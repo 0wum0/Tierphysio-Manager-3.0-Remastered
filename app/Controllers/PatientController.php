@@ -61,6 +61,28 @@ class PatientController extends Controller
         ]);
     }
 
+    public function showJson(array $params = []): void
+    {
+        $patient  = $this->patientService->findById((int)$params['id']);
+        if (!$patient) {
+            http_response_code(404);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'not found']);
+            exit;
+        }
+
+        $owner    = $this->ownerService->findById((int)$patient['owner_id']);
+        $timeline = $this->patientService->getTimeline((int)$params['id']);
+
+        header('Content-Type: application/json');
+        echo json_encode([
+            'patient'  => $patient,
+            'owner'    => $owner,
+            'timeline' => $timeline,
+        ]);
+        exit;
+    }
+
     public function store(array $params = []): void
     {
         $this->validateCsrf();

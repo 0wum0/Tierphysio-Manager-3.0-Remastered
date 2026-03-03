@@ -27,6 +27,7 @@ $router->post('/profil/password', [ProfileController::class, 'updatePassword'], 
 $router->get('/patienten', [PatientController::class, 'index'], ['auth']);
 $router->post('/patienten', [PatientController::class, 'store'], ['auth']);
 $router->get('/patienten/{id}', [PatientController::class, 'show'], ['auth']);
+$router->get('/patienten/{id}/json', [PatientController::class, 'showJson'], ['auth']);
 $router->post('/patienten/{id}', [PatientController::class, 'update'], ['auth']);
 $router->post('/patienten/{id}/loeschen', [PatientController::class, 'delete'], ['auth']);
 $router->post('/patienten/{id}/foto', [PatientController::class, 'uploadPhoto'], ['auth']);

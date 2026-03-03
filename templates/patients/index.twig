@@ -12,6 +12,164 @@
     </button>
 </div>
 
+{# ── PATIENT DETAIL MODAL (single, reused for all patients) ── #}
+<div class="modal-overlay" id="modal-patient-detail">
+    <div class="modal modal-xl" style="max-width:860px;width:96vw;max-height:92vh;display:flex;flex-direction:column;">
+
+        {# Modal Header: photo strip + name + badge + actions #}
+        <div id="pd-header" style="display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;border-bottom:1px solid var(--glass-border);flex-shrink:0;flex-wrap:wrap;min-height:72px;">
+            <div id="pd-photo" style="width:52px;height:52px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--bg-elevated);display:flex;align-items:center;justify-content:center;">
+                <svg width="24" height="24" fill="none" viewBox="0 0 24 24" style="opacity:0.3;"><path stroke="currentColor" stroke-width="1.5" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            </div>
+            <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+                    <span id="pd-name" style="font-size:1.05rem;font-weight:700;color:var(--text-primary);"></span>
+                    <span id="pd-badge" class="badge" style="display:none;"></span>
+                </div>
+                <div id="pd-species" style="font-size:0.8rem;color:var(--text-muted);margin-top:0.1rem;"></div>
+            </div>
+            <div style="display:flex;gap:0.5rem;align-items:center;flex-shrink:0;">
+                <a id="pd-invoice-btn" href="#" class="btn btn-secondary btn-sm">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
+                    Rechnung
+                </a>
+                <a id="pd-edit-btn" href="#" class="btn btn-primary btn-sm">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Bearbeiten
+                </a>
+                <button class="modal-close" data-modal-close="modal-patient-detail" type="button" style="flex-shrink:0;">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+        </div>
+
+        {# Loading spinner #}
+        <div id="pd-loading" style="display:flex;align-items:center;justify-content:center;padding:3rem;flex:1;">
+            <div style="width:32px;height:32px;border:3px solid var(--glass-border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+        </div>
+
+        {# Modal Body (hidden until loaded) #}
+        <div id="pd-body" style="display:none;overflow-y:auto;flex:1;">
+            <div style="display:flex;gap:0;flex-wrap:wrap;">
+
+                {# LEFT COLUMN: photo + patient details + owner #}
+                <div id="pd-left" style="width:240px;flex-shrink:0;border-right:1px solid var(--glass-border);display:flex;flex-direction:column;">
+
+                    {# Full photo #}
+                    <div id="pd-photo-full" style="width:100%;aspect-ratio:1;background:var(--bg-elevated);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;">
+                        <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="opacity:0.2;"><path stroke="currentColor" stroke-width="1.5" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    </div>
+
+                    {# Patient details #}
+                    <div style="padding:1rem;flex:1;display:flex;flex-direction:column;gap:0.6rem;">
+                        <div style="font-size:0.7rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.25rem;">Patient</div>
+                        <div id="pd-details" style="display:flex;flex-direction:column;gap:0.5rem;font-size:0.82rem;"></div>
+
+                        {# Owner #}
+                        <div style="border-top:1px solid var(--glass-border);padding-top:0.75rem;margin-top:0.25rem;">
+                            <div style="font-size:0.7rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">Besitzer</div>
+                            <div id="pd-owner" style="font-size:0.82rem;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                {# RIGHT COLUMN: add entry form + timeline #}
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+
+                    {# Add entry form (collapsible) #}
+                    <div style="border-bottom:1px solid var(--glass-border);">
+                        <button id="pd-toggle-form" type="button" style="width:100%;padding:0.75rem 1rem;background:none;border:none;color:var(--text-secondary);font-size:0.82rem;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">
+                            <span style="display:flex;align-items:center;gap:0.5rem;">
+                                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                                Neuer Timeline-Eintrag
+                            </span>
+                            <svg id="pd-toggle-chevron" width="14" height="14" fill="none" viewBox="0 0 24 24" style="transition:transform 0.2s;"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="6 9 12 15 18 9"/></svg>
+                        </button>
+                        <div id="pd-entry-form" style="display:none;padding:0 1rem 1rem;">
+                            <form id="pd-timeline-form" method="POST" enctype="multipart/form-data">
+                                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">
+                                    <div>
+                                        <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.25rem;">Typ</label>
+                                        <select name="type" class="form-control" style="font-size:0.82rem;padding:0.4rem 0.6rem;">
+                                            <option value="note">📝 Notiz</option>
+                                            <option value="treatment">💊 Behandlung</option>
+                                            <option value="photo">📷 Foto</option>
+                                            <option value="document">📄 Dokument</option>
+                                            <option value="other">📌 Sonstiges</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.25rem;">Datum</label>
+                                        <input type="datetime-local" name="entry_date" class="form-control" style="font-size:0.82rem;padding:0.4rem 0.6rem;" value="{{ 'now'|date('Y-m-d\\TH:i') }}">
+                                    </div>
+                                </div>
+                                <div style="margin-bottom:0.5rem;">
+                                    <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.25rem;">Titel</label>
+                                    <input type="text" name="title" class="form-control" placeholder="Kurzer Titel..." style="font-size:0.82rem;padding:0.4rem 0.6rem;">
+                                </div>
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">
+                                    <div>
+                                        <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.25rem;">Status-Badge</label>
+                                        <select name="status_badge" class="form-control" style="font-size:0.82rem;padding:0.4rem 0.6rem;">
+                                            <option value="">— Kein Badge —</option>
+                                            <option value="Schmerzfrei">Schmerzfrei</option>
+                                            <option value="In Behandlung">In Behandlung</option>
+                                            <option value="Kontrolltermin">Kontrolltermin</option>
+                                            <option value="Notfall">Notfall</option>
+                                            <option value="Gebessert">Gebessert</option>
+                                            <option value="Entlassen">Entlassen</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.25rem;">Anhang</label>
+                                        <input type="file" name="attachment" class="form-control" style="font-size:0.75rem;padding:0.35rem;">
+                                    </div>
+                                </div>
+                                <div style="margin-bottom:0.75rem;">
+                                    <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.25rem;">Inhalt</label>
+                                    <textarea name="content" class="form-control" rows="2" placeholder="Notizen, Befunde..." style="font-size:0.82rem;padding:0.4rem 0.6rem;resize:vertical;"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-sm" style="width:100%;">
+                                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                                    Eintrag speichern
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    {# Timeline #}
+                    <div style="padding:1rem;overflow-y:auto;flex:1;">
+                        <div style="font-size:0.7rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Timeline</div>
+                        <div id="pd-timeline" class="timeline"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{# Datei-Viewer Modal #}
+<div id="fileviewer-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.88);align-items:center;justify-content:center;flex-direction:column;">
+    <div style="position:relative;width:92vw;max-width:960px;height:88vh;display:flex;flex-direction:column;background:var(--bg-surface,#1a1a2e);border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.7);">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
+            <span id="fv-filename" style="font-size:0.875rem;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%;"></span>
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+                <a id="fv-download" href="" download style="background:rgba(255,255,255,0.12);color:#fff;border:none;padding:0.35rem 0.75rem;border-radius:6px;font-size:0.8rem;text-decoration:none;display:flex;align-items:center;gap:0.4rem;">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    Herunterladen
+                </a>
+                <button id="fv-close" style="background:rgba(255,255,255,0.12);border:none;color:#fff;width:32px;height:32px;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+        </div>
+        <div id="fv-body" style="flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#111;"></div>
+    </div>
+</div>
+
 {# Search & Filter #}
 <form method="GET" action="/patienten">
     <div class="glass-card" style="padding:1rem;">
@@ -43,7 +201,7 @@
 {% if patients %}
     <div class="patient-grid">
         {% for patient in patients %}
-            <a href="/patienten/{{ patient.id }}" class="patient-card">
+            <div class="patient-card" style="cursor:pointer;" data-patient-id="{{ patient.id }}" role="button" tabindex="0">
                 <div class="patient-card-image">
                     {% if patient.photo %}
                         <img src="/patienten/{{ patient.id }}/foto/{{ patient.photo }}" alt="{{ patient.name }}">
@@ -71,7 +229,7 @@
                         {% endif %}
                     </div>
                 </div>
-            </a>
+            </div>
         {% endfor %}
     </div>
 
@@ -191,18 +349,302 @@
 
 {% block scripts %}
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const ownerSelect = document.getElementById('p-owner');
-    if (!ownerSelect) return;
-    fetch('/tierhalter?format=json')
-        .catch(() => {});
+(function () {
+'use strict';
+
+/* ── Owner dropdown for new-patient modal ─────────────────── */
+const ownerSelect = document.getElementById('p-owner');
+if (ownerSelect) {
     const owners = {{ owners is defined ? owners|json_encode|raw : '[]' }};
-    owners.forEach(o => {
+    owners.forEach(function (o) {
         const opt = document.createElement('option');
         opt.value = o.id;
         opt.textContent = o.last_name + ', ' + o.first_name;
         ownerSelect.appendChild(opt);
     });
+}
+
+/* ── Helpers ──────────────────────────────────────────────── */
+function esc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtDate(str) {
+    if (!str) return '—';
+    const d = new Date(str.replace(' ', 'T'));
+    return d.toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function fmtDateTime(str) {
+    if (!str) return '—';
+    const d = new Date(str.replace(' ', 'T'));
+    return d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' +
+           d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+}
+function typeIcon(t) {
+    return {note:'📝', treatment:'💊', photo:'📷', document:'📄', other:'📌'}[t] || '📌';
+}
+
+/* ── Spin animation ───────────────────────────────────────── */
+if (!document.getElementById('pd-spin-style')) {
+    const s = document.createElement('style');
+    s.id = 'pd-spin-style';
+    s.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(s);
+}
+
+/* ── File viewer ──────────────────────────────────────────── */
+const fvOverlay = document.getElementById('fileviewer-overlay');
+const fvBody    = document.getElementById('fv-body');
+const fvName    = document.getElementById('fv-filename');
+const fvDl      = document.getElementById('fv-download');
+const fvClose   = document.getElementById('fv-close');
+const imgExts   = ['jpg','jpeg','png','gif','webp'];
+
+function openViewer(src, filename) {
+    fvName.textContent = filename;
+    fvDl.href = src; fvDl.download = filename;
+    fvBody.innerHTML = '';
+    const ext = (filename.split('.').pop() || '').toLowerCase();
+    if (imgExts.includes(ext)) {
+        const img = document.createElement('img');
+        img.src = src; img.alt = filename;
+        img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;';
+        fvBody.appendChild(img);
+    } else if (ext === 'pdf') {
+        const fr = document.createElement('iframe');
+        fr.src = src; fr.style.cssText = 'width:100%;height:100%;border:none;';
+        fr.title = filename; fvBody.appendChild(fr);
+    } else {
+        fvBody.innerHTML = `<div style="text-align:center;color:rgba(255,255,255,0.7);padding:3rem;">
+            <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="margin:0 auto 1rem;display:block;opacity:0.5;"><path stroke="currentColor" stroke-width="1.5" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="1.5" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
+            <div style="font-size:1rem;font-weight:600;margin-bottom:0.5rem;">${esc(filename)}</div>
+            <div style="font-size:0.85rem;margin-bottom:1.5rem;opacity:0.6;">Dieser Dateityp kann nicht direkt angezeigt werden.</div>
+            <a href="${src}" download="${esc(filename)}" style="background:var(--accent,#4f7cff);color:#fff;padding:0.6rem 1.4rem;border-radius:8px;text-decoration:none;">Herunterladen</a>
+        </div>`;
+    }
+    fvOverlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+function closeViewer() {
+    fvOverlay.style.display = 'none';
+    fvBody.innerHTML = '';
+    document.body.style.overflow = '';
+}
+if (fvClose) fvClose.addEventListener('click', closeViewer);
+if (fvOverlay) fvOverlay.addEventListener('click', function(e){ if(e.target===fvOverlay) closeViewer(); });
+
+/* ── Patient Detail Modal ─────────────────────────────────── */
+const pdModal      = document.getElementById('modal-patient-detail');
+const pdLoading    = document.getElementById('pd-loading');
+const pdBody       = document.getElementById('pd-body');
+const pdName       = document.getElementById('pd-name');
+const pdBadge      = document.getElementById('pd-badge');
+const pdSpecies    = document.getElementById('pd-species');
+const pdPhoto      = document.getElementById('pd-photo');
+const pdPhotoFull  = document.getElementById('pd-photo-full');
+const pdDetails    = document.getElementById('pd-details');
+const pdOwner      = document.getElementById('pd-owner');
+const pdTimeline   = document.getElementById('pd-timeline');
+const pdInvoiceBtn = document.getElementById('pd-invoice-btn');
+const pdEditBtn    = document.getElementById('pd-edit-btn');
+const pdForm       = document.getElementById('pd-timeline-form');
+const pdToggleBtn  = document.getElementById('pd-toggle-form');
+const pdEntryForm  = document.getElementById('pd-entry-form');
+const pdChevron    = document.getElementById('pd-toggle-chevron');
+
+/* Toggle add-entry form */
+if (pdToggleBtn) {
+    pdToggleBtn.addEventListener('click', function () {
+        const open = pdEntryForm.style.display !== 'none';
+        pdEntryForm.style.display = open ? 'none' : 'block';
+        pdChevron.style.transform = open ? '' : 'rotate(180deg)';
+    });
+}
+
+function resetModal() {
+    pdLoading.style.display = 'flex';
+    pdBody.style.display = 'none';
+    pdName.textContent = '';
+    pdBadge.style.display = 'none';
+    pdSpecies.textContent = '';
+    pdPhoto.innerHTML = '<svg width="24" height="24" fill="none" viewBox="0 0 24 24" style="opacity:0.3;"><path stroke="currentColor" stroke-width="1.5" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+    pdPhotoFull.innerHTML = '<svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="opacity:0.2;"><path stroke="currentColor" stroke-width="1.5" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+    pdDetails.innerHTML = '';
+    pdOwner.innerHTML = '';
+    pdTimeline.innerHTML = '';
+    pdEntryForm.style.display = 'none';
+    pdChevron.style.transform = '';
+}
+
+function detail(label, value) {
+    if (!value) return '';
+    return `<div><span style="color:var(--text-muted);font-size:0.75rem;">${esc(label)}</span><div style="font-weight:500;margin-top:0.1rem;">${esc(value)}</div></div>`;
+}
+
+function renderTimeline(timeline, patientId) {
+    if (!timeline || !timeline.length) {
+        pdTimeline.innerHTML = '<div style="text-align:center;padding:2rem 1rem;color:var(--text-muted);font-size:0.85rem;">Noch keine Einträge</div>';
+        return;
+    }
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    let html = '<div class="timeline">';
+    timeline.forEach(function (e) {
+        const hasAttach = e.attachment;
+        const ext = hasAttach ? (e.attachment.split('.').pop() || '').toLowerCase() : '';
+        const isImg = imgExts.includes(ext);
+        const src = hasAttach ? `/patienten/${patientId}/dokumente/${encodeURIComponent(e.attachment)}` : '';
+
+        let attachHtml = '';
+        if (hasAttach) {
+            if (isImg) {
+                attachHtml = `<div class="mt-2">
+                    <a href="${src}" data-lightbox-modal="${src}" data-filename="${esc(e.attachment)}" style="cursor:pointer;display:inline-block;">
+                        <img src="${src}" alt="${esc(e.attachment)}" style="max-height:100px;max-width:100%;border-radius:6px;border:1px solid var(--glass-border);display:block;">
+                    </a></div>`;
+            } else {
+                attachHtml = `<div class="mt-2">
+                    <a href="${src}" data-lightbox-modal="${src}" data-filename="${esc(e.attachment)}" class="btn btn-secondary btn-sm" style="font-size:0.78rem;">
+                        <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                        ${esc(e.attachment)}
+                    </a></div>`;
+            }
+        }
+
+        html += `<div class="timeline-item">
+            <div class="timeline-dot timeline-dot-${esc(e.type)}"></div>
+            <div class="timeline-card">
+                <div class="timeline-meta">
+                    <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
+                        <span class="text-xs">${typeIcon(e.type)}</span>
+                        ${e.status_badge ? `<span class="badge badge-primary" style="font-size:0.62rem;">${esc(e.status_badge)}</span>` : ''}
+                        <span class="timeline-date">${fmtDateTime(e.entry_date)}</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:0.4rem;">
+                        ${e.user_name ? `<span class="timeline-author">${esc(e.user_name)}</span>` : ''}
+                        <form action="/patienten/${patientId}/timeline/${e.id}/loeschen" method="POST" style="margin:0;" onsubmit="return confirm('Eintrag wirklich löschen?');">
+                            <input type="hidden" name="_csrf_token" value="${csrf}">
+                            <button type="submit" style="width:22px;height:22px;padding:0;color:var(--text-muted);border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                                <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                ${e.title ? `<div class="timeline-title">${esc(e.title)}</div>` : ''}
+                ${e.content ? `<div class="timeline-content">${esc(e.content)}</div>` : ''}
+                ${attachHtml}
+            </div>
+        </div>`;
+    });
+    html += '</div>';
+    pdTimeline.innerHTML = html;
+
+    /* Attach file-viewer listeners to dynamically rendered items */
+    pdTimeline.querySelectorAll('[data-lightbox-modal]').forEach(function (el) {
+        el.addEventListener('click', function (e) {
+            e.preventDefault();
+            openViewer(el.dataset.lightboxModal, el.dataset.filename);
+        });
+    });
+}
+
+function openPatientModal(patientId) {
+    resetModal();
+    Modal.open('modal-patient-detail');
+
+    fetch('/patienten/' + patientId + '/json')
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            const p = data.patient;
+            const o = data.owner;
+
+            /* Header */
+            pdName.textContent = p.name || '';
+            if (p.status) {
+                const slug = p.status.toLowerCase().replace(/ /g,'_');
+                pdBadge.textContent = p.status;
+                pdBadge.className = 'badge badge-' + slug;
+                pdBadge.style.display = '';
+            }
+            pdSpecies.textContent = [p.species, p.breed].filter(Boolean).join(' · ');
+            pdInvoiceBtn.href = '/rechnungen/erstellen?patient_id=' + patientId;
+            pdEditBtn.href    = '/patienten/' + patientId;
+
+            /* Thumbnail photo in header */
+            if (p.photo) {
+                const imgH = document.createElement('img');
+                imgH.src = '/patienten/' + patientId + '/foto/' + p.photo;
+                imgH.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+                pdPhoto.innerHTML = '';
+                pdPhoto.appendChild(imgH);
+            }
+
+            /* Full photo left panel */
+            if (p.photo) {
+                const imgF = document.createElement('img');
+                imgF.src = '/patienten/' + patientId + '/foto/' + p.photo;
+                imgF.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+                pdPhotoFull.innerHTML = '';
+                pdPhotoFull.appendChild(imgF);
+            }
+
+            /* Details */
+            pdDetails.innerHTML =
+                detail('Tierart', p.species) +
+                detail('Rasse', p.breed) +
+                detail('Geschlecht', p.gender) +
+                detail('Geburtsdatum', p.birth_date ? fmtDate(p.birth_date) : null) +
+                detail('Farbe', p.color) +
+                detail('Chip-Nr.', p.chip_number) +
+                (p.notes ? `<div style="border-top:1px solid var(--glass-border);padding-top:0.5rem;margin-top:0.25rem;"><span style="color:var(--text-muted);font-size:0.75rem;">Notizen</span><div style="font-size:0.8rem;line-height:1.5;margin-top:0.2rem;color:var(--text-secondary);">${esc(p.notes)}</div></div>` : '');
+
+            /* Owner */
+            if (o) {
+                pdOwner.innerHTML = `<a href="/tierhalter/${o.id}" style="text-decoration:none;display:flex;align-items:center;gap:0.6rem;">
+                    <div style="width:32px;height:32px;border-radius:50%;background:var(--accent-dim,rgba(79,124,255,0.2));display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:var(--accent);flex-shrink:0;">
+                        ${esc((o.first_name||'').charAt(0)+(o.last_name||'').charAt(0))}
+                    </div>
+                    <div>
+                        <div style="font-weight:600;font-size:0.85rem;">${esc(o.first_name+' '+o.last_name)}</div>
+                        ${o.phone ? `<div style="font-size:0.75rem;color:var(--text-muted);">${esc(o.phone)}</div>` : ''}
+                        ${o.email ? `<div style="font-size:0.75rem;color:var(--text-muted);">${esc(o.email)}</div>` : ''}
+                    </div>
+                </a>`;
+            } else {
+                pdOwner.innerHTML = '<span style="color:var(--text-muted);font-size:0.82rem;">Kein Besitzer</span>';
+            }
+
+            /* Timeline form action */
+            if (pdForm) pdForm.action = '/patienten/' + patientId + '/timeline';
+
+            /* Timeline */
+            renderTimeline(data.timeline, patientId);
+
+            /* Show body */
+            pdLoading.style.display = 'none';
+            pdBody.style.display = 'block';
+        })
+        .catch(function () {
+            pdLoading.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;">Fehler beim Laden.</div>';
+        });
+}
+
+/* ── Card click listeners ─────────────────────────────────── */
+document.querySelectorAll('[data-patient-id]').forEach(function (card) {
+    card.addEventListener('click', function () {
+        openPatientModal(card.dataset.patientId);
+    });
+    card.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openPatientModal(card.dataset.patientId);
+        }
+    });
 });
+
+/* ── Global Escape closes file viewer ─────────────────────── */
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && fvOverlay && fvOverlay.style.display !== 'none') closeViewer();
+});
+
+})();
 </script>
 {% endblock %}
