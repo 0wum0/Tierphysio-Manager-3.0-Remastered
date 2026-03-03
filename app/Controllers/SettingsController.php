@@ -61,6 +61,12 @@ class SettingsController extends Controller
             }
         }
 
+        if (empty($data)) {
+            $this->session->flash('error', 'DEBUG: Keine Daten empfangen. POST-Keys: ' . implode(', ', array_keys($_POST)));
+            $this->redirect('/einstellungen');
+            return;
+        }
+
         foreach ($data as $key => $value) {
             $this->settingsService->set($key, $value);
         }
