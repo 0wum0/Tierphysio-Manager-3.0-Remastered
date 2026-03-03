@@ -138,8 +138,7 @@
                     <div style="font-size:0.82rem;color:var(--text-muted);">{{ s.appointment_wish ?: '—' }}</div>
                 </td>
                 <td style="padding:0.85rem 1rem;">
-                    <div style="font-size:0.82rem;">{{ s.created_at|date_de }}</div>
-                    <div style="font-size:0.75rem;color:var(--text-muted);">{{ s.created_at|datetime_de|split(' ')|last }}</div>
+                    <div style="font-size:0.82rem;">{{ s.created_at|datetime_de }}</div>
                 </td>
                 <td style="padding:0.85rem 1.25rem;text-align:right;" onclick="event.stopPropagation();">
                     <div style="display:flex;gap:0.4rem;justify-content:flex-end;">

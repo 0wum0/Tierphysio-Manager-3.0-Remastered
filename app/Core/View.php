@@ -127,6 +127,10 @@ class View
             }
             return $initials;
         }));
+
+        $this->twig->addFilter(new TwigFilter('nl2br', function (string $value) {
+            return nl2br(htmlspecialchars($value, ENT_QUOTES, 'UTF-8'));
+        }, ['is_safe' => ['html']]));
     }
 
     public function addGlobal(string $name, mixed $value): void
