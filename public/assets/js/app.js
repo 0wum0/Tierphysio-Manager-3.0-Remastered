@@ -358,9 +358,9 @@ const CustomSelect = {
 
         /* Read styles BEFORE hiding */
         const selStyles   = window.getComputedStyle(sel);
-        const selInlineW  = sel.style.width;
+        const selInlineW  = sel.dataset.csWidth || sel.style.width;
         const selInlineFlex = sel.style.flex;
-        const selWidth    = selInlineW || selStyles.width || 'auto';
+        const selWidth    = selInlineW || 'auto';
         const selFontSize = selStyles.fontSize || '0.9rem';
         const selPadT     = selStyles.paddingTop    || '0.65rem';
         const selPadB     = selStyles.paddingBottom || '0.65rem';
