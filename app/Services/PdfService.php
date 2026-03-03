@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Core\Translator;
 use App\Repositories\SettingsRepository;
 use TCPDF;
 
 class PdfService
 {
     public function __construct(
-        private readonly SettingsRepository $settingsRepository
+        private readonly SettingsRepository $settingsRepository,
+        private readonly Translator $translator
     ) {}
 
     public function generateInvoicePdf(
@@ -19,6 +21,7 @@ class PdfService
         ?array $owner,
         ?array $patient
     ): string {
+        $t = fn(string $k) => $this->translator->trans($k);
         $settings = $this->settingsRepository->all();
 
         // Reserve space for footer (extra line if custom footer text set)
@@ -112,20 +115,20 @@ class PdfService
         $pdf->SetFont($font, 'B', 13);
         $pdf->SetTextColor(...$accentColor);
         $pdf->SetXY(105, 52);
-        $pdf->Cell(85, 8, 'RECHNUNG', 0, 1, 'R');
+        $pdf->Cell(85, 8, mb_strtoupper($this->translator->trans('invoices.invoice')), 0, 1, 'R');
 
         $pdf->SetFont($font, '', 8.5);
         $pdf->SetTextColor(...$darkColor);
         $metaY = 62;
         $metaRows = [
-            'Rechnungsnummer' => $invoice['invoice_number'],
-            'Datum'           => $invoice['issue_date'] ? date('d.m.Y', strtotime($invoice['issue_date'])) : '-',
+            $this->translator->trans('invoices.invoice_number') => $invoice['invoice_number'],
+            $this->translator->trans('invoices.issue_date')     => $invoice['issue_date'] ? date('d.m.Y', strtotime($invoice['issue_date'])) : '-',
         ];
         if (!empty($invoice['due_date'])) {
-            $metaRows['Fällig am'] = date('d.m.Y', strtotime($invoice['due_date']));
+            $metaRows[$this->translator->trans('invoices.due_date')] = date('d.m.Y', strtotime($invoice['due_date']));
         }
         if ($showPatient && $patient) {
-            $metaRows['Patient'] = $patient['name'] . ' (' . ($patient['species'] ?? '') . ')';
+            $metaRows[$this->translator->trans('invoices.patient')] = $patient['name'] . ' (' . ($patient['species'] ?? '') . ')';
             if (!empty($patient['chip_number'])) {
                 $metaRows['Chip-Nr.'] = $patient['chip_number'];
             }
@@ -144,11 +147,11 @@ class PdfService
         $pdf->SetTextColor(255, 255, 255);
         $pdf->SetFont($font, 'B', 8.5);
         $pdf->SetXY(20, $tableY);
-        $pdf->Cell(93, 6.5, 'Beschreibung', 1, 0, 'L', true);
-        $pdf->Cell(18, 6.5, 'Menge', 1, 0, 'C', true);
-        $pdf->Cell(27, 6.5, 'Einzelpreis', 1, 0, 'R', true);
-        $pdf->Cell(15, 6.5, 'MwSt.', 1, 0, 'C', true);
-        $pdf->Cell(27, 6.5, 'Gesamt', 1, 1, 'R', true);
+        $pdf->Cell(93, 6.5, $t('invoices.description'), 1, 0, 'L', true);
+        $pdf->Cell(18, 6.5, $t('invoices.quantity'),    1, 0, 'C', true);
+        $pdf->Cell(27, 6.5, $t('invoices.unit_price'),  1, 0, 'R', true);
+        $pdf->Cell(15, 6.5, $t('invoices.tax_rate'),    1, 0, 'C', true);
+        $pdf->Cell(27, 6.5, $t('invoices.total'),       1, 1, 'R', true);
 
         $pdf->SetTextColor(...$darkColor);
         $pdf->SetFont($font, '', 8.5);
@@ -171,11 +174,11 @@ class PdfService
         $pdf->SetTextColor(...$darkColor);
 
         $pdf->SetXY(125, $totalY);
-        $pdf->Cell(38, 5.5, 'Nettobetrag:', 0, 0, 'R');
+        $pdf->Cell(38, 5.5, $t('invoices.total_net') . ':', 0, 0, 'R');
         $pdf->Cell(27, 5.5, number_format((float)$invoice['total_net'], 2, ',', '.') . ' €', 0, 1, 'R');
 
         $pdf->SetXY(125, $totalY + 5.5);
-        $pdf->Cell(38, 5.5, 'MwSt.:', 0, 0, 'R');
+        $pdf->Cell(38, 5.5, $t('invoices.total_tax') . ':', 0, 0, 'R');
         $pdf->Cell(27, 5.5, number_format((float)$invoice['total_tax'], 2, ',', '.') . ' €', 0, 1, 'R');
 
         $pdf->SetDrawColor(...$primaryColor);
@@ -185,7 +188,7 @@ class PdfService
         $pdf->SetFont($font, 'B', 10);
         $pdf->SetTextColor(...$accentColor);
         $pdf->SetXY(125, $totalY + 13);
-        $pdf->Cell(38, 7, 'Gesamtbetrag:', 0, 0, 'R');
+        $pdf->Cell(38, 7, $t('invoices.total_gross') . ':', 0, 0, 'R');
         $pdf->Cell(27, 7, number_format((float)$invoice['total_gross'], 2, ',', '.') . ' €', 0, 1, 'R');
 
         // ── NOTES / PAYMENT TERMS ────────────────────────────────────────
