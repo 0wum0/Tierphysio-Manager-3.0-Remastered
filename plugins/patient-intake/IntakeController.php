@@ -145,49 +145,49 @@ class IntakeController extends Controller
         try {
             $app = \App\Core\Application::getInstance();
             $db  = $app->getContainer()->get(Database::class);
+            $pdo = $db->getPdo();
 
-            /* 1. Find or create owner */
-            $existingOwner = $db->fetch(
-                "SELECT id FROM owners WHERE email = ? LIMIT 1",
-                [$submission['owner_email']]
-            );
+            /* 1. Find or create owner — use PDO directly to avoid any wrapper issues */
+            $stmt = $pdo->prepare("SELECT id FROM owners WHERE email = ? LIMIT 1");
+            $stmt->execute([$submission['owner_email']]);
+            $existingOwner = $stmt->fetch(\PDO::FETCH_ASSOC);
 
             if ($existingOwner) {
                 $ownerId = (int)$existingOwner['id'];
             } else {
-                $db->execute(
+                $ins = $pdo->prepare(
                     "INSERT INTO owners (first_name, last_name, email, phone, street, zip, city, created_at, updated_at)
-                     VALUES (?,?,?,?,?,?,?,NOW(),NOW())",
-                    [
-                        $submission['owner_first_name'],
-                        $submission['owner_last_name'],
-                        $submission['owner_email'],
-                        $submission['owner_phone'],
-                        $submission['owner_street'],
-                        $submission['owner_zip'],
-                        $submission['owner_city'],
-                    ]
+                     VALUES (?,?,?,?,?,?,?,NOW(),NOW())"
                 );
-                $ownerId = (int)$db->lastInsertId();
+                $ins->execute([
+                    $submission['owner_first_name'],
+                    $submission['owner_last_name'],
+                    $submission['owner_email'],
+                    $submission['owner_phone'],
+                    $submission['owner_street'],
+                    $submission['owner_zip'],
+                    $submission['owner_city'],
+                ]);
+                $ownerId = (int)$pdo->lastInsertId();
             }
 
-            /* 2. Create patient */
-            $db->execute(
+            /* 2. Create patient — use PDO directly */
+            $ins2 = $pdo->prepare(
                 "INSERT INTO patients (name, species, breed, gender, birth_date, color, chip_number, owner_id, photo, status, created_at, updated_at)
-                 VALUES (?,?,?,?,?,?,?,?,?,'aktiv',NOW(),NOW())",
-                [
-                    $submission['patient_name'],
-                    $submission['patient_species'],
-                    $submission['patient_breed'],
-                    $submission['patient_gender'],
-                    $submission['patient_birth_date'] ?: null,
-                    $submission['patient_color'],
-                    $submission['patient_chip'],
-                    $ownerId,
-                    $submission['patient_photo'],
-                ]
+                 VALUES (?,?,?,?,?,?,?,?,?,'aktiv',NOW(),NOW())"
             );
-            $patientId = (int)$db->lastInsertId();
+            $ins2->execute([
+                $submission['patient_name'],
+                $submission['patient_species'],
+                $submission['patient_breed'],
+                $submission['patient_gender'],
+                $submission['patient_birth_date'] ?: null,
+                $submission['patient_color'],
+                $submission['patient_chip'],
+                $ownerId,
+                $submission['patient_photo'],
+            ]);
+            $patientId = (int)$pdo->lastInsertId();
 
             /* 3. Mark submission as accepted */
             $this->repo->updateStatus((int)$params['id'], 'uebernommen', [
