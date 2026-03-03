@@ -109,12 +109,7 @@ class SettingsController extends Controller
 
     public function plugins(array $params = []): void
     {
-        $plugins = $this->pluginManager->getAllAvailablePlugins();
-
-        $this->render('settings/plugins.twig', [
-            'page_title' => $this->translator->trans('settings.plugins'),
-            'plugins'    => $plugins,
-        ]);
+        $this->redirect('/einstellungen#plugins');
     }
 
     public function enablePlugin(array $params = []): void
@@ -122,7 +117,7 @@ class SettingsController extends Controller
         $this->validateCsrf();
         $this->pluginManager->enablePlugin($params['name']);
         $this->session->flash('success', $this->translator->trans('settings.plugin_enabled'));
-        $this->redirect('/einstellungen/plugins');
+        $this->redirect('/einstellungen#plugins');
     }
 
     public function disablePlugin(array $params = []): void
@@ -130,24 +125,12 @@ class SettingsController extends Controller
         $this->validateCsrf();
         $this->pluginManager->disablePlugin($params['name']);
         $this->session->flash('success', $this->translator->trans('settings.plugin_disabled'));
-        $this->redirect('/einstellungen/plugins');
+        $this->redirect('/einstellungen#plugins');
     }
 
     public function updater(array $params = []): void
     {
-        $currentVersion  = $this->migrationService->getCurrentVersion();
-        $latestVersion   = $this->migrationService->getLatestVersion();
-        $pendingMigrations = $this->migrationService->getPendingMigrations();
-
-        $this->render('settings/updater.twig', [
-            'page_title'      => $this->translator->trans('settings.updater'),
-            'current_version' => $currentVersion,
-            'latest_version'  => $latestVersion,
-            'pending'         => $pendingMigrations,
-            'up_to_date'      => empty($pendingMigrations),
-            'php_version'     => PHP_VERSION,
-            'app_env'         => $this->config->get('app.env', 'production'),
-        ]);
+        $this->redirect('/einstellungen#updates');
     }
 
     public function runMigrations(array $params = []): void
@@ -161,17 +144,12 @@ class SettingsController extends Controller
             $this->session->flash('error', $this->translator->trans('settings.migrations_failed') . ': ' . $e->getMessage());
         }
 
-        $this->redirect('/einstellungen/updater');
+        $this->redirect('/einstellungen#updates');
     }
 
     public function users(array $params = []): void
     {
-        $users = $this->userRepository->findAll();
-
-        $this->render('settings/users.twig', [
-            'page_title' => $this->translator->trans('settings.users'),
-            'users'      => $users,
-        ]);
+        $this->redirect('/einstellungen#benutzer');
     }
 
     public function createUser(array $params = []): void
@@ -204,7 +182,7 @@ class SettingsController extends Controller
         ]);
 
         $this->session->flash('success', $this->translator->trans('settings.user_created'));
-        $this->redirect('/einstellungen/benutzer');
+        $this->redirect('/einstellungen#benutzer');
     }
 
     public function updateUser(array $params = []): void
@@ -246,12 +224,12 @@ class SettingsController extends Controller
         $currentUserId = (int)$this->session->get('user_id');
         if ((int)$params['id'] === $currentUserId) {
             $this->session->flash('error', $this->translator->trans('settings.cannot_delete_self'));
-            $this->redirect('/einstellungen/benutzer');
+            $this->redirect('/einstellungen#benutzer');
             return;
         }
 
         $this->userRepository->delete((int)$params['id']);
         $this->session->flash('success', $this->translator->trans('settings.user_deleted'));
-        $this->redirect('/einstellungen/benutzer');
+        $this->redirect('/einstellungen#benutzer');
     }
 }
