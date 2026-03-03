@@ -1,9 +1,6 @@
 # Environment
 .env
 
-# Composer
-/vendor/
-
 # Storage (keep structure, ignore contents)
 /storage/cache/
 /storage/logs/*.log

@@ -1,0 +1,13 @@
+Options -Indexes
+RewriteEngine On
+
+# Step 1: If the file exists inside public/, serve it directly (static assets, etc.)
+RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
+RewriteRule ^(.*)$ public/$1 [L]
+
+# Step 2: If the directory exists inside public/, serve it directly
+RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -d
+RewriteRule ^(.*)$ public/$1 [L]
+
+# Step 3: Everything else → public/index.php (PHP router handles it)
+RewriteRule ^(.*)$ public/index.php [QSA,L]

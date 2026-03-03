@@ -29,9 +29,12 @@ class InstallerController extends Controller
         $step = (int)($params['step'] ?? 1);
         $step = max(1, min(4, $step));
 
+        $detectedUrl = $this->detectAppUrl();
+
         $data = [
-            'page_title' => 'Tierphysio Manager 3.0 - Installation',
-            'step'       => $step,
+            'page_title'   => 'Tierphysio Manager 3.0 - Installation',
+            'step'         => $step,
+            'detected_url' => $detectedUrl,
         ];
 
         if ($step === 1) {
@@ -39,6 +42,13 @@ class InstallerController extends Controller
         }
 
         $this->render('installer/index.twig', $data);
+    }
+
+    private function detectAppUrl(): string
+    {
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        return $scheme . '://' . $host;
     }
 
     public function checkDb(array $params = []): void
@@ -138,17 +148,28 @@ class InstallerController extends Controller
 
     private function checkRequirements(): array
     {
+        $storageOk = is_writable(ROOT_PATH . '/storage')
+            || (!is_dir(ROOT_PATH . '/storage') && mkdir(ROOT_PATH . '/storage', 0755, true));
+
         return [
-            ['label' => 'PHP >= 8.3',         'ok' => version_compare(PHP_VERSION, '8.3.0', '>=')],
-            ['label' => 'PDO MySQL',           'ok' => extension_loaded('pdo_mysql')],
-            ['label' => 'GD / Imagick',        'ok' => extension_loaded('gd') || extension_loaded('imagick')],
-            ['label' => 'mbstring',            'ok' => extension_loaded('mbstring')],
-            ['label' => 'fileinfo',            'ok' => extension_loaded('fileinfo')],
-            ['label' => 'openssl',             'ok' => extension_loaded('openssl')],
-            ['label' => '.env schreibbar',     'ok' => is_writable(ROOT_PATH)],
-            ['label' => 'storage/ schreibbar', 'ok' => is_writable(ROOT_PATH . '/storage')
-                || !is_dir(ROOT_PATH . '/storage')
-                || mkdir(ROOT_PATH . '/storage', 0755, true)],
+            ['label' => 'PHP >= 8.3',                'ok' => version_compare(PHP_VERSION, '8.3.0', '>='),
+             'fix'   => 'PHP 8.3 oder höher wird benötigt. Bitte den Hoster kontaktieren.'],
+            ['label' => 'PDO MySQL Extension',       'ok' => extension_loaded('pdo_mysql'),
+             'fix'   => 'Die PHP-Erweiterung pdo_mysql ist nicht aktiv. Bitte den Hoster kontaktieren.'],
+            ['label' => 'GD / Imagick Extension',    'ok' => extension_loaded('gd') || extension_loaded('imagick'),
+             'fix'   => 'Die GD oder Imagick PHP-Erweiterung wird für Bildverarbeitung benötigt.'],
+            ['label' => 'mbstring Extension',        'ok' => extension_loaded('mbstring'),
+             'fix'   => 'Die mbstring PHP-Erweiterung fehlt.'],
+            ['label' => 'fileinfo Extension',        'ok' => extension_loaded('fileinfo'),
+             'fix'   => 'Die fileinfo PHP-Erweiterung fehlt.'],
+            ['label' => 'openssl Extension',         'ok' => extension_loaded('openssl'),
+             'fix'   => 'Die openssl PHP-Erweiterung fehlt.'],
+            ['label' => 'vendor/ Ordner vorhanden',  'ok' => is_dir(ROOT_PATH . '/vendor'),
+             'fix'   => 'Der vendor/-Ordner fehlt. Bitte die vollständige ZIP-Datei entpacken und alle Dateien inklusive vendor/ hochladen.'],
+            ['label' => 'Konfiguration schreibbar',  'ok' => is_writable(ROOT_PATH),
+             'fix'   => 'Das Hauptverzeichnis ist nicht schreibbar. Bitte die Berechtigungen auf 755 setzen.'],
+            ['label' => 'storage/ schreibbar',       'ok' => $storageOk,
+             'fix'   => 'Der storage/-Ordner ist nicht schreibbar. Bitte chmod 755 auf storage/ setzen.'],
         ];
     }
 
@@ -180,26 +201,40 @@ class InstallerController extends Controller
 
     private function writeEnvFile(string $host, int $port, string $database, string $username, string $password, string $appUrl = 'http://localhost', string $locale = 'de'): void
     {
-        $key  = bin2hex(random_bytes(32));
-        $env  = file_exists(ROOT_PATH . '/.env')
-            ? file_get_contents(ROOT_PATH . '/.env')
-            : file_get_contents(ROOT_PATH . '/.env.example');
+        $key = bin2hex(random_bytes(32));
 
-        $replacements = [
-            'APP_URL=http://localhost'  => "APP_URL={$appUrl}",
-            'APP_KEY='                  => "APP_KEY={$key}",
-            'APP_LOCALE=de'             => "APP_LOCALE={$locale}",
-            'DB_HOST=localhost'         => "DB_HOST={$host}",
-            'DB_PORT=3306'              => "DB_PORT={$port}",
-            'DB_DATABASE=tierphysio'    => "DB_DATABASE={$database}",
-            'DB_USERNAME=root'          => "DB_USERNAME={$username}",
-            'DB_PASSWORD='              => "DB_PASSWORD={$password}",
-            'INSTALLED=false'           => 'INSTALLED=true',
-        ];
+        $env = <<<ENV
+APP_NAME="Tierphysio Manager"
+APP_VERSION="3.0.0"
+APP_ENV=production
+APP_DEBUG=false
+APP_URL={$appUrl}
+APP_KEY={$key}
 
-        foreach ($replacements as $search => $replace) {
-            $env = str_replace($search, $replace, $env);
-        }
+DB_HOST={$host}
+DB_PORT={$port}
+DB_DATABASE={$database}
+DB_USERNAME={$username}
+DB_PASSWORD={$password}
+
+SESSION_LIFETIME=120
+SESSION_SECURE=false
+
+MAIL_DRIVER=smtp
+MAIL_HOST=localhost
+MAIL_PORT=587
+MAIL_USERNAME=
+MAIL_PASSWORD=
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS=noreply@{$host}
+MAIL_FROM_NAME="Tierphysio Manager"
+
+UPLOAD_MAX_SIZE=10485760
+
+APP_LOCALE={$locale}
+INSTALLED=true
+DB_VERSION=0
+ENV;
 
         file_put_contents(ROOT_PATH . '/.env', $env);
     }

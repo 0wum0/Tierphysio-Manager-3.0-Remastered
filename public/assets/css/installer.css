@@ -276,6 +276,18 @@ html { font-size: 16px; }
 .inst-req-item:last-child { border-bottom: none; }
 .inst-req-item:hover { background: rgba(255,255,255,0.02); }
 
+.inst-req-fix {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 1.25rem 0.6rem 3.25rem;
+  font-size: 0.78rem;
+  color: #fbbf24;
+  background: rgba(245,158,11,0.05);
+  border-bottom: 1px solid var(--glass-border);
+  line-height: 1.5;
+}
+
 .inst-req-left {
   display: flex;
   align-items: center;
