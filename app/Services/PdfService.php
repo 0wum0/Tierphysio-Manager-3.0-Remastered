@@ -134,6 +134,11 @@ class PdfService
             $pdf->SetXY(110, 90);
             $pdf->Cell(40, 5, 'Patient:', 0, 0, 'R');
             $pdf->Cell(40, 5, $patient['name'] . ' (' . ($patient['species'] ?? '') . ')', 0, 1, 'R');
+            if (!empty($patient['chip_number'])) {
+                $pdf->SetXY(110, 96);
+                $pdf->Cell(40, 5, 'Chip-Nr.:', 0, 0, 'R');
+                $pdf->Cell(40, 5, $patient['chip_number'], 0, 1, 'R');
+            }
         }
 
         // Positions Table
