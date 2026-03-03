@@ -77,6 +77,7 @@ class SettingsController extends Controller
             'pdf_primary_color', 'pdf_font', 'pdf_layout',
             'pdf_show_logo', 'pdf_show_patient', 'pdf_footer_text',
             'pdf_header_style', 'pdf_accent_color',
+            'calendar_cron_secret',
         ];
 
         $data = [];
