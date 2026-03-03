@@ -31,21 +31,27 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.btn:active,
-.lg-btn:active,
-.cal-nav-btn:active,
-.cal-view-btn:active,
-.header-btn:active,
-.modal-close:active,
-.dropdown-item:active {
-  transform: scale(0.93) !important;
-  transition: transform 0.10s cubic-bezier(0.4,0,0.2,1) !important;
+/* Pulse keyframe: kurz runter → über normal → zurück */
+@keyframes lg-pulse {
+  0%   { transform: scale(1);    }
+  30%  { transform: scale(0.91); }
+  65%  { transform: scale(1.06); }
+  100% { transform: scale(1);    }
 }
 
-/* Nav-Items etwas weniger stark */
-.nav-item:active {
-  transform: scale(0.96) !important;
-  transition: transform 0.10s cubic-bezier(0.4,0,0.2,1) !important;
+@keyframes lg-pulse-sm {
+  0%   { transform: scale(1);    }
+  30%  { transform: scale(0.94); }
+  65%  { transform: scale(1.04); }
+  100% { transform: scale(1);    }
+}
+
+.lg-pulsing {
+  animation: lg-pulse 0.35s cubic-bezier(0.4,0,0.2,1) forwards !important;
+}
+
+.lg-pulsing-sm {
+  animation: lg-pulse-sm 0.30s cubic-bezier(0.4,0,0.2,1) forwards !important;
 }
 
 /* Ripple-Welle */

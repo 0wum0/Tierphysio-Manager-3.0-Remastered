@@ -195,30 +195,38 @@ function updateSidebarToggle() {
 updateSidebarToggle();
 window.addEventListener('resize', updateSidebarToggle);
 
-/* ── Apple-style Ripple + Pulse ── */
+/* ── Apple-style Pulse + Ripple ── */
 (function() {
-    const RIPPLE_SELECTOR = [
-        '.btn', '.lg-btn', '.cal-nav-btn', '.cal-view-btn',
-        '.header-btn', '.modal-close', '.dropdown-item', '.nav-item'
-    ].join(',');
+    const BTN_SEL  = '.btn, .lg-btn, .cal-nav-btn, .cal-view-btn, .header-btn, .modal-close, .dropdown-item';
+    const NAV_SEL  = '.nav-item';
+    const ALL_SEL  = BTN_SEL + ', ' + NAV_SEL;
+
+    function triggerPulse(el) {
+        const cls = el.matches(NAV_SEL) ? 'lg-pulsing-sm' : 'lg-pulsing';
+        el.classList.remove('lg-pulsing', 'lg-pulsing-sm');
+        /* force reflow so animation restarts if clicked again quickly */
+        void el.offsetWidth;
+        el.classList.add(cls);
+        el.addEventListener('animationend', () => el.classList.remove(cls), { once: true });
+    }
 
     function spawnRipple(el, e) {
+        if (!el.matches(BTN_SEL)) return;
         const rect = el.getBoundingClientRect();
-        const x    = (e.clientX ?? rect.left + rect.width  / 2) - rect.left;
-        const y    = (e.clientY ?? rect.top  + rect.height / 2) - rect.top;
-
+        const x    = e.clientX - rect.left;
+        const y    = e.clientY - rect.top;
         const wave = document.createElement('span');
         wave.className = 'lg-ripple-wave';
         wave.style.left = x + 'px';
         wave.style.top  = y + 'px';
         el.appendChild(wave);
-
         wave.addEventListener('animationend', () => wave.remove(), { once: true });
     }
 
     document.addEventListener('pointerdown', function(e) {
-        const el = e.target.closest(RIPPLE_SELECTOR);
+        const el = e.target.closest(ALL_SEL);
         if (!el || el.disabled || el.hasAttribute('data-no-ripple')) return;
+        triggerPulse(el);
         spawnRipple(el, e);
     }, { passive: true });
 })();
