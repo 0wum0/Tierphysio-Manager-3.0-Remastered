@@ -359,6 +359,7 @@ const CustomSelect = {
         /* Read styles BEFORE hiding */
         const selStyles   = window.getComputedStyle(sel);
         const selInlineW  = sel.style.width;
+        const selInlineFlex = sel.style.flex;
         const selWidth    = selInlineW || selStyles.width || 'auto';
         const selFontSize = selStyles.fontSize || '0.9rem';
         const selPadT     = selStyles.paddingTop    || '0.65rem';
@@ -369,7 +370,9 @@ const CustomSelect = {
 
         const wrapper = document.createElement('div');
         wrapper.className = 'cs-wrapper';
-        wrapper.style.cssText = `position:relative;display:inline-block;width:${selWidth};vertical-align:middle;`;
+        let wrapperCSS = `position:relative;display:inline-block;width:${selWidth};vertical-align:middle;`;
+        if (selInlineFlex) wrapperCSS += `flex:${selInlineFlex};`;
+        wrapper.style.cssText = wrapperCSS;
         if (sel.disabled) wrapper.classList.add('cs-disabled');
 
         const trigger = document.createElement('div');
