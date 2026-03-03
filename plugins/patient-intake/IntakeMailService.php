@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace Plugins\PatientIntake;
 
-use App\Core\Config;
+use App\Repositories\SettingsRepository;
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 class IntakeMailService
 {
-    public function __construct(private readonly Config $config) {}
+    public function __construct(private readonly SettingsRepository $settings) {}
 
     public function sendNewSubmissionNotification(array $submission): bool
     {
-        $to      = $this->config->get('mail.from_address', '');
-        $toName  = $this->config->get('mail.from_name', 'Tierphysio Manager');
+        $to      = $this->settings->get('mail_from_address', $this->settings->get('company_email', ''));
+        $toName  = $this->settings->get('mail_from_name', 'Tierphysio Manager');
 
         if (empty($to)) {
             return false;
@@ -22,8 +24,8 @@ class IntakeMailService
         $subject = '🐾 Neue Patientenanmeldung: ' . $submission['patient_name']
             . ' (' . $submission['owner_first_name'] . ' ' . $submission['owner_last_name'] . ')';
 
-        $appName = $this->config->get('app.name', 'Tierphysio Manager');
-        $appUrl  = rtrim($this->config->get('app.url', ''), '/');
+        $appName = $this->settings->get('company_name', 'Tierphysio Manager');
+        $appUrl  = rtrim($_ENV['APP_URL'] ?? '', '/');
         $inboxUrl = $appUrl . '/eingangsmeldungen';
 
         $date = date('d.m.Y H:i', strtotime($submission['created_at']));
@@ -42,35 +44,32 @@ class IntakeMailService
         }
 
         $toName  = $submission['owner_first_name'] . ' ' . $submission['owner_last_name'];
-        $subject = 'Ihre Anmeldung bei ' . $this->config->get('app.name', 'Tierphysio Manager');
-
-        $appName = $this->config->get('app.name', 'Tierphysio Manager');
-        $html = $this->buildConfirmationHtml($submission, $appName);
-        $text = $this->buildConfirmationText($submission, $appName);
+        $appName = $this->settings->get('company_name', 'Tierphysio Manager');
+        $subject = 'Ihre Anmeldung bei ' . $appName;
+        $html  = $this->buildConfirmationHtml($submission, $appName);
+        $text  = $this->buildConfirmationText($submission, $appName);
 
         return $this->sendMail($to, $toName, $subject, $html, $text);
     }
 
     private function sendMail(string $to, string $toName, string $subject, string $html, string $text): bool
     {
-        $driver = $this->config->get('mail.driver', 'smtp');
-
-        if ($driver === 'smtp') {
+        $host = $this->settings->get('smtp_host', '');
+        if (!empty($host)) {
             return $this->sendSmtp($to, $toName, $subject, $html, $text);
         }
-
         return $this->sendPhpMail($to, $toName, $subject, $html, $text);
     }
 
     private function sendSmtp(string $to, string $toName, string $subject, string $html, string $text): bool
     {
-        $host       = $this->config->get('mail.host', 'localhost');
-        $port       = (int)$this->config->get('mail.port', 587);
-        $username   = $this->config->get('mail.username', '');
-        $password   = $this->config->get('mail.password', '');
-        $encryption = $this->config->get('mail.encryption', 'tls');
-        $fromAddr   = $this->config->get('mail.from_address', $username);
-        $fromName   = $this->config->get('mail.from_name', 'Tierphysio Manager');
+        $host       = $this->settings->get('smtp_host', 'localhost');
+        $port       = (int)$this->settings->get('smtp_port', 587);
+        $username   = $this->settings->get('smtp_username', '');
+        $password   = $this->settings->get('smtp_password', '');
+        $encryption = $this->settings->get('smtp_encryption', 'tls');
+        $fromAddr   = $this->settings->get('mail_from_address', $username);
+        $fromName   = $this->settings->get('mail_from_name', 'Tierphysio Manager');
 
         if (class_exists(\PHPMailer\PHPMailer\PHPMailer::class)) {
             try {
@@ -109,8 +108,8 @@ class IntakeMailService
 
     private function sendPhpMail(string $to, string $toName, string $subject, string $html, string $text): bool
     {
-        $fromAddr = $this->config->get('mail.from_address', 'noreply@localhost');
-        $fromName = $this->config->get('mail.from_name', 'Tierphysio Manager');
+        $fromAddr = $this->settings->get('mail_from_address', '');
+        $fromName = $this->settings->get('mail_from_name', 'Tierphysio Manager');
         $boundary = md5(uniqid());
 
         $headers  = "From: =?UTF-8?B?" . base64_encode($fromName) . "?= <$fromAddr>\r\n";

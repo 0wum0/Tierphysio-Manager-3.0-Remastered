@@ -4,29 +4,31 @@ declare(strict_types=1);
 
 namespace Plugins\PatientInvite;
 
-use App\Core\Config;
+use App\Repositories\SettingsRepository;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
 class InviteMailService
 {
-    public function __construct(private readonly Config $config) {}
+    public function __construct(private readonly SettingsRepository $settings) {}
 
     public function sendInviteEmail(string $toEmail, string $inviteUrl, string $note = ''): bool
     {
-        $fromAddress = $this->config->get('mail.from_address', '');
-        $fromName    = $this->config->get('mail.from_name', 'Tierphysio Manager');
-        $appName     = $this->config->get('app.name', 'Tierphysio Manager');
+        $fromAddress = $this->settings->get('mail_from_address', '');
+        $fromName    = $this->settings->get('mail_from_name', 'Tierphysio Manager');
+        $appName     = $this->settings->get('company_name', 'Tierphysio Manager');
+
+        if (empty($fromAddress)) return false;
 
         $subject = "Ihre Einladung zur Anmeldung — {$appName}";
         $html    = $this->buildEmailHtml($inviteUrl, $note, $appName, $fromName);
         $plain   = $this->buildEmailPlain($inviteUrl, $note, $appName);
 
-        if ($this->config->get('mail.driver') === 'smtp' && !empty($fromAddress)) {
+        $smtpHost = $this->settings->get('smtp_host', '');
+        if (!empty($smtpHost)) {
             return $this->sendViaSMTP($toEmail, $subject, $html, $plain);
         }
 
-        if (empty($fromAddress)) return false;
         $headers  = "From: {$fromName} <{$fromAddress}>\r\n";
         $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
         return mail($toEmail, $subject, $html, $headers);
@@ -44,16 +46,17 @@ class InviteMailService
         try {
             $mail = new PHPMailer(true);
             $mail->isSMTP();
-            $mail->Host       = $this->config->get('mail.host');
-            $mail->SMTPAuth   = true;
-            $mail->Username   = $this->config->get('mail.username');
-            $mail->Password   = $this->config->get('mail.password');
-            $mail->SMTPSecure = $this->config->get('mail.encryption', 'tls');
-            $mail->Port       = (int)$this->config->get('mail.port', 587);
-            $mail->CharSet    = 'UTF-8';
+            $mail->Host     = $this->settings->get('smtp_host', 'localhost');
+            $mail->Username = $this->settings->get('smtp_username', '');
+            $mail->Password = $this->settings->get('smtp_password', '');
+            $mail->SMTPAuth = !empty($mail->Username);
+            $enc = $this->settings->get('smtp_encryption', 'tls');
+            $mail->SMTPSecure = $enc === 'ssl' ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port     = (int)$this->settings->get('smtp_port', 587);
+            $mail->CharSet  = 'UTF-8';
 
-            $fromAddress = $this->config->get('mail.from_address');
-            $fromName    = $this->config->get('mail.from_name', 'Tierphysio Manager');
+            $fromAddress = $this->settings->get('mail_from_address', '');
+            $fromName    = $this->settings->get('mail_from_name', 'Tierphysio Manager');
             $mail->setFrom($fromAddress, $fromName);
             $mail->addAddress($to);
 

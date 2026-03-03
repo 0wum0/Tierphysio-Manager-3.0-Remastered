@@ -11,22 +11,26 @@ use App\Core\Translator;
 use App\Core\View;
 use App\Core\Database;
 use App\Core\Application;
+use App\Repositories\SettingsRepository;
 
 class InviteController extends Controller
 {
     private InviteRepository  $repo;
     private InviteMailService $mailer;
+    private SettingsRepository $settingsRepository;
 
     public function __construct(
         View $view,
         Session $session,
         Config $config,
         Translator $translator,
-        Database $db
+        Database $db,
+        SettingsRepository $settingsRepository
     ) {
         parent::__construct($view, $session, $config, $translator);
-        $this->repo   = new InviteRepository($db);
-        $this->mailer = new InviteMailService($config);
+        $this->repo               = new InviteRepository($db);
+        $this->settingsRepository = $settingsRepository;
+        $this->mailer             = new InviteMailService($settingsRepository);
     }
 
     /* ─────────────────────────────────────────────────────────
@@ -89,7 +93,7 @@ class InviteController extends Controller
             'created_at' => date('Y-m-d H:i:s'),
         ]);
 
-        $appUrl    = rtrim($this->config->get('app.url', ''), '/');
+        $appUrl    = rtrim($_ENV['APP_URL'] ?? '', '/');
         $inviteUrl = $appUrl . '/einladung/' . $token;
 
         /* Send */
@@ -115,9 +119,9 @@ class InviteController extends Controller
             return;
         }
 
-        $appUrl    = rtrim($this->config->get('app.url', ''), '/');
+        $appUrl    = rtrim($_ENV['APP_URL'] ?? '', '/');
         $inviteUrl = $appUrl . '/einladung/' . $invite['token'];
-        $appName   = $this->config->get('app.name', 'Tierphysio Manager');
+        $appName   = $this->settingsRepository->get('company_name', 'Tierphysio Manager');
         $waUrl     = $this->mailer->buildWhatsAppUrl($invite['phone'], $inviteUrl, $appName);
 
         $this->json(['ok' => true, 'url' => $waUrl]);
@@ -130,7 +134,7 @@ class InviteController extends Controller
             $this->json(['ok' => false, 'error' => 'Nicht gefunden'], 404);
             return;
         }
-        $appUrl    = rtrim($this->config->get('app.url', ''), '/');
+        $appUrl    = rtrim($_ENV['APP_URL'] ?? '', '/');
         $inviteUrl = $appUrl . '/einladung/' . $invite['token'];
         $this->json(['ok' => true, 'url' => $inviteUrl]);
     }
@@ -331,7 +335,7 @@ class InviteController extends Controller
     {
         $this->view->render($template, array_merge([
             'csrf_token' => $this->session->generateCsrfToken(),
-            'app_name'   => $this->config->get('app.name', 'Tierphysio Manager'),
+            'app_name'   => $this->settingsRepository->get('company_name', 'Tierphysio Manager'),
         ], $data));
     }
 

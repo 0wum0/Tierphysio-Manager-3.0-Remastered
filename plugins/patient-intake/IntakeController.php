@@ -10,6 +10,7 @@ use App\Core\Session;
 use App\Core\Translator;
 use App\Core\View;
 use App\Core\Database;
+use App\Repositories\SettingsRepository;
 
 class IntakeController extends Controller
 {
@@ -21,11 +22,12 @@ class IntakeController extends Controller
         Session $session,
         Config $config,
         Translator $translator,
-        Database $db
+        Database $db,
+        SettingsRepository $settingsRepository
     ) {
         parent::__construct($view, $session, $config, $translator);
         $this->repo   = new IntakeRepository($db);
-        $this->mailer = new IntakeMailService($config);
+        $this->mailer = new IntakeMailService($settingsRepository);
     }
 
     /* ─────────────────────────────────────────────────────────
