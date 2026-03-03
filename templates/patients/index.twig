@@ -1,5 +1,45 @@
 {% extends 'layouts/base.twig' %}
 
+{% block head %}
+<link href="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css" rel="stylesheet">
+<style>
+/* Quill Editor — App-Theme Anpassung */
+.ql-toolbar.ql-snow {
+    background: var(--bg-elevated);
+    border: 1px solid var(--glass-border) !important;
+    border-bottom: none !important;
+    border-radius: var(--radius) var(--radius) 0 0;
+    padding: 0.35rem 0.5rem;
+}
+.ql-toolbar.ql-snow .ql-stroke { stroke: var(--text-secondary); }
+.ql-toolbar.ql-snow .ql-fill  { fill:   var(--text-secondary); }
+.ql-toolbar.ql-snow .ql-picker-label { color: var(--text-secondary); }
+.ql-toolbar.ql-snow button:hover .ql-stroke,
+.ql-toolbar.ql-snow .ql-active .ql-stroke { stroke: var(--accent); }
+.ql-toolbar.ql-snow button:hover .ql-fill,
+.ql-toolbar.ql-snow .ql-active .ql-fill  { fill:   var(--accent); }
+.ql-container.ql-snow {
+    background: var(--bg-surface);
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 0 0 var(--radius) var(--radius);
+    font-family: inherit;
+    font-size: 0.83rem;
+}
+.ql-editor {
+    min-height: 80px;
+    max-height: 220px;
+    color: var(--text-primary);
+    padding: 0.5rem 0.75rem;
+    line-height: 1.55;
+}
+.ql-editor.ql-blank::before {
+    color: var(--text-muted);
+    font-style: normal;
+}
+.ql-editor p { margin: 0; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
     <div>
@@ -115,7 +155,8 @@
                     </div>
                     <div style="margin-bottom:0.75rem;">
                         <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.2rem;">Inhalt</label>
-                        <textarea name="content" class="form-control" rows="2" placeholder="Notizen, Befunde, Behandlungsschritte..." style="font-size:0.82rem;padding:0.4rem 0.5rem;resize:vertical;"></textarea>
+                        <div id="pd-quill-editor"></div>
+                        <input type="hidden" name="content" id="pd-content-input">
                     </div>
                     <button type="submit" class="btn btn-primary btn-sm" style="margin-top:0.25rem;">
                         <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -342,9 +383,39 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js"></script>
 <script>
 (function () {
 'use strict';
+
+/* ── Quill Rich-Text-Editor ───────────────────────────────── */
+let quillEditor = null;
+function initQuill() {
+    if (quillEditor) return;
+    const el = document.getElementById('pd-quill-editor');
+    if (!el) return;
+    quillEditor = new Quill(el, {
+        theme: 'snow',
+        placeholder: 'Notizen, Befunde, Behandlungsschritte...',
+        modules: {
+            toolbar: [
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ list: 'ordered' }, { list: 'bullet' }],
+                ['blockquote'],
+                [{ color: [] }],
+                ['clean']
+            ]
+        }
+    });
+}
+/* Wire hidden input before submit */
+document.addEventListener('submit', function (e) {
+    if (!quillEditor) return;
+    const form = e.target;
+    if (form.id !== 'pd-timeline-form') return;
+    const hidden = document.getElementById('pd-content-input');
+    if (hidden) hidden.value = quillEditor.root.innerHTML;
+}, true);
 
 /* ── Owner dropdown for new-patient modal ─────────────────── */
 const ownerSelect = document.getElementById('p-owner');
@@ -522,7 +593,7 @@ function renderTimeline(timeline, patientId) {
                     </div>
                 </div>
                 ${e.title ? `<div class="timeline-title">${esc(e.title)}</div>` : ''}
-                ${e.content ? `<div class="timeline-content">${esc(e.content)}</div>` : ''}
+                ${e.content ? `<div class="timeline-content ql-editor" style="padding:0;min-height:0;">${e.content}</div>` : ''}
                 ${attachHtml}
             </div>
         </div>`;
@@ -542,6 +613,8 @@ function renderTimeline(timeline, patientId) {
 function openPatientModal(patientId) {
     resetModal();
     Modal.open('modal-patient-detail');
+    initQuill();
+    if (quillEditor) quillEditor.setContents([]);
 
     fetch('/patienten/' + patientId + '/json')
         .then(function (r) { return r.json(); })
