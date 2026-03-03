@@ -86,7 +86,7 @@
                     <div class="position-row" style="display:grid;grid-template-columns:1fr 140px 80px 110px 80px auto;gap:0.5rem;margin-bottom:0.5rem;align-items:center;">
                         <input type="text" name="position_description[]" class="form-control" placeholder="{{ t('invoices.description') }}" required>
                         <select name="position_treatment_type[]" class="form-control" style="font-size:0.85rem;" data-cs-width="140px">
-                            <option value="">— keine —</option>
+                            <option value="" selected>— keine —</option>
                             {% for tt in treatment_types %}
                                 <option value="{{ tt.id }}" data-price="{{ tt.price }}" data-color="{{ tt.color }}">{{ tt.name }}</option>
                             {% endfor %}
@@ -157,7 +157,7 @@
     <div class="position-row" style="display:grid;grid-template-columns:1fr 140px 80px 110px 80px auto;gap:0.5rem;margin-bottom:0.5rem;align-items:center;">
         <input type="text" name="position_description[]" class="form-control" placeholder="{{ t('invoices.description') }}" required>
         <select name="position_treatment_type[]" class="form-control" style="font-size:0.85rem;" data-cs-width="140px">
-            <option value="">— keine —</option>
+            <option value="" selected>— keine —</option>
             {% for tt in treatment_types %}
                 <option value="{{ tt.id }}" data-price="{{ tt.price }}" data-color="{{ tt.color }}">{{ tt.name }}</option>
             {% endfor %}

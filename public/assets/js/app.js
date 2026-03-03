@@ -177,6 +177,9 @@ const InvoicePositions = {
         if (!container || !template) return;
         const clone = template.content.cloneNode(true);
         container.appendChild(clone);
+        /* Init custom selects in the newly added row */
+        const newRow = container.lastElementChild;
+        if (typeof CustomSelect !== 'undefined') CustomSelect.refresh(newRow);
     },
 
     updateRowTotal(row) {
@@ -540,10 +543,10 @@ document.addEventListener('DOMContentLoaded', () => {
     Dropdown.init();
     FlashMessages.init();
     ConfirmDelete.init();
-    InvoicePositions.init();
     DashboardChart.init();
     InstallerDB.init();
     CustomSelect.init();
+    InvoicePositions.init();
 
     /* Close all custom selects on outside click */
     document.addEventListener('click', () => {
