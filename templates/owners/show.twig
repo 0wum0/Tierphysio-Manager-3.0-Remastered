@@ -98,7 +98,7 @@
                         <a href="/patienten/{{ animal.id }}" class="patient-card">
                             <div class="patient-card-image" style="height:100px;">
                                 {% if animal.photo %}
-                                    <img src="/storage/patients/{{ animal.id }}/{{ animal.photo }}" alt="{{ animal.name }}">
+                                    <img src="/patienten/{{ animal.id }}/foto/{{ animal.photo }}" alt="{{ animal.name }}">
                                 {% else %}
                                     <div class="patient-card-image-placeholder"><svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="1.5" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
                                 {% endif %}

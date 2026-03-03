@@ -33,6 +33,7 @@ $router->post('/patienten/{id}/foto', [PatientController::class, 'uploadPhoto'],
 $router->post('/patienten/{id}/timeline', [PatientController::class, 'addTimelineEntry'], ['auth']);
 $router->post('/patienten/{id}/timeline/{entryId}/loeschen', [PatientController::class, 'deleteTimelineEntry'], ['auth']);
 $router->get('/patienten/{id}/dokumente/{file}', [PatientController::class, 'downloadDocument'], ['auth']);
+$router->get('/patienten/{id}/foto/{file}', [PatientController::class, 'servePhoto'], ['auth']);
 $router->post('/patienten/{id}/dokumente', [PatientController::class, 'uploadDocument'], ['auth']);
 
 $router->get('/tierhalter', [OwnerController::class, 'index'], ['auth']);

@@ -239,4 +239,27 @@ class PatientController extends Controller
         readfile($path);
         exit;
     }
+
+    public function servePhoto(array $params = []): void
+    {
+        $file = basename($this->sanitize($params['file']));
+        $path = STORAGE_PATH . '/patients/' . (int)$params['id'] . '/' . $file;
+
+        if (!file_exists($path) || !is_file($path)) {
+            $this->abort(404);
+        }
+
+        $finfo    = new \finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($path);
+
+        if (!str_starts_with($mimeType, 'image/')) {
+            $this->abort(403);
+        }
+
+        header('Content-Type: ' . $mimeType);
+        header('Content-Length: ' . filesize($path));
+        header('Cache-Control: public, max-age=86400');
+        readfile($path);
+        exit;
+    }
 }
