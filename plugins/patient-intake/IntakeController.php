@@ -147,13 +147,13 @@ class IntakeController extends Controller
             $db  = $app->getContainer()->get(Database::class);
 
             /* 1. Find or create owner */
-            $ownerRows = $db->query(
+            $existingOwner = $db->fetch(
                 "SELECT id FROM owners WHERE email = ? LIMIT 1",
                 [$submission['owner_email']]
             );
 
-            if (!empty($ownerRows)) {
-                $ownerId = (int)$ownerRows[0]['id'];
+            if ($existingOwner) {
+                $ownerId = (int)$existingOwner['id'];
             } else {
                 $db->execute(
                     "INSERT INTO owners (first_name, last_name, email, phone, street, zip, city, created_at, updated_at)
