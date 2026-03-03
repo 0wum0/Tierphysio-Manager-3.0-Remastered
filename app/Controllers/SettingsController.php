@@ -31,11 +31,25 @@ class SettingsController extends Controller
 
     public function index(array $params = []): void
     {
-        $settings = $this->settingsService->all();
+        $settings        = $this->settingsService->all();
+        $users           = $this->userRepository->findAll();
+        $plugins         = $this->pluginManager->getAllAvailablePlugins();
+        $currentVersion  = $this->migrationService->getCurrentVersion();
+        $latestVersion   = $this->migrationService->getLatestVersion();
+        $pendingMigrations = $this->migrationService->getPendingMigrations();
 
         $this->render('settings/index.twig', [
-            'page_title' => $this->translator->trans('nav.settings'),
-            'settings'   => $settings,
+            'page_title'      => $this->translator->trans('nav.settings'),
+            'settings'        => $settings,
+            'users'           => $users,
+            'plugins'         => $plugins,
+            'current_version' => $currentVersion,
+            'latest_version'  => $latestVersion,
+            'pending'         => $pendingMigrations,
+            'up_to_date'      => empty($pendingMigrations),
+            'php_version'     => PHP_VERSION,
+            'app_env'         => $this->config->get('app.env', 'production'),
+            'active_tab'      => $params['tab'] ?? ($_GET['tab'] ?? 'firma'),
         ]);
     }
 
