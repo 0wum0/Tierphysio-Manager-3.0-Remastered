@@ -6,8 +6,8 @@ RewriteRule ^(\.env|composer\.(json|lock)|\.git) - [F,L]
 RewriteRule ^(app|lang|migrations|templates|plugins)/ - [F,L]
 
 # Serve storage/uploads/ and storage/patients/ directly (images, logos)
-RewriteCond %{DOCUMENT_ROOT}/%1 -f
-RewriteRule ^(storage/(?:uploads|patients)/.+)$ $1 [L]
+RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} -f
+RewriteRule ^storage/(uploads|patients)/.+ - [L]
 
 # Serve static files from public/ directly
 RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
