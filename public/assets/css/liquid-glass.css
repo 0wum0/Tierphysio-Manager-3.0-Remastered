@@ -13,16 +13,21 @@
    Apple-style Click Animations
    ============================================================ */
 
-/* Scale-pulse beim Klicken — wie iOS */
+/* Ripple-Containment — KEIN inline-style per JS nötig */
 .btn,
-.nav-item,
 .lg-btn,
 .cal-nav-btn,
 .cal-view-btn,
 .header-btn,
 .modal-close,
-.dropdown-item,
-button:not([data-no-pulse]) {
+.dropdown-item {
+  position: relative !important;
+  overflow: hidden !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Nav-item: kein overflow:hidden (würde Tooltip/Badge abschneiden) */
+.nav-item {
   -webkit-tap-highlight-color: transparent;
 }
 
