@@ -12,6 +12,7 @@ use App\Core\View;
 use App\Core\Database;
 use App\Repositories\PatientRepository;
 use App\Repositories\OwnerRepository;
+use App\Repositories\SettingsRepository;
 use App\Repositories\TreatmentTypeRepository;
 use App\Repositories\UserRepository;
 use App\Services\MailService;
@@ -27,7 +28,8 @@ class CalendarController extends Controller
         private readonly PatientRepository $patientRepository,
         private readonly OwnerRepository $ownerRepository,
         private readonly UserRepository $userRepository,
-        private readonly MailService $mailService
+        private readonly MailService $mailService,
+        private readonly SettingsRepository $settingsRepository
     ) {
         parent::__construct($view, $session, $config, $translator);
     }
@@ -287,6 +289,31 @@ class CalendarController extends Controller
 
         $this->session->flash('error', 'Fehler beim Erstellen des Termins.');
         $this->redirect('/kalender/warteliste');
+    }
+
+    /* ── Cron: send pending reminders ── */
+    public function cronReminders(array $params = []): void
+    {
+        $secret = $this->settingsRepository->get('calendar_cron_secret', '');
+        $token  = $_GET['token'] ?? ($_SERVER['HTTP_X_CRON_TOKEN'] ?? '');
+
+        if (empty($secret) || !hash_equals($secret, $token)) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Unauthorized']);
+            exit;
+        }
+
+        $reminderService = new ReminderService(
+            $this->appointmentRepository,
+            $this->mailService,
+            $this->settingsRepository
+        );
+
+        $result = $reminderService->processPending();
+
+        header('Content-Type: application/json');
+        echo json_encode(array_merge($result, ['ok' => true, 'time' => date('c')]));
+        exit;
     }
 
     /* ── Create invoice from appointment ── */

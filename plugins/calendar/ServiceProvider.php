@@ -51,6 +51,9 @@ class ServiceProvider
         $router->post('/kalender/ical-import',       [CalendarController::class, 'icalImport'],      ['auth']);
         $router->post('/kalender/{id}/rechnung',     [CalendarController::class, 'createInvoice'],   ['auth']);
 
+        /* Cron endpoint - no auth middleware, secured by token */
+        $router->get('/kalender/cron/erinnerungen',  [CalendarController::class, 'cronReminders'],   []);
+
         /* JSON API */
         $router->get('/api/kalender/events',         [CalendarController::class, 'apiEvents'],       ['auth']);
         $router->get('/api/kalender/events/{id}',    [CalendarController::class, 'apiShow'],         ['auth']);
