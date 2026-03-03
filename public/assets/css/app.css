@@ -4,9 +4,9 @@
 
 :root {
   /* Dark Theme (default) */
-  --bg-base:         #0a0a14;
-  --bg-surface:      #0f0f1e;
-  --bg-elevated:     #141428;
+  --bg-base:         #080818;
+  --bg-surface:      #0d0d20;
+  --bg-elevated:     #12122a;
   --glass-bg:        rgba(255,255,255,0.04);
   --glass-bg-hover:  rgba(255,255,255,0.07);
   --glass-border:    rgba(255,255,255,0.08);
@@ -67,7 +67,11 @@ html { font-size: 16px; scroll-behavior: smooth; }
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: var(--bg-base);
+  background:
+    radial-gradient(ellipse 120% 80% at 0%   0%,   #0e1235 0%, transparent 55%),
+    radial-gradient(ellipse 100% 70% at 100% 100%, #150d2e 0%, transparent 55%),
+    radial-gradient(ellipse 80%  60% at 50%  50%,  #090920 0%, transparent 70%),
+    #07070f;
   color: var(--text-primary);
   min-height: 100vh;
   overflow-x: hidden;
@@ -79,11 +83,11 @@ body::before {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse 900px 700px at 15%  8%,  rgba(79,124,255,0.13) 0%, transparent 65%),
-    radial-gradient(ellipse 700px 600px at 85% 85%,  rgba(168,85,247,0.11) 0%, transparent 65%),
-    radial-gradient(ellipse 500px 400px at 60% 35%,  rgba(6,182,212,0.07)  0%, transparent 65%),
-    radial-gradient(ellipse 400px 350px at 90% 15%,  rgba(168,85,247,0.07) 0%, transparent 60%),
-    radial-gradient(ellipse 300px 250px at 10% 75%,  rgba(79,124,255,0.06) 0%, transparent 60%);
+    radial-gradient(ellipse 900px 750px at 10%   5%,  rgba(59,100,255,0.22)  0%, transparent 60%),
+    radial-gradient(ellipse 700px 600px at 88%  88%,  rgba(140,60,240,0.18)  0%, transparent 60%),
+    radial-gradient(ellipse 500px 420px at 55%  35%,  rgba(0,170,210,0.10)   0%, transparent 60%),
+    radial-gradient(ellipse 400px 360px at 92%  12%,  rgba(160,70,255,0.12)  0%, transparent 58%),
+    radial-gradient(ellipse 320px 260px at  8%  78%,  rgba(59,100,255,0.10)  0%, transparent 58%);
   pointer-events: none;
   z-index: 0;
   animation: bg-drift 28s ease-in-out infinite alternate;

@@ -115,21 +115,21 @@ body::after {
 /* ── CSS Custom Properties ── */
 :root {
   /* Liquid Glass Tokens */
-  --lg-blur:            28px;
-  --lg-saturate:        160%;
-  --lg-brightness:      1.04;
+  --lg-blur:            36px;
+  --lg-saturate:        200%;
+  --lg-brightness:      1.10;
 
-  /* Prismatic edge — subtiler Regenbogen-Rand */
-  --lg-edge-light:      rgba(255,255,255,0.55);
-  --lg-edge-shadow:     rgba(0,0,0,0.18);
+  /* Prismatic edge */
+  --lg-edge-light:      rgba(255,255,255,0.70);
+  --lg-edge-shadow:     rgba(0,0,0,0.20);
 
   /* Inner glow */
-  --lg-inner-glow:      rgba(255,255,255,0.10);
-  --lg-inner-glow-top:  rgba(255,255,255,0.22);
+  --lg-inner-glow:      rgba(255,255,255,0.14);
+  --lg-inner-glow-top:  rgba(255,255,255,0.32);
 
-  /* Tint (leichter Blau-Lila-Schimmer wie Apple) */
-  --lg-tint:            rgba(120,160,255,0.07);
-  --lg-tint-hover:      rgba(120,160,255,0.11);
+  /* Tint — sichtbarer Blau-Lila-Schimmer */
+  --lg-tint:            rgba(100,140,255,0.10);
+  --lg-tint-hover:      rgba(100,140,255,0.16);
 
   /* Radii */
   --lg-radius-sm:   14px;
@@ -379,16 +379,18 @@ body::after {
    ============================================================ */
 .glass-card {
   position: relative;
-  backdrop-filter: blur(28px) saturate(160%) brightness(1.04) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(160%) brightness(1.04) !important;
-  background: var(--lg-tint) !important;
-  border: 1px solid rgba(255,255,255,0.16) !important;
+  backdrop-filter: blur(36px) saturate(200%) brightness(1.10) !important;
+  -webkit-backdrop-filter: blur(36px) saturate(200%) brightness(1.10) !important;
+  background: rgba(100,140,255,0.08) !important;
+  border: 1px solid rgba(255,255,255,0.20) !important;
   border-radius: var(--lg-radius-lg) !important;
   box-shadow:
-    inset 0  1px 0    rgba(255,255,255,0.20),
-    inset 0 -1px 0    rgba(0,0,0,0.08),
-    0 8px 32px rgba(0,0,0,0.28),
-    0 2px  8px rgba(0,0,0,0.15) !important;
+    inset 0  1px 0    rgba(255,255,255,0.32),
+    inset 0 -1px 0    rgba(0,0,0,0.10),
+    inset 1px 0 0     rgba(255,255,255,0.10),
+    inset -1px 0 0    rgba(255,255,255,0.10),
+    0 12px 40px rgba(0,0,0,0.40),
+    0  2px 10px rgba(0,0,0,0.20) !important;
   overflow: hidden;
 }
 
@@ -420,13 +422,15 @@ body::after {
 }
 
 .glass-card:hover {
-  background: var(--lg-tint-hover) !important;
-  border-color: rgba(255,255,255,0.26) !important;
+  background: rgba(100,140,255,0.14) !important;
+  border-color: rgba(255,255,255,0.32) !important;
   box-shadow:
-    inset 0  1px 0    rgba(255,255,255,0.28),
-    inset 0 -1px 0    rgba(0,0,0,0.10),
-    0 16px 48px rgba(0,0,0,0.38),
-    0  4px 12px rgba(0,0,0,0.20) !important;
+    inset 0  1px 0    rgba(255,255,255,0.42),
+    inset 0 -1px 0    rgba(0,0,0,0.12),
+    inset 1px 0 0     rgba(255,255,255,0.14),
+    inset -1px 0 0    rgba(255,255,255,0.14),
+    0 20px 60px rgba(0,0,0,0.50),
+    0  4px 16px rgba(0,0,0,0.25) !important;
   transform: translateY(-2px);
 }
 
@@ -434,11 +438,11 @@ body::after {
    Override: Sidebar → Liquid Glass Panel
    ============================================================ */
 .sidebar {
-  background: rgba(8,8,20,0.65) !important;
-  backdrop-filter: blur(32px) saturate(180%) brightness(1.03) !important;
-  -webkit-backdrop-filter: blur(32px) saturate(180%) brightness(1.03) !important;
-  border-right: 1px solid rgba(255,255,255,0.10) !important;
-  box-shadow: 4px 0 40px rgba(0,0,0,0.40) !important;
+  background: rgba(8,8,28,0.55) !important;
+  backdrop-filter: blur(40px) saturate(220%) brightness(1.12) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(220%) brightness(1.12) !important;
+  border-right: 1px solid rgba(255,255,255,0.14) !important;
+  box-shadow: 4px 0 48px rgba(0,0,0,0.50) !important;
 }
 
 /* Prismatische rechte Kante der Sidebar */
@@ -463,29 +467,31 @@ body::after {
    Override: Top Header
    ============================================================ */
 .top-header {
-  background: rgba(8,8,20,0.60) !important;
-  backdrop-filter: blur(28px) saturate(170%) brightness(1.03) !important;
-  -webkit-backdrop-filter: blur(28px) saturate(170%) brightness(1.03) !important;
-  border-bottom: 1px solid rgba(255,255,255,0.09) !important;
+  background: rgba(8,8,28,0.50) !important;
+  backdrop-filter: blur(36px) saturate(200%) brightness(1.08) !important;
+  -webkit-backdrop-filter: blur(36px) saturate(200%) brightness(1.08) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.12) !important;
   box-shadow:
     inset 0 -1px 0 rgba(0,0,0,0.12),
-    0 4px 20px rgba(0,0,0,0.15) !important;
+    0 4px 24px rgba(0,0,0,0.20) !important;
 }
 
 /* ============================================================
    Override: Modals
    ============================================================ */
 .modal {
-  background: rgba(10,10,25,0.70) !important;
-  backdrop-filter: blur(40px) saturate(180%) brightness(1.05) !important;
-  -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(1.05) !important;
-  border: 1px solid rgba(255,255,255,0.16) !important;
+  background: rgba(8,8,28,0.62) !important;
+  backdrop-filter: blur(48px) saturate(220%) brightness(1.12) !important;
+  -webkit-backdrop-filter: blur(48px) saturate(220%) brightness(1.12) !important;
+  border: 1px solid rgba(255,255,255,0.22) !important;
   border-radius: var(--lg-radius-xl) !important;
   box-shadow:
-    inset 0  1px 0 rgba(255,255,255,0.22),
-    inset 0 -1px 0 rgba(0,0,0,0.12),
-    0 40px 100px rgba(0,0,0,0.60),
-    0  8px  24px rgba(0,0,0,0.35) !important;
+    inset 0  1px 0 rgba(255,255,255,0.35),
+    inset 0 -1px 0 rgba(0,0,0,0.15),
+    inset 1px 0 0  rgba(255,255,255,0.12),
+    inset -1px 0 0 rgba(255,255,255,0.12),
+    0 48px 120px rgba(0,0,0,0.70),
+    0  8px  28px rgba(0,0,0,0.40) !important;
   overflow: hidden;
 }
 
