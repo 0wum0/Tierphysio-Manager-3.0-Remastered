@@ -645,11 +645,11 @@
 </div>
 
 {# Edit Modal für Behandlungsart #}
-<div class="modal-overlay" id="modal-edit-tt" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+<div class="modal-overlay" id="modal-edit-tt" onclick="if(event.target===this)this.classList.remove('open')">
     <div class="modal">
         <div class="modal-header">
             <h2 class="modal-title">Behandlungsart bearbeiten</h2>
-            <button class="modal-close" onclick="document.getElementById('modal-edit-tt').style.display='none'">&times;</button>
+            <button class="modal-close" onclick="document.getElementById('modal-edit-tt').classList.remove('open')" type="button"><svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
         </div>
         <div class="modal-body">
             <form id="form-edit-tt" action="" method="POST">
@@ -683,7 +683,7 @@
                     </label>
                 </div>
                 <div class="flex gap-2 justify-end">
-                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-edit-tt').style.display='none'">Abbrechen</button>
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('modal-edit-tt').classList.remove('open')">Abbrechen</button>
                     <button type="submit" class="btn btn-primary">Speichern</button>
                 </div>
             </form>
@@ -943,7 +943,7 @@ function openEditTT(tt) {
     document.getElementById('ett-sort').value   = tt.sort_order || 0;
     document.getElementById('ett-desc').value   = tt.description || '';
     document.getElementById('ett-active').checked = tt.active == 1;
-    document.getElementById('modal-edit-tt').style.display = 'flex';
+    document.getElementById('modal-edit-tt').classList.add('open');
 }
 </script>
 
