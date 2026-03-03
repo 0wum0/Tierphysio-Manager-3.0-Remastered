@@ -128,6 +128,57 @@
             <div class="header-title">{% block header_title %}{{ page_title ?? app_name }}{% endblock %}</div>
 
             <div class="header-actions">
+
+                {# ── Notification Bell (patient-intake plugin) ── #}
+                {% if intake_unread_count is defined %}
+                <div class="dropdown" id="notif-dropdown-wrap">
+                    <button class="header-btn notif-bell-btn" data-dropdown="notif-menu" aria-label="Benachrichtigungen"
+                            style="position:relative;">
+                        <svg width="17" height="17" fill="none" viewBox="0 0 24 24">
+                            <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                  d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                            <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                  d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                        </svg>
+                        <span class="notif-badge" id="notif-badge"
+                              style="display:{% if intake_unread_count > 0 %}flex{% else %}none{% endif %};">
+                            {{ intake_unread_count > 9 ? '9+' : intake_unread_count }}
+                        </span>
+                    </button>
+                    <div class="dropdown-menu notif-menu" id="notif-menu" style="width:320px;right:0;left:auto;">
+                        <div style="padding:0.75rem 1rem 0.5rem;border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;">
+                            <span style="font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Neue Anmeldungen</span>
+                            {% if intake_unread_count > 0 %}
+                            <span style="background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:100px;padding:0.1rem 0.5rem;font-size:0.72rem;font-weight:700;">{{ intake_unread_count }}</span>
+                            {% endif %}
+                        </div>
+                        <div id="notif-list">
+                        {% if intake_latest is defined and intake_latest|length > 0 %}
+                            {% for item in intake_latest %}
+                            <a href="/eingangsmeldungen/{{ item.id }}" class="dropdown-item" style="flex-direction:column;align-items:flex-start;gap:0.15rem;padding:0.65rem 1rem;">
+                                <div style="display:flex;align-items:center;gap:0.5rem;width:100%;">
+                                    <span style="width:7px;height:7px;border-radius:50%;background:#ef4444;flex-shrink:0;animation:notif-pulse 2s infinite;"></span>
+                                    <strong style="font-size:0.85rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🐾 {{ item.patient_name }}</strong>
+                                    <span style="font-size:0.72rem;color:var(--text-muted);flex-shrink:0;">{{ item.created_at|datetime_de }}</span>
+                                </div>
+                                <span style="font-size:0.78rem;color:var(--text-muted);padding-left:1.1rem;">{{ item.owner_first_name }} {{ item.owner_last_name }} · hat eine Terminanfrage</span>
+                            </a>
+                            {% endfor %}
+                        {% else %}
+                            <div style="padding:1.25rem 1rem;text-align:center;font-size:0.85rem;color:var(--text-muted);">
+                                Keine neuen Anmeldungen 🎉
+                            </div>
+                        {% endif %}
+                        </div>
+                        <div style="padding:0.5rem 0.75rem;border-top:1px solid var(--glass-border);">
+                            <a href="/eingangsmeldungen" class="dropdown-item" style="justify-content:center;color:var(--accent);font-size:0.82rem;font-weight:600;">
+                                Alle Eingangsmeldungen →
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
                 <button class="header-btn" id="theme-toggle" title="Design wechseln" aria-label="Design wechseln">
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24">
                         <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -186,6 +237,118 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
 <script src="/assets/js/app.js?v={{ 'now'|date('YmdHi') }}"></script>
 {% block scripts %}{% endblock %}
+
+{% if intake_unread_count is defined %}
+<style>
+/* Notification Bell */
+.notif-bell-btn { position: relative; }
+.notif-badge {
+    position: absolute;
+    top: 2px; right: 2px;
+    min-width: 17px; height: 17px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 0.6rem;
+    font-weight: 800;
+    border-radius: 100px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+    border: 2px solid var(--bg-primary, #0f0f1a);
+    line-height: 1;
+    pointer-events: none;
+    animation: badge-pop 0.4s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes badge-pop { from { transform: scale(0); } to { transform: scale(1); } }
+@keyframes notif-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }
+.notif-menu { max-height: 400px; overflow-y: auto; }
+.notif-bell-btn.has-new svg { animation: bell-ring 0.6s ease 0.2s both; }
+@keyframes bell-ring {
+    0%  { transform: rotate(0); }
+    20% { transform: rotate(15deg); }
+    40% { transform: rotate(-12deg); }
+    60% { transform: rotate(8deg); }
+    80% { transform: rotate(-5deg); }
+    100%{ transform: rotate(0); }
+}
+</style>
+
+<script>
+/* ── Notification Polling (every 30s) ── */
+(function () {
+    const badge    = document.getElementById('notif-badge');
+    const bellBtn  = document.querySelector('.notif-bell-btn');
+    const listEl   = document.getElementById('notif-list');
+    if (!badge || !bellBtn) return;
+
+    let lastCount = parseInt(badge.textContent) || 0;
+
+    function formatDe(str) {
+        if (!str) return '';
+        const d = new Date(str.replace(' ', 'T'));
+        if (isNaN(d)) return str;
+        return d.toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric'})
+             + ' ' + d.toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'});
+    }
+
+    function poll() {
+        fetch('/api/intake/notifications', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            const count = data.count || 0;
+
+            /* Update badge */
+            if (count > 0) {
+                badge.textContent = count > 9 ? '9+' : count;
+                badge.style.display = 'flex';
+                bellBtn.classList.add('has-new');
+            } else {
+                badge.style.display = 'none';
+                bellBtn.classList.remove('has-new');
+            }
+
+            /* Ring bell animation if new items arrived since last poll */
+            if (count > lastCount && lastCount >= 0) {
+                bellBtn.querySelector('svg').style.animation = 'none';
+                /* force reflow */
+                void bellBtn.querySelector('svg').offsetWidth;
+                bellBtn.querySelector('svg').style.animation = '';
+            }
+            lastCount = count;
+
+            /* Update dropdown list */
+            if (listEl) {
+                if (data.items && data.items.length > 0) {
+                    listEl.innerHTML = data.items.map(function (item) {
+                        return '<a href="/eingangsmeldungen/' + item.id + '" class="dropdown-item" style="flex-direction:column;align-items:flex-start;gap:0.15rem;padding:0.65rem 1rem;">'
+                            + '<div style="display:flex;align-items:center;gap:0.5rem;width:100%;">'
+                            + '<span style="width:7px;height:7px;border-radius:50%;background:#ef4444;flex-shrink:0;animation:notif-pulse 2s infinite;"></span>'
+                            + '<strong style="font-size:0.85rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🐾 ' + (item.patient_name || '') + '</strong>'
+                            + '<span style="font-size:0.72rem;color:var(--text-muted);flex-shrink:0;">' + formatDe(item.created_at) + '</span>'
+                            + '</div>'
+                            + '<span style="font-size:0.78rem;color:var(--text-muted);padding-left:1.1rem;">' + (item.owner_first_name || '') + ' ' + (item.owner_last_name || '') + ' · hat eine Terminanfrage</span>'
+                            + '</a>';
+                    }).join('');
+                } else {
+                    listEl.innerHTML = '<div style="padding:1.25rem 1rem;text-align:center;font-size:0.85rem;color:var(--text-muted);">Keine neuen Anmeldungen 🎉</div>';
+                }
+            }
+        })
+        .catch(function () { /* silently ignore network errors */ });
+    }
+
+    /* Poll every 30 seconds */
+    setInterval(poll, 30000);
+
+    /* Ring bell once on page load if there are new notifications */
+    if (lastCount > 0) {
+        setTimeout(function () {
+            bellBtn.classList.add('has-new');
+        }, 800);
+    }
+})();
+</script>
+{% endif %}
 
 <script>
 // Show sidebar toggle on mobile - NEVER show overlay here, that's Sidebar.open()'s job

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }} — {{ app_name }}</title>
+    <script>!function(){try{var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}catch(e){}}();</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/app.css">
+    <link rel="stylesheet" href="/assets/css/liquid-glass.css">
+    <style>
+        body { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem 1rem; }
+        .ty-wrapper { max-width: 520px; width: 100%; text-align: center; }
+        .ty-icon { font-size: 5rem; margin-bottom: 1.5rem; display: block; animation: popIn 0.6s cubic-bezier(.34,1.56,.64,1); }
+        @keyframes popIn { from { transform: scale(0.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .ty-title { font-size: 2rem; font-weight: 800; margin: 0 0 1rem; }
+        .ty-text { color: var(--text-muted); font-size: 0.95rem; line-height: 1.7; margin: 0 0 2rem; }
+        .ty-steps { display: flex; gap: 1rem; flex-direction: column; margin-bottom: 2.5rem; text-align: left; }
+        .ty-step { display: flex; align-items: flex-start; gap: 0.85rem; padding: 1rem; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; }
+        .ty-step-num { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), #8b5cf6); color: #fff; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .ty-step-body { font-size: 0.85rem; line-height: 1.5; }
+        .ty-step-body strong { display: block; margin-bottom: 0.2rem; font-weight: 600; }
+        .ty-step-body span { color: var(--text-muted); }
+        .ty-confetti { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; z-index: 0; }
+        .confetti-piece { position: absolute; top: -10px; width: 8px; height: 8px; border-radius: 2px; animation: confettiFall linear forwards; }
+        @keyframes confettiFall { to { transform: translateY(110vh) rotate(720deg); opacity: 0; } }
+    </style>
+</head>
+<body>
+
+<div class="ty-confetti" id="confetti-container"></div>
+
+<div class="ty-wrapper" style="position:relative;z-index:1;">
+    <div class="lg-card" style="padding: 2.5rem 2rem;">
+        <span class="ty-icon">🎉</span>
+        <h1 class="ty-title">Anmeldung erhalten!</h1>
+        <p class="ty-text">
+            Vielen Dank für Ihre Anmeldung. Wir haben alle Ihre Daten erhalten und werden uns innerhalb kurzer Zeit bei Ihnen melden, um einen Termin zu vereinbaren.
+        </p>
+
+        <div class="ty-steps">
+            <div class="ty-step">
+                <div class="ty-step-num">1</div>
+                <div class="ty-step-body">
+                    <strong>Bestätigungs-E-Mail</strong>
+                    <span>Sie erhalten in Kürze eine Bestätigung per E-Mail mit Ihren Angaben.</span>
+                </div>
+            </div>
+            <div class="ty-step">
+                <div class="ty-step-num">2</div>
+                <div class="ty-step-body">
+                    <strong>Terminvereinbarung</strong>
+                    <span>Unser Team meldet sich bei Ihnen, um einen passenden Termin zu finden.</span>
+                </div>
+            </div>
+            <div class="ty-step">
+                <div class="ty-step-num">3</div>
+                <div class="ty-step-body">
+                    <strong>Willkommen!</strong>
+                    <span>Beim ersten Besuch nehmen wir Ihren Patienten in unsere Kartei auf.</span>
+                </div>
+            </div>
+        </div>
+
+        <p style="font-size:0.82rem;color:var(--text-muted);">
+            Bei Fragen erreichen Sie uns jederzeit per E-Mail oder Telefon.<br>
+            <strong style="color:var(--text-primary);">{{ app_name }}</strong>
+        </p>
+    </div>
+</div>
+
+<script>
+/* Confetti animation */
+(function () {
+    const colors = ['#4f7cff','#8b5cf6','#22c55e','#f59e0b','#ef4444','#06b6d4'];
+    const container = document.getElementById('confetti-container');
+    for (let i = 0; i < 60; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        piece.style.left      = Math.random() * 100 + 'vw';
+        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.width     = (Math.random() * 8 + 5) + 'px';
+        piece.style.height    = (Math.random() * 8 + 5) + 'px';
+        piece.style.animationDuration = (Math.random() * 3 + 2) + 's';
+        piece.style.animationDelay    = (Math.random() * 2) + 's';
+        piece.style.opacity   = Math.random() * 0.8 + 0.2;
+        container.appendChild(piece);
+    }
+})();
+</script>
+</body>
+</html>

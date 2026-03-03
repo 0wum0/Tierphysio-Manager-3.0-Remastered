@@ -1,0 +1,276 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Anmeldung: {{ submission.patient_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div style="display:flex;align-items:center;gap:0.75rem;">
+        <a href="/eingangsmeldungen" class="btn btn-secondary btn-sm">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="m15 18-6-6 6-6"/></svg>
+            Zurück
+        </a>
+        <div>
+            <h1 class="page-title" style="margin:0;">{{ submission.patient_name }}</h1>
+            <p class="page-subtitle" style="margin:0;">Anmeldung vom {{ submission.created_at|datetime_de }}</p>
+        </div>
+    </div>
+    <div style="display:flex;gap:0.75rem;align-items:center;">
+        {# Status selector #}
+        <select id="status-select" class="form-control" style="padding:0.5rem 0.9rem;border-radius:100px;font-size:0.85rem;min-width:160px;">
+            <option value="neu"            {% if submission.status == 'neu' %}selected{% endif %}>🔴 Neu</option>
+            <option value="in_bearbeitung" {% if submission.status == 'in_bearbeitung' %}selected{% endif %}>🟡 In Bearbeitung</option>
+            <option value="uebernommen"    {% if submission.status == 'uebernommen' %}selected{% endif %}>🟢 Übernommen</option>
+            <option value="abgelehnt"      {% if submission.status == 'abgelehnt' %}selected{% endif %}>⚫ Abgelehnt</option>
+        </select>
+
+        {% if submission.status == 'uebernommen' and submission.accepted_patient_id %}
+        <a href="/patienten/{{ submission.accepted_patient_id }}" class="btn btn-primary">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            Zur Patientenakte
+        </a>
+        {% elseif submission.status not in ['uebernommen','abgelehnt'] %}
+        <button class="btn btn-primary" id="btn-accept">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></svg>
+            Als Patient übernehmen
+        </button>
+        <button class="btn btn-secondary" id="btn-reject" style="color:#ef4444;border-color:rgba(239,68,68,0.3);">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Ablehnen
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+
+    {# ── Tier ── #}
+    <div class="lg-card">
+        <div class="card-header">
+            <div class="card-title">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                Tier
+            </div>
+        </div>
+        <div class="card-body">
+            {% if submission.patient_photo %}
+            <div style="margin-bottom:1.25rem;">
+                <img src="/intake/foto/{{ submission.patient_photo }}" alt="{{ submission.patient_name }}"
+                     style="width:120px;height:120px;object-fit:cover;border-radius:16px;border:2px solid var(--glass-border);">
+            </div>
+            {% endif %}
+            <div class="detail-grid">
+                <div class="detail-row">
+                    <span class="detail-label">Name</span>
+                    <span class="detail-value"><strong>{{ submission.patient_name }}</strong></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Tierart</span>
+                    <span class="detail-value">{{ submission.patient_species ?: '—' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Rasse</span>
+                    <span class="detail-value">{{ submission.patient_breed ?: '—' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Geschlecht</span>
+                    <span class="detail-value">{{ submission.patient_gender ?: '—' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Geburtsdatum</span>
+                    <span class="detail-value">{{ submission.patient_birth_date ? submission.patient_birth_date|date_de : '—' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Fellfarbe</span>
+                    <span class="detail-value">{{ submission.patient_color ?: '—' }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Chip-Nr.</span>
+                    <span class="detail-value">{{ submission.patient_chip ?: '—' }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ── Besitzer ── #}
+    <div class="lg-card">
+        <div class="card-header">
+            <div class="card-title">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2"/></svg>
+                Besitzer
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="detail-grid">
+                <div class="detail-row">
+                    <span class="detail-label">Name</span>
+                    <span class="detail-value"><strong>{{ submission.owner_first_name }} {{ submission.owner_last_name }}</strong></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">E-Mail</span>
+                    <span class="detail-value">
+                        <a href="mailto:{{ submission.owner_email }}" style="color:var(--accent);">{{ submission.owner_email }}</a>
+                    </span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Telefon</span>
+                    <span class="detail-value">
+                        <a href="tel:{{ submission.owner_phone }}" style="color:var(--accent);">{{ submission.owner_phone }}</a>
+                    </span>
+                </div>
+                {% if submission.owner_street %}
+                <div class="detail-row">
+                    <span class="detail-label">Adresse</span>
+                    <span class="detail-value">
+                        {{ submission.owner_street }}<br>
+                        {{ submission.owner_zip }} {{ submission.owner_city }}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div style="display:flex;gap:0.5rem;margin-top:1.25rem;">
+                <a href="mailto:{{ submission.owner_email }}" class="btn btn-secondary btn-sm">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="22,6 12,13 2,6"/></svg>
+                    E-Mail senden
+                </a>
+                <a href="tel:{{ submission.owner_phone }}" class="btn btn-secondary btn-sm">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    Anrufen
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {# ── Anliegen ── #}
+    <div class="lg-card" style="grid-column:span 2;">
+        <div class="card-header">
+            <div class="card-title">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                Anliegen &amp; Terminwunsch
+            </div>
+            {% if submission.appointment_wish %}
+            <span style="background:rgba(79,124,255,0.15);color:var(--accent);border:1px solid rgba(79,124,255,0.3);border-radius:100px;padding:0.2rem 0.75rem;font-size:0.78rem;font-weight:600;">
+                📅 {{ submission.appointment_wish }}
+            </span>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+                <div>
+                    <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:0.6rem;">Beschreibung des Anliegens</div>
+                    <div style="font-size:0.9rem;line-height:1.7;color:var(--text-primary);">{{ submission.reason|nl2br }}</div>
+                </div>
+                {% if submission.notes %}
+                <div>
+                    <div style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);margin-bottom:0.6rem;">Weitere Anmerkungen</div>
+                    <div style="font-size:0.88rem;line-height:1.7;color:var(--text-muted);">{{ submission.notes|nl2br }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# ── Quick actions ── #}
+    {% if submission.status not in ['uebernommen','abgelehnt'] %}
+    <div class="lg-card" style="grid-column:span 2;background:linear-gradient(135deg,rgba(79,124,255,0.08),rgba(139,92,246,0.08));border-color:rgba(79,124,255,0.25);">
+        <div class="card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+            <div>
+                <div style="font-weight:700;font-size:1rem;margin-bottom:0.25rem;">Bereit zur Übernahme?</div>
+                <div style="font-size:0.85rem;color:var(--text-muted);">Patient und Besitzer werden direkt in der Kartei angelegt. Existierende Besitzer (gleiche E-Mail) werden automatisch erkannt.</div>
+            </div>
+            <div style="display:flex;gap:0.75rem;">
+                <button class="btn btn-primary" id="btn-accept-2" style="padding:0.7rem 1.75rem;">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></svg>
+                    Ja, Patient übernehmen
+                </button>
+                <button class="btn btn-secondary" id="btn-reject-2" style="color:#ef4444;border-color:rgba(239,68,68,0.3);padding:0.7rem 1.25rem;">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    Nein, ablehnen
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<style>
+.detail-grid { display:flex;flex-direction:column;gap:0; }
+.detail-row { display:flex;align-items:flex-start;padding:0.55rem 0;border-bottom:1px solid var(--glass-border); }
+.detail-row:last-child { border-bottom:none; }
+.detail-label { width:110px;flex-shrink:0;font-size:0.78rem;color:var(--text-muted);font-weight:500;padding-top:1px; }
+.detail-value { font-size:0.88rem;color:var(--text-primary);flex:1; }
+.form-control { background:var(--glass-bg);border:1.5px solid var(--glass-border);color:var(--text-primary);font-family:inherit; }
+.form-control:focus { outline:none;border-color:var(--accent); }
+@media(max-width:768px) {
+    [style*="grid-template-columns:1fr 1fr"] { grid-template-columns:1fr!important; }
+    [style*="grid-column:span 2"] { grid-column:span 1!important; }
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const submissionId = {{ submission.id }};
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+function doAccept() {
+    if (!confirm('Patient "{{ submission.patient_name }}" und Besitzer "{{ submission.owner_first_name }} {{ submission.owner_last_name }}" in die Kartei übernehmen?')) return;
+
+    const btns = document.querySelectorAll('#btn-accept,#btn-accept-2');
+    btns.forEach(function (b) { b.disabled = true; b.textContent = 'Wird übernommen…'; });
+
+    fetch('/eingangsmeldungen/' + submissionId + '/akzeptieren', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+        body: '_csrf_token=' + encodeURIComponent(csrfToken)
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.ok) {
+            window.location.href = '/patienten/' + data.patient_id;
+        } else {
+            alert('Fehler: ' + (data.error || 'Unbekannt'));
+            btns.forEach(function (b) { b.disabled = false; });
+        }
+    })
+    .catch(function () { alert('Netzwerkfehler.'); btns.forEach(function (b) { b.disabled = false; }); });
+}
+
+function doReject() {
+    if (!confirm('Diese Anmeldung ablehnen?')) return;
+
+    fetch('/eingangsmeldungen/' + submissionId + '/ablehnen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+        body: '_csrf_token=' + encodeURIComponent(csrfToken)
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (data.ok) window.location.href = '/eingangsmeldungen';
+        else alert('Fehler: ' + (data.error || 'Unbekannt'));
+    })
+    .catch(function () { alert('Netzwerkfehler.'); });
+}
+
+document.getElementById('btn-accept')?.addEventListener('click', doAccept);
+document.getElementById('btn-accept-2')?.addEventListener('click', doAccept);
+document.getElementById('btn-reject')?.addEventListener('click', doReject);
+document.getElementById('btn-reject-2')?.addEventListener('click', doReject);
+
+/* Status select */
+document.getElementById('status-select')?.addEventListener('change', function () {
+    const status = this.value;
+    fetch('/eingangsmeldungen/' + submissionId + '/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+        body: 'status=' + encodeURIComponent(status) + '&_csrf_token=' + encodeURIComponent(csrfToken)
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+        if (!data.ok) alert('Status konnte nicht gespeichert werden.');
+    })
+    .catch(function () { alert('Netzwerkfehler.'); });
+});
+</script>
+{% endblock %}

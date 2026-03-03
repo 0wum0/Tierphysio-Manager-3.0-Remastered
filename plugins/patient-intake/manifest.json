@@ -1,0 +1,10 @@
+{
+    "name": "Patientenanmeldung",
+    "slug": "patient-intake",
+    "version": "1.0.0",
+    "description": "Öffentliches Anmeldeformular für neue Patienten (Tier + Besitzer) mit Multi-Step Wizard, Foto-Upload, E-Mail-Benachrichtigung und Admin-Eingangspostfach.",
+    "author": "Tierphysio Manager",
+    "min_app_version": "3.0.0",
+    "service_provider": "Plugins\\PatientIntake\\ServiceProvider",
+    "hooks": ["registerRoutes", "dashboardWidgets", "navItems", "headerNotifications"]
+}

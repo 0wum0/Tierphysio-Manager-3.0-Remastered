@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }} — {{ app_name }}</title>
+    <script>!function(){try{var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}catch(e){}}();</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/app.css">
+    <link rel="stylesheet" href="/assets/css/liquid-glass.css">
+    <style>
+        body { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 2rem 1rem 4rem; }
+
+        .intake-wrapper { width: 100%; max-width: 680px; }
+
+        .intake-header { text-align: center; margin-bottom: 2.5rem; }
+        .intake-logo { width: 64px; height: 64px; background: linear-gradient(135deg, var(--accent), #8b5cf6); border-radius: 20px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1rem; box-shadow: 0 8px 32px rgba(79,124,255,0.35); }
+        .intake-title { font-size: 1.75rem; font-weight: 800; margin: 0 0 0.5rem; }
+        .intake-subtitle { color: var(--text-muted); font-size: 0.95rem; margin: 0; }
+
+        /* Progress Steps */
+        .steps-bar { display: flex; align-items: center; justify-content: center; gap: 0; margin-bottom: 2.5rem; }
+        .step-item { display: flex; align-items: center; gap: 0; }
+        .step-circle { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--glass-border); background: var(--glass-bg); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); transition: all 0.3s ease; flex-shrink: 0; }
+        .step-circle.active { border-color: var(--accent); background: var(--accent); color: #fff; box-shadow: 0 0 16px rgba(79,124,255,0.4); }
+        .step-circle.done { border-color: #22c55e; background: #22c55e; color: #fff; }
+        .step-label { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.35rem; white-space: nowrap; }
+        .step-label.active { color: var(--accent); font-weight: 600; }
+        .step-label.done { color: #22c55e; }
+        .step-connector { width: 48px; height: 2px; background: var(--glass-border); flex-shrink: 0; transition: background 0.3s; }
+        .step-connector.done { background: #22c55e; }
+        .step-wrap { display: flex; flex-direction: column; align-items: center; }
+
+        /* Card */
+        .intake-card { position: relative; overflow: visible; }
+
+        /* Form Steps */
+        .form-step { display: none; }
+        .form-step.active { display: block; animation: fadeSlideIn 0.35s ease; }
+        @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+        .step-heading { font-size: 1.1rem; font-weight: 700; margin: 0 0 1.5rem; display: flex; align-items: center; gap: 0.6rem; }
+        .step-heading-icon { width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(135deg, var(--accent), #8b5cf6); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.9rem; }
+
+        .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        @media (max-width: 500px) { .form-grid-2 { grid-template-columns: 1fr; } }
+
+        .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
+        .form-group label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); }
+        .form-group label .req { color: #ef4444; margin-left: 2px; }
+        .form-group input,
+        .form-group select,
+        .form-group textarea { background: var(--glass-bg); border: 1.5px solid var(--glass-border); border-radius: 10px; padding: 0.65rem 0.9rem; font-size: 0.9rem; color: var(--text-primary); font-family: inherit; transition: border-color 0.2s, box-shadow 0.2s; width: 100%; box-sizing: border-box; }
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,124,255,0.15); }
+        .form-group textarea { resize: vertical; min-height: 100px; }
+        .form-group select option { background: #1e1e2e; }
+
+        /* Photo Upload */
+        .photo-upload-area { border: 2px dashed var(--glass-border); border-radius: 14px; padding: 2rem 1rem; text-align: center; cursor: pointer; transition: all 0.25s; background: var(--glass-bg); }
+        .photo-upload-area:hover, .photo-upload-area.dragover { border-color: var(--accent); background: rgba(79,124,255,0.08); }
+        .photo-upload-area .upload-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+        .photo-upload-area .upload-text { font-size: 0.85rem; color: var(--text-muted); }
+        .photo-upload-area .upload-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; opacity: 0.6; }
+        .photo-preview { margin-top: 1rem; display: none; }
+        .photo-preview img { width: 120px; height: 120px; object-fit: cover; border-radius: 14px; border: 2px solid var(--glass-border); }
+        .photo-remove { display: inline-block; margin-top: 0.5rem; font-size: 0.78rem; color: #ef4444; cursor: pointer; }
+
+        /* Appointment options */
+        .apt-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+        @media (max-width: 500px) { .apt-options { grid-template-columns: 1fr 1fr; } }
+        .apt-option { display: none; }
+        .apt-option + label { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; padding: 0.9rem 0.5rem; border: 2px solid var(--glass-border); border-radius: 12px; cursor: pointer; transition: all 0.2s; font-size: 0.82rem; color: var(--text-muted); background: var(--glass-bg); text-align: center; }
+        .apt-option + label:hover { border-color: var(--accent); color: var(--text-primary); }
+        .apt-option:checked + label { border-color: var(--accent); background: rgba(79,124,255,0.1); color: var(--accent); font-weight: 600; }
+        .apt-option + label .apt-icon { font-size: 1.4rem; }
+
+        /* Navigation */
+        .form-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--glass-border); }
+        .btn-prev { background: var(--glass-bg); border: 1.5px solid var(--glass-border); color: var(--text-primary); padding: 0.65rem 1.4rem; border-radius: 100px; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+        .btn-prev:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-next, .btn-submit { background: linear-gradient(135deg, var(--accent), #8b5cf6); border: none; color: #fff; padding: 0.65rem 1.8rem; border-radius: 100px; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: all 0.2s; font-family: inherit; display: flex; align-items: center; gap: 0.5rem; }
+        .btn-next:hover, .btn-submit:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(79,124,255,0.35); }
+        .btn-next:disabled, .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* Error/info messages */
+        .field-error { font-size: 0.78rem; color: #ef4444; margin-top: 0.2rem; display: none; }
+        .field-error.visible { display: block; }
+        .form-errors { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; font-size: 0.85rem; color: #ef4444; display: none; }
+        .form-errors.visible { display: block; }
+        .form-errors ul { margin: 0.5rem 0 0; padding-left: 1.2rem; }
+        .form-errors ul li { margin-bottom: 0.25rem; }
+
+        /* Loading overlay */
+        .submit-loading { display: none; align-items: center; gap: 0.75rem; font-size: 0.9rem; color: var(--text-muted); }
+        .submit-loading.visible { display: flex; }
+        .spinner { width: 20px; height: 20px; border: 2px solid var(--glass-border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Disclaimer */
+        .intake-disclaimer { font-size: 0.78rem; color: var(--text-muted); text-align: center; margin-top: 1.5rem; line-height: 1.5; }
+
+        /* Info note */
+        .info-note { background: rgba(79,124,255,0.08); border: 1px solid rgba(79,124,255,0.2); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.25rem; display: flex; gap: 0.5rem; }
+        .info-note svg { flex-shrink: 0; margin-top: 1px; color: var(--accent); }
+    </style>
+</head>
+<body>
+
+<div class="intake-wrapper">
+
+    <div class="intake-header">
+        <div class="intake-logo">
+            <svg width="30" height="30" fill="none" viewBox="0 0 24 24">
+                <path stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                      d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+        </div>
+        <h1 class="intake-title">{{ app_name }}</h1>
+        <p class="intake-subtitle">Neue Patientenanmeldung — Bitte füllen Sie das Formular vollständig aus</p>
+    </div>
+
+    <!-- Steps bar -->
+    <div class="steps-bar">
+        <div class="step-wrap">
+            <div class="step-circle active" id="sc-1">1</div>
+            <div class="step-label active" id="sl-1">Besitzer</div>
+        </div>
+        <div class="step-connector" id="conn-1"></div>
+        <div class="step-wrap">
+            <div class="step-circle" id="sc-2">2</div>
+            <div class="step-label" id="sl-2">Tier</div>
+        </div>
+        <div class="step-connector" id="conn-2"></div>
+        <div class="step-wrap">
+            <div class="step-circle" id="sc-3">3</div>
+            <div class="step-label" id="sl-3">Anliegen</div>
+        </div>
+        <div class="step-connector" id="conn-3"></div>
+        <div class="step-wrap">
+            <div class="step-circle" id="sc-4">4</div>
+            <div class="step-label" id="sl-4">Termin</div>
+        </div>
+    </div>
+
+    <div class="lg-card intake-card">
+
+        <div class="form-errors" id="form-errors">
+            <strong>Bitte korrigieren Sie folgende Fehler:</strong>
+            <ul id="error-list"></ul>
+        </div>
+
+        <form id="intake-form" enctype="multipart/form-data" novalidate>
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <input type="text" name="website" style="display:none;" tabindex="-1" autocomplete="off">
+
+            <!-- ────── STEP 1: Besitzer ────── -->
+            <div class="form-step active" id="step-1">
+                <div class="step-heading">
+                    <div class="step-heading-icon">👤</div>
+                    Ihre Kontaktdaten
+                </div>
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label for="owner_first_name">Vorname <span class="req">*</span></label>
+                        <input type="text" id="owner_first_name" name="owner_first_name" placeholder="Max" autocomplete="given-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="owner_last_name">Nachname <span class="req">*</span></label>
+                        <input type="text" id="owner_last_name" name="owner_last_name" placeholder="Mustermann" autocomplete="family-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="owner_email">E-Mail-Adresse <span class="req">*</span></label>
+                        <input type="email" id="owner_email" name="owner_email" placeholder="max@beispiel.de" autocomplete="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="owner_phone">Telefon / Mobil <span class="req">*</span></label>
+                        <input type="tel" id="owner_phone" name="owner_phone" placeholder="+49 123 456789" autocomplete="tel" required>
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label for="owner_street">Straße &amp; Hausnummer</label>
+                        <input type="text" id="owner_street" name="owner_street" placeholder="Musterstraße 12" autocomplete="street-address">
+                    </div>
+                    <div class="form-group">
+                        <label for="owner_zip">PLZ</label>
+                        <input type="text" id="owner_zip" name="owner_zip" placeholder="12345" autocomplete="postal-code" maxlength="10">
+                    </div>
+                    <div class="form-group">
+                        <label for="owner_city">Ort</label>
+                        <input type="text" id="owner_city" name="owner_city" placeholder="Musterstadt" autocomplete="address-level2">
+                    </div>
+                </div>
+                <div class="form-nav">
+                    <div></div>
+                    <button type="button" class="btn-next" data-next="2">
+                        Weiter
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ────── STEP 2: Tier ────── -->
+            <div class="form-step" id="step-2">
+                <div class="step-heading">
+                    <div class="step-heading-icon">🐾</div>
+                    Angaben zum Tier
+                </div>
+                <div class="form-grid-2">
+                    <div class="form-group">
+                        <label for="patient_name">Name des Tieres <span class="req">*</span></label>
+                        <input type="text" id="patient_name" name="patient_name" placeholder="z.B. Bello" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="patient_species">Tierart <span class="req">*</span></label>
+                        <select id="patient_species" name="patient_species" required>
+                            <option value="">— Bitte wählen —</option>
+                            <option value="Hund">Hund</option>
+                            <option value="Katze">Katze</option>
+                            <option value="Pferd">Pferd</option>
+                            <option value="Kaninchen">Kaninchen</option>
+                            <option value="Vogel">Vogel</option>
+                            <option value="Reptil">Reptil</option>
+                            <option value="Kleintier">Kleintier</option>
+                            <option value="Sonstiges">Sonstiges</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="patient_breed">Rasse</label>
+                        <input type="text" id="patient_breed" name="patient_breed" placeholder="z.B. Labrador">
+                    </div>
+                    <div class="form-group">
+                        <label for="patient_gender">Geschlecht</label>
+                        <select id="patient_gender" name="patient_gender">
+                            <option value="">— Bitte wählen —</option>
+                            <option value="männlich">Männlich</option>
+                            <option value="weiblich">Weiblich</option>
+                            <option value="kastriert">Kastriert (m)</option>
+                            <option value="sterilisiert">Sterilisiert (w)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="patient_birth_date">Geburtsdatum (ca.)</label>
+                        <input type="date" id="patient_birth_date" name="patient_birth_date">
+                    </div>
+                    <div class="form-group">
+                        <label for="patient_color">Fellfarbe / Zeichnung</label>
+                        <input type="text" id="patient_color" name="patient_color" placeholder="z.B. schwarz-weiß">
+                    </div>
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label for="patient_chip">Chip-Nummer</label>
+                        <input type="text" id="patient_chip" name="patient_chip" placeholder="15-stellige Nummer (optional)">
+                    </div>
+                </div>
+
+                <!-- Photo Upload -->
+                <div class="form-group" style="margin-top:1.25rem;">
+                    <label>Foto des Tieres</label>
+                    <div class="photo-upload-area" id="photo-drop" onclick="document.getElementById('patient_photo').click()">
+                        <div class="upload-icon">📷</div>
+                        <div class="upload-text">Foto hier ablegen oder klicken zum Auswählen</div>
+                        <div class="upload-hint">JPG, PNG, WebP · max. 8 MB</div>
+                    </div>
+                    <input type="file" id="patient_photo" name="patient_photo" accept="image/*" style="display:none;">
+                    <div class="photo-preview" id="photo-preview">
+                        <img id="photo-preview-img" src="" alt="Vorschau">
+                        <br>
+                        <span class="photo-remove" id="photo-remove">✕ Entfernen</span>
+                    </div>
+                </div>
+
+                <div class="form-nav">
+                    <button type="button" class="btn-prev" data-prev="1">← Zurück</button>
+                    <button type="button" class="btn-next" data-next="3">
+                        Weiter
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ────── STEP 3: Anliegen ────── -->
+            <div class="form-step" id="step-3">
+                <div class="step-heading">
+                    <div class="step-heading-icon">📋</div>
+                    Ihr Anliegen
+                </div>
+                <div class="info-note">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="12" y1="16" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="8" x2="12.01" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    Je genauer Sie Ihr Anliegen beschreiben, desto besser können wir uns auf den Termin vorbereiten.
+                </div>
+                <div class="form-group">
+                    <label for="reason">Warum kommen Sie zu uns? <span class="req">*</span></label>
+                    <textarea id="reason" name="reason" rows="5" placeholder="z.B. Mein Hund hat Probleme mit der Hüfte und läuft seit einigen Wochen leicht hinkend. Wir suchen eine physiotherapeutische Behandlung..." required></textarea>
+                </div>
+                <div class="form-group" style="margin-top:1rem;">
+                    <label for="notes">Weitere Anmerkungen</label>
+                    <textarea id="notes" name="notes" rows="3" placeholder="z.B. bekannte Diagnosen, Vorbehandlungen, Allergien, Besonderheiten..."></textarea>
+                </div>
+                <div class="form-nav">
+                    <button type="button" class="btn-prev" data-prev="2">← Zurück</button>
+                    <button type="button" class="btn-next" data-next="4">
+                        Weiter
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ────── STEP 4: Terminwunsch ────── -->
+            <div class="form-step" id="step-4">
+                <div class="step-heading">
+                    <div class="step-heading-icon">📅</div>
+                    Terminwunsch
+                </div>
+
+                <div class="form-group" style="margin-bottom:1.5rem;">
+                    <label>Wann soll der Termin stattfinden?</label>
+                    <div class="apt-options">
+                        <div>
+                            <input type="radio" class="apt-option" name="appointment_wish" id="apt_asap" value="Schnellstmöglich">
+                            <label for="apt_asap"><span class="apt-icon">⚡</span>Schnellstmöglich</label>
+                        </div>
+                        <div>
+                            <input type="radio" class="apt-option" name="appointment_wish" id="apt_week" value="Diese Woche">
+                            <label for="apt_week"><span class="apt-icon">📆</span>Diese Woche</label>
+                        </div>
+                        <div>
+                            <input type="radio" class="apt-option" name="appointment_wish" id="apt_nextweek" value="Nächste Woche">
+                            <label for="apt_nextweek"><span class="apt-icon">🗓️</span>Nächste Woche</label>
+                        </div>
+                        <div>
+                            <input type="radio" class="apt-option" name="appointment_wish" id="apt_flexible" value="Flexibel">
+                            <label for="apt_flexible"><span class="apt-icon">🔄</span>Flexibel</label>
+                        </div>
+                        <div>
+                            <input type="radio" class="apt-option" name="appointment_wish" id="apt_morning" value="Vormittags bevorzugt">
+                            <label for="apt_morning"><span class="apt-icon">🌅</span>Vormittags</label>
+                        </div>
+                        <div>
+                            <input type="radio" class="apt-option" name="appointment_wish" id="apt_afternoon" value="Nachmittags bevorzugt">
+                            <label for="apt_afternoon"><span class="apt-icon">🌇</span>Nachmittags</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary preview -->
+                <div style="background: rgba(79,124,255,0.07); border: 1px solid rgba(79,124,255,0.2); border-radius: 14px; padding: 1.25rem; margin-top: 0.5rem;">
+                    <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 1rem;">Zusammenfassung</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1.5rem; font-size: 0.85rem;">
+                        <div><span style="color:var(--text-muted);">Besitzer:</span><br><strong id="sum-owner">—</strong></div>
+                        <div><span style="color:var(--text-muted);">Tier:</span><br><strong id="sum-patient">—</strong></div>
+                        <div><span style="color:var(--text-muted);">E-Mail:</span><br><span id="sum-email" style="color:var(--text-muted);">—</span></div>
+                        <div><span style="color:var(--text-muted);">Telefon:</span><br><span id="sum-phone" style="color:var(--text-muted);">—</span></div>
+                    </div>
+                </div>
+
+                <!-- Consent -->
+                <div class="form-group" style="margin-top:1.5rem; flex-direction:row; align-items:flex-start; gap:0.75rem;">
+                    <input type="checkbox" id="consent" name="consent" style="margin-top:3px; flex-shrink:0; width:18px; height:18px; cursor:pointer;" required>
+                    <label for="consent" style="font-size:0.83rem; color:var(--text-muted); cursor:pointer; line-height:1.5;">
+                        Ich habe die Datenschutzerklärung gelesen und stimme der Verarbeitung meiner Daten zur Terminvereinbarung zu. <span class="req">*</span>
+                    </label>
+                </div>
+
+                <div class="form-nav">
+                    <button type="button" class="btn-prev" data-prev="3">← Zurück</button>
+                    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.75rem;">
+                        <div class="submit-loading" id="submit-loading">
+                            <div class="spinner"></div>
+                            <span>Wird gesendet…</span>
+                        </div>
+                        <button type="submit" class="btn-submit" id="btn-submit">
+                            <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M22 2 11 13M22 2 15 22l-4-9-9-4 20-7z"/></svg>
+                            Anmeldung absenden
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </form>
+    </div>
+
+    <p class="intake-disclaimer">
+        Ihre Daten werden ausschließlich zur Terminvereinbarung verwendet und nicht an Dritte weitergegeben.<br>
+        <strong>{{ app_name }}</strong> · Dieses Formular ist verschlüsselt übertragen.
+    </p>
+
+</div>
+
+<script>
+(function () {
+    let currentStep = 1;
+    const totalSteps = 4;
+
+    function goTo(step) {
+        if (step < 1 || step > totalSteps) return;
+
+        /* Validate current before going forward */
+        if (step > currentStep && !validateStep(currentStep)) return;
+
+        document.getElementById('step-' + currentStep).classList.remove('active');
+        currentStep = step;
+        document.getElementById('step-' + currentStep).classList.add('active');
+
+        /* Update step circles */
+        for (let i = 1; i <= totalSteps; i++) {
+            const sc = document.getElementById('sc-' + i);
+            const sl = document.getElementById('sl-' + i);
+            sc.classList.remove('active', 'done');
+            sl.classList.remove('active', 'done');
+            if (i < currentStep) { sc.classList.add('done'); sl.classList.add('done'); sc.innerHTML = '✓'; }
+            else if (i === currentStep) { sc.classList.add('active'); sl.classList.add('active'); sc.innerHTML = i; }
+            else { sc.innerHTML = i; }
+        }
+
+        /* Update connectors */
+        for (let i = 1; i <= totalSteps - 1; i++) {
+            const conn = document.getElementById('conn-' + i);
+            if (conn) conn.classList.toggle('done', i < currentStep);
+        }
+
+        if (currentStep === 4) updateSummary();
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function validateStep(step) {
+        const panel = document.getElementById('step-' + step);
+        const required = panel.querySelectorAll('[required]');
+        let ok = true;
+
+        required.forEach(function (field) {
+            if (field.type === 'checkbox') {
+                if (!field.checked) { highlight(field, true); ok = false; }
+                else highlight(field, false);
+            } else if (!field.value.trim()) {
+                highlight(field, true); ok = false;
+            } else if (field.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(field.value)) {
+                highlight(field, true); ok = false;
+            } else {
+                highlight(field, false);
+            }
+        });
+
+        return ok;
+    }
+
+    function highlight(field, error) {
+        field.style.borderColor = error ? 'rgba(239,68,68,0.7)' : '';
+    }
+
+    function updateSummary() {
+        const fn = document.getElementById('owner_first_name').value;
+        const ln = document.getElementById('owner_last_name').value;
+        const pn = document.getElementById('patient_name').value;
+        const ps = document.getElementById('patient_species').value;
+        document.getElementById('sum-owner').textContent   = [fn, ln].filter(Boolean).join(' ') || '—';
+        document.getElementById('sum-patient').textContent = [pn, ps].filter(Boolean).join(' · ') || '—';
+        document.getElementById('sum-email').textContent   = document.getElementById('owner_email').value || '—';
+        document.getElementById('sum-phone').textContent   = document.getElementById('owner_phone').value || '—';
+    }
+
+    /* Button delegates */
+    document.querySelectorAll('.btn-next').forEach(function (btn) {
+        btn.addEventListener('click', function () { goTo(parseInt(btn.dataset.next)); });
+    });
+    document.querySelectorAll('.btn-prev').forEach(function (btn) {
+        btn.addEventListener('click', function () { goTo(parseInt(btn.dataset.prev)); });
+    });
+
+    /* Photo upload */
+    const photoInput   = document.getElementById('patient_photo');
+    const photoDrop    = document.getElementById('photo-drop');
+    const photoPreview = document.getElementById('photo-preview');
+    const photoImg     = document.getElementById('photo-preview-img');
+    const photoRemove  = document.getElementById('photo-remove');
+
+    function showPreview(file) {
+        if (!file || !file.type.startsWith('image/')) return;
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            photoImg.src = e.target.result;
+            photoPreview.style.display = 'block';
+            photoDrop.style.display = 'none';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    photoInput.addEventListener('change', function () {
+        if (photoInput.files[0]) showPreview(photoInput.files[0]);
+    });
+
+    photoRemove.addEventListener('click', function () {
+        photoInput.value = '';
+        photoImg.src = '';
+        photoPreview.style.display = 'none';
+        photoDrop.style.display = '';
+    });
+
+    photoDrop.addEventListener('dragover', function (e) { e.preventDefault(); photoDrop.classList.add('dragover'); });
+    photoDrop.addEventListener('dragleave', function () { photoDrop.classList.remove('dragover'); });
+    photoDrop.addEventListener('drop', function (e) {
+        e.preventDefault();
+        photoDrop.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) {
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            photoInput.files = dt.files;
+            showPreview(file);
+        }
+    });
+
+    /* Form submit */
+    document.getElementById('intake-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        if (!validateStep(4)) return;
+
+        const submitBtn   = document.getElementById('btn-submit');
+        const loadingEl   = document.getElementById('submit-loading');
+        const errorsEl    = document.getElementById('form-errors');
+        const errorList   = document.getElementById('error-list');
+
+        submitBtn.disabled  = true;
+        loadingEl.classList.add('visible');
+        errorsEl.classList.remove('visible');
+
+        const formData = new FormData(this);
+
+        fetch('/anmeldung', {
+            method: 'POST',
+            body:   formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.ok) {
+                window.location.href = '/anmeldung/danke';
+            } else {
+                submitBtn.disabled = false;
+                loadingEl.classList.remove('visible');
+                errorsEl.classList.add('visible');
+                errorList.innerHTML = (data.errors || ['Unbekannter Fehler.']).map(function (e) { return '<li>' + e + '</li>'; }).join('');
+            }
+        })
+        .catch(function () {
+            submitBtn.disabled = false;
+            loadingEl.classList.remove('visible');
+            errorsEl.classList.add('visible');
+            errorList.innerHTML = '<li>Netzwerkfehler. Bitte versuchen Sie es erneut.</li>';
+        });
+    });
+
+    /* Keyboard enter on inputs → advance step */
+    document.querySelectorAll('.form-step input:not([type=file]):not([type=checkbox]):not([type=radio])').forEach(function (inp) {
+        inp.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const nextBtn = document.querySelector('#step-' + currentStep + ' .btn-next');
+                if (nextBtn) nextBtn.click();
+            }
+        });
+    });
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,253 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Eingangsmeldungen{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <svg width="22" height="22" fill="none" viewBox="0 0 24 24" style="vertical-align:-4px;margin-right:0.4rem;">
+                <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                      d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                          points="22,6 12,13 2,6"/>
+            </svg>
+            Eingangsmeldungen
+            {% if counts.neu > 0 %}
+                <span class="badge badge-danger" style="font-size:0.7rem;vertical-align:middle;margin-left:0.5rem;">{{ counts.neu }} neu</span>
+            {% endif %}
+        </h1>
+        <p class="page-subtitle">Neue Patientenanmeldungen über das Online-Formular</p>
+    </div>
+    <div style="display:flex;gap:0.75rem;align-items:center;">
+        <a href="/anmeldung" target="_blank" class="btn btn-secondary">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Anmeldeformular öffnen
+        </a>
+        <button class="btn btn-secondary" id="copy-link-btn" data-url="{{ app_url ?? '' }}/anmeldung">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Link kopieren
+        </button>
+    </div>
+</div>
+
+{# Status filter tabs #}
+<div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;">
+    <a href="/eingangsmeldungen"
+       class="btn btn-sm {% if active_status == '' %}btn-primary{% else %}btn-secondary{% endif %}">
+        Alle <span class="badge" style="margin-left:0.3rem;background:rgba(255,255,255,0.15);">{{ (counts.neu + counts.in_bearbeitung + counts.uebernommen + counts.abgelehnt) }}</span>
+    </a>
+    <a href="/eingangsmeldungen?status=neu"
+       class="btn btn-sm {% if active_status == 'neu' %}btn-primary{% else %}btn-secondary{% endif %}">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:0.35rem;{% if counts.neu > 0 %}animation:pulse 2s infinite;{% endif %}"></span>
+        Neu <span class="badge" style="margin-left:0.3rem;background:rgba(239,68,68,0.3);color:#ef4444;">{{ counts.neu }}</span>
+    </a>
+    <a href="/eingangsmeldungen?status=in_bearbeitung"
+       class="btn btn-sm {% if active_status == 'in_bearbeitung' %}btn-primary{% else %}btn-secondary{% endif %}">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f59e0b;margin-right:0.35rem;"></span>
+        In Bearbeitung <span class="badge" style="margin-left:0.3rem;background:rgba(245,158,11,0.2);color:#f59e0b;">{{ counts.in_bearbeitung }}</span>
+    </a>
+    <a href="/eingangsmeldungen?status=uebernommen"
+       class="btn btn-sm {% if active_status == 'uebernommen' %}btn-primary{% else %}btn-secondary{% endif %}">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:0.35rem;"></span>
+        Übernommen <span class="badge" style="margin-left:0.3rem;background:rgba(34,197,94,0.2);color:#22c55e;">{{ counts.uebernommen }}</span>
+    </a>
+    <a href="/eingangsmeldungen?status=abgelehnt"
+       class="btn btn-sm {% if active_status == 'abgelehnt' %}btn-primary{% else %}btn-secondary{% endif %}">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--text-muted);margin-right:0.35rem;"></span>
+        Abgelehnt <span class="badge" style="margin-left:0.3rem;">{{ counts.abgelehnt }}</span>
+    </a>
+</div>
+
+{% if submissions is empty %}
+<div class="lg-card" style="padding:3rem;text-align:center;">
+    <div style="font-size:3rem;margin-bottom:1rem;">📭</div>
+    <div style="font-size:1rem;font-weight:600;margin-bottom:0.5rem;">Keine Meldungen</div>
+    <div style="font-size:0.85rem;color:var(--text-muted);">
+        {% if active_status == 'neu' %}Es liegen keine neuen Anmeldungen vor.
+        {% elseif active_status == 'in_bearbeitung' %}Keine Anmeldungen in Bearbeitung.
+        {% elseif active_status == 'uebernommen' %}Noch keine Anmeldungen übernommen.
+        {% elseif active_status == 'abgelehnt' %}Keine abgelehnten Anmeldungen.
+        {% else %}Es sind noch keine Anmeldungen eingegangen.<br>Teilen Sie den <a href="/anmeldung" target="_blank" style="color:var(--accent);">Anmeldelink</a> mit Ihren Kunden.{% endif %}
+    </div>
+</div>
+{% else %}
+
+<div class="lg-card" style="padding:0;overflow:hidden;">
+    <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;">
+            <thead>
+                <tr style="border-bottom:1px solid var(--glass-border);">
+                    <th style="padding:0.9rem 1.25rem;text-align:left;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Status</th>
+                    <th style="padding:0.9rem 1rem;text-align:left;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Tier</th>
+                    <th style="padding:0.9rem 1rem;text-align:left;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Besitzer</th>
+                    <th style="padding:0.9rem 1rem;text-align:left;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Kontakt</th>
+                    <th style="padding:0.9rem 1rem;text-align:left;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Terminwunsch</th>
+                    <th style="padding:0.9rem 1rem;text-align:left;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Eingegangen</th>
+                    <th style="padding:0.9rem 1.25rem;text-align:right;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Aktion</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for s in submissions %}
+            <tr class="intake-row" style="border-bottom:1px solid var(--glass-border);transition:background 0.15s;cursor:pointer;" onclick="window.location='/eingangsmeldungen/{{ s.id }}'">
+                <td style="padding:0.85rem 1.25rem;">
+                    {% if s.status == 'neu' %}
+                        <span class="status-badge" style="background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);">
+                            <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#ef4444;margin-right:0.35rem;animation:pulse 2s infinite;"></span>
+                            Neu
+                        </span>
+                    {% elseif s.status == 'in_bearbeitung' %}
+                        <span class="status-badge" style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);">
+                            <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#f59e0b;margin-right:0.35rem;"></span>
+                            In Bearb.
+                        </span>
+                    {% elseif s.status == 'uebernommen' %}
+                        <span class="status-badge" style="background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid rgba(34,197,94,0.3);">
+                            <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;margin-right:0.35rem;"></span>
+                            Übernommen
+                        </span>
+                    {% else %}
+                        <span class="status-badge" style="background:var(--glass-bg);color:var(--text-muted);border:1px solid var(--glass-border);">
+                            Abgelehnt
+                        </span>
+                    {% endif %}
+                </td>
+                <td style="padding:0.85rem 1rem;">
+                    <div style="display:flex;align-items:center;gap:0.65rem;">
+                        {% if s.patient_photo %}
+                        <img src="/intake/foto/{{ s.patient_photo }}" alt="{{ s.patient_name }}"
+                             style="width:36px;height:36px;border-radius:8px;object-fit:cover;border:1px solid var(--glass-border);">
+                        {% else %}
+                        <div style="width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--accent),#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">🐾</div>
+                        {% endif %}
+                        <div>
+                            <div style="font-weight:600;font-size:0.9rem;">{{ s.patient_name }}</div>
+                            <div style="font-size:0.75rem;color:var(--text-muted);">{{ s.patient_species }}{% if s.patient_breed %} · {{ s.patient_breed }}{% endif %}</div>
+                        </div>
+                    </div>
+                </td>
+                <td style="padding:0.85rem 1rem;">
+                    <div style="font-weight:500;font-size:0.88rem;">{{ s.owner_first_name }} {{ s.owner_last_name }}</div>
+                    {% if s.owner_city %}<div style="font-size:0.75rem;color:var(--text-muted);">{{ s.owner_zip }} {{ s.owner_city }}</div>{% endif %}
+                </td>
+                <td style="padding:0.85rem 1rem;">
+                    <div style="font-size:0.82rem;">{{ s.owner_email }}</div>
+                    <div style="font-size:0.78rem;color:var(--text-muted);">{{ s.owner_phone }}</div>
+                </td>
+                <td style="padding:0.85rem 1rem;">
+                    <div style="font-size:0.82rem;color:var(--text-muted);">{{ s.appointment_wish ?: '—' }}</div>
+                </td>
+                <td style="padding:0.85rem 1rem;">
+                    <div style="font-size:0.82rem;">{{ s.created_at|date_de }}</div>
+                    <div style="font-size:0.75rem;color:var(--text-muted);">{{ s.created_at|datetime_de|split(' ')|last }}</div>
+                </td>
+                <td style="padding:0.85rem 1.25rem;text-align:right;" onclick="event.stopPropagation();">
+                    <div style="display:flex;gap:0.4rem;justify-content:flex-end;">
+                        <a href="/eingangsmeldungen/{{ s.id }}" class="btn btn-sm btn-secondary">Details</a>
+                        {% if s.status not in ['uebernommen','abgelehnt'] %}
+                        <button class="btn btn-sm btn-success intake-accept-btn"
+                                data-id="{{ s.id }}"
+                                title="Als Patient übernehmen">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></svg>
+                        </button>
+                        <button class="btn btn-sm btn-danger intake-reject-btn"
+                                data-id="{{ s.id }}"
+                                title="Ablehnen">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+                        </button>
+                        {% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# Pagination #}
+{% if pagination.last_page > 1 %}
+<div style="display:flex;justify-content:center;gap:0.5rem;margin-top:1.5rem;flex-wrap:wrap;">
+    {% for p in 1..pagination.last_page %}
+    <a href="/eingangsmeldungen?status={{ active_status }}&page={{ p }}"
+       class="btn btn-sm {% if p == pagination.current_page %}btn-primary{% else %}btn-secondary{% endif %}">{{ p }}</a>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<style>
+.intake-row:hover { background: rgba(255,255,255,0.03); }
+.status-badge { display:inline-flex;align-items:center;padding:0.25rem 0.65rem;border-radius:100px;font-size:0.75rem;font-weight:600;white-space:nowrap; }
+.btn-success { background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid rgba(34,197,94,0.3); }
+.btn-success:hover { background:rgba(34,197,94,0.25); }
+.btn-danger { background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.25); }
+.btn-danger:hover { background:rgba(239,68,68,0.22); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+</style>
+<script>
+/* Copy link button */
+document.getElementById('copy-link-btn')?.addEventListener('click', function () {
+    const url = this.dataset.url || window.location.origin + '/anmeldung';
+    navigator.clipboard.writeText(url).then(function () {
+        const btn = document.getElementById('copy-link-btn');
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></svg> Kopiert!';
+        setTimeout(function () { btn.innerHTML = orig; }, 2000);
+    });
+});
+
+/* Quick accept */
+document.querySelectorAll('.intake-accept-btn').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const id = this.dataset.id;
+        if (!confirm('Patient und Besitzer direkt in die Kartei übernehmen?')) return;
+
+        btn.disabled = true;
+        btn.innerHTML = '<div style="width:12px;height:12px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;"></div>';
+
+        fetch('/eingangsmeldungen/' + id + '/akzeptieren', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+            body: '_csrf_token=' + encodeURIComponent(document.querySelector('meta[name="csrf-token"]')?.content || '')
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.ok) {
+                window.location.href = '/patienten/' + data.patient_id;
+            } else {
+                alert('Fehler: ' + (data.error || 'Unbekannt'));
+                btn.disabled = false;
+            }
+        })
+        .catch(function () { alert('Netzwerkfehler.'); btn.disabled = false; });
+    });
+});
+
+/* Quick reject */
+document.querySelectorAll('.intake-reject-btn').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const id = this.dataset.id;
+        if (!confirm('Diese Anmeldung ablehnen?')) return;
+
+        fetch('/eingangsmeldungen/' + id + '/ablehnen', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+            body: '_csrf_token=' + encodeURIComponent(document.querySelector('meta[name="csrf-token"]')?.content || '')
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.ok) window.location.reload();
+            else alert('Fehler: ' + (data.error || 'Unbekannt'));
+        })
+        .catch(function () { alert('Netzwerkfehler.'); });
+    });
+});
+</script>
+{% endblock %}
