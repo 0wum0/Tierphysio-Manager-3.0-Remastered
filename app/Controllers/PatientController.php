@@ -316,9 +316,23 @@ class PatientController extends Controller
     public function servePhoto(array $params = []): void
     {
         $file = basename($this->sanitize($params['file']));
-        $path = STORAGE_PATH . '/patients/' . (int)$params['id'] . '/' . $file;
 
-        if (!file_exists($path) || !is_file($path)) {
+        /* Check multiple locations: per-patient folder, flat patients dir, intake dir */
+        $candidates = [
+            STORAGE_PATH . '/patients/' . (int)$params['id'] . '/' . $file,
+            STORAGE_PATH . '/patients/' . $file,
+            STORAGE_PATH . '/intake/' . $file,
+        ];
+
+        $path = null;
+        foreach ($candidates as $candidate) {
+            if (file_exists($candidate) && is_file($candidate)) {
+                $path = $candidate;
+                break;
+            }
+        }
+
+        if ($path === null) {
             $this->abort(404);
         }
 
