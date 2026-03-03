@@ -66,6 +66,9 @@ class SettingsController extends Controller
             'smtp_host', 'smtp_port', 'smtp_username', 'smtp_password',
             'smtp_encryption', 'mail_from_name', 'mail_from_address',
             'default_language', 'default_theme',
+            'pdf_primary_color', 'pdf_font', 'pdf_layout',
+            'pdf_show_logo', 'pdf_show_patient', 'pdf_footer_text',
+            'pdf_header_style', 'pdf_accent_color',
         ];
 
         $data = [];

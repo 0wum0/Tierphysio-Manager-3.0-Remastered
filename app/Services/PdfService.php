@@ -28,10 +28,17 @@ class PdfService
         $pdf->SetAutoPageBreak(true, 25);
         $pdf->AddPage();
 
-        $primaryColor = [41, 98, 255];
+        $primaryColor = $this->hexToRgb($settings['pdf_primary_color'] ?? '#2962FF');
+        $accentColor  = $this->hexToRgb($settings['pdf_accent_color']  ?? '#2962FF');
         $darkColor    = [15, 15, 26];
         $grayColor    = [100, 100, 120];
         $lightGray    = [245, 245, 250];
+        $font         = $this->resolvePdfFont($settings['pdf_font'] ?? 'helvetica');
+        $layout       = $settings['pdf_layout']      ?? 'classic';
+        $headerStyle  = $settings['pdf_header_style'] ?? 'line';
+        $showLogo     = ($settings['pdf_show_logo']    ?? '1') === '1';
+        $showPatient  = ($settings['pdf_show_patient'] ?? '1') === '1';
+        $footerCustom = $settings['pdf_footer_text']  ?? '';
 
         $companyName   = $settings['company_name']   ?? 'Tierphysio Praxis';
         $companyStreet = $settings['company_street'] ?? '';
@@ -48,16 +55,16 @@ class PdfService
             : null;
 
         // Header
-        if ($logoFile && file_exists($logoFile)) {
+        if ($showLogo && $logoFile && file_exists($logoFile)) {
             $pdf->Image($logoFile, 20, 15, 40, 0, '', '', '', false, 300);
         }
 
-        $pdf->SetFont('helvetica', 'B', 18);
+        $pdf->SetFont($font, 'B', 18);
         $pdf->SetTextColor(...$darkColor);
         $pdf->SetXY(110, 15);
         $pdf->Cell(80, 10, $companyName, 0, 1, 'R');
 
-        $pdf->SetFont('helvetica', '', 9);
+        $pdf->SetFont($font, '', 9);
         $pdf->SetTextColor(...$grayColor);
         $pdf->SetXY(110, 26);
         $pdf->Cell(80, 5, $companyStreet, 0, 1, 'R');
@@ -72,18 +79,23 @@ class PdfService
             $pdf->Cell(80, 5, $companyEmail, 0, 1, 'R');
         }
 
-        // Divider line
-        $pdf->SetDrawColor(...$primaryColor);
-        $pdf->SetLineWidth(0.8);
-        $pdf->Line(20, 55, 190, 55);
+        // Header divider
+        if ($headerStyle === 'band') {
+            $pdf->SetFillColor(...$primaryColor);
+            $pdf->Rect(20, 53, 170, 4, 'F');
+        } else {
+            $pdf->SetDrawColor(...$primaryColor);
+            $pdf->SetLineWidth(0.8);
+            $pdf->Line(20, 55, 190, 55);
+        }
 
         // Recipient
-        $pdf->SetFont('helvetica', '', 8);
+        $pdf->SetFont($font, '', 8);
         $pdf->SetTextColor(...$grayColor);
         $pdf->SetXY(20, 60);
         $pdf->Cell(80, 4, $companyName . ' · ' . $companyStreet . ' · ' . $companyZip . ' ' . $companyCity, 0, 1);
 
-        $pdf->SetFont('helvetica', '', 10);
+        $pdf->SetFont($font, '', 10);
         $pdf->SetTextColor(...$darkColor);
         $pdf->SetXY(20, 67);
 
@@ -96,12 +108,12 @@ class PdfService
         }
 
         // Invoice Meta
-        $pdf->SetFont('helvetica', 'B', 14);
-        $pdf->SetTextColor(...$primaryColor);
+        $pdf->SetFont($font, 'B', 14);
+        $pdf->SetTextColor(...$accentColor);
         $pdf->SetXY(110, 60);
         $pdf->Cell(80, 10, 'RECHNUNG', 0, 1, 'R');
 
-        $pdf->SetFont('helvetica', '', 9);
+        $pdf->SetFont($font, '', 9);
         $pdf->SetTextColor(...$darkColor);
         $pdf->SetXY(110, 72);
         $pdf->Cell(40, 5, 'Rechnungsnummer:', 0, 0, 'R');
@@ -118,7 +130,7 @@ class PdfService
             $pdf->Cell(40, 5, date('d.m.Y', strtotime($invoice['due_date'])), 0, 1, 'R');
         }
 
-        if ($patient) {
+        if ($showPatient && $patient) {
             $pdf->SetXY(110, 90);
             $pdf->Cell(40, 5, 'Patient:', 0, 0, 'R');
             $pdf->Cell(40, 5, $patient['name'] . ' (' . ($patient['species'] ?? '') . ')', 0, 1, 'R');
@@ -128,7 +140,7 @@ class PdfService
         $tableY = 110;
         $pdf->SetFillColor(...$primaryColor);
         $pdf->SetTextColor(255, 255, 255);
-        $pdf->SetFont('helvetica', 'B', 9);
+        $pdf->SetFont($font, 'B', 9);
         $pdf->SetXY(20, $tableY);
         $pdf->Cell(90, 7, 'Beschreibung', 1, 0, 'L', true);
         $pdf->Cell(20, 7, 'Menge', 1, 0, 'C', true);
@@ -137,7 +149,7 @@ class PdfService
         $pdf->Cell(30, 7, 'Gesamt', 1, 1, 'R', true);
 
         $pdf->SetTextColor(...$darkColor);
-        $pdf->SetFont('helvetica', '', 9);
+        $pdf->SetFont($font, '', 9);
         $fill = false;
 
         foreach ($positions as $pos) {
@@ -153,7 +165,7 @@ class PdfService
 
         // Totals
         $totalY = $pdf->GetY() + 5;
-        $pdf->SetFont('helvetica', '', 9);
+        $pdf->SetFont($font, '', 9);
         $pdf->SetXY(120, $totalY);
         $pdf->Cell(40, 6, 'Nettobetrag:', 0, 0, 'R');
         $pdf->Cell(30, 6, number_format((float)$invoice['total_net'], 2, ',', '.') . ' €', 0, 1, 'R');
@@ -166,14 +178,14 @@ class PdfService
         $pdf->SetLineWidth(0.4);
         $pdf->Line(120, $totalY + 13, 190, $totalY + 13);
 
-        $pdf->SetFont('helvetica', 'B', 11);
-        $pdf->SetTextColor(...$primaryColor);
+        $pdf->SetFont($font, 'B', 11);
+        $pdf->SetTextColor(...$accentColor);
         $pdf->SetXY(120, $totalY + 14);
         $pdf->Cell(40, 8, 'Gesamtbetrag:', 0, 0, 'R');
         $pdf->Cell(30, 8, number_format((float)$invoice['total_gross'], 2, ',', '.') . ' €', 0, 1, 'R');
 
         // Notes / Payment Terms
-        $pdf->SetFont('helvetica', '', 9);
+        $pdf->SetFont($font, '', 9);
         $pdf->SetTextColor(...$darkColor);
         if (!empty($invoice['notes'])) {
             $pdf->SetXY(20, $totalY + 14);
@@ -184,7 +196,7 @@ class PdfService
         if (!empty($paymentTerms)) {
             $notesY = $pdf->GetY() + 8;
             $pdf->SetXY(20, $notesY);
-            $pdf->SetFont('helvetica', 'I', 8);
+            $pdf->SetFont($font, 'I', 8);
             $pdf->SetTextColor(...$grayColor);
             $pdf->MultiCell(170, 4, $paymentTerms, 0, 'L');
         }
@@ -194,7 +206,7 @@ class PdfService
         $pdf->SetDrawColor(...$grayColor);
         $pdf->SetLineWidth(0.3);
         $pdf->Line(20, $footerY, 190, $footerY);
-        $pdf->SetFont('helvetica', '', 7);
+        $pdf->SetFont($font, '', 7);
         $pdf->SetTextColor(...$grayColor);
         $pdf->SetXY(20, $footerY + 2);
 
@@ -206,6 +218,34 @@ class PdfService
 
         $pdf->Cell(170, 4, implode('   |   ', $footerParts), 0, 0, 'C');
 
+        if (!empty($footerCustom)) {
+            $pdf->SetXY(20, $footerY + 7);
+            $pdf->Cell(170, 4, $footerCustom, 0, 0, 'C');
+        }
+
         return $pdf->Output('', 'S');
+    }
+
+    private function hexToRgb(string $hex): array
+    {
+        $hex = ltrim($hex, '#');
+        if (strlen($hex) === 3) {
+            $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
+        }
+        return [
+            (int)hexdec(substr($hex, 0, 2)),
+            (int)hexdec(substr($hex, 2, 2)),
+            (int)hexdec(substr($hex, 4, 2)),
+        ];
+    }
+
+    private function resolvePdfFont(string $font): string
+    {
+        return match($font) {
+            'times'    => 'times',
+            'courier'  => 'courier',
+            'dejavusans' => 'dejavusans',
+            default    => 'helvetica',
+        };
     }
 }
