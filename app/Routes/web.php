@@ -51,6 +51,7 @@ $router->post('/rechnungen/{id}', [InvoiceController::class, 'update'], ['auth']
 $router->post('/rechnungen/{id}/loeschen', [InvoiceController::class, 'delete'], ['auth']);
 $router->post('/rechnungen/{id}/status', [InvoiceController::class, 'updateStatus'], ['auth']);
 $router->get('/rechnungen/{id}/pdf', [InvoiceController::class, 'downloadPdf'], ['auth']);
+$router->get('/rechnungen/{id}/positionen-json', [InvoiceController::class, 'positionsJson'], ['auth']);
 $router->post('/rechnungen/{id}/senden', [InvoiceController::class, 'sendEmail'], ['auth']);
 
 $router->get('/einstellungen', [SettingsController::class, 'index'], ['admin']);

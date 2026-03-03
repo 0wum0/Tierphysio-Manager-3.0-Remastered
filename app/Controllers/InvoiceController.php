@@ -204,6 +204,23 @@ class InvoiceController extends Controller
         $this->redirect("/rechnungen/{$params['id']}");
     }
 
+    public function positionsJson(array $params = []): void
+    {
+        $invoice = $this->invoiceService->findById((int)$params['id']);
+        if (!$invoice) {
+            http_response_code(404);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'not found']);
+            exit;
+        }
+
+        $positions = $this->invoiceService->getPositions((int)$params['id']);
+
+        header('Content-Type: application/json');
+        echo json_encode(['positions' => $positions]);
+        exit;
+    }
+
     public function downloadPdf(array $params = []): void
     {
         $invoice   = $this->invoiceService->findById((int)$params['id']);
@@ -218,7 +235,8 @@ class InvoiceController extends Controller
         $pdf = $this->pdfService->generateInvoicePdf($invoice, $positions, $owner, $patient);
 
         header('Content-Type: application/pdf');
-        header('Content-Disposition: attachment; filename="Rechnung-' . $invoice['invoice_number'] . '.pdf"');
+        // Use inline so iframes/modals can display it, still downloadable via browser save
+        header('Content-Disposition: inline; filename="Rechnung-' . $invoice['invoice_number'] . '.pdf"');
         echo $pdf;
         exit;
     }

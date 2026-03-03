@@ -1,6 +1,103 @@
 {% extends 'layouts/base.twig' %}
 
 {% block content %}
+
+{# ── INVOICE DETAIL MODALS ─────────────────────────────────────────── #}
+{% for invoice in invoices %}
+<div class="modal-overlay" id="modal-invoice-{{ invoice.id }}" style="z-index:800;">
+    <div class="modal modal-xl" style="max-width:900px;width:95vw;max-height:90vh;display:flex;flex-direction:column;">
+        <div class="modal-header" style="flex-shrink:0;">
+            <div class="flex items-center gap-3">
+                <span class="font-bold" style="font-size:1rem;">{{ invoice.invoice_number }}</span>
+                <span class="badge badge-{{ invoice.status }}">{{ t('invoices.status_' ~ invoice.status) }}</span>
+            </div>
+            <button class="modal-close" data-modal-close="modal-invoice-{{ invoice.id }}" type="button">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+        </div>
+        <div class="modal-body" style="overflow-y:auto;flex:1;">
+            <div class="flex gap-4" style="flex-wrap:wrap;align-items:flex-start;">
+
+                {# Left: meta + positions #}
+                <div style="flex:1;min-width:260px;display:flex;flex-direction:column;gap:1rem;">
+
+                    <div class="form-grid form-grid-2" style="gap:0.75rem;">
+                        <div>
+                            <div class="text-xs text-muted mb-1">{{ t('invoices.issue_date') }}</div>
+                            <div class="font-semibold text-sm">{{ invoice.issue_date|date_de }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-muted mb-1">{{ t('invoices.due_date') }}</div>
+                            <div class="font-semibold text-sm {{ invoice.status == 'overdue' ? 'text-danger' : '' }}">{{ invoice.due_date ? invoice.due_date|date_de : '—' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-muted mb-1">{{ t('invoices.owner') }}</div>
+                            <div class="font-semibold text-sm">{{ invoice.owner_name ?? '—' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-muted mb-1">{{ t('invoices.patient') }}</div>
+                            <div class="font-semibold text-sm">{{ invoice.patient_name ?? '—' }}</div>
+                        </div>
+                    </div>
+
+                    {# Positions laden wir per AJAX #}
+                    <div id="positions-{{ invoice.id }}" data-invoice-id="{{ invoice.id }}">
+                        <div style="text-align:center;padding:1rem;color:var(--text-muted);font-size:0.85rem;">Lade Positionen…</div>
+                    </div>
+
+                    <div class="flex justify-between items-center" style="border-top:1px solid var(--glass-border);padding-top:0.75rem;">
+                        <span class="text-xs text-muted">Gesamt (brutto)</span>
+                        <span class="font-bold" style="font-size:1.1rem;color:var(--accent);">{{ invoice.total_gross|money }}</span>
+                    </div>
+
+                    {# Status ändern #}
+                    <form action="/rechnungen/{{ invoice.id }}/status" method="POST" class="flex gap-2 items-center">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <select name="status" class="form-control" style="flex:1;font-size:0.85rem;">
+                            <option value="draft"   {{ invoice.status == 'draft'   ? 'selected' : '' }}>{{ t('invoices.status_draft') }}</option>
+                            <option value="open"    {{ invoice.status == 'open'    ? 'selected' : '' }}>{{ t('invoices.status_open') }}</option>
+                            <option value="paid"    {{ invoice.status == 'paid'    ? 'selected' : '' }}>{{ t('invoices.status_paid') }}</option>
+                            <option value="overdue" {{ invoice.status == 'overdue' ? 'selected' : '' }}>{{ t('invoices.status_overdue') }}</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary btn-sm" style="flex-shrink:0;">Status speichern</button>
+                    </form>
+
+                    <div class="flex gap-2" style="flex-wrap:wrap;">
+                        <a href="/rechnungen/{{ invoice.id }}" class="btn btn-secondary btn-sm">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            Bearbeiten
+                        </a>
+                        <button class="btn btn-secondary btn-sm" onclick="openPdfPreview('/rechnungen/{{ invoice.id }}/pdf', '{{ invoice.invoice_number }}.pdf')">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="1.5" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
+                            PDF Vorschau
+                        </button>
+                        <a href="/rechnungen/{{ invoice.id }}/pdf" class="btn btn-secondary btn-sm" download>
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            Download
+                        </a>
+                        <form action="/rechnungen/{{ invoice.id }}/loeschen" method="POST" style="margin:0;">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                            <button type="submit" class="btn btn-danger btn-sm" data-confirm="{{ t('common.confirm_delete') }}">
+                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="3 6 5 6 21 6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                                Löschen
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                {# Right: PDF preview iframe #}
+                <div style="flex:1;min-width:280px;height:420px;background:#111;border-radius:8px;overflow:hidden;border:1px solid var(--glass-border);" id="pdf-frame-wrap-{{ invoice.id }}">
+                    <div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:0.85rem;flex-direction:column;gap:0.5rem;" id="pdf-placeholder-{{ invoice.id }}">
+                        <svg width="32" height="32" fill="none" viewBox="0 0 24 24" style="opacity:0.3;"><path stroke="currentColor" stroke-width="1.5" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="1.5" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
+                        <span>PDF-Vorschau wird geladen…</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
 <div class="page-header">
     <div>
         <h1 class="page-title">{{ t('invoices.title') }}</h1>
@@ -84,10 +181,8 @@
             </thead>
             <tbody>
                 {% for invoice in invoices %}
-                <tr>
-                    <td>
-                        <a href="/rechnungen/{{ invoice.id }}" class="font-semibold" style="color:var(--accent);">{{ invoice.invoice_number }}</a>
-                    </td>
+                <tr class="invoice-row" data-modal-open="modal-invoice-{{ invoice.id }}" data-invoice-id="{{ invoice.id }}" style="cursor:pointer;">
+                    <td><span class="font-semibold" style="color:var(--accent);">{{ invoice.invoice_number }}</span></td>
                     <td>{{ invoice.owner_name ?? '—' }}</td>
                     <td>{{ invoice.patient_name ?? '—' }}</td>
                     <td>{{ invoice.issue_date|date_de }}</td>
@@ -100,12 +195,9 @@
                     <td><span class="badge badge-{{ invoice.status }}">{{ t('invoices.status_' ~ invoice.status) }}</span></td>
                     <td>
                         <div class="flex gap-2" style="justify-content:flex-end;">
-                            <a href="/rechnungen/{{ invoice.id }}" class="btn btn-secondary btn-sm" title="Anzeigen">
+                            <span class="btn btn-secondary btn-sm" title="Details">
                                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>
-                            </a>
-                            <a href="/rechnungen/{{ invoice.id }}/pdf" class="btn btn-secondary btn-sm" title="{{ t('invoices.download_pdf') }}">
-                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                            </a>
+                            </span>
                         </div>
                     </td>
                 </tr>
@@ -133,4 +225,109 @@
         <a href="/rechnungen/erstellen" class="btn btn-primary">{{ t('invoices.new_invoice') }}</a>
     </div>
 {% endif %}
+{# PDF Viewer Modal (global, reused) #}
+<div id="pdf-viewer-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.9);align-items:center;justify-content:center;flex-direction:column;">
+    <div style="position:relative;width:92vw;max-width:1000px;height:90vh;display:flex;flex-direction:column;background:var(--bg-surface,#1a1a2e);border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.7);">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
+            <span id="pv-filename" style="font-size:0.875rem;font-weight:600;color:#fff;"></span>
+            <div style="display:flex;gap:0.5rem;">
+                <a id="pv-download" href="" download style="background:rgba(255,255,255,0.12);color:#fff;padding:0.35rem 0.75rem;border-radius:6px;font-size:0.8rem;text-decoration:none;">Herunterladen</a>
+                <button id="pv-close" style="background:rgba(255,255,255,0.12);border:none;color:#fff;width:32px;height:32px;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+        </div>
+        <iframe id="pv-frame" src="" style="flex:1;border:none;width:100%;" title="PDF Vorschau"></iframe>
+    </div>
+</div>
+
+<script>
+(function () {
+    // ── Invoice row click → open modal + lazy load PDF preview ──────
+    document.querySelectorAll('.invoice-row').forEach(function (row) {
+        row.addEventListener('click', function (e) {
+            if (e.target.closest('button, a, form')) return;
+            const invoiceId = row.dataset.invoiceId;
+            const modalId   = 'modal-invoice-' + invoiceId;
+
+            // Open modal via existing modal system
+            const overlay = document.getElementById(modalId);
+            if (overlay) {
+                overlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+
+            // Lazy-load positions
+            const posBox = document.getElementById('positions-' + invoiceId);
+            if (posBox && posBox.dataset.loaded !== '1') {
+                posBox.dataset.loaded = '1';
+                fetch('/rechnungen/' + invoiceId + '/positionen-json')
+                    .then(r => r.json())
+                    .then(function (data) {
+                        if (!data.positions || !data.positions.length) {
+                            posBox.innerHTML = '<p class="text-sm text-muted">Keine Positionen.</p>';
+                            return;
+                        }
+                        let html = '<table style="width:100%;border-collapse:collapse;font-size:0.82rem;">';
+                        html += '<thead><tr style="border-bottom:1px solid var(--glass-border);">';
+                        html += '<th style="text-align:left;padding:4px 6px;color:var(--text-muted);font-weight:500;">Beschreibung</th>';
+                        html += '<th style="text-align:right;padding:4px 6px;color:var(--text-muted);font-weight:500;">Menge</th>';
+                        html += '<th style="text-align:right;padding:4px 6px;color:var(--text-muted);font-weight:500;">Einzelpreis</th>';
+                        html += '<th style="text-align:right;padding:4px 6px;color:var(--text-muted);font-weight:500;">MwSt.</th>';
+                        html += '<th style="text-align:right;padding:4px 6px;color:var(--text-muted);font-weight:500;">Gesamt</th>';
+                        html += '</tr></thead><tbody>';
+                        data.positions.forEach(function (p, i) {
+                            const bg = i % 2 === 0 ? 'background:rgba(255,255,255,0.02);' : '';
+                            const total = (parseFloat(p.quantity) * parseFloat(p.unit_price)).toFixed(2).replace('.', ',');
+                            const price = parseFloat(p.unit_price).toFixed(2).replace('.', ',');
+                            const qty   = parseFloat(p.quantity).toFixed(2).replace('.', ',');
+                            html += `<tr style="${bg}"><td style="padding:5px 6px;">${p.description}</td><td style="text-align:right;padding:5px 6px;">${qty}</td><td style="text-align:right;padding:5px 6px;">${price} €</td><td style="text-align:right;padding:5px 6px;">${p.tax_rate}%</td><td style="text-align:right;padding:5px 6px;font-weight:600;">${total} €</td></tr>`;
+                        });
+                        html += '</tbody></table>';
+                        posBox.innerHTML = html;
+                    })
+                    .catch(function () {
+                        posBox.innerHTML = '<p class="text-sm text-muted">Positionen konnten nicht geladen werden.</p>';
+                    });
+            }
+
+            // Lazy-load PDF in iframe
+            const pdfWrap = document.getElementById('pdf-frame-wrap-' + invoiceId);
+            const pdfPlaceholder = document.getElementById('pdf-placeholder-' + invoiceId);
+            if (pdfWrap && pdfPlaceholder && !pdfWrap.dataset.loaded) {
+                pdfWrap.dataset.loaded = '1';
+                const frame = document.createElement('iframe');
+                frame.src   = '/rechnungen/' + invoiceId + '/pdf';
+                frame.style.cssText = 'width:100%;height:100%;border:none;display:block;';
+                frame.title = 'Rechnungs-PDF';
+                pdfPlaceholder.remove();
+                pdfWrap.appendChild(frame);
+            }
+        });
+    });
+
+    // ── Global PDF preview modal ─────────────────────────────────────
+    window.openPdfPreview = function (src, filename) {
+        document.getElementById('pv-filename').textContent = filename;
+        document.getElementById('pv-download').href = src;
+        document.getElementById('pv-download').download = filename;
+        document.getElementById('pv-frame').src = src;
+        document.getElementById('pdf-viewer-overlay').style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    };
+
+    document.getElementById('pv-close').addEventListener('click', function () {
+        document.getElementById('pdf-viewer-overlay').style.display = 'none';
+        document.getElementById('pv-frame').src = '';
+        document.body.style.overflow = '';
+    });
+    document.getElementById('pdf-viewer-overlay').addEventListener('click', function (e) {
+        if (e.target === this) {
+            this.style.display = 'none';
+            document.getElementById('pv-frame').src = '';
+            document.body.style.overflow = '';
+        }
+    });
+})();
+</script>
 {% endblock %}

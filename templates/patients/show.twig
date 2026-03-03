@@ -224,8 +224,10 @@
                                             </a>
                                         {% else %}
                                             <a href="/patienten/{{ patient.id }}/dokumente/{{ entry.attachment }}"
-                                               class="btn btn-secondary btn-sm" download>
-                                                <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                                               class="btn btn-secondary btn-sm"
+                                               data-lightbox="/patienten/{{ patient.id }}/dokumente/{{ entry.attachment }}"
+                                               data-filename="{{ entry.attachment }}">
+                                                <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="1.5" stroke-linecap="round" points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
                                                 {{ entry.attachment }}
                                             </a>
                                         {% endif %}
@@ -321,54 +323,91 @@
         </form>
     </div>
 </div>
-{# Lightbox Modal für Bild-Anhänge #}
-<div id="lightbox-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;flex-direction:column;gap:1rem;">
-    <button id="lightbox-close" style="position:absolute;top:1rem;right:1rem;background:rgba(255,255,255,0.15);border:none;color:#fff;width:36px;height:36px;border-radius:50%;cursor:pointer;font-size:1.2rem;display:flex;align-items:center;justify-content:center;">
-        <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-    </button>
-    <img id="lightbox-img" src="" alt="" style="max-width:90vw;max-height:80vh;border-radius:8px;object-fit:contain;box-shadow:0 8px 40px rgba(0,0,0,0.6);">
-    <div id="lightbox-filename" style="color:rgba(255,255,255,0.7);font-size:0.8rem;"></div>
-    <a id="lightbox-download" href="" download style="color:rgba(255,255,255,0.9);font-size:0.8rem;text-decoration:underline;">Herunterladen</a>
+{# Datei-Viewer Modal (Bilder + PDFs + Dokumente) #}
+<div id="fileviewer-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.88);align-items:center;justify-content:center;flex-direction:column;">
+    <div style="position:relative;width:92vw;max-width:960px;height:88vh;display:flex;flex-direction:column;background:var(--bg-surface,#1a1a2e);border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.7);">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
+            <span id="fv-filename" style="font-size:0.875rem;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%;"></span>
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+                <a id="fv-download" href="" download style="background:rgba(255,255,255,0.12);color:#fff;border:none;padding:0.35rem 0.75rem;border-radius:6px;font-size:0.8rem;text-decoration:none;display:flex;align-items:center;gap:0.4rem;">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    Herunterladen
+                </a>
+                <button id="fv-close" style="background:rgba(255,255,255,0.12);border:none;color:#fff;width:32px;height:32px;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+        </div>
+        <div id="fv-body" style="flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#111;"></div>
+    </div>
 </div>
 
 <script>
 (function () {
-    const overlay  = document.getElementById('lightbox-overlay');
-    const img      = document.getElementById('lightbox-img');
-    const fname    = document.getElementById('lightbox-filename');
-    const dlLink   = document.getElementById('lightbox-download');
-    const closeBtn = document.getElementById('lightbox-close');
+    const overlay  = document.getElementById('fileviewer-overlay');
+    const fvBody   = document.getElementById('fv-body');
+    const fvName   = document.getElementById('fv-filename');
+    const fvDl     = document.getElementById('fv-download');
+    const fvClose  = document.getElementById('fv-close');
 
-    function openLightbox(src, filename) {
-        img.src      = src;
-        img.alt      = filename;
-        fname.textContent = filename;
-        dlLink.href  = src;
-        dlLink.download = filename;
+    const imgExts  = ['jpg','jpeg','png','gif','webp'];
+    const docExts  = ['pdf','doc','docx','xls','xlsx','txt','csv'];
+
+    function extOf(filename) {
+        return (filename.split('.').pop() || '').toLowerCase();
+    }
+
+    function openViewer(src, filename) {
+        fvName.textContent = filename;
+        fvDl.href          = src;
+        fvDl.download      = filename;
+        fvBody.innerHTML   = '';
+
+        const ext = extOf(filename);
+
+        if (imgExts.includes(ext)) {
+            const img = document.createElement('img');
+            img.src   = src;
+            img.alt   = filename;
+            img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;';
+            fvBody.appendChild(img);
+        } else if (ext === 'pdf') {
+            const frame = document.createElement('iframe');
+            frame.src   = src;
+            frame.style.cssText = 'width:100%;height:100%;border:none;';
+            frame.setAttribute('title', filename);
+            fvBody.appendChild(frame);
+        } else {
+            // Fallback for Word/Excel/txt: show download prompt
+            fvBody.innerHTML = `
+                <div style="text-align:center;color:rgba(255,255,255,0.7);padding:3rem;">
+                    <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="margin:0 auto 1rem;display:block;opacity:0.5;"><path stroke="currentColor" stroke-width="1.5" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="1.5" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
+                    <div style="font-size:1rem;font-weight:600;margin-bottom:0.5rem;">${filename}</div>
+                    <div style="font-size:0.85rem;margin-bottom:1.5rem;opacity:0.6;">Dieser Dateityp kann nicht direkt angezeigt werden.</div>
+                    <a href="${src}" download="${filename}" style="background:var(--accent,#4f7cff);color:#fff;padding:0.6rem 1.4rem;border-radius:8px;text-decoration:none;font-size:0.875rem;">Herunterladen</a>
+                </div>`;
+        }
+
         overlay.style.display = 'flex';
         document.body.style.overflow = 'hidden';
     }
 
-    function closeLightbox() {
+    function closeViewer() {
         overlay.style.display = 'none';
-        img.src = '';
+        fvBody.innerHTML = '';
         document.body.style.overflow = '';
     }
 
     document.querySelectorAll('[data-lightbox]').forEach(function (el) {
         el.addEventListener('click', function (e) {
             e.preventDefault();
-            openLightbox(el.dataset.lightbox, el.dataset.filename);
+            openViewer(el.dataset.lightbox, el.dataset.filename);
         });
     });
 
-    closeBtn.addEventListener('click', closeLightbox);
-    overlay.addEventListener('click', function (e) {
-        if (e.target === overlay) closeLightbox();
-    });
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closeLightbox();
-    });
+    fvClose.addEventListener('click', closeViewer);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) closeViewer(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeViewer(); });
 })();
 </script>
 {% endblock %}
