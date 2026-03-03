@@ -480,6 +480,7 @@ const CustomSelect = {
 
         const close = () => {
             wrapper.classList.remove('cs-open');
+            dropdown.style.display = 'none';
             trigger.setAttribute('aria-expanded', 'false');
         };
 
