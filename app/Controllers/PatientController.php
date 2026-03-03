@@ -211,6 +211,47 @@ class PatientController extends Controller
         $this->redirect("/patienten/{$params['id']}");
     }
 
+    public function addTimelineEntryJson(array $params = []): void
+    {
+        $this->validateCsrf();
+        $patient = $this->patientService->findById((int)$params['id']);
+        if (!$patient) {
+            http_response_code(404);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'not found']);
+            exit;
+        }
+
+        $data = [
+            'patient_id'   => (int)$params['id'],
+            'type'         => $this->sanitize($this->post('type', 'note')),
+            'title'        => $this->sanitize($this->post('title', '')),
+            'content'      => $this->post('content', ''),
+            'status_badge' => $this->sanitize($this->post('status_badge', '')),
+            'entry_date'   => $this->post('entry_date') ?: date('Y-m-d H:i:s'),
+            'user_id'      => (int)$this->session->get('user_id'),
+        ];
+
+        if (!empty($_FILES['attachment']['name'])) {
+            $destination = STORAGE_PATH . '/patients/' . $params['id'] . '/timeline';
+            $file = $this->uploadFile('attachment', $destination, [
+                'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+                'application/pdf', 'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            ]);
+            if ($file) {
+                $data['attachment'] = $file;
+            }
+        }
+
+        $this->patientService->addTimelineEntry($data);
+        $timeline = $this->patientService->getTimeline((int)$params['id']);
+
+        header('Content-Type: application/json');
+        echo json_encode(['ok' => true, 'timeline' => $timeline]);
+        exit;
+    }
+
     public function deleteTimelineEntry(array $params = []): void
     {
         $this->validateCsrf();

@@ -32,6 +32,7 @@ $router->post('/patienten/{id}', [PatientController::class, 'update'], ['auth'])
 $router->post('/patienten/{id}/loeschen', [PatientController::class, 'delete'], ['auth']);
 $router->post('/patienten/{id}/foto', [PatientController::class, 'uploadPhoto'], ['auth']);
 $router->post('/patienten/{id}/timeline', [PatientController::class, 'addTimelineEntry'], ['auth']);
+$router->post('/patienten/{id}/timeline-json', [PatientController::class, 'addTimelineEntryJson'], ['auth']);
 $router->post('/patienten/{id}/timeline/{entryId}/loeschen', [PatientController::class, 'deleteTimelineEntry'], ['auth']);
 $router->get('/patienten/{id}/dokumente/{file}', [PatientController::class, 'downloadDocument'], ['auth']);
 $router->get('/patienten/{id}/foto/{file}', [PatientController::class, 'servePhoto'], ['auth']);
