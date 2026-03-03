@@ -210,6 +210,7 @@ class PdfService
         }
 
         // ── FOOTER (pinned to bottom of last page) ───────────────────────
+        $pdf->SetAutoPageBreak(false);
         $pdf->SetY(-($footerHeight + 2));
         $pdf->SetDrawColor(...$grayColor);
         $pdf->SetLineWidth(0.2);
