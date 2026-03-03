@@ -72,17 +72,10 @@ class MigrationService
         $sql        = file_get_contents($file);
         $statements = array_filter(array_map('trim', explode(';', $sql)));
 
-        $this->db->beginTransaction();
-        try {
-            foreach ($statements as $statement) {
-                if (!empty($statement)) {
-                    $this->db->execute($statement);
-                }
+        foreach ($statements as $statement) {
+            if (!empty($statement)) {
+                $this->db->execute($statement);
             }
-            $this->db->commit();
-        } catch (\Throwable $e) {
-            $this->db->rollback();
-            throw $e;
         }
     }
 
