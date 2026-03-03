@@ -355,15 +355,32 @@ const CustomSelect = {
     build(sel) {
         if (sel.dataset.csInit) return;
         sel.dataset.csInit = '1';
+
+        /* Read styles BEFORE hiding */
+        const selStyles   = window.getComputedStyle(sel);
+        const selInlineW  = sel.style.width;
+        const selWidth    = selInlineW || selStyles.width || 'auto';
+        const selFontSize = selStyles.fontSize || '0.9rem';
+        const selPadT     = selStyles.paddingTop    || '0.65rem';
+        const selPadB     = selStyles.paddingBottom || '0.65rem';
+        const selPadL     = selStyles.paddingLeft   || '0.875rem';
+
         sel.style.display = 'none';
 
         const wrapper = document.createElement('div');
         wrapper.className = 'cs-wrapper';
-        wrapper.style.cssText = 'position:relative;width:100%;display:inline-block;';
+        wrapper.style.cssText = `position:relative;display:inline-block;width:${selWidth};vertical-align:middle;`;
         if (sel.disabled) wrapper.classList.add('cs-disabled');
 
         const trigger = document.createElement('div');
         trigger.className = 'cs-trigger form-control';
+        trigger.style.fontSize      = selFontSize;
+        trigger.style.paddingTop    = selPadT;
+        trigger.style.paddingBottom = selPadB;
+        trigger.style.paddingLeft   = selPadL;
+        trigger.style.paddingRight  = '2.2rem';
+        trigger.style.boxSizing     = 'border-box';
+        trigger.style.width         = '100%';
         trigger.setAttribute('tabindex', sel.disabled ? '-1' : '0');
         trigger.setAttribute('role', 'combobox');
         trigger.setAttribute('aria-expanded', 'false');
