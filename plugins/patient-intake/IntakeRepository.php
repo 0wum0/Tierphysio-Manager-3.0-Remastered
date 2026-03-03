@@ -14,7 +14,7 @@ class IntakeRepository
 
     public function create(array $data): int
     {
-        $cols = implode(', ', array_map(fn($k) => "`$k`", array_keys($data)));
+        $cols         = implode(', ', array_map(fn($k) => "`$k`", array_keys($data)));
         $placeholders = implode(', ', array_fill(0, count($data), '?'));
         $this->db->execute(
             "INSERT INTO `" . self::TABLE . "` ($cols) VALUES ($placeholders)",
@@ -25,22 +25,21 @@ class IntakeRepository
 
     public function findById(int $id): array|false
     {
-        $rows = $this->db->query(
+        return $this->db->fetch(
             "SELECT * FROM `" . self::TABLE . "` WHERE id = ? LIMIT 1",
             [$id]
         );
-        return $rows[0] ?? false;
     }
 
     public function findAll(string $status = '', int $limit = 100, int $offset = 0): array
     {
         if ($status !== '') {
-            return $this->db->query(
+            return $this->db->fetchAll(
                 "SELECT * FROM `" . self::TABLE . "` WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
                 [$status, $limit, $offset]
             );
         }
-        return $this->db->query(
+        return $this->db->fetchAll(
             "SELECT * FROM `" . self::TABLE . "` ORDER BY created_at DESC LIMIT ? OFFSET ?",
             [$limit, $offset]
         );
@@ -48,25 +47,23 @@ class IntakeRepository
 
     public function countByStatus(string $status): int
     {
-        $rows = $this->db->query(
-            "SELECT COUNT(*) AS cnt FROM `" . self::TABLE . "` WHERE status = ?",
+        return (int)$this->db->fetchColumn(
+            "SELECT COUNT(*) FROM `" . self::TABLE . "` WHERE status = ?",
             [$status]
         );
-        return (int)($rows[0]['cnt'] ?? 0);
     }
 
     public function countUnread(): int
     {
-        $rows = $this->db->query(
-            "SELECT COUNT(*) AS cnt FROM `" . self::TABLE . "` WHERE status IN ('neu','in_bearbeitung')",
+        return (int)$this->db->fetchColumn(
+            "SELECT COUNT(*) FROM `" . self::TABLE . "` WHERE status IN ('neu','in_bearbeitung')",
             []
         );
-        return (int)($rows[0]['cnt'] ?? 0);
     }
 
     public function getLatestUnread(int $limit = 5): array
     {
-        return $this->db->query(
+        return $this->db->fetchAll(
             "SELECT id, patient_name, owner_first_name, owner_last_name, created_at
              FROM `" . self::TABLE . "`
              WHERE status IN ('neu','in_bearbeitung')
@@ -92,20 +89,20 @@ class IntakeRepository
         $offset = ($page - 1) * $perPage;
 
         if ($status !== '') {
-            $total = $this->db->query(
-                "SELECT COUNT(*) AS cnt FROM `" . self::TABLE . "` WHERE status = ?",
+            $total = (int)$this->db->fetchColumn(
+                "SELECT COUNT(*) FROM `" . self::TABLE . "` WHERE status = ?",
                 [$status]
-            )[0]['cnt'] ?? 0;
-            $items = $this->db->query(
+            );
+            $items = $this->db->fetchAll(
                 "SELECT * FROM `" . self::TABLE . "` WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
                 [$status, $perPage, $offset]
             );
         } else {
-            $total = $this->db->query(
-                "SELECT COUNT(*) AS cnt FROM `" . self::TABLE . "`",
+            $total = (int)$this->db->fetchColumn(
+                "SELECT COUNT(*) FROM `" . self::TABLE . "`",
                 []
-            )[0]['cnt'] ?? 0;
-            $items = $this->db->query(
+            );
+            $items = $this->db->fetchAll(
                 "SELECT * FROM `" . self::TABLE . "` ORDER BY created_at DESC LIMIT ? OFFSET ?",
                 [$perPage, $offset]
             );
@@ -113,10 +110,10 @@ class IntakeRepository
 
         return [
             'items'        => $items,
-            'total'        => (int)$total,
+            'total'        => $total,
             'per_page'     => $perPage,
             'current_page' => $page,
-            'last_page'    => (int)ceil((int)$total / $perPage),
+            'last_page'    => (int)ceil($total / $perPage),
         ];
     }
 }
