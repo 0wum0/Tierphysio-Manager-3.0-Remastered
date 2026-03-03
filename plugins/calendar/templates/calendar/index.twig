@@ -2,6 +2,7 @@
 
 {% block head %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css">
+<link rel="stylesheet" href="/assets/css/calendar.css">
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.11/locales/de.global.min.js"></script>
 {% endblock %}
@@ -35,55 +36,64 @@
 </div>
 
 {# Stats Bar #}
-<div class="flex gap-3 mb-4" style="flex-wrap:wrap;">
-    <div class="glass-card" style="flex:1;min-width:120px;padding:0.75rem 1rem;text-align:center;">
-        <div style="font-size:1.5rem;font-weight:700;color:var(--accent);">{{ stats.today ?? 0 }}</div>
-        <div style="font-size:0.75rem;color:var(--text-muted);">Heute</div>
+<div class="cal-stats-bar">
+    <div class="cal-stat" style="--stat-gradient:linear-gradient(135deg,#4f7cff,#7c9fff);">
+        <div class="cal-stat-value">{{ stats.today ?? 0 }}</div>
+        <div class="cal-stat-label">Heute</div>
     </div>
-    <div class="glass-card" style="flex:1;min-width:120px;padding:0.75rem 1rem;text-align:center;">
-        <div style="font-size:1.5rem;font-weight:700;color:var(--accent);">{{ stats.upcoming ?? 0 }}</div>
-        <div style="font-size:0.75rem;color:var(--text-muted);">Geplant</div>
+    <div class="cal-stat" style="--stat-gradient:linear-gradient(135deg,#a855f7,#7c3aed);">
+        <div class="cal-stat-value">{{ stats.upcoming ?? 0 }}</div>
+        <div class="cal-stat-label">Geplant</div>
     </div>
-    <div class="glass-card" style="flex:1;min-width:120px;padding:0.75rem 1rem;text-align:center;">
-        <div style="font-size:1.5rem;font-weight:700;color:var(--success);">{{ stats.completed ?? 0 }}</div>
-        <div style="font-size:0.75rem;color:var(--text-muted);">Abgeschlossen</div>
+    <div class="cal-stat" style="--stat-gradient:linear-gradient(135deg,#22c55e,#16a34a);">
+        <div class="cal-stat-value">{{ stats.completed ?? 0 }}</div>
+        <div class="cal-stat-label">Abgeschlossen</div>
     </div>
-    <div class="glass-card" style="flex:1;min-width:120px;padding:0.75rem 1rem;text-align:center;">
-        <div style="font-size:1.5rem;font-weight:700;color:var(--danger);">{{ stats.cancelled ?? 0 }}</div>
-        <div style="font-size:0.75rem;color:var(--text-muted);">Abgesagt</div>
+    <div class="cal-stat" style="--stat-gradient:linear-gradient(135deg,#ef4444,#dc2626);">
+        <div class="cal-stat-value">{{ stats.cancelled ?? 0 }}</div>
+        <div class="cal-stat-label">Abgesagt</div>
     </div>
 </div>
 
 {# Calendar Container #}
-<div class="glass-card" style="padding:0;">
-    <div id="cal-toolbar" style="display:flex;align-items:center;gap:0.5rem;padding:0.875rem 1rem;border-bottom:1px solid var(--glass-border);flex-wrap:wrap;">
+<div class="cal-card">
+    <div class="cal-toolbar">
         <div class="flex gap-1">
-            <button class="btn btn-secondary btn-sm" id="cal-prev">‹</button>
-            <button class="btn btn-secondary btn-sm" id="cal-today">Heute</button>
-            <button class="btn btn-secondary btn-sm" id="cal-next">›</button>
+            <button class="cal-nav-btn" id="cal-prev" title="Zurück">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="15 18 9 12 15 6"/></svg>
+            </button>
+            <button class="cal-nav-btn" id="cal-today" title="Heute" style="width:auto;padding:0 0.75rem;font-size:0.75rem;font-weight:700;letter-spacing:0.03em;">Heute</button>
+            <button class="cal-nav-btn" id="cal-next" title="Weiter">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="9 18 15 12 9 6"/></svg>
+            </button>
         </div>
-        <h2 id="cal-title" style="font-size:1rem;font-weight:600;margin:0 0.5rem;flex:1;"></h2>
+        <h2 class="cal-title" id="cal-title"></h2>
         <div class="flex gap-1">
-            <button class="btn btn-secondary btn-sm cal-view-btn active" data-view="dayGridMonth">Monat</button>
-            <button class="btn btn-secondary btn-sm cal-view-btn" data-view="timeGridWeek">Woche</button>
-            <button class="btn btn-secondary btn-sm cal-view-btn" data-view="timeGridDay">Tag</button>
-            <button class="btn btn-secondary btn-sm cal-view-btn" data-view="listWeek">Liste</button>
+            <button class="cal-view-btn active" data-view="dayGridMonth">Monat</button>
+            <button class="cal-view-btn cal-hide-mobile" data-view="timeGridWeek">Woche</button>
+            <button class="cal-view-btn cal-hide-mobile" data-view="timeGridDay">Tag</button>
+            <button class="cal-view-btn" data-view="listWeek">Liste</button>
         </div>
     </div>
-    <div id="calendar" style="padding:0.5rem;min-height:600px;"></div>
+    <div class="cal-body">
+        <div id="calendar"></div>
+    </div>
 </div>
 
-{# iCal Import Form #}
-<div class="glass-card mt-4" style="padding:1rem;">
-    <details>
-        <summary style="cursor:pointer;font-size:0.875rem;font-weight:600;color:var(--text-muted);">iCal-Datei importieren (.ics)</summary>
-        <form action="/kalender/ical-import" method="POST" enctype="multipart/form-data" class="flex gap-3 mt-3 items-center">
+{# iCal Import #}
+<details class="cal-import-section">
+    <summary>
+        <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        iCal-Datei importieren (.ics)
+    </summary>
+    <div class="cal-import-body">
+        <form action="/kalender/ical-import" method="POST" enctype="multipart/form-data" class="flex gap-3 items-center" style="width:100%;">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
             <input type="file" name="ical_file" accept=".ics" class="form-control" style="flex:1;">
             <button type="submit" class="btn btn-primary btn-sm">Importieren</button>
         </form>
-    </details>
-</div>
+    </div>
+</details>
 
 {# ── Appointment Modal ── #}
 <div class="modal-overlay" id="modal-appointment">
@@ -232,24 +242,6 @@
     </div>
 </div>
 
-<style>
-/* FullCalendar theme overrides */
-#calendar { --fc-border-color: var(--glass-border); --fc-today-bg-color: rgba(79,124,255,0.07); --fc-neutral-bg-color: transparent; --fc-list-event-hover-bg-color: rgba(79,124,255,0.1); }
-.fc { color: var(--text-primary); font-family: inherit; }
-.fc .fc-toolbar-title { font-size: 1rem; font-weight: 600; }
-.fc .fc-col-header-cell { font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); padding: 0.5rem 0; background: transparent; border: none; }
-.fc .fc-daygrid-day-number { font-size: 0.8rem; color: var(--text-secondary); padding: 0.3rem 0.5rem; }
-.fc .fc-daygrid-day.fc-day-today .fc-daygrid-day-number { background: var(--accent); color: #fff; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; padding: 0; margin: 0.25rem; }
-.fc .fc-event { border-radius: 6px; font-size: 0.78rem; font-weight: 500; padding: 1px 4px; border: none; cursor: pointer; }
-.fc .fc-event:hover { opacity: 0.85; }
-.fc .fc-timegrid-slot { height: 2.5rem; }
-.fc .fc-timegrid-slot-label { font-size: 0.7rem; color: var(--text-muted); }
-.fc .fc-list-event-title { font-size: 0.85rem; }
-.fc .fc-list-day-cushion { background: var(--glass-bg); }
-.fc .fc-scrollgrid { border: none; }
-.fc .fc-scrollgrid td, .fc .fc-scrollgrid th { border-color: var(--glass-border); }
-.cal-view-btn.active { background: var(--accent) !important; color: #fff !important; border-color: var(--accent) !important; }
-</style>
 
 <script>
 (function() {
