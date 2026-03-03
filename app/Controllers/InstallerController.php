@@ -212,7 +212,8 @@ class InstallerController extends Controller
 
     private function writeEnvFile(string $host, int $port, string $database, string $username, string $password, string $appUrl = 'http://localhost', string $locale = 'de'): void
     {
-        $key = bin2hex(random_bytes(32));
+        $key           = bin2hex(random_bytes(32));
+        $sessionSecure = str_starts_with($appUrl, 'https') ? 'true' : 'false';
 
         $env = <<<ENV
 APP_NAME="Tierphysio Manager"
@@ -229,7 +230,7 @@ DB_USERNAME={$username}
 DB_PASSWORD={$password}
 
 SESSION_LIFETIME=120
-SESSION_SECURE=false
+SESSION_SECURE={$sessionSecure}
 
 MAIL_DRIVER=smtp
 MAIL_HOST=localhost
