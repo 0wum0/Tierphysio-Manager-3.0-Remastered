@@ -215,14 +215,17 @@ document.querySelectorAll('.copy-link-btn').forEach(function (btn) {
     });
 });
 
-/* WhatsApp */
+/* WhatsApp — opens WhatsApp with just the link, user picks the contact themselves */
 document.querySelectorAll('.wa-btn').forEach(function (btn) {
     btn.addEventListener('click', function (e) {
         e.preventDefault();
-        fetch('/einladungen/' + btn.dataset.id + '/whatsapp', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        fetch('/einladungen/' + btn.dataset.id + '/link', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
         .then(function (r) { return r.json(); })
         .then(function (data) {
-            if (data.ok) window.open(data.url, '_blank');
+            if (data.ok) {
+                const waUrl = 'https://wa.me/?text=' + encodeURIComponent(data.url);
+                window.open(waUrl, '_blank');
+            }
         });
     });
 });
