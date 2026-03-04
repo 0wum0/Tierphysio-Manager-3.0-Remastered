@@ -51,6 +51,130 @@
         max-width: calc(100vw - 160px) !important;
     }
 }
+/* ── Patient Info Card ──────────────────────────────────────── */
+.pd-info-card {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    background: var(--bg-elevated, rgba(255,255,255,0.04));
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    overflow: hidden;
+}
+.pd-info-photo {
+    width: 100px;
+    flex-shrink: 0;
+    background: var(--bg-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.pd-info-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.pd-info-divider {
+    width: 1px;
+    background: var(--glass-border);
+    flex-shrink: 0;
+    align-self: stretch;
+}
+.pd-info-col {
+    flex: 1;
+    min-width: 0;
+    padding: 0.85rem 1rem;
+}
+.pd-info-col-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.6rem;
+    padding-bottom: 0.45rem;
+    border-bottom: 1px solid var(--glass-border);
+}
+.pd-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.55rem 1rem;
+    font-size: 0.82rem;
+}
+/* detail() helper output */
+.pd-info-grid > div > span {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    display: block;
+}
+.pd-info-grid > div > div {
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-top: 0.05rem;
+    word-break: break-word;
+}
+@media (max-width: 600px) {
+    .pd-info-card {
+        flex-direction: column;
+    }
+    .pd-info-photo {
+        width: 100%;
+        height: 90px;
+    }
+    .pd-info-divider {
+        width: 100%;
+        height: 1px;
+    }
+    .pd-info-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* ── Owner block inside info card ───────────────────────────── */
+.pd-owner-link {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    text-decoration: none;
+    color: inherit;
+}
+.pd-owner-link:hover .pd-owner-name {
+    color: var(--accent);
+}
+.pd-owner-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--accent-dim, rgba(79,124,255,0.18));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+    letter-spacing: 0.02em;
+}
+.pd-owner-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+}
+.pd-owner-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    transition: color 0.15s;
+}
+.pd-owner-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    word-break: break-all;
+}
+
 /* ── Timeline Entry Form ────────────────────────────────────── */
 .pd-entry-section {
     background: var(--bg-elevated, rgba(255,255,255,0.04));
@@ -267,22 +391,22 @@
         {# Modal Body (hidden until loaded) #}
         <div id="pd-body" style="display:none;overflow-y:auto;flex:1;padding:1.25rem;display:flex;flex-direction:column;gap:1.25rem;">
 
-            {# ── ZEILE 1: Foto  |  Patienteninfos  |  Besitzerinfos ── #}
-            <div style="display:flex;gap:1.25rem;flex-wrap:wrap;align-items:flex-start;">
-                <div id="pd-photo-full" style="width:120px;height:120px;flex-shrink:0;border-radius:12px;overflow:hidden;background:var(--bg-elevated);display:flex;align-items:center;justify-content:center;">
-                    <svg width="40" height="40" fill="none" viewBox="0 0 24 24" style="opacity:0.2;"><path stroke="currentColor" stroke-width="1.5" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            {# ── INFO CARD: Foto | Patient | Besitzer ── #}
+            <div class="pd-info-card">
+                <div id="pd-photo-full" class="pd-info-photo">
+                    <svg width="36" height="36" fill="none" viewBox="0 0 24 24" style="opacity:0.2;"><path stroke="currentColor" stroke-width="1.5" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                 </div>
-                <div style="flex:1;min-width:150px;">
-                    <div style="font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">Patient</div>
-                    <div id="pd-details" style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem 1rem;font-size:0.83rem;"></div>
+                <div class="pd-info-divider"></div>
+                <div class="pd-info-col">
+                    <div class="pd-info-col-label">Patient</div>
+                    <div id="pd-details" class="pd-info-grid"></div>
                 </div>
-                <div style="flex:1;min-width:150px;">
-                    <div style="font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.5rem;">Besitzer</div>
-                    <div id="pd-owner" style="font-size:0.83rem;"></div>
+                <div class="pd-info-divider"></div>
+                <div class="pd-info-col">
+                    <div class="pd-info-col-label">Besitzer</div>
+                    <div id="pd-owner"></div>
                 </div>
             </div>
-
-            <div style="border-top:1px solid var(--glass-border);"></div>
 
             {# ── ZEILE 2: Neuer Timeline-Eintrag ── #}
             <div class="pd-entry-section">
@@ -781,7 +905,7 @@ if (pdSearchInput) {
 
 function detail(label, value) {
     if (!value) return '';
-    return `<div><span style="color:var(--text-muted);font-size:0.75rem;">${esc(label)}</span><div style="font-weight:500;margin-top:0.1rem;">${esc(value)}</div></div>`;
+    return `<div><span>${esc(label)}</span><div>${esc(value)}</div></div>`;
 }
 
 function renderTimeline(timeline, patientId) {
@@ -901,18 +1025,17 @@ function openPatientModal(patientId) {
                 detail('Geburtsdatum', p.birth_date ? fmtDate(p.birth_date) : null) +
                 detail('Farbe', p.color) +
                 detail('Chip-Nr.', p.chip_number) +
-                (p.notes ? `<div style="border-top:1px solid var(--glass-border);padding-top:0.5rem;margin-top:0.25rem;"><span style="color:var(--text-muted);font-size:0.75rem;">Notizen</span><div style="font-size:0.8rem;line-height:1.5;margin-top:0.2rem;color:var(--text-secondary);">${esc(p.notes)}</div></div>` : '');
+                (p.notes ? `<div style="grid-column:1/-1;border-top:1px solid var(--glass-border);padding-top:0.5rem;margin-top:0.1rem;"><span>Notizen</span><div style="line-height:1.5;">${esc(p.notes)}</div></div>` : '');
 
             /* Owner */
             if (o) {
-                pdOwner.innerHTML = `<a href="/tierhalter/${o.id}" style="text-decoration:none;display:flex;align-items:center;gap:0.6rem;">
-                    <div style="width:32px;height:32px;border-radius:50%;background:var(--accent-dim,rgba(79,124,255,0.2));display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:var(--accent);flex-shrink:0;">
-                        ${esc((o.first_name||'').charAt(0)+(o.last_name||'').charAt(0))}
-                    </div>
-                    <div>
-                        <div style="font-weight:600;font-size:0.85rem;">${esc(o.first_name+' '+o.last_name)}</div>
-                        ${o.phone ? `<div style="font-size:0.75rem;color:var(--text-muted);">${esc(o.phone)}</div>` : ''}
-                        ${o.email ? `<div style="font-size:0.75rem;color:var(--text-muted);">${esc(o.email)}</div>` : ''}
+                pdOwner.innerHTML = `<a href="/tierhalter/${o.id}" class="pd-owner-link">
+                    <div class="pd-owner-avatar">${esc((o.first_name||'').charAt(0)+(o.last_name||'').charAt(0))}</div>
+                    <div class="pd-owner-info">
+                        <div class="pd-owner-name">${esc(o.first_name+' '+o.last_name)}</div>
+                        ${o.phone ? `<div class="pd-owner-meta">${esc(o.phone)}</div>` : ''}
+                        ${o.email ? `<div class="pd-owner-meta">${esc(o.email)}</div>` : ''}
+                        ${o.street ? `<div class="pd-owner-meta">${esc(o.street)}${o.zip||o.city ? ', '+esc((o.zip||'')+' '+(o.city||'')).trim() : ''}</div>` : ''}
                     </div>
                 </a>`;
             } else {
