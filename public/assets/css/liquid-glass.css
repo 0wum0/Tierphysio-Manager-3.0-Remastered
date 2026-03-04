@@ -85,57 +85,32 @@
   background: rgba(79,124,255,0.20);
 }
 
-/* ── Second background layer — drifts in opposite direction ── */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 600px 500px at 50% 60%,  rgba(168,85,247,0.07) 0%, transparent 60%),
-    radial-gradient(ellipse 400px 300px at 25% 45%,  rgba(6,182,212,0.05)  0%, transparent 60%),
-    radial-gradient(ellipse 350px 280px at 75% 25%,  rgba(79,124,255,0.06) 0%, transparent 60%);
-  pointer-events: none;
-  z-index: 0;
-  animation: bg-drift-reverse 36s ease-in-out infinite alternate;
-}
-
-@keyframes bg-drift-reverse {
-  0%   { opacity: 0.8; transform: scale(1.02) translate(8px,  -8px);  }
-  50%  { opacity: 1;   transform: scale(0.98) translate(-6px,  10px); }
-  100% { opacity: 0.8; transform: scale(1.03) translate(10px, -4px);  }
-}
-
-[data-theme="light"] body::after {
-  background:
-    radial-gradient(ellipse 600px 500px at 50% 60%,  rgba(147,51,234,0.05)  0%, transparent 60%),
-    radial-gradient(ellipse 400px 300px at 25% 45%,  rgba(6,182,212,0.04)   0%, transparent 60%),
-    radial-gradient(ellipse 350px 280px at 75% 25%,  rgba(59,110,240,0.04)  0%, transparent 60%);
-}
+/* body::after is now handled by app.css starfield — no override here */
 
 /* ── CSS Custom Properties ── */
 :root {
   /* Liquid Glass Tokens */
-  --lg-blur:            36px;
-  --lg-saturate:        200%;
-  --lg-brightness:      1.10;
+  --lg-blur:            40px;
+  --lg-saturate:        180%;
+  --lg-brightness:      1.05;
 
   /* Prismatic edge */
-  --lg-edge-light:      rgba(255,255,255,0.70);
-  --lg-edge-shadow:     rgba(0,0,0,0.20);
+  --lg-edge-light:      rgba(255,255,255,0.60);
+  --lg-edge-shadow:     rgba(0,0,0,0.30);
 
   /* Inner glow */
-  --lg-inner-glow:      rgba(255,255,255,0.14);
-  --lg-inner-glow-top:  rgba(255,255,255,0.32);
+  --lg-inner-glow:      rgba(79,124,255,0.08);
+  --lg-inner-glow-top:  rgba(255,255,255,0.18);
 
-  /* Tint — sichtbarer Blau-Lila-Schimmer */
-  --lg-tint:            rgba(100,140,255,0.10);
-  --lg-tint-hover:      rgba(100,140,255,0.16);
+  /* Tint — futuristic blue-purple */
+  --lg-tint:            rgba(6,8,28,0.55);
+  --lg-tint-hover:      rgba(8,12,38,0.65);
 
   /* Radii */
-  --lg-radius-sm:   14px;
-  --lg-radius-md:   18px;
-  --lg-radius-lg:   24px;
-  --lg-radius-xl:   32px;
+  --lg-radius-sm:   10px;
+  --lg-radius-md:   14px;
+  --lg-radius-lg:   18px;
+  --lg-radius-xl:   24px;
   --lg-radius-pill: 9999px;
 }
 
@@ -159,19 +134,15 @@ body::after {
 .lg-btn,
 .lg-input {
   position: relative;
-  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate)) brightness(var(--lg-brightness));
-  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate)) brightness(var(--lg-brightness));
+  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-saturate));
   background: var(--lg-tint);
-  /* Prismatischer Rand: außen dunkel, innen hell */
-  border: 1px solid rgba(255,255,255,0.18);
-  /* Innen-Glow oben + Außen-Schatten */
+  border: 1px solid rgba(79,124,255,0.12);
   box-shadow:
     inset 0  1px 0    var(--lg-inner-glow-top),
-    inset 0 -1px 0    rgba(0,0,0,0.08),
-    inset 1px 0 0     var(--lg-inner-glow),
-    inset -1px 0 0    var(--lg-inner-glow),
-    0 8px 32px rgba(0,0,0,0.25),
-    0 2px  8px rgba(0,0,0,0.15);
+    inset 0 -1px 0    rgba(0,0,0,0.12),
+    0 8px 40px rgba(0,0,0,0.45),
+    0 2px  8px rgba(0,0,0,0.20);
   transition:
     background 0.2s ease,
     box-shadow 0.2s ease,
@@ -180,7 +151,7 @@ body::after {
   overflow: hidden;
 }
 
-/* Prismatischer Pseudo-Rand — schimmernder Top-Edge */
+/* Prismatischer Pseudo-Rand — futuristic blue/purple top edge */
 .lg::before,
 .lg-card::before,
 .lg-panel::before,
@@ -192,30 +163,30 @@ body::after {
   height: 1px;
   background: linear-gradient(
     90deg,
-    transparent         0%,
-    rgba(255,255,255,0.0)  5%,
-    rgba(180,200,255,0.5) 20%,
-    rgba(255,255,255,0.9) 50%,
-    rgba(200,180,255,0.5) 80%,
-    rgba(255,255,255,0.0) 95%,
-    transparent        100%
+    transparent           0%,
+    rgba(79,124,255,0.0)  8%,
+    rgba(79,124,255,0.55) 25%,
+    rgba(168,85,247,0.70) 50%,
+    rgba(79,124,255,0.55) 75%,
+    rgba(79,124,255,0.0)  92%,
+    transparent          100%
   );
   border-radius: inherit;
   pointer-events: none;
   z-index: 1;
 }
 
-/* Schimmernder Reflex oben-links */
+/* Schimmernder Reflex oben-links — futuristic blue tint */
 .lg::after,
 .lg-card::after,
 .lg-panel::after {
   content: '';
   position: absolute;
   top: 0; left: 0;
-  width: 60%; height: 45%;
+  width: 55%; height: 40%;
   background: radial-gradient(
-    ellipse at 30% 0%,
-    rgba(255,255,255,0.12) 0%,
+    ellipse at 25% 0%,
+    rgba(79,124,255,0.07) 0%,
     transparent 70%
   );
   border-radius: inherit;
@@ -223,19 +194,17 @@ body::after {
   z-index: 1;
 }
 
-/* Hover — mehr Tint + lift */
+/* Hover — futuristic blue glow lift */
 .lg:hover,
 .lg-card:hover,
 .lg-panel:hover {
   background: var(--lg-tint-hover);
-  border-color: rgba(255,255,255,0.28);
+  border-color: rgba(79,124,255,0.22);
   box-shadow:
-    inset 0  1px 0    rgba(255,255,255,0.30),
-    inset 0 -1px 0    rgba(0,0,0,0.10),
-    inset 1px 0 0     rgba(255,255,255,0.14),
-    inset -1px 0 0    rgba(255,255,255,0.14),
-    0 16px 48px rgba(0,0,0,0.35),
-    0  4px 12px rgba(0,0,0,0.20);
+    inset 0  1px 0    rgba(255,255,255,0.07),
+    inset 0 -1px 0    rgba(0,0,0,0.12),
+    0 16px 52px rgba(0,0,0,0.55),
+    0 0 24px rgba(79,124,255,0.07);
   transform: translateY(-2px);
 }
 
@@ -375,36 +344,33 @@ body::after {
 }
 
 /* ============================================================
-   Override: glass-card → Liquid Glass
+   Override: glass-card → Futuristic Liquid Glass
    ============================================================ */
 .glass-card {
   position: relative;
-  backdrop-filter: blur(36px) saturate(200%) brightness(1.10) !important;
-  -webkit-backdrop-filter: blur(36px) saturate(200%) brightness(1.10) !important;
-  background: rgba(100,140,255,0.08) !important;
-  border: 1px solid rgba(255,255,255,0.20) !important;
+  backdrop-filter: blur(40px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(180%) !important;
+  background: rgba(6,8,28,0.58) !important;
+  border: 1px solid rgba(79,124,255,0.1) !important;
   border-radius: var(--lg-radius-lg) !important;
   box-shadow:
-    inset 0  1px 0    rgba(255,255,255,0.32),
-    inset 0 -1px 0    rgba(0,0,0,0.10),
-    inset 1px 0 0     rgba(255,255,255,0.10),
-    inset -1px 0 0    rgba(255,255,255,0.10),
-    0 12px 40px rgba(0,0,0,0.40),
-    0  2px 10px rgba(0,0,0,0.20) !important;
+    inset 0  1px 0 rgba(255,255,255,0.05),
+    0 12px 44px rgba(0,0,0,0.50),
+    0  2px 10px rgba(0,0,0,0.25) !important;
   overflow: hidden;
 }
 
 .glass-card::before {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0;
+  top: 0; left: 12%; right: 12%;
   height: 1px;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(180,200,255,0.4) 20%,
-    rgba(255,255,255,0.85) 50%,
-    rgba(200,180,255,0.4) 80%,
+    rgba(79,124,255,0.55) 30%,
+    rgba(168,85,247,0.45) 50%,
+    rgba(79,124,255,0.55) 70%,
     transparent 100%
   );
   pointer-events: none;
@@ -415,37 +381,34 @@ body::after {
   content: '';
   position: absolute;
   top: 0; left: 0;
-  width: 55%; height: 40%;
-  background: radial-gradient(ellipse at 25% 0%, rgba(255,255,255,0.10) 0%, transparent 65%);
+  width: 50%; height: 35%;
+  background: radial-gradient(ellipse at 20% 0%, rgba(79,124,255,0.06) 0%, transparent 65%);
   pointer-events: none;
   z-index: 1;
 }
 
 .glass-card:hover {
-  background: rgba(100,140,255,0.14) !important;
-  border-color: rgba(255,255,255,0.32) !important;
+  background: rgba(8,12,38,0.68) !important;
+  border-color: rgba(79,124,255,0.2) !important;
   box-shadow:
-    inset 0  1px 0    rgba(255,255,255,0.42),
-    inset 0 -1px 0    rgba(0,0,0,0.12),
-    inset 1px 0 0     rgba(255,255,255,0.14),
-    inset -1px 0 0    rgba(255,255,255,0.14),
-    0 20px 60px rgba(0,0,0,0.50),
-    0  4px 16px rgba(0,0,0,0.25) !important;
+    inset 0  1px 0 rgba(255,255,255,0.06),
+    0 20px 60px rgba(0,0,0,0.60),
+    0 0 30px rgba(79,124,255,0.07) !important;
   transform: translateY(-2px);
 }
 
 /* ============================================================
-   Override: Sidebar → Liquid Glass Panel
+   Override: Sidebar → Futuristic HUD Panel
    ============================================================ */
 .sidebar {
-  background: rgba(8,8,28,0.55) !important;
-  backdrop-filter: blur(40px) saturate(220%) brightness(1.12) !important;
-  -webkit-backdrop-filter: blur(40px) saturate(220%) brightness(1.12) !important;
-  border-right: 1px solid rgba(255,255,255,0.14) !important;
-  box-shadow: 4px 0 48px rgba(0,0,0,0.50) !important;
+  background: rgba(3,3,14,0.82) !important;
+  backdrop-filter: blur(48px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(48px) saturate(160%) !important;
+  border-right: 1px solid rgba(79,124,255,0.13) !important;
+  box-shadow: inset -1px 0 0 rgba(79,124,255,0.07), 4px 0 48px rgba(0,0,0,0.60) !important;
 }
 
-/* Prismatische rechte Kante der Sidebar */
+/* Right edge prismatic line */
 .sidebar::after {
   content: '';
   position: absolute;
@@ -454,9 +417,9 @@ body::after {
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    rgba(180,200,255,0.35) 20%,
-    rgba(255,255,255,0.60) 50%,
-    rgba(200,180,255,0.35) 80%,
+    rgba(79,124,255,0.35) 25%,
+    rgba(168,85,247,0.25) 50%,
+    rgba(79,124,255,0.35) 75%,
     transparent 100%
   );
   pointer-events: none;
@@ -467,46 +430,44 @@ body::after {
    Override: Top Header
    ============================================================ */
 .top-header {
-  background: rgba(8,8,28,0.50) !important;
-  backdrop-filter: blur(36px) saturate(200%) brightness(1.08) !important;
-  -webkit-backdrop-filter: blur(36px) saturate(200%) brightness(1.08) !important;
-  border-bottom: 1px solid rgba(255,255,255,0.12) !important;
+  background: rgba(3,3,14,0.75) !important;
+  backdrop-filter: blur(36px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(36px) saturate(160%) !important;
+  border-bottom: 1px solid rgba(79,124,255,0.1) !important;
   box-shadow:
-    inset 0 -1px 0 rgba(0,0,0,0.12),
-    0 4px 24px rgba(0,0,0,0.20) !important;
+    0 1px 0 rgba(79,124,255,0.06),
+    0 4px 28px rgba(0,0,0,0.40) !important;
 }
 
 /* ============================================================
-   Override: Modals
+   Override: Modals → Futuristic
    ============================================================ */
 .modal {
-  background: rgba(8,8,28,0.62) !important;
-  backdrop-filter: blur(48px) saturate(220%) brightness(1.12) !important;
-  -webkit-backdrop-filter: blur(48px) saturate(220%) brightness(1.12) !important;
-  border: 1px solid rgba(255,255,255,0.22) !important;
+  background: rgba(4,4,18,0.90) !important;
+  backdrop-filter: blur(52px) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(52px) saturate(160%) !important;
+  border: 1px solid rgba(79,124,255,0.18) !important;
   border-radius: var(--lg-radius-xl) !important;
   box-shadow:
-    inset 0  1px 0 rgba(255,255,255,0.35),
-    inset 0 -1px 0 rgba(0,0,0,0.15),
-    inset 1px 0 0  rgba(255,255,255,0.12),
-    inset -1px 0 0 rgba(255,255,255,0.12),
-    0 48px 120px rgba(0,0,0,0.70),
-    0  8px  28px rgba(0,0,0,0.40) !important;
+    inset 0  1px 0 rgba(255,255,255,0.05),
+    0 48px 120px rgba(0,0,0,0.75),
+    0  8px  28px rgba(0,0,0,0.45),
+    0 0 60px rgba(79,124,255,0.06) !important;
   overflow: hidden;
 }
 
-/* Prismatische obere Kante Modal */
+/* Prismatic top edge Modal */
 .modal::before {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0;
+  top: 0; left: 12%; right: 12%;
   height: 1px;
   background: linear-gradient(
     90deg,
     transparent 0%,
-    rgba(150,190,255,0.4) 20%,
-    rgba(255,255,255,0.90) 50%,
-    rgba(200,160,255,0.4) 80%,
+    rgba(79,124,255,0.65) 30%,
+    rgba(168,85,247,0.55) 50%,
+    rgba(79,124,255,0.65) 70%,
     transparent 100%
   );
   pointer-events: none;
@@ -514,85 +475,78 @@ body::after {
 }
 
 /* ============================================================
-   Override: Buttons
+   Override: Buttons → Futuristic
    ============================================================ */
 .btn-primary {
-  background: linear-gradient(135deg, rgba(79,124,255,0.75), rgba(168,85,247,0.65)) !important;
-  border: 1px solid rgba(120,160,255,0.40) !important;
+  background: linear-gradient(135deg, #4f7cff 0%, #3557d4 100%) !important;
+  border: 1px solid rgba(79,124,255,0.55) !important;
   box-shadow:
-    inset 0  1px 0 rgba(255,255,255,0.30),
-    inset 0 -1px 0 rgba(0,0,0,0.15),
-    0 4px 20px rgba(79,124,255,0.40),
-    0 2px  6px rgba(0,0,0,0.25) !important;
+    inset 0  1px 0 rgba(255,255,255,0.18),
+    0 4px 22px rgba(79,124,255,0.42),
+    0 2px  6px rgba(0,0,0,0.30) !important;
   color: #fff !important;
-  backdrop-filter: blur(12px) !important;
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, rgba(79,124,255,0.90), rgba(168,85,247,0.80)) !important;
+  background: linear-gradient(135deg, #5f8cff 0%, #4568e8 100%) !important;
   box-shadow:
-    inset 0  1px 0 rgba(255,255,255,0.40),
-    inset 0 -1px 0 rgba(0,0,0,0.15),
-    0 6px 28px rgba(79,124,255,0.55),
-    0 2px  8px rgba(0,0,0,0.30) !important;
+    inset 0  1px 0 rgba(255,255,255,0.22),
+    0 6px 30px rgba(79,124,255,0.58),
+    0 2px  8px rgba(0,0,0,0.35) !important;
   transform: translateY(-1px);
   filter: none !important;
 }
 
 .btn-secondary {
-  background: rgba(255,255,255,0.07) !important;
-  border: 1px solid rgba(255,255,255,0.14) !important;
-  color: rgba(200,210,255,0.90) !important;
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  color: rgba(180,195,255,0.90) !important;
   backdrop-filter: blur(12px) !important;
-  box-shadow:
-    inset 0  1px 0 rgba(255,255,255,0.15),
-    inset 0 -1px 0 rgba(0,0,0,0.08),
-    0 2px  8px rgba(0,0,0,0.18) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.20) !important;
 }
 
 .btn-secondary:hover {
-  background: rgba(255,255,255,0.12) !important;
-  border-color: rgba(255,255,255,0.24) !important;
-  color: #fff !important;
-  box-shadow:
-    inset 0  1px 0 rgba(255,255,255,0.22),
-    inset 0 -1px 0 rgba(0,0,0,0.10),
-    0 4px 14px rgba(0,0,0,0.25) !important;
+  background: rgba(79,124,255,0.09) !important;
+  border-color: rgba(79,124,255,0.28) !important;
+  color: var(--accent-light) !important;
+  box-shadow: 0 4px 16px rgba(79,124,255,0.12) !important;
 }
 
 /* ============================================================
-   Override: Form Controls
+   Override: Form Controls → Futuristic
    ============================================================ */
 .form-control {
-  background: rgba(255,255,255,0.06) !important;
-  border: 1px solid rgba(255,255,255,0.12) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  box-shadow:
-    inset 0 2px 4px rgba(0,0,0,0.15),
-    inset 0 1px 0 rgba(255,255,255,0.04) !important;
-  color: #f0f0ff !important;
+  background: rgba(4,4,18,0.72) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03) !important;
+  color: #eeeeff !important;
+}
+
+.form-control:hover {
+  border-color: rgba(79,124,255,0.22) !important;
 }
 
 .form-control:focus {
-  background: rgba(255,255,255,0.09) !important;
-  border-color: rgba(100,150,255,0.60) !important;
+  background: rgba(79,124,255,0.05) !important;
+  border-color: rgba(79,124,255,0.52) !important;
   box-shadow:
-    inset 0 2px 4px rgba(0,0,0,0.10),
-    0 0 0 3px rgba(79,124,255,0.22),
-    inset 0 1px 0 rgba(255,255,255,0.06) !important;
+    0 0 0 3px rgba(79,124,255,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 0 22px rgba(79,124,255,0.08) !important;
 }
 
 /* ============================================================
-   Override: Table container
+   Override: Table container → Futuristic
    ============================================================ */
 .table-container {
-  background: rgba(255,255,255,0.025) !important;
-  backdrop-filter: blur(24px) saturate(150%) !important;
-  border: 1px solid rgba(255,255,255,0.09) !important;
+  background: rgba(3,4,16,0.72) !important;
+  backdrop-filter: blur(28px) saturate(150%) !important;
+  border: 1px solid rgba(79,124,255,0.09) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.07),
-    0 8px 32px rgba(0,0,0,0.25) !important;
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    0 8px 40px rgba(0,0,0,0.45) !important;
   overflow: hidden;
   position: relative;
 }
@@ -600,25 +554,24 @@ body::after {
 .table-container::before {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0;
+  top: 0; left: 12%; right: 12%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5) 50%, transparent);
+  background: linear-gradient(90deg, transparent, rgba(79,124,255,0.45) 40%, rgba(168,85,247,0.35) 60%, transparent);
   pointer-events: none;
   z-index: 2;
 }
 
 /* ============================================================
-   Override: Nav items
+   Override: Nav items → Futuristic
    ============================================================ */
 .nav-item.active {
   background: linear-gradient(135deg,
-    rgba(79,124,255,0.20),
-    rgba(168,85,247,0.14)) !important;
-  border: 1px solid rgba(100,150,255,0.28) !important;
+    rgba(79,124,255,0.14),
+    rgba(168,85,247,0.07)) !important;
+  border: 1px solid rgba(79,124,255,0.22) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.12),
-    0 2px 12px rgba(79,124,255,0.18) !important;
-  backdrop-filter: blur(8px) !important;
+    inset 0 1px 0 rgba(255,255,255,0.05),
+    0 0 16px rgba(79,124,255,0.08) !important;
 }
 
 /* ============================================================
@@ -634,83 +587,88 @@ body::after {
    Light theme overrides
    ============================================================ */
 [data-theme="light"] {
-  --lg-tint:          rgba(255,255,255,0.45);
-  --lg-tint-hover:    rgba(255,255,255,0.65);
-  --lg-inner-glow:    rgba(255,255,255,0.70);
-  --lg-inner-glow-top:rgba(255,255,255,0.95);
-  --lg-edge-light:    rgba(255,255,255,0.95);
+  --lg-tint:           rgba(255,255,255,0.60);
+  --lg-tint-hover:     rgba(255,255,255,0.78);
+  --lg-inner-glow:     rgba(255,255,255,0.55);
+  --lg-inner-glow-top: rgba(255,255,255,0.85);
+  --lg-edge-light:     rgba(255,255,255,0.95);
 }
 
 [data-theme="light"] .sidebar {
-  background: rgba(235,238,252,0.72) !important;
-  border-right: 1px solid rgba(0,0,0,0.08) !important;
-  box-shadow: 4px 0 32px rgba(0,0,0,0.08) !important;
+  background: rgba(238,241,255,0.88) !important;
+  border-right-color: rgba(79,100,200,0.1) !important;
+  box-shadow: 4px 0 30px rgba(60,80,200,0.07) !important;
 }
 
 [data-theme="light"] .top-header {
-  background: rgba(242,244,255,0.78) !important;
-  border-bottom-color: rgba(0,0,0,0.07) !important;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.06) !important;
+  background: rgba(240,243,255,0.85) !important;
+  border-bottom-color: rgba(79,100,200,0.1) !important;
+  box-shadow: 0 2px 16px rgba(60,80,200,0.06) !important;
 }
 
 [data-theme="light"] .glass-card {
-  background: rgba(255,255,255,0.58) !important;
-  border-color: rgba(255,255,255,0.90) !important;
+  background: rgba(255,255,255,0.72) !important;
+  border-color: rgba(79,100,200,0.1) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,1),
-    0 8px 32px rgba(100,120,200,0.10),
-    0 2px  8px rgba(0,0,0,0.08) !important;
+    inset 0 1px 0 rgba(255,255,255,0.9),
+    0 8px 32px rgba(60,80,200,0.08),
+    0 2px  8px rgba(0,0,0,0.05) !important;
 }
 
 [data-theme="light"] .glass-card:hover {
-  background: rgba(255,255,255,0.78) !important;
+  background: rgba(255,255,255,0.88) !important;
+  border-color: rgba(79,100,200,0.18) !important;
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,1),
-    0 16px 48px rgba(100,120,200,0.14),
-    0  4px 12px rgba(0,0,0,0.10) !important;
+    0 16px 48px rgba(60,80,200,0.12),
+    0  4px 12px rgba(0,0,0,0.07) !important;
 }
 
 [data-theme="light"] .modal {
-  background: rgba(245,247,255,0.88) !important;
-  border-color: rgba(255,255,255,0.95) !important;
+  background: rgba(245,247,255,0.92) !important;
+  border-color: rgba(79,100,200,0.14) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,1),
-    0 40px 100px rgba(100,120,200,0.20),
-    0  8px  24px rgba(0,0,0,0.12) !important;
+    0 40px 100px rgba(60,80,200,0.18),
+    0  8px  24px rgba(0,0,0,0.10) !important;
 }
 
 [data-theme="light"] .btn-secondary {
-  background: rgba(255,255,255,0.65) !important;
-  border-color: rgba(0,0,0,0.12) !important;
+  background: rgba(255,255,255,0.70) !important;
+  border-color: rgba(79,100,200,0.14) !important;
   color: rgba(30,40,80,0.90) !important;
 }
 
 [data-theme="light"] .btn-secondary:hover {
-  background: rgba(255,255,255,0.85) !important;
-  color: rgba(30,40,80,1) !important;
+  background: rgba(255,255,255,0.88) !important;
+  border-color: rgba(59,110,240,0.28) !important;
+  color: var(--accent) !important;
 }
 
 [data-theme="light"] .form-control {
-  background: rgba(255,255,255,0.72) !important;
-  border-color: rgba(0,0,0,0.10) !important;
-  color: #0f0f2e !important;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.06) !important;
+  background: rgba(255,255,255,0.80) !important;
+  border-color: rgba(79,100,200,0.14) !important;
+  color: #0c0c1e !important;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.04) !important;
+}
+
+[data-theme="light"] .form-control:hover {
+  border-color: rgba(59,110,240,0.30) !important;
 }
 
 [data-theme="light"] .form-control:focus {
-  background: rgba(255,255,255,0.95) !important;
-  border-color: rgba(59,110,240,0.50) !important;
+  background: rgba(255,255,255,0.96) !important;
+  border-color: rgba(59,110,240,0.55) !important;
   box-shadow:
-    inset 0 1px 3px rgba(0,0,0,0.04),
+    inset 0 1px 3px rgba(0,0,0,0.03),
     0 0 0 3px rgba(59,110,240,0.14) !important;
 }
 
 [data-theme="light"] .nav-item.active {
   background: linear-gradient(135deg,
-    rgba(59,110,240,0.14),
-    rgba(147,51,234,0.10)) !important;
-  border-color: rgba(59,110,240,0.25) !important;
+    rgba(59,110,240,0.12),
+    rgba(147,51,234,0.08)) !important;
+  border-color: rgba(59,110,240,0.22) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,0.8),
-    0 2px 10px rgba(59,110,240,0.12) !important;
+    inset 0 1px 0 rgba(255,255,255,0.7),
+    0 2px 10px rgba(59,110,240,0.10) !important;
 }
