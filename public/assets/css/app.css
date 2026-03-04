@@ -2054,20 +2054,23 @@ textarea.form-control { resize: vertical; min-height: 100px; }
   }
   .data-table { min-width: 600px; }
 
-  /* Modals: nearly full width */
+  /* Modals: nearly full width, nie über den Displayrand */
   .modal,
   .modal-lg,
   .modal-xl {
     width: 96vw !important;
     max-width: 96vw !important;
-    max-height: 92vh;
-    margin: 0.5rem auto;
+    max-height: min(92vh, calc(100dvh - 2rem));
+    margin: auto;
+    box-sizing: border-box;
   }
-  .modal-body { padding: 1rem; }
-
-  /* Invoice modal: stack columns */
-  .modal-body .flex.gap-4 { flex-direction: column; }
-  #pdf-frame-wrap-* { height: 300px; }
+  .modal-overlay {
+    padding: 0.5rem;
+    align-items: center;
+  }
+  .modal-body { padding: 1rem; overflow-y: auto; }
+  .modal-header { padding: 1rem; }
+  .modal-footer { padding: 0.75rem 1rem; }
 }
 
 /* ============================================================
@@ -2128,17 +2131,24 @@ textarea.form-control { resize: vertical; min-height: 100px; }
   .data-table th:nth-child(3),
   .data-table td:nth-child(3) { display: none; }
 
-  /* Modals */
+  /* Modals: Bottom-Sheet auf kleinen Phones */
   .modal,
   .modal-lg,
   .modal-xl {
     width: 100vw !important;
     max-width: 100vw !important;
-    max-height: 96vh;
+    max-height: min(92vh, calc(100dvh - env(safe-area-inset-top, 0px)));
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-    margin: auto 0 0;
+    margin: 0;
+    box-sizing: border-box;
   }
-  .modal-overlay { align-items: flex-end; }
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .modal-body { padding: 0.875rem; }
+  .modal-header { padding: 0.875rem 1rem; }
+  .modal-footer { padding: 0.75rem 1rem; }
 
   /* Glass cards */
   .glass-card { padding: 0.875rem; }
