@@ -272,153 +272,422 @@
    TAB: PDF-DESIGN
 ════════════════════════════════════════════════════ #}
 <div class="settings-tab-content" id="tab-pdf">
-    <form action="/einstellungen" method="POST">
+    <form action="/einstellungen" method="POST" id="pdf-settings-form">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
 
         <div class="flex gap-4" style="align-items:flex-start;flex-wrap:wrap;">
 
-            {# Left: Design Options #}
-            <div style="flex:1;min-width:280px;display:flex;flex-direction:column;gap:1rem;">
+            {# ── LEFT COLUMN ── #}
+            <div style="flex:1.2;min-width:300px;display:flex;flex-direction:column;gap:1rem;">
 
+                {# 1. Farben #}
                 <div class="glass-card">
-                    <h3 class="section-title">Farben</h3>
+                    <h3 class="section-title">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:6px;vertical-align:-2px;"><circle cx="13.5" cy="6.5" r="2.5" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="10.5" r="2.5" stroke="currentColor" stroke-width="2"/><circle cx="8.5" cy="7.5" r="2.5" stroke="currentColor" stroke-width="2"/><circle cx="6.5" cy="12.5" r="2.5" stroke="currentColor" stroke-width="2"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M20.488 9c.328.93.512 1.944.512 3a9 9 0 0 1-9 9 3 3 0 0 1 0-6c1.657 0 3-1.343 3-3 0-.552.448-1 1-1h4.5"/></svg>
+                        Farben
+                    </h3>
                     <div class="form-grid form-grid-2">
                         <div class="form-group">
-                            <label class="form-label">Primärfarbe (Tabellenheader, Trennlinie)</label>
+                            <label class="form-label">Primärfarbe</label>
+                            <p class="form-hint" style="margin-bottom:6px;">Tabellenheader, Trennlinie</p>
                             <div class="flex gap-2 items-center">
                                 <input type="color" id="pdf_primary_color_picker" value="{{ settings.pdf_primary_color ?? '#2962FF' }}"
-                                    style="width:44px;height:38px;padding:2px;border:1px solid var(--glass-border);border-radius:var(--radius-sm);background:transparent;cursor:pointer;">
+                                    style="width:44px;height:38px;padding:2px;border:1px solid var(--glass-border);border-radius:var(--radius-sm);background:transparent;cursor:pointer;flex-shrink:0;">
                                 <input type="text" name="pdf_primary_color" id="pdf_primary_color" class="form-control" value="{{ settings.pdf_primary_color ?? '#2962FF' }}" maxlength="7" style="font-family:monospace;">
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Akzentfarbe (Summe, Titel)</label>
+                            <label class="form-label">Akzentfarbe</label>
+                            <p class="form-hint" style="margin-bottom:6px;">Gesamtsumme, Rechnungstitel</p>
                             <div class="flex gap-2 items-center">
                                 <input type="color" id="pdf_accent_color_picker" value="{{ settings.pdf_accent_color ?? '#2962FF' }}"
-                                    style="width:44px;height:38px;padding:2px;border:1px solid var(--glass-border);border-radius:var(--radius-sm);background:transparent;cursor:pointer;">
+                                    style="width:44px;height:38px;padding:2px;border:1px solid var(--glass-border);border-radius:var(--radius-sm);background:transparent;cursor:pointer;flex-shrink:0;">
                                 <input type="text" name="pdf_accent_color" id="pdf_accent_color" class="form-control" value="{{ settings.pdf_accent_color ?? '#2962FF' }}" maxlength="7" style="font-family:monospace;">
                             </div>
                         </div>
+                        <div class="form-group">
+                            <label class="form-label">Hintergrundfarbe Zeilen</label>
+                            <p class="form-hint" style="margin-bottom:6px;">Zebra-Streifen (gerade Zeilen)</p>
+                            <div class="flex gap-2 items-center">
+                                <input type="color" id="pdf_row_color_picker" value="{{ settings.pdf_row_color ?? '#F5F5FA' }}"
+                                    style="width:44px;height:38px;padding:2px;border:1px solid var(--glass-border);border-radius:var(--radius-sm);background:transparent;cursor:pointer;flex-shrink:0;">
+                                <input type="text" name="pdf_row_color" id="pdf_row_color" class="form-control" value="{{ settings.pdf_row_color ?? '#F5F5FA' }}" maxlength="7" style="font-family:monospace;">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Wasserzeichen-Text</label>
+                            <p class="form-hint" style="margin-bottom:6px;">Diagonal auf jeder Seite (leer = kein Wasserzeichen)</p>
+                            <input type="text" name="pdf_watermark" class="form-control" value="{{ settings.pdf_watermark ?? '' }}" placeholder="z.B. ENTWURF oder BEZAHLT" maxlength="30">
+                        </div>
                     </div>
                 </div>
 
+                {# 2. Schrift & Layout #}
                 <div class="glass-card">
-                    <h3 class="section-title">Schrift &amp; Layout</h3>
-                    <div class="form-group">
-                        <label class="form-label">Schriftart</label>
-                        <select name="pdf_font" class="form-control" id="pdf_font_select">
-                            <option value="helvetica" {{ (settings.pdf_font ?? 'helvetica') == 'helvetica' ? 'selected' : '' }}>Helvetica (Standard)</option>
-                            <option value="times"     {{ (settings.pdf_font ?? 'helvetica') == 'times'     ? 'selected' : '' }}>Times New Roman (Klassisch)</option>
-                            <option value="courier"   {{ (settings.pdf_font ?? 'helvetica') == 'courier'   ? 'selected' : '' }}>Courier (Monospace)</option>
-                            <option value="dejavusans" {{ (settings.pdf_font ?? 'helvetica') == 'dejavusans' ? 'selected' : '' }}>DejaVu Sans (Modern)</option>
-                        </select>
-                    </div>
-                    <div class="form-group mt-3">
-                        <label class="form-label">Kopfzeilen-Stil</label>
-                        <select name="pdf_header_style" class="form-control">
-                            <option value="line" {{ (settings.pdf_header_style ?? 'line') == 'line' ? 'selected' : '' }}>Linie (dünn)</option>
-                            <option value="band" {{ (settings.pdf_header_style ?? 'line') == 'band' ? 'selected' : '' }}>Farbband (kräftig)</option>
-                        </select>
+                    <h3 class="section-title">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:6px;vertical-align:-2px;"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="4" x2="12" y2="20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        Schrift &amp; Layout
+                    </h3>
+                    <div class="form-grid form-grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Schriftart</label>
+                            <select name="pdf_font" class="form-control" id="pdf_font_select">
+                                <option value="helvetica"  {{ (settings.pdf_font ?? 'helvetica') == 'helvetica'  ? 'selected' : '' }}>Helvetica (Standard)</option>
+                                <option value="times"      {{ (settings.pdf_font ?? 'helvetica') == 'times'      ? 'selected' : '' }}>Times New Roman (Klassisch)</option>
+                                <option value="courier"    {{ (settings.pdf_font ?? 'helvetica') == 'courier'    ? 'selected' : '' }}>Courier (Monospace)</option>
+                                <option value="dejavusans" {{ (settings.pdf_font ?? 'helvetica') == 'dejavusans' ? 'selected' : '' }}>DejaVu Sans (Modern)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Basis-Schriftgröße (pt)</label>
+                            <input type="number" name="pdf_font_size" class="form-control" value="{{ settings.pdf_font_size ?? '9' }}" min="7" max="14" step="0.5">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Kopfzeilen-Stil</label>
+                            <select name="pdf_header_style" class="form-control" id="pdf_header_style_select">
+                                <option value="line"    {{ (settings.pdf_header_style ?? 'line') == 'line'    ? 'selected' : '' }}>Dünne Linie</option>
+                                <option value="band"    {{ (settings.pdf_header_style ?? 'line') == 'band'    ? 'selected' : '' }}>Farbband (kräftig)</option>
+                                <option value="none"    {{ (settings.pdf_header_style ?? 'line') == 'none'    ? 'selected' : '' }}>Keiner</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Logo-Position</label>
+                            <select name="pdf_logo_position" class="form-control">
+                                <option value="left"   {{ (settings.pdf_logo_position ?? 'left') == 'left'   ? 'selected' : '' }}>Links</option>
+                                <option value="center" {{ (settings.pdf_logo_position ?? 'left') == 'center' ? 'selected' : '' }}>Mitte</option>
+                                <option value="right"  {{ (settings.pdf_logo_position ?? 'left') == 'right'  ? 'selected' : '' }}>Rechts</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Logo-Breite (mm)</label>
+                            <input type="number" name="pdf_logo_width" class="form-control" value="{{ settings.pdf_logo_width ?? '35' }}" min="10" max="80">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Seitenränder (mm)</label>
+                            <input type="number" name="pdf_margin" class="form-control" value="{{ settings.pdf_margin ?? '20' }}" min="5" max="40">
+                        </div>
                     </div>
                 </div>
 
+                {# 3. Inhaltsoptionen #}
                 <div class="glass-card">
-                    <h3 class="section-title">Inhaltsoptionen</h3>
-                    <div class="flex flex-col gap-3">
+                    <h3 class="section-title">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:6px;vertical-align:-2px;"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 11l3 3L22 4"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        Inhaltsoptionen
+                    </h3>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem 1.5rem;">
                         <label class="flex items-center gap-2" style="cursor:pointer;">
                             <input type="hidden" name="pdf_show_logo" value="0">
-                            <input type="checkbox" name="pdf_show_logo" value="1" {{ (settings.pdf_show_logo ?? '1') == '1' ? 'checked' : '' }}
-                                style="width:16px;height:16px;accent-color:var(--accent);">
-                            <span class="text-sm">Firmenlogo auf Rechnung anzeigen</span>
+                            <input type="checkbox" name="pdf_show_logo" value="1" {{ (settings.pdf_show_logo ?? '1') == '1' ? 'checked' : '' }} style="width:16px;height:16px;accent-color:var(--accent);">
+                            <span class="text-sm">Firmenlogo anzeigen</span>
                         </label>
                         <label class="flex items-center gap-2" style="cursor:pointer;">
                             <input type="hidden" name="pdf_show_patient" value="0">
-                            <input type="checkbox" name="pdf_show_patient" value="1" {{ (settings.pdf_show_patient ?? '1') == '1' ? 'checked' : '' }}
-                                style="width:16px;height:16px;accent-color:var(--accent);">
-                            <span class="text-sm">Patientenname auf Rechnung anzeigen</span>
+                            <input type="checkbox" name="pdf_show_patient" value="1" {{ (settings.pdf_show_patient ?? '1') == '1' ? 'checked' : '' }} style="width:16px;height:16px;accent-color:var(--accent);">
+                            <span class="text-sm">Patientenname anzeigen</span>
+                        </label>
+                        <label class="flex items-center gap-2" style="cursor:pointer;">
+                            <input type="hidden" name="pdf_show_chip" value="0">
+                            <input type="checkbox" name="pdf_show_chip" value="1" {{ (settings.pdf_show_chip ?? '1') == '1' ? 'checked' : '' }} style="width:16px;height:16px;accent-color:var(--accent);">
+                            <span class="text-sm">Chip-Nummer anzeigen</span>
+                        </label>
+                        <label class="flex items-center gap-2" style="cursor:pointer;">
+                            <input type="hidden" name="pdf_zebra_rows" value="0">
+                            <input type="checkbox" name="pdf_zebra_rows" value="1" {{ (settings.pdf_zebra_rows ?? '1') == '1' ? 'checked' : '' }} style="width:16px;height:16px;accent-color:var(--accent);">
+                            <span class="text-sm">Zebra-Streifen in Tabelle</span>
+                        </label>
+                        <label class="flex items-center gap-2" style="cursor:pointer;">
+                            <input type="hidden" name="pdf_show_page_numbers" value="0">
+                            <input type="checkbox" name="pdf_show_page_numbers" value="1" {{ (settings.pdf_show_page_numbers ?? '1') == '1' ? 'checked' : '' }} style="width:16px;height:16px;accent-color:var(--accent);">
+                            <span class="text-sm">Seitenzahlen anzeigen</span>
+                        </label>
+                        <label class="flex items-center gap-2" style="cursor:pointer;">
+                            <input type="hidden" name="pdf_show_iban" value="0">
+                            <input type="checkbox" name="pdf_show_iban" value="1" {{ (settings.pdf_show_iban ?? '1') == '1' ? 'checked' : '' }} style="width:16px;height:16px;accent-color:var(--accent);">
+                            <span class="text-sm">IBAN in Fußzeile anzeigen</span>
+                        </label>
+                        <label class="flex items-center gap-2" style="cursor:pointer;">
+                            <input type="hidden" name="pdf_show_tax_number" value="0">
+                            <input type="checkbox" name="pdf_show_tax_number" value="1" {{ (settings.pdf_show_tax_number ?? '1') == '1' ? 'checked' : '' }} style="width:16px;height:16px;accent-color:var(--accent);">
+                            <span class="text-sm">Steuernummer in Fußzeile</span>
+                        </label>
+                        <label class="flex items-center gap-2" style="cursor:pointer;">
+                            <input type="hidden" name="pdf_show_website" value="0">
+                            <input type="checkbox" name="pdf_show_website" value="1" {{ (settings.pdf_show_website ?? '0') == '1' ? 'checked' : '' }} style="width:16px;height:16px;accent-color:var(--accent);">
+                            <span class="text-sm">Website im Kopf anzeigen</span>
                         </label>
                     </div>
                 </div>
 
+                {# 4. Texte #}
                 <div class="glass-card">
-                    <h3 class="section-title">Fußzeile</h3>
+                    <h3 class="section-title">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:6px;vertical-align:-2px;"><line x1="17" y1="10" x2="3" y2="10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="21" y1="6" x2="3" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="21" y1="14" x2="3" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="17" y1="18" x2="3" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        Texte &amp; Inhalte
+                    </h3>
                     <div class="form-group">
+                        <label class="form-label">Einleitungstext (unter Empfängeradresse)</label>
+                        <textarea name="pdf_intro_text" class="form-control" rows="2" placeholder="z.B. Sehr geehrte Damen und Herren, hiermit stellen wir Ihnen folgende Leistungen in Rechnung:">{{ settings.pdf_intro_text ?? '' }}</textarea>
+                        <span class="form-hint">Erscheint vor der Positionstabelle.</span>
+                    </div>
+                    <div class="form-group mt-3">
+                        <label class="form-label">Schlusstext (unter den Summen)</label>
+                        <textarea name="pdf_closing_text" class="form-control" rows="2" placeholder="z.B. Vielen Dank für Ihr Vertrauen. Bei Fragen stehen wir Ihnen gerne zur Verfügung.">{{ settings.pdf_closing_text ?? '' }}</textarea>
+                        <span class="form-hint">Erscheint nach den Summen, vor den Zahlungsbedingungen.</span>
+                    </div>
+                    <div class="form-group mt-3">
                         <label class="form-label">Zusätzlicher Fußzeilentext</label>
-                        <input type="text" name="pdf_footer_text" class="form-control" value="{{ settings.pdf_footer_text ?? '' }}" placeholder="z.B. Umsatzsteuer nicht ausgewiesen (Kleinunternehmer §19)">
-                        <span class="form-hint">Wird unter den Bankdaten angezeigt.</span>
+                        <input type="text" name="pdf_footer_text" class="form-control" value="{{ settings.pdf_footer_text ?? '' }}" placeholder="z.B. Umsatzsteuer nicht ausgewiesen (Kleinunternehmer §19 UStG)">
+                        <span class="form-hint">Wird unter den Bankdaten in der Fußzeile angezeigt.</span>
                     </div>
                 </div>
+
             </div>
 
-            {# Right: Live Preview #}
-            <div style="flex:1;min-width:300px;position:sticky;top:1rem;">
+            {# ── RIGHT COLUMN: Live Preview ── #}
+            <div style="flex:1;min-width:310px;position:sticky;top:1rem;">
                 <div class="glass-card">
-                    <h3 class="section-title">Vorschau</h3>
-                    <div id="pdf-preview" style="background:#fff;border-radius:4px;padding:16px;font-family:Helvetica,sans-serif;font-size:11px;color:#0f0f1a;min-height:380px;border:1px solid var(--glass-border);position:relative;overflow:hidden;">
-                        {# Mini PDF mock #}
-                        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
-                            {% if settings.company_logo %}
-                                <img src="/storage/uploads/{{ settings.company_logo }}" alt="Logo" style="max-height:32px;" id="preview-logo">
-                            {% else %}
-                                <div id="preview-logo" style="width:64px;height:24px;background:#e0e0e0;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#999;">LOGO</div>
-                            {% endif %}
-                            <div style="text-align:right;">
-                                <div id="preview-company" style="font-weight:700;font-size:13px;">{{ settings.company_name ?? 'Firmenname' }}</div>
-                                <div style="color:#646478;font-size:9px;">{{ settings.company_street ?? 'Musterstraße 1' }}</div>
-                                <div style="color:#646478;font-size:9px;">{{ settings.company_zip ?? '12345' }} {{ settings.company_city ?? 'Musterstadt' }}</div>
-                            </div>
-                        </div>
-                        <div id="preview-divider" style="height:3px;background:#2962FF;margin-bottom:10px;border-radius:1px;"></div>
-                        <div style="display:flex;justify-content:space-between;">
-                            <div style="font-size:9px;color:#646478;">Empfänger<br><span style="color:#0f0f1a;font-weight:600;">Max Mustermann</span><br>Beispielstr. 5<br>12345 Beispielstadt</div>
-                            <div style="text-align:right;">
-                                <div id="preview-title" style="font-weight:700;font-size:14px;color:#2962FF;">RECHNUNG</div>
-                                <div style="font-size:9px;color:#646478;">RE-2025-0042<br>01.01.2025</div>
-                            </div>
-                        </div>
-                        <div style="margin-top:12px;">
-                            <div id="preview-table-header" style="display:flex;background:#2962FF;color:#fff;font-weight:700;font-size:9px;padding:4px 6px;border-radius:2px;">
-                                <span style="flex:3;">Beschreibung</span>
-                                <span style="flex:1;text-align:right;">Menge</span>
-                                <span style="flex:1.5;text-align:right;">Preis</span>
-                                <span style="flex:1.5;text-align:right;">Gesamt</span>
-                            </div>
-                            <div style="display:flex;font-size:9px;padding:3px 6px;background:#f5f5fa;">
-                                <span style="flex:3;">Physiotherapie-Behandlung</span>
-                                <span style="flex:1;text-align:right;">1</span>
-                                <span style="flex:1.5;text-align:right;">65,00 €</span>
-                                <span style="flex:1.5;text-align:right;">65,00 €</span>
-                            </div>
-                            <div style="display:flex;font-size:9px;padding:3px 6px;">
-                                <span style="flex:3;">Ganzkörpermassage</span>
-                                <span style="flex:1;text-align:right;">2</span>
-                                <span style="flex:1.5;text-align:right;">45,00 €</span>
-                                <span style="flex:1.5;text-align:right;">90,00 €</span>
-                            </div>
-                        </div>
-                        <div style="display:flex;justify-content:flex-end;margin-top:8px;">
-                            <div style="text-align:right;font-size:9px;">
-                                <div>Netto: 155,00 €</div>
-                                <div>MwSt.: 29,45 €</div>
-                                <div style="border-top:1px solid #ccc;margin-top:3px;padding-top:3px;">
-                                    <strong id="preview-total" style="font-size:11px;color:#2962FF;">Gesamt: 184,45 €</strong>
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="section-title" style="margin-bottom:0;">Live-Vorschau</h3>
+                        <a href="/rechnungen/1/pdf" target="_blank" class="btn btn-secondary btn-sm" style="font-size:0.75rem;">
+                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            Echte Vorschau öffnen
+                        </a>
+                    </div>
+
+                    {# PDF Mock Preview #}
+                    <div id="pdf-preview" style="background:#fff;border-radius:6px;padding:14px 16px;font-family:Helvetica,sans-serif;font-size:10px;color:#0f0f1a;min-height:420px;border:1px solid var(--glass-border);position:relative;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+
+                        {# Watermark #}
+                        <div id="preview-watermark" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-35deg);font-size:28px;font-weight:900;color:rgba(0,0,0,0.06);pointer-events:none;white-space:nowrap;z-index:0;letter-spacing:0.05em;display:none;"></div>
+
+                        <div style="position:relative;z-index:1;">
+                            {# Header #}
+                            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px;">
+                                <div id="preview-logo-wrap">
+                                    {% if settings.company_logo %}
+                                        <img src="/storage/uploads/{{ settings.company_logo }}" alt="Logo" style="max-height:28px;max-width:70px;" id="preview-logo">
+                                    {% else %}
+                                        <div id="preview-logo" style="width:56px;height:20px;background:#e0e0e8;border-radius:2px;display:flex;align-items:center;justify-content:center;font-size:7px;color:#999;">LOGO</div>
+                                    {% endif %}
+                                </div>
+                                <div style="text-align:right;">
+                                    <div id="preview-company" style="font-weight:700;font-size:12px;">{{ settings.company_name ?? 'Firmenname' }}</div>
+                                    <div style="color:#646478;font-size:8px;">{{ settings.company_street ?? 'Musterstraße 1' }}</div>
+                                    <div style="color:#646478;font-size:8px;">{{ (settings.company_zip ?? '12345') ~ ' ' ~ (settings.company_city ?? 'Musterstadt') }}</div>
+                                    {% if settings.company_phone %}<div style="color:#646478;font-size:8px;">Tel: {{ settings.company_phone }}</div>{% endif %}
                                 </div>
                             </div>
+
+                            {# Divider #}
+                            <div id="preview-divider-wrap" style="margin-bottom:9px;">
+                                <div id="preview-divider" style="height:3px;background:#2962FF;border-radius:1px;"></div>
+                            </div>
+
+                            {# Recipient + Meta #}
+                            <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+                                <div>
+                                    <div style="font-size:7px;color:#aaa;margin-bottom:2px;">Firmenname · Musterstr. · 12345 Stadt</div>
+                                    <div style="font-size:9px;color:#0f0f1a;font-weight:600;">Max Mustermann</div>
+                                    <div style="font-size:8px;color:#646478;">Beispielstr. 5<br>12345 Beispielstadt</div>
+                                </div>
+                                <div style="text-align:right;">
+                                    <div id="preview-title" style="font-weight:700;font-size:13px;color:#2962FF;letter-spacing:0.04em;">RECHNUNG</div>
+                                    <div style="font-size:8px;color:#646478;margin-top:2px;">
+                                        Nr.: RE-2025-0042<br>
+                                        Datum: 01.01.2025<br>
+                                        Fällig: 15.01.2025
+                                    </div>
+                                    <div id="preview-patient-row" style="font-size:8px;color:#646478;margin-top:2px;">Patient: Bello (Hund)</div>
+                                </div>
+                            </div>
+
+                            {# Table #}
+                            <div style="margin-bottom:8px;">
+                                <div id="preview-table-header" style="display:flex;background:#2962FF;color:#fff;font-weight:700;font-size:8px;padding:3px 5px;border-radius:2px 2px 0 0;">
+                                    <span style="flex:3;">Beschreibung</span>
+                                    <span style="flex:0.8;text-align:center;">Menge</span>
+                                    <span style="flex:1.2;text-align:right;">Einzelpreis</span>
+                                    <span style="flex:0.7;text-align:center;">MwSt</span>
+                                    <span style="flex:1.2;text-align:right;">Gesamt</span>
+                                </div>
+                                <div id="preview-row-1" style="display:flex;font-size:8px;padding:3px 5px;background:#F5F5FA;">
+                                    <span style="flex:3;">Physiotherapie-Behandlung</span>
+                                    <span style="flex:0.8;text-align:center;">1,00</span>
+                                    <span style="flex:1.2;text-align:right;">65,00 €</span>
+                                    <span style="flex:0.7;text-align:center;">19 %</span>
+                                    <span style="flex:1.2;text-align:right;">65,00 €</span>
+                                </div>
+                                <div id="preview-row-2" style="display:flex;font-size:8px;padding:3px 5px;">
+                                    <span style="flex:3;">Ganzkörpermassage</span>
+                                    <span style="flex:0.8;text-align:center;">2,00</span>
+                                    <span style="flex:1.2;text-align:right;">45,00 €</span>
+                                    <span style="flex:0.7;text-align:center;">19 %</span>
+                                    <span style="flex:1.2;text-align:right;">90,00 €</span>
+                                </div>
+                                <div id="preview-row-3" style="display:flex;font-size:8px;padding:3px 5px;background:#F5F5FA;">
+                                    <span style="flex:3;">Nachsorge-Konsultation</span>
+                                    <span style="flex:0.8;text-align:center;">1,00</span>
+                                    <span style="flex:1.2;text-align:right;">30,00 €</span>
+                                    <span style="flex:0.7;text-align:center;">19 %</span>
+                                    <span style="flex:1.2;text-align:right;">30,00 €</span>
+                                </div>
+                            </div>
+
+                            {# Totals #}
+                            <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+                                <div style="text-align:right;font-size:8.5px;min-width:140px;">
+                                    <div style="display:flex;justify-content:space-between;gap:12px;color:#646478;"><span>Nettobetrag:</span><span>155,00 €</span></div>
+                                    <div style="display:flex;justify-content:space-between;gap:12px;color:#646478;"><span>MwSt. 19 %:</span><span>29,45 €</span></div>
+                                    <div style="border-top:1px solid #ccc;margin-top:3px;padding-top:3px;display:flex;justify-content:space-between;gap:12px;">
+                                        <span style="font-weight:700;">Gesamtbetrag:</span>
+                                        <strong id="preview-total" style="color:#2962FF;">184,45 €</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {# Footer #}
+                            <div id="preview-footer" style="padding-top:5px;border-top:1px solid #e0e0e0;font-size:7.5px;color:#888;text-align:center;line-height:1.6;">
+                                Bank: Musterbank &nbsp;|&nbsp; IBAN: DE00 1234 5678 9000 &nbsp;|&nbsp; BIC: MUBADEXX &nbsp;|&nbsp; St.-Nr.: 123/456/78900
+                            </div>
+                            <div id="preview-footer-custom" style="font-size:7px;color:#aaa;text-align:center;margin-top:2px;display:none;"></div>
                         </div>
-                        <div id="preview-footer" style="margin-top:14px;padding-top:4px;border-top:1px solid #ccc;font-size:8px;color:#646478;text-align:center;">Bank: Musterbank &nbsp;|&nbsp; IBAN: DE00 1234 5678 9000 &nbsp;|&nbsp; St.-Nr.: 123/456/78900</div>
                     </div>
-                    <p class="text-xs text-muted mt-2" style="line-height:1.4;">Die Vorschau zeigt das ungefähre Layout. Das endgültige PDF kann leicht abweichen.</p>
+                    <p class="form-hint mt-2">Die Vorschau zeigt das ungefähre Layout. Das endgültige PDF wird mit TCPDF erzeugt und kann minimal abweichen.</p>
+                </div>
+
+                {# PDF test download info #}
+                <div class="glass-card mt-3" style="background:rgba(79,124,255,0.05);border-color:rgba(79,124,255,0.15);">
+                    <div style="display:flex;gap:10px;align-items:flex-start;">
+                        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" style="color:var(--accent);flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        <div>
+                            <div style="font-size:0.82rem;font-weight:600;color:var(--text-primary);margin-bottom:3px;">Tipp: Echte PDF-Vorschau</div>
+                            <p class="form-hint">Speichere die Einstellungen und öffne dann eine bestehende Rechnung → <strong>PDF herunterladen</strong>, um das finale Ergebnis zu sehen.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="flex justify-end mt-3">
+        <div class="flex justify-end mt-4">
             <button type="submit" class="btn btn-primary">
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="17 21 17 13 7 13 7 21"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 3 7 8 15 8"/></svg>
                 {{ t('common.save') }}
             </button>
         </div>
     </form>
+
+    <script>
+    (function() {
+        function syncColor(pickerId, inputId) {
+            const picker = document.getElementById(pickerId);
+            const input  = document.getElementById(inputId);
+            if (!picker || !input) return;
+            picker.addEventListener('input', function() {
+                input.value = picker.value.toUpperCase();
+                updatePreview();
+            });
+            input.addEventListener('input', function() {
+                if (/^#[0-9A-Fa-f]{6}$/.test(input.value)) {
+                    picker.value = input.value;
+                    updatePreview();
+                }
+            });
+        }
+        syncColor('pdf_primary_color_picker', 'pdf_primary_color');
+        syncColor('pdf_accent_color_picker',  'pdf_accent_color');
+        syncColor('pdf_row_color_picker',      'pdf_row_color');
+
+        function val(name) {
+            const el = document.querySelector('[name="' + name + '"]:not([type="hidden"])') ||
+                       document.querySelector('[name="' + name + '"]');
+            return el ? el.value : '';
+        }
+        function checked(name) {
+            const el = document.querySelector('input[name="' + name + '"][type="checkbox"]');
+            return el ? el.checked : false;
+        }
+
+        function updatePreview() {
+            const primary  = val('pdf_primary_color') || '#2962FF';
+            const accent   = val('pdf_accent_color')  || '#2962FF';
+            const rowColor = val('pdf_row_color')      || '#F5F5FA';
+            const headerStyle = val('pdf_header_style');
+            const watermark   = val('pdf_watermark');
+            const footerCustom= val('pdf_footer_text');
+            const showPatient = checked('pdf_show_patient');
+            const showLogo    = checked('pdf_show_logo');
+            const zebraRows   = checked('pdf_zebra_rows');
+
+            /* Colors */
+            const th = document.getElementById('preview-table-header');
+            if (th) th.style.background = primary;
+
+            const title = document.getElementById('preview-title');
+            if (title) title.style.color = accent;
+
+            const total = document.getElementById('preview-total');
+            if (total) total.style.color = accent;
+
+            /* Divider style */
+            const div = document.getElementById('preview-divider');
+            const divWrap = document.getElementById('preview-divider-wrap');
+            if (div && divWrap) {
+                if (headerStyle === 'none') {
+                    divWrap.style.display = 'none';
+                } else {
+                    divWrap.style.display = '';
+                    div.style.height = headerStyle === 'band' ? '6px' : '2px';
+                    div.style.background = primary;
+                }
+            }
+
+            /* Zebra rows */
+            const r1 = document.getElementById('preview-row-1');
+            const r3 = document.getElementById('preview-row-3');
+            if (r1) r1.style.background = zebraRows ? rowColor : '#fff';
+            if (r3) r3.style.background = zebraRows ? rowColor : '#fff';
+
+            /* Patient row */
+            const patRow = document.getElementById('preview-patient-row');
+            if (patRow) patRow.style.display = showPatient ? '' : 'none';
+
+            /* Logo */
+            const logoWrap = document.getElementById('preview-logo-wrap');
+            if (logoWrap) logoWrap.style.display = showLogo ? '' : 'none';
+
+            /* Watermark */
+            const wm = document.getElementById('preview-watermark');
+            if (wm) {
+                if (watermark) {
+                    wm.textContent = watermark.toUpperCase();
+                    wm.style.display = '';
+                } else {
+                    wm.style.display = 'none';
+                }
+            }
+
+            /* Custom footer */
+            const fc = document.getElementById('preview-footer-custom');
+            if (fc) {
+                if (footerCustom) {
+                    fc.textContent = footerCustom;
+                    fc.style.display = '';
+                } else {
+                    fc.style.display = 'none';
+                }
+            }
+        }
+
+        /* Attach listeners to all form inputs */
+        document.getElementById('pdf-settings-form').querySelectorAll('input,select,textarea').forEach(function(el) {
+            el.addEventListener('input', updatePreview);
+            el.addEventListener('change', updatePreview);
+        });
+
+        updatePreview();
+    })();
+    </script>
 </div>
 
 {# ════════════════════════════════════════════════════

@@ -74,9 +74,13 @@ class SettingsController extends Controller
             'smtp_host', 'smtp_port', 'smtp_username', 'smtp_password',
             'smtp_encryption', 'mail_from_name', 'mail_from_address',
             'default_language', 'default_theme',
-            'pdf_primary_color', 'pdf_font', 'pdf_layout',
-            'pdf_show_logo', 'pdf_show_patient', 'pdf_footer_text',
-            'pdf_header_style', 'pdf_accent_color',
+            'pdf_primary_color', 'pdf_accent_color', 'pdf_row_color',
+            'pdf_font', 'pdf_font_size', 'pdf_layout',
+            'pdf_header_style', 'pdf_logo_position', 'pdf_logo_width', 'pdf_margin',
+            'pdf_show_logo', 'pdf_show_patient', 'pdf_show_chip',
+            'pdf_show_page_numbers', 'pdf_show_iban', 'pdf_show_tax_number', 'pdf_show_website',
+            'pdf_zebra_rows', 'pdf_watermark',
+            'pdf_footer_text', 'pdf_intro_text', 'pdf_closing_text',
             'calendar_cron_secret',
         ];
 
