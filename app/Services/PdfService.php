@@ -330,6 +330,11 @@ class PdfService
         return $pdf->Output('', 'S');
     }
 
+    public function getSettings(): array
+    {
+        return $this->settingsRepository->all();
+    }
+
     private function hexToRgb(string $hex): array
     {
         $hex = ltrim($hex, '#');

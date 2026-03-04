@@ -227,6 +227,28 @@ class InvoiceController extends Controller
         exit;
     }
 
+    public function preview(array $params = []): void
+    {
+        $invoice   = $this->invoiceService->findById((int)$params['id']);
+        if (!$invoice) {
+            $this->abort(404);
+        }
+
+        $positions = $this->invoiceService->getPositions((int)$params['id']);
+        $owner     = $invoice['owner_id'] ? $this->ownerService->findById((int)$invoice['owner_id']) : null;
+        $patient   = $invoice['patient_id'] ? $this->patientService->findById((int)$invoice['patient_id']) : null;
+        $settings  = $this->pdfService->getSettings();
+
+        $this->render('invoices/preview.twig', [
+            'page_title' => 'Rechnung ' . $invoice['invoice_number'],
+            'invoice'    => $invoice,
+            'positions'  => $positions,
+            'owner'      => $owner,
+            'patient'    => $patient,
+            'settings'   => $settings,
+        ]);
+    }
+
     public function downloadPdf(array $params = []): void
     {
         $invoice   = $this->invoiceService->findById((int)$params['id']);
