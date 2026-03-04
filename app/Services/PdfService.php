@@ -142,11 +142,17 @@ class PdfService
 
         // ── MAIN CONTENT ─────────────────────────────────────────────────
 
-        // "Rechnung" — large script-style italic title top right
-        $pdf->SetFont($font, 'BI', 34);
-        $pdf->SetTextColor(...$darkColor);
-        $pdf->SetXY($contentX, 10);
-        $pdf->Cell($contentW, 18, 'Rechnung', 0, 1, 'R');
+        // "Rechnung" — script image top right
+        $rechnungImg = ROOT_PATH . '/public/assets/img/rechnung-script.png';
+        if (file_exists($rechnungImg)) {
+            $imgW = 72;
+            $pdf->Image($rechnungImg, $rightEdge - $imgW, 6, $imgW, 0, 'PNG');
+        } else {
+            $pdf->SetFont($font, 'BI', 34);
+            $pdf->SetTextColor(...$darkColor);
+            $pdf->SetXY($contentX, 10);
+            $pdf->Cell($contentW, 18, 'Rechnung', 0, 1, 'R');
+        }
 
         // Company info block — top right, smaller
         $pdf->SetFont($font, 'B', $fontSize);
@@ -329,10 +335,16 @@ class PdfService
         $thankY = $grossY + 32;
         if (!empty($invoice['notes'])) $thankY += 12;
 
-        $pdf->SetFont($font, 'BI', 24);
-        $pdf->SetTextColor(...$darkColor);
-        $pdf->SetXY($contentX, $thankY);
-        $pdf->Cell($contentW, 12, 'Vielen Dank!', 0, 1, 'L');
+        $vielenDankImg = ROOT_PATH . '/public/assets/img/vielen-dank-script.png';
+        if (file_exists($vielenDankImg)) {
+            $imgW = 68;
+            $pdf->Image($vielenDankImg, $contentX, $thankY, $imgW, 0, 'PNG');
+        } else {
+            $pdf->SetFont($font, 'BI', 24);
+            $pdf->SetTextColor(...$darkColor);
+            $pdf->SetXY($contentX, $thankY);
+            $pdf->Cell($contentW, 12, 'Vielen Dank!', 0, 1, 'L');
+        }
 
         // Closing / payment terms below "Vielen Dank!"
         $closingY = $thankY + 14;
