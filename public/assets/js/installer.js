@@ -209,6 +209,114 @@ function showInlineError(inputId, message) {
     }, { once: true });
 }
 
+/* ── Running dog leg + tail + ear animations ── */
+function initDogAnimation() {
+    const legF1 = document.getElementById('dog-leg-f1');
+    const legF2 = document.getElementById('dog-leg-f2');
+    const legR1 = document.getElementById('dog-leg-r1');
+    const legR2 = document.getElementById('dog-leg-r2');
+    const tail  = document.getElementById('dog-tail');
+    const ear   = document.getElementById('dog-ear');
+
+    if (!legF1) return;
+
+    let t = 0;
+
+    function tick() {
+        t += 0.18; // speed
+        const s = Math.sin(t);
+        const c = Math.cos(t);
+
+        // Front legs — alternating
+        if (legF1) legF1.style.transform = `rotate(${s * 32}deg)`;
+        if (legF2) legF2.style.transform = `rotate(${-s * 32}deg)`;
+        // Rear legs — opposite phase
+        if (legR1) legR1.style.transform = `rotate(${-s * 36}deg)`;
+        if (legR2) legR2.style.transform = `rotate(${s * 36}deg)`;
+        // Tail wag
+        if (tail)  tail.style.transform  = `rotate(${c * 22}deg)`;
+        // Ear flap
+        if (ear)   ear.style.transform   = `rotate(${s * 14}deg)`;
+
+        requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+}
+
+/* ── Cycling install status messages ── */
+function initStatusCycler() {
+    const el = document.getElementById('inst-status-text');
+    if (!el) return;
+
+    const messages = [
+        'Dateien werden kopiert…',
+        'Datenbankschema wird geladen…',
+        'Abhängigkeiten prüfen…',
+        'Konfiguration wird gespeichert…',
+        'Migrationen werden ausgeführt…',
+        'Plugins werden initialisiert…',
+        'Fast fertig…',
+        'Systemcheck läuft…',
+        'Berechtigungen werden gesetzt…',
+        'Verbindung wird hergestellt…',
+    ];
+
+    let idx = 0;
+    const cycle = () => {
+        el.style.opacity = '0';
+        setTimeout(() => {
+            idx = (idx + 1) % messages.length;
+            el.textContent = messages[idx];
+            el.style.transition = 'opacity 0.4s ease';
+            el.style.opacity = '1';
+        }, 350);
+    };
+
+    setInterval(cycle, 2800);
+}
+
+/* ── Animated progress counter on form submit ── */
+function initProgressOnSubmit() {
+    const bar    = document.getElementById('inst-bar-fill');
+    const pct    = document.getElementById('inst-pct');
+    if (!bar || !pct) return;
+
+    const startPct = parseFloat(bar.style.width) || 0;
+
+    document.querySelectorAll('#db-submit-btn, #admin-submit-btn').forEach(btn => {
+        const form = btn.closest('form');
+        if (!form) return;
+        form.addEventListener('submit', () => {
+            // Animate bar to next step value
+            const target = Math.min(startPct + 34, 100);
+            let current = startPct;
+            const step = () => {
+                current = Math.min(current + 0.8, target);
+                bar.style.width = current + '%';
+                pct.textContent = Math.round(current) + '%';
+                if (current < target) requestAnimationFrame(step);
+            };
+            requestAnimationFrame(step);
+        });
+    });
+}
+
+/* ── Step 4 complete state ── */
+function initCompleteState() {
+    const scene  = document.querySelector('.inst-install-scene');
+    const bar    = document.getElementById('inst-bar-fill');
+    const pct    = document.getElementById('inst-pct');
+    const status = document.getElementById('inst-status-text');
+    if (!scene || !bar) return;
+
+    // Detect step 4 by bar being at 100%
+    const currentPct = parseFloat(bar.style.width) || 0;
+    if (currentPct >= 100) {
+        scene.classList.add('complete');
+        if (status) status.textContent = 'Installation abgeschlossen! 🎉';
+    }
+}
+
 /* ── Init ── */
 document.addEventListener('DOMContentLoaded', () => {
     initPasswordToggles();
@@ -217,4 +325,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initDbTest();
     initSubmitLoading();
     initAdminFormGuard();
+    initDogAnimation();
+    initStatusCycler();
+    initProgressOnSubmit();
+    initCompleteState();
 });
