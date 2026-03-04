@@ -75,6 +75,10 @@ class SettingsController extends Controller
             'smtp_encryption', 'mail_from_name', 'mail_from_address',
             'default_language', 'default_theme',
             'pdf_primary_color', 'pdf_accent_color', 'pdf_row_color',
+            'pdf_color_company_name', 'pdf_color_company_info', 'pdf_color_recipient',
+            'pdf_color_table_header_bg', 'pdf_color_table_header_text',
+            'pdf_color_table_text', 'pdf_color_line', 'pdf_color_total_label',
+            'pdf_color_total_gross', 'pdf_color_footer',
             'pdf_font', 'pdf_font_size', 'pdf_layout',
             'pdf_header_style', 'pdf_logo_position', 'pdf_logo_width', 'pdf_margin',
             'pdf_show_logo', 'pdf_show_patient', 'pdf_show_chip',
@@ -121,6 +125,41 @@ class SettingsController extends Controller
         $this->settingsService->set('company_logo', $filename);
         $this->session->flash('success', $this->translator->trans('settings.logo_updated'));
         $this->redirect('/einstellungen');
+    }
+
+    public function uploadPdfRechnungBild(array $params = []): void
+    {
+        $this->validateCsrf();
+        $dest     = ROOT_PATH . '/public/assets/img';
+        $filename = $this->uploadFile('pdf_rechnung_bild', $dest, ['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+        if ($filename === false) {
+            $this->session->flash('error', 'Bild-Upload fehlgeschlagen.');
+            $this->redirect('/einstellungen?tab=pdf');
+            return;
+        }
+        // Rename to fixed filename so PdfService always finds it
+        $ext = pathinfo($dest . '/' . $filename, PATHINFO_EXTENSION);
+        rename($dest . '/' . $filename, $dest . '/rechnung-script.' . $ext);
+        $this->settingsService->set('pdf_rechnung_bild', 'rechnung-script.' . $ext);
+        $this->session->flash('success', '"Rechnung"-Bild aktualisiert.');
+        $this->redirect('/einstellungen?tab=pdf');
+    }
+
+    public function uploadPdfVielenDankBild(array $params = []): void
+    {
+        $this->validateCsrf();
+        $dest     = ROOT_PATH . '/public/assets/img';
+        $filename = $this->uploadFile('pdf_vielen_dank_bild', $dest, ['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+        if ($filename === false) {
+            $this->session->flash('error', 'Bild-Upload fehlgeschlagen.');
+            $this->redirect('/einstellungen?tab=pdf');
+            return;
+        }
+        $ext = pathinfo($dest . '/' . $filename, PATHINFO_EXTENSION);
+        rename($dest . '/' . $filename, $dest . '/vielen-dank-script.' . $ext);
+        $this->settingsService->set('pdf_vielen_dank_bild', 'vielen-dank-script.' . $ext);
+        $this->session->flash('success', '"Vielen Dank!"-Bild aktualisiert.');
+        $this->redirect('/einstellungen?tab=pdf');
     }
 
     public function plugins(array $params = []): void

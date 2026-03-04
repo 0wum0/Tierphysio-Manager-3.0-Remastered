@@ -24,11 +24,21 @@ class PdfService
         $settings = $this->settingsRepository->all();
 
         // ── Settings ─────────────────────────────────────────────────────
-        $sidebarColor  = $this->hexToRgb($settings['pdf_primary_color'] ?? '#8B9E8B');
-        $accentColor   = $this->hexToRgb($settings['pdf_accent_color']  ?? '#6B7F6B');
-        $darkColor     = [30, 30, 30];
-        $grayColor     = [110, 110, 110];
-        $lightGray     = [180, 180, 180];
+        $sidebarColor      = $this->hexToRgb($settings['pdf_primary_color']              ?? '#8B9E8B');
+        $accentColor       = $this->hexToRgb($settings['pdf_accent_color']               ?? '#6B7F6B');
+        $colorCompanyName  = $this->hexToRgb($settings['pdf_color_company_name']         ?? '#1E1E1E');
+        $colorCompanyInfo  = $this->hexToRgb($settings['pdf_color_company_info']         ?? '#6E6E6E');
+        $colorRecipient    = $this->hexToRgb($settings['pdf_color_recipient']            ?? '#1E1E1E');
+        $colorTableHdrBg   = $this->hexToRgb($settings['pdf_color_table_header_bg']      ?? '#8B9E8B');
+        $colorTableHdrText = $this->hexToRgb($settings['pdf_color_table_header_text']    ?? '#FFFFFF');
+        $colorTableText    = $this->hexToRgb($settings['pdf_color_table_text']           ?? '#1E1E1E');
+        $colorLine         = $this->hexToRgb($settings['pdf_color_line']                 ?? '#B4B4B4');
+        $colorTotalLabel   = $this->hexToRgb($settings['pdf_color_total_label']          ?? '#1E1E1E');
+        $colorTotalGross   = $this->hexToRgb($settings['pdf_color_total_gross']          ?? '#1E1E1E');
+        $colorFooter       = $this->hexToRgb($settings['pdf_color_footer']               ?? '#6E6E6E');
+        $darkColor         = $colorCompanyName;
+        $grayColor         = $colorCompanyInfo;
+        $lightGray         = $colorLine;
         $font          = $this->resolvePdfFont($settings['pdf_font'] ?? 'helvetica');
         $fontSize      = (float)($settings['pdf_font_size'] ?? 9);
         $showPatient   = ($settings['pdf_show_patient']     ?? '1') === '1';
@@ -142,23 +152,9 @@ class PdfService
 
         // ── MAIN CONTENT ─────────────────────────────────────────────────
 
-        // "Rechnung" script image — top right, height ~28mm
-        $rechnungImg = ROOT_PATH . '/public/assets/img/rechnung-script.png';
-        $rechnungImgH = 28; // rendered height in mm
-        if (file_exists($rechnungImg)) {
-            $imgW = 72;
-            $pdf->Image($rechnungImg, $rightEdge - $imgW, 5, $imgW, 0, 'PNG');
-        } else {
-            $rechnungImgH = 18;
-            $pdf->SetFont($font, 'BI', 34);
-            $pdf->SetTextColor(...$darkColor);
-            $pdf->SetXY($contentX, 5);
-            $pdf->Cell($contentW, $rechnungImgH, 'Rechnung', 0, 1, 'R');
-        }
-
-        // Company info block — top right, BELOW the Rechnung image
-        $companyInfoTopY = 5 + $rechnungImgH + 1;
-        $pdf->SetFont($font, 'B', $fontSize);
+        // ── Company info top right FIRST ────────────────────────────────
+        $companyInfoTopY = 8;
+        $pdf->SetFont($font, 'B', $fontSize + 1);
         $pdf->SetTextColor(...$darkColor);
         $pdf->SetXY($contentX + ($contentW / 2), $companyInfoTopY);
         $pdf->Cell($contentW / 2, 5, $companyName, 0, 1, 'R');
@@ -178,8 +174,26 @@ class PdfService
             $pdf->Cell($contentW / 2, 4, $line, 0, 1, 'R');
             $infoY += 4;
         }
-        // Address block starts below company info
-        $headerBottomY = $infoY + 4;
+
+        // "Rechnung" script image — BELOW company info, right-aligned
+        $rechnungImg  = $this->resolveAssetImg($settings['pdf_rechnung_bild'] ?? 'rechnung-script.png');
+        $rechnungImgY = $infoY + 4;
+        if (file_exists($rechnungImg)) {
+            $imgW = 72;
+            $pdf->Image($rechnungImg, $rightEdge - $imgW, $rechnungImgY, $imgW, 0, '');
+            // Calculate actual rendered height from image aspect ratio
+            [$pw, $ph] = @getimagesize($rechnungImg) ?: [300, 120];
+            $rechnungImgH = ($ph > 0 && $pw > 0) ? ($ph / $pw) * $imgW : 28;
+        } else {
+            $rechnungImgH = 18;
+            $pdf->SetFont($font, 'BI', 34);
+            $pdf->SetTextColor(...$darkColor);
+            $pdf->SetXY($contentX, $rechnungImgY);
+            $pdf->Cell($contentW, $rechnungImgH, 'Rechnung', 0, 1, 'R');
+        }
+
+        // Address block starts below company info + rechnung image
+        $headerBottomY = $rechnungImgY + $rechnungImgH + 4;
 
         // ── ADDRESS BLOCK: Recipient left ────────────────────────────────
         $addrTopY = max($headerBottomY, 58);
@@ -188,11 +202,12 @@ class PdfService
         $colW = $contentW / 2 - 4;
         if ($owner) {
             $pdf->SetFont($font, 'B', $fontSize);
-            $pdf->SetTextColor(...$darkColor);
+            $pdf->SetTextColor(...$colorRecipient);
             $pdf->SetXY($contentX, $addrTopY);
             $pdf->Cell($colW, 5.5, $owner['first_name'] . ' ' . $owner['last_name'], 0, 1);
 
             $pdf->SetFont($font, '', $fontSize - 0.5);
+            $pdf->SetTextColor(...$colorRecipient);
             $pdf->SetXY($contentX, $addrTopY + 6);
             if (!empty($owner['street'])) {
                 $pdf->Cell($colW, 4.5, $owner['street'], 0, 1);
@@ -204,7 +219,7 @@ class PdfService
             }
             // Kundennummer
             $pdf->SetFont($font, '', $fontSize - 1.5);
-            $pdf->SetTextColor(...$grayColor);
+            $pdf->SetTextColor(...$colorCompanyInfo);
             $pdf->SetXY($contentX, $addrTopY + 21);
             $pdf->Cell($colW, 4, 'Kunden-Nr. ' . str_pad((string)($owner['id'] ?? 1), 4, '0', STR_PAD_LEFT), 0, 1);
         }
@@ -213,7 +228,7 @@ class PdfService
         if ($showPatient && $patient) {
             $patY = $addrTopY + 30;
             $pdf->SetFont($font, '', $fontSize - 1.5);
-            $pdf->SetTextColor(...$grayColor);
+            $pdf->SetTextColor(...$colorCompanyInfo);
             $pdf->SetXY($contentX, $patY);
             $label = 'Patient: ' . $patient['name'];
             if (!empty($patient['species'])) $label .= ' (' . $patient['species'] . ')';
@@ -227,18 +242,22 @@ class PdfService
         // ── POSITIONS TABLE ───────────────────────────────────────────────
         $tableTopY = max($addrTopY + 38, 100);
 
-        // Table header — thin line above/below, grey labels
-        $pdf->SetDrawColor(...$lightGray);
+        // Table header — thin line above/below, colored labels
+        $pdf->SetDrawColor(...$colorLine);
         $pdf->SetLineWidth(0.3);
         $pdf->Line($contentX, $tableTopY, $rightEdge, $tableTopY);
 
         $pdf->SetFont($font, '', $fontSize - 1.5);
-        $pdf->SetTextColor(...$grayColor);
+        $pdf->SetTextColor(...$colorTableHdrText);
 
         $cQty   = 16;
         $cPrice = 26;
         $cTotal = 26;
         $cDesc  = $contentW - $cQty - $cPrice - $cTotal;
+
+        // Header background
+        $pdf->SetFillColor(...$colorTableHdrBg);
+        $pdf->Rect($contentX, $tableTopY, $contentW, 7.5, 'F');
 
         $pdf->SetXY($contentX, $tableTopY + 1.5);
         $pdf->Cell($cQty,  4, 'Anzahl', 0, 0, 'L');
@@ -246,11 +265,12 @@ class PdfService
         $pdf->Cell($cPrice,4, 'Preis', 0, 0, 'R');
         $pdf->Cell($cTotal,4, 'Total', 0, 1, 'R');
 
-        $pdf->Line($contentX, $tableTopY + 7, $rightEdge, $tableTopY + 7);
+        $pdf->SetDrawColor(...$colorLine);
+        $pdf->Line($contentX, $tableTopY + 7.5, $rightEdge, $tableTopY + 7.5);
 
         // Table rows
-        $rowY = $tableTopY + 9;
-        $pdf->SetTextColor(...$darkColor);
+        $rowY = $tableTopY + 10;
+        $pdf->SetTextColor(...$colorTableText);
 
         foreach ($positions as $pos) {
             $lineNet  = (float)$pos['quantity'] * (float)$pos['unit_price'];
@@ -277,6 +297,7 @@ class PdfService
 
             // Main description line
             $pdf->SetFont($font, '', $fontSize - 0.5);
+            $pdf->SetTextColor(...$colorTableText);
             $pdf->SetXY($contentX, $rowY);
             $pdf->Cell($cQty,  5.5, $qtyStr, 0, 0, 'L');
             $pdf->Cell($cDesc, 5.5, $pos['description'], 0, 0, 'L');
@@ -284,7 +305,7 @@ class PdfService
             $pdf->Cell($cTotal,5.5, $totalStr, 0, 1, 'R');
 
             // Thin divider between rows
-            $pdf->SetDrawColor(...$lightGray);
+            $pdf->SetDrawColor(...$colorLine);
             $pdf->SetLineWidth(0.15);
             $pdf->Line($contentX, $rowY + 6, $rightEdge, $rowY + 6);
 
@@ -303,7 +324,7 @@ class PdfService
         $totLabelW = $cPrice + 10;
 
         $pdf->SetFont($font, '', $fontSize);
-        $pdf->SetTextColor(...$darkColor);
+        $pdf->SetTextColor(...$colorTotalLabel);
 
         // Net
         $pdf->SetXY($totLabelX, $totY + 3);
@@ -319,6 +340,7 @@ class PdfService
         $taxOffsetY = $totY + 10;
         foreach ($taxGroups as $rate => $taxAmt) {
             $pdf->SetXY($totLabelX, $taxOffsetY);
+            $pdf->SetTextColor(...$colorTotalLabel);
             $pdf->Cell($totLabelW, 6, 'MwSt. ' . number_format($rate, 0) . '%', 0, 0, 'L');
             $pdf->Cell($cTotal, 6, number_format($taxAmt, 2, ',', '.') . ' €', 0, 1, 'R');
             $taxOffsetY += 7;
@@ -326,12 +348,12 @@ class PdfService
 
         // Gross total
         $grossY = $taxOffsetY + 2;
-        $pdf->SetDrawColor(...$lightGray);
+        $pdf->SetDrawColor(...$colorLine);
         $pdf->SetLineWidth(0.2);
         $pdf->Line($totLabelX, $grossY, $rightEdge, $grossY);
 
         $pdf->SetFont($font, 'B', $fontSize + 0.5);
-        $pdf->SetTextColor(...$darkColor);
+        $pdf->SetTextColor(...$colorTotalGross);
         $pdf->SetXY($totLabelX, $grossY + 3);
         $pdf->Cell($totLabelW, 7, 'Total', 0, 0, 'L');
         $pdf->Cell($cTotal, 7, number_format((float)$invoice['total_gross'], 2, ',', '.') . ' €', 0, 1, 'R');
@@ -357,10 +379,10 @@ class PdfService
         // But never above the totals block
         $thankY = max($thankY, $grossY + 18);
 
-        $vielenDankImg = ROOT_PATH . '/public/assets/img/vielen-dank-script.png';
+        $vielenDankImg = $this->resolveAssetImg($settings['pdf_vielen_dank_bild'] ?? 'vielen-dank-script.png');
         if (file_exists($vielenDankImg)) {
             $imgW = 68;
-            $pdf->Image($vielenDankImg, $contentX, $thankY, $imgW, 0, 'PNG');
+            $pdf->Image($vielenDankImg, $contentX, $thankY, $imgW, 0, '');
         } else {
             $pdf->SetFont($font, 'BI', 24);
             $pdf->SetTextColor(...$darkColor);
@@ -380,17 +402,17 @@ class PdfService
         // ── FOOTER (bank details + contact, bottom of page) ───────────────
         $footerTopY = 248;
 
-        $pdf->SetDrawColor(...$lightGray);
+        $pdf->SetDrawColor(...$colorLine);
         $pdf->SetLineWidth(0.3);
         $pdf->Line($contentX, $footerTopY, $rightEdge, $footerTopY);
 
         $pdf->SetFont($font, 'B', $fontSize - 1);
-        $pdf->SetTextColor(...$darkColor);
+        $pdf->SetTextColor(...$colorFooter);
         $pdf->SetXY($contentX, $footerTopY + 3);
         $pdf->Cell(60, 4.5, 'Bankverbindung', 0, 1);
 
         $pdf->SetFont($font, '', $fontSize - 1.5);
-        $pdf->SetTextColor(...$grayColor);
+        $pdf->SetTextColor(...$colorFooter);
         $bankY = $footerTopY + 8;
         if ($bankName) {
             $pdf->SetXY($contentX, $bankY);
@@ -419,7 +441,7 @@ class PdfService
         $contactParts = array_filter([$companyEmail, ($showWebsite ? $companyWebsite : '')]);
         if ($contactParts) {
             $pdf->SetFont($font, '', $fontSize - 1.5);
-            $pdf->SetTextColor(...$grayColor);
+            $pdf->SetTextColor(...$colorFooter);
             $pdf->SetXY($contentX + 70, $footerTopY + 10);
             $pdf->Cell($contentW - 70, 4, implode('   ', $contactParts), 0, 1, 'R');
         }
@@ -430,6 +452,11 @@ class PdfService
     public function getSettings(): array
     {
         return $this->settingsRepository->all();
+    }
+
+    private function resolveAssetImg(string $filename): string
+    {
+        return ROOT_PATH . '/public/assets/img/' . $filename;
     }
 
     private function hexToRgb(string $hex): array

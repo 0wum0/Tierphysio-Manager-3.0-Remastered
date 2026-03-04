@@ -60,6 +60,8 @@ $router->post('/rechnungen/{id}/senden', [InvoiceController::class, 'sendEmail']
 $router->get('/einstellungen', [SettingsController::class, 'index'], ['admin']);
 $router->post('/einstellungen', [SettingsController::class, 'update'], ['admin']);
 $router->post('/einstellungen/logo', [SettingsController::class, 'uploadLogo'], ['admin']);
+$router->post('/einstellungen/pdf-rechnung-bild', [SettingsController::class, 'uploadPdfRechnungBild'], ['admin']);
+$router->post('/einstellungen/pdf-vielen-dank-bild', [SettingsController::class, 'uploadPdfVielenDankBild'], ['admin']);
 $router->get('/einstellungen/plugins', [SettingsController::class, 'plugins'], ['admin']);
 $router->post('/einstellungen/plugins/{name}/aktivieren', [SettingsController::class, 'enablePlugin'], ['admin']);
 $router->post('/einstellungen/plugins/{name}/deaktivieren', [SettingsController::class, 'disablePlugin'], ['admin']);
