@@ -68,15 +68,23 @@
                 </div>
                 <div id="pd-species" style="font-size:0.8rem;color:var(--text-muted);margin-top:0.1rem;"></div>
             </div>
-            <div style="display:flex;gap:0.5rem;align-items:center;flex-shrink:0;">
+            <div style="display:flex;gap:0.5rem;align-items:center;flex-shrink:0;flex-wrap:wrap;">
                 <a id="pd-invoice-btn" href="#" class="btn btn-secondary btn-sm">
                     <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
                     Rechnung
                 </a>
+                <button id="pd-pdf-btn" type="button" class="btn btn-secondary btn-sm" onclick="exportPatientPDF()">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    Akte als PDF
+                </button>
                 <a id="pd-edit-btn" href="#" class="btn btn-primary btn-sm">
                     <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     Bearbeiten
                 </a>
+                <button id="pd-delete-btn" type="button" class="btn btn-sm" style="background:var(--danger-bg);color:var(--danger);border:1px solid var(--danger-border);" onclick="deletePatient()">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="3 6 5 6 21 6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M10 11v6M14 11v6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 6V4h6v2"/></svg>
+                    Löschen
+                </button>
                 <button class="modal-close" data-modal-close="modal-patient-detail" type="button" style="flex-shrink:0;">
                     <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                 </button>
@@ -546,6 +554,7 @@ const pdInvoiceBtn = document.getElementById('pd-invoice-btn');
 const pdEditBtn    = document.getElementById('pd-edit-btn');
 const pdForm         = document.getElementById('pd-timeline-form');
 const pdSearchInput  = document.getElementById('pd-timeline-search');
+let currentPatientData = null;
 
 function resetModal() {
     pdLoading.style.display = 'flex';
@@ -741,6 +750,9 @@ function openPatientModal(patientId) {
                 }
             }
 
+            /* Store for PDF / delete */
+            currentPatientData = data;
+
             /* Timeline */
             renderTimeline(data.timeline, patientId);
 
@@ -752,6 +764,210 @@ function openPatientModal(patientId) {
         .catch(function () {
             pdLoading.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;">Fehler beim Laden.</div>';
         });
+}
+
+/* ── PDF Export ──────────────────────────────────────────── */
+function exportPatientPDF() {
+    if (!currentPatientData) return;
+    const p = currentPatientData.patient;
+    const o = currentPatientData.owner;
+    const tl = currentPatientData.timeline || [];
+    const pid = p.id;
+
+    function fe(v) { return v ? String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : '—'; }
+    function fmtD(s) {
+        if (!s) return '—';
+        const d = new Date(s.replace(' ','T'));
+        return isNaN(d) ? s : d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+    }
+    function fmtDT(s) {
+        if (!s) return '';
+        const d = new Date(s.replace(' ','T'));
+        return isNaN(d) ? s : d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' + d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) + ' Uhr';
+    }
+    const typeIcon = {note:'📝',treatment:'💊',photo:'📷',document:'📄',other:'📌'};
+
+    const tlRows = tl.map(function(e) {
+        const content = e.content ? e.content.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim() : '';
+        return `<tr>
+          <td style="white-space:nowrap;color:#555;font-size:11px;">${fmtDT(e.entry_date)}</td>
+          <td style="white-space:nowrap;">${typeIcon[e.type]||'•'} ${fe(e.title||e.type)}</td>
+          <td>${fe(e.status_badge)}</td>
+          <td style="max-width:320px;">${fe(content)}</td>
+          <td style="white-space:nowrap;color:#555;font-size:11px;">${fe(e.user_name||e.user_id||'')}</td>
+        </tr>`;
+    }).join('');
+
+    const photoSrc = p.photo ? '/patienten/' + pid + '/foto/' + encodeURIComponent(p.photo) : null;
+
+    const html = `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Patientenakte — ${fe(p.name)}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Inter',Arial,sans-serif;font-size:12px;color:#1a1a2e;background:#fff;}
+  .page{max-width:780px;margin:0 auto;padding:32px 36px;}
+  /* Header */
+  .doc-header{display:flex;align-items:flex-start;justify-content:space-between;padding-bottom:18px;border-bottom:2px solid #3b6ef0;margin-bottom:22px;}
+  .doc-header-left{}
+  .doc-logo{font-size:18px;font-weight:700;color:#3b6ef0;letter-spacing:-0.02em;margin-bottom:2px;}
+  .doc-subtitle{font-size:10px;color:#777;text-transform:uppercase;letter-spacing:0.08em;}
+  .doc-header-right{text-align:right;font-size:10px;color:#777;line-height:1.6;}
+  /* Patient banner */
+  .patient-banner{display:flex;gap:18px;align-items:flex-start;background:linear-gradient(135deg,#f0f4ff,#f8f0ff);border:1px solid #d0d8f0;border-radius:10px;padding:16px 20px;margin-bottom:20px;}
+  .patient-photo{width:72px;height:72px;border-radius:8px;object-fit:cover;border:2px solid #d0d8f0;flex-shrink:0;background:#e8eaf8;display:flex;align-items:center;justify-content:center;}
+  .patient-photo img{width:72px;height:72px;border-radius:8px;object-fit:cover;}
+  .patient-photo-placeholder{width:72px;height:72px;border-radius:8px;background:#e8eaf8;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;}
+  .patient-name{font-size:18px;font-weight:700;color:#1a1a2e;margin-bottom:2px;}
+  .patient-species{font-size:11px;color:#6677aa;margin-bottom:8px;}
+  .patient-badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:600;background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe;}
+  /* Grid sections */
+  .sections{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+  .section{background:#f8f9fc;border:1px solid #e2e6f0;border-radius:8px;padding:14px 16px;}
+  .section-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#6677aa;margin-bottom:10px;border-bottom:1px solid #e2e6f0;padding-bottom:6px;}
+  .field-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #eef0f6;}
+  .field-row:last-child{border-bottom:none;}
+  .field-label{color:#777;font-size:11px;}
+  .field-value{font-weight:500;font-size:11px;color:#1a1a2e;text-align:right;max-width:55%;}
+  /* Timeline */
+  .tl-section{margin-top:4px;}
+  .tl-title{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#6677aa;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #e2e6f0;}
+  table{width:100%;border-collapse:collapse;font-size:11px;}
+  thead th{background:#f0f4ff;color:#3b6ef0;font-weight:600;font-size:10px;text-align:left;padding:7px 10px;border-bottom:1px solid #d0d8f0;text-transform:uppercase;letter-spacing:0.05em;}
+  tbody tr{border-bottom:1px solid #eef0f6;}
+  tbody tr:nth-child(even){background:#fafbff;}
+  tbody td{padding:7px 10px;vertical-align:top;color:#2a2a4a;}
+  /* Footer */
+  .doc-footer{margin-top:24px;padding-top:12px;border-top:1px solid #e2e6f0;display:flex;justify-content:space-between;font-size:9px;color:#aaa;}
+  /* Print actions bar (screen only) */
+  .print-bar{position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#3b6ef0,#7c3aed);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:10px 24px;box-shadow:0 2px 12px rgba(59,110,240,0.25);font-size:13px;font-weight:600;}
+  .print-bar-left{display:flex;align-items:center;gap:10px;}
+  .print-btn{background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.35);border-radius:6px;padding:6px 16px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background 0.15s;}
+  .print-btn:hover{background:rgba(255,255,255,0.32);}
+  .print-btn-primary{background:#fff;color:#3b6ef0;border:none;}
+  .print-btn-primary:hover{background:#f0f4ff;}
+  .print-btn-danger{background:rgba(239,68,68,0.2);border-color:rgba(239,68,68,0.4);}
+  .print-btn-danger:hover{background:rgba(239,68,68,0.35);}
+  @media print{
+    .print-bar{display:none!important;}
+    .page{padding:16px;}
+    body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  }
+  @page{margin:16mm 12mm;}
+</style>
+</head>
+<body>
+<div class="print-bar">
+  <div class="print-bar-left">
+    <span>🐾 Patientenakte — ${fe(p.name)}</span>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <button class="print-btn" onclick="window.print()">
+      🖨️ Drucken / Als PDF speichern
+    </button>
+    <button class="print-btn print-btn-primary" onclick="sendEmail()">
+      ✉️ Per E-Mail senden
+    </button>
+    <button class="print-btn print-btn-danger" onclick="window.close()">✕ Schließen</button>
+  </div>
+</div>
+<div class="page" style="margin-top:56px;">
+  <div class="doc-header">
+    <div class="doc-header-left">
+      <div class="doc-logo">🐾 Tierphysio Manager</div>
+      <div class="doc-subtitle">Patientenakte · Vertraulich</div>
+    </div>
+    <div class="doc-header-right">
+      Erstellt am: ${new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'})}<br>
+      Patienten-ID: #${fe(p.id)}
+    </div>
+  </div>
+
+  <div class="patient-banner">
+    ${photoSrc
+      ? `<img class="patient-photo" src="${photoSrc}" alt="Foto" crossorigin="anonymous">`
+      : `<div class="patient-photo-placeholder">🐾</div>`
+    }
+    <div>
+      <div class="patient-name">${fe(p.name)}</div>
+      <div class="patient-species">${fe(p.species)}${p.breed?' · '+fe(p.breed):''}</div>
+      ${p.status ? `<span class="patient-badge">${fe(p.status)}</span>` : ''}
+    </div>
+  </div>
+
+  <div class="sections">
+    <div class="section">
+      <div class="section-title">Patientendaten</div>
+      <div class="field-row"><span class="field-label">Tierart</span><span class="field-value">${fe(p.species)}</span></div>
+      <div class="field-row"><span class="field-label">Rasse</span><span class="field-value">${fe(p.breed)}</span></div>
+      <div class="field-row"><span class="field-label">Geschlecht</span><span class="field-value">${fe(p.gender)}</span></div>
+      <div class="field-row"><span class="field-label">Geburtsdatum</span><span class="field-value">${fmtD(p.birth_date)}</span></div>
+      <div class="field-row"><span class="field-label">Farbe</span><span class="field-value">${fe(p.color)}</span></div>
+      <div class="field-row"><span class="field-label">Chip-Nr.</span><span class="field-value">${fe(p.chip_number)}</span></div>
+      <div class="field-row"><span class="field-label">Status</span><span class="field-value">${fe(p.status)}</span></div>
+      ${p.notes ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #e2e6f0;"><span class="field-label">Notizen</span><div style="margin-top:4px;font-size:11px;line-height:1.5;color:#2a2a4a;">${fe(p.notes)}</div></div>` : ''}
+    </div>
+    <div class="section">
+      <div class="section-title">Besitzer</div>
+      ${o ? `
+      <div class="field-row"><span class="field-label">Name</span><span class="field-value">${fe(o.first_name+' '+o.last_name)}</span></div>
+      <div class="field-row"><span class="field-label">Telefon</span><span class="field-value">${fe(o.phone)}</span></div>
+      <div class="field-row"><span class="field-label">E-Mail</span><span class="field-value">${fe(o.email)}</span></div>
+      <div class="field-row"><span class="field-label">Adresse</span><span class="field-value">${fe(o.address)}</span></div>
+      <div class="field-row"><span class="field-label">PLZ / Ort</span><span class="field-value">${fe((o.postal_code||'')+(o.city?' '+o.city:''))}</span></div>
+      ` : '<div style="color:#aaa;font-size:11px;">Kein Besitzer hinterlegt</div>'}
+    </div>
+  </div>
+
+  <div class="tl-section">
+    <div class="tl-title">Timeline · ${tl.length} Einträge</div>
+    ${tl.length ? `
+    <table>
+      <thead><tr>
+        <th>Datum</th><th>Typ / Titel</th><th>Status</th><th>Inhalt</th><th>Erfasst von</th>
+      </tr></thead>
+      <tbody>${tlRows}</tbody>
+    </table>` : '<div style="color:#aaa;font-size:11px;padding:8px 0;">Keine Timeline-Einträge vorhanden.</div>'}
+  </div>
+
+  <div class="doc-footer">
+    <span>Tierphysio Manager · Patientenakte</span>
+    <span>Erstellt am ${new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}</span>
+  </div>
+</div>
+<script>
+function sendEmail() {
+  const subject = encodeURIComponent('Patientenakte ${fe(p.name)}');
+  const body = encodeURIComponent('Anbei die Patientenakte von ${fe(p.name)}.\n\nBitte als PDF drucken und anhängen oder direkt aus dem Browser als PDF speichern.');
+  window.location.href = 'mailto:?subject=' + subject + '&body=' + body;
+}
+<\/script>
+</body></html>`;
+
+    const win = window.open('', '_blank', 'width=900,height=700,scrollbars=yes');
+    if (!win) { alert('Popup wurde blockiert. Bitte Popup-Blocker deaktivieren.'); return; }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+}
+
+/* ── Patient löschen ──────────────────────────────────────── */
+function deletePatient() {
+    if (!currentPatientData) return;
+    const p = currentPatientData.patient;
+    if (!confirm('Patient "' + p.name + '" wirklich löschen?\nDiese Aktion kann nicht rückgängig gemacht werden.')) return;
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/patienten/' + p.id + '/loeschen';
+    const token = document.createElement('input');
+    token.type = 'hidden'; token.name = '_csrf_token'; token.value = csrf;
+    form.appendChild(token);
+    document.body.appendChild(form);
+    form.submit();
 }
 
 /* ── Card click listeners ─────────────────────────────────── */
