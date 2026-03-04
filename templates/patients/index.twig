@@ -51,6 +51,122 @@
         max-width: calc(100vw - 160px) !important;
     }
 }
+/* ── Timeline Entry Form ────────────────────────────────────── */
+.pd-entry-section {
+    background: var(--bg-elevated, rgba(255,255,255,0.04));
+    border: 1px solid var(--glass-border);
+    border-radius: 10px;
+    padding: 1rem;
+}
+.pd-section-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.85rem;
+}
+.pd-entry-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+.pd-form-grid4 {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr 1.2fr 1fr;
+    gap: 0.6rem;
+    align-items: end;
+}
+.pd-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    min-width: 0;
+}
+.pd-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+.pd-select,
+.pd-input {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 0.83rem;
+    padding: 0.42rem 0.6rem;
+    border: 1px solid var(--glass-border);
+    border-radius: 7px;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    appearance: none;
+    -webkit-appearance: none;
+    line-height: 1.4;
+    transition: border-color 0.15s;
+}
+.pd-select {
+    background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%23888' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+    padding-right: 2rem;
+}
+.pd-select:focus,
+.pd-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-dim, rgba(79,124,255,0.18));
+}
+.pd-file {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 0.82rem;
+    padding: 0.38rem 0.5rem;
+    border: 1px solid var(--glass-border);
+    border-radius: 7px;
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    cursor: pointer;
+}
+.pd-file::-webkit-file-upload-button {
+    background: var(--bg-elevated);
+    border: 1px solid var(--glass-border);
+    border-radius: 5px;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    padding: 0.2rem 0.6rem;
+    cursor: pointer;
+    margin-right: 0.5rem;
+}
+.pd-form-footer {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.6rem;
+}
+.pd-submit-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+    align-self: flex-end;
+    margin-bottom: 0;
+}
+@media (max-width: 640px) {
+    .pd-form-grid4 {
+        grid-template-columns: 1fr 1fr;
+    }
+    .pd-form-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .pd-submit-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+@media (max-width: 400px) {
+    .pd-form-grid4 {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Quill Editor — App-Theme Anpassung */
 .ql-toolbar.ql-snow {
     background: var(--bg-elevated);
@@ -168,18 +284,17 @@
 
             <div style="border-top:1px solid var(--glass-border);"></div>
 
-            {# ── ZEILE 2: Neuer Eintrag — Titel oben, Felder darunter ── #}
-            <div>
-                <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">
-                    Neuer Timeline-Eintrag
-                </div>
-                <form id="pd-timeline-form" method="POST" enctype="multipart/form-data">
+            {# ── ZEILE 2: Neuer Timeline-Eintrag ── #}
+            <div class="pd-entry-section">
+                <div class="pd-section-label">Neuer Timeline-Eintrag</div>
+                <form id="pd-timeline-form" method="POST" enctype="multipart/form-data" class="pd-entry-form">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-                    {# Row 1: Typ + Behandlungsart (2 col) #}
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">
-                        <div>
-                            <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.2rem;">Typ</label>
-                            <select name="type" class="form-control" style="font-size:0.82rem;padding:0.4rem 0.5rem;">
+
+                    {# 4-column meta grid: Typ | Behandlungsart | Datum | Status #}
+                    <div class="pd-form-grid4">
+                        <div class="pd-field">
+                            <label class="pd-label">Typ</label>
+                            <select name="type" class="pd-select" data-no-cs>
                                 <option value="note">📝 Notiz</option>
                                 <option value="treatment">💊 Behandlung</option>
                                 <option value="photo">📷 Foto</option>
@@ -187,22 +302,19 @@
                                 <option value="other">📌 Sonstiges</option>
                             </select>
                         </div>
-                        <div>
-                            <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.2rem;">Behandlungsart</label>
-                            <select name="treatment_type_id" id="pd-treatment-type" class="form-control" style="font-size:0.82rem;padding:0.4rem 0.5rem;">
+                        <div class="pd-field">
+                            <label class="pd-label">Behandlungsart</label>
+                            <select name="treatment_type_id" id="pd-treatment-type" class="pd-select" data-no-cs>
                                 <option value="">— keine —</option>
                             </select>
                         </div>
-                    </div>
-                    {# Row 2: Datum + Status-Badge (2 col) #}
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:0.5rem;">
-                        <div>
-                            <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.2rem;">Datum</label>
-                            <input type="datetime-local" name="entry_date" class="form-control" style="font-size:0.82rem;padding:0.4rem 0.5rem;" value="{{ 'now'|date('Y-m-d\\TH:i') }}">
+                        <div class="pd-field">
+                            <label class="pd-label">Datum</label>
+                            <input type="datetime-local" name="entry_date" class="pd-input" value="{{ 'now'|date('Y-m-d\\TH:i') }}">
                         </div>
-                        <div>
-                            <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.2rem;">Status-Badge</label>
-                            <select name="status_badge" class="form-control" style="font-size:0.82rem;padding:0.4rem 0.5rem;">
+                        <div class="pd-field">
+                            <label class="pd-label">Status</label>
+                            <select name="status_badge" class="pd-select" data-no-cs>
                                 <option value="">— kein —</option>
                                 <option value="Schmerzfrei">Schmerzfrei</option>
                                 <option value="In Behandlung">In Behandlung</option>
@@ -213,25 +325,32 @@
                             </select>
                         </div>
                     </div>
-                    {# Row 3: Anhang (full width, mobile-friendly) #}
-                    <div style="margin-bottom:0.5rem;">
-                        <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.2rem;">Anhang</label>
-                        <input type="file" name="attachment" id="pd-attachment" class="form-control" accept="image/*,application/pdf,.doc,.docx" style="font-size:0.82rem;padding:0.4rem 0.5rem;width:100%;">
+
+                    {# Titel #}
+                    <div class="pd-field">
+                        <label class="pd-label">Titel</label>
+                        <input type="text" name="title" class="pd-input" placeholder="Kurzer Titel...">
                     </div>
-                    {# Zeile: Titel (oben) dann Inhalt (darunter) #}
-                    <div style="margin-bottom:0.5rem;">
-                        <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.2rem;">Titel</label>
-                        <input type="text" name="title" class="form-control" placeholder="Kurzer Titel..." style="font-size:0.82rem;padding:0.4rem 0.5rem;">
-                    </div>
-                    <div style="margin-bottom:0.75rem;">
-                        <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.2rem;">Inhalt</label>
+
+                    {# Inhalt #}
+                    <div class="pd-field">
+                        <label class="pd-label">Inhalt</label>
                         <div id="pd-quill-editor"></div>
                         <input type="hidden" name="content" id="pd-content-input">
                     </div>
-                    <button type="submit" class="btn btn-primary btn-sm" style="margin-top:0.25rem;">
-                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                        Eintrag speichern
-                    </button>
+
+                    {# Anhang + Submit in einer Zeile #}
+                    <div class="pd-form-footer">
+                        <div class="pd-field" style="flex:1;min-width:0;">
+                            <label class="pd-label">Anhang</label>
+                            <input type="file" name="attachment" id="pd-attachment" class="pd-file" accept="image/*,application/pdf,.doc,.docx">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm pd-submit-btn">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            Speichern
+                        </button>
+                    </div>
+
                 </form>
             </div>
 
@@ -806,7 +925,7 @@ function openPatientModal(patientId) {
                 pdForm.dataset.patientId = patientId;
             }
 
-            /* Populate treatment type dropdown */
+            /* Populate treatment type dropdown (native select — no CustomSelect) */
             var ttSel = document.getElementById('pd-treatment-type');
             if (ttSel && data.treatment_types) {
                 ttSel.innerHTML = '<option value="">— keine —</option>';
@@ -817,16 +936,6 @@ function openPatientModal(patientId) {
                     opt.dataset.color = tt.color;
                     ttSel.appendChild(opt);
                 });
-                /* Rebuild custom select for this element */
-                if (typeof CustomSelect !== 'undefined') {
-                    delete ttSel.dataset.csInit;
-                    ttSel.style.display = '';
-                    var oldWrapper = ttSel.nextSibling;
-                    if (oldWrapper && oldWrapper.classList && oldWrapper.classList.contains('cs-wrapper')) {
-                        oldWrapper.remove();
-                    }
-                    CustomSelect.build(ttSel);
-                }
             }
 
             /* Store for PDF / delete */
