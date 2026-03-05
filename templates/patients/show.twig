@@ -537,6 +537,13 @@
         var el = document.getElementById(id);
         if (el) { el.classList.remove('open'); document.body.style.overflow = ''; }
     }
+
+    /* Auto-open modal from ?open= query param */
+    var openParam = new URLSearchParams(window.location.search).get('open');
+    if (openParam === 'invoice') { openModal('modal-create-invoice'); }
+    else if (openParam === 'edit') { openModal('modal-edit-patient'); }
+    /* Clean URL without reload */
+    if (openParam) { history.replaceState(null, '', window.location.pathname); }
     document.addEventListener('click', function (e) {
         var opener = e.target.closest('[data-modal-open]');
         if (opener) { e.preventDefault(); openModal(opener.getAttribute('data-modal-open')); return; }

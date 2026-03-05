@@ -368,18 +368,18 @@
             </div>
             {# Row 2: action buttons — scrollable on very small screens #}
             <div style="display:flex;gap:0.4rem;align-items:center;margin-top:0.6rem;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;">
-                <a id="pd-invoice-btn" href="#" class="btn btn-secondary btn-sm" style="white-space:nowrap;flex-shrink:0;">
+                <button id="pd-invoice-btn" type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;flex-shrink:0;">
                     <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
                     Rechnung
-                </a>
+                </button>
                 <button id="pd-pdf-btn" type="button" class="btn btn-secondary btn-sm" onclick="exportPatientPDF()" style="white-space:nowrap;flex-shrink:0;">
                     <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                     Akte als PDF
                 </button>
-                <a id="pd-edit-btn" href="#" class="btn btn-primary btn-sm" style="white-space:nowrap;flex-shrink:0;">
+                <button id="pd-edit-btn" type="button" class="btn btn-primary btn-sm" style="white-space:nowrap;flex-shrink:0;">
                     <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     Bearbeiten
-                </a>
+                </button>
                 <button id="pd-delete-btn" type="button" class="btn btn-sm" style="background:var(--danger-bg);color:var(--danger);border:1px solid var(--danger-border);white-space:nowrap;flex-shrink:0;" onclick="deletePatient()">
                     <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="3 6 5 6 21 6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M10 11v6M14 11v6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 6V4h6v2"/></svg>
                     Löschen
@@ -882,6 +882,25 @@ const pdForm         = document.getElementById('pd-timeline-form');
 const pdSearchInput  = document.getElementById('pd-timeline-search');
 let currentPatientData = null;
 
+/* ── Invoice button: open inline modal ── */
+if (pdInvoiceBtn) {
+    pdInvoiceBtn.addEventListener('click', function () {
+        const pid = pdInvoiceBtn.dataset.patientId;
+        if (!pid) return;
+        // Close patient detail modal first, then open invoice modal on patient page
+        window.location.href = '/patienten/' + pid + '?open=invoice';
+    });
+}
+
+/* ── Edit button: open patient edit modal on patient page ── */
+if (pdEditBtn) {
+    pdEditBtn.addEventListener('click', function () {
+        const pid = pdEditBtn.dataset.patientId;
+        if (!pid) return;
+        window.location.href = '/patienten/' + pid + '?open=edit';
+    });
+}
+
 function resetModal() {
     pdLoading.style.display = 'flex';
     pdBody.style.display = 'none';
@@ -1000,8 +1019,8 @@ function openPatientModal(patientId) {
                 pdBadge.style.display = '';
             }
             pdSpecies.textContent = [p.species, p.breed].filter(Boolean).join(' · ');
-            pdInvoiceBtn.href = '/rechnungen/erstellen?patient_id=' + patientId;
-            pdEditBtn.href    = '/patienten/' + patientId;
+            pdInvoiceBtn.dataset.patientId = patientId;
+            pdEditBtn.dataset.patientId    = patientId;
 
             /* Thumbnail photo in header */
             if (p.photo) {
@@ -1262,11 +1281,15 @@ function sendEmail() {
 <\/script>
 </body></html>`;
 
-    const win = window.open('', '_blank', 'width=900,height=700,scrollbars=yes');
-    if (!win) { alert('Popup wurde blockiert. Bitte Popup-Blocker deaktivieren.'); return; }
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
+    const blob = new Blob([html], {type: 'text/html;charset=utf-8'});
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.target   = '_blank';
+    a.rel      = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 1000);
 }
 
 /* ── Patient löschen ──────────────────────────────────────── */
