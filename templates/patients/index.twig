@@ -701,6 +701,210 @@
     </div>
 </div>
 
+{# ── Edit Patient Modal (inline, no navigation) ───────────────────── #}
+<div class="modal-overlay" id="modal-edit-patient-inline">
+    <div class="modal modal-lg">
+        <div class="modal-header">
+            <h3 class="modal-title" id="edit-modal-title">Patient bearbeiten</h3>
+            <button class="modal-close" data-modal-close="modal-edit-patient-inline" type="button">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+        </div>
+        <form id="edit-patient-form" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <div class="modal-body" style="overflow-y:auto;max-height:72vh;">
+
+                {# Photo upload #}
+                <div class="form-group mb-4">
+                    <label class="form-label">Profilbild</label>
+                    <div class="flex items-center gap-3">
+                        <div id="edit-photo-preview" style="width:64px;height:64px;border-radius:50%;overflow:hidden;background:var(--bg-elevated);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:2px solid var(--glass-border);">
+                            <svg width="28" height="28" fill="none" viewBox="0 0 24 24" style="opacity:0.3;"><path stroke="currentColor" stroke-width="1.5" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.5"/></svg>
+                        </div>
+                        <div style="flex:1;">
+                            <input type="file" name="photo" id="edit-photo-input" accept="image/*" class="form-control" style="font-size:0.8rem;padding:0.4rem;">
+                            <div class="form-hint">JPG, PNG, WEBP — max. 5 MB</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-grid form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Name *</label>
+                        <input type="text" name="name" id="edit-name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tierart</label>
+                        <input type="text" name="species" id="edit-species" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Rasse</label>
+                        <input type="text" name="breed" id="edit-breed" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Geburtsdatum</label>
+                        <input type="date" name="birth_date" id="edit-birth" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Geschlecht</label>
+                        <select name="gender" id="edit-gender" class="form-control">
+                            <option value="unbekannt">Unbekannt</option>
+                            <option value="männlich">Männlich</option>
+                            <option value="weiblich">Weiblich</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Farbe</label>
+                        <input type="text" name="color" id="edit-color" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Chip-Nummer</label>
+                        <input type="text" name="chip_number" id="edit-chip" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select name="status" id="edit-status" class="form-control">
+                            <option value="aktiv">Aktiv</option>
+                            <option value="in_behandlung">In Behandlung</option>
+                            <option value="schmerzfrei">Schmerzfrei</option>
+                            <option value="kontrolltermin">Kontrolltermin</option>
+                            <option value="inaktiv">Inaktiv</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group mt-3">
+                    <label class="form-label">Tierhalter *</label>
+                    <select name="owner_id" id="edit-owner" class="form-control" required>
+                        {% for o in owners %}
+                            <option value="{{ o.id }}">{{ o.last_name }}, {{ o.first_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group mt-3">
+                    <label class="form-label">Notizen</label>
+                    <textarea name="notes" id="edit-notes" class="form-control" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-modal-close="modal-edit-patient-inline">Abbrechen</button>
+                <button type="submit" class="btn btn-primary">Speichern</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# ── Create Invoice Modal (inline, no navigation) ─────────────────── #}
+<div class="modal-overlay" id="modal-invoice-inline">
+    <div class="modal modal-xl" style="max-width:860px;width:95vw;max-height:92vh;display:flex;flex-direction:column;">
+        <div class="modal-header" style="flex-shrink:0;">
+            <div class="flex items-center gap-3">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
+                <span class="font-bold" style="font-size:1rem;">Rechnung erstellen</span>
+            </div>
+            <button class="modal-close" data-modal-close="modal-invoice-inline" type="button">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+        </div>
+        <form action="/rechnungen" method="POST" id="invoice-inline-form">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="patient_id" id="inv-patient-id" value="">
+        <input type="hidden" name="owner_id"   id="inv-owner-id"   value="">
+        <div class="modal-body" style="overflow-y:auto;flex:1;">
+            <div class="flex gap-4" style="flex-wrap:wrap;align-items:flex-start;">
+                {# Left: meta #}
+                <div style="flex:1;min-width:240px;display:flex;flex-direction:column;gap:1rem;">
+                    <div class="form-grid form-grid-2">
+                        <div class="form-group">
+                            <label class="form-label">Rechnungsnummer</label>
+                            <input type="text" name="invoice_number" id="inv-number" class="form-control" value="{{ next_number }}" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-control">
+                                <option value="draft">Entwurf</option>
+                                <option value="open">Offen</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Rechnungsdatum</label>
+                            <input type="date" name="issue_date" class="form-control" value="{{ 'now'|date('Y-m-d') }}">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Fälligkeitsdatum</label>
+                            <input type="date" name="due_date" class="form-control" value="{{ 'now'|date_modify('+14 days')|date('Y-m-d') }}">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Notizen</label>
+                        <textarea name="notes" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Zahlungsbedingungen</label>
+                        <textarea name="payment_terms" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                {# Right: positions #}
+                <div style="flex:1.4;min-width:300px;display:flex;flex-direction:column;gap:0.75rem;">
+                    {% if kleinunternehmer %}
+                    <div class="flex items-center gap-2" style="background:rgba(255,193,7,0.12);border:1px solid rgba(255,193,7,0.3);border-radius:var(--radius-sm);padding:0.5rem 0.75rem;">
+                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" style="color:#f59e0b;flex-shrink:0;"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        <span class="text-xs"><strong>Kleinunternehmer §19 UStG</strong> — MwSt. 0%</span>
+                    </div>
+                    {% endif %}
+                    <div style="display:grid;grid-template-columns:1fr 70px 100px {{ kleinunternehmer ? '0px' : '65px' }} auto;gap:0.4rem;">
+                        <span class="text-xs text-muted">Beschreibung</span>
+                        <span class="text-xs text-muted" style="text-align:right;">Menge</span>
+                        <span class="text-xs text-muted" style="text-align:right;">Einzelpreis</span>
+                        {% if not kleinunternehmer %}<span class="text-xs text-muted" style="text-align:right;">MwSt.%</span>{% endif %}
+                        <span></span>
+                    </div>
+                    <div id="inv-positions-container">
+                        <div class="inv-pos-row" style="display:grid;grid-template-columns:1fr 70px 100px {{ kleinunternehmer ? '0px' : '65px' }} auto;gap:0.4rem;margin-bottom:0.4rem;align-items:center;">
+                            <input type="text" name="position_description[]" class="form-control" placeholder="Leistung..." required>
+                            <input type="number" name="position_quantity[]"    class="form-control inv-qty"   value="1"    min="0.01" step="0.01" style="text-align:right;">
+                            <input type="number" name="position_price[]"       class="form-control inv-price" value="0.00" min="0"    step="0.01" style="text-align:right;">
+                            <input type="number" name="position_tax_rate[]"    class="form-control inv-tax"   value="{{ kleinunternehmer ? '0' : default_tax_rate }}" min="0" step="0.01" style="text-align:right;{{ kleinunternehmer ? 'display:none;' : '' }}">
+                            <button type="button" class="btn btn-danger btn-icon btn-sm inv-remove-pos" style="visibility:hidden;">
+                                <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" id="inv-add-pos" class="btn btn-secondary btn-sm" style="align-self:flex-start;">
+                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        Position hinzufügen
+                    </button>
+                    <div style="border-top:1px solid var(--glass-border);padding-top:0.75rem;margin-top:0.25rem;">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-muted">Gesamt (brutto)</span>
+                            <span id="inv-total" class="font-bold" style="color:var(--accent);font-size:1rem;">0,00 €</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" style="flex-shrink:0;">
+            <button type="button" class="btn btn-secondary" data-modal-close="modal-invoice-inline">Abbrechen</button>
+            <button type="submit" class="btn btn-primary">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="17 21 17 13 7 13 7 21"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 3 7 8 15 8"/></svg>
+                Rechnung speichern
+            </button>
+        </div>
+        </form>
+    </div>
+</div>
+
+<template id="inv-pos-row-template">
+    <div class="inv-pos-row" style="display:grid;grid-template-columns:1fr 70px 100px {{ kleinunternehmer ? '0px' : '65px' }} auto;gap:0.4rem;margin-bottom:0.4rem;align-items:center;">
+        <input type="text" name="position_description[]" class="form-control" placeholder="Leistung..." required>
+        <input type="number" name="position_quantity[]"    class="form-control inv-qty"   value="1"    min="0.01" step="0.01" style="text-align:right;">
+        <input type="number" name="position_price[]"       class="form-control inv-price" value="0.00" min="0"    step="0.01" style="text-align:right;">
+        <input type="number" name="position_tax_rate[]"    class="form-control inv-tax"   value="{{ kleinunternehmer ? '0' : default_tax_rate }}" min="0" step="0.01" style="text-align:right;{{ kleinunternehmer ? 'display:none;' : '' }}">
+        <button type="button" class="btn btn-danger btn-icon btn-sm inv-remove-pos">
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+    </div>
+</template>
+
 {% endblock %}
 
 {% block scripts %}
@@ -882,24 +1086,116 @@ const pdForm         = document.getElementById('pd-timeline-form');
 const pdSearchInput  = document.getElementById('pd-timeline-search');
 let currentPatientData = null;
 
-/* ── Invoice button: open inline modal ── */
+/* ── Invoice button: open inline invoice modal ── */
 if (pdInvoiceBtn) {
     pdInvoiceBtn.addEventListener('click', function () {
-        const pid = pdInvoiceBtn.dataset.patientId;
-        if (!pid) return;
-        // Close patient detail modal first, then open invoice modal on patient page
-        window.location.href = '/patienten/' + pid + '?open=invoice';
+        if (!currentPatientData) return;
+        const p = currentPatientData.patient;
+        const o = currentPatientData.owner;
+        document.getElementById('inv-patient-id').value = p.id || '';
+        document.getElementById('inv-owner-id').value   = (o && o.id) ? o.id : '';
+        Modal.open('modal-invoice-inline');
     });
 }
 
-/* ── Edit button: open patient edit modal on patient page ── */
+/* ── Edit button: open inline edit modal and pre-fill ── */
 if (pdEditBtn) {
     pdEditBtn.addEventListener('click', function () {
-        const pid = pdEditBtn.dataset.patientId;
-        if (!pid) return;
-        window.location.href = '/patienten/' + pid + '?open=edit';
+        if (!currentPatientData) return;
+        const p = currentPatientData.patient;
+        const o = currentPatientData.owner;
+        /* Set form action to correct patient update URL */
+        const form = document.getElementById('edit-patient-form');
+        form.action = '/patienten/' + p.id;
+        /* Pre-fill title */
+        document.getElementById('edit-modal-title').textContent = (p.name || 'Patient') + ' bearbeiten';
+        /* Pre-fill fields */
+        document.getElementById('edit-name').value    = p.name    || '';
+        document.getElementById('edit-species').value = p.species || '';
+        document.getElementById('edit-breed').value   = p.breed   || '';
+        document.getElementById('edit-birth').value   = p.birth_date ? p.birth_date.slice(0,10) : '';
+        document.getElementById('edit-color').value   = p.color   || '';
+        document.getElementById('edit-chip').value    = p.chip_number || '';
+        document.getElementById('edit-notes').value   = p.notes   || '';
+        /* Gender */
+        var gSel = document.getElementById('edit-gender');
+        for (var i = 0; i < gSel.options.length; i++) {
+            gSel.options[i].selected = (gSel.options[i].value === (p.gender || 'unbekannt'));
+        }
+        /* Status */
+        var sSel = document.getElementById('edit-status');
+        for (var i = 0; i < sSel.options.length; i++) {
+            sSel.options[i].selected = (sSel.options[i].value === (p.status || 'aktiv'));
+        }
+        /* Owner */
+        var oSel = document.getElementById('edit-owner');
+        for (var i = 0; i < oSel.options.length; i++) {
+            oSel.options[i].selected = (parseInt(oSel.options[i].value) === parseInt(p.owner_id || (o && o.id)));
+        }
+        /* Photo preview */
+        var prev = document.getElementById('edit-photo-preview');
+        if (p.photo) {
+            prev.innerHTML = '<img src="/patienten/'+p.id+'/foto/'+encodeURIComponent(p.photo)+'" style="width:100%;height:100%;object-fit:cover;">';
+        } else {
+            prev.innerHTML = '<svg width="28" height="28" fill="none" viewBox="0 0 24 24" style="opacity:0.3;"><path stroke="currentColor" stroke-width="1.5" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.5"/></svg>';
+        }
+        Modal.open('modal-edit-patient-inline');
     });
 }
+
+/* ── Edit photo live preview ── */
+var editPhotoInput = document.getElementById('edit-photo-input');
+if (editPhotoInput) {
+    editPhotoInput.addEventListener('change', function () {
+        var file = this.files && this.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var prev = document.getElementById('edit-photo-preview');
+            prev.innerHTML = '<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover;">';
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+/* ── Invoice modal: positions + total ── */
+(function(){
+    var cont  = document.getElementById('inv-positions-container');
+    var addB  = document.getElementById('inv-add-pos');
+    var totEl = document.getElementById('inv-total');
+    var tmpl  = document.getElementById('inv-pos-row-template');
+    function calcTotal(){
+        var t=0;
+        cont.querySelectorAll('.inv-pos-row').forEach(function(r){
+            var qty=parseFloat(r.querySelector('.inv-qty').value)||0;
+            var pr=parseFloat(r.querySelector('.inv-price').value)||0;
+            var tx=parseFloat(r.querySelector('.inv-tax').value)||0;
+            t+=qty*pr*(1+tx/100);
+        });
+        totEl.textContent=t.toFixed(2).replace('.',',')+' €';
+    }
+    function updRemove(){
+        var rows=cont.querySelectorAll('.inv-pos-row');
+        rows.forEach(function(r){ r.querySelector('.inv-remove-pos').style.visibility=rows.length>1?'visible':'hidden'; });
+    }
+    function bindRow(row){
+        row.querySelectorAll('input').forEach(function(i){ i.addEventListener('input',calcTotal); });
+        row.querySelector('.inv-remove-pos').addEventListener('click',function(){ row.remove(); updRemove(); calcTotal(); });
+    }
+    if(cont&&addB&&tmpl){
+        bindRow(cont.querySelector('.inv-pos-row'));
+        calcTotal();
+        addB.addEventListener('click',function(){
+            var clone=tmpl.content.cloneNode(true);
+            var row=clone.querySelector('.inv-pos-row');
+            bindRow(row);
+            cont.appendChild(row);
+            updRemove();
+            calcTotal();
+            row.querySelector('input[type="text"]').focus();
+        });
+    }
+})();
 
 function resetModal() {
     pdLoading.style.display = 'flex';

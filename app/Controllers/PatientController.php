@@ -38,12 +38,22 @@ class PatientController extends Controller
         $page    = (int)$this->get('page', 1);
         $result  = $this->patientService->getPaginated($page, 12, $search, $filter);
 
+        $treatmentTypes = [];
+        try { $treatmentTypes = $this->treatmentTypeRepository->findActive(); } catch (\Throwable) {}
+        $settings = $this->settingsRepository->all();
+        $owners   = $this->ownerService->findAll();
+
         $this->render('patients/index.twig', [
-            'page_title' => $this->translator->trans('nav.patients'),
-            'patients'   => $result['items'],
-            'pagination' => $result,
-            'search'     => $search,
-            'filter'     => $filter,
+            'page_title'       => $this->translator->trans('nav.patients'),
+            'patients'         => $result['items'],
+            'pagination'       => $result,
+            'search'           => $search,
+            'filter'           => $filter,
+            'owners'           => $owners,
+            'treatment_types'  => $treatmentTypes,
+            'next_number'      => $this->invoiceService->generateInvoiceNumber(),
+            'kleinunternehmer' => ($settings['kleinunternehmer'] ?? '0') === '1',
+            'default_tax_rate' => $settings['default_tax_rate'] ?? '19',
         ]);
     }
 
