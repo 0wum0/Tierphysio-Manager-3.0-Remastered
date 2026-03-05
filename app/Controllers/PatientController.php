@@ -12,6 +12,7 @@ use App\Core\View;
 use App\Services\PatientService;
 use App\Services\OwnerService;
 use App\Services\InvoiceService;
+use App\Services\PdfService;
 use App\Repositories\TreatmentTypeRepository;
 use App\Repositories\SettingsRepository;
 
@@ -26,7 +27,8 @@ class PatientController extends Controller
         private readonly OwnerService $ownerService,
         private readonly TreatmentTypeRepository $treatmentTypeRepository,
         private readonly InvoiceService $invoiceService,
-        private readonly SettingsRepository $settingsRepository
+        private readonly SettingsRepository $settingsRepository,
+        private readonly PdfService $pdfService
     ) {
         parent::__construct($view, $session, $config, $translator);
     }
@@ -337,6 +339,28 @@ class PatientController extends Controller
 
         header('Content-Type: application/json');
         echo json_encode(['ok' => true, 'timeline' => $timeline]);
+        exit;
+    }
+
+    public function downloadPatientPdf(array $params = []): void
+    {
+        $patient = $this->patientService->findById((int)$params['id']);
+        if (!$patient) {
+            $this->abort(404);
+        }
+
+        $owner    = $this->ownerService->findById((int)$patient['owner_id']);
+        $timeline = $this->patientService->getTimeline((int)$params['id']);
+
+        $pdfBytes = $this->pdfService->generatePatientPdf($patient, $owner, $timeline);
+
+        $filename = 'Patientenakte_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $patient['name'] ?? 'Patient') . '_' . date('Y-m-d') . '.pdf';
+
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Content-Length: ' . strlen($pdfBytes));
+        header('Cache-Control: private, max-age=0');
+        echo $pdfBytes;
         exit;
     }
 

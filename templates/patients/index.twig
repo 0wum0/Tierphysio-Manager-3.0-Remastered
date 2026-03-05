@@ -1648,6 +1648,11 @@ function openPatientModal(patientId) {
 function exportPatientPDF() {
     if (!currentPatientData) return;
     const p = currentPatientData.patient;
+    window.location.href = '/patienten/' + p.id + '/pdf';
+}
+function exportPatientPDF_old_unused() {
+    if (!currentPatientData) return;
+    const p = currentPatientData.patient;
     const o = currentPatientData.owner;
     const tl = currentPatientData.timeline || [];
     const pid = p.id;

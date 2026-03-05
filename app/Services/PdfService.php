@@ -473,6 +473,340 @@ class PdfService
         return $pdf->Output('', 'S');
     }
 
+    public function generatePatientPdf(
+        array $patient,
+        ?array $owner,
+        array $timeline
+    ): string {
+        $settings = $this->settingsRepository->all();
+
+        $sidebarColor = $this->hexToRgb($settings['pdf_primary_color'] ?? '#8B9E8B');
+        $accentColor  = $this->hexToRgb($settings['pdf_accent_color']  ?? '#6B7F6B');
+        $font         = $this->resolvePdfFont($settings['pdf_font'] ?? 'helvetica');
+        $fontSize     = (float)($settings['pdf_font_size'] ?? 9);
+        $companyName  = $settings['company_name']   ?? '';
+        $companyEmail = $settings['company_email']  ?? '';
+        $companyPhone = $settings['company_phone']  ?? '';
+        $logoFile     = !empty($settings['company_logo'])
+            ? STORAGE_PATH . '/uploads/' . $settings['company_logo']
+            : null;
+
+        $darkColor = $this->hexToRgb($settings['pdf_color_company_name'] ?? '#1E1E1E');
+        $grayColor = $this->hexToRgb($settings['pdf_color_company_info'] ?? '#6E6E6E');
+        $lineColor = $this->hexToRgb($settings['pdf_color_line']         ?? '#B4B4B4');
+
+        $sidebarW = 42;
+        $contentX = 50;
+        $contentW = 145;
+        $pageH    = 297;
+
+        $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+        $pdf->SetMargins(0, 0, 0);
+        $pdf->SetAutoPageBreak(true, 15);
+        $pdf->AddPage();
+
+        // ── Sidebar ──────────────────────────────────────────────────────
+        $this->drawPatientSidebar($pdf, $sidebarColor, $sidebarW, $pageH, $font, $fontSize, $logoFile, $patient, $owner);
+
+        // ── Header: company name + title ─────────────────────────────────
+        $pdf->SetFont($font, 'B', $fontSize + 3);
+        $pdf->SetTextColor(...$darkColor);
+        $pdf->SetXY($contentX, 10);
+        $pdf->Cell($contentW, 7, 'Patientenakte', 0, 1, 'L');
+
+        $pdf->SetFont($font, '', $fontSize - 1);
+        $pdf->SetTextColor(...$grayColor);
+        $pdf->SetXY($contentX, 17);
+        $pdf->Cell($contentW, 5, 'Erstellt am ' . date('d.m.Y') . ($companyName ? ' · ' . $companyName : ''), 0, 1, 'L');
+
+        // ── Patient info table ────────────────────────────────────────────
+        $y = 26;
+        $pdf->SetDrawColor(...$lineColor);
+        $pdf->SetLineWidth(0.3);
+        $pdf->Line($contentX, $y, $contentX + $contentW, $y);
+
+        $pdf->SetFillColor(...$sidebarColor);
+        $pdf->Rect($contentX, $y, $contentW, 7, 'F');
+        $pdf->SetFont($font, 'B', $fontSize - 0.5);
+        $pdf->SetTextColor(255, 255, 255);
+        $pdf->SetXY($contentX + 2, $y + 1.5);
+        $pdf->Cell($contentW - 4, 4, 'Patientendaten', 0, 1, 'L');
+        $y += 9;
+
+        $colW = $contentW / 2;
+        $fields = [
+            ['Name',         $patient['name']        ?? '—'],
+            ['Tierart',      $patient['species']     ?? '—'],
+            ['Rasse',        $patient['breed']       ?? '—'],
+            ['Geschlecht',   $patient['gender']      ?? '—'],
+            ['Farbe',        $patient['color']       ?? '—'],
+            ['Chip-Nr.',     $patient['chip_number'] ?? '—'],
+            ['Geburtsdatum', !empty($patient['birth_date']) ? date('d.m.Y', strtotime($patient['birth_date'])) : '—'],
+            ['Status',       $patient['status']      ?? '—'],
+        ];
+
+        $pdf->SetFont($font, '', $fontSize - 1);
+        $col = 0;
+        $rowY = $y;
+        foreach ($fields as $i => $field) {
+            $xPos = $contentX + ($col * $colW);
+            $pdf->SetTextColor(...$grayColor);
+            $pdf->SetXY($xPos + 2, $rowY);
+            $pdf->Cell($colW - 4, 4, $field[0], 0, 0, 'L');
+            $pdf->SetTextColor(...$darkColor);
+            $pdf->SetXY($xPos + 2, $rowY + 4);
+            $pdf->SetFont($font, 'B', $fontSize - 0.5);
+            $pdf->Cell($colW - 4, 4.5, $field[1], 0, 0, 'L');
+            $pdf->SetFont($font, '', $fontSize - 1);
+            $col++;
+            if ($col >= 2) {
+                $col = 0;
+                $rowY += 10;
+            }
+        }
+        if ($col === 1) $rowY += 10;
+        $y = $rowY + 2;
+
+        // Owner info
+        if ($owner) {
+            $pdf->SetDrawColor(...$lineColor);
+            $pdf->SetLineWidth(0.2);
+            $pdf->Line($contentX, $y, $contentX + $contentW, $y);
+            $y += 2;
+
+            $pdf->SetFillColor(...$accentColor);
+            $pdf->Rect($contentX, $y, $contentW, 7, 'F');
+            $pdf->SetFont($font, 'B', $fontSize - 0.5);
+            $pdf->SetTextColor(255, 255, 255);
+            $pdf->SetXY($contentX + 2, $y + 1.5);
+            $pdf->Cell($contentW - 4, 4, 'Tierhalter', 0, 1, 'L');
+            $y += 9;
+
+            $ownerName = trim(($owner['first_name'] ?? '') . ' ' . ($owner['last_name'] ?? ''));
+            $ownerInfo = array_filter([
+                $ownerName,
+                $owner['street'] ?? '',
+                trim(($owner['zip'] ?? '') . ' ' . ($owner['city'] ?? '')),
+                $owner['email'] ?? '',
+                $owner['phone'] ?? '',
+            ]);
+            $pdf->SetFont($font, '', $fontSize - 0.5);
+            $pdf->SetTextColor(...$darkColor);
+            foreach ($ownerInfo as $line) {
+                $pdf->SetXY($contentX + 2, $y);
+                $pdf->Cell($contentW - 4, 5, $line, 0, 1, 'L');
+                $y += 5;
+            }
+            $y += 2;
+        }
+
+        // Notes
+        if (!empty($patient['notes'])) {
+            $pdf->SetDrawColor(...$lineColor);
+            $pdf->SetLineWidth(0.2);
+            $pdf->Line($contentX, $y, $contentX + $contentW, $y);
+            $y += 3;
+            $pdf->SetFont($font, 'B', $fontSize - 1);
+            $pdf->SetTextColor(...$grayColor);
+            $pdf->SetXY($contentX + 2, $y);
+            $pdf->Cell($contentW - 4, 4, 'Notizen', 0, 1);
+            $y += 5;
+            $pdf->SetFont($font, '', $fontSize - 0.5);
+            $pdf->SetTextColor(...$darkColor);
+            $pdf->SetXY($contentX + 2, $y);
+            $pdf->MultiCell($contentW - 4, 4.5, strip_tags($patient['notes']), 0, 'L');
+            $y = $pdf->GetY() + 3;
+        }
+
+        // ── Timeline ─────────────────────────────────────────────────────
+        $y += 3;
+        if ($y > 260) { $pdf->AddPage(); $y = 15; $this->drawPatientSidebar($pdf, $sidebarColor, $sidebarW, $pageH, $font, $fontSize, $logoFile, $patient, $owner); }
+
+        $pdf->SetDrawColor(...$lineColor);
+        $pdf->SetLineWidth(0.3);
+        $pdf->Line($contentX, $y, $contentX + $contentW, $y);
+        $pdf->SetFillColor(...$sidebarColor);
+        $pdf->Rect($contentX, $y, $contentW, 7, 'F');
+        $pdf->SetFont($font, 'B', $fontSize - 0.5);
+        $pdf->SetTextColor(255, 255, 255);
+        $pdf->SetXY($contentX + 2, $y + 1.5);
+        $pdf->Cell($contentW - 4, 4, 'Timeline (' . count($timeline) . ' Einträge)', 0, 1, 'L');
+        $y += 10;
+
+        $typeLabels = ['note' => 'Notiz', 'treatment' => 'Behandlung', 'photo' => 'Foto', 'document' => 'Dokument', 'other' => 'Sonstiges'];
+
+        foreach ($timeline as $entry) {
+            // Estimate height needed: header ~8, content variable, min 12
+            $contentText = strip_tags(html_entity_decode($entry['content'] ?? '', ENT_QUOTES, 'UTF-8'));
+            $contentLines = max(1, (int)ceil(mb_strlen($contentText) / 80));
+            $entryH = 8 + ($contentLines * 4.5) + (empty($entry['title']) ? 0 : 5) + 4;
+
+            if ($y + $entryH > 268) {
+                $pdf->AddPage();
+                $y = 15;
+                $this->drawPatientSidebar($pdf, $sidebarColor, $sidebarW, $pageH, $font, $fontSize, $logoFile, $patient, $owner);
+            }
+
+            // Entry card background
+            $pdf->SetFillColor(245, 246, 248);
+            $pdf->RoundedRect($contentX, $y, $contentW, $entryH, 2, '1111', 'F');
+
+            // Colored left dot bar
+            $dotColors = [
+                'note'      => $this->hexToRgb('#4f7cff'),
+                'treatment' => $this->hexToRgb('#22c55e'),
+                'photo'     => $this->hexToRgb('#a855f7'),
+                'document'  => $this->hexToRgb('#f59e0b'),
+                'other'     => $this->hexToRgb('#64748b'),
+            ];
+            $dc = $dotColors[$entry['type'] ?? 'other'] ?? $dotColors['other'];
+            $pdf->SetFillColor(...$dc);
+            $pdf->Rect($contentX, $y, 2, $entryH, 'F');
+
+            // Meta line: type + date + status badge + user
+            $pdf->SetFont($font, 'B', $fontSize - 2);
+            $pdf->SetTextColor(...$dc);
+            $typeLabel = $typeLabels[$entry['type'] ?? 'other'] ?? 'Sonstiges';
+            $pdf->SetXY($contentX + 4, $y + 2);
+            $pdf->Cell(28, 3.5, strtoupper($typeLabel), 0, 0, 'L');
+
+            $pdf->SetFont($font, '', $fontSize - 2);
+            $pdf->SetTextColor(...$grayColor);
+            $dateStr = '';
+            if (!empty($entry['entry_date'])) {
+                $d = new \DateTime($entry['entry_date']);
+                $dateStr = $d->format('d.m.Y H:i');
+            }
+            $pdf->SetXY($contentX + 32, $y + 2);
+            $pdf->Cell(45, 3.5, $dateStr, 0, 0, 'L');
+
+            if (!empty($entry['status_badge'])) {
+                $pdf->SetFont($font, 'B', $fontSize - 2.5);
+                $pdf->SetTextColor(...$accentColor);
+                $pdf->SetXY($contentX + 78, $y + 2);
+                $pdf->Cell(35, 3.5, $entry['status_badge'], 0, 0, 'L');
+            }
+
+            if (!empty($entry['user_name'])) {
+                $pdf->SetFont($font, '', $fontSize - 2);
+                $pdf->SetTextColor(...$grayColor);
+                $pdf->SetXY($contentX + $contentW - 42, $y + 2);
+                $pdf->Cell(40, 3.5, $entry['user_name'], 0, 0, 'R');
+            }
+
+            $innerY = $y + 7;
+
+            // Title
+            if (!empty($entry['title'])) {
+                $pdf->SetFont($font, 'B', $fontSize);
+                $pdf->SetTextColor(...$darkColor);
+                $pdf->SetXY($contentX + 4, $innerY);
+                $pdf->Cell($contentW - 8, 4.5, $entry['title'], 0, 1, 'L');
+                $innerY += 5;
+            }
+
+            // Content (strip HTML tags)
+            if (!empty($entry['content'])) {
+                $clean = strip_tags(html_entity_decode($entry['content'], ENT_QUOTES, 'UTF-8'));
+                $clean = preg_replace('/\s+/', ' ', trim($clean));
+                if ($clean !== '') {
+                    $pdf->SetFont($font, '', $fontSize - 0.5);
+                    $pdf->SetTextColor(...$darkColor);
+                    $pdf->SetXY($contentX + 4, $innerY);
+                    $pdf->MultiCell($contentW - 8, 4.5, $clean, 0, 'L');
+                }
+            }
+
+            // Treatment type tag
+            if (!empty($entry['treatment_type_name'])) {
+                $tagY = $y + $entryH - 5;
+                $pdf->SetFont($font, 'B', $fontSize - 2.5);
+                $pdf->SetTextColor(...$accentColor);
+                $pdf->SetXY($contentX + $contentW - 55, $tagY);
+                $pdf->Cell(52, 3.5, $entry['treatment_type_name'], 0, 0, 'R');
+            }
+
+            $y += $entryH + 3;
+        }
+
+        if (empty($timeline)) {
+            $pdf->SetFont($font, 'I', $fontSize - 0.5);
+            $pdf->SetTextColor(...$grayColor);
+            $pdf->SetXY($contentX + 2, $y);
+            $pdf->Cell($contentW - 4, 6, 'Noch keine Einträge vorhanden.', 0, 1, 'C');
+        }
+
+        return $pdf->Output('', 'S');
+    }
+
+    private function drawPatientSidebar(
+        TCPDF $pdf,
+        array $sidebarColor,
+        float $sidebarW,
+        float $pageH,
+        string $font,
+        float $fontSize,
+        ?string $logoFile,
+        array $patient,
+        ?array $owner
+    ): void {
+        $pdf->SetFillColor(...$sidebarColor);
+        $pdf->Rect(0, 0, $sidebarW, $pageH, 'F');
+
+        $logoY = 14;
+        if ($logoFile && file_exists($logoFile)) {
+            $logoMaxW = $sidebarW - 10;
+            $pdf->Image($logoFile, 5, $logoY, $logoMaxW, 0, '', '', '', false, 300);
+            $logoY += 26;
+        } else {
+            $cx = $sidebarW / 2;
+            $cy = $logoY + 12;
+            $pdf->SetDrawColor(255, 255, 255);
+            $pdf->SetLineWidth(0.5);
+            $pdf->Circle($cx, $cy, 11, 0, 360, 'D');
+            $pdf->SetFont($font, 'B', 7);
+            $pdf->SetTextColor(255, 255, 255);
+            $pdf->SetXY(3, $cy - 4);
+            $pdf->Cell($sidebarW - 6, 8, 'LOGO', 0, 0, 'C');
+            $logoY += 28;
+        }
+
+        // Patient name in sidebar
+        $sideY = $logoY + 8;
+        $pdf->SetFont($font, '', $fontSize - 2.5);
+        $pdf->SetTextColor(200, 225, 200);
+        $pdf->SetXY(3, $sideY);
+        $pdf->Cell($sidebarW - 6, 4, 'PATIENT', 0, 1, 'C');
+        $pdf->SetFont($font, 'B', $fontSize - 0.5);
+        $pdf->SetTextColor(255, 255, 255);
+        $pdf->SetXY(3, $sideY + 5);
+        $pdf->MultiCell($sidebarW - 6, 5, $patient['name'] ?? '', 0, 'C');
+
+        if (!empty($patient['species'])) {
+            $pdf->SetFont($font, '', $fontSize - 2);
+            $pdf->SetTextColor(200, 225, 200);
+            $sideY2 = $pdf->GetY() + 2;
+            $pdf->SetXY(3, $sideY2);
+            $pdf->Cell($sidebarW - 6, 4, $patient['species'], 0, 1, 'C');
+        }
+
+        // Owner in sidebar
+        if ($owner) {
+            $owY = $pdf->GetY() + 8;
+            $pdf->SetFont($font, '', $fontSize - 2.5);
+            $pdf->SetTextColor(200, 225, 200);
+            $pdf->SetXY(3, $owY);
+            $pdf->Cell($sidebarW - 6, 4, 'TIERHALTER', 0, 1, 'C');
+            $ownerName = trim(($owner['first_name'] ?? '') . ' ' . ($owner['last_name'] ?? ''));
+            $pdf->SetFont($font, 'B', $fontSize - 1.5);
+            $pdf->SetTextColor(255, 255, 255);
+            $pdf->SetXY(3, $owY + 5);
+            $pdf->MultiCell($sidebarW - 6, 4.5, $ownerName, 0, 'C');
+        }
+    }
+
     public function getSettings(): array
     {
         return $this->settingsRepository->all();
