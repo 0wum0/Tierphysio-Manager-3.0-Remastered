@@ -192,6 +192,10 @@ class InviteController extends Controller
 
     public function submit(array $params = []): void
     {
+        /* Detect AJAX: X-Requested-With may be stripped by some Apache configs */
+        $wantsJson = $this->isAjax()
+            || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json');
+
         $token  = $params['token'] ?? '';
         $invite = $this->repo->findByToken($token);
 
@@ -209,7 +213,7 @@ class InviteController extends Controller
         $errors = $this->validateFormData($data);
 
         if (!empty($errors)) {
-            if ($this->isAjax()) {
+            if ($wantsJson) {
                 $this->json(['ok' => false, 'errors' => $errors], 422);
                 return;
             }
@@ -313,7 +317,7 @@ class InviteController extends Controller
                 $pdo->rollBack();
             }
             error_log('[PatientInvite] submit error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine() . "\n" . $e->getTraceAsString());
-            if ($this->isAjax()) {
+            if ($wantsJson) {
                 $this->json(['ok' => false, 'error' => $e->getMessage() . ' (' . basename($e->getFile()) . ':' . $e->getLine() . ')'], 500);
                 return;
             }
@@ -328,7 +332,7 @@ class InviteController extends Controller
             return;
         }
 
-        if ($this->isAjax()) {
+        if ($wantsJson) {
             $this->json(['ok' => true, 'redirect' => '/einladung/' . $token . '/danke']);
             return;
         }
