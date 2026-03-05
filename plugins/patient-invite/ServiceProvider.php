@@ -44,6 +44,9 @@ class ServiceProvider
         $router->get('/einladungen/{id}/link',     [InviteController::class, 'copyLink'],   ['auth']);
         $router->post('/einladungen/{id}/widerrufen', [InviteController::class, 'revoke'],  ['auth']);
 
+        /* Admin — diagnose */
+        $router->get('/einladungen/diagnose',      [InviteController::class, 'diagnose'],   ['auth']);
+
         /* Public — magic link (no auth) */
         $router->get('/einladung/{token}',        [InviteController::class, 'landing'],    []);
         $router->post('/einladung/{token}',        [InviteController::class, 'submit'],     []);

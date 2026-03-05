@@ -282,7 +282,15 @@ function submitForm() {
         body: fd,
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
-    .then(function (r) { return r.json(); })
+    .then(function (r) {
+        const ct = r.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) {
+            return r.text().then(function(t) {
+                throw new Error('Server HTTP ' + r.status + ': ' + t.substring(0, 400));
+            });
+        }
+        return r.json();
+    })
     .then(function (data) {
         if (data.ok) {
             window.location.href = data.redirect;
@@ -293,8 +301,8 @@ function submitForm() {
             btn.textContent = '🚀 Jetzt registrieren';
         }
     })
-    .catch(function () {
-        alert('Netzwerkfehler. Bitte erneut versuchen.');
+    .catch(function (err) {
+        alert('Fehler: ' + (err.message || 'Netzwerkfehler. Bitte erneut versuchen.'));
         btn.disabled = false;
         btn.textContent = '🚀 Jetzt registrieren';
     });

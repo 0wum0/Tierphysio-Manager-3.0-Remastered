@@ -233,6 +233,7 @@ class InviteController extends Controller
         try {
             $db  = Application::getInstance()->getContainer()->get(Database::class);
             $pdo = $db->getPdo();
+            $pdo->beginTransaction();
 
             /* 1. Find or create owner */
             $stmt = $pdo->prepare("SELECT id FROM owners WHERE email = ? LIMIT 1");
@@ -261,13 +262,17 @@ class InviteController extends Controller
             /* 2. Copy photo to patients storage */
             $patientPhoto = '';
             if (!empty($photoFilename)) {
-                $src    = STORAGE_PATH . '/intake/' . $photoFilename;
-                $dstDir = STORAGE_PATH . '/patients';
-                if (!is_dir($dstDir)) mkdir($dstDir, 0755, true);
-                $dst = $dstDir . '/' . $photoFilename;
-                if (file_exists($src)) {
-                    copy($src, $dst);
-                    $patientPhoto = $photoFilename;
+                try {
+                    $src    = STORAGE_PATH . '/intake/' . $photoFilename;
+                    $dstDir = STORAGE_PATH . '/patients';
+                    if (!is_dir($dstDir)) mkdir($dstDir, 0755, true);
+                    $dst = $dstDir . '/' . $photoFilename;
+                    if (file_exists($src)) {
+                        copy($src, $dst);
+                        $patientPhoto = $photoFilename;
+                    }
+                } catch (\Throwable) {
+                    /* Photo copy failed — continue without photo */
                 }
             }
 
@@ -289,13 +294,27 @@ class InviteController extends Controller
             ]);
             $patientId = (int)$pdo->lastInsertId();
 
-            /* 4. Mark token as used */
-            $this->repo->accept($token, $patientId, $ownerId);
+            $pdo->commit();
+
+            /* 4. Mark token as used — separate try so DB data is already saved */
+            try {
+                $this->repo->accept($token, $patientId, $ownerId);
+            } catch (\Throwable $e2) {
+                /* accept() failed (e.g. column missing) — try minimal status update */
+                error_log('[PatientInvite] accept() failed: ' . $e2->getMessage());
+                try {
+                    $pdo->prepare("UPDATE `patient_invite_tokens` SET status = 'angenommen' WHERE token = ?")
+                        ->execute([$token]);
+                } catch (\Throwable) {}
+            }
 
         } catch (\Throwable $e) {
-            error_log('[PatientInvite] submit error: ' . $e->getMessage());
+            if (isset($pdo) && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            error_log('[PatientInvite] submit error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine() . "\n" . $e->getTraceAsString());
             if ($this->isAjax()) {
-                $this->json(['ok' => false, 'error' => 'Interner Fehler. Bitte versuchen Sie es erneut.'], 500);
+                $this->json(['ok' => false, 'error' => $e->getMessage() . ' (' . basename($e->getFile()) . ':' . $e->getLine() . ')'], 500);
                 return;
             }
             $this->renderPublic('@patient-invite/form.twig', [
@@ -314,6 +333,25 @@ class InviteController extends Controller
             return;
         }
         $this->redirect('/einladung/' . $token . '/danke');
+    }
+
+    public function diagnose(array $params = []): void
+    {
+        $db  = Application::getInstance()->getContainer()->get(Database::class);
+        $pdo = $db->getPdo();
+
+        $cols = $pdo->query("SHOW COLUMNS FROM `patient_invite_tokens`")->fetchAll(\PDO::FETCH_ASSOC);
+        $colNames = array_column($cols, 'Field');
+
+        $recent = $pdo->query("SELECT id, token, status, accepted_patient_id, accepted_owner_id, expires_at, accepted_at FROM `patient_invite_tokens` ORDER BY id DESC LIMIT 5")->fetchAll(\PDO::FETCH_ASSOC);
+
+        $this->json([
+            'table_columns'     => $colNames,
+            'has_accepted_cols' => in_array('accepted_patient_id', $colNames),
+            'recent_tokens'     => $recent,
+            'php_version'       => PHP_VERSION,
+            'storage_writable'  => is_writable(STORAGE_PATH),
+        ]);
     }
 
     public function thankYou(array $params = []): void
