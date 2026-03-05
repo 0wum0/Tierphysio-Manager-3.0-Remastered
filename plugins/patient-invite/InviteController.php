@@ -155,6 +155,50 @@ class InviteController extends Controller
         $this->json(['ok' => true]);
     }
 
+    public function acceptAdmin(array $params = []): void
+    {
+        $this->validateCsrf();
+        $invite = $this->repo->findById((int)$params['id']);
+        if (!$invite) {
+            $this->json(['ok' => false, 'error' => 'Nicht gefunden'], 404);
+            return;
+        }
+        if ($invite['status'] !== 'offen') {
+            $this->json(['ok' => false, 'error' => 'Einladung ist nicht mehr offen'], 422);
+            return;
+        }
+
+        $db  = Application::getInstance()->getContainer()->get(Database::class);
+        $pdo = $db->getPdo();
+        $pdo->prepare(
+            "UPDATE `patient_invite_tokens` SET status = 'angenommen', accepted_at = NOW() WHERE id = ?"
+        )->execute([$params['id']]);
+
+        $this->json(['ok' => true]);
+    }
+
+    public function rejectAdmin(array $params = []): void
+    {
+        $this->validateCsrf();
+        $invite = $this->repo->findById((int)$params['id']);
+        if (!$invite) {
+            $this->json(['ok' => false, 'error' => 'Nicht gefunden'], 404);
+            return;
+        }
+        if ($invite['status'] !== 'offen') {
+            $this->json(['ok' => false, 'error' => 'Einladung ist nicht mehr offen'], 422);
+            return;
+        }
+
+        $db  = Application::getInstance()->getContainer()->get(Database::class);
+        $pdo = $db->getPdo();
+        $pdo->prepare(
+            "UPDATE `patient_invite_tokens` SET status = 'abgelaufen' WHERE id = ?"
+        )->execute([$params['id']]);
+
+        $this->json(['ok' => true]);
+    }
+
     /* ─────────────────────────────────────────────────────────
        PUBLIC: Magic Link Landing — Besitzer klickt den Link
     ───────────────────────────────────────────────────────── */

@@ -42,7 +42,9 @@ class ServiceProvider
         $router->post('/einladungen/senden',       [InviteController::class, 'send'],       ['auth']);
         $router->get('/einladungen/{id}/whatsapp', [InviteController::class, 'whatsappUrl'],['auth']);
         $router->get('/einladungen/{id}/link',     [InviteController::class, 'copyLink'],   ['auth']);
-        $router->post('/einladungen/{id}/widerrufen', [InviteController::class, 'revoke'],  ['auth']);
+        $router->post('/einladungen/{id}/widerrufen', [InviteController::class, 'revoke'],      ['auth']);
+        $router->post('/einladungen/{id}/annehmen',   [InviteController::class, 'acceptAdmin'], ['auth']);
+        $router->post('/einladungen/{id}/ablehnen',   [InviteController::class, 'rejectAdmin'], ['auth']);
 
         /* Admin — diagnose */
         $router->get('/einladungen/diagnose',      [InviteController::class, 'diagnose'],   ['auth']);
