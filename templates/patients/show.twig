@@ -11,10 +11,10 @@
         <span class="badge badge-{{ patient.status|lower|replace({' ':'_', 'ä':'ae','ü':'ue','ö':'oe'}) }}">{{ patient.status }}</span>
     </div>
     <div class="flex gap-2">
-        <a href="/rechnungen/erstellen?patient_id={{ patient.id }}" class="btn btn-secondary btn-sm">
+        <button class="btn btn-secondary btn-sm" data-modal-open="modal-create-invoice">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
             {{ t('patients.create_invoice') }}
-        </a>
+        </button>
         <button class="btn btn-primary btn-sm" data-modal-open="modal-edit-patient">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             {{ t('common.edit') }}
@@ -326,6 +326,135 @@
     </div>
 </div>
 
+{# ── Rechnung erstellen Modal ────────────────────────────────────── #}
+<div class="modal-overlay" id="modal-create-invoice">
+    <div class="modal modal-xl" style="max-width:860px;width:95vw;max-height:92vh;display:flex;flex-direction:column;">
+        <div class="modal-header" style="flex-shrink:0;">
+            <div class="flex items-center gap-3">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
+                <span class="font-bold" style="font-size:1rem;">Rechnung erstellen</span>
+            </div>
+            <button class="modal-close" data-modal-close="modal-create-invoice" type="button">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+        </div>
+
+        <form action="/rechnungen" method="POST" id="invoice-create-modal-form">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="patient_id" value="{{ patient.id }}">
+        <input type="hidden" name="owner_id" value="{{ owner.id ?? '' }}">
+
+        <div class="modal-body" style="overflow-y:auto;flex:1;">
+            <div class="flex gap-4" style="flex-wrap:wrap;align-items:flex-start;">
+
+                {# Left: invoice meta #}
+                <div style="flex:1;min-width:260px;display:flex;flex-direction:column;gap:1rem;">
+
+                    <div class="form-grid form-grid-2">
+                        <div class="form-group">
+                            <label class="form-label">{{ t('invoices.invoice_number') }}</label>
+                            <input type="text" name="invoice_number" class="form-control" value="{{ next_number }}" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">{{ t('invoices.status') }}</label>
+                            <select name="status" class="form-control">
+                                <option value="draft">{{ t('invoices.status_draft') }}</option>
+                                <option value="open">{{ t('invoices.status_open') }}</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">{{ t('invoices.issue_date') }}</label>
+                            <input type="date" name="issue_date" class="form-control" value="{{ 'now'|date('Y-m-d') }}">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">{{ t('invoices.due_date') }}</label>
+                            <input type="date" name="due_date" class="form-control" value="{{ 'now'|date_modify('+14 days')|date('Y-m-d') }}">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">{{ t('invoices.notes') }}</label>
+                        <textarea name="notes" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">{{ t('invoices.payment_terms') }}</label>
+                        <textarea name="payment_terms" class="form-control" rows="2"></textarea>
+                    </div>
+
+                </div>
+
+                {# Right: positions #}
+                <div style="flex:1.4;min-width:300px;display:flex;flex-direction:column;gap:0.75rem;">
+
+                    {% if kleinunternehmer %}
+                    <div class="flex items-center gap-2" style="background:rgba(255,193,7,0.12);border:1px solid rgba(255,193,7,0.3);border-radius:var(--radius-sm);padding:0.5rem 0.75rem;">
+                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" style="color:#f59e0b;flex-shrink:0;"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        <span class="text-xs"><strong>Kleinunternehmer §19 UStG</strong> — MwSt. 0%</span>
+                    </div>
+                    {% endif %}
+
+                    {# Column headers #}
+                    <div style="display:grid;grid-template-columns:1fr 70px 100px {{ kleinunternehmer ? '0px' : '65px' }} auto;gap:0.4rem;">
+                        <span class="text-xs text-muted">Beschreibung</span>
+                        <span class="text-xs text-muted" style="text-align:right;">Menge</span>
+                        <span class="text-xs text-muted" style="text-align:right;">Einzelpreis</span>
+                        {% if not kleinunternehmer %}<span class="text-xs text-muted" style="text-align:right;">MwSt.%</span>{% endif %}
+                        <span></span>
+                    </div>
+
+                    <div id="modal-positions-container">
+                        <div class="modal-position-row" style="display:grid;grid-template-columns:1fr 70px 100px {{ kleinunternehmer ? '0px' : '65px' }} auto;gap:0.4rem;margin-bottom:0.4rem;align-items:center;">
+                            <input type="text" name="position_description[]" class="form-control" placeholder="Leistung..." required>
+                            <input type="number" name="position_quantity[]" class="form-control pos-qty" value="1" min="0.01" step="0.01" style="text-align:right;">
+                            <input type="number" name="position_price[]" class="form-control pos-price" value="0.00" min="0" step="0.01" style="text-align:right;">
+                            <input type="number" name="position_tax_rate[]" class="form-control pos-tax" value="{{ kleinunternehmer ? '0' : default_tax_rate }}" min="0" step="0.01" style="text-align:right;{{ kleinunternehmer ? 'display:none;' : '' }}">
+                            <button type="button" class="btn btn-danger btn-icon btn-sm remove-modal-position" title="Entfernen" style="visibility:hidden;">
+                                <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="button" id="modal-add-position" class="btn btn-secondary btn-sm" style="align-self:flex-start;">
+                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        Position hinzufügen
+                    </button>
+
+                    {# Running total #}
+                    <div style="border-top:1px solid var(--glass-border);padding-top:0.75rem;margin-top:0.25rem;">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-muted">Gesamt (brutto)</span>
+                            <span id="modal-total-gross" class="font-bold" style="color:var(--accent);font-size:1rem;">0,00 €</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer" style="flex-shrink:0;">
+            <button type="button" class="btn btn-secondary" data-modal-close="modal-create-invoice">{{ t('common.cancel') }}</button>
+            <button type="submit" class="btn btn-primary">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="17 21 17 13 7 13 7 21"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 3 7 8 15 8"/></svg>
+                Rechnung speichern
+            </button>
+        </div>
+        </form>
+    </div>
+</div>
+
+{# Position Row Template for modal #}
+<template id="modal-position-row-template">
+    <div class="modal-position-row" style="display:grid;grid-template-columns:1fr 70px 100px {{ kleinunternehmer ? '0px' : '65px' }} auto;gap:0.4rem;margin-bottom:0.4rem;align-items:center;">
+        <input type="text" name="position_description[]" class="form-control" placeholder="Leistung..." required>
+        <input type="number" name="position_quantity[]" class="form-control pos-qty" value="1" min="0.01" step="0.01" style="text-align:right;">
+        <input type="number" name="position_price[]" class="form-control pos-price" value="0.00" min="0" step="0.01" style="text-align:right;">
+        <input type="number" name="position_tax_rate[]" class="form-control pos-tax" value="{{ kleinunternehmer ? '0' : default_tax_rate }}" min="0" step="0.01" style="text-align:right;{{ kleinunternehmer ? 'display:none;' : '' }}">
+        <button type="button" class="btn btn-danger btn-icon btn-sm remove-modal-position" title="Entfernen">
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+    </div>
+</template>
+
 {# Datei-Viewer (Bilder + PDFs) #}
 <div id="fileviewer-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.88);align-items:center;justify-content:center;padding:1rem;box-sizing:border-box;">
     <div style="position:relative;width:100%;max-width:960px;height:min(88vh,100%);display:flex;flex-direction:column;background:var(--bg-surface,#1a1a2e);border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.7);">
@@ -346,6 +475,58 @@
 </div>
 
 <script>
+/* ── Invoice creation modal: positions + total ── */
+(function () {
+    var container  = document.getElementById('modal-positions-container');
+    var addBtn     = document.getElementById('modal-add-position');
+    var totalEl    = document.getElementById('modal-total-gross');
+    var tmpl       = document.getElementById('modal-position-row-template');
+
+    function calcTotal() {
+        var total = 0;
+        container.querySelectorAll('.modal-position-row').forEach(function (row) {
+            var qty   = parseFloat(row.querySelector('.pos-qty').value)   || 0;
+            var price = parseFloat(row.querySelector('.pos-price').value) || 0;
+            var tax   = parseFloat(row.querySelector('.pos-tax').value)   || 0;
+            total += qty * price * (1 + tax / 100);
+        });
+        totalEl.textContent = total.toFixed(2).replace('.', ',') + ' €';
+    }
+
+    function updateRemoveButtons() {
+        var rows = container.querySelectorAll('.modal-position-row');
+        rows.forEach(function (row) {
+            row.querySelector('.remove-modal-position').style.visibility = rows.length > 1 ? 'visible' : 'hidden';
+        });
+    }
+
+    function bindRow(row) {
+        row.querySelectorAll('input').forEach(function (inp) {
+            inp.addEventListener('input', calcTotal);
+        });
+        row.querySelector('.remove-modal-position').addEventListener('click', function () {
+            row.remove();
+            updateRemoveButtons();
+            calcTotal();
+        });
+    }
+
+    if (container && addBtn && tmpl) {
+        bindRow(container.querySelector('.modal-position-row'));
+        calcTotal();
+
+        addBtn.addEventListener('click', function () {
+            var clone = tmpl.content.cloneNode(true);
+            var row   = clone.querySelector('.modal-position-row');
+            bindRow(row);
+            container.appendChild(row);
+            updateRemoveButtons();
+            calcTotal();
+            row.querySelector('input[type="text"]').focus();
+        });
+    }
+})();
+
 /* ── Modal open/close ── */
 (function () {
     function openModal(id) {

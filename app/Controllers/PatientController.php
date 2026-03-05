@@ -11,7 +11,9 @@ use App\Core\Translator;
 use App\Core\View;
 use App\Services\PatientService;
 use App\Services\OwnerService;
+use App\Services\InvoiceService;
 use App\Repositories\TreatmentTypeRepository;
+use App\Repositories\SettingsRepository;
 
 class PatientController extends Controller
 {
@@ -22,7 +24,9 @@ class PatientController extends Controller
         Translator $translator,
         private readonly PatientService $patientService,
         private readonly OwnerService $ownerService,
-        private readonly TreatmentTypeRepository $treatmentTypeRepository
+        private readonly TreatmentTypeRepository $treatmentTypeRepository,
+        private readonly InvoiceService $invoiceService,
+        private readonly SettingsRepository $settingsRepository
     ) {
         parent::__construct($view, $session, $config, $translator);
     }
@@ -54,12 +58,21 @@ class PatientController extends Controller
         $timeline = $this->patientService->getTimeline((int)$params['id']);
         $owners   = $this->ownerService->findAll();
 
+        $treatmentTypes = [];
+        try { $treatmentTypes = $this->treatmentTypeRepository->findActive(); } catch (\Throwable) {}
+
+        $settings = $this->settingsRepository->all();
+
         $this->render('patients/show.twig', [
-            'page_title' => $patient['name'],
-            'patient'    => $patient,
-            'owner'      => $owner,
-            'timeline'   => $timeline,
-            'owners'     => $owners,
+            'page_title'       => $patient['name'],
+            'patient'          => $patient,
+            'owner'            => $owner,
+            'timeline'         => $timeline,
+            'owners'           => $owners,
+            'treatment_types'  => $treatmentTypes,
+            'next_number'      => $this->invoiceService->generateInvoiceNumber(),
+            'kleinunternehmer' => ($settings['kleinunternehmer'] ?? '0') === '1',
+            'default_tax_rate' => $settings['default_tax_rate'] ?? '19',
         ]);
     }
 
