@@ -318,10 +318,12 @@
         });
     });
 
-    /* ── Bootstrap 5 Modal instances ── */
-    const bsAptModal    = new bootstrap.Modal(document.getElementById('modal-appointment'), { backdrop: true, keyboard: true });
-    const bsDeleteModal = new bootstrap.Modal(document.getElementById('modal-apt-delete'),  { backdrop: true, keyboard: true });
-    const form          = document.getElementById('form-appointment');
+    /* ── Bootstrap 5 Modal instances (lazy) ── */
+    let _bsAptModal = null;
+    let _bsDeleteModal = null;
+    function bsAptModal()    { return _bsAptModal    || (_bsAptModal    = new bootstrap.Modal(document.getElementById('modal-appointment'), { backdrop: true, keyboard: true })); }
+    function bsDeleteModal() { return _bsDeleteModal || (_bsDeleteModal = new bootstrap.Modal(document.getElementById('modal-apt-delete'),  { backdrop: true, keyboard: true })); }
+    const form = document.getElementById('form-appointment');
 
     function openNewModal(start, end, allDay) {
         currentAptId = null;
@@ -333,7 +335,7 @@
         if (start) document.getElementById('apt-start').value = start.slice(0,16);
         if (end)   document.getElementById('apt-end').value   = end.slice(0,16);
         document.getElementById('apt-allday').checked = !!allDay;
-        bsAptModal.show();
+        bsAptModal().show();
         setTimeout(() => document.getElementById('apt-title').focus(), 300);
     }
 
@@ -359,7 +361,7 @@
 
         document.getElementById('btn-apt-delete').style.display  = '';
         document.getElementById('btn-apt-invoice').style.display = '';
-        bsAptModal.show();
+        bsAptModal().show();
     }
 
     function setSelectVal(id, val) {
@@ -368,7 +370,7 @@
         sel.value = val;
     }
 
-    function closeModal() { bsAptModal.hide(); currentAptId = null; }
+    function closeModal() { bsAptModal().hide(); currentAptId = null; }
 
     document.getElementById('btn-new-appointment').addEventListener('click', () => {
         const now = new Date();
@@ -424,8 +426,8 @@
     /* ── Delete ── */
     document.getElementById('btn-apt-delete').addEventListener('click', () => {
         document.getElementById('delete-apt-id').value = currentAptId;
-        bsAptModal.hide();
-        bsDeleteModal.show();
+        bsAptModal().hide();
+        bsDeleteModal().show();
     });
 
     async function doDelete(mode) {
@@ -435,7 +437,7 @@
         data.append('mode', mode);
         const res  = await fetch('/api/kalender/events/' + id + '/loeschen', { method: 'POST', body: data });
         const json = await res.json();
-        if (json.success) { calendar.refetchEvents(); bsDeleteModal.hide(); }
+        if (json.success) { calendar.refetchEvents(); bsDeleteModal().hide(); }
         else alert('Fehler beim Löschen.');
     }
     document.getElementById('btn-delete-single').addEventListener('click', () => doDelete('single'));
