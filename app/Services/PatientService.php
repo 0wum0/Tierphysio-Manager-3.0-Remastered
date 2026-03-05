@@ -60,6 +60,11 @@ class PatientService
         $this->patientRepository->addTimelineEntry($data);
     }
 
+    public function updateTimelineEntry(int $entryId, array $data): void
+    {
+        $this->patientRepository->updateTimelineEntry($entryId, $data);
+    }
+
     public function deleteTimelineEntry(int $entryId): void
     {
         $this->patientRepository->deleteTimelineEntry($entryId);

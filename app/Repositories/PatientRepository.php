@@ -153,6 +153,35 @@ class PatientRepository extends Repository
         }
     }
 
+    public function getTimelineEntry(int $entryId): ?array
+    {
+        $row = $this->db->fetchAll(
+            "SELECT t.*, u.name AS user_name, tt.name AS treatment_type_name, tt.color AS treatment_type_color
+             FROM patient_timeline t
+             LEFT JOIN users u ON t.user_id = u.id
+             LEFT JOIN treatment_types tt ON t.treatment_type_id = tt.id
+             WHERE t.id = ?",
+            [$entryId]
+        );
+        return $row[0] ?? null;
+    }
+
+    public function updateTimelineEntry(int $entryId, array $data): void
+    {
+        $this->db->execute(
+            "UPDATE patient_timeline SET type=?, treatment_type_id=?, title=?, content=?, status_badge=?, entry_date=? WHERE id=?",
+            [
+                $data['type'],
+                $data['treatment_type_id'] ?: null,
+                $data['title'],
+                $data['content'],
+                $data['status_badge'],
+                $data['entry_date'],
+                $entryId,
+            ]
+        );
+    }
+
     public function deleteTimelineEntry(int $entryId): void
     {
         $this->db->execute("DELETE FROM patient_timeline WHERE id = ?", [$entryId]);

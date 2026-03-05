@@ -302,6 +302,44 @@ class PatientController extends Controller
         $this->redirect("/patienten/{$params['id']}");
     }
 
+    public function updateTimelineEntryJson(array $params = []): void
+    {
+        $this->validateCsrf();
+        $patient = $this->patientService->findById((int)$params['id']);
+        if (!$patient) { http_response_code(404); header('Content-Type: application/json'); echo json_encode(['error' => 'not found']); exit; }
+
+        $ttId = $this->post('treatment_type_id', '');
+        $data = [
+            'type'              => $this->sanitize($this->post('type', 'note')),
+            'treatment_type_id' => $ttId !== '' ? (int)$ttId : null,
+            'title'             => $this->sanitize($this->post('title', '')),
+            'content'           => $this->post('content', ''),
+            'status_badge'      => $this->sanitize($this->post('status_badge', '')),
+            'entry_date'        => $this->post('entry_date') ?: date('Y-m-d H:i:s'),
+        ];
+
+        $this->patientService->updateTimelineEntry((int)$params['entryId'], $data);
+        $timeline = $this->patientService->getTimeline((int)$params['id']);
+
+        header('Content-Type: application/json');
+        echo json_encode(['ok' => true, 'timeline' => $timeline]);
+        exit;
+    }
+
+    public function deleteTimelineEntryJson(array $params = []): void
+    {
+        $this->validateCsrf();
+        $patient = $this->patientService->findById((int)$params['id']);
+        if (!$patient) { http_response_code(404); header('Content-Type: application/json'); echo json_encode(['error' => 'not found']); exit; }
+
+        $this->patientService->deleteTimelineEntry((int)$params['entryId']);
+        $timeline = $this->patientService->getTimeline((int)$params['id']);
+
+        header('Content-Type: application/json');
+        echo json_encode(['ok' => true, 'timeline' => $timeline]);
+        exit;
+    }
+
     public function uploadDocument(array $params = []): void
     {
         $this->validateCsrf();
