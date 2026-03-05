@@ -159,6 +159,116 @@
     </div>
 </form>
 
+<script>
+(function () {
+    /* ── Data from PHP ── */
+    const patientsByOwner = {};
+    {% for patient in patients %}
+    {% if patient.owner_id %}
+    (patientsByOwner['{{ patient.owner_id }}'] = patientsByOwner['{{ patient.owner_id }}'] || [])
+        .push({ id: '{{ patient.id }}', label: '{{ patient.name|e('js') }} ({{ patient.species|e('js') }})' });
+    {% endif %}
+    {% endfor %}
+
+    /* ── Owner → Patient filter ── */
+    const ownerSel   = document.querySelector('[name="owner_id"]');
+    const patientSel = document.querySelector('[name="patient_id"]');
+    const allPatientOptions = Array.from(patientSel.options).map(o => ({
+        value: o.value, text: o.textContent, ownerId: o.dataset.owner || ''
+    }));
+
+    function filterPatients(ownerId) {
+        const animals = patientsByOwner[ownerId] || [];
+        patientSel.innerHTML = '<option value="">— Kein Patient —</option>';
+        if (animals.length) {
+            animals.forEach(a => {
+                const opt = new Option(a.label, a.id);
+                patientSel.appendChild(opt);
+            });
+            if (animals.length === 1) patientSel.value = animals[0].id;
+        } else {
+            /* no animals for this owner — show all */
+            allPatientOptions.forEach(p => {
+                if (p.value) patientSel.appendChild(new Option(p.text, p.value));
+            });
+        }
+    }
+
+    ownerSel.addEventListener('change', function () {
+        filterPatients(this.value);
+    });
+
+    /* pre-select on page load if owner already selected */
+    if (ownerSel.value) filterPatients(ownerSel.value);
+
+    /* ── Treatment type → description + price ── */
+    function bindTreatmentSelect(row) {
+        const ttSel  = row.querySelector('[name="position_treatment_type[]"]');
+        const desc   = row.querySelector('[name="position_description[]"]');
+        const price  = row.querySelector('[name="position_price[]"]');
+        if (!ttSel) return;
+        ttSel.addEventListener('change', function () {
+            const opt = this.options[this.selectedIndex];
+            if (!opt || !opt.value) return;
+            const ttPrice = opt.dataset.price;
+            const ttName  = opt.textContent.trim();
+            if (desc && !desc.value) desc.value = ttName;
+            if (price && ttPrice && parseFloat(ttPrice) > 0) {
+                price.value = parseFloat(ttPrice).toFixed(2);
+                recalc();
+            }
+        });
+    }
+
+    /* ── Totals recalc ── */
+    function recalc() {
+        let net = 0, tax = 0;
+        document.querySelectorAll('.position-row').forEach(row => {
+            const qty   = parseFloat(row.querySelector('.pos-qty')?.value  || 0);
+            const price = parseFloat(row.querySelector('.pos-price')?.value || 0);
+            const taxR  = parseFloat(row.querySelector('.pos-tax')?.value  || 0);
+            const lineNet = qty * price;
+            net += lineNet;
+            tax += lineNet * (taxR / 100);
+        });
+        const fmt = v => v.toFixed(2).replace('.', ',') + ' €';
+        document.getElementById('total-net').textContent   = fmt(net);
+        document.getElementById('total-tax').textContent   = fmt(tax);
+        document.getElementById('total-gross').textContent = fmt(net + tax);
+    }
+
+    /* bind existing rows */
+    document.querySelectorAll('.position-row').forEach(row => {
+        bindTreatmentSelect(row);
+        row.querySelector('.pos-qty')?.addEventListener('input', recalc);
+        row.querySelector('.pos-price')?.addEventListener('input', recalc);
+        row.querySelector('.pos-tax')?.addEventListener('input', recalc);
+        row.querySelector('.remove-position')?.addEventListener('click', function () {
+            this.closest('.position-row').remove();
+            recalc();
+        });
+    });
+
+    /* ── Add position ── */
+    document.getElementById('add-position').addEventListener('click', function () {
+        const tpl  = document.getElementById('position-row-template');
+        const node = tpl.content.cloneNode(true);
+        const row  = node.querySelector('.position-row');
+        document.getElementById('positions-container').appendChild(node);
+        bindTreatmentSelect(row);
+        row.querySelector('.pos-qty')?.addEventListener('input', recalc);
+        row.querySelector('.pos-price')?.addEventListener('input', recalc);
+        row.querySelector('.pos-tax')?.addEventListener('input', recalc);
+        row.querySelector('.remove-position')?.addEventListener('click', function () {
+            this.closest('.position-row').remove();
+            recalc();
+        });
+    });
+
+    recalc();
+})();
+</script>
+
 {# Position Row Template #}
 <template id="position-row-template">
     <div class="position-row" style="display:grid;grid-template-columns:1fr 140px 80px 110px {{ kleinunternehmer ? '0px' : '80px' }} auto;gap:0.5rem;margin-bottom:0.5rem;align-items:center;">
