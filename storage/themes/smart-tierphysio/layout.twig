@@ -183,36 +183,34 @@
                          alt="{{ app_name }}"
                          style="width:32px;height:32px;border-radius:8px;object-fit:contain;background:var(--bs-primary);padding:2px;flex-shrink:0;">
                 {% else %}
-                    <div class="sa-brand-icon" style="width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;">
-                        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <g transform="translate(16,16)">
-                                <ellipse cx="0" cy="0" rx="12" ry="5" fill="url(#sg0)" opacity="0.85">
-                                    <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="3s" repeatCount="indefinite"/>
-                                </ellipse>
-                                <ellipse cx="0" cy="0" rx="12" ry="5" fill="url(#sg1)" opacity="0.85">
-                                    <animateTransform attributeName="transform" type="rotate" from="60" to="420" dur="3s" repeatCount="indefinite"/>
-                                </ellipse>
-                                <ellipse cx="0" cy="0" rx="12" ry="5" fill="url(#sg2)" opacity="0.85">
-                                    <animateTransform attributeName="transform" type="rotate" from="120" to="480" dur="3s" repeatCount="indefinite"/>
-                                </ellipse>
-                                <circle cx="0" cy="0" r="4" fill="white" opacity="0.95"/>
-                            </g>
-                            <defs>
-                                <linearGradient id="sg0" x1="-12" y1="0" x2="12" y2="0" gradientUnits="userSpaceOnUse">
-                                    <stop stop-color="#A8ECF9"/>
-                                    <stop offset="1" stop-color="#6EA8FE"/>
-                                </linearGradient>
-                                <linearGradient id="sg1" x1="-12" y1="0" x2="12" y2="0" gradientUnits="userSpaceOnUse">
-                                    <stop stop-color="#6EA8FE"/>
-                                    <stop offset="1" stop-color="#a78bfa"/>
-                                </linearGradient>
-                                <linearGradient id="sg2" x1="-12" y1="0" x2="12" y2="0" gradientUnits="userSpaceOnUse">
-                                    <stop stop-color="#a78bfa"/>
-                                    <stop offset="1" stop-color="#A8ECF9"/>
-                                </linearGradient>
-                            </defs>
-                        </svg>
-                    </div>
+                    <svg width="36" height="36" viewBox="-2 -2 36 36" overflow="visible" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;display:block;">
+                        <g transform="translate(16,16)">
+                            <ellipse cx="0" cy="0" rx="14" ry="5.5" fill="url(#sg0)" opacity="0.9">
+                                <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="3s" repeatCount="indefinite"/>
+                            </ellipse>
+                            <ellipse cx="0" cy="0" rx="14" ry="5.5" fill="url(#sg1)" opacity="0.9">
+                                <animateTransform attributeName="transform" type="rotate" from="60" to="420" dur="3s" repeatCount="indefinite"/>
+                            </ellipse>
+                            <ellipse cx="0" cy="0" rx="14" ry="5.5" fill="url(#sg2)" opacity="0.9">
+                                <animateTransform attributeName="transform" type="rotate" from="120" to="480" dur="3s" repeatCount="indefinite"/>
+                            </ellipse>
+                            <circle cx="0" cy="0" r="4.5" fill="white" opacity="0.95"/>
+                        </g>
+                        <defs>
+                            <linearGradient id="sg0" x1="-14" y1="0" x2="14" y2="0" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#A8ECF9"/>
+                                <stop offset="1" stop-color="#6EA8FE"/>
+                            </linearGradient>
+                            <linearGradient id="sg1" x1="-14" y1="0" x2="14" y2="0" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#6EA8FE"/>
+                                <stop offset="1" stop-color="#a78bfa"/>
+                            </linearGradient>
+                            <linearGradient id="sg2" x1="-14" y1="0" x2="14" y2="0" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#a78bfa"/>
+                                <stop offset="1" stop-color="#A8ECF9"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
                 {% endif %}
                 <div class="nav-link-text">
                     <div class="fw-700 fs-md lh-1">{{ app_name }}</div>

@@ -90,6 +90,14 @@
 }
 .btn-primary:hover::after { opacity: 1; }
 
+/* ── App logo brand area: never clip the animated SVG ── */
+.app-logo,
+.app-logo > div,
+.app-sidebar .app-logo,
+.app-sidebar .app-logo > div {
+  overflow: visible !important;
+}
+
 /* ── App header: glow around logo icon ── */
 .app-logo:hover [style*="background:var(--bs-primary)"],
 .app-logo:focus [style*="background:var(--bs-primary)"] {
