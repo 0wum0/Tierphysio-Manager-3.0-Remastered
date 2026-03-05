@@ -7,6 +7,20 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
+  :root {
+    --sidebar-color: {{ settings.pdf_primary_color ?? '#8B9E8B' }};
+    --c-company-name: {{ settings.pdf_color_company_name ?? '#1E1E1E' }};
+    --c-company-info: {{ settings.pdf_color_company_info ?? '#6E6E6E' }};
+    --c-recipient: {{ settings.pdf_color_recipient ?? '#1E1E1E' }};
+    --c-tbl-hdr-bg: {{ settings.pdf_color_table_header_bg ?? '#8B9E8B' }};
+    --c-tbl-hdr-txt: {{ settings.pdf_color_table_header_text ?? '#FFFFFF' }};
+    --c-tbl-text: {{ settings.pdf_color_table_text ?? '#1E1E1E' }};
+    --c-line: {{ settings.pdf_color_line ?? '#B4B4B4' }};
+    --c-total-lbl: {{ settings.pdf_color_total_label ?? '#1E1E1E' }};
+    --c-total-gross: {{ settings.pdf_color_total_gross ?? '#1E1E1E' }};
+    --c-footer: {{ settings.pdf_color_footer ?? '#6E6E6E' }};
+  }
+
   body {
     font-family: 'Helvetica Neue', Arial, sans-serif;
     font-size: 9.5pt;
@@ -61,141 +75,149 @@
     padding: 0 20px;
   }
 
-  /* ── A4 Page ─────────────────────────────────────── */
+  /* ── A4 Page — sidebar layout ────────────────────── */
   .a4 {
     background: #fff;
     width: 100%;
-    min-height: 1122px; /* A4 at 96dpi approx */
+    min-height: 1122px;
     box-shadow: 0 4px 40px rgba(0,0,0,0.18);
     border-radius: 3px;
-    padding: 50px 55px 60px;
+    display: flex;
     position: relative;
+    overflow: hidden;
   }
 
-  /* ── Header band ─────────────────────────────────── */
-  .inv-header {
+  /* ── Left sidebar ────────────────────────────────── */
+  .inv-sidebar {
+    width: 160px;
+    flex-shrink: 0;
+    background: var(--sidebar-color);
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding-bottom: 20px;
-    border-bottom: 3px solid #1a1a2e;
+    flex-direction: column;
+    align-items: center;
+    padding: 36px 12px 36px;
+    min-height: 100%;
+  }
+  .inv-sidebar .sb-logo {
+    width: 100%;
+    display: flex;
+    justify-content: center;
     margin-bottom: 28px;
   }
-  .inv-logo img {
-    max-height: 70px;
-    max-width: 180px;
+  .inv-sidebar .sb-logo img {
+    max-width: 110px;
+    max-height: 90px;
     object-fit: contain;
   }
-  .inv-logo-placeholder {
-    width: 120px;
-    height: 50px;
-    background: #eee;
-    border-radius: 4px;
+  .inv-sidebar .sb-logo-placeholder {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.5);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 8pt;
-    color: #999;
+    color: rgba(255,255,255,0.7);
     letter-spacing: 0.05em;
-    text-transform: uppercase;
   }
-
-  /* Big "Rechnung" script heading */
-  .inv-title-block {
-    text-align: right;
+  .inv-sidebar .sb-divider {
+    width: 60%;
+    height: 1px;
+    background: rgba(255,255,255,0.25);
+    margin: 14px 0;
   }
-  .inv-title-script {
-    font-size: 42pt;
-    font-weight: 700;
-    color: #1a1a2e;
-    font-style: italic;
-    letter-spacing: -0.5px;
-    line-height: 1;
-  }
-  .inv-number-badge {
-    display: inline-block;
-    margin-top: 6px;
-    font-size: 8.5pt;
-    font-weight: 600;
-    color: #666;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  /* ── Two-column info row ─────────────────────────── */
-  .inv-info-row {
-    display: flex;
-    gap: 32px;
-    margin-bottom: 28px;
-    align-items: flex-start;
-  }
-  .inv-sender-col {
-    flex: 0 0 auto;
-    min-width: 200px;
-  }
-  .inv-receiver-col {
-    flex: 1;
-  }
-  .inv-meta-col {
-    flex: 0 0 auto;
-    min-width: 170px;
-    text-align: right;
-  }
-
-  /* Small return address line */
-  .return-address {
+  .inv-sidebar .sb-label {
     font-size: 7pt;
-    color: #888;
-    border-bottom: 1px solid #ccc;
+    color: rgba(220,240,220,0.85);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 3px;
+    text-align: center;
+  }
+  .inv-sidebar .sb-value {
+    font-size: 9pt;
+    font-weight: 700;
+    color: #fff;
+    text-align: center;
+    margin-bottom: 16px;
+    word-break: break-all;
+  }
+
+  /* ── Main content ────────────────────────────────── */
+  .inv-main {
+    flex: 1;
+    padding: 36px 44px 120px;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  /* Company info top-right */
+  .inv-company-block {
+    text-align: right;
+    margin-bottom: 10px;
+  }
+  .inv-company-name {
+    font-size: 12pt;
+    font-weight: 700;
+    color: var(--c-company-name);
+    margin-bottom: 2px;
+  }
+  .inv-company-info {
+    font-size: 8pt;
+    color: var(--c-company-info);
+    line-height: 1.55;
+  }
+
+  /* Rechnung script */
+  .inv-script {
+    text-align: right;
+    font-size: 36pt;
+    font-style: italic;
+    font-family: Georgia, 'Times New Roman', serif;
+    color: var(--c-company-name);
+    line-height: 1;
+    margin-bottom: 18px;
+  }
+
+  /* Recipient block */
+  .inv-recipient {
+    margin-bottom: 22px;
+  }
+  .inv-return-addr {
+    font-size: 7pt;
+    color: var(--c-company-info);
+    border-bottom: 1px solid var(--c-line);
     padding-bottom: 3px;
-    margin-bottom: 8px;
+    margin-bottom: 7px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
-
-  /* Recipient address */
-  .recipient-name {
-    font-weight: 700;
+  .inv-recipient-name {
     font-size: 11pt;
-    margin-bottom: 2px;
+    font-weight: 700;
+    color: var(--c-recipient);
+    margin-bottom: 3px;
   }
-  .recipient-address {
-    font-size: 9.5pt;
+  .inv-recipient-addr {
+    font-size: 9pt;
+    color: var(--c-recipient);
     line-height: 1.55;
-    color: #333;
+  }
+  .inv-recipient-meta {
+    margin-top: 6px;
+    font-size: 8pt;
+    color: var(--c-company-info);
+    line-height: 1.55;
   }
 
-  /* Meta table */
-  .meta-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 8.5pt;
-  }
-  .meta-table td {
-    padding: 2px 0;
-    vertical-align: top;
-  }
-  .meta-table td:first-child {
-    color: #888;
-    white-space: nowrap;
-    padding-right: 10px;
-  }
-  .meta-table td:last-child {
-    font-weight: 600;
-    text-align: right;
-  }
-
-  /* ── Subject line ─────────────────────────────────── */
-  .inv-subject {
-    font-size: 11pt;
-    font-weight: 700;
-    margin-bottom: 8px;
-  }
+  /* Intro */
   .inv-intro {
     font-size: 9pt;
     color: #444;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
     line-height: 1.5;
   }
 
@@ -207,8 +229,8 @@
     font-size: 9pt;
   }
   .pos-table thead tr {
-    background: #1a1a2e;
-    color: #fff;
+    background: var(--c-tbl-hdr-bg);
+    color: var(--c-tbl-hdr-txt);
   }
   .pos-table thead th {
     padding: 7px 10px;
@@ -218,26 +240,16 @@
     text-transform: uppercase;
     white-space: nowrap;
   }
-  .pos-table thead th:last-child,
-  .pos-table thead th:nth-child(2),
-  .pos-table thead th:nth-child(3),
-  .pos-table thead th:nth-child(4) {
-    text-align: right;
-  }
+  .pos-table thead th:not(:first-child) { text-align: right; }
   .pos-table tbody tr {
-    border-bottom: 1px solid #eee;
-  }
-  .pos-table tbody tr:nth-child(even) {
-    background: #f8f8fc;
+    border-bottom: 1px solid var(--c-line);
   }
   .pos-table tbody td {
-    padding: 8px 10px;
+    padding: 7px 10px;
     vertical-align: top;
+    color: var(--c-tbl-text);
   }
-  .pos-table tbody td:nth-child(2),
-  .pos-table tbody td:nth-child(3),
-  .pos-table tbody td:nth-child(4),
-  .pos-table tbody td:nth-child(5) {
+  .pos-table tbody td:not(:first-child) {
     text-align: right;
     white-space: nowrap;
   }
@@ -247,7 +259,7 @@
     display: flex;
     justify-content: flex-end;
     margin-top: 10px;
-    margin-bottom: 28px;
+    margin-bottom: 24px;
   }
   .totals-table {
     min-width: 240px;
@@ -256,87 +268,41 @@
   }
   .totals-table td {
     padding: 4px 10px;
-    vertical-align: top;
   }
   .totals-table td:first-child {
-    color: #666;
+    color: var(--c-total-lbl);
     white-space: nowrap;
   }
   .totals-table td:last-child {
     text-align: right;
     font-weight: 600;
     white-space: nowrap;
+    color: var(--c-total-lbl);
   }
-  .totals-table .total-gross {
-    border-top: 2px solid #1a1a2e;
-    border-bottom: 2px solid #1a1a2e;
-    background: #1a1a2e;
-    color: #fff;
+  .totals-table .total-divider td {
+    border-top: 1px solid var(--c-line);
+    padding-top: 6px;
   }
   .totals-table .total-gross td {
-    color: #fff;
     font-size: 11pt;
     font-weight: 800;
-    padding: 6px 10px;
+    color: var(--c-total-gross);
+    padding-top: 4px;
   }
 
-  /* ── Closing text & IBAN ─────────────────────────── */
+  /* ── Closing / Thank-you ─────────────────────────── */
   .inv-closing {
     font-size: 9pt;
     color: #444;
     line-height: 1.6;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
   }
   .inv-thankyou {
-    font-size: 18pt;
-    font-weight: 700;
+    font-size: 22pt;
     font-style: italic;
-    color: #1a1a2e;
-    margin-bottom: 20px;
-  }
-
-  /* ── Footer band ─────────────────────────────────── */
-  .inv-footer {
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    border-top: 2px solid #1a1a2e;
-    padding: 12px 55px;
-    display: flex;
-    gap: 24px;
-    justify-content: space-between;
-    align-items: flex-start;
-    background: #fff;
-    border-radius: 0 0 3px 3px;
-  }
-  .inv-footer .footer-col {
-    flex: 1;
-  }
-  .inv-footer .footer-col-label {
-    font-size: 7pt;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #888;
-    margin-bottom: 3px;
-  }
-  .inv-footer .footer-col-value {
-    font-size: 8.5pt;
-    color: #1a1a2e;
-    line-height: 1.5;
-  }
-
-  /* ── Patient chip ─────────────────────────────────── */
-  .patient-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: #f0f2ff;
-    border: 1px solid #c8d4ff;
-    border-radius: 20px;
-    padding: 2px 10px 2px 6px;
-    font-size: 8pt;
-    color: #3a5adb;
-    margin-bottom: 16px;
+    font-family: Georgia, 'Times New Roman', serif;
+    color: var(--c-company-name);
+    margin-bottom: 0;
   }
 
   /* ── Notes ───────────────────────────────────────── */
@@ -347,8 +313,43 @@
     margin-bottom: 16px;
     padding: 10px 12px;
     background: #f8f8fc;
-    border-left: 3px solid #c8d4ff;
+    border-left: 3px solid var(--c-line);
     border-radius: 3px;
+  }
+
+  /* ── Footer ──────────────────────────────────────── */
+  .inv-footer {
+    position: absolute;
+    bottom: 0;
+    left: 160px;
+    right: 0;
+    border-top: 1px solid var(--c-line);
+    padding: 10px 44px;
+    display: flex;
+    gap: 24px;
+    justify-content: space-between;
+    align-items: flex-start;
+    background: #fff;
+  }
+  .inv-footer .footer-col-label {
+    font-size: 7pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--c-footer);
+    margin-bottom: 2px;
+  }
+  .inv-footer .footer-col-value {
+    font-size: 8pt;
+    color: var(--c-footer);
+    line-height: 1.5;
+  }
+  .inv-ku-notice {
+    font-size: 7.5pt;
+    font-style: italic;
+    color: var(--c-footer);
+    text-align: center;
+    margin-top: 4px;
   }
 
   /* ── Print styles ─────────────────────────────────── */
@@ -356,13 +357,7 @@
     body { background: #fff; }
     .toolbar { display: none; }
     .paper-wrap { margin: 0; padding: 0; max-width: 100%; }
-    .a4 {
-      box-shadow: none;
-      border-radius: 0;
-      padding: 18mm 20mm 25mm;
-      min-height: auto;
-    }
-    .inv-footer { position: fixed; bottom: 0; left: 20mm; right: 20mm; }
+    .a4 { box-shadow: none; border-radius: 0; min-height: 100vh; }
   }
 </style>
 </head>
@@ -398,213 +393,187 @@
 <div class="paper-wrap">
 <div class="a4">
 
-  {# ── HEADER ──────────────────────────────────────── #}
-  <div class="inv-header">
-    <div class="inv-logo">
+  {# ── LEFT SIDEBAR ─────────────────────────────────── #}
+  <div class="inv-sidebar">
+
+    {# Logo #}
+    <div class="sb-logo">
       {% if settings.company_logo %}
-        <img src="/storage/uploads/{{ settings.company_logo }}" alt="{{ settings.company_name ?? 'Logo' }}">
+        <img src="/storage/uploads/{{ settings.company_logo }}" alt="Logo">
       {% else %}
-        <div class="inv-logo-placeholder">Logo</div>
+        <div class="sb-logo-placeholder">LOGO</div>
       {% endif %}
     </div>
-    <div class="inv-title-block">
-      <div class="inv-title-script">Rechnung</div>
-      <div class="inv-number-badge">Nr. {{ invoice.invoice_number }}</div>
-    </div>
+
+    <div class="sb-divider"></div>
+
+    {# Rechnungsnummer #}
+    <div class="sb-label">Rechnungsnummer</div>
+    <div class="sb-value">{{ invoice.invoice_number }}</div>
+
+    {# Rechnungsdatum #}
+    <div class="sb-label">Rechnungsdatum</div>
+    <div class="sb-value">{{ invoice.issue_date|date_de }}</div>
+
+    {# Fällig #}
+    {% if invoice.due_date %}
+    <div class="sb-divider"></div>
+    <div class="sb-label">Fällig am</div>
+    <div class="sb-value" style="{{ invoice.status == 'overdue' ? 'color:#ffcccc;' : '' }}">{{ invoice.due_date|date_de }}</div>
+    {% endif %}
+
   </div>
 
-  {# ── INFO ROW: Sender | Recipient | Meta ─────────── #}
-  <div class="inv-info-row">
+  {# ── MAIN CONTENT ─────────────────────────────────── #}
+  <div class="inv-main">
 
-    {# Sender #}
-    <div class="inv-sender-col">
-      <div style="font-weight:700;font-size:10pt;margin-bottom:6px;">
-        {{ settings.company_name ?? 'Tierphysio Praxis' }}
-      </div>
-      <div style="font-size:8.5pt;line-height:1.6;color:#444;">
+    {# Company info — top right #}
+    <div class="inv-company-block">
+      <div class="inv-company-name">{{ settings.company_name ?? '' }}</div>
+      <div class="inv-company-info">
         {% if settings.company_street %}{{ settings.company_street }}<br>{% endif %}
         {% if settings.company_zip or settings.company_city %}{{ settings.company_zip }} {{ settings.company_city }}<br>{% endif %}
-        {% if settings.company_phone %}<span style="color:#888;">Tel:</span> {{ settings.company_phone }}<br>{% endif %}
-        {% if settings.company_email %}<span style="color:#888;">E-Mail:</span> {{ settings.company_email }}<br>{% endif %}
-        {% if settings.company_website %}<span style="color:#888;">Web:</span> {{ settings.company_website }}{% endif %}
+        {% if settings.company_phone %}Tel: {{ settings.company_phone }}<br>{% endif %}
+        {% if settings.company_email %}{{ settings.company_email }}{% endif %}
       </div>
     </div>
 
+    {# "Rechnung" script heading #}
+    <div class="inv-script">Rechnung</div>
+
     {# Recipient #}
-    <div class="inv-receiver-col">
+    <div class="inv-recipient">
+      <div class="inv-return-addr">
+        {{ settings.company_name ?? '' }} &nbsp;·&nbsp; {{ settings.company_street ?? '' }} &nbsp;·&nbsp; {{ settings.company_zip ?? '' }} {{ settings.company_city ?? '' }}
+      </div>
       {% if owner %}
-        <div class="return-address">
-          {{ settings.company_name ?? '' }} · {{ settings.company_street ?? '' }} · {{ settings.company_zip ?? '' }} {{ settings.company_city ?? '' }}
-        </div>
-        <div class="recipient-name">{{ owner.first_name }} {{ owner.last_name }}</div>
-        <div class="recipient-address">
-          {% if owner.street %}{{ owner.street }}<br>{% endif %}
-          {% if owner.zip or owner.city %}{{ owner.zip }} {{ owner.city }}<br>{% endif %}
-          {% if owner.country and owner.country != 'DE' %}{{ owner.country }}{% endif %}
-        </div>
+      <div class="inv-recipient-name">{{ owner.first_name }} {{ owner.last_name }}</div>
+      <div class="inv-recipient-addr">
+        {% if owner.street %}{{ owner.street }}<br>{% endif %}
+        {% if owner.zip or owner.city %}{{ owner.zip }} {{ owner.city }}{% endif %}
+      </div>
+      <div class="inv-recipient-meta">
+        {% if patient %}Patient: {{ patient.name }}{% if patient.species %} ({{ patient.species }}){% endif %}{% endif %}
+      </div>
       {% endif %}
     </div>
 
-    {# Meta #}
-    <div class="inv-meta-col">
-      <table class="meta-table">
+    {# Intro text #}
+    {% if settings.pdf_intro_text %}
+    <div class="inv-intro">{{ settings.pdf_intro_text }}</div>
+    {% else %}
+    <div class="inv-intro">für folgende erbrachten Leistungen erlauben wir uns, Ihnen folgenden Betrag in Rechnung zu stellen:</div>
+    {% endif %}
+
+    {# ── Positions table ─────────────────────────────── #}
+    {% set kleinunternehmer = (settings.kleinunternehmer ?? '0') == '1' %}
+    <table class="pos-table">
+      <thead>
         <tr>
-          <td>Rechnungsdatum</td>
-          <td>{{ invoice.issue_date|date_de }}</td>
+          <th style="width:10%;text-align:left;">Anz.</th>
+          <th style="width:45%;text-align:left;">Leistung / Beschreibung</th>
+          <th style="width:15%;">Einzelpreis</th>
+          {% if not kleinunternehmer %}<th style="width:10%;">MwSt.</th>{% endif %}
+          <th style="width:15%;">Betrag</th>
         </tr>
-        {% if invoice.due_date %}
+      </thead>
+      <tbody>
+        {% for pos in positions %}
         <tr>
-          <td>Fällig bis</td>
-          <td style="{{ invoice.status == 'overdue' ? 'color:#d32f2f;' : '' }}">{{ invoice.due_date|date_de }}</td>
+          <td>{{ pos.quantity|number_format(2, ',', '.') }}</td>
+          <td style="text-align:left;">{{ pos.description }}</td>
+          <td>{{ pos.unit_price|money }}</td>
+          {% if not kleinunternehmer %}<td>{{ pos.tax_rate }}%</td>{% endif %}
+          <td>{{ (pos.quantity * pos.unit_price)|money }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {# ── Totals ───────────────────────────────────────── #}
+    <div class="totals-wrap">
+      <table class="totals-table">
+        {% if kleinunternehmer %}
+        <tr class="total-divider">
+          <td>Gesamtbetrag (netto)</td>
+          <td>{{ invoice.total_net|money }}</td>
+        </tr>
+        {% else %}
+        <tr>
+          <td>Total exkl. MwSt.</td>
+          <td>{{ invoice.total_net|money }}</td>
+        </tr>
+        {% set taxGroups = {} %}
+        {% for pos in positions %}
+          {% set rate = pos.tax_rate %}
+          {% set prev = attribute(taxGroups, rate) ?? 0 %}
+          {% set taxGroups = taxGroups|merge({(rate): prev + pos.quantity * pos.unit_price * rate / 100}) %}
+        {% endfor %}
+        {% for rate, amt in taxGroups %}
+        <tr>
+          <td>MwSt. {{ rate }}%</td>
+          <td>{{ amt|number_format(2, ',', '.') }} €</td>
+        </tr>
+        {% endfor %}
+        <tr class="total-divider">
+          <td></td><td></td>
         </tr>
         {% endif %}
-        <tr>
-          <td>Rechnungs-Nr.</td>
-          <td>{{ invoice.invoice_number }}</td>
+        <tr class="total-gross">
+          <td>Total</td>
+          <td>{{ invoice.total_gross|money }}</td>
         </tr>
-        {% if patient %}
-        <tr>
-          <td>Patient</td>
-          <td>{{ patient.name }}</td>
-        </tr>
-        {% endif %}
-        {% if settings.tax_number %}
-        <tr>
-          <td>Steuer-Nr.</td>
-          <td>{{ settings.tax_number }}</td>
-        </tr>
-        {% endif %}
       </table>
     </div>
 
-  </div>
-
-  {# ── Patient chip (optional) ──────────────────────── #}
-  {% if patient %}
-  <div class="patient-chip">
-    <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4" stroke="#3a5adb" stroke-width="2"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="#3a5adb" stroke-width="2" stroke-linecap="round"/></svg>
-    {{ patient.name }}{% if patient.species %} · {{ patient.species }}{% endif %}
-  </div>
-  {% endif %}
-
-  {# ── Intro text / Subject ─────────────────────────── #}
-  <div class="inv-subject">
-    Rechnung Nr. {{ invoice.invoice_number }}
-    {% if patient %} für {{ patient.name }}{% endif %}
-  </div>
-  {% if settings.pdf_intro_text %}
-  <div class="inv-intro">{{ settings.pdf_intro_text }}</div>
-  {% else %}
-  <div class="inv-intro">
-    für folgende erbrachten Leistungen erlauben wir uns, Ihnen folgenden Betrag in Rechnung zu stellen:
-  </div>
-  {% endif %}
-
-  {# ── Positions table ──────────────────────────────── #}
-  <table class="pos-table">
-    <thead>
-      <tr>
-        <th style="width:40%;text-align:left;">Leistung / Beschreibung</th>
-        <th style="width:10%;">Menge</th>
-        <th style="width:15%;">Einzelpreis</th>
-        <th style="width:10%;">MwSt.</th>
-        <th style="width:15%;">Betrag</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for pos in positions %}
-      <tr>
-        <td>{{ pos.description }}</td>
-        <td>{{ pos.quantity|number_format(2, ',', '.') }}</td>
-        <td>{{ pos.unit_price|money }}</td>
-        <td>{{ pos.tax_rate }}%</td>
-        <td><strong>{{ (pos.quantity * pos.unit_price)|money }}</strong></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  {# ── Totals ───────────────────────────────────────── #}
-  <div class="totals-wrap">
-    <table class="totals-table">
-      <tr>
-        <td>Nettobetrag</td>
-        <td>{{ invoice.total_net|money }}</td>
-      </tr>
-      <tr>
-        <td>Umsatzsteuer</td>
-        <td>{{ invoice.total_tax|money }}</td>
-      </tr>
-      <tr class="total-gross">
-        <td>Gesamtbetrag</td>
-        <td>{{ invoice.total_gross|money }}</td>
-      </tr>
-    </table>
-  </div>
-
-  {# ── Notes ────────────────────────────────────────── #}
-  {% if invoice.notes %}
-  <div class="inv-notes">{{ invoice.notes }}</div>
-  {% endif %}
-
-  {# ── Closing / Thank-you ──────────────────────────── #}
-  {% if settings.pdf_closing_text %}
-  <div class="inv-closing">{{ settings.pdf_closing_text }}</div>
-  {% else %}
-  <div class="inv-closing">
-    Bitte überweisen Sie den Gesamtbetrag
-    {% if invoice.due_date %}bis zum <strong>{{ invoice.due_date|date_de }}</strong>{% endif %}
-    auf das unten angegebene Konto.
-    {% if invoice.payment_terms %}<br><em>{{ invoice.payment_terms }}</em>{% endif %}
-  </div>
-  {% endif %}
-
-  <div class="inv-thankyou">Vielen Dank!</div>
-
-  {# ── Footer bar ───────────────────────────────────── #}
-  <div class="inv-footer">
-    {# Company #}
-    <div class="footer-col">
-      <div class="footer-col-label">Absender</div>
-      <div class="footer-col-value">
-        <strong>{{ settings.company_name ?? '' }}</strong><br>
-        {{ settings.company_street ?? '' }}<br>
-        {{ settings.company_zip ?? '' }} {{ settings.company_city ?? '' }}
-      </div>
-    </div>
-
-    {# Contact #}
-    {% if settings.company_phone or settings.company_email %}
-    <div class="footer-col">
-      <div class="footer-col-label">Kontakt</div>
-      <div class="footer-col-value">
-        {% if settings.company_phone %}Tel: {{ settings.company_phone }}<br>{% endif %}
-        {% if settings.company_email %}{{ settings.company_email }}<br>{% endif %}
-        {% if settings.company_website %}{{ settings.company_website }}{% endif %}
-      </div>
-    </div>
+    {# Notes #}
+    {% if invoice.notes %}
+    <div class="inv-notes">{{ invoice.notes }}</div>
     {% endif %}
 
-    {# Bank #}
-    {% if settings.bank_iban %}
-    <div class="footer-col">
-      <div class="footer-col-label">Bankverbindung</div>
-      <div class="footer-col-value">
-        {% if settings.bank_name %}<strong>{{ settings.bank_name }}</strong><br>{% endif %}
-        IBAN: {{ settings.bank_iban }}<br>
-        {% if settings.bank_bic %}BIC: {{ settings.bank_bic }}{% endif %}
-      </div>
-    </div>
+    {# Closing #}
+    {% if settings.pdf_closing_text %}
+    <div class="inv-closing">{{ settings.pdf_closing_text }}</div>
+    {% elseif invoice.payment_terms %}
+    <div class="inv-closing"><em>{{ invoice.payment_terms }}</em></div>
     {% endif %}
 
-    {# Tax / Legal #}
-    {% if settings.tax_number %}
-    <div class="footer-col">
-      <div class="footer-col-label">Steuernummer</div>
-      <div class="footer-col-value">{{ settings.tax_number }}</div>
+    {# "Vielen Dank!" #}
+    <div class="inv-thankyou">Vielen Dank!</div>
+
+    {# ── Footer ───────────────────────────────────────── #}
+    <div class="inv-footer">
+      {% if settings.bank_name or settings.bank_iban %}
+      <div>
+        <div class="footer-col-label">Bankverbindung</div>
+        <div class="footer-col-value">
+          {% if settings.bank_name %}{{ settings.bank_name }}<br>{% endif %}
+          {% if settings.bank_iban %}IBAN: {{ settings.bank_iban }}<br>{% endif %}
+          {% if settings.bank_bic %}BIC: {{ settings.bank_bic }}{% endif %}
+        </div>
+      </div>
+      {% endif %}
+      {% if settings.company_email or settings.company_phone %}
+      <div>
+        <div class="footer-col-label">Kontakt</div>
+        <div class="footer-col-value">
+          {% if settings.company_email %}{{ settings.company_email }}<br>{% endif %}
+          {% if settings.company_phone %}Tel: {{ settings.company_phone }}{% endif %}
+        </div>
+      </div>
+      {% endif %}
+      {% if settings.tax_number %}
+      <div>
+        <div class="footer-col-label">Steuernummer</div>
+        <div class="footer-col-value">{{ settings.tax_number }}</div>
+      </div>
+      {% endif %}
     </div>
+    {% if kleinunternehmer %}
+    <div class="inv-ku-notice" style="position:absolute;bottom:4px;left:160px;right:0;text-align:center;">Gemäß §19 UStG wird keine Umsatzsteuer berechnet.</div>
     {% endif %}
-  </div>
+
+  </div>{# .inv-main #}
 
 </div>{# .a4 #}
 </div>{# .paper-wrap #}
