@@ -18,7 +18,7 @@
         margin-top: auto;
         align-self: flex-end;
     }
-    #modal-patient-detail.modal-overlay {
+    #modal-patient-detail.tp-overlay {
         align-items: flex-end !important;
     }
     /* Patient + Owner info side by side → stack vertically */
@@ -345,7 +345,7 @@
 </div>
 
 {# ── PATIENT DETAIL MODAL (single, reused for all patients) ── #}
-<div class="modal-overlay" id="modal-patient-detail">
+<div class="tp-overlay" id="modal-patient-detail">
     <div class="tp-modal tp-modal-xl" style="max-width:860px;width:96vw;max-height:92vh;display:flex;flex-direction:column;">
 
         {# Modal Header: photo strip + name + badge + actions #}
@@ -626,7 +626,7 @@
 {% endif %}
 
 {# New Patient Modal #}
-<div class="modal-overlay" id="modal-new-patient">
+<div class="tp-overlay" id="modal-new-patient">
     <div class="tp-modal tp-modal-lg">
         <div class="modal-header">
             <h3 class="modal-title">{{ t('patients.new_patient') }}</h3>
@@ -702,7 +702,7 @@
 </div>
 
 {# ── Edit Patient Modal (inline, no navigation) ───────────────────── #}
-<div class="modal-overlay" id="modal-edit-patient-inline">
+<div class="tp-overlay" id="modal-edit-patient-inline">
     <div class="tp-modal tp-modal-lg">
         <div class="modal-header">
             <h3 class="modal-title" id="edit-modal-title">Patient bearbeiten</h3>
@@ -794,7 +794,7 @@
 </div>
 
 {# ── Create Invoice Modal (inline, no navigation) ─────────────────── #}
-<div class="modal-overlay" id="modal-invoice-inline">
+<div class="tp-overlay" id="modal-invoice-inline">
     <div class="tp-modal tp-modal-xl" style="max-width:860px;width:95vw;max-height:92vh;display:flex;flex-direction:column;">
         <div class="modal-header" style="flex-shrink:0;">
             <div class="flex items-center gap-3">
