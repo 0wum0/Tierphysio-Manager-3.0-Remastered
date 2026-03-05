@@ -12,7 +12,7 @@
     <style>
         body { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:2rem 1rem; }
         .ty-wrapper { max-width:480px; width:100%; text-align:center; position:relative; z-index:1; }
-        .ty-icon { font-size:5rem; display:block; margin-bottom:1.25rem; animation:popIn 0.6s cubic-bezier(.34,1.56,.64,1); }
+        .ty-icon { display:flex; align-items:center; justify-content:center; margin-bottom:1.25rem; animation:popIn 0.6s cubic-bezier(.34,1.56,.64,1); filter:drop-shadow(0 0 14px rgba(110,168,254,0.6)); }
         @keyframes popIn { from{transform:scale(0.3);opacity:0} to{transform:scale(1);opacity:1} }
         .ty-confetti { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:hidden; z-index:0; }
         .confetti-piece { position:absolute; top:-10px; border-radius:2px; animation:fall linear forwards; }
@@ -26,7 +26,31 @@
 <div class="ty-confetti" id="confetti-container"></div>
 <div class="ty-wrapper">
     <div class="lg-card" style="padding:2.5rem 2rem;">
-        <span class="ty-icon">🎉</span>
+        <div class="ty-icon">
+            {% if global_settings is defined and global_settings.company_logo is defined and global_settings.company_logo %}
+                <img src="/storage/uploads/{{ global_settings.company_logo }}" alt="{{ app_name }}" style="width:72px;height:72px;border-radius:16px;object-fit:contain;">
+            {% else %}
+                <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="translate(36,36)">
+                        <ellipse cx="0" cy="0" rx="27" ry="10" fill="url(#ivty0)" opacity="0.9">
+                            <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="3s" repeatCount="indefinite"/>
+                        </ellipse>
+                        <ellipse cx="0" cy="0" rx="27" ry="10" fill="url(#ivty1)" opacity="0.9">
+                            <animateTransform attributeName="transform" type="rotate" from="60" to="420" dur="3s" repeatCount="indefinite"/>
+                        </ellipse>
+                        <ellipse cx="0" cy="0" rx="27" ry="10" fill="url(#ivty2)" opacity="0.9">
+                            <animateTransform attributeName="transform" type="rotate" from="120" to="480" dur="3s" repeatCount="indefinite"/>
+                        </ellipse>
+                        <circle cx="0" cy="0" r="9" fill="white" opacity="0.95"/>
+                    </g>
+                    <defs>
+                        <linearGradient id="ivty0" x1="-27" y1="0" x2="27" y2="0" gradientUnits="userSpaceOnUse"><stop stop-color="#A8ECF9"/><stop offset="1" stop-color="#6EA8FE"/></linearGradient>
+                        <linearGradient id="ivty1" x1="-27" y1="0" x2="27" y2="0" gradientUnits="userSpaceOnUse"><stop stop-color="#6EA8FE"/><stop offset="1" stop-color="#a78bfa"/></linearGradient>
+                        <linearGradient id="ivty2" x1="-27" y1="0" x2="27" y2="0" gradientUnits="userSpaceOnUse"><stop stop-color="#a78bfa"/><stop offset="1" stop-color="#A8ECF9"/></linearGradient>
+                    </defs>
+                </svg>
+            {% endif %}
+        </div>
         <h1 style="font-size:1.8rem;font-weight:800;margin:0 0 0.75rem;">Sie sind dabei!</h1>
         <p style="color:var(--text-muted);font-size:0.92rem;line-height:1.7;margin:0 0 0.5rem;">
             Ihre Registrierung war erfolgreich. Sie und Ihr Tier sind jetzt als aktive Patienten in unserem System eingetragen.

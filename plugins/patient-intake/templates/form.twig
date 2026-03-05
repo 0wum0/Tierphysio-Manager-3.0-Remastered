@@ -16,7 +16,7 @@
         .intake-wrapper { width: 100%; max-width: 680px; }
 
         .intake-header { text-align: center; margin-bottom: 2.5rem; }
-        .intake-logo { width: 64px; height: 64px; background: linear-gradient(135deg, var(--accent), #8b5cf6); border-radius: 20px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1rem; box-shadow: 0 8px 32px rgba(79,124,255,0.35); }
+        .intake-logo { width: 64px; height: 64px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1rem; filter: drop-shadow(0 0 12px rgba(110,168,254,0.55)); }
         .intake-title { font-size: 1.75rem; font-weight: 800; margin: 0 0 0.5rem; }
         .intake-subtitle { color: var(--text-muted); font-size: 0.95rem; margin: 0; }
 
@@ -114,10 +114,29 @@
 
     <div class="intake-header">
         <div class="intake-logo">
-            <svg width="30" height="30" fill="none" viewBox="0 0 24 24">
-                <path stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                      d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-            </svg>
+            {% if global_settings is defined and global_settings.company_logo is defined and global_settings.company_logo %}
+                <img src="/storage/uploads/{{ global_settings.company_logo }}" alt="{{ app_name }}" style="width:64px;height:64px;border-radius:16px;object-fit:contain;">
+            {% else %}
+                <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="translate(32,32)">
+                        <ellipse cx="0" cy="0" rx="24" ry="9" fill="url(#if0)" opacity="0.9">
+                            <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="3s" repeatCount="indefinite"/>
+                        </ellipse>
+                        <ellipse cx="0" cy="0" rx="24" ry="9" fill="url(#if1)" opacity="0.9">
+                            <animateTransform attributeName="transform" type="rotate" from="60" to="420" dur="3s" repeatCount="indefinite"/>
+                        </ellipse>
+                        <ellipse cx="0" cy="0" rx="24" ry="9" fill="url(#if2)" opacity="0.9">
+                            <animateTransform attributeName="transform" type="rotate" from="120" to="480" dur="3s" repeatCount="indefinite"/>
+                        </ellipse>
+                        <circle cx="0" cy="0" r="8" fill="white" opacity="0.95"/>
+                    </g>
+                    <defs>
+                        <linearGradient id="if0" x1="-24" y1="0" x2="24" y2="0" gradientUnits="userSpaceOnUse"><stop stop-color="#A8ECF9"/><stop offset="1" stop-color="#6EA8FE"/></linearGradient>
+                        <linearGradient id="if1" x1="-24" y1="0" x2="24" y2="0" gradientUnits="userSpaceOnUse"><stop stop-color="#6EA8FE"/><stop offset="1" stop-color="#a78bfa"/></linearGradient>
+                        <linearGradient id="if2" x1="-24" y1="0" x2="24" y2="0" gradientUnits="userSpaceOnUse"><stop stop-color="#a78bfa"/><stop offset="1" stop-color="#A8ECF9"/></linearGradient>
+                    </defs>
+                </svg>
+            {% endif %}
         </div>
         <h1 class="intake-title">{{ app_name }}</h1>
         <p class="intake-subtitle">Neue Patientenanmeldung — Bitte füllen Sie das Formular vollständig aus</p>
