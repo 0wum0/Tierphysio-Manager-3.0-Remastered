@@ -46,8 +46,9 @@ class PdfService
         $showIban      = ($settings['pdf_show_iban']        ?? '1') === '1';
         $showTaxNum    = ($settings['pdf_show_tax_number']  ?? '1') === '1';
         $showWebsite   = ($settings['pdf_show_website']     ?? '0') === '1';
-        $watermark     = trim($settings['pdf_watermark']    ?? '');
-        $closingText   = trim($settings['pdf_closing_text'] ?? '');
+        $watermark        = trim($settings['pdf_watermark']    ?? '');
+        $closingText      = trim($settings['pdf_closing_text'] ?? '');
+        $kleinunternehmer = ($settings['kleinunternehmer']   ?? '0') === '1';
 
         $companyName    = $settings['company_name']    ?? '';
         $companyStreet  = $settings['company_street']  ?? '';
@@ -326,28 +327,36 @@ class PdfService
         $pdf->SetFont($font, '', $fontSize);
         $pdf->SetTextColor(...$colorTotalLabel);
 
-        // Net
-        $pdf->SetXY($totLabelX, $totY + 3);
-        $pdf->Cell($totLabelW, 6, 'Total exkl. MwSt.', 0, 0, 'L');
-        $pdf->Cell($cTotal, 6, number_format((float)$invoice['total_net'], 2, ',', '.') . ' €', 0, 1, 'R');
+        if ($kleinunternehmer) {
+            // Kleinunternehmer: only show total (no MwSt. rows)
+            $pdf->SetXY($totLabelX, $totY + 3);
+            $pdf->Cell($totLabelW, 6, 'Gesamtbetrag (netto)', 0, 0, 'L');
+            $pdf->Cell($cTotal, 6, number_format((float)$invoice['total_net'], 2, ',', '.') . ' €', 0, 1, 'R');
+            $grossY = $totY + 12;
+        } else {
+            // Net
+            $pdf->SetXY($totLabelX, $totY + 3);
+            $pdf->Cell($totLabelW, 6, 'Total exkl. MwSt.', 0, 0, 'L');
+            $pdf->Cell($cTotal, 6, number_format((float)$invoice['total_net'], 2, ',', '.') . ' €', 0, 1, 'R');
 
-        // Tax rows — group by rate
-        $taxGroups = [];
-        foreach ($positions as $pos) {
-            $rate = (float)$pos['tax_rate'];
-            $taxGroups[$rate] = ($taxGroups[$rate] ?? 0) + ((float)$pos['quantity'] * (float)$pos['unit_price'] * $rate / 100);
-        }
-        $taxOffsetY = $totY + 10;
-        foreach ($taxGroups as $rate => $taxAmt) {
-            $pdf->SetXY($totLabelX, $taxOffsetY);
-            $pdf->SetTextColor(...$colorTotalLabel);
-            $pdf->Cell($totLabelW, 6, 'MwSt. ' . number_format($rate, 0) . '%', 0, 0, 'L');
-            $pdf->Cell($cTotal, 6, number_format($taxAmt, 2, ',', '.') . ' €', 0, 1, 'R');
-            $taxOffsetY += 7;
+            // Tax rows — group by rate
+            $taxGroups = [];
+            foreach ($positions as $pos) {
+                $rate = (float)$pos['tax_rate'];
+                $taxGroups[$rate] = ($taxGroups[$rate] ?? 0) + ((float)$pos['quantity'] * (float)$pos['unit_price'] * $rate / 100);
+            }
+            $taxOffsetY = $totY + 10;
+            foreach ($taxGroups as $rate => $taxAmt) {
+                $pdf->SetXY($totLabelX, $taxOffsetY);
+                $pdf->SetTextColor(...$colorTotalLabel);
+                $pdf->Cell($totLabelW, 6, 'MwSt. ' . number_format($rate, 0) . '%', 0, 0, 'L');
+                $pdf->Cell($cTotal, 6, number_format($taxAmt, 2, ',', '.') . ' €', 0, 1, 'R');
+                $taxOffsetY += 7;
+            }
+            $grossY = $taxOffsetY + 2;
         }
 
-        // Gross total
-        $grossY = $taxOffsetY + 2;
+        // Gross total line
         $pdf->SetDrawColor(...$colorLine);
         $pdf->SetLineWidth(0.2);
         $pdf->Line($totLabelX, $grossY, $rightEdge, $grossY);
@@ -444,6 +453,14 @@ class PdfService
             $pdf->SetTextColor(...$colorFooter);
             $pdf->SetXY($contentX + 70, $footerTopY + 10);
             $pdf->Cell($contentW - 70, 4, implode('   ', $contactParts), 0, 1, 'R');
+        }
+
+        // §19 UStG notice for Kleinunternehmer
+        if ($kleinunternehmer) {
+            $pdf->SetFont($font, 'I', $fontSize - 2);
+            $pdf->SetTextColor(...$colorFooter);
+            $pdf->SetXY($contentX, $footerTopY + 26);
+            $pdf->Cell($contentW, 4, 'Gemäß §19 UStG wird keine Umsatzsteuer berechnet.', 0, 1, 'C');
         }
 
         return $pdf->Output('', 'S');

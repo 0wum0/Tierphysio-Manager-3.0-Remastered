@@ -67,20 +67,26 @@
 
             <div class="glass-card">
                 <h3 class="font-semibold mb-3" style="font-size:0.95rem;">{{ t('invoices.positions') }}</h3>
-                <div style="display:grid;grid-template-columns:1fr 80px 110px 80px auto;gap:0.375rem;margin-bottom:0.375rem;">
+                {% if kleinunternehmer %}
+                <div class="flex items-center gap-2 mb-3" style="background:rgba(255,193,7,0.12);border:1px solid rgba(255,193,7,0.3);border-radius:var(--radius-sm);padding:0.5rem 0.75rem;">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="color:#f59e0b;flex-shrink:0;"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    <span class="text-sm"><strong>Kleinunternehmer §19 UStG</strong> — MwSt. wird automatisch auf 0% gesetzt.</span>
+                </div>
+                {% endif %}
+                <div style="display:grid;grid-template-columns:1fr 80px 110px {{ kleinunternehmer ? '0px' : '80px' }} auto;gap:0.375rem;margin-bottom:0.375rem;">
                     <span class="text-xs text-muted">{{ t('invoices.description') }}</span>
                     <span class="text-xs text-muted" style="text-align:right;">{{ t('invoices.quantity') }}</span>
                     <span class="text-xs text-muted" style="text-align:right;">{{ t('invoices.unit_price') }}</span>
-                    <span class="text-xs text-muted" style="text-align:right;">{{ t('invoices.tax_rate') }}</span>
+                    {% if not kleinunternehmer %}<span class="text-xs text-muted" style="text-align:right;">{{ t('invoices.tax_rate') }}</span>{% endif %}
                     <span></span>
                 </div>
                 <div id="positions-container">
                     {% for pos in positions %}
-                    <div class="position-row" style="display:grid;grid-template-columns:1fr 80px 110px 80px auto;gap:0.5rem;margin-bottom:0.5rem;align-items:center;">
+                    <div class="position-row" style="display:grid;grid-template-columns:1fr 80px 110px {{ kleinunternehmer ? '0px' : '80px' }} auto;gap:0.5rem;margin-bottom:0.5rem;align-items:center;">
                         <input type="text" name="position_description[]" class="form-control" value="{{ pos.description }}" required>
                         <input type="number" name="position_quantity[]" class="form-control pos-qty" value="{{ pos.quantity }}" min="0.01" step="0.01" style="text-align:right;">
                         <input type="number" name="position_price[]" class="form-control pos-price" value="{{ pos.unit_price }}" min="0" step="0.01" style="text-align:right;">
-                        <input type="number" name="position_tax_rate[]" class="form-control pos-tax" value="{{ pos.tax_rate }}" min="0" step="0.01" style="text-align:right;">
+                        <input type="number" name="position_tax_rate[]" class="form-control pos-tax" value="{{ kleinunternehmer ? '0' : pos.tax_rate }}" min="0" step="0.01" style="text-align:right;{{ kleinunternehmer ? 'display:none;' : '' }}">
                         <button type="button" class="btn btn-danger btn-icon btn-sm remove-position">
                             <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                         </button>
@@ -135,11 +141,11 @@
 </form>
 
 <template id="position-row-template">
-    <div class="position-row" style="display:grid;grid-template-columns:1fr 80px 110px 80px auto;gap:0.5rem;margin-bottom:0.5rem;align-items:center;">
+    <div class="position-row" style="display:grid;grid-template-columns:1fr 80px 110px {{ kleinunternehmer ? '0px' : '80px' }} auto;gap:0.5rem;margin-bottom:0.5rem;align-items:center;">
         <input type="text" name="position_description[]" class="form-control" placeholder="{{ t('invoices.description') }}" required>
         <input type="number" name="position_quantity[]" class="form-control pos-qty" value="1" min="0.01" step="0.01" style="text-align:right;">
         <input type="number" name="position_price[]" class="form-control pos-price" value="0.00" min="0" step="0.01" style="text-align:right;">
-        <input type="number" name="position_tax_rate[]" class="form-control pos-tax" value="19" min="0" step="0.01" style="text-align:right;">
+        <input type="number" name="position_tax_rate[]" class="form-control pos-tax" value="{{ kleinunternehmer ? '0' : default_tax_rate }}" min="0" step="0.01" style="text-align:right;{{ kleinunternehmer ? 'display:none;' : '' }}">
         <button type="button" class="btn btn-danger btn-icon btn-sm remove-position">
             <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         </button>

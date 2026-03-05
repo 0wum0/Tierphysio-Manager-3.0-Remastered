@@ -15,6 +15,7 @@ use App\Services\OwnerService;
 use App\Services\PdfService;
 use App\Services\MailService;
 use App\Repositories\TreatmentTypeRepository;
+use App\Repositories\SettingsRepository;
 
 class InvoiceController extends Controller
 {
@@ -28,7 +29,8 @@ class InvoiceController extends Controller
         private readonly OwnerService $ownerService,
         private readonly PdfService $pdfService,
         private readonly MailService $mailService,
-        private readonly TreatmentTypeRepository $treatmentTypeRepository
+        private readonly TreatmentTypeRepository $treatmentTypeRepository,
+        private readonly SettingsRepository $settingsRepository
     ) {
         parent::__construct($view, $session, $config, $translator);
     }
@@ -62,6 +64,7 @@ class InvoiceController extends Controller
         $treatmentTypes = [];
         try { $treatmentTypes = $this->treatmentTypeRepository->findActive(); } catch (\Throwable) {}
 
+        $settings = $this->settingsRepository->all();
         $this->render('invoices/create.twig', [
             'page_title'          => $this->translator->trans('invoices.create'),
             'patients'            => $patients,
@@ -70,6 +73,8 @@ class InvoiceController extends Controller
             'preselected_owner'   => $preselected_owner,
             'next_number'         => $this->invoiceService->generateInvoiceNumber(),
             'treatment_types'     => $treatmentTypes,
+            'kleinunternehmer'    => ($settings['kleinunternehmer'] ?? '0') === '1',
+            'default_tax_rate'    => $settings['default_tax_rate'] ?? '19',
         ]);
     }
 
@@ -138,12 +143,15 @@ class InvoiceController extends Controller
         $patients  = $this->patientService->findAll();
         $owners    = $this->ownerService->findAll();
 
+        $settings = $this->settingsRepository->all();
         $this->render('invoices/edit.twig', [
-            'page_title' => $this->translator->trans('invoices.edit'),
-            'invoice'    => $invoice,
-            'positions'  => $positions,
-            'patients'   => $patients,
-            'owners'     => $owners,
+            'page_title'       => $this->translator->trans('invoices.edit'),
+            'invoice'          => $invoice,
+            'positions'        => $positions,
+            'patients'         => $patients,
+            'owners'           => $owners,
+            'kleinunternehmer' => ($settings['kleinunternehmer'] ?? '0') === '1',
+            'default_tax_rate' => $settings['default_tax_rate'] ?? '19',
         ]);
     }
 

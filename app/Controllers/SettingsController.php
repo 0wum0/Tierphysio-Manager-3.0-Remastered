@@ -70,7 +70,7 @@ class SettingsController extends Controller
             'company_phone', 'company_email', 'company_website',
             'bank_name', 'bank_iban', 'bank_bic',
             'payment_terms', 'invoice_prefix', 'invoice_start_number',
-            'tax_number', 'vat_number', 'default_tax_rate',
+            'tax_number', 'vat_number', 'default_tax_rate', 'kleinunternehmer',
             'smtp_host', 'smtp_port', 'smtp_username', 'smtp_password',
             'smtp_encryption', 'mail_from_name', 'mail_from_address',
             'default_language', 'default_theme',
