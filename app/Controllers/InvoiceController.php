@@ -237,6 +237,10 @@ class InvoiceController extends Controller
 
     public function preview(array $params = []): void
     {
+        // Allow embedding in same-origin iframes (overrides server-level X-Frame-Options/CSP)
+        header('X-Frame-Options: SAMEORIGIN', true);
+        header("Content-Security-Policy: frame-ancestors 'self'", true);
+
         $invoice   = $this->invoiceService->findById((int)$params['id']);
         if (!$invoice) {
             $this->abort(404);
