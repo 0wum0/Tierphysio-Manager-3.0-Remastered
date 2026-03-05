@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="{{ current_locale }}" data-bs-theme="dark" class="set-nav-dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, maximum-scale=5">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="msapplication-tap-highlight" content="no">
+    <title>{% block title %}{{ page_title ?? app_name }}{% endblock %} — {{ app_name }}</title>
+
+    {# FOUC prevention #}
+    <script>
+    (function(){
+        try {
+            var t = localStorage.getItem('sa-theme-mode') || 'dark';
+            document.documentElement.setAttribute('data-bs-theme', t);
+            if (t === 'dark') document.documentElement.classList.add('set-nav-dark');
+            var s = localStorage.getItem('sa-theme-style') || '';
+            if (s) document.documentElement.setAttribute('data-theme-style', s);
+            var saved = localStorage.getItem('sa-layout-classes');
+            if (saved) {
+                saved.split(' ').forEach(function(c){ if(c) document.documentElement.classList.add(c); });
+            }
+        } catch(e){}
+    })();
+    </script>
+
+    {# SmartAdmin core CSS #}
+    <link rel="stylesheet" media="screen, print" href="/themes/smart-tierphysio/plugins/waves/waves.min.css">
+    <link rel="stylesheet" media="screen, print" href="/themes/smart-tierphysio/css/smartapp.min.css">
+    <link rel="stylesheet" media="screen, print" href="/themes/smart-tierphysio/webfonts/smartadmin/sa-icons.css">
+    <link rel="stylesheet" media="screen, print" href="/themes/smart-tierphysio/bridge.css">
+
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+<div class="app-wrap">
+
+    {# ── Top Header ── #}
+    <header class="app-header">
+        <div class="d-flex flex-grow-1 w-100 me-auto align-items-center">
+
+            {# Mobile menu toggle #}
+            <button class="mobile-menu-icon me-2 d-flex d-lg-none flex-shrink-0"
+                    data-action="toggle-swap" data-toggleclass="app-mobile-menu-open"
+                    aria-label="Toggle Mobile Menu">
+                <svg class="sa-icon"><use href="/themes/smart-tierphysio/icons/sprite.svg#menu"></use></svg>
+            </button>
+
+            {# Desktop collapse #}
+            <button type="button" class="collapse-icon me-3 d-none d-lg-inline-flex"
+                    data-action="toggle" data-class="set-nav-minified"
+                    aria-label="Toggle Navigation Size">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 8">
+                    <polygon fill="#878787" points="4.5,1 3.8,0.2 0,4 3.8,7.8 4.5,7 1.5,4"/>
+                </svg>
+            </button>
+
+            {# Brand name in header #}
+            <span class="d-none d-lg-block fw-600 fs-lg me-3" style="white-space:nowrap; letter-spacing:-.01em;">
+                🐾 {{ app_name }}
+            </span>
+
+            {# Search #}
+            <form class="app-search" role="search" action="/patienten" autocomplete="off">
+                <input type="text" class="form-control" placeholder="Suchen…" name="q">
+            </form>
+        </div>
+
+        {# Settings panel toggle #}
+        <button type="button" class="btn btn-system hidden-mobile"
+                data-action="toggle-swap" data-toggleclass="open"
+                data-target="aside.js-drawer-settings"
+                aria-label="Einstellungen">
+            <svg class="sa-icon sa-icon-2x"><use href="/themes/smart-tierphysio/icons/sprite.svg#settings"></use></svg>
+        </button>
+
+        {# Dark / Light toggle #}
+        <button type="button" class="btn btn-system" data-action="toggle-theme"
+                aria-label="Dark/Light Mode">
+            <svg class="sa-icon sa-icon-2x sa-mode-light">
+                <use href="/themes/smart-tierphysio/icons/sprite.svg#sun"></use>
+            </svg>
+            <svg class="sa-icon sa-icon-2x sa-mode-dark">
+                <use href="/themes/smart-tierphysio/icons/sprite.svg#moon"></use>
+            </svg>
+        </button>
+
+        {# Fullscreen #}
+        <button type="button" class="btn btn-system d-none d-lg-block"
+                data-action="app-fullscreen" aria-label="Vollbild">
+            <svg class="sa-icon sa-icon-2x sa-fullscreen-on">
+                <use href="/themes/smart-tierphysio/icons/sprite.svg#minimize"></use>
+            </svg>
+            <svg class="sa-icon sa-icon-2x sa-fullscreen-off">
+                <use href="/themes/smart-tierphysio/icons/sprite.svg#maximize"></use>
+            </svg>
+        </button>
+
+        {# Notifications (intake plugin) #}
+        {% if intake_unread_count is defined %}
+        <button type="button" class="btn btn-system dropdown-toggle no-arrow"
+                data-bs-toggle="dropdown" aria-expanded="false" aria-label="Benachrichtigungen">
+            {% if intake_unread_count > 0 %}
+            <span class="badge badge-icon pos-top pos-end">{{ intake_unread_count > 9 ? '9+' : intake_unread_count }}</span>
+            {% endif %}
+            <svg class="sa-icon sa-icon-2x"><use href="/themes/smart-tierphysio/icons/sprite.svg#bell"></use></svg>
+        </button>
+        <div class="dropdown-menu dropdown-menu-animated dropdown-xl dropdown-menu-end p-0">
+            <div class="notification-header rounded-top mb-2">
+                <h4 class="m-0">
+                    {{ intake_unread_count ?? 0 }} Neu
+                    <small class="mb-0 opacity-80">Patientenanmeldungen</small>
+                </h4>
+            </div>
+            <div class="custom-scroll" style="max-height:320px; overflow-y:auto;">
+                {% if intake_latest is defined and intake_latest|length > 0 %}
+                <ul class="notification">
+                    {% for item in intake_latest %}
+                    <li class="unread alert alert-dismissable">
+                        <a href="/eingangsmeldungen/{{ item.id }}" class="d-flex align-items-center text-decoration-none">
+                            <span class="d-flex flex-column flex-1 ms-1">
+                                <span class="name">🐾 {{ item.patient_name }}</span>
+                                <span class="msg-a fs-sm">{{ item.owner_first_name }} {{ item.owner_last_name }}</span>
+                                <span class="fs-nano text-muted mt-1">{{ item.created_at|datetime_de }}</span>
+                            </span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="p-4 text-center text-muted">Keine neuen Anmeldungen 🎉</div>
+                {% endif %}
+            </div>
+            <div class="py-2 px-3 text-end border-top">
+                <a href="/eingangsmeldungen" class="fs-xs fw-500">Alle anzeigen →</a>
+            </div>
+        </div>
+        {% endif %}
+
+        {# User dropdown #}
+        <button type="button" data-bs-toggle="dropdown"
+                class="btn-system bg-transparent d-flex flex-shrink-0 align-items-center justify-content-center"
+                style="width:38px; height:38px; border-radius:50%; font-size:0.75rem; font-weight:700; background:var(--bs-primary)!important; color:#fff; border:none;"
+                aria-label="Benutzermenü">
+            {{ current_user.name|initials }}
+        </button>
+        <div class="dropdown-menu dropdown-menu-animated dropdown-menu-end">
+            <div class="notification-header rounded-top mb-2">
+                <div class="d-flex flex-row align-items-center mt-1 mb-1 color-white">
+                    <div class="info-card-text ms-2">
+                        <div class="fs-lg text-truncate text-truncate-lg">{{ current_user.name }}</div>
+                        <span class="text-truncate text-truncate-md opacity-80 fs-sm">
+                            {{ current_user.role == 'admin' ? 'Administrator' : 'Mitarbeiter' }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="dropdown-divider m-0"></div>
+            <a href="/profil" class="dropdown-item">
+                <svg class="sa-icon me-1"><use href="/themes/smart-tierphysio/icons/sprite.svg#user"></use></svg>
+                Mein Profil
+            </a>
+            <a href="/einstellungen" class="dropdown-item">
+                <svg class="sa-icon me-1"><use href="/themes/smart-tierphysio/icons/sprite.svg#settings"></use></svg>
+                Einstellungen
+            </a>
+            <div class="dropdown-divider m-0"></div>
+            <form action="/logout" method="POST" style="margin:0;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="dropdown-item text-danger">
+                    <svg class="sa-icon me-1"><use href="/themes/smart-tierphysio/icons/sprite.svg#log-out"></use></svg>
+                    Abmelden
+                </button>
+            </form>
+        </div>
+    </header>
+
+    {# ── Sidebar ── #}
+    <aside class="app-sidebar d-flex flex-column">
+
+        {# Sidebar brand #}
+        <a href="/dashboard" class="app-logo flex-shrink-0" style="text-decoration:none;">
+            <div class="d-flex align-items-center px-3 py-2 gap-2">
+                <div style="width:32px; height:32px; background:var(--bs-primary); border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <svg width="20" height="20" viewBox="0 0 100 100" fill="white">
+                        <ellipse cx="20" cy="28" rx="8" ry="11" transform="rotate(-15 20 28)"/>
+                        <ellipse cx="40" cy="18" rx="7" ry="10" transform="rotate(-5 40 18)"/>
+                        <ellipse cx="60" cy="18" rx="7" ry="10" transform="rotate(5 60 18)"/>
+                        <ellipse cx="80" cy="28" rx="8" ry="11" transform="rotate(15 80 28)"/>
+                        <path d="M50 42 C30 42 18 55 20 68 C22 80 34 88 50 88 C66 88 78 80 80 68 C82 55 70 42 50 42 Z"/>
+                    </svg>
+                </div>
+                <div class="nav-link-text">
+                    <div class="fw-700 fs-md lh-1">{{ app_name }}</div>
+                    <div class="fs-nano text-muted">v{{ app_version }}</div>
+                </div>
+            </div>
+        </a>
+
+        {# Nav filter #}
+        <form class="app-menu-filter-container px-3 mt-1">
+            <input type="text" class="form-control form-control-sm" id="searchInput"
+                   placeholder="Navigation filtern…" autocomplete="off">
+            <div class="js-filter-message nav-filter-msg badge bg-secondary btn"
+                 data-bs-toggle="tooltip" data-bs-placement="top"
+                 data-bs-original-title="Filter zurücksetzen"></div>
+        </form>
+
+        {# Primary nav #}
+        <nav id="js-primary-nav" class="primary-nav flex-grow-1 custom-scroll">
+            <ul id="js-nav-menu" class="nav-menu">
+
+                <li class="nav-title"><span>Tierphysio</span></li>
+
+                <li class="{{ is_active('/dashboard') == 'active' ? 'active' : '' }}">
+                    <a href="/dashboard" data-filter-tags="dashboard übersicht">
+                        <svg class="sa-icon"><use href="/themes/smart-tierphysio/icons/sprite.svg#trello"></use></svg>
+                        <span class="nav-link-text">Dashboard</span>
+                    </a>
+                </li>
+
+                <li class="nav-title"><span>Verwaltung</span></li>
+
+                <li class="{{ is_active('/patienten') == 'active' ? 'active' : '' }}">
+                    <a href="/patienten" data-filter-tags="patienten tiere">
+                        <svg class="sa-icon"><use href="/themes/smart-tierphysio/icons/sprite.svg#heart"></use></svg>
+                        <span class="nav-link-text">Patienten</span>
+                    </a>
+                </li>
+
+                <li class="{{ is_active('/tierhalter') == 'active' ? 'active' : '' }}">
+                    <a href="/tierhalter" data-filter-tags="tierhalter besitzer kunden">
+                        <svg class="sa-icon"><use href="/themes/smart-tierphysio/icons/sprite.svg#users"></use></svg>
+                        <span class="nav-link-text">Tierhalter</span>
+                    </a>
+                </li>
+
+                <li class="{{ is_active('/rechnungen') == 'active' ? 'active' : '' }}">
+                    <a href="/rechnungen" data-filter-tags="rechnungen faktura">
+                        <svg class="sa-icon"><use href="/themes/smart-tierphysio/icons/sprite.svg#file-text"></use></svg>
+                        <span class="nav-link-text">Rechnungen</span>
+                    </a>
+                </li>
+
+                {# Plugin nav items #}
+                {% for item in plugin_nav_items ?? [] %}
+                {% if not (item.admin_only is defined and item.admin_only) or (current_user and current_user.role == 'admin') %}
+                <li class="{{ is_active(item.href) == 'active' ? 'active' : '' }}">
+                    <a href="{{ item.href }}" data-filter-tags="{{ item.label|lower }}">
+                        {% if item.icon is defined %}{{ item.icon|raw }}{% endif %}
+                        <span class="nav-link-text">{{ item.label }}</span>
+                    </a>
+                </li>
+                {% endif %}
+                {% endfor %}
+
+                {% if current_user and current_user.role == 'admin' %}
+                <li class="nav-title"><span>Administration</span></li>
+
+                <li class="{{ is_active('/einstellungen') == 'active' ? 'active' : '' }}">
+                    <a href="/einstellungen" data-filter-tags="einstellungen konfiguration">
+                        <svg class="sa-icon"><use href="/themes/smart-tierphysio/icons/sprite.svg#settings"></use></svg>
+                        <span class="nav-link-text">Einstellungen</span>
+                    </a>
+                </li>
+                {% endif %}
+
+            </ul>
+        </nav>
+
+        {# Sidebar user footer #}
+        <div class="app-sidebar-footer p-3 border-top d-flex align-items-center gap-2">
+            <div style="width:32px; height:32px; border-radius:50%; background:var(--bs-primary); color:#fff; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700; flex-shrink:0;">
+                {{ current_user.name|initials }}
+            </div>
+            <div class="nav-link-text overflow-hidden">
+                <div class="fw-600 fs-sm text-truncate">{{ current_user.name }}</div>
+                <div class="fs-nano text-muted">{{ current_user.role == 'admin' ? 'Administrator' : 'Mitarbeiter' }}</div>
+            </div>
+        </div>
+    </aside>
+
+    {# ── Main Content ── #}
+    <main class="main-content" id="js-page-content" role="main">
+
+        {# Page header #}
+        <div class="subheader d-flex align-items-center justify-content-between mb-3">
+            <div class="subheader-title">
+                <h1 class="subheader-h1">{% block header_title %}{{ page_title ?? app_name }}{% endblock %}</h1>
+            </div>
+            <div class="subheader-block">
+                {# Breadcrumb / Actions slot #}
+                {% block subheader_actions %}{% endblock %}
+            </div>
+        </div>
+
+        {# Flash messages #}
+        {% if flash.success is defined %}
+        <div class="alert alert-success alert-dismissible d-flex align-items-center mb-3" role="alert" data-auto-dismiss="5000">
+            <svg class="sa-icon sa-icon-success me-2 flex-shrink-0"><use href="/themes/smart-tierphysio/icons/sprite.svg#check-circle"></use></svg>
+            <span>{{ flash.success }}</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Schließen"></button>
+        </div>
+        {% endif %}
+        {% if flash.error is defined %}
+        <div class="alert alert-danger alert-dismissible d-flex align-items-center mb-3" role="alert" data-auto-dismiss="8000">
+            <svg class="sa-icon sa-icon-danger me-2 flex-shrink-0"><use href="/themes/smart-tierphysio/icons/sprite.svg#alert-circle"></use></svg>
+            <span>{{ flash.error }}</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Schließen"></button>
+        </div>
+        {% endif %}
+        {% if flash.info is defined %}
+        <div class="alert alert-info alert-dismissible d-flex align-items-center mb-3" role="alert" data-auto-dismiss="5000">
+            <svg class="sa-icon me-2 flex-shrink-0"><use href="/themes/smart-tierphysio/icons/sprite.svg#info"></use></svg>
+            <span>{{ flash.info }}</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Schließen"></button>
+        </div>
+        {% endif %}
+
+        {# Page content #}
+        {% block content %}{% endblock %}
+
+    </main>
+
+    {# ── Settings Drawer ── #}
+    <aside class="app-aside js-drawer-settings" id="js-app-settings" role="complementary">
+        <div class="sticky-top d-flex align-items-center justify-content-between p-3 border-bottom">
+            <h6 class="fw-700 m-0">
+                <svg class="sa-icon me-2"><use href="/themes/smart-tierphysio/icons/sprite.svg#settings"></use></svg>
+                App-Einstellungen
+            </h6>
+            <button class="btn btn-sm btn-ghost-secondary"
+                    data-action="toggle-swap" data-toggleclass="open"
+                    data-target="aside.js-drawer-settings" aria-label="Schließen">
+                <svg class="sa-icon"><use href="/themes/smart-tierphysio/icons/sprite.svg#x"></use></svg>
+            </button>
+        </div>
+
+        <div class="custom-scroll p-3">
+
+            <div class="mod-status" data-prefix="Layout">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="sa-nav-fixed"
+                           data-action="toggle" data-class="set-nav-fixed">
+                    <label class="form-check-label" for="sa-nav-fixed">Navigation fixiert</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="sa-nav-dark"
+                           data-action="toggle" data-class="set-nav-dark" checked>
+                    <label class="form-check-label" for="sa-nav-dark">Dunkle Navigation</label>
+                </div>
+                <div class="form-check d-none d-lg-block">
+                    <input class="form-check-input" type="checkbox" id="sa-nav-minified"
+                           data-action="toggle" data-class="set-nav-minified">
+                    <label class="form-check-label" for="sa-nav-minified">Navigation minimiert</label>
+                </div>
+            </div>
+
+            <div class="mod-status app-themes mt-3" data-prefix="Farbthema">
+                <div class="clickable-boxes">
+                    <input type="radio" id="sa-t0" name="sa-theme" data-action="theme-style" data-theme-style="" checked>
+                    <label for="sa-t0" data-prefix="Standard" style="background:linear-gradient(135deg,#FF6A00,#F6A2D5,#4C91BF,#7A8B92,#AB7C9A);"></label>
+
+                    <input type="radio" id="sa-t1" name="sa-theme" data-action="theme-style" data-theme-style="nebula">
+                    <label for="sa-t1" data-prefix="Nebula" style="background:linear-gradient(135deg,#2a7dbf,#2a9d8f,#766cbc,#f4a261,#e76f51);"></label>
+
+                    <input type="radio" id="sa-t2" name="sa-theme" data-action="theme-style" data-theme-style="night">
+                    <label for="sa-t2" data-prefix="Night" style="background:linear-gradient(135deg,#1e2a47,#2b3654,#363d6c,#4f5d79,#717b91,#b6c4d1);"></label>
+
+                    <input type="radio" id="sa-t3" name="sa-theme" data-action="theme-style" data-theme-style="aurora">
+                    <label for="sa-t3" data-prefix="Aurora" style="background:linear-gradient(135deg,#337e7e,#527a4a,#63279b,#7FFF00,#87CEFA,#B0E0E6);"></label>
+
+                    <input type="radio" id="sa-t4" name="sa-theme" data-action="theme-style" data-theme-style="solar">
+                    <label for="sa-t4" data-prefix="Solar" style="background:linear-gradient(135deg,#FF8C00,#FFD700,#FF4500,#F1C40F,#F39C12);"></label>
+
+                    <input type="radio" id="sa-t5" name="sa-theme" data-action="theme-style" data-theme-style="earth">
+                    <label for="sa-t5" data-prefix="Earth" style="background:linear-gradient(135deg,#2198f3,#3173a5,#3f6888,#618d48,#52bf11);"></label>
+
+                    <input type="radio" id="sa-t6" name="sa-theme" data-action="theme-style" data-theme-style="lunar">
+                    <label for="sa-t6" data-prefix="Lunar" style="background:linear-gradient(135deg,#2C3E50,#34495E,#5F6368,#AAB7B8,#E6E6FA,#F1F3F4);"></label>
+
+                    <input type="radio" id="sa-t7" name="sa-theme" data-action="theme-style" data-theme-style="flare">
+                    <label for="sa-t7" data-prefix="Flare" style="background:linear-gradient(135deg,#FF4500,#FF6347,#F44336,#D32F2F,#B71C1C);"></label>
+
+                    <input type="radio" id="sa-t8" name="sa-theme" data-action="theme-style" data-theme-style="storm">
+                    <label for="sa-t8" data-prefix="Storm" style="background:linear-gradient(135deg,#2F4F4F,#3B5360,#4B6A6E,#5A7980,#A9A9A9,#FFD700);"></label>
+
+                    <input type="radio" id="sa-t9" name="sa-theme" data-action="theme-style" data-theme-style="olive">
+                    <label for="sa-t9" data-prefix="Olive" style="background:linear-gradient(135deg,#556B2F,#6B8E23,#8B9A3D,#A9B83E,#BDB76B);"></label>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <button type="button" onclick="appDOM.resetStyle();"
+                        class="btn btn-outline-danger btn-sm w-100">
+                    <i class="sa sa-reload me-1"></i> Factory Reset
+                </button>
+            </div>
+        </div>
+    </aside>
+    <div class="backdrop" data-action="toggle-swap" data-toggleclass="open"
+         data-target="aside.js-drawer-settings"></div>
+
+</div>{# /app-wrap #}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+{# SmartAdmin core scripts #}
+<script src="/themes/smart-tierphysio/plugins/bootstrap/bootstrap.bundle.min.js"></script>
+<script src="/themes/smart-tierphysio/scripts/core/saveloadscript.js"></script>
+<script src="/themes/smart-tierphysio/scripts/core/smartNavigation.js"></script>
+<script src="/themes/smart-tierphysio/scripts/core/smartFilter.js"></script>
+<script src="/themes/smart-tierphysio/scripts/core/smartSlimscroll.js"></script>
+<script src="/themes/smart-tierphysio/plugins/sortablejs/Sortable.min.js"></script>
+<script src="/themes/smart-tierphysio/plugins/waves/waves.min.js"></script>
+<script src="/themes/smart-tierphysio/scripts/core/smartApp.js"></script>
+
+{% block scripts %}{% endblock %}
+
+{# Auto-dismiss alerts #}
+<script>
+(function(){
+    document.querySelectorAll('[data-auto-dismiss]').forEach(function(el){
+        var t = parseInt(el.getAttribute('data-auto-dismiss')) || 5000;
+        setTimeout(function(){
+            el.style.transition = 'opacity .4s';
+            el.style.opacity = '0';
+            setTimeout(function(){ el.remove(); }, 400);
+        }, t);
+    });
+})();
+</script>
+
+{# Notification polling #}
+{% if intake_unread_count is defined %}
+<script>
+(function(){
+    var badge = document.querySelector('.notif-bell-badge');
+    function poll(){
+        fetch('/api/intake/notifications',{headers:{'X-Requested-With':'XMLHttpRequest'}})
+        .then(function(r){return r.json();})
+        .then(function(d){
+            var c = d.count||0;
+            document.querySelectorAll('.notif-bell-badge').forEach(function(b){
+                b.textContent = c > 9 ? '9+' : c;
+                b.style.display = c > 0 ? 'flex' : 'none';
+            });
+        }).catch(function(){});
+    }
+    setInterval(poll, 30000);
+})();
+</script>
+{% endif %}
+</body>
+</html>
