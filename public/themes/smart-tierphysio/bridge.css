@@ -418,11 +418,11 @@
 .backdrop.open { display: block; }
 
 /* ═══════════════════════════════════════════
-   CUSTOM MODAL-OVERLAY SYSTEM
-   Used by calendar plugin and other plugins
-   that use the Liquid-Glass modal pattern.
+   CAL-MODAL SYSTEM (calendar plugin)
+   Uses .cal-modal-overlay to avoid conflict
+   with Bootstrap 5's .modal { display:none }
    ═══════════════════════════════════════════ */
-.modal-overlay {
+.cal-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
@@ -435,10 +435,10 @@
   padding: 1rem;
   overflow-y: auto;
 }
-.modal-overlay.open {
+.cal-modal-overlay.open {
   display: flex !important;
 }
-.modal-overlay > .modal {
+.cal-modal {
   position: relative;
   background: var(--bs-body-bg);
   border: 1px solid var(--bs-border-color);
@@ -448,16 +448,16 @@
   max-width: 560px;
   max-height: 90vh;
   overflow-y: auto;
-  animation: modalSlideIn .25s cubic-bezier(0.34,1.26,0.64,1);
+  animation: calModalIn .25s cubic-bezier(0.34,1.26,0.64,1);
 }
-.modal-overlay > .modal.modal-lg  { max-width: 740px; }
-.modal-overlay > .modal.modal-xl  { max-width: 960px; }
-.modal-overlay > .modal.modal-sm  { max-width: 400px; }
-@keyframes modalSlideIn {
+.cal-modal.cal-modal-lg  { max-width: 740px; }
+.cal-modal.cal-modal-xl  { max-width: 960px; }
+.cal-modal.cal-modal-sm  { max-width: 400px; }
+@keyframes calModalIn {
   from { opacity: 0; transform: translateY(20px) scale(0.97); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-.modal-overlay .modal-header {
+.cal-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -465,20 +465,34 @@
   padding: 1rem 1.25rem;
   border-bottom: 1px solid var(--bs-border-color);
 }
-.modal-overlay .modal-title {
+.cal-modal-title {
   font-size: 1rem;
   font-weight: 700;
   margin: 0;
   color: var(--bs-body-color);
 }
-.modal-overlay .modal-body  { padding: 1.25rem; }
-.modal-overlay .modal-footer {
+.cal-modal-body  { padding: 1.25rem; }
+.cal-modal-footer {
   padding: .875rem 1.25rem;
   border-top: 1px solid var(--bs-border-color);
   display: flex;
   gap: .5rem;
   justify-content: flex-end;
 }
+.cal-modal-close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--bs-secondary-color);
+  padding: .3rem;
+  border-radius: 6px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .15s;
+}
+.cal-modal-close:hover { background: var(--bs-tertiary-bg); color: var(--bs-body-color); }
 
 /* ── form-grid-2 used in calendar modal ── */
 .form-grid-2 {
