@@ -243,7 +243,7 @@
 
 <script>
 (function() {
-    const CSRF = document.querySelector('[name="_csrf_token"]')?.value || '';
+    const CSRF = document.querySelector('#form-appointment [name="_csrf_token"]')?.value || '{{ csrf_token }}';
     let calendar;
     let currentAptId = null;
 
