@@ -21,14 +21,30 @@ class ServiceProvider
         /* Register ThemeManager as singleton */
         $container->singleton(ThemeManager::class, fn() => new ThemeManager());
 
-        /* Register template path */
+        /* Register template path for admin UI */
         $view = $container->get(View::class);
         $view->addTemplatePath(__DIR__ . '/templates', 'theme-manager');
 
         /* Inject active theme CSS and slug as Twig globals */
         $themeManager = $container->get(ThemeManager::class);
-        $view->addGlobal('active_theme_slug', $themeManager->getActive());
-        $view->addGlobal('active_theme_css',  $themeManager->activeCssUrl());
+        $activeSlug   = $themeManager->getActive();
+        $view->addGlobal('active_theme_slug',   $activeSlug);
+        $view->addGlobal('active_theme_css',    $themeManager->activeCssUrl());
+
+        /* Register active theme directory as Twig namespace so layout.twig is usable */
+        if ($activeSlug !== 'default') {
+            $themeDir = STORAGE_PATH . '/themes/' . $activeSlug;
+            if (is_dir($themeDir)) {
+                $view->addTemplatePath($themeDir, $activeSlug);
+            }
+        }
+
+        /* Tell base.twig which layout to extend (null = base.twig itself) */
+        $layoutTwig = null;
+        if ($themeManager->activeHasCustomLayout()) {
+            $layoutTwig = '@' . $activeSlug . '/layout.twig';
+        }
+        $view->addGlobal('active_theme_layout', $layoutTwig);
 
         /* Register routes */
         $pluginManager->hook('registerRoutes', [$this, 'registerRoutes']);

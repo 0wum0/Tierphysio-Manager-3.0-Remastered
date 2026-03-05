@@ -1,0 +1,207 @@
+{
+  "Alerts": {
+    "alert": [
+      "alert-circle",
+      "alert-octagon",
+      "alert-triangle",
+      "info"
+    ]
+  },
+  "Arrows": {
+    "arrow": [
+      "arrow-down",
+      "arrow-up",
+      "arrow-left",
+      "arrow-right"
+    ],
+    "direction": [
+      "chevron-down",
+      "chevron-up",
+      "chevron-left",
+      "chevron-right",
+      "chevrons-down",
+      "chevrons-up",
+      "chevrons-left",
+      "chevrons-right"
+    ]
+  },
+  "Communication": {
+    "message": [
+      "message-circle",
+      "message-square"
+    ],
+    "phone": [
+      "phone",
+      "phone-call",
+      "phone-forwarded",
+      "phone-incoming",
+      "phone-missed",
+      "phone-off",
+      "phone-outgoing"
+    ]
+  },
+  "Editing": {
+    "edit": [
+      "edit",
+      "edit-2",
+      "edit-3",
+      "pen-tool",
+      "scissors",
+      "delete",
+      "trash-2",
+      "trash"
+    ]
+  },
+  "Finance": {
+    "chart": [
+      "bar-chart",
+      "bar-chart-2",
+      "pie-chart"
+    ],
+    "business": [
+      "briefcase",
+      "credit-card",
+      "dollar-sign"
+    ]
+  },
+  "Media": {
+    "control": [
+      "play",
+      "play-circle",
+      "pause",
+      "pause-circle",
+      "fast-forward",
+      "rewind",
+      "skip-back",
+      "skip-forward"
+    ],
+    "comment": [
+      "message-square",
+      "message-circle"
+    ]
+  },
+  "Socialmedia": {
+    "social": [
+      "facebook",
+      "instagram",
+      "twitter",
+      "linkedin",
+      "github",
+      "gitlab",
+      "dribbble",
+      "twitch",
+      "slack"
+    ]
+  },
+  "Web": {
+    "code": [
+      "code",
+      "codepen",
+      "codesandbox"
+    ],
+    "security": [
+      "shield",
+      "shield-off",
+      "unlock",
+      "lock",
+      "key"
+    ]
+  },
+  "Geometry": {
+    "shapes": [
+      "circle",
+      "octagon",
+      "hexagon",
+      "triangle",
+      "square"
+    ]
+  },
+  "Weather": {
+    "forecast": [
+      "cloud",
+      "cloud-drizzle",
+      "cloud-lightning",
+      "cloud-rain",
+      "cloud-snow",
+      "sun",
+      "sunrise",
+      "sunset",
+      "wind",
+      "umbrella"
+    ]
+  },
+  "Users": {
+    "profile": [
+      "user",
+      "users",
+      "user-plus",
+      "user-minus",
+      "user-check",
+      "user-x"
+    ],
+    "emoji": [
+      "meh",
+      "smile",
+      "frown"
+    ]    
+  },
+  "Security": {
+    "lock": [
+      "lock",
+      "unlock",
+      "shield",
+      "shield-off",
+      "key"
+    ]
+  },
+  "Time": {
+    "schedule": [
+      "clock",
+      "calendar",
+      "watch"
+    ]
+  },
+  "Documents": {
+    "doc": [
+      "file",
+      "file-text",
+      "file-plus",
+      "file-minus"
+    ]
+  },
+  "Folders": {
+    "folder": [
+      "folder",
+      "folder-plus",
+      "folder-minus"
+    ]
+  },
+  "Devices": {
+    "device": [
+      "smartphone",
+      "tablet",
+      "monitor",
+      "tv",
+      "hard-drive",
+      "cpu",
+      "printer"
+    ]
+  },
+  "Interface": {
+    "control": [
+      "settings",
+      "sliders",
+      "refresh-ccw",
+      "refresh-cw",
+      "repeat"
+    ],
+    "layout": [
+      "layout",
+      "grid",
+      "columns",
+      "menu",
+      "list",
+      "sidebar"
+    ]
+  }
+}

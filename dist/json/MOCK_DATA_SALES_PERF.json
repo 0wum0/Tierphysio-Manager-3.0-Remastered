@@ -1,0 +1,452 @@
+[
+  {
+    "CustomerID": "268410636",
+    "Name": "Cooley, Walker J.",
+    "PurchaseDate": "03-13-19",
+    "CustomerEmail": "wcooley@gmail.com",
+    "CustomerCVV": "717",
+    "Country": "USA",
+    "InvoiceAmount": "$7,007"
+  },
+  {
+    "CustomerID": "077610947",
+    "Name": "Wise, Ruby R.",
+    "PurchaseDate": "04-10-19",
+    "CustomerEmail": "rwise@hotmail.com",
+    "CustomerCVV": "715",
+    "Country": "Australia",
+    "InvoiceAmount": "$7,052"
+  },
+  {
+    "CustomerID": "959104621",
+    "Name": "Orr, Isabella V.",
+    "PurchaseDate": "05-14-20",
+    "CustomerEmail": "iorr@yahoo.com",
+    "CustomerCVV": "256",
+    "Country": "Canada",
+    "InvoiceAmount": "$6,697"
+  },
+  {
+    "CustomerID": "756590147",
+    "Name": "Schwartz, Xander P.",
+    "PurchaseDate": "11-05-18",
+    "CustomerEmail": "xschwartz@outlook.com",
+    "CustomerCVV": "963",
+    "Country": "India",
+    "InvoiceAmount": "$8,117"
+  },
+  {
+    "CustomerID": "533801387",
+    "Name": "Gilmore, Cedric O.",
+    "PurchaseDate": "01-16-20",
+    "CustomerEmail": "cgilmore@aol.com",
+    "CustomerCVV": "754",
+    "Country": "Brazil",
+    "InvoiceAmount": "$5,328"
+  },
+  {
+    "CustomerID": "403080948",
+    "Name": "Foley, Cynthia M.",
+    "PurchaseDate": "07-14-18",
+    "CustomerEmail": "cfoley@gmail.com",
+    "CustomerCVV": "826",
+    "Country": "Mexico",
+    "InvoiceAmount": "$6,823"
+  },
+  {
+    "CustomerID": "114290869",
+    "Name": "Marshall, Carter V.",
+    "PurchaseDate": "08-30-18",
+    "CustomerEmail": "cmarshall@hotmail.com",
+    "CustomerCVV": "256",
+    "Country": "Germany",
+    "InvoiceAmount": "$6,679"
+  },
+  {
+    "CustomerID": "033182882",
+    "Name": "Reilly, Jacob K.",
+    "PurchaseDate": "09-19-18",
+    "CustomerEmail": "jreilly@yahoo.com",
+    "CustomerCVV": "703",
+    "Country": "France",
+    "InvoiceAmount": "$5,252"
+  },
+  {
+    "CustomerID": "471026559",
+    "Name": "Barlow, Jena S.",
+    "PurchaseDate": "12-16-19",
+    "CustomerEmail": "jbarlow@outlook.com",
+    "CustomerCVV": "998",
+    "Country": "Italy",
+    "InvoiceAmount": "$5,542"
+  },
+  {
+    "CustomerID": "223467911",
+    "Name": "Huber, Warren Z.",
+    "PurchaseDate": "05-30-20",
+    "CustomerEmail": "whuber@aol.com",
+    "CustomerCVV": "127",
+    "Country": "Spain",
+    "InvoiceAmount": "$7,331"
+  },
+  {
+    "CustomerID": "571295351",
+    "Name": "Miller, Emerald G.",
+    "PurchaseDate": "11-08-19",
+    "CustomerEmail": "emiller@gmail.com",
+    "CustomerCVV": "791",
+    "Country": "United Kingdom",
+    "InvoiceAmount": "$8,318"
+  },
+  {
+    "CustomerID": "314268756",
+    "Name": "Randolph, Ina Y.",
+    "PurchaseDate": "04-20-19",
+    "CustomerEmail": "irandolph@hotmail.com",
+    "CustomerCVV": "272",
+    "Country": "Netherlands",
+    "InvoiceAmount": "$9,181"
+  },
+  {
+    "CustomerID": "010785095",
+    "Name": "Stephens, Brady K.",
+    "PurchaseDate": "04-18-19",
+    "CustomerEmail": "bstephens@yahoo.com",
+    "CustomerCVV": "810",
+    "Country": "Australia",
+    "InvoiceAmount": "$8,253"
+  },
+  {
+    "CustomerID": "522462928",
+    "Name": "Eaton, Cathleen M.",
+    "PurchaseDate": "03-18-20",
+    "CustomerEmail": "ceaton@outlook.com",
+    "CustomerCVV": "238",
+    "Country": "USA",
+    "InvoiceAmount": "$5,585"
+  },
+  {
+    "CustomerID": "833601081",
+    "Name": "Conner, Wylie U.",
+    "PurchaseDate": "09-07-18",
+    "CustomerEmail": "wconner@aol.com",
+    "CustomerCVV": "917",
+    "Country": "Australia",
+    "InvoiceAmount": "$6,687"
+  },
+  {
+    "CustomerID": "462938945",
+    "Name": "Mccall, Hyacinth M.",
+    "PurchaseDate": "06-22-19",
+    "CustomerEmail": "hmccall@gmail.com",
+    "CustomerCVV": "335",
+    "Country": "USA",
+    "InvoiceAmount": "$5,419"
+  },
+  {
+    "CustomerID": "465431336",
+    "Name": "Calderon, Bruno L.",
+    "PurchaseDate": "06-22-19",
+    "CustomerEmail": "bcalderon@hotmail.com",
+    "CustomerCVV": "449",
+    "Country": "Australia",
+    "InvoiceAmount": "$7,833"
+  },
+  {
+    "CustomerID": "700402324",
+    "Name": "Barnes, Brittany O.",
+    "PurchaseDate": "08-23-19",
+    "CustomerEmail": "bbarnes@yahoo.com",
+    "CustomerCVV": "200",
+    "Country": "Canada",
+    "InvoiceAmount": "$9,673"
+  },
+  {
+    "CustomerID": "999816267",
+    "Name": "Lambert, Nerea A.",
+    "PurchaseDate": "04-01-20",
+    "CustomerEmail": "nlambert@outlook.com",
+    "CustomerCVV": "347",
+    "Country": "India",
+    "InvoiceAmount": "$5,805"
+  },
+  {
+    "CustomerID": "230094773",
+    "Name": "Hartman, Murphy I.",
+    "PurchaseDate": "02-19-19",
+    "CustomerEmail": "mhartman@aol.com",
+    "CustomerCVV": "120",
+    "Country": "Brazil",
+    "InvoiceAmount": "$5,785"
+  },
+  {
+    "CustomerID": "656291846",
+    "Name": "Hartman, Griffin I.",
+    "PurchaseDate": "09-04-19",
+    "CustomerEmail": "ghartman@gmail.com",
+    "CustomerCVV": "369",
+    "Country": "Mexico",
+    "InvoiceAmount": "$6,885"
+  },
+  {
+    "CustomerID": "667672315",
+    "Name": "Buchanan, Jack N.",
+    "PurchaseDate": "09-19-19",
+    "CustomerEmail": "jbuchanan@hotmail.com",
+    "CustomerCVV": "394",
+    "Country": "Germany",
+    "InvoiceAmount": "$6,480"
+  },
+  {
+    "CustomerID": "895637221",
+    "Name": "Holloway, Molly T.",
+    "PurchaseDate": "12-04-19",
+    "CustomerEmail": "mholloway@yahoo.com",
+    "CustomerCVV": "978",
+    "Country": "France",
+    "InvoiceAmount": "$7,940"
+  },
+  {
+    "CustomerID": "582511127",
+    "Name": "Pacheco, Nicholas Q.",
+    "PurchaseDate": "12-17-19",
+    "CustomerEmail": "npacheco@outlook.com",
+    "CustomerCVV": "860",
+    "Country": "Italy",
+    "InvoiceAmount": "$9,291"
+  },
+  {
+    "CustomerID": "473206092",
+    "Name": "Woods, Lucian Y.",
+    "PurchaseDate": "04-04-20",
+    "CustomerEmail": "lwoods@aol.com",
+    "CustomerCVV": "267",
+    "Country": "Spain",
+    "InvoiceAmount": "$6,514"
+  },
+  {
+    "CustomerID": "058837337",
+    "Name": "Shelton, Benedict Q.",
+    "PurchaseDate": "08-18-18",
+    "CustomerEmail": "bshelton@gmail.com",
+    "CustomerCVV": "556",
+    "Country": "United Kingdom",
+    "InvoiceAmount": "$5,960"
+  },
+  {
+    "CustomerID": "435186291",
+    "Name": "Mcmahon, Zephania V.",
+    "PurchaseDate": "03-20-19",
+    "CustomerEmail": "zmcmahon@hotmail.com",
+    "CustomerCVV": "313",
+    "Country": "Netherlands",
+    "InvoiceAmount": "$9,119"
+  },
+  {
+    "CustomerID": "290955491",
+    "Name": "Bryant, Paloma S.",
+    "PurchaseDate": "08-09-18",
+    "CustomerEmail": "pbryant@yahoo.com",
+    "CustomerCVV": "564",
+    "Country": "USA",
+    "InvoiceAmount": "$7,675"
+  },
+  {
+    "CustomerID": "960011146",
+    "Name": "Sutton, Dominique R.",
+    "PurchaseDate": "03-31-19",
+    "CustomerEmail": "dsutton@outlook.com",
+    "CustomerCVV": "517",
+    "Country": "Australia",
+    "InvoiceAmount": "$5,836"
+  },
+  {
+    "CustomerID": "332794726",
+    "Name": "Whitehead, Amal R.",
+    "PurchaseDate": "05-02-20",
+    "CustomerEmail": "awhitehead@aol.com",
+    "CustomerCVV": "450",
+    "Country": "USA",
+    "InvoiceAmount": "$5,351"
+  },
+  {
+    "CustomerID": "270594724",
+    "Name": "Hopkins, Taylor I.",
+    "PurchaseDate": "05-03-20",
+    "CustomerEmail": "thopkins@gmail.com",
+    "CustomerCVV": "509",
+    "Country": "USA",
+    "InvoiceAmount": "$5,373"
+  },
+  {
+    "CustomerID": "062276811",
+    "Name": "Dalton, Ursula I.",
+    "PurchaseDate": "05-23-19",
+    "CustomerEmail": "udalton@hotmail.com",
+    "CustomerCVV": "235",
+    "Country": "Australia",
+    "InvoiceAmount": "$8,587"
+  },
+  {
+    "CustomerID": "475988143",
+    "Name": "Velasquez, Harper B.",
+    "PurchaseDate": "05-03-20",
+    "CustomerEmail": "hvelasquez@yahoo.com",
+    "CustomerCVV": "166",
+    "Country": "Canada",
+    "InvoiceAmount": "$5,844"
+  },
+  {
+    "CustomerID": "959744004",
+    "Name": "Flowers, Jackson U.",
+    "PurchaseDate": "10-06-19",
+    "CustomerEmail": "jflowers@outlook.com",
+    "CustomerCVV": "654",
+    "Country": "India",
+    "InvoiceAmount": "$8,953"
+  },
+  {
+    "CustomerID": "461623134",
+    "Name": "Massey, Mercedes R.",
+    "PurchaseDate": "05-22-20",
+    "CustomerEmail": "mmassey@aol.com",
+    "CustomerCVV": "199",
+    "Country": "Brazil",
+    "InvoiceAmount": "$7,332"
+  },
+  {
+    "CustomerID": "197211170",
+    "Name": "Barrera, Ulysses V.",
+    "PurchaseDate": "02-17-19",
+    "CustomerEmail": "ubarrera@gmail.com",
+    "CustomerCVV": "809",
+    "Country": "Mexico",
+    "InvoiceAmount": "$9,416"
+  },
+  {
+    "CustomerID": "918682220",
+    "Name": "Wilder, Sophia L.",
+    "PurchaseDate": "03-06-19",
+    "CustomerEmail": "swilder@hotmail.com",
+    "CustomerCVV": "480",
+    "Country": "Germany",
+    "InvoiceAmount": "$5,571"
+  },
+  {
+    "CustomerID": "268276169",
+    "Name": "Lott, Tucker E.",
+    "PurchaseDate": "02-03-19",
+    "CustomerEmail": "tlott@yahoo.com",
+    "CustomerCVV": "344",
+    "Country": "France",
+    "InvoiceAmount": "$7,563"
+  },
+  {
+    "CustomerID": "690297924",
+    "Name": "Morse, Alyssa G.",
+    "PurchaseDate": "11-27-19",
+    "CustomerEmail": "amorse@outlook.com",
+    "CustomerCVV": "513",
+    "Country": "Italy",
+    "InvoiceAmount": "$8,768"
+  },
+  {
+    "CustomerID": "591331798",
+    "Name": "Kemp, Darrel H.",
+    "PurchaseDate": "04-17-20",
+    "CustomerEmail": "dkemp@aol.com",
+    "CustomerCVV": "479",
+    "Country": "Spain",
+    "InvoiceAmount": "$7,197"
+  },
+  {
+    "CustomerID": "186475257",
+    "Name": "Madden, Keaton R.",
+    "PurchaseDate": "04-27-20",
+    "CustomerEmail": "kmadden@gmail.com",
+    "CustomerCVV": "361",
+    "Country": "United Kingdom",
+    "InvoiceAmount": "$9,904"
+  },
+  {
+    "CustomerID": "510961618",
+    "Name": "Chaney, Brynne H.",
+    "PurchaseDate": "10-23-19",
+    "CustomerEmail": "bchaney@hotmail.com",
+    "CustomerCVV": "305",
+    "Country": "Netherlands",
+    "InvoiceAmount": "$6,660"
+  },
+  {
+    "CustomerID": "543494850",
+    "Name": "Carroll, Alexis S.",
+    "PurchaseDate": "07-07-19",
+    "CustomerEmail": "acarroll@yahoo.com",
+    "CustomerCVV": "640",
+    "Country": "USA",
+    "InvoiceAmount": "$9,617"
+  },
+  {
+    "CustomerID": "304655673",
+    "Name": "Key, Chase F.",
+    "PurchaseDate": "03-09-19",
+    "CustomerEmail": "ckey@outlook.com",
+    "CustomerCVV": "171",
+    "Country": "Australia",
+    "InvoiceAmount": "$8,533"
+  },
+  {
+    "CustomerID": "462690355",
+    "Name": "Douglas, Sebastian Z.",
+    "PurchaseDate": "03-16-19",
+    "CustomerEmail": "sdouglas@aol.com",
+    "CustomerCVV": "432",
+    "Country": "USA",
+    "InvoiceAmount": "$6,932"
+  },
+  {
+    "CustomerID": "156043267",
+    "Name": "Spence, Gillian K.",
+    "PurchaseDate": "09-03-18",
+    "CustomerEmail": "gspence@gmail.com",
+    "CustomerCVV": "557",
+    "Country": "USA",
+    "InvoiceAmount": "$9,081"
+  },
+  {
+    "CustomerID": "163510126",
+    "Name": "Hill, Ingrid N.",
+    "PurchaseDate": "02-01-20",
+    "CustomerEmail": "ihill@hotmail.com",
+    "CustomerCVV": "395",
+    "Country": "Australia",
+    "InvoiceAmount": "$8,552"
+  },
+  {
+    "CustomerID": "622838605",
+    "Name": "Larson, Matthew C.",
+    "PurchaseDate": "05-09-20",
+    "CustomerEmail": "mlarson@yahoo.com",
+    "CustomerCVV": "771",
+    "Country": "Canada",
+    "InvoiceAmount": "$6,559"
+  },
+  {
+    "CustomerID": "916243272",
+    "Name": "Wagner, Xerxes X.",
+    "PurchaseDate": "07-19-18",
+    "CustomerEmail": "xwagner@outlook.com",
+    "CustomerCVV": "647",
+    "Country": "India",
+    "InvoiceAmount": "$8,061"
+  },
+  {
+    "CustomerID": "218462067",
+    "Name": "Yang, Savannah M.",
+    "PurchaseDate": "08-10-18",
+    "CustomerEmail": "syang@aol.com",
+    "CustomerCVV": "632",
+    "Country": "Brazil",
+    "InvoiceAmount": "$6,029"
+  }
+]

@@ -1,0 +1,31 @@
+Patient ID,Patient Name,Phone,DOB,Service,Service Date,Severity,Bill Paid,Bill Due,Department,Staff,Nurse,Status
+PTXS1650,John Doe,123-456-7890,"March 15, 1985",Surgery,"January 15, 2025",Severe,"$4,500.00",$500.00,Cardiology,Dr. Smith,Nurse Adams,Pending
+PTXS1680,Jane Smith,987-654-3210,"July 22, 1990",Consultation,"February 10, 2025",Mild,$100.00,$50.00,General,Dr. Jones,null,Overdue
+PTXS1710,Jim Beam,555-123-4567,"April 10, 1978",X-Ray,"March 5, 2025",Moderate,$300.00,$0.00,Radiology,Dr. Brown,null,Paid
+PTXS1740,Jhon Doe,123-456-7891,"March 16, 1985",Surgery,"January 16, 2025",Severe,"$4,600.00",$500.00,Cardiolgy,Dr. Smth,Nurse Baker,Pending
+PTXS1770,Jane Smyth,987-654-3211,"July 23, 1990",Consultation,"February 11, 2025",Mild,$105.00,$50.00,Genral,Dr. Jons,null,Overdue
+PTXS1800,Jim Beem,555-123-4568,"April 11, 1978",X-Ray,"March 6, 2025",Moderate,$310.00,$0.00,Radiologyy,Dr. Brownn,null,Paid
+PTXS1830,Alice Johnson,415-555-0101,"September 5, 1982",Physical Therapy,"April 20, 2025",Moderate,$350.00,$50.00,Orthopedics,Dr. Davis,null,Pending
+PTXS1860,Robert Lee,310-987-6543,"December 12, 1995",Lab Test,"May 15, 2025",Mild,$200.00,$0.00,Pathology,Dr. Clark,null,Paid
+PTXS1890,Sarah Kim,212-345-6789,"June 30, 1988",Surgery,"June 10, 2025",Severe,"$5,500.00",$500.00,Cardiology,Dr. Smithh,Nurse Carter,Overdue
+PTXS1920,Michael Brown,617-890-1234,"January 25, 1975",Consultation,"July 25, 2025",Mild,$110.00,$50.00,General,Dr. Jones,null,Pending
+PTXS1950,Emily Davis,720-456-7891,"October 15, 1992",X-Ray,"August 5, 2025",Moderate,$320.00,$0.00,Radiology,Dr. Brown,null,Paid
+PTXS1980,David Wilson,503-234-5678,"February 8, 1980",Physical Therapy,"September 15, 2025",Moderate,$360.00,$50.00,Orthopedcs,Dr. Davis,null,Overdue
+PTXS2010,Linda Carter,858-901-2345,"May 20, 1987",Lab Test,"October 10, 2025",Mild,$210.00,$0.00,Patholgy,Dr. Clarkk,null,Paid
+PTXS2040,Thomas Green,206-789-0123,"November 11, 1970",Surgery,"November 20, 2025",Severe,"$4,700.00",$500.00,Cardiology,Dr. Smith,Nurse Davis,Pending
+PTXS2070,Nancy White,404-567-8901,"August 3, 1993",Consultation,"December 5, 2025",Mild,$115.00,$50.00,General,Dr. Jnes,null,Overdue
+PTXS2100,Paul Adams,713-345-6789,"March 28, 1984",X-Ray,"January 25, 2025",Moderate,$330.00,$0.00,Radiology,Dr. Brwn,null,Paid
+PTXS2130,Clara Evans,916-123-4567,"December 1, 1989",Physical Therapy,"February 15, 2025",Moderate,$370.00,$50.00,Orthopedics,Dr. Davis,null,Pending
+PTXS2160,Oliver Harris,312-890-1234,"June 14, 1976",Lab Test,"March 10, 2025",Mild,$220.00,$0.00,Pathology,Dr. Clark,null,Paid
+PTXS2190,Jhn Doe,123-456-7892,"March 17, 1985",Surgery,"January 17, 2025",Severe,"$4,550.00",$500.00,Cardiolgy,Dr. Smith,Nurse Evans,Overdue
+PTXS2220,Jane Smth,987-654-3212,"July 24, 1990",Consultation,"February 12, 2025",Mild,$100.00,$50.00,Genral,Dr. Jones,null,Pending
+PTXS2250,Jim Bem,555-123-4569,"April 12, 1978",X-Ray,"March 7, 2025",Moderate,$305.00,$0.00,Radiologyy,Dr. Brown,null,Paid
+PTXS2280,Alic Johnson,415-555-0102,"September 6, 1982",Physical Therapy,"April 21, 2025",Moderate,$355.00,$50.00,Orthopedcs,Dr. Davs,null,Overdue
+PTXS2310,Rober Lee,310-987-6544,"December 13, 1995",Lab Test,"May 16, 2025",Mild,$205.00,$0.00,Patholgy,Dr. Clark,null,Paid
+PTXS2340,Sara Kim,212-345-6790,"June 29, 1988",Surgery,"June 11, 2025",Severe,"$5,550.00",$500.00,Cardiology,Dr. Smth,Nurse Foster,Pending
+PTXS2370,Michel Brown,617-890-1235,"January 26, 1975",Consultation,"July 26, 2025",Mild,$105.00,$50.00,General,Dr. Jones,null,Overdue
+PTXS2400,Emly Davis,720-456-7892,"October 16, 1992",X-Ray,"August 6, 2025",Moderate,$315.00,$0.00,Radiology,Dr. Brownn,null,Paid
+PTXS2430,Davd Wilson,503-234-5679,"February 9, 1980",Physical Therapy,"September 16, 2025",Moderate,$365.00,$50.00,Orthopedics,Dr. Davis,null,Pending
+PTXS2460,Lind Carter,858-901-2346,"May 21, 1987",Lab Test,"October 11, 2025",Mild,$215.00,$0.00,Pathology,Dr. Clrk,null,Paid
+PTXS2490,Thom Green,206-789-0124,"November 12, 1970",Surgery,"November 21, 2025",Severe,"$4,750.00",$500.00,Cardiology,Dr. Smith,Nurse Grant,Overdue
+PTXS2520,Nanc White,404-567-8902,"August 4, 1993",Consultation,"December 6, 2025",Mild,$110.00,$50.00,General,Dr. Jnes,null,Pending

@@ -1,0 +1,600 @@
+[
+    {
+        "id": "1",
+        "sender": "Melissa Ayre",
+        "subject": "Re: New security codes (2)",
+        "timestamp": "2023-10-15T20:31:00Z",
+        "starred": true,
+        "attachments": [],
+        "read": false,
+        "priority": "high",
+        "bodyPreview": "This email is a follow-up regarding the new security codes. Please find the updated codes attached for your reference. Ensure you update your system with these codes by tomorrow to maintain security compliance. Let me know if you encounter any issues during the process."
+    },
+    {
+        "id": "2",
+        "sender": "Adison Le",
+        "subject": "Welcome to the new portal, here is what you need to do",
+        "timestamp": "2023-10-15T18:22:00Z",
+        "starred": false,
+        "attachments": [
+            { "filename": "welcome_guide.pdf", "size": "1.5MB" }
+        ],
+        "read": false,
+        "priority": null,
+        "bodyPreview": "Welcome to our new portal! To get started, please review the attached guide which outlines the steps to set up your account. You’ll need to verify your email and set a new password. Contact support if you need assistance with the setup process."
+    },
+    {
+        "id": "3",
+        "sender": "Oliver Kopyuv",
+        "subject": "Transformer Combustion Defuser is ready",
+        "timestamp": "2023-10-15T17:12:00Z",
+        "starred": false,
+        "attachments": [
+            { "filename": "defuser_manual.pdf", "size": "2MB" },
+            { "filename": "defuser_image.png", "size": "500KB" }
+        ],
+        "read": true,
+        "priority": "high",
+        "bodyPreview": "The Transformer Combustion Defuser is now ready for deployment. Please review the manual and image attached for setup instructions. Ensure all safety protocols are followed during installation. Let me know if you need additional resources or support."
+    },
+    {
+        "id": "4",
+        "sender": "Dr. John Cook PhD",
+        "subject": "PWS facts for patient #3245",
+        "timestamp": "2023-10-15T16:31:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": true,
+        "priority": "low",
+        "bodyPreview": "Here are the latest PWS facts for patient #3245. The data includes recent test results and treatment recommendations. Please review and discuss with the patient at their next appointment. Contact me for any clarifications needed."
+    },
+    {
+        "id": "5",
+        "sender": "Sarah McBrook",
+        "subject": "Are you coming to the after party?",
+        "timestamp": "2023-10-15T15:43:00Z",
+        "starred": false,
+        "attachments": [
+            { "filename": "party_invite.docx", "size": "300KB" }
+        ],
+        "read": true,
+        "priority": null,
+        "bodyPreview": "Hey! Are you coming to the after party this weekend? It’s going to be a great time with music, food, and friends. The invite is attached with all the details including location and time. RSVP by Friday!"
+    },
+    {
+        "id": "6",
+        "sender": "Lisa Hatchensen",
+        "subject": "The results for bloodwork",
+        "timestamp": "2023-10-15T14:00:00Z",
+        "starred": false,
+        "attachments": [
+            { "filename": "bloodwork_results.pdf", "size": "1MB" },
+            { "filename": "chart.jpg", "size": "400KB" }
+        ],
+        "read": true,
+        "priority": "low",
+        "bodyPreview": "Your bloodwork results are ready. The attached PDF contains the full report, and the chart provides a visual summary of your levels. Please schedule a follow-up to discuss these results with your doctor. Let me know if you have questions."
+    },
+    {
+        "id": "7",
+        "sender": "Anthony Bezyeth",
+        "subject": "Questions regarding acceskey",
+        "timestamp": "2023-10-15T13:35:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": true,
+        "priority": "high",
+        "bodyPreview": "I have some questions regarding the acceskey you provided. Can you confirm its validity and explain how to use it with the new system? I’m experiencing issues and need clarification. Please respond at your earliest convenience."
+    },
+    {
+        "id": "8",
+        "sender": "Wrapbootstrap",
+        "subject": "Your registration is complete",
+        "timestamp": "2023-10-15T12:59:00Z",
+        "starred": false,
+        "attachments": [
+            { "filename": "registration_confirmation.pdf", "size": "800KB" }
+        ],
+        "read": true,
+        "priority": null,
+        "bodyPreview": "Congratulations! Your registration with Wrapbootstrap is now complete. The attached confirmation includes your account details and next steps. You can now access premium resources. Let us know if you need further assistance."
+    },
+    {
+        "id": "9",
+        "sender": "Oliver Kopyuv",
+        "subject": "Transformer Combustion Defuser is ready",
+        "timestamp": "2023-10-15T12:12:00Z",
+        "starred": false,
+        "attachments": [
+            { "filename": "defuser_specs.docx", "size": "600KB" },
+            { "filename": "defuser_photo.png", "size": "300KB" }
+        ],
+        "read": true,
+        "priority": "high",
+        "bodyPreview": "The Transformer Combustion Defuser is prepared for testing. Attached are the specs document and a photo for your review. Please schedule the test soon and inform me of the results. Safety gear is required during the process."
+    },
+    {
+        "id": "10",
+        "sender": "Dr. John Cook PhD",
+        "subject": "PWS facts for patient #3245",
+        "timestamp": "2023-10-14T16:31:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": true,
+        "priority": "low",
+        "bodyPreview": "Updated PWS facts for patient #3245 are available. This includes recent health metrics and suggested care plans. Review these details and prepare for the patient’s upcoming visit. Reach out if you need more information."
+    },
+    {
+        "id": "11",
+        "sender": "Sarah McBrook",
+        "subject": "Are you coming to the after party?",
+        "timestamp": "2023-10-14T15:43:00Z",
+        "starred": false,
+        "attachments": [
+            { "filename": "party_details.pdf", "size": "250KB" }
+        ],
+        "read": false,
+        "priority": null,
+        "bodyPreview": "Just checking if you’re joining us for the after party! It’s this Saturday with great food and music. The attached PDF has the address and schedule. Please let me know your RSVP by tomorrow evening."
+    },
+    {
+        "id": "12",
+        "sender": "Lisa Hatchensen",
+        "subject": "The results for bloodwork",
+        "timestamp": "2023-10-14T14:00:00Z",
+        "starred": true,
+        "attachments": [
+            { "filename": "results_summary.pdf", "size": "900KB" }
+        ],
+        "read": true,
+        "priority": "low",
+        "bodyPreview": "Here are your latest bloodwork results. The summary PDF attached shows all key findings. Schedule a consultation to go over these with your healthcare provider. Contact the office for an appointment."
+    },
+    {
+        "id": "13",
+        "sender": "Anthony Bezyeth",
+        "subject": "Questions regarding acceskey",
+        "timestamp": "2023-10-12T13:35:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": true,
+        "priority": "high",
+        "bodyPreview": "I need help with the acceskey you sent. It seems to be invalid or misconfigured. Could you provide a new one or guide me on its correct usage? This is urgent for my current project deadline."
+    },
+    {
+        "id": "14",
+        "sender": "Bloodworks Inc.",
+        "subject": "Your results are here",
+        "timestamp": "2023-10-03T12:00:00Z",
+        "starred": false,
+        "attachments": [
+            { "filename": "results_report.pdf", "size": "1.2MB" },
+            { "filename": "test_image.jpg", "size": "450KB" }
+        ],
+        "read": true,
+        "priority": null,
+        "bodyPreview": "Your latest test results from Bloodworks Inc. are ready. The report and an image of your test are attached for your review. Please consult your doctor to interpret these findings. Reach out if you have concerns."
+    },
+    {
+        "id": "15",
+        "sender": "Oliver Kopyuv",
+        "subject": "Transformer Combustion Defuser is ready",
+        "timestamp": "2023-09-18T12:12:00Z",
+        "starred": false,
+        "attachments": [
+            { "filename": "defuser_guide.pdf", "size": "1.8MB" }
+        ],
+        "read": true,
+        "priority": "low",
+        "bodyPreview": "The Transformer Combustion Defuser is fully assembled and ready. The guide attached provides setup and maintenance instructions. Please test it in a controlled environment and report back with feedback."
+    },
+    {
+        "id": "16",
+        "sender": "Dr. John Cook PhD",
+        "subject": "PWS facts for patient #3245",
+        "timestamp": "2023-09-18T16:31:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": true,
+        "priority": "high",
+        "bodyPreview": "New PWS facts for patient #3245 are compiled. This includes updated medical history and potential treatment options. Prepare for the next consultation and bring any questions you might have."
+    },
+    {
+        "id": "17",
+        "sender": "Emily Stone",
+        "subject": "Meeting reminder: Project review tomorrow",
+        "timestamp": "2023-10-15T10:15:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": false,
+        "priority": "high",
+        "bodyPreview": "This is a reminder for our project review meeting scheduled tomorrow at 2 PM. Please come prepared with your updates and any questions. Let me know if you can’t make it."
+    },
+    {
+        "id": "18",
+        "sender": "TechSupport Team",
+        "subject": "System maintenance scheduled for tonight",
+        "timestamp": "2023-10-15T09:00:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": false,
+        "priority": "high",
+        "bodyPreview": "We have scheduled system maintenance for tonight from 10 PM to 2 AM. Expect downtime during this period. Please save your work and contact us if you have concerns."
+    },
+    {
+        "id": "19",
+        "sender": "Marketing Dept",
+        "subject": "New campaign assets ready",
+        "timestamp": "2023-10-15T08:30:00Z",
+        "starred": false,
+        "attachments": [
+            { "filename": "campaign_assets.zip", "size": "3MB" }
+        ],
+        "read": true,
+        "priority": null,
+        "bodyPreview": "The new campaign assets are ready for review. Download the attached zip file to access the images and copy. Please provide feedback by end of day tomorrow."
+    },
+    {
+        "id": "20",
+        "sender": "Dr. Anna Lee",
+        "subject": "Patient #4567 follow-up notes",
+        "timestamp": "2023-10-14T12:45:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": true,
+        "priority": "low",
+        "bodyPreview": "Here are the follow-up notes for patient #4567. The patient is responding well to treatment, but we need to monitor their progress closely. Schedule their next visit for next week."
+    },
+    {
+        "id": "21",
+        "sender": "Oliver Kopyuv",
+        "subject": "Transformer Combustion Defuser update",
+        "timestamp": "2023-10-14T11:20:00Z",
+        "starred": true,
+        "attachments": [
+            { "filename": "update_log.txt", "size": "100KB" }
+        ],
+        "read": false,
+        "priority": "high",
+        "bodyPreview": "I’ve updated the Transformer Combustion Defuser with the latest firmware. The attached log details the changes. Please test the new version and report any issues immediately."
+    },
+    {
+        "id": "22",
+        "sender": "HR Department",
+        "subject": "Reminder: Submit your timesheet",
+        "timestamp": "2023-10-14T10:00:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": false,
+        "priority": "high",
+        "bodyPreview": "Please submit your timesheet for this week by the end of today. You can access the submission portal on our intranet. Contact HR if you encounter any issues."
+    },
+    {
+        "id": "23",
+        "sender": "James Carter",
+        "subject": "Lunch meeting today at 1 PM",
+        "timestamp": "2023-10-14T09:15:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": true,
+        "priority": null,
+        "bodyPreview": "Let’s meet for lunch today at 1 PM to discuss the project timeline. I’ve reserved a table at the usual spot. Let me know if you can make it!"
+    },
+    {
+        "id": "24",
+        "sender": "Billing Dept",
+        "subject": "Invoice #7890 due soon",
+        "timestamp": "2023-10-13T14:30:00Z",
+        "starred": false,
+        "attachments": [
+            { "filename": "invoice_7890.pdf", "size": "700KB" }
+        ],
+        "read": false,
+        "priority": "high",
+        "bodyPreview": "Your invoice #7890 is due on October 20th. The attached PDF contains the details. Please ensure payment is made on time to avoid late fees. Contact us with any questions."
+    },
+    {
+        "id": "25",
+        "sender": "Lisa Hatchensen",
+        "subject": "Updated bloodwork results",
+        "timestamp": "2023-10-13T13:00:00Z",
+        "starred": false,
+        "attachments": [
+            { "filename": "updated_results.pdf", "size": "1.1MB" }
+        ],
+        "read": true,
+        "priority": "low",
+        "bodyPreview": "I’ve updated your bloodwork results with the latest data. The attached PDF includes the revised report. Please review and schedule a consultation to discuss any changes."
+    },
+    {
+        "id": "26",
+        "sender": "Sarah McBrook",
+        "subject": "After party playlist suggestions",
+        "timestamp": "2023-10-13T11:45:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": true,
+        "priority": null,
+        "bodyPreview": "Hey! I’m putting together the playlist for the after party. Do you have any song suggestions? Let me know your favorites by tonight so I can add them to the list!"
+    },
+    {
+        "id": "27",
+        "sender": "TechSupport Team",
+        "subject": "Password reset request received",
+        "timestamp": "2023-10-13T10:30:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": true,
+        "priority": "high",
+        "bodyPreview": "We’ve received a password reset request for your account. If this was you, follow the link in the email to reset your password. If not, please contact us immediately."
+    },
+    {
+        "id": "28",
+        "sender": "Oliver Kopyuv",
+        "subject": "Transformer Combustion Defuser testing schedule",
+        "timestamp": "2023-10-12T15:00:00Z",
+        "starred": false,
+        "attachments": [
+            { "filename": "test_schedule.docx", "size": "400KB" }
+        ],
+        "read": false,
+        "priority": "high",
+        "bodyPreview": "The testing schedule for the Transformer Combustion Defuser is ready. The attached document outlines the dates and protocols. Please confirm your availability for the sessions."
+    },
+    {
+        "id": "29",
+        "sender": "Dr. John Cook PhD",
+        "subject": "PWS facts for patient #7890",
+        "timestamp": "2023-10-12T14:00:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": true,
+        "priority": "low",
+        "bodyPreview": "Here are the PWS facts for patient #7890. The report includes recent observations and care suggestions. Review these before the patient’s next visit."
+    },
+    {
+        "id": "30",
+        "sender": "Marketing Dept",
+        "subject": "Feedback needed on campaign draft",
+        "timestamp": "2023-10-12T12:30:00Z",
+        "starred": false,
+        "attachments": [
+            { "filename": "campaign_draft.pdf", "size": "2.5MB" }
+        ],
+        "read": false,
+        "priority": null,
+        "bodyPreview": "We’ve prepared a draft for the upcoming campaign. The attached PDF includes the visuals and text. Please provide your feedback by tomorrow afternoon."
+    },
+    {
+        "id": "31",
+        "sender": "Emily Stone",
+        "subject": "Project milestone update",
+        "timestamp": "2023-10-11T16:00:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": true,
+        "priority": "high",
+        "bodyPreview": "We’ve reached a key milestone in the project. Let’s schedule a meeting to review our progress and plan the next steps. I’ll send a calendar invite shortly."
+    },
+    {
+        "id": "32",
+        "sender": "Bloodworks Inc.",
+        "subject": "Reminder: Schedule your next test",
+        "timestamp": "2023-10-11T14:45:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": false,
+        "priority": null,
+        "bodyPreview": "This is a reminder to schedule your next blood test with Bloodworks Inc. You can book an appointment online or call our office. Don’t delay, as slots fill up quickly!"
+    },
+    {
+        "id": "33",
+        "sender": "Anthony Bezyeth",
+        "subject": "Follow-up on acceskey issue",
+        "timestamp": "2023-10-11T13:15:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": true,
+        "priority": "high",
+        "bodyPreview": "Following up on my previous email about the acceskey issue. I’m still unable to proceed with the setup. Can we arrange a call to troubleshoot this together?"
+    },
+    {
+        "id": "34",
+        "sender": "Sarah McBrook",
+        "subject": "After party food preferences",
+        "timestamp": "2023-10-11T11:00:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": true,
+        "priority": null,
+        "bodyPreview": "I’m finalizing the food menu for the after party. Do you have any dietary restrictions or preferences? Let me know so I can ensure there’s something for everyone!"
+    },
+    {
+        "id": "35",
+        "sender": "Lisa Hatchensen",
+        "subject": "Bloodwork results clarification",
+        "timestamp": "2023-10-10T15:30:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": true,
+        "priority": "low",
+        "bodyPreview": "I noticed a discrepancy in your bloodwork results. I’ve scheduled a retest to confirm the findings. Please come in next week for the follow-up test."
+    },
+    {
+        "id": "36",
+        "sender": "TechSupport Team",
+        "subject": "System update completed",
+        "timestamp": "2023-10-10T14:00:00Z",
+        "starred": false,
+        "attachments": [
+            { "filename": "update_notes.txt", "size": "150KB" }
+        ],
+        "read": true,
+        "priority": null,
+        "bodyPreview": "The system update has been completed successfully. The attached notes detail the changes and improvements. Let us know if you experience any issues."
+    },
+    {
+        "id": "37",
+        "sender": "Oliver Kopyuv",
+        "subject": "Transformer Combustion Defuser safety concerns",
+        "timestamp": "2023-10-10T12:45:00Z",
+        "starred": true,
+        "attachments": [],
+        "read": false,
+        "priority": "high",
+        "bodyPreview": "I’ve identified a potential safety issue with the Transformer Combustion Defuser. We need to pause testing until this is resolved. Let’s discuss this urgently."
+    },
+    {
+        "id": "38",
+        "sender": "Dr. Anna Lee",
+        "subject": "Patient #4567 lab results",
+        "timestamp": "2023-10-09T16:00:00Z",
+        "starred": false,
+        "attachments": [
+            { "filename": "lab_results.pdf", "size": "950KB" }
+        ],
+        "read": true,
+        "priority": "low",
+        "bodyPreview": "The lab results for patient #4567 are attached. They show improvement in key areas, but we should adjust their medication. Let’s discuss at the next meeting."
+    },
+    {
+        "id": "39",
+        "sender": "Marketing Dept",
+        "subject": "Campaign launch date confirmed",
+        "timestamp": "2023-10-09T14:30:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": true,
+        "priority": null,
+        "bodyPreview": "The campaign launch date has been confirmed for October 25th. Ensure all materials are ready by the 20th. We’ll have a final review meeting next week."
+    },
+    {
+        "id": "40",
+        "sender": "James Carter",
+        "subject": "Project budget approval needed",
+        "timestamp": "2023-10-09T13:00:00Z",
+        "starred": false,
+        "attachments": [
+            { "filename": "budget_proposal.pdf", "size": "1MB" }
+        ],
+        "read": false,
+        "priority": "high",
+        "bodyPreview": "I’ve prepared the project budget proposal, attached for your review. We need approval by tomorrow to proceed with the next phase. Please take a look and let me know."
+    },
+    {
+        "id": "41",
+        "sender": "HR Department",
+        "subject": "Employee survey results",
+        "timestamp": "2023-10-08T15:00:00Z",
+        "starred": false,
+        "attachments": [
+            { "filename": "survey_results.pdf", "size": "1.3MB" }
+        ],
+        "read": true,
+        "priority": null,
+        "bodyPreview": "The results of the recent employee survey are attached. We’ve identified key areas for improvement. Join us for a discussion on how to address these findings."
+    },
+    {
+        "id": "42",
+        "sender": "Emily Stone",
+        "subject": "Team building event next month",
+        "timestamp": "2023-10-08T13:30:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": true,
+        "priority": null,
+        "bodyPreview": "We’re planning a team building event for next month. It’ll be a fun day with activities and networking. Save the date for November 5th and let me know if you can attend!"
+    },
+    {
+        "id": "43",
+        "sender": "Billing Dept",
+        "subject": "Payment confirmation for invoice #4567",
+        "timestamp": "2023-10-07T16:00:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": true,
+        "priority": null,
+        "bodyPreview": "We’ve received your payment for invoice #4567. Thank you for your prompt response. You’ll receive a receipt shortly. Contact us if you need further assistance."
+    },
+    {
+        "id": "44",
+        "sender": "Oliver Kopyuv",
+        "subject": "Transformer Combustion Defuser maintenance guide",
+        "timestamp": "2023-10-07T14:45:00Z",
+        "starred": false,
+        "attachments": [
+            { "filename": "maintenance_guide.pdf", "size": "1.6MB" }
+        ],
+        "read": true,
+        "priority": "low",
+        "bodyPreview": "Here’s the maintenance guide for the Transformer Combustion Defuser. Follow these steps to ensure optimal performance. Let me know if you need training on this."
+    },
+    {
+        "id": "45",
+        "sender": "Dr. John Cook PhD",
+        "subject": "PWS facts for patient #1234",
+        "timestamp": "2023-10-06T15:30:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": true,
+        "priority": "low",
+        "bodyPreview": "PWS facts for patient #1234 are ready. The report includes their latest health data and recommendations. Review this before their appointment next week."
+    },
+    {
+        "id": "46",
+        "sender": "Sarah McBrook",
+        "subject": "After party RSVP reminder",
+        "timestamp": "2023-10-06T13:00:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": false,
+        "priority": null,
+        "bodyPreview": "Just a reminder to RSVP for the after party by today! We need to finalize the headcount for catering. Let me know if you’re coming or not."
+    },
+    {
+        "id": "47",
+        "sender": "Lisa Hatchensen",
+        "subject": "Bloodwork results follow-up",
+        "timestamp": "2023-10-05T16:00:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": true,
+        "priority": "low",
+        "bodyPreview": "Following up on your bloodwork results. Have you scheduled your consultation yet? Please do so soon to discuss the findings with your doctor."
+    },
+    {
+        "id": "48",
+        "sender": "TechSupport Team",
+        "subject": "Security update required",
+        "timestamp": "2023-10-05T14:30:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": false,
+        "priority": "high",
+        "bodyPreview": "A security update is required for your account. Please update your software to the latest version to ensure protection. Contact us if you need assistance."
+    },
+    {
+        "id": "49",
+        "sender": "Marketing Dept",
+        "subject": "Social media campaign results",
+        "timestamp": "2023-10-04T12:00:00Z",
+        "starred": false,
+        "attachments": [
+            { "filename": "campaign_results.pdf", "size": "2MB" }
+        ],
+        "read": true,
+        "priority": null,
+        "bodyPreview": "The results for our recent social media campaign are attached. We saw a 15% increase in engagement. Let’s discuss how to build on this success."
+    },
+    {
+        "id": "50",
+        "sender": "James Carter",
+        "subject": "Project timeline extension request",
+        "timestamp": "2023-10-04T10:30:00Z",
+        "starred": false,
+        "attachments": [],
+        "read": false,
+        "priority": "high",
+        "bodyPreview": "We need to request an extension for the project timeline due to unforeseen delays. Can we discuss this in our next meeting? I’ll provide more details then."
+    }
+]

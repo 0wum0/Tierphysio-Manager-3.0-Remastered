@@ -1,0 +1,517 @@
+{
+    "Communication & Messaging": {
+      "email": [
+        "envelope",
+        "envelope-letter",
+        "envelope-open",
+        "paper-plane"
+      ],
+      "mail": [
+        "envelope",
+        "envelope-letter",
+        "envelope-open",
+        "paper-plane"
+      ],
+      "message": [
+        "envelope",
+        "speech",
+        "bubble",
+        "bubbles",
+        "paper-plane"
+      ],
+      "chat": [
+        "bubble",
+        "bubbles",
+        "speech"
+      ],
+      "phone": [
+        "call-in",
+        "call-out",
+        "call-end"
+      ],
+      "telephone": [
+        "phone",
+        "call-in",
+        "call-out",
+        "call-end"
+      ],
+      "microphone": [
+        "microphone",
+        "earphones",
+        "earphones-alt"
+      ]
+    },
+    "User Management & Accounts": {
+      "profile": [
+        "user",
+        "users",
+        "person",
+        "user-follow",
+        "user-following",
+        "user-unfollow"
+      ],
+      "account": [
+        "user",
+        "users",
+        "login",
+        "logout"
+      ],
+      "person": [
+        "user",
+        "users",
+        "user-follow",
+        "user-following"
+      ],
+      "group": [
+        "users",
+        "user-follow",
+        "user-following"
+      ],
+      "authentication": [
+        "login",
+        "logout",
+        "lock",
+        "key"
+      ],
+      "security": [
+        "login",
+        "logout",
+        "lock",
+        "key"
+      ]
+    },
+    "Actions & Controls": {
+      "delete": [
+        "trash",
+        "close",
+        "ban"
+      ],
+      "remove": [
+        "trash",
+        "close",
+        "ban",
+        "minus"
+      ],
+      "add": [
+        "plus",
+        "big-plus"
+      ],
+      "create": [
+        "plus",
+        "big-plus",
+        "pencil"
+      ],
+      "edit": [
+        "pencil",
+        "wrench"
+      ],
+      "modify": [
+        "pencil",
+        "wrench",
+        "settings"
+      ],
+      "undo": [
+        "action-undo",
+        "refresh",
+        "reload"
+      ],
+      "redo": [
+        "action-redo",
+        "refresh",
+        "reload"
+      ],
+      "refresh": [
+        "refresh",
+        "reload",
+        "loop"
+      ]
+    },
+    "Navigation & Direction": {
+      "menu": [
+        "menu",
+        "list",
+        "grid"
+      ],
+      "navigation": [
+        "menu",
+        "compass",
+        "direction",
+        "directions"
+      ],
+      "direction": [
+        "compass",
+        "direction",
+        "directions",
+        "map"
+      ],
+      "location": [
+        "map",
+        "pin",
+        "compass"
+      ],
+      "arrows": [
+        "arrow-up",
+        "arrow-down",
+        "arrow-left",
+        "arrow-right"
+      ],
+      "chevrons": [
+        "chevron-up",
+        "chevron-down",
+        "chevron-left",
+        "chevron-right"
+      ],
+      "controls": [
+        "control-start",
+        "control-end",
+        "control-forward",
+        "control-rewind"
+      ]
+    },
+    "Media & Entertainment": {
+      "play": [
+        "control-play",
+        "control-forward"
+      ],
+      "pause": [
+        "control-pause"
+      ],
+      "stop": [
+        "control-end"
+      ],
+      "next": [
+        "control-forward",
+        "arrow-right"
+      ],
+      "previous": [
+        "control-rewind",
+        "arrow-left"
+      ],
+      "music": [
+        "music-tone",
+        "music-tone-alt",
+        "playlist"
+      ],
+      "audio": [
+        "music-tone",
+        "music-tone-alt",
+        "microphone",
+        "earphones",
+        "earphones-alt"
+      ],
+      "video": [
+        "film",
+        "camcorder",
+        "control-play"
+      ],
+      "photo": [
+        "picture",
+        "camera",
+        "frame"
+      ],
+      "image": [
+        "picture",
+        "camera",
+        "frame"
+      ],
+      "gallery": [
+        "picture",
+        "frame",
+        "grid"
+      ],
+      "camera": [
+        "camera",
+        "camcorder"
+      ]
+    },
+    "Devices & Screens": {
+      "desktop": [
+        "screen-desktop"
+      ],
+      "mobile": [
+        "screen-smartphone"
+      ],
+      "tablet": [
+        "screen-tablet"
+      ],
+      "devices": [
+        "screen-desktop",
+        "screen-smartphone",
+        "screen-tablet"
+      ],
+      "controller": [
+        "game-controller",
+        "cursor",
+        "cursor-move"
+      ],
+      "computer": [
+        "screen-desktop"
+      ]
+    },
+    "Files & Documents": {
+      "document": [
+        "doc",
+        "docs",
+        "paper-plane",
+        "notebook",
+        "note"
+      ],
+      "file": [
+        "doc",
+        "docs",
+        "paper-clip"
+      ],
+      "folder": [
+        "folder",
+        "folder-alt",
+        "drawer"
+      ],
+      "attachment": [
+        "paper-clip",
+        "link"
+      ],
+      "notes": [
+        "notebook",
+        "note",
+        "pencil"
+      ]
+    },
+    "Business & Analytics": {
+      "business": [
+        "briefcase",
+        "chart",
+        "graph",
+        "calculator"
+      ],
+      "work": [
+        "briefcase",
+        "calendar",
+        "clock"
+      ],
+      "chart": [
+        "bar-chart",
+        "graph",
+        "pie-chart"
+      ],
+      "analytics": [
+        "graph",
+        "bar-chart",
+        "pie-chart",
+        "speedometer"
+      ],
+      "finance": [
+        "calculator",
+        "credit-card",
+        "wallet"
+      ],
+      "statistics": [
+        "bar-chart",
+        "graph",
+        "pie-chart",
+        "calculator"
+      ]
+    },
+    "System & Settings": {
+      "settings": [
+        "wrench",
+        "settings",
+        "equalizer",
+        "gear"
+      ],
+      "config": [
+        "settings",
+        "wrench",
+        "equalizer"
+      ],
+      "preferences": [
+        "settings",
+        "wrench",
+        "equalizer"
+      ],
+      "tools": [
+        "wrench",
+        "magic-wand",
+        "pencil"
+      ],
+      "support": [
+        "support",
+        "question",
+        "info"
+      ],
+      "power": [
+        "power",
+        "energy"
+      ]
+    },
+    "Search & View": {
+      "search": [
+        "magnifier",
+        "magnifier-add",
+        "magnifier-remove",
+        "eye"
+      ],
+      "find": [
+        "magnifier",
+        "search",
+        "eye"
+      ],
+      "zoom": [
+        "magnifier-add",
+        "magnifier-remove",
+        "size-fullscreen"
+      ],
+      "look": [
+        "eye",
+        "magnifier",
+        "search"
+      ],
+      "view": [
+        "eye",
+        "eyeglasses",
+        "magnifier"
+      ]
+    },
+    "Authentication": {
+      "security": [
+        "shield",
+        "lock",
+        "key",
+        "umbrella"
+      ],
+      "protection": [
+        "shield",
+        "lock",
+        "umbrella"
+      ],
+      "lock": [
+        "lock",
+        "lock-open",
+        "key",
+        "lock-nav"
+      ],
+      "password": [
+        "lock",
+        "key",
+        "shield"
+      ]
+    },
+    "Shopping & E-commerce": {
+      "cart": [
+        "basket",
+        "basket-loaded",
+        "bag",
+        "handbag"
+      ],
+      "shop": [
+        "basket",
+        "cart",
+        "bag",
+        "credit-card"
+      ],
+      "purchase": [
+        "credit-card",
+        "wallet",
+        "basket-loaded"
+      ],
+      "payment": [
+        "credit-card",
+        "wallet",
+        "money"
+      ]
+    },
+    "Social & Sharing": {
+      "share": [
+        "share",
+        "share-alt",
+        "social-facebook",
+        "social-twitter"
+      ],
+      "social": [
+        "social-facebook",
+        "social-twitter",
+        "social-dribbble",
+        "social-dropbox",
+        "social-youtube",
+        "social-tumblr"
+      ],
+      "like": [
+        "like",
+        "heart",
+        "emoticon-smile"
+      ],
+      "dislike": [
+        "dislike",
+        "ban"
+      ]
+    },
+    "Misc UI Elements": {
+      "notification": [
+        "bell",
+        "info",
+        "badge"
+      ],
+      "alert": [
+        "bell",
+        "info",
+        "warning",
+        "ban"
+      ],
+      "time": [
+        "clock",
+        "hourglass",
+        "calendar",
+        "calendar-fine"
+      ],
+      "schedule": [
+        "calendar",
+        "clock",
+        "calendar-fine"
+      ],
+      "apps": [
+        "grid",
+        "my-apps"
+      ],
+      "cloud": [
+        "cloud-download",
+        "cloud-upload"
+      ],
+      "download": [
+        "cloud-download"
+      ],
+      "upload": [
+        "cloud-upload"
+      ],
+      "favorite": [
+        "heart",
+        "like",
+        "star"
+      ]
+    },
+    "Additional Categories": {
+      "education": [
+        "graduation",
+        "book-open",
+        "chemistry"
+      ],
+      "gaming": [
+        "game-controller",
+        "ghost",
+        "puzzle"
+      ],
+      "weather": [
+        "cloud-download",
+        "cloud-upload",
+        "umbrella"
+      ],
+      "achievement": [
+        "trophy",
+        "badge",
+        "star"
+      ],
+      "transportation": [
+        "plane",
+        "rocket"
+      ]
+    }
+  }
+  

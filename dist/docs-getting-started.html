@@ -1,0 +1,2762 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light" class="set-nav-dark">
+
+<head>
+    <meta charset="utf-8">
+    <title> Getting Started | SmartAdmin - Enterprise Admin Dashboard by Webora</title>
+    <meta name="description" content="Page Description">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, maximum-scale=5">
+
+    <!-- Standard favicon for browsers -->
+    <link rel="icon" href="img/favicon-32x32.png" type="image/png" sizes="32x32">
+    <link rel="icon" href="img/favicon-16x16.png" type="image/png" sizes="16x16">
+
+    <!-- Apple Touch Icon (iOS) -->
+    <link rel="apple-touch-icon" href="img/apple-touch-icon.png" sizes="180x180">
+
+    <!-- Android/Chrome (Progressive Web App) -->
+    <link rel="icon" href="img/favicon-192x192.png" type="image/png" sizes="192x192">
+
+    <!-- Call App Mode on ios devices -->
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Remove Tap Highlight on Windows Phone IE -->
+    <meta name="msapplication-tap-highlight" content="no">
+
+    <link rel="stylesheet" href="plugins/highlightjs/night-owl.css">
+
+    <!-- Vendor css -->
+    <link rel="stylesheet" media="screen, print" href="plugins/waves/waves.min.css">
+
+    <!-- Base css -->
+    <link rel="stylesheet" media="screen, print" href="css/smartapp.min.css">
+
+    <!-- Icons css-->
+    <link rel="stylesheet" media="screen, print" href="webfonts/smartadmin/sa-icons.css">
+    <link rel="stylesheet" media="screen, print" href="webfonts/fontawesome/fontawesome.css">
+
+    <!-- Save/Load functionality JavaScript -->
+    <script src="scripts/core/saveloadscript.js"></script>
+</head>
+
+<body>
+
+    <div class="app-wrap">
+
+        <header class="app-header">
+            <!-- Collapse icon -->
+            <div class="d-flex flex-grow-1 w-100 me-auto align-items-center">
+
+                <!-- App logo -->
+                <a href="dashboard-control-center.html" class="app-logo flex-shrink-0" data-prefix="v5.2.0" data-action="playsound" data-soundpath="media/sound/" data-soundfile="sawhisp.mp3">
+                    <!-- <img src="img/logo.svg" alt="logo"> -->
+
+                    <svg class="custom-logo">
+                        <use href="img/app-logo.svg#custom-logo"></use>
+                    </svg>
+
+                    <!-- Logo Backdrop Animation -->
+                    <div class="logo-backdrop">
+                        <div class="blobs">
+                            <svg viewbox="0 0 1200 1200">
+                                <g class="blob blob-1">
+                                    <path d="M 100 600 q 0 -700, 500 -500 t 500 500 t -500 500 T 100 600 z" />
+                                </g>
+                                <g class="blob blob-2">
+                                    <path d="M 100 600 q -50 -400, 500 -500 t 450 550 t -500 500 T 100 600 z" />
+                                </g>
+                                <g class="blob blob-3">
+                                    <path d="M 100 600 q 0 -400, 500 -500 t 400 500 t -500 500 T 100 600 z" />
+                                </g>
+                                <g class="blob blob-4">
+                                    <path d="M 150 600 q 0 -600, 500 -500 t 500 550 t -500 500 T 150 600 z" />
+                                </g>
+                                <g class="blob blob-1 alt">
+                                    <path d="M 150 600 q 0 -600, 500 -500 t 500 550 t -500 500 T 150 600 z" />
+                                </g>
+                                <g class="blob blob-2 alt">
+                                    <path d="M 100 600 q 100 -600, 500 -500 t 400 500 t -500 500 T 100 600 z" />
+                                </g>
+                                <g class="blob blob-3 alt">
+                                    <path d="M 100 600 q 0 -400, 500 -500 t 400 500 t -500 500 T 100 600 z" />
+                                </g>
+                                <g class="blob blob-4 alt">
+                                    <path d="M 150 600 q 0 -600, 500 -500 t 500 550 t -500 500 T 150 600 z" />
+                                </g>
+                            </svg>
+                        </div>
+                    </div>
+                </a>
+
+                <button class="mobile-menu-icon me-2 d-flex d-sm-flex d-md-flex d-lg-none flex-shrink-0" data-action="toggle-swap" data-toggleclass="app-mobile-menu-open" aria-label="Toggle Mobile Menu">
+                    <svg class="sa-icon">
+                        <use href="icons/sprite.svg#menu"></use>
+                    </svg>
+                </button>
+
+                <!-- Collapse icon -->
+                <button type="button" class="collapse-icon me-3 d-none d-lg-inline-flex d-xl-inline-flex d-xxl-inline-flex" data-action="toggle" data-class="set-nav-minified" aria-label="Toggle Navigation Size">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 8">
+                        <polygon fill="#878787" points="4.5,1 3.8,0.2 0,4 3.8,7.8 4.5,7 1.5,4" />
+                    </svg>
+                </button>
+
+                <form class="app-search" role="search" action="search.html" autocomplete="off">
+                    <input type="text" class="form-control" placeholder="Search for anything">
+                </form>
+            </div>
+
+            <!-- Settings -->
+            <button type="button" class="btn btn-system hidden-mobile" data-action="toggle-swap" data-toggleclass="open" data-target="aside.js-drawer-settings" aria-label="Open Settings">
+                <svg class="sa-icon sa-icon-2x">
+                    <use href="icons/sprite.svg#settings"></use>
+                </svg>
+            </button>
+
+            <!-- Theme modes -->
+            <button type="button" class="btn btn-system" data-action="toggle-theme" aria-label="Toggle Dark Mode" aria-pressed="false">
+                <svg class="sa-icon sa-icon-2x sa-mode-light">
+                    <use href="icons/sprite.svg#sun"></use>
+                </svg>
+                <svg class="sa-icon sa-icon-2x sa-mode-dark">
+                    <use href="icons/sprite.svg#moon"></use>
+                </svg>
+            </button>
+
+            <!-- Sidebar -->
+            <button type="button" class="btn btn-system d-none d-sm-block d-sm-none d-md-none d-lg-block" data-action="toggle-swap" data-toggleclass="open" data-target="aside.js-app-drawer" aria-label="Open Sidebar">
+                <svg class="sa-icon sa-icon-2x">
+                    <use href="icons/sprite.svg#aperture"></use>
+                </svg>
+            </button>
+
+            <!-- Full Screen Mode -->
+            <button type="button" class="btn btn-system d-none d-sm-block d-sm-none d-md-none d-lg-block" data-action="app-fullscreen" aria-label="Toggle Dark Mode" aria-pressed="false">
+                <svg class="sa-icon sa-icon-2x sa-fullscreen-on">
+                    <use href="icons/sprite.svg#minimize"></use>
+                </svg>
+                <svg class="sa-icon sa-icon-2x sa-fullscreen-off">
+                    <use href="icons/sprite.svg#maximize"></use>
+                </svg>
+            </button>
+
+            <!-- Notifications -->
+            <button type="button" class="btn btn-system dropdown-toggle no-arrow" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Open Notifications">
+                <span class="badge badge-icon pos-top pos-end">5</span>
+                <svg class="sa-icon sa-icon-2x">
+                    <use href="icons/sprite.svg#bell"></use>
+                </svg>
+            </button>
+
+            <!-- Notifications dropdown -->
+            <div class="dropdown-menu dropdown-menu-animated dropdown-xl dropdown-menu-end p-0">
+                <div class="notification-header rounded-top mb-2">
+                    <h4 class="m-0">
+                        5 New
+                        <small class="mb-0 opacity-80">User Notifications</small>
+                    </h4>
+                </div>
+
+                <ul class="nav nav-tabs nav-tabs-clean" role="tablist">
+                    <li class="nav-item d-none">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#tab-default" role="tab" aria-selected="true">Hidden</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-4 fs-md fw-500" data-bs-toggle="tab" href="#tab-messages" role="tab" aria-selected="false">Messages</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-4 fs-md fw-500" data-bs-toggle="tab" href="#tab-feeds" role="tab" aria-selected="false">Feeds</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link px-4 fs-md fw-500" data-bs-toggle="tab" href="#tab-events" role="tab" aria-selected="false">Events</a>
+                    </li>
+                </ul>
+
+                <div class="tab-content tab-notification">
+                    <!--Security message-->
+                    <div class="tab-pane fade show active" id="tab-default" role="tabpanel">
+                        <div class="d-flex h-100">
+                            <div class="px-4 d-flex flex-column align-items-center justify-content-center">
+
+                                <svg class="sa-icon sa-icon-5x sa-icon-primary">
+                                    <use href="icons/sprite.svg#arrow-up-circle"></use>
+                                </svg>
+                                <span class="text-center fw-300" style="font-size: 1.25rem;">
+                                    Select a tab above
+                                </span>
+                                <div class="mb-0 py-3 text-center fs-md fw-300 text-muted">
+                                    This blank page helps protect your privacy.
+                                    To change this default message, <a href="#">update your settings</a>.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Messages -->
+                    <div class="tab-pane fade" id="tab-messages" role="tabpanel">
+                        <div class="custom-scroll h-100">
+                            <ul class="notification">
+                                <li class="unread alert alert-dismissable">
+                                    <div class="d-flex align-items-center">
+                                        <span class="status me-2">
+                                            <span class="profile-image rounded-circle d-inline-block" style="background-image:url('img/demo/avatars/avatar-c.png')"></span>
+                                        </span>
+                                        <span class="d-flex flex-column flex-1 ms-1">
+                                            <!-- <span class="name">Melissa Ayre <span class="badge bg-primary fw-n position-absolute top-0 end-0 mt-1">INBOX</span></span> -->
+                                            <span class="name">Melissa Ayre</span>
+                                            <span class="msg-a fs-sm">Re: New security codes</span>
+                                            <span class="msg-b fs-xs">Hello again and thanks for being part...</span>
+                                            <span class="fs-nano text-muted mt-1">56 seconds ago</span>
+                                        </span>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </li>
+                                <li class="unread alert alert-dismissable">
+                                    <div class="d-flex align-items-center">
+                                        <span class="status me-2">
+                                            <span class="profile-image rounded-circle d-inline-block" style="background-image:url('img/demo/avatars/avatar-a.png')"></span>
+                                        </span>
+                                        <span class="d-flex flex-column flex-1 ms-1">
+                                            <span class="name">Adison Lee</span>
+                                            <span class="msg-a fs-sm">Msed quia non numquam eius</span>
+                                            <span class="fs-nano text-muted mt-1">2 minutes ago</span>
+                                        </span>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </li>
+                                <li class="alert alert-dismissable">
+                                    <div class="d-flex align-items-center">
+                                        <span class="status status-success me-2">
+                                            <span class="profile-image rounded-circle d-inline-block" style="background-image:url('img/demo/avatars/avatar-b.png')"></span>
+                                        </span>
+                                        <span class="d-flex flex-column flex-1 ms-1">
+                                            <span class="name">Oliver Kopyuv</span>
+                                            <span class="msg-a fs-sm">Msed quia non numquam eius</span>
+                                            <span class="fs-nano text-muted mt-1">3 days ago</span>
+                                        </span>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </li>
+                                <li class="alert alert-dismissable">
+                                    <div class="d-flex align-items-center">
+                                        <span class="status status-warning me-2">
+                                            <span class="profile-image rounded-circle d-inline-block" style="background-image:url('img/demo/avatars/avatar-e.png')"></span>
+                                        </span>
+                                        <span class="d-flex flex-column flex-1 ms-1">
+                                            <span class="name">Dr. John Cook PhD</span>
+                                            <span class="msg-a fs-sm">Msed quia non numquam eius</span>
+                                            <span class="fs-nano text-muted mt-1">2 weeks ago</span>
+                                        </span>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </li>
+                                <li class="alert alert-dismissable">
+                                    <div class="d-flex align-items-center">
+                                        <span class="status status-success me-2">
+                                            <span class="profile-image rounded-circle d-inline-block" style="background-image:url('img/demo/avatars/avatar-h.png')"></span>
+                                        </span>
+                                        <span class="d-flex flex-column flex-1 ms-1">
+                                            <span class="name">Sarah McBrook</span>
+                                            <span class="msg-a fs-sm">Msed quia non numquam eius</span>
+                                            <span class="fs-nano text-muted mt-1">3 weeks ago</span>
+                                        </span>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </li>
+                                <li class="alert alert-dismissable">
+                                    <div class="d-flex align-items-center">
+                                        <span class="status status-success me-2">
+                                            <span class="profile-image rounded-circle d-inline-block" style="background-image:url('img/demo/avatars/avatar-m.png')"></span>
+                                        </span>
+                                        <span class="d-flex flex-column flex-1 ms-1">
+                                            <span class="name">Anothony Bezyeth</span>
+                                            <span class="msg-a fs-sm">Msed quia non numquam eius</span>
+                                            <span class="fs-nano text-muted mt-1">one month ago</span>
+                                        </span>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </li>
+                                <li class="alert alert-dismissable">
+                                    <div class="d-flex align-items-center">
+                                        <span class="status status-danger me-2">
+                                            <span class="profile-image rounded-circle d-inline-block" style="background-image:url('img/demo/avatars/avatar-j.png')"></span>
+                                        </span>
+                                        <span class="d-flex flex-column flex-1 ms-1">
+                                            <span class="name">Lisa Hatchensen</span>
+                                            <span class="msg-a fs-sm">Msed quia non numquam eius</span>
+                                            <span class="fs-nano text-muted mt-1">one year ago</span>
+                                        </span>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </li>
+                            </ul>
+                            <div class="notification-empty-msg">
+                                <svg class="sa-icon sa-icon-5x sa-icon-primary">
+                                    <use href="icons/sprite.svg#coffee"></use>
+                                </svg>
+                                <span>
+                                    No new messages
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Feeds -->
+                    <div class="tab-pane fade" id="tab-feeds" role="tabpanel">
+                        <div class="custom-scroll h-100">
+                            <ul class="notification">
+                                <li class="unread alert alert-dismissable">
+                                    <div class="d-flex align-items-center show-child-on-hover">
+                                        <span class="d-flex flex-column flex-1">
+                                            <span class="name d-flex align-items-center">Administrator <span class="badge bg-success fw-n ms-1">UPDATE</span></span>
+                                            <span class="msg-a fs-sm">
+                                                System updated to version <strong>5.0</strong> <a href="buildnotes.html">(build notes)</a>
+                                            </span>
+                                            <span class="fs-nano text-muted mt-1">5 mins ago</span>
+                                        </span>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </li>
+                                <li class="alert alert-dismissable">
+                                    <div class="d-flex align-items-center show-child-on-hover">
+                                        <div class="d-flex flex-column flex-1">
+                                            <span class="name">
+                                                Adison Lee <span class="fw-300 d-inline">replied to your video <a href="#" class="fw-400"> Cancer Drug</a> </span>
+                                            </span>
+                                            <span class="msg-a fs-sm mt-2">Bring to the table win-win survival strategies to ensure proactive domination. At the end of the day...</span>
+                                            <span class="fs-nano text-muted mt-1">10 minutes ago</span>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </li>
+                                <li class="alert alert-dismissable">
+                                    <div class="d-flex align-items-center show-child-on-hover">
+                                        <div class="d-flex flex-column flex-1">
+                                            <span class="name">
+                                                Troy Norman'<span class="fw-300">s new connections</span>
+                                            </span>
+                                            <div class="fs-sm d-flex align-items-center mt-2">
+                                                <span class="profile-image-md ms-1 rounded-circle d-inline-block" style="background-image:url('img/demo/avatars/avatar-a.png'); background-size: cover;"></span>
+                                                <span class="profile-image-md ms-1 rounded-circle d-inline-block" style="background-image:url('img/demo/avatars/avatar-b.png'); background-size: cover;"></span>
+                                                <span class="profile-image-md ms-1 rounded-circle d-inline-block" style="background-image:url('img/demo/avatars/avatar-c.png'); background-size: cover;"></span>
+                                                <span class="profile-image-md ms-1 rounded-circle d-inline-block" style="background-image:url('img/demo/avatars/avatar-e.png'); background-size: cover;"></span>
+                                                <div data-hasmore="+3" class="rounded-circle profile-image-md ms-1">
+                                                    <span class="profile-image-md ms-1 rounded-circle d-inline-block" style="background-image:url('img/demo/avatars/avatar-h.png'); background-size: cover;"></span>
+                                                </div>
+                                            </div>
+                                            <span class="fs-nano text-muted mt-1">55 minutes ago</span>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </li>
+                                <li class="alert alert-dismissable">
+                                    <div class="d-flex align-items-center show-child-on-hover">
+                                        <div class="d-flex flex-column flex-1">
+                                            <span class="name">Dr John Cook <span class="fw-300">sent a <span class="text-danger">new signal</span></span></span>
+                                            <span class="msg-a fs-sm mt-2">Nanotechnology immersion along the information highway will close the loop on focusing solely on the bottom line.</span>
+                                            <span class="fs-nano text-muted mt-1">10 minutes ago</span>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </li>
+                                <li class="alert alert-dismissable">
+                                    <div class="d-flex align-items-center show-child-on-hover">
+                                        <div class="d-flex flex-column flex-1">
+                                            <span class="name">Lab Images <span class="fw-300">were updated!</span></span>
+                                            <div class="fs-sm d-flex align-items-center mt-1">
+                                                <a href="#" class="ms-1 mt-1" title="Cell A-0012">
+                                                    <span class="d-block img-share" style="background-image:url('img/thumbs/pic-7.png'); background-size: cover;"></span>
+                                                </a>
+                                                <a href="#" class="ms-1 mt-1" title="Patient A-473 saliva">
+                                                    <span class="d-block img-share" style="background-image:url('img/thumbs/pic-8.png'); background-size: cover;"></span>
+                                                </a>
+                                                <a href="#" class="ms-1 mt-1" title="Patient A-473 blood cells">
+                                                    <span class="d-block img-share" style="background-image:url('img/thumbs/pic-11.png'); background-size: cover;"></span>
+                                                </a>
+                                                <a href="#" class="ms-1 mt-1" title="Patient A-473 Membrane O.C">
+                                                    <span class="d-block img-share" style="background-image:url('img/thumbs/pic-12.png'); background-size: cover;"></span>
+                                                </a>
+                                            </div>
+                                            <span class="fs-nano text-muted mt-1">55 minutes ago</span>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </li>
+                                <li class="alert alert-dismissable">
+                                    <div class="d-flex align-items-center show-child-on-hover">
+                                        <div class="d-flex flex-column flex-1 w-100">
+                                            <div class="name mb-2"> Lisa Lamar<span class="fw-300"> updated project</span>
+                                            </div>
+                                            <div class="row fs-b fw-300">
+                                                <div class="col text-start"> Progress </div>
+                                                <div class="col text-end fw-500"> 45% </div>
+                                            </div>
+                                            <div class="progress progress-sm d-flex mt-1">
+                                                <span class="progress-bar bg-primary progress-bar-striped" role="progressbar" style="width: 45%" aria-valuenow="45" aria-valuemin="0" aria-valuemax="100"></span>
+                                            </div>
+                                            <span class="fs-nano text-muted mt-1">2 hrs ago</span>
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </li>
+                            </ul>
+                            <div class="notification-empty-msg">
+                                <svg class="sa-icon sa-icon-5x sa-icon-primary">
+                                    <use href="icons/sprite.svg#smile"></use>
+                                </svg>
+                                <span>
+                                    You are all set!
+                                </span>
+                            </div>
+                        </div>
+
+                    </div>
+                    <!-- Events -->
+                    <div class="tab-pane fade" id="tab-events" role="tabpanel">
+                        <div class="d-flex flex-column h-100">
+                            <div class="h-auto">
+                                <table class="table-calendar m-0 w-100 h-100 border-0">
+                                    <tr>
+                                        <th colspan="7" class="pt-3 pb-2 px-3 text-center">
+                                            <div class="js-get-date h6 fw-600 mb-2">Fake Day, October 15th, 2090</div>
+                                        </th>
+                                    </tr>
+                                    <tr class="text-center">
+                                        <th>Sun</th>
+                                        <th>Mon</th>
+                                        <th>Tue</th>
+                                        <th>Wed</th>
+                                        <th>Thu</th>
+                                        <th>Fri</th>
+                                        <th>Sat</th>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-muted bg-faded">30</td>
+                                        <td>1</td>
+                                        <td>2</td>
+                                        <td>3</td>
+                                        <td>4</td>
+                                        <td>5</td>
+                                        <td>
+                                            <svg class="sa-icon sa-icon-warning m-1 position-absolute pos-left pos-top" style="--sa-icon-size: 0.85rem; --sa-fill-opacity: 0.5;">
+                                                <use href="icons/sprite.svg#star"></use>
+                                            </svg>
+                                            6
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>7</td>
+                                        <td>8</td>
+                                        <td>9</td>
+                                        <td class="bg-primary-600 text-white pattern-0">10</td>
+                                        <td>11</td>
+                                        <td>12</td>
+                                        <td>13</td>
+                                    </tr>
+                                    <tr>
+                                        <td>14</td>
+                                        <td>15</td>
+                                        <td>16</td>
+                                        <td>17</td>
+                                        <td>18</td>
+                                        <td>19</td>
+                                        <td>20</td>
+                                    </tr>
+                                    <tr>
+                                        <td>21</td>
+                                        <td>
+                                            <svg class="sa-icon sa-icon-info m-1 position-absolute pos-left pos-top" style="--sa-icon-size: 0.85rem; --sa-fill-opacity: 0.5;">
+                                                <use href="icons/sprite.svg#shield"></use>
+                                            </svg>
+                                            22
+                                        </td>
+                                        <td>23</td>
+                                        <td>24</td>
+                                        <td>25</td>
+                                        <td>26</td>
+                                        <td>27</td>
+                                    </tr>
+                                    <tr>
+                                        <td>28</td>
+                                        <td>29</td>
+                                        <td>30</td>
+                                        <td>31</td>
+                                        <td class="text-muted bg-faded">1</td>
+                                        <td class="text-muted bg-faded">2</td>
+                                        <td class="text-muted bg-faded">3</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="flex-1 custom-scroll shadow-inset-3">
+                                <div class="p-2">
+                                    <div class="d-flex align-items-center text-left mb-3">
+                                        <div class="width-5 text-primary align-self-start table-calendar-appointment-date fw-300 text-center">
+                                            15
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="d-flex flex-column">
+                                                <span class="l-h-n fs-md fw-500">
+                                                    October 2020
+                                                </span>
+                                                <span class="l-h-n fs-nano fw-400 text-secondary">
+                                                    Monday
+                                                </span>
+                                            </div>
+                                            <div class="d-flex flex-column gap-2 mt-2">
+                                                <div>
+                                                    <strong>2:30PM</strong> - Doctor's appointment
+                                                </div>
+                                                <div>
+                                                    <strong>3:30PM</strong> - Report overview
+                                                </div>
+                                                <div>
+                                                    <strong>4:30PM</strong> - Meeting with Donnah V.
+                                                </div>
+                                                <div>
+                                                    <strong>5:30PM</strong> - Late Lunch
+                                                </div>
+                                                <div>
+                                                    <strong>6:30PM</strong> - Report Compression
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="py-2 px-3 d-block rounded-bottom text-end border-light border-bottom-0 border-end-0 border-start-0">
+                    <a href="#" class="fs-xs fw-500 ms-auto">view all notifications</a>
+                </div>
+            </div>
+
+            <!-- Profile -->
+            <button type="button" data-bs-toggle="dropdown" title="drlantern@getwebora.com" class="btn-system bg-transparent d-flex flex-shrink-0 align-items-center justify-content-center" aria-label="Open Profile Dropdown">
+                <img src="img/demo/avatars/avatar-admin.png" class="profile-image profile-image-md rounded-circle" alt="Sunny A.">
+            </button>
+
+            <!-- Profile dropdown -->
+            <div class="dropdown-menu dropdown-menu-animated">
+                <div class="notification-header rounded-top mb-2">
+                    <div class="d-flex flex-row align-items-center mt-1 mb-1 color-white">
+                        <span class="status status-success d-inline-block me-2">
+                            <img src="img/demo/avatars/avatar-admin.png" class="profile-image rounded-circle" alt="Sunny A.">
+                        </span>
+                        <div class="info-card-text">
+                            <div class="fs-lg text-truncate text-truncate-lg">Sunny A.</div>
+                            <span class="text-truncate text-truncate-md opacity-80 fs-sm">sunnya@sadim.com</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dropdown-divider m-0"></div>
+
+                <a href="#" class="dropdown-item" data-action="app-reset" role="button">
+                    <span data-i18n="drpdwn.reset_layout">Reset Layout</span>
+                </a>
+                <a href="#" class="dropdown-item" data-action="toggle-swap" data-toggleclass="open" data-target="aside.js-drawer-settings" role="button">
+                    <span data-i18n="drpdwn.settings">Settings</span>
+                </a>
+                <a href="#" class="dropdown-item d-block d-sm-block d-md-block d-lg-none" data-action="toggle-swap" data-toggleclass="open" data-target="aside.js-app-drawer" role="button">
+                    <span data-i18n="drpdwn.settings">Virtual Assistant</span>
+                </a>
+
+                <div class="dropdown-divider m-0"></div>
+
+                <a href="#" class="dropdown-item d-flex justify-content-between align-items-center" data-action="app-fullscreen" aria-pressed="false" role="button">
+                    <span data-i18n="drpdwn.fullscreen">Fullscreen</span>
+                    <b class="text-muted fs-nano px-2 rounded font-monospace align-self-center border">F11</b>
+                </a>
+                <a href="#" class="dropdown-item d-flex justify-content-between align-items-center" data-action="app-print" role="button">
+                    <span data-i18n="drpdwn.print">Print</span>
+                    <span class="text-muted fs-nano px-2 rounded font-monospace align-self-center border">
+                        <svg width="15" height="15">
+                            <path d="M4.505 4.496h2M5.505 5.496v5M8.216 4.496l.055 5.993M10 7.5c.333.333.5.667.5 1v2M12.326 4.5v5.996M8.384 4.496c1.674 0 2.116 0 2.116 1.5s-.442 1.5-2.116 1.5M3.205 9.303c-.09.448-.277 1.21-1.241 1.203C1 10.5.5 9.513.5 8V7c0-1.57.5-2.5 1.464-2.494.964.006 1.134.598 1.24 1.342M12.553 10.5h1.953" stroke-width="1.2" stroke="currentColor" fill="none" stroke-linecap="square"></path>
+                        </svg>
+                        + P
+                    </span>
+                </a>
+
+                <div class="dropdown-multilevel dropdown-multilevel-left">
+                    <div class="dropdown-item d-flex justify-content-between align-items-center">
+                        <span data-i18n="drpdwn.language">Language</span>
+                        <i class="sa sa-chevron-right"></i>
+                    </div>
+                    <div class="dropdown-menu">
+                        <a href="#?lang=fr" class="dropdown-item" data-action="lang" data-lang="fr">Français</a>
+                        <a href="#?lang=en" class="dropdown-item selected" data-action="lang" data-lang="en">English (US)</a>
+                        <a href="#?lang=es" class="dropdown-item" data-action="lang" data-lang="es">Español</a>
+                        <a href="#?lang=ru" class="dropdown-item" data-action="lang" data-lang="ru">Русский язык</a>
+                        <a href="#?lang=jp" class="dropdown-item" data-action="lang" data-lang="jp">日本語</a>
+                        <a href="#?lang=ch" class="dropdown-item" data-action="lang" data-lang="ch">中文</a>
+                    </div>
+                </div>
+
+                <div class="dropdown-divider m-0"></div>
+
+                <a class="dropdown-item py-3 fw-500 d-flex justify-content-between" href="auth-login.html">
+                    <span class="text-danger" data-i18n="drpdwn.page-logout">Logout</span>
+                    <span class="d-block text-truncate text-truncate-sm">@sunnyahmed</span>
+                </a>
+            </div>
+        </header>
+
+        <aside class="app-sidebar d-flex flex-column">
+
+            <a href="dashboard-control-center.html" class="app-logo flex-shrink-0" data-prefix="v5.2.0" data-action="playsound" data-soundpath="media/sound/" data-soundfile="sawhisp.mp3">
+                <!-- <img src="img/logo.svg" alt="logo"> -->
+
+                <svg class="custom-logo">
+                    <use href="img/app-logo.svg#custom-logo"></use>
+                </svg>
+
+                <!-- Logo Backdrop Animation -->
+                <div class="logo-backdrop">
+                    <div class="blobs">
+                        <svg viewbox="0 0 1200 1200">
+                            <g class="blob blob-1">
+                                <path d="M 100 600 q 0 -700, 500 -500 t 500 500 t -500 500 T 100 600 z" />
+                            </g>
+                            <g class="blob blob-2">
+                                <path d="M 100 600 q -50 -400, 500 -500 t 450 550 t -500 500 T 100 600 z" />
+                            </g>
+                            <g class="blob blob-3">
+                                <path d="M 100 600 q 0 -400, 500 -500 t 400 500 t -500 500 T 100 600 z" />
+                            </g>
+                            <g class="blob blob-4">
+                                <path d="M 150 600 q 0 -600, 500 -500 t 500 550 t -500 500 T 150 600 z" />
+                            </g>
+                            <g class="blob blob-1 alt">
+                                <path d="M 150 600 q 0 -600, 500 -500 t 500 550 t -500 500 T 150 600 z" />
+                            </g>
+                            <g class="blob blob-2 alt">
+                                <path d="M 100 600 q 100 -600, 500 -500 t 400 500 t -500 500 T 100 600 z" />
+                            </g>
+                            <g class="blob blob-3 alt">
+                                <path d="M 100 600 q 0 -400, 500 -500 t 400 500 t -500 500 T 100 600 z" />
+                            </g>
+                            <g class="blob blob-4 alt">
+                                <path d="M 150 600 q 0 -600, 500 -500 t 500 550 t -500 500 T 150 600 z" />
+                            </g>
+                        </svg>
+                    </div>
+                </div>
+            </a>
+
+            <form class="app-menu-filter-container px-4">
+                <input type="text" class="form-control" id="searchInput" placeholder="Filter" autocomplete="off">
+                <div class="js-filter-message nav-filter-msg badge bg-secondary btn" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-original-title="Clear filter"></div>
+            </form>
+
+            <nav id="js-primary-nav" class="primary-nav flex-grow-1 custom-scroll">
+
+                <ul id="js-nav-menu" class="nav-menu">
+
+                    <li class="nav-title"><span>Insights</span></li>
+
+                    <li class="nav-item">
+                        <a href="#" title="Dashboards" data-filter-tags>
+                            <svg class="sa-icon">
+                                <use href="icons/sprite.svg#trello"></use>
+                            </svg>
+                            <span class="nav-link-text" data-i18n>Dashboards</span>
+                            <span class="badge bg-danger-700 badge-end">New</span>
+                        </a>
+
+                        <ul>
+                            <li>
+                                <a href="dashboard-control-center.html">
+                                    <span class="nav-link-text" data-i18n>Control Center</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="dashboard-subscription.html">
+                                    <span class="nav-link-text" data-i18n>Subscription & Billing</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="dashboard-marketing.html">
+                                    <span class="nav-link-text" data-i18n>Marketing & Sales</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="dashboard-project-management.html">
+                                    <span class="nav-link-text" data-i18n>Project Management</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-title"><span>Config</span></li>
+
+                    <li>
+                        <a href="appintel.html">
+                            <svg class="sa-icon">
+                                <use href="icons/sprite.svg#cpu"></use>
+                            </svg>
+                            <span class="nav-link-text">Application Intel</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a href="#" title="Documentation" data-filter-tags>
+                            <svg class="sa-icon">
+                                <use href="icons/sprite.svg#book-open"></use>
+                            </svg>
+                            <span class="nav-link-text" data-i18n>Documentation</span>
+                        </a>
+
+                        <ul>
+                            <li>
+                                <a href="docs-build-notes.html">
+                                    <span class="nav-link-text" data-i18n>Build Notes</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="docs-getting-started.html">
+                                    <span class="nav-link-text" data-i18n>Getting Started</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="docs-smartappjs.html">
+                                    <span class="nav-link-text" data-i18n>App DOM</span>
+                                    <span class="badge bg-danger badge-end">P</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="docs-smartnavigationjs.html">
+                                    <span class="nav-link-text" data-i18n>Smart Navigation</span>
+                                    <span class="badge bg-danger badge-end">P</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="docs-smartfilterjs.html">
+                                    <span class="nav-link-text" data-i18n>Smart Filter</span>
+                                    <span class="badge bg-warning text-dark badge-end">D</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="docs-sortablejs.html">
+                                    <span class="nav-link-text" data-i18n>Sortable</span>
+                                    <span class="badge bg-warning text-dark badge-end">D</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="docs-bootstrapbundlejs.html">
+                                    <span class="nav-link-text" data-i18n>Bootstrap Bundle</span>
+                                    <span class="badge bg-warning text-dark badge-end">D</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="docs-smartslimscrolljs.html">
+                                    <span class="nav-link-text" data-i18n>Smart Slim Scroll</span>
+                                    <span class="badge bg-success badge-end">O</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="docs-wavesjs.html">
+                                    <span class="nav-link-text" data-i18n>Waves</span>
+                                    <span class="badge bg-success badge-end">O</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="docs-apexbarchartjs.html">
+                                    <span class="nav-link-text" data-i18n>Apex Chart Js</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="docs-easypiechartjs.html">
+                                    <span class="nav-link-text" data-i18n>Easy Pie Chart Js</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="docs-fullcalendarjs.html">
+                                    <span class="nav-link-text" data-i18n>Full Calendar Js</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="docs-peitychartsjs.html">
+                                    <span class="nav-link-text" data-i18n>Peity Chart Js</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="docs-smarttablesjs.html">
+                                    <span class="nav-link-text" data-i18n>Smart Table Js</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="docs-streamlinejs.html">
+                                    <span class="nav-link-text" data-i18n>Stream Line Js</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-title"><span>Layouts</span></li>
+
+                    <li class="nav-item">
+                        <a href="#" title="Access Control" data-filter-tags>
+                            <svg class="sa-icon">
+                                <use href="icons/sprite.svg#slash"></use>
+                            </svg>
+                            <span class="nav-link-text" data-i18n>Access Control</span>
+                        </a>
+
+                        <ul>
+                            <li class="nav-item">
+                                <a href="#" title="Authentication" data-filter-tags>
+                                    <span class="nav-link-text" data-i18n>Authentication Pages</span>
+                                </a>
+
+                                <ul>
+                                    <li>
+                                        <a href="auth-login.html">
+                                            <span class="nav-link-text" data-i18n>Login</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="auth-register.html">
+                                            <span class="nav-link-text" data-i18n>Register</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="auth-forgetpassword.html">
+                                            <span class="nav-link-text" data-i18n>Forget Password</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="auth-twofactor.html">
+                                            <span class="nav-link-text" data-i18n>2FA</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="auth-lockscreen.html">
+                                            <span class="nav-link-text" data-i18n>Lock Screen</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li>
+                                <a href="emaildesign.html">
+                                    <span class="nav-link-text" data-i18n>Email Templates</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="#" title="Error Pages" data-filter-tags>
+                                    <span class="nav-link-text" data-i18n>Error Pages</span>
+                                </a>
+
+                                <ul>
+                                    <li>
+                                        <a href="error-404.html">
+                                            <span class="nav-link-text" data-i18n>404 Not Found</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="error-404-2.html">
+                                            <span class="nav-link-text" data-i18n>404 Not Found 2</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="error-500.html">
+                                            <span class="nav-link-text" data-i18n>500 Internal Server</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li>
+                                <a href="profile.html">
+                                    <span class="nav-link-text" data-i18n>User Profile</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item">
+                        <a href="#" title="Communication" data-filter-tags>
+                            <svg class="sa-icon">
+                                <use href="icons/sprite.svg#message-square"></use>
+                            </svg>
+                            <span class="nav-link-text" data-i18n>Communication</span>
+                        </a>
+
+                        <ul>
+                            <li>
+                                <a href="messenger.html">
+                                    <span class="nav-link-text" data-i18n>Messenger & Chat</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="#" title="Email" data-filter-tags>
+                                    <span class="nav-link-text" data-i18n>Email</span>
+                                </a>
+
+                                <ul>
+                                    <li>
+                                        <a href="systemmail.html">
+                                            <span class="nav-link-text" data-i18n>System Mail</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="systemmail-read.html">
+                                            <span class="nav-link-text" data-i18n>Mail Read</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                            <li>
+                                <a href="usercontact.html">
+                                    <span class="nav-link-text" data-i18n>User Contact</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item">
+                        <a href="#" title="Miscellaneous" data-filter-tags>
+                            <svg class="sa-icon">
+                                <use href="icons/sprite.svg#archive"></use>
+                            </svg>
+                            <span class="nav-link-text" data-i18n>Miscellaneous</span>
+                        </a>
+
+                        <ul>
+                            <li>
+                                <a href="forum.html">
+                                    <span class="nav-link-text" data-i18n>Forum General</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="forum-threads.html">
+                                    <span class="nav-link-text" data-i18n>Forum Threads</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="forum-discussion.html">
+                                    <span class="nav-link-text" data-i18n>Forum Discussions</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="search.html">
+                                    <span class="nav-link-text" data-i18n>Search</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li>
+                        <a href="landing.html" target="_blank">
+                            <svg class="sa-icon">
+                                <use href="icons/sprite.svg#zap"></use>
+                            </svg>
+                            <span class="nav-link-text">Landing</span>
+                        </a>
+                    </li>
+
+                    <li class="nav-title"><span>Design</span></li>
+
+                    <li class="nav-item">
+                        <a href="#" title="UI Components" data-filter-tags>
+                            <svg class="sa-icon">
+                                <use href="icons/sprite.svg#layers"></use>
+                            </svg>
+                            <span class="nav-link-text" data-i18n>UI Components</span>
+                        </a>
+
+                        <ul>
+                            <li>
+                                <a href="ui-alerts.html">
+                                    <span class="nav-link-text" data-i18n>Alerts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-accordions.html">
+                                    <span class="nav-link-text" data-i18n>Accordions</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-badges.html">
+                                    <span class="nav-link-text" data-i18n>Badges</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-buttons.html">
+                                    <span class="nav-link-text" data-i18n>Buttons</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-buttongroup.html">
+                                    <span class="nav-link-text" data-i18n>Button Group</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-cards.html">
+                                    <span class="nav-link-text" data-i18n>Cards</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-breadcrumbs.html">
+                                    <span class="nav-link-text" data-i18n>Breadcrumbs</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-dropdowns.html">
+                                    <span class="nav-link-text" data-i18n>Dropdowns</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-navbars.html">
+                                    <span class="nav-link-text" data-i18n>Navbars</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-pagination.html">
+                                    <span class="nav-link-text" data-i18n>Pagination</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-scrollspy.html">
+                                    <span class="nav-link-text" data-i18n>ScrollSpy</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-collapse.html">
+                                    <span class="nav-link-text" data-i18n>Collapse</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-modal.html">
+                                    <span class="nav-link-text" data-i18n>Modal</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-tabs-pills.html">
+                                    <span class="nav-link-text" data-i18n>Tabs & Pills</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-tooltips.html">
+                                    <span class="nav-link-text" data-i18n>Tooltips</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-popovers.html">
+                                    <span class="nav-link-text" data-i18n>Popovers</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-toasts.html">
+                                    <span class="nav-link-text" data-i18n>Toasts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-progressbars.html">
+                                    <span class="nav-link-text" data-i18n>Progress Bars</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-spinners.html">
+                                    <span class="nav-link-text" data-i18n>Spinners</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-carousels.html">
+                                    <span class="nav-link-text" data-i18n>Carousels</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-panels.html">
+                                    <span class="nav-link-text" data-i18n>Panels</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-list-filter.html">
+                                    <span class="nav-link-text" data-i18n>List Filter</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="ui-sidepanels.html">
+                                    <span class="nav-link-text" data-i18n>Side Panels</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item">
+                        <a href="#" title="System Utilities" data-filter-tags>
+                            <svg class="sa-icon">
+                                <use href="icons/sprite.svg#package"></use>
+                            </svg>
+                            <span class="nav-link-text" data-i18n>System Utilities</span>
+                        </a>
+
+                        <ul>
+                            <li>
+                                <a href="utilities-borders.html">
+                                    <span class="nav-link-text" data-i18n>Borders</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="utilities-display-property.html">
+                                    <span class="nav-link-text" data-i18n>Display Property</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="utilities-responsivegrid.html">
+                                    <span class="nav-link-text" data-i18n>Responsive Grid</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="utilities-position.html">
+                                    <span class="nav-link-text" data-i18n>Position</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="utilities-colorpalette.html">
+                                    <span class="nav-link-text" data-i18n>Color Palette</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="utilities-typography.html">
+                                    <span class="nav-link-text" data-i18n>Typography</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="utilities-sizing.html">
+                                    <span class="nav-link-text" data-i18n>Sizing</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="utilities-spacing.html">
+                                    <span class="nav-link-text" data-i18n>Spacing</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="utilities-flexbox.html">
+                                    <span class="nav-link-text" data-i18n>Flexbox</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="utilities-helpers.html">
+                                    <span class="nav-link-text" data-i18n>Helpers</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="utilities-visibility-generator.html">
+                                    <span class="nav-link-text" data-i18n>Visibility Generator</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item">
+                        <a href="#" title="Iconography" data-filter-tags>
+                            <svg class="sa-icon">
+                                <use href="icons/sprite.svg#heart"></use>
+                            </svg>
+                            <span class="nav-link-text" data-i18n>Iconography</span>
+                        </a>
+
+                        <ul>
+                            <li>
+                                <a href="icons-system.html">
+                                    <span class="nav-link-text" data-i18n>System Icons</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="icons-fontawesome.html">
+                                    <span class="nav-link-text" data-i18n>FontAwesome 5.3</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="icons-smartadmin.html">
+                                    <span class="nav-link-text" data-i18n>SmartAdmin Icons 1.0</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="icons-stackgenerator.html">
+                                    <span class="nav-link-text" data-i18n>Stack Generator</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="icons-stacklibrary.html">
+                                    <span class="nav-link-text" data-i18n>Stack Library</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item">
+                        <a href="#" title="Tables" data-filter-tags>
+                            <svg class="sa-icon">
+                                <use href="icons/sprite.svg#table"></use>
+                            </svg>
+                            <span class="nav-link-text" data-i18n>Tables</span>
+                        </a>
+
+                        <ul>
+                            <li>
+                                <a href="tables-basic.html">
+                                    <span class="nav-link-text" data-i18n>Basic Tables</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="tables-style-generator.html">
+                                    <span class="nav-link-text" data-i18n>Tables Style Generator</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item">
+                        <a href="#" title="Forms" data-filter-tags>
+                            <svg class="sa-icon">
+                                <use href="icons/sprite.svg#edit"></use>
+                            </svg>
+                            <span class="nav-link-text" data-i18n>Forms</span>
+                        </a>
+
+                        <ul>
+                            <li>
+                                <a href="forms-inputs.html">
+                                    <span class="nav-link-text" data-i18n>Inputs</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="forms-checkbox-radio.html">
+                                    <span class="nav-link-text" data-i18n>Checkbox & Radio</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="forms-groups.html">
+                                    <span class="nav-link-text" data-i18n>Groups</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="forms-validation.html">
+                                    <span class="nav-link-text" data-i18n>Validation</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-title"><span>Data Visualization</span></li>
+
+                    <li class="nav-item">
+                        <a href="#" title="Smart Tables" data-filter-tags>
+                            <svg class="sa-icon">
+                                <use href="icons/sprite.svg#database"></use>
+                            </svg>
+                            <span class="nav-link-text" data-i18n>Smart Tables</span>
+                            <span class="badge bg-primary-500 badge-end">1.2.7</span>
+                        </a>
+
+                        <ul>
+                            <li>
+                                <a href="smarttables-minimal.html">
+                                    <span class="nav-link-text" data-i18n>Minimal Settings</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="smarttables-responsive.html">
+                                    <span class="nav-link-text" data-i18n>Responsive Settings</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="smarttables-importexport-data.html">
+                                    <span class="nav-link-text" data-i18n>Import & Export Data</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="smarttables-json-source.html">
+                                    <span class="nav-link-text" data-i18n>JSON Data Source</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="smarttables-manage-records.html">
+                                    <span class="nav-link-text" data-i18n>Manage Records</span>
+                                    <span class="badge bg-warning text-dark badge-end">New</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="smarttables-fuzzy-matching.html">
+                                    <span class="nav-link-text" data-i18n>Fuzzy Matching</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="smarttables-server-side.html">
+                                    <span class="nav-link-text" data-i18n>Server-Side Mode</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item">
+                        <a href="#" title="Apex Charts" data-filter-tags>
+                            <svg class="sa-icon">
+                                <use href="icons/sprite.svg#pie-chart"></use>
+                            </svg>
+                            <span class="nav-link-text" data-i18n>Apex Charts</span>
+                        </a>
+
+                        <ul>
+                            <li>
+                                <a href="apex-area.html">
+                                    <span class="nav-link-text" data-i18n>Area Charts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="apex-bar.html">
+                                    <span class="nav-link-text" data-i18n>Bar Charts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="apex-box-whisker.html">
+                                    <span class="nav-link-text" data-i18n>Box & Whisker Charts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="apex-bubble.html">
+                                    <span class="nav-link-text" data-i18n>Bubble Charts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="apex-candlestick.html">
+                                    <span class="nav-link-text" data-i18n>Candlestick Charts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="apex-column.html">
+                                    <span class="nav-link-text" data-i18n>Column Charts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="apex-funnel.html">
+                                    <span class="nav-link-text" data-i18n>Funnel Charts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="apex-heatmap.html">
+                                    <span class="nav-link-text" data-i18n>Heatmap Charts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="apex-line.html">
+                                    <span class="nav-link-text" data-i18n>Line Charts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="apex-mixed-combo.html">
+                                    <span class="nav-link-text" data-i18n>Mixed/Combo Charts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="apex-pie-donut.html">
+                                    <span class="nav-link-text" data-i18n>Pie/Donuts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="apex-polar-area.html">
+                                    <span class="nav-link-text" data-i18n>Polar Area Charts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="apex-radar.html">
+                                    <span class="nav-link-text" data-i18n>Radar Charts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="apex-radialbars-circle.html">
+                                    <span class="nav-link-text" data-i18n>RadialBars/Circle Charts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="apex-range-area.html">
+                                    <span class="nav-link-text" data-i18n>Range Area Charts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="apex-scatter.html">
+                                    <span class="nav-link-text" data-i18n>Scatter Charts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="apex-slope.html">
+                                    <span class="nav-link-text" data-i18n>Slope Charts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="apex-sparkline.html">
+                                    <span class="nav-link-text" data-i18n>Sparklines</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="apex-timeline.html">
+                                    <span class="nav-link-text" data-i18n>Timeline Charts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="apex-treemap.html">
+                                    <span class="nav-link-text" data-i18n>Treemap Charts</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item">
+                        <a href="#" title="Data Bites" data-filter-tags>
+                            <svg class="sa-icon">
+                                <use href="icons/sprite.svg#grid"></use>
+                            </svg>
+                            <span class="nav-link-text" data-i18n>Data Bites</span>
+                        </a>
+
+                        <ul>
+                            <li>
+                                <a href="peity-charts.html">
+                                    <span class="nav-link-text" data-i18n>Peity Charts</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="streamline.html">
+                                    <span class="nav-link-text" data-i18n>Streamline</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="easy-pie-chart.html">
+                                    <span class="nav-link-text" data-i18n>Easy Pie Chart</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+
+                    <li>
+                        <a href="fullcalendar.html">
+                            <svg class="sa-icon">
+                                <use href="icons/sprite.svg#calendar"></use>
+                            </svg>
+                            <span class="nav-link-text">Full Calendar</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="no-results-msg pt-3 info-container">
+                    <h6 class="mb-1"> No menu items found.</h6>
+                    <p class="fs-sm">Try searching with different keywords.</p>
+                    <div class="d-flex align-items-center gap-1 fs-xs fw-500 font-style-italic">
+                        <kbd class="kbd-key">
+                            <svg width="15" height="15" aria-label="Escape key" role="img">
+                                <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2">
+                                    <path d="M13.6167 8.936c-.1065.3583-.6883.962-1.4875.962-.7993 0-1.653-.9165-1.653-2.1258v-.5678c0-1.2548.7896-2.1016 1.653-2.1016.8634 0 1.3601.4778 1.4875 1.0724M9 6c-.1352-.4735-.7506-.9219-1.46-.8972-.7092.0246-1.344.57-1.344 1.2166s.4198.8812 1.3445.9805C8.465 7.3992 8.968 7.9337 9 8.5c.032.5663-.454 1.398-1.4595 1.398C6.6593 9.898 6 9 5.963 8.4851m-1.4748.5368c-.2635.5941-.8099.876-1.5443.876s-1.7073-.6248-1.7073-2.204v-.4603c0-1.0416.721-2.131 1.7073-2.131.9864 0 1.6425 1.031 1.5443 2.2492h-2.956"></path>
+                                </g>
+                            </svg>
+                        </kbd> to reset
+                    </div>
+                </div>
+            </nav>
+
+            <div class="nav-footer">
+                <svg class="sa-icon sa-thin">
+                    <use href="icons/sprite.svg#wifi"></use>
+                </svg>
+            </div>
+        </aside>
+
+        <div class="backdrop" data-action="toggle-swap" data-toggleclass="app-mobile-menu-open"></div>
+
+
+        <!-- Sidebar Link Active Script -->
+        <script>
+            const sideNavMenu = document.getElementById("js-nav-menu");
+            const currentUrl = window.location.href.split(/[?#]/)[0];     // Match current URL
+            const allLinks = sideNavMenu.querySelectorAll("a");
+            const allCollapses = sideNavMenu.querySelectorAll("li [aria-expanded='true']");   // Ensure only one collapse is open at a time
+
+            // Prevent default toggle behavior for toggle links
+            sideNavMenu.querySelectorAll("li .has-ul").forEach((toggle) => { toggle.addEventListener("click", (e) => e.preventDefault()); });
+
+            allCollapses.forEach((collapse) => {
+
+                console.log(collapse)
+                collapse.addEventListener("show.bs.collapse", (event) => {
+                    const currentCollapse = event.target;
+
+                    // Get all ancestor collapses of the current item
+                    const ancestors = [];
+                    let el = currentCollapse.parentElement;
+                    while (el && el !== sideNavMenu) {
+                        if (el.classList.contains("collapse")) {
+                            ancestors.push(el);
+                        }
+                        el = el.parentElement;
+                    }
+
+                    allCollapses.forEach((other) => {
+                        if (other !== currentCollapse && !ancestors.includes(other)) {
+                            new bootstrap.Collapse(other, { toggle: false }).hide();
+                        }
+                    });
+                });
+            });
+
+            allLinks.forEach((link) => {
+                if (link.href === currentUrl) {
+
+                    link.classList.add("active");
+
+                    // Traverse up to activate all parents and show collapses
+                    let currentElement = link.closest("li");
+                    while (currentElement && currentElement !== sideNavMenu) {
+                        currentElement.classList.add("active");
+
+                        // Show parent collapses
+                        const parentCollapse = currentElement.closest("[role='menu']");
+                        if (parentCollapse) {
+                            new bootstrap.Collapse(parentCollapse, { toggle: false }).show();
+
+                            // Also mark the <li> that contains the collapse as active
+                            const collapseParentLi = parentCollapse.closest("li");
+                            if (collapseParentLi) {
+                                collapseParentLi.classList.add("active");
+                            }
+
+                            currentElement = collapseParentLi;
+                        } else {
+                            currentElement = currentElement.parentElement;
+                        }
+                    }
+                }
+            });
+        </script>
+
+        <main class="app-body">
+            <div class="app-content">
+
+                <div class="content-wrapper">
+
+                    
+                    <h1 class="subheader-title mb-2">Getting Started</h1>
+                    
+
+                    
+                    <nav class="app-breadcrumb" aria-label="breadcrumb">
+                        <ol class="breadcrumb ms-0 text-muted mb-0">
+                            
+                            <li class="breadcrumb-item">Design</li>
+                            
+                            
+                            <li class="breadcrumb-item">UI Components</li>
+                            
+                            <li class="breadcrumb-item active" aria-current="page">Getting Started</li>
+                        </ol>
+                    </nav>
+
+                    
+                    <h6 class="mt-3 mb-4 fst-italic"></h6>
+                    
+
+                    <div class="main-content">
+
+                        <div class="row">
+                            <div class="order-2 order-xl-1 col-lg-12 col-xl-9">
+
+                                <section id="introduction" class="concept-section">
+                                    <h4 class="my-4">SmartAdmin - Modern UI Framework</h4>
+                                    <p>Welcome to SmartAdmin v5, an advanced UI Bootstrap 5 Admin and Dashboard template designed for modern web applications. This guide will walk you through setting up and running the SmartAdmin project, understanding its core components, and customizing it to fit your needs.</p>
+
+                                    <div class="pro-tip">
+                                        <strong>Pro Tip:</strong> SmartAdmin v5 is built with vanilla JavaScript and Bootstrap 5, eliminating jQuery dependencies for better performance and modern development practices.
+                                    </div>
+                                </section>
+
+                                <section id="prerequisites" class="concept-section">
+                                    <h2 class="concept-title">Prerequisites</h2>
+                                    <p>Before you begin, ensure you have the following tools installed on your computer:</p>
+
+                                    <div class="table-responsive mb-4 mt-4">
+                                        <table class="table table-striped table-clean">
+                                            <thead>
+                                                <tr>
+                                                    <th>Tool</th>
+                                                    <th>Version</th>
+                                                    <th>Purpose</th>
+                                                    <th>Installation</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td><strong>Node.js & npm</strong></td>
+                                                    <td>v14.x or later</td>
+                                                    <td>JavaScript runtime and package manager</td>
+                                                    <td><a href="https://nodejs.org/" target="_blank">nodejs.org</a></td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Gulp CLI</strong></td>
+                                                    <td>Latest</td>
+                                                    <td>Task automation toolkit</td>
+                                                    <td><code>npm install gulp-cli -g</code></td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Git</strong></td>
+                                                    <td>Latest</td>
+                                                    <td>Version control system</td>
+                                                    <td><a href="https://git-scm.com/" target="_blank">git-scm.com</a></td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Code Editor</strong></td>
+                                                    <td>Any</td>
+                                                    <td>For editing project files</td>
+                                                    <td>VS Code, Sublime Text, etc.</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <p>Verify your installations with these commands:</p>
+                                    <div class="code-example">
+                                        <pre><code>node --version
+npm --version
+gulp --version
+git --version</code></pre>
+                                    </div>
+                                </section>
+
+                                <section id="installation" class="concept-section">
+                                    <h2 class="concept-title">Installation</h2>
+                                    <p>Follow these steps to set up SmartAdmin v5:</p>
+
+                                    <h6 class="text-uppercase fw-700">Step 1: Extract the Package</h6>
+                                    <div class="code-example">
+                                        <div class="code-example">
+                                            <pre><code># Open the SmartAdmin project folder (Full or Seed) in your preferred code editor (e.g., VS Code, WebStorm, Sublime Text, etc.)</code></pre>
+                                        </div>
+
+
+                                        <h6 class="text-uppercase fw-700">Step 2: Install Dependencies</h6>
+                                        <div class="code-example">
+                                            <pre><code># Option 1: If Using yarn (https://yarnpkg.com/getting-started)
+yarn install
+                                                
+# --------------------------------------------
+
+# Option 2: If Using npm (https://docs.npmjs.com/)
+npm install
+
+
+# --------------------------------------------
+
+# Option 3: If Using bun (https://bun.sh/docs)
+bun install
+</code></pre>
+                                        </div>
+
+
+
+                                        <h6 class="text-uppercase fw-700">Step 3: Build the Project</h6>
+                                        <div class="code-example">
+                                            <pre><code>// Default task - builds everything and starts watching for changes
+gulp
+
+// Build all assets without watching
+gulp build
+
+// RTL (Right-to-Left) support
+gulp rtl
+
+// Build RTL all assets without watching
+gulp rtlbuild
+</code></pre>
+                                        </div>
+
+                                        <div class="warning">
+                                            <strong>Important:</strong> Always run the project through a web server, not by opening HTML files directly, to avoid AJAX and module loading issues.
+                                        </div>
+                                </section>
+
+                                <section id="project-structure" class="concept-section">
+                                    <h2 class="concept-title">Project Structure</h2>
+                                    <p>Understanding the SmartAdmin v5 file organization is crucial for effective development. Click the tree view below to expand and collapse the project structure:</p>
+
+                                    <div class="tree-view-container">
+                                        <div id="tree-view" class="tree-view"></div>
+                                    </div>
+
+                                    <div class="table-responsive mb-4 mt-4">
+                                        <table class="table table-striped table-clean">
+                                            <thead>
+                                                <tr>
+                                                    <th>Directory/File</th>
+                                                    <th>Description</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td><code>/src</code></td>
+                                                    <td>Source files (SCSS, JS, views)</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><code>/dist</code></td>
+                                                    <td>Compiled and processed files (created by Gulp)</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><code>/src/sass</code></td>
+                                                    <td>SCSS source files for styling</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><code>/src/scripts</code></td>
+                                                    <td>JavaScript source files</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><code>gulpfile.js</code></td>
+                                                    <td>Gulp configuration and tasks</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><code>plugins.config.js</code></td>
+                                                    <td>Plugins File Path</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><code>package.json</code></td>
+                                                    <td>Project dependencies and scripts</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </section>
+
+                                <section id="gulp-system" class="concept-section">
+                                    <h2 class="concept-title">Gulp Build System</h2>
+                                    <p>SmartAdmin v5 uses Gulp to automate development tasks. The <code>gulpfile.js</code> defines various tasks for building, processing, and serving the application.</p>
+
+                                    <h6 class="text-uppercase fw-700">Key Gulp Tasks</h6>
+                                    <p>Here are the main Gulp tasks you'll use during development:</p>
+                                    <div class="code-example">
+                                        <pre><code>// Default task - builds everything and starts watching for changes
+gulp
+
+// Build all assets without watching
+gulp build
+
+// RTL (Right-to-Left) support
+gulp rtl
+
+// Build RTL all assets without watching
+gulp rtlbuild
+</code></pre>
+                                    </div>
+
+
+                                    <h6 class="text-uppercase fw-700">Customizing the Gulp Build Process</h6>
+                                    <p>You can customize the Gulp build process to fit your project needs:</p>
+
+                                    <div class="table-responsive mb-4 mt-4">
+                                        <table class="table table-striped table-clean">
+                                            <thead>
+                                                <tr>
+                                                    <th>Customization</th>
+                                                    <th>How to Implement</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td><strong>Adding New Tasks</strong></td>
+                                                    <td>Define new task functions and register them with <code>gulp.task()</code></td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Modifying Build Paths</strong></td>
+                                                    <td>Update the <code>config.paths</code> object to change source or destination directories</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Adding Preprocessors</strong></td>
+                                                    <td>Install additional Gulp plugins and add them to the appropriate task pipeline</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Optimizing for Production</strong></td>
+                                                    <td>Add minification, compression, and optimization steps to the build tasks</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Adding Linting</strong></td>
+                                                    <td>Incorporate ESLint, Stylelint, or other linting tools into the build process</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+
+                                    <h6 class="text-uppercase fw-700">Integrating with Backend Build Systems</h6>
+                                    <p>When integrating SmartAdmin with a backend framework, you may need to adjust the Gulp workflow:</p>
+
+                                    <ul class="list-spaced mb-4">
+                                        <li><strong>ASP.NET / .NET Core:</strong> Configure Gulp to output files to the wwwroot directory and integrate with MSBuild</li>
+                                        <li><strong>Laravel:</strong> Adjust paths to work with Laravel's public directory structure or integrate with Laravel Mix</li>
+                                        <li><strong>Django:</strong> Configure Gulp to output to Django's static files directory and integrate with collectstatic</li>
+                                        <li><strong>Node.js:</strong> Set up Gulp to work alongside Express or other Node.js frameworks</li>
+                                    </ul>
+
+                                    <div class="pro-tip">
+                                        <strong>Pro Tip:</strong> You can extend the Gulp tasks by modifying <code>gulpfile.js</code> to add custom build steps, optimizations, or deployment processes. Consider creating environment-specific configurations for development, testing, and production.
+                                    </div>
+                                </section>
+
+
+                                <section id="customizing-index" class="concept-section">
+                                    <h2 class="concept-title">Customizing index.html as Your Application Foundation</h2>
+                                    <p>The <code>index.html</code> file serves as an ideal starting point for building your application. This blank template provides the basic structure while allowing maximum flexibility for integration with various backend frameworks.</p>
+
+                                    <h6 class="text-uppercase fw-700">Understanding index.html</h6>
+                                    <p>Let's examine the key components of the index.html file:</p>
+
+
+                                    <h6 class="text-uppercase fw-700">Example of index.html Structure</h6>
+                                    <p>The <code>index.html</code> file provides the overall layout structure for your application. It includes:</p>
+                                    <div class="code-example">
+                                        <pre><code>&#64;&#64;include('./partials/app-html.html')
+
+&lt;head&gt;
+    &#64;&#64;include('./partials/app-meta-title.html', {&quot;pageTitle&quot;: 'Blank Page'})
+
+    &#64;&#64;include('./partials/app-head-css.html')
+&lt;/head&gt;
+
+&lt;body&gt;
+
+    &lt;div class=&quot;app-wrap&quot;&gt;
+
+        &#64;&#64;include('./partials/app-header.html')
+
+        &#64;&#64;include('./partials/app-sidebar.html')
+
+        &lt;main class=&quot;app-body&quot;&gt;
+            &lt;div class=&quot;app-content&quot;&gt;
+
+                &lt;div class=&quot;content-wrapper&quot;&gt;
+
+                    &#64;&#64;include('./partials/app-pagetitle.html', {
+                        &quot;pageTitle&quot;: &quot;Blank Page&quot;,
+                        &quot;pageSubTitle1&quot;: &quot;Blank Page&quot;,
+                        &quot;pageSubText&quot;: &quot;Blank Page&quot;
+                    })
+
+                &lt;/div&gt;
+
+
+            &lt;/div&gt;
+
+            &#64;&#64;include('./partials/app-footer.html')
+
+        &lt;/main&gt;
+
+        &#64;&#64;include('./partials/app-drawer.html')
+
+        &#64;&#64;include('./partials/app-settings.html')
+
+    &lt;/div&gt;
+
+    &#64;&#64;include('./partials/app-scripts.html')
+
+    &lt;script src=&quot;scripts/pages/blank.js&quot;&gt;&lt;/script&gt;
+
+&lt;/body&gt;
+
+&lt;/html&gt;</code></pre>
+                                    </div>
+                                    <h6 class="text-uppercase fw-700">Key Configuration Parameters</h6>
+                                    <div class="table-responsive mb-4 mt-4">
+                                        <table class="table table-striped table-clean">
+                                            <thead>
+                                                <tr>
+                                                    <th>Parameter</th>
+                                                    <th>Description</th>
+                                                    <th>Usage</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td><code>pageTitle</code></td>
+                                                    <td>Sets the page title in the browser tab</td>
+                                                    <td>String value for the HTML title tag</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><code>currentPage</code></td>
+                                                    <td>Identifies the current page for navigation highlighting</td>
+                                                    <td>Should match a navigation item ID in navigation.json</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><code>additionalCSS</code></td>
+                                                    <td>Array of CSS files specific to this page</td>
+                                                    <td>Paths relative to the dist directory</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><code>additionalJS</code></td>
+                                                    <td>Array of JavaScript files specific to this page</td>
+                                                    <td>Paths relative to the dist directory</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><code>additionalScripts</code></td>
+                                                    <td>Inline JavaScript to be executed on page load</td>
+                                                    <td>Raw JavaScript code as a template literal</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><code>contentRight</code></td>
+                                                    <td>Content for the right sidebar (if enabled)</td>
+                                                    <td>HTML content as a template literal</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><code>content</code></td>
+                                                    <td>Main page content</td>
+                                                    <td>HTML content as a template literal</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <h6 class="text-uppercase fw-700">Example of app-head-css.html Structure</h6>
+                                    <p>The <code>app-head-css.html</code> file provides the base head css for the application:</p>
+                                    <div class="code-example">
+                                        <pre><code>&lt;!-- Vendor css --&gt;
+&lt;link rel=&quot;stylesheet&quot; media=&quot;screen, print&quot; href=&quot;plugins/waves/waves.min.css&quot;&gt;
+
+&lt;!-- Base css --&gt;
+&lt;link rel=&quot;stylesheet&quot; media=&quot;screen, print&quot; href=&quot;css/smartapp.css&quot;&gt;
+
+&lt;!-- Icons css--&gt;
+&lt;link rel=&quot;stylesheet&quot; media=&quot;screen, print&quot; href=&quot;webfonts/smartadmin/sa-icons.css&quot;&gt;
+&lt;link rel=&quot;stylesheet&quot; media=&quot;screen, print&quot; href=&quot;webfonts/fontawesome/fontawesome.css&quot;&gt;
+
+&lt;!-- Save/Load functionality JavaScript --&gt;
+&lt;script src=&quot;scripts/core/saveloadscript.js&quot;&gt;&lt;/script&gt;
+                                        </code></pre>
+                                    </div>
+
+                                    <h6 class="text-uppercase fw-700">Example of app-scripts.html Structure</h6>
+                                    <p>The <code>app-scripts.html</code> file provides the base scripts for the application:</p>
+                                    <div class="code-example">
+                                        <pre><code>&lt;!-- Core scripts --&gt;
+&lt;script src=&quot;plugins/bootstrap/bootstrap.bundle.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;scripts/core/smartNavigation.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;scripts/core/smartFilter.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;scripts/core/smartSlimscroll.js&quot;&gt;&lt;/script&gt;
+
+&lt;!-- Dependable scripts --&gt;
+&lt;script src=&quot;plugins/sortablejs/Sortable.min.js&quot;&gt;&lt;/script&gt;
+&lt;script src=&quot;plugins/waves/waves.min.js&quot;&gt;&lt;/script&gt;
+
+&lt;!-- App.js --&gt;
+&lt;script src=&quot;scripts/core/smartApp.js&quot;&gt;&lt;/script&gt;</code></pre>
+                                    </div>
+
+
+                                </section>
+
+                                <section id="best-practices" class="concept-section">
+                                    <h2 class="concept-title">Best Practices for Customization</h2>
+                                    <div class="table-responsive mb-4 mt-4">
+                                        <table class="table table-striped table-clean">
+                                            <thead>
+                                                <tr>
+                                                    <th>Practice</th>
+                                                    <th>Description</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td><strong>Modular Structure</strong></td>
+                                                    <td>Break down the UI into reusable components/partials that can be maintained independently</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Configuration-Driven</strong></td>
+                                                    <td>Use configuration objects to control page behavior rather than hardcoding values</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Asset Management</strong></td>
+                                                    <td>Implement proper bundling and minification for production environments</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Authentication Integration</strong></td>
+                                                    <td>Plan for user authentication UI components and session management</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>API Communication</strong></td>
+                                                    <td>Establish patterns for frontend-backend communication (REST, GraphQL, etc.)</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>State Management</strong></td>
+                                                    <td>Implement appropriate state management for your application complexity</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><strong>Error Handling</strong></td>
+                                                    <td>Create consistent error handling and user feedback mechanisms</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div class="pro-tip">
+                                        <strong>Pro Tip:</strong> Create a standardized page template early in your development process. This template should include all common elements (navigation, footer, authentication UI) and provide clear extension points for page-specific content.
+                                    </div>
+                                </section>
+
+                                <section id="theme-colors" class="concept-section">
+                                    <h2 class="concept-title">Theme Colors and Customization</h2>
+                                    <p>SmartAdmin v5 provides a powerful theming system that allows you to customize the visual appearance of your application. The theme is built using SCSS variables, making it easy to change colors, typography, and other visual elements.</p>
+
+                                    <h6 class="text-uppercase fw-700">Understanding _variables.scss</h6>
+                                    <p>The core of the theming system is the <code>src/sass/app/_variables.scss</code> file. This file contains all the color definitions and other visual variables that control the appearance of the template:</p>
+
+                                    <div class="code-example">
+                                        <pre><code>// Core theme colors in _variables.scss
+$color-primary:                     #2196F3;
+$color-success:                     #1dc9b7;
+$color-info:                        #a486d1;
+$color-warning:                     #ffc241;
+$color-danger:                      #fd3995;
+$color-fusion:                      darken(desaturate(adjust-hue($color-primary, 5), 80%), 25%);
+$color-white:                       #fff;
+$color-black:                       #000; 
+
+// Color Maps
+$theme-colors: (
+  'primary': $color-primary,
+  'success': $color-success,
+  'info': $color-info,
+  'warning': $color-warning,
+  'danger': $color-danger,
+  'fusion': $color-fusion,
+  'dark': $color-black,
+  'light': $color-white,
+  'secondary': #6c757d
+);</code></pre>
+                                    </div>
+
+                                    <h6 class="text-uppercase fw-700">Customizing Theme Colors</h6>
+                                    <p>To change the theme colors of your application:</p>
+
+                                    <ol>
+                                        <li>Locate and open <code>src/sass/app/_variables.scss</code></li>
+                                        <li>Modify the color variables to match your brand or design requirements</li>
+                                        <li>Run <code>gulp</code> to compile the SCSS into CSS</li>
+                                        <li>Or use <code>gulp</code> to start the watch process for automatic compilation on changes</li>
+                                    </ol>
+
+                                    <div class="table-responsive mb-4 mt-4">
+                                        <table class="table table-striped table-clean">
+                                            <thead>
+                                                <tr>
+                                                    <th>Color Variable</th>
+                                                    <th>Used For</th>
+                                                    <th>Default Value</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td><code>$color-primary</code></td>
+                                                    <td>Primary buttons, links, active states, and brand elements</td>
+                                                    <td>#2196F3 (Blue)</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><code>$color-success</code></td>
+                                                    <td>Success messages, confirmations, and positive actions</td>
+                                                    <td>#1dc9b7 (Teal)</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><code>$color-info</code></td>
+                                                    <td>Information messages, help text, and neutral notifications</td>
+                                                    <td>#a486d1 (Purple)</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><code>$color-warning</code></td>
+                                                    <td>Warning messages, caution indicators, and attention-grabbing elements</td>
+                                                    <td>#ffc241 (Amber)</td>
+                                                </tr>
+                                                <tr>
+                                                    <td><code>$color-danger</code></td>
+                                                    <td>Error messages, destructive actions, and critical alerts</td>
+                                                    <td>#fd3995 (Pink)</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <h6 class="text-uppercase fw-700">CSS Variables System</h6>
+                                    <p>SmartAdmin v5 converts SCSS variables into CSS custom properties (variables) for runtime theme switching capabilities. This enables features like dark mode and dynamic theming:</p>
+
+                                    <div class="code-example">
+                                        <pre><code>// CSS Variables in :root
+:root {
+    // Theme Colors
+    @each $name, $value in $theme-colors {
+        // Base color
+        --bs-#{$name}: #{$value};
+        
+        // RGB values for rgba() usage
+        --bs-#{$name}-rgb: #{red($value)}, #{green($value)}, #{blue($value)};
+        
+        // Text emphasis colors
+        --bs-#{$name}-text-emphasis: #{darken($value, 30%)};
+        
+        // Subtle background colors
+        --bs-#{$name}-bg-subtle: #{lighten($value, 30%)};
+        
+        // Subtle border colors
+        --bs-#{$name}-border-subtle: #{lighten($value, 20%)};
+    }
+}</code></pre>
+                                    </div>
+
+                                    <h6 class="text-uppercase fw-700">Compiling Theme Changes</h6>
+                                    <p>After making changes to the SCSS variables, you need to compile them to CSS using Gulp:</p>
+
+                                    <div class="code-example">
+                                        <pre><code>// Compile SCSS to CSS (one-time)
+gulp
+
+// Build all assets without watching
+gulp build
+
+// RTL (Right-to-Left) support
+gulp rtl
+
+// Build RTL all assets without watching
+gulp rtlbuild</code></pre>
+                                    </div>
+
+                                    <div>
+                                        <h6 class="text-uppercase fw-700">Dark Mode Customization</h6>
+                                        <p>The dark mode theme is defined in the same file using the <code>[data-bs-theme=dark]</code> selector found in <code>src/sass/app/_darkmode.scss</code></p>
+
+                                        <h6>Inverse Key Variables</h6>
+                                        <p>The following variables are used to customize the dark mode theme which has the proper inverse effect:</p>
+                                        <ul>
+                                            <li><code>--bs-body-color</code> / <code>--bs-body-color-rgb</code>: Inverse Text color</li>
+                                            <li><code>--bs-body-bg</code> / <code>--bs-body-bg-rgb</code>: Inverse Background color</li>
+                                            <li><code>--bs-emphasis-color</code> / <code>--bs-emphasis-color-rgb</code>: Inverse Emphasis color</li>
+                                            <li><code>--bs-border-color</code> / <code>--bs-border-color-rgb</code>: Inverse Border color</li>
+                                        </ul>
+
+                                        <div class="code-example">
+                                            <pre><code>// Dark theme overrides 
+[data-bs-theme=dark] {
+    color-scheme: dark;
+    --bs-body-color: #{$body-color-dark};
+    --bs-body-color-rgb: #{red($body-color-dark)}, #{green($body-color-dark)}, #{blue($body-color-dark)};
+    --bs-body-bg: #{$body-bg-dark};
+    --bs-body-bg-rgb: #{red($body-bg-dark)}, #{green($body-bg-dark)}, #{blue($body-bg-dark)};
+    --bs-emphasis-color: #{$body-emphasis-color-dark};
+    --bs-emphasis-color-rgb: #{red($body-emphasis-color-dark)}, #{green($body-emphasis-color-dark)}, #{blue($body-emphasis-color-dark)};
+    --bs-secondary-color: #{$body-secondary-color-dark};
+    --bs-secondary-color-rgb: #{red($body-secondary-color-dark)}, #{green($body-secondary-color-dark)}, #{blue($body-secondary-color-dark)};
+    --bs-secondary-bg: #{$body-secondary-bg-dark};
+    --bs-secondary-bg-rgb: #{red($body-secondary-bg-dark)}, #{green($body-secondary-bg-dark)}, #{blue($body-secondary-bg-dark)};
+    --bs-tertiary-color: #{$body-tertiary-color-dark};
+    --bs-tertiary-color-rgb: #{red($body-tertiary-color-dark)}, #{green($body-tertiary-color-dark)}, #{blue($body-tertiary-color-dark)};
+    --bs-tertiary-bg: #{$body-tertiary-bg-dark};
+    --bs-tertiary-bg-rgb: #{red($body-tertiary-bg-dark)}, #{green($body-tertiary-bg-dark)}, #{blue($body-tertiary-bg-dark)};
+    --bs-primary-text-emphasis: #{$primary-text-emphasis-dark};
+    --bs-secondary-text-emphasis: #{$secondary-text-emphasis-dark};
+    --bs-success-text-emphasis: #{$success-text-emphasis-dark};
+    --bs-info-text-emphasis: #{$info-text-emphasis-dark};
+    --bs-warning-text-emphasis: #{$warning-text-emphasis-dark};
+    --bs-danger-text-emphasis: #{$danger-text-emphasis-dark};
+    --bs-light-text-emphasis: #{$light-text-emphasis-dark};
+    --bs-dark-text-emphasis: #{$dark-text-emphasis-dark};
+    --bs-primary-bg-subtle: #{$primary-bg-subtle-dark};
+    --bs-secondary-bg-subtle: #{$secondary-bg-subtle-dark};
+    --bs-success-bg-subtle: #{$success-bg-subtle-dark};
+    --bs-info-bg-subtle: #{$info-bg-subtle-dark};
+    --bs-warning-bg-subtle: #{$warning-bg-subtle-dark};
+    --bs-danger-bg-subtle: #{$danger-bg-subtle-dark};
+    --bs-light-bg-subtle: #{$light-bg-subtle-dark};
+    --bs-dark-bg-subtle: #{$dark-bg-subtle-dark};
+    --bs-primary-border-subtle: #{$primary-border-subtle-dark};
+    --bs-secondary-border-subtle: #{$secondary-border-subtle-dark};
+    --bs-success-border-subtle: #{$success-border-subtle-dark};
+    --bs-info-border-subtle: #{$info-border-subtle-dark};
+    --bs-warning-border-subtle: #{$warning-border-subtle-dark};
+    --bs-danger-border-subtle: #{$danger-border-subtle-dark};
+    --bs-light-border-subtle: #{$light-border-subtle-dark};
+    --bs-dark-border-subtle: #{$dark-border-subtle-dark};
+    --bs-border-color: #{$border-color-dark};
+    --bs-border-color-translucent: #{$border-color-translucent-dark};
+    --bs-headings-color: #{$headings-color-dark};
+    --bs-link-color: #{$link-color-dark};
+    --bs-link-hover-color: #{$link-hover-color-dark};
+    --bs-code-color: #{$code-color-dark};
+    --bs-mark-color: #{$mark-color-dark};
+    --bs-mark-bg: #{$mark-bg-dark};
+    --bs-form-select-indicator-color: #{$form-select-indicator-color-dark};
+    --bs-form-select-indicator: #{$form-select-indicator-dark};
+    --bs-form-switch-color: #{$form-switch-color-dark};
+    --bs-form-switch-bg-image: #{$form-switch-bg-image-dark};
+    --bs-form-valid-color: #{$form-valid-color-dark};
+    --bs-form-valid-border-color: #{$form-valid-border-color-dark};
+    --bs-form-invalid-color: #{$form-invalid-color-dark};
+    --bs-form-invalid-border-color: #{$form-invalid-border-color-dark};
+    --bs-accordion-icon-color: #{$accordion-icon-color-dark};
+    --bs-accordion-icon-active-color: #{$accordion-icon-active-color-dark};
+    --bs-accordion-button-icon: #{$accordion-button-icon-dark};
+    --bs-accordion-button-active-icon: #{$accordion-button-active-icon-dark};
+}</code></pre>
+                                        </div>
+                                    </div>
+
+                                    <div class="warning">
+                                        <strong>Important:</strong> Always use the Gulp tasks to compile your SCSS changes. Direct edits to CSS files will be overwritten during the next compilation.
+                                    </div>
+
+                                    <h6 class="text-uppercase fw-700">Advanced Customization Tips</h6>
+                                    <ul class="list-spaced mb-4">
+                                        <li><strong>Color Shades:</strong> SmartAdmin generates color shades (50-900) for each theme color automatically</li>
+                                        <li><strong>Typography:</strong> Customize fonts by changing the <code>--font-family</code> variable</li>
+                                        <li><strong>Layout:</strong> Adjust layout dimensions with variables like <code>--app-header-height</code> and <code>--menu-width</code></li>
+                                        <li><strong>Custom Themes:</strong> Create multiple theme files by extending the base variables</li>
+                                    </ul>
+
+                                    <div class="pro-tip">
+                                        <strong>Pro Tip:</strong> For large projects, create a separate <code>_custom-variables.scss</code> file that imports and overrides the default variables. This approach makes it easier to update the template while preserving your customizations.
+                                    </div>
+                                </section>
+
+                                <section id="smartapp-examples" class="concept-section">
+                                    <h2 class="concept-title">Examples and Usage</h2>
+                                    <h6 class="text-uppercase fw-700">Toggle Actions</h6>
+                                    <p>Toggle actions are used to switch classes on and off elements:</p>
+                                    <div class="code-example">
+                                        <pre><code>&lt;!-- Basic Toggle Example -->
+&lt;button data-action="toggle" data-class="my-class">Toggle Class&lt;/button>
+
+&lt;!-- Toggle with Dependencies -->
+&lt;button data-action="toggle" 
+        data-class="primary-theme"
+        data-dependency="dark-mode light-mode">Toggle Theme&lt;/button>
+
+&lt;!-- Toggle with Co-dependencies -->
+&lt;button data-action="toggle" 
+        data-class="menu-expanded"
+        data-codependence="menu-collapsed">Toggle Menu&lt;/button></code></pre>
+                                    </div>
+
+                                    <h6 class="text-uppercase fw-700">Panel Actions</h6>
+                                    <p>SmartApp.js includes comprehensive panel management features:</p>
+                                    <div class="code-example">
+                                        <pre><code>&lt;!-- Panel Controls -->
+&lt;div class="panel">
+    &lt;div class="panel-hdr">
+        &lt;h2>Example Panel&lt;/h2>
+        &lt;div class="panel-toolbar">
+            &lt;button class="btn btn-panel" data-action="panel-collapse">
+                &lt;i class="fa fa-minus">&lt;/i>
+            &lt;/button>
+            &lt;button class="btn btn-panel" data-action="panel-fullscreen">
+                &lt;i class="fa fa-expand">&lt;/i>
+            &lt;/button>
+            &lt;button class="btn btn-panel" data-action="panel-close">
+                &lt;i class="fa fa-times">&lt;/i>
+            &lt;/button>
+        &lt;/div>
+    &lt;/div>
+    &lt;div class="panel-container">
+        &lt;div class="panel-content">
+            Panel content here
+        &lt;/div>
+    &lt;/div>
+&lt;/div></code></pre>
+                                    </div>
+
+                                    <h6 class="text-uppercase fw-700">Sound Controls</h6>
+                                    <p>SmartApp.js provides audio playback functionality:</p>
+                                    <div class="code-example">
+                                        <pre><code>&lt;!-- Play Sound Example -->
+&lt;button data-action="playsound" 
+        data-soundfile="notification.mp3">
+    Play Notification
+&lt;/button>
+
+&lt;!-- Play Sound with Path -->
+&lt;button data-action="playsound" 
+        data-soundpath="media/sound/" 
+        data-soundfile="alert.mp3">
+    Play Alert
+&lt;/button></code></pre>
+                                    </div>
+
+                                    <h6 class="text-uppercase fw-700">Class Management</h6>
+                                    <p>Direct class manipulation on target elements:</p>
+                                    <div class="code-example">
+                                        <pre><code>&lt;!-- Add Class Example -->
+&lt;button data-action="add-class" 
+        data-target="#myElement" 
+        data-classname="active">
+    Activate Element
+&lt;/button>
+
+&lt;!-- Remove Class Example -->
+&lt;button data-action="remove-class" 
+        data-target="#myElement" 
+        data-classname="disabled">
+    Enable Element
+&lt;/button>
+
+&lt;!-- Toggle Replace Example -->
+&lt;button data-action="toggle-replace" 
+        data-target="#myElement"
+        data-removeclass="light-theme"
+        data-addclass="dark-theme">
+    Switch Theme
+&lt;/button></code></pre>
+                                    </div>
+
+                                    <h6 class="text-uppercase fw-700">Working Examples</h6>
+                                    <div class="mb-4">
+                                        <p>Here are some live examples you can try:</p>
+
+                                        <div class="panel mb-4">
+                                            <div class="panel-hdr">
+                                                <h2>Demo Panel</h2>
+                                                <div class="panel-toolbar">
+                                                    <button type="button" class="btn btn-panel" data-action="panel-collapse"></button>
+                                                    <button type="button" class="btn btn-panel" data-action="panel-fullscreen"></button>
+                                                    <button type="button" class="btn btn-panel" data-action="panel-close"></button>
+                                                </div>
+                                            </div>
+
+                                            <div class="panel-container">
+                                                <div class="panel-content">
+                                                    <p>This is a working example of a panel with all controls enabled. <strong>Tip:</strong>Remember to use the <code>btn-has-sound</code> class when adding a sound to a button.</p>
+                                                    <button type="button" class="btn btn-outline-default btn-has-sound d-flex align-items-center" data-action="playsound" data-soundfile="sawhisp.mp3">
+                                                        <svg class="sa-icon d-inline-block me-2">
+                                                            <use href="icons/sprite.svg#volume-2"></use>
+                                                        </svg>
+                                                        Play Sound
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+
+                                        <p>Adds the class "demo-active" to the HTML element and saves the settings</p>
+                                        <button type="button" class="btn btn-outline-default mb-3" data-action="toggle" data-class="demo-active">
+                                            Toggle Class
+                                        </button>
+
+                                        <p>Adds/Remove the class "highlight" to the #demoElement element</p>
+                                        <div class="d-flex gap-2 mb-4">
+                                            <button type="button" class="btn btn-outline-default" data-action="add-class" data-target="#demoElement" data-classname="highlight">
+                                                Add Highlight
+                                            </button>
+                                            <button type="button" class="btn btn-outline-default" data-action="remove-class" data-target="#demoElement" data-classname="highlight">
+                                                Remove Highlight
+                                            </button>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section id="theme-settings" class="concept-section">
+                                    <h2 class="concept-title">Theme Settings and Customization</h2>
+                                    <p>SmartAdmin provides a comprehensive theme settings system that allows you to customize the layout and appearance of your application. These settings can be controlled through data attributes and are automatically saved to local storage.</p>
+
+                                    <h6 class="text-uppercase fw-700">Available Theme Settings</h6>
+                                    <div class="table-responsive mb-4">
+                                        <table class="table table-striped table-clean">
+                                            <thead>
+                                                <tr>
+                                                    <th>Setting</th>
+                                                    <th>Class</th>
+                                                    <th>Description</th>
+                                                    <th>Example</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>Header Fixed</td>
+                                                    <td><code>set-header-fixed</code></td>
+                                                    <td>Fixes the header position at the top of the page</td>
+                                                    <td>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" data-action="toggle" data-class="set-header-fixed">
+                                                            <label class="form-check-label">Toggle Fixed Header</label>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Navigation Full Height</td>
+                                                    <td><code>set-nav-full</code></td>
+                                                    <td>Extends navigation to full page height</td>
+                                                    <td>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" data-action="toggle" data-class="set-nav-full" data-codependence="set-nav-collapsed">
+                                                            <label class="form-check-label">Toggle Full Height</label>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Navigation Fixed</td>
+                                                    <td><code>set-nav-fixed</code></td>
+                                                    <td>Fixes the navigation position</td>
+                                                    <td>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" data-action="toggle" data-class="set-nav-fixed">
+                                                            <label class="form-check-label">Toggle Fixed Nav</label>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Navigation Collapsed</td>
+                                                    <td><code>set-nav-collapsed</code></td>
+                                                    <td>Collapses the navigation to icons only</td>
+                                                    <td>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" data-action="toggle" data-class="set-nav-collapsed" data-dependency="set-nav-full">
+                                                            <label class="form-check-label">Toggle Collapsed Nav</label>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Navigation Minified</td>
+                                                    <td><code>set-nav-minified</code></td>
+                                                    <td>Minifies the navigation menu</td>
+                                                    <td>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" data-action="toggle" data-class="set-nav-minified">
+                                                            <label class="form-check-label">Toggle Minified Nav</label>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Dark Navigation</td>
+                                                    <td><code>set-nav-dark</code></td>
+                                                    <td>Applies dark theme to navigation</td>
+                                                    <td>
+                                                        <div class="form-check">
+                                                            <input class="form-check-input" type="checkbox" data-action="toggle" data-class="set-nav-dark">
+                                                            <label class="form-check-label">Toggle Dark Nav</label>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <h6 class="text-uppercase fw-700">Implementation Example</h6>
+                                    <p>Here's how to implement theme settings in your application:</p>
+                                    <div class="code-example">
+                                        <pre><code>&lt;!-- Theme Setting Toggle -->
+&lt;div class="form-check">
+    &lt;input class="form-check-input" 
+           type="checkbox" 
+           id="actionNavFull" 
+           data-action="toggle" 
+           data-class="set-nav-full"
+           data-codependence="set-nav-collapsed">
+    &lt;label class="form-check-label" for="actionNavFull">
+        Navigation full height
+    &lt;/label>
+&lt;/div>
+
+&lt;!-- Theme Setting with Dependencies -->
+&lt;div class="form-check">
+    &lt;input class="form-check-input" 
+           type="checkbox" 
+           id="actionNavCollapsed" 
+           data-action="toggle" 
+           data-class="set-nav-collapsed"
+           data-dependency="set-nav-full">
+    &lt;label class="form-check-label" for="actionNavCollapsed">
+        Navigation collapsed
+    &lt;/label>
+&lt;/div></code></pre>
+                                    </div>
+
+                                    <h6 class="text-uppercase fw-700">Understanding Dependencies</h6>
+                                    <p>Theme settings can have dependencies and co-dependencies:</p>
+                                    <ul class="list-spaced mb-4">
+                                        <li><strong>data-dependency:</strong> Classes that must be added when this setting is enabled</li>
+                                        <li><strong>data-codependence:</strong> Classes that must be removed when this setting is enabled</li>
+                                    </ul>
+
+                                    <div class="pro-tip">
+                                        <strong>Pro Tip:</strong> Theme settings are automatically saved to local storage and restored on page reload. You can reset all settings using the <code>appDOM.resetStyle()</code> method.
+                                    </div>
+                                </section>
+
+                            </div>
+                            <div class="order-1 order-xl-2 col-lg-12 col-xl-3 sticky-xl-top z-1">
+                                <!-- Sidebar (Right Side) - Sticky Navigation -->
+                                <h5 class="mb-3 ps-lg-3">On This Page</h5>
+                                <ul class="list-unstyled ps-lg-3">
+                                    <li class="py-1"><a href="#introduction">Introduction</a></li>
+                                    <li class="py-1"><a href="#prerequisites">Prerequisites</a></li>
+                                    <li class="py-1"><a href="#installation">Installation</a></li>
+                                    <li class="py-1"><a href="#project-structure">Project Structure</a></li>
+                                    <li class="py-1"><a href="#gulp-system">Gulp Build</a></li>
+                                    <li class="py-1"><a href="#navigation-system">Navigation</a></li>
+                                    <li class="py-1"><a href="#customizing-index">Customizing</a></li>
+                                    <li class="py-1"><a href="#backend-integration">Backend Integration</a></li>
+                                    <li class="py-1"><a href="#best-practices">Best Practices</a></li>
+                                    <li class="py-1"><a href="#theme-colors">Theme Colors</a></li>
+                                    <li class="py-1"><a href="#smartapp-examples">Examples</a></li>
+                                    <li class="py-1"><a href="#theme-settings">Theme Settings</a></li>
+                                </ul>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <footer class="app-footer">
+            	<div class="app-footer-content flex-grow-1">
+            		SmartAdmin &copy;
+
+            		<script>document.write(new Date().getFullYear());</script>.
+
+            		<span class="hidden-mobile"> All rights reserved, </span>
+
+            		<span class="fw-bold">Webora.</span>
+
+            		<a href="#top" class="ms-auto hidden-mobile" aria-label="Back to top">
+            			<svg class="sa-icon sa-thick sa-icon-primary">
+            				<use href="icons/sprite.svg#arrow-up"></use>
+            			</svg>
+            		</a>
+            	</div>
+            </footer>
+
+        </main>
+
+        <aside class="app-drawer js-app-drawer">
+            <button type="button" class="btn btn-system position-absolute top-0 end-0 z-2 overflow-hidden p-3" data-action="toggle-swap" data-toggleclass="open" data-target="aside.js-app-drawer" aria-label="Close">
+                <svg class="sa-icon sa-icon-2x">
+                    <use href="icons/sprite.svg#x"></use>
+                </svg>
+            </button>
+
+            <div class="custom-scrollbar h-100 p-0">
+                <div class="d-flex flex-grow-1 p-0 w-100 h-100">
+                    <!-- left sidebar -->
+                    <div class="d-flex flex-column flex-grow-1 flex-0 overflow-x-auto h-100">
+
+                        <div class="flex-wrap align-items-center flex-grow-1 position-relative bg-gray-50">
+                            <div class="position-absolute top-0 bottom-0 w-100 overflow-hidden d-flex flex-column">
+
+                                <!-- chat container -->
+                                <div class="w-100 p-4 pb-0 px-lg-3 bg-subtlelight-fade custom-scroll flex-grow-1 d-flex flex-column">
+
+                                    <div class="mb-g">
+                                        <h4 class="fw-600">Hi Sunny,</h4>
+                                        <span class="text-muted">how can I help you today?</span>
+                                    </div>
+                                    <div class="mt-auto ms-auto mb-2 btn btn-outline-default px-2 py-1 fw-500 fs-xs text-gradient">
+                                        Analyze my data
+                                    </div>
+                                    <p class="ms-auto mb-2 btn btn-outline-default px-2 py-1 fs-xs fw-500 text-gradient">
+                                        Create a new report
+                                    </p>
+                                    <p class="ms-auto mb-2 btn btn-outline-default px-2 py-1 fs-xs fw-500 text-gradient">
+                                        Summarize my Calendar
+                                    </p>
+
+                                </div>
+
+                                <!-- chat input -->
+                                <div class="bg-faded m-3 rounded height-auto">
+                                    <textarea rows="2" class="form-control px-2 rounded-top" placeholder="Ask me anything"></textarea>
+                                    <div class="d-flex align-items-center py-2 px-2 border border-top-0 rounded-bottom">
+                                        <div class="d-flex gap-1 flex-row align-items-center flex-wrap flex-shrink-0">
+                                            <button class="btn btn-icon fs-xl flex-shrink-0" aria-label="Attach Files or Photos" type="button" data-bs-toggle="tooltip" data-bs-original-title="Attach Files or Photos" data-bs-placement="top">
+                                                <svg class="sa-icon sa-bold sa-icon-subtlelight">
+                                                    <use href="icons/sprite.svg#file"></use>
+                                                </svg>
+                                            </button>
+                                            <button class="btn btn-icon fs-xl width-1 flex-shrink-0" aria-label="Voice" type="button" data-bs-toggle="tooltip" data-bs-original-title="Voice" data-bs-placement="top">
+                                                <svg class="sa-icon sa-bold sa-icon-subtlelight">
+                                                    <use href="icons/sprite.svg#mic"></use>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <button class="btn btn-icon fs-xl width-1 flex-shrink-0 ms-auto" aria-label="Send" type="button" data-bs-toggle="tooltip" data-bs-original-title="Send" data-bs-placement="top">
+                                            <svg class="sa-icon sa-bold sa-icon-subtlelight sa-icon-2x">
+                                                <use href="icons/sprite.svg#arrow-up-circle"></use>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <div class="backdrop" data-action="toggle-swap" data-toggleclass="open" data-target="aside.js-app-drawer"></div>
+
+        <aside class="app-drawer js-drawer-settings">
+        	<div class="app-drawer-header">
+        		<div class="h4 mb-0">
+        			App Builder
+        		</div>
+        		<button type="button" class="btn btn-system ms-auto" data-action="toggle-swap" data-toggleclass="open" data-target="aside.js-drawer-settings" aria-label="Close">
+        			<svg class="sa-icon sa-icon-2x">
+        				<use href="icons/sprite.svg#x"></use>
+        			</svg>
+        		</button>
+        	</div>
+
+        	<div class="custom-scrollbar h-100">
+
+        		<div class="info-container">
+        			Unlock limitless design potential with 16+ layout combinations and extensive customization options—tailor your dashboard to fit your exact needs.
+        			<button type="button" class="btn btn-sm btn-outline-secondary ms-1" data-action="playsound" data-soundpath="media/sound/" data-soundfile="settings-voice.mp3" aria-label="Play Settings Voice">
+        				<svg class="sa-icon">
+        					<use href="icons/sprite.svg#volume-2"></use>
+        				</svg>
+        			</button>
+        		</div>
+
+        		<div class="d-flex justify-content-spaced w-100 app-fob-showcase-text" data-prefix="Preview">
+        			<div class="app-fob app-fob-lg app-fob-showcase">
+        				<div></div>
+        				<div></div>
+        				<div></div>
+        			</div>
+        		</div>
+
+        		<div class="mod-status primary-mod" data-prefix="Primary Settings">
+        			<div class="form-check">
+        				<input class="form-check-input" type="checkbox" id="actionHeaderFixed" data-action="toggle" data-class="set-header-fixed">
+        				<label class="form-check-label" for="actionHeaderFixed">
+        					Header position fixed
+        				</label>
+        			</div>
+        			<div class="form-check d-none d-lg-block d-xl-block d-xxl-block">
+        				<input class="form-check-input" type="checkbox" id="actionNavFull" data-action="toggle" data-class="set-nav-full" data-codependence="set-nav-collapsed">
+        				<label class="form-check-label" for="actionNavFull">
+        					Navigation full height
+        				</label>
+        			</div>
+        		</div>
+
+        		<div class="mod-status d-none d-lg-block d-xl-block d-xxl-block" data-prefix="Addon Settings">
+        			<div class="form-check">
+        				<input class="form-check-input" type="checkbox" id="actionNavFixed" data-action="toggle" data-class="set-nav-fixed">
+        				<label class="form-check-label" for="actionNavFixed">
+        					Navigation position fixed
+        				</label>
+        			</div>
+        			<div class="form-check">
+        				<input class="form-check-input" type="checkbox" id="actionNavCollapsed" data-action="toggle" data-class="set-nav-collapsed" data-dependency="set-nav-full">
+        				<label class="form-check-label" for="actionNavCollapsed">
+        					Navigation collapsed
+        				</label>
+        			</div>
+        		</div>
+
+        		<div class="mod-status" data-prefix="Misc Settings">
+        			<div class="form-check d-none d-lg-block d-xl-block d-xxl-block">
+        				<input class="form-check-input" type="checkbox" id="actionNavMinified" data-action="toggle" data-class="set-nav-minified">
+        				<label class="form-check-label" for="actionNavMinified">
+        					Navigation Minified
+        				</label>
+        			</div>
+        			<div class="form-check">
+        				<input class="form-check-input" type="checkbox" id="darkNavigation" data-action="toggle" data-class="set-nav-dark">
+        				<label class="form-check-label" for="darkNavigation">
+        					Dark Navigation
+        				</label>
+        			</div>
+        		</div>
+
+        		<div class="mod-status" data-prefix="Aria Settings">
+        			<div class="form-check">
+        				<input class="form-check-input" type="checkbox" id="actionColorblindMode" data-action="toggle" data-class="set-colorblind-mode">
+        				<label class="form-check-label" for="actionColorblindMode">
+        					Colorblind Mode
+        				</label>
+        			</div>
+        			<div class="form-check">
+        				<input class="form-check-input" type="checkbox" id="actionHighContrastMode" data-action="toggle" data-class="set-high-contrast-mode">
+        				<label class="form-check-label" for="actionHighContrastMode">
+        					High Contrast Mode
+        				</label>
+        			</div>
+        		</div>
+
+        		<div class="mod-status app-themes" data-prefix="Themes">
+        			<div class="clickable-boxes">
+        				<!-- Default -->
+        				<input type="radio" id="option0" name="options" data-action="theme-style" data-theme-style="" checked>
+        				<label for="option0" data-prefix="Default" style="background: linear-gradient(135deg, #FF6A00, #F6A2D5, #4C91BF, #7A8B92, #AB7C9A);"></label>
+
+        				<!-- Nebula -->
+        				<input type="radio" id="option1" name="options" data-action="theme-style" data-theme-style="nebula">
+        				<label for="option1" data-prefix="Nebula" style="background: linear-gradient(135deg, #2a7dbf, #2a9d8f, #766cbc, #f4a261, #e76f51);"></label>
+
+        				<!-- Olive -->
+        				<input type="radio" id="option2" name="options" data-action="theme-style" data-theme-style="olive">
+        				<label for="option2" data-prefix="Olive" style="background: linear-gradient(135deg, #556B2F, #6B8E23, #8B9A3D, #A9B83E, #BDB76B);"></label>
+
+        				<!-- Solar -->
+        				<input type="radio" id="option3" name="options" data-action="theme-style" data-theme-style="solar">
+        				<label for="option3" data-prefix="Solar" style="background: linear-gradient(135deg, #FF8C00, #FFD700, #FF4500, #F1C40F, #F39C12);"></label>
+
+        				<!-- Lunar -->
+        				<input type="radio" id="option4" name="options" data-action="theme-style" data-theme-style="lunar">
+        				<label for="option4" data-prefix="Lunar" style="background: linear-gradient(135deg, #2C3E50, #34495E, #5F6368, #AAB7B8, #E6E6FA, #F1F3F4);"></label>
+
+        				<!-- Night -->
+        				<input type="radio" id="option5" name="options" data-action="theme-style" data-theme-style="night">
+        				<label for="option5" data-prefix="Night" style="background: linear-gradient(135deg, #1e2a47, #2b3654, #363d6c, #4f5d79, #717b91, #b6c4d1);"></label>
+
+        				<!-- Aurora -->
+        				<input type="radio" id="option6" name="options" data-action="theme-style" data-theme-style="aurora">
+        				<label for="option6" data-prefix="Aurora" style="background: linear-gradient(135deg, #337e7e, #527a4a, #63279b, #7FFF00, #87CEFA, #B0E0E6);"></label>
+
+        				<!-- Earth -->
+        				<input type="radio" id="option7" name="options" data-action="theme-style" data-theme-style="earth">
+        				<label for="option7" data-prefix="Earth" style="background: linear-gradient(135deg, #2198f3, #3173a5, #3f6888, #618d48, #52bf11);"></label>
+
+        				<!-- Flare -->
+        				<input type="radio" id="option8" name="options" data-action="theme-style" data-theme-style="flare">
+        				<label for="option8" data-prefix="Flare" style="background: linear-gradient(135deg, #FF4500, #FF6347, #F44336, #D32F2F, #B71C1C);"></label>
+
+        				<!-- Storm -->
+        				<input type="radio" id="option9" name="options" data-action="theme-style" data-theme-style="storm">
+        				<label for="option9" data-prefix="Storm" style="background: linear-gradient(135deg, #2F4F4F, #3B5360, #4B6A6E, #5A7980, #A9A9A9, #FFD700);"></label>
+
+        			</div>
+        		</div>
+
+        		<div class="d-flex" style="gap:10px">
+        			<button type="button" onclick="appDOM.resetStyle();" class="btn reset-button btn-outline-danger flex-grow-1"> <i class="sa sa-reload align-base me-1"></i> Factory Reset</button>
+        			<button type="button" onclick="resetPanelState();" class="btn btn-outline-secondary flex-grow-1"><i class="sa sa-reload align-base me-1"></i> Reset Panel</button>
+        		</div>
+        	</div>
+        </aside>
+
+        <div class="backdrop" data-action="toggle-swap" data-toggleclass="open" data-target="aside.js-drawer-settings"></div>
+
+    </div>
+
+    <!-- Core scripts -->
+    <script src="plugins/bootstrap/bootstrap.bundle.min.js"></script>
+    <script src="scripts/core/smartNavigation.js"></script>
+    <script src="scripts/core/smartFilter.js"></script>
+    <script src="scripts/core/smartSlimscroll.js"></script>
+
+    <!-- Dependable scripts -->
+    <script src="plugins/sortablejs/Sortable.min.js"></script>
+    <script src="plugins/waves/waves.min.js"></script>
+
+    <!-- App.js -->
+    <script src="scripts/core/smartApp.js"></script>
+
+    <script src="scripts/pages/treedemo.js"></script>
+
+    <!-- Code Highlightjs -->
+    <script src="plugins/highlightjs/highlight.min.js"></script>
+    <script src="plugins/highlightjs/go.min.js"></script>
+    <script src="scripts/pages/code-highlight.js"></script>
+
+</body>
+
+</html>

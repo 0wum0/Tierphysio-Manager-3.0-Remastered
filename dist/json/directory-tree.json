@@ -1,0 +1,179 @@
+{
+    "name": "SmartAdmin",
+    "type": "directory",
+    "children": [
+        {
+            "name": "gulpfile.js",
+            "type": "file",
+            "path": "gulpfile.js"
+        },
+        {
+            "name": "package.json",
+            "type": "file",
+            "path": "package.json"
+        },
+        {
+            "name": "plugins.config.js",
+            "type": "file",
+            "path": "plugins.config.js"
+        },
+        {
+            "name": "README.md",
+            "type": "file",
+            "path": "README.md"
+        },
+        {
+            "name": "src",
+            "type": "directory",
+            "children": [
+                {
+                    "name": "e-templates",
+                    "type": "directory"
+                },
+                {
+                    "name": "icons",
+                    "type": "directory"
+                },
+                {
+                    "name": "img",
+                    "type": "directory"
+                },
+                {
+                    "name": "json",
+                    "type": "directory"
+                },
+                {
+                    "name": "media",
+                    "type": "directory"
+                },
+                {
+                    "name": "sass",
+                    "type": "directory",
+                    "children": [
+                        {
+                            "name": "smartapp.scss",
+                            "type": "file"
+                        }
+                    ]
+                },
+                {
+                    "name": "scripts",
+                    "type": "directory",
+                    "children": [
+                        {
+                            "name": "core",
+                            "type": "directory"
+                        },
+                        {
+                            "name": "dependable",
+                            "type": "directory"
+                        },
+                        {
+                            "name": "optional",
+                            "type": "directory"
+                        },
+                        {
+                            "name": "pagescripts",
+                            "type": "directory"
+                        }
+                    ]
+                },
+                {
+                    "name": "All HTML Pages...",
+                    "type": "file",
+                    "path": "List of all smartadmin HTML pages"
+                },
+                {
+                    "name": "partials",
+                    "type": "directory",
+                    "children": [
+                        {
+                            "name": "app-drawer.html",
+                            "type": "file",
+                            "path": "src/partials/app-drawer.html"
+                        },
+                        {
+                            "name": "app-footer.html",
+                            "type": "file",
+                            "path": "src/partials/app-footer.html"
+                        },
+                        {
+                            "name": "app-head-css.html",
+                            "type": "file",
+                            "path": "src/partials/app-head-css.html"
+                        },
+                        {
+                            "name": "app-header.html",
+                            "type": "file",
+                            "path": "src/partials/app-header.html"
+                        },
+                        {
+                            "name": "app-html.html",
+                            "type": "file",
+                            "path": "src/partials/app-html.html"
+                        },
+                        {
+                            "name": "app-logo.html",
+                            "type": "file",
+                            "path": "src/partials/app-logo.html"
+                        },
+                        {
+                            "name": "app-menu-filter.html",
+                            "type": "file",
+                            "path": "src/partials/app-menu-filter.html"
+                        },
+                        {
+                            "name": "app-meta-title.html",
+                            "type": "file",
+                            "path": "src/partials/app-meta-title.html"
+                        },
+                        {
+                            "name": "app-notifications.html",
+                            "type": "file",
+                            "path": "src/partials/app-notifications.html"
+                        },
+                        {
+                            "name": "app-pagetitle.html",
+                            "type": "file",
+                            "path": "src/partials/app-pagetitle.html"
+                        },
+                        {
+                            "name": "app-scripts.html",
+                            "type": "file",
+                            "path": "src/partials/app-scripts.html"
+                        },
+                        {
+                            "name": "app-settings.html",
+                            "type": "file",
+                            "path": "src/partials/app-settings.html"
+                        },
+                        {
+                            "name": "app-sidebar.html",
+                            "type": "file",
+                            "path": "src/partials/app-sidebar.html"
+                        },
+                        {
+                            "name": "generated-navigation.html",
+                            "type": "file",
+                            "path": "src/partials/generated-navigation.html"
+                        }
+                    ]
+                },
+                {
+                    "name": "webfonts",
+                    "type": "directory",
+                    "children": [
+                        {
+                            "name": "fontawesome",
+                            "type": "directory"
+                        },
+                        {
+                            "name": "smartadmin",
+                            "type": "directory"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

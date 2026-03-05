@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light" class="set-nav-dark">
+
+<head>
+    <meta charset="utf-8">
+    <title> SmartAdmin v5 - Modern Admin Dashboard | SmartAdmin - Enterprise Admin Dashboard by Webora</title>
+    <meta name="description" content="Page Description">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, maximum-scale=5">
+
+    <!-- Standard favicon for browsers -->
+    <link rel="icon" href="img/favicon-32x32.png" type="image/png" sizes="32x32">
+    <link rel="icon" href="img/favicon-16x16.png" type="image/png" sizes="16x16">
+
+    <!-- Apple Touch Icon (iOS) -->
+    <link rel="apple-touch-icon" href="img/apple-touch-icon.png" sizes="180x180">
+
+    <!-- Android/Chrome (Progressive Web App) -->
+    <link rel="icon" href="img/favicon-192x192.png" type="image/png" sizes="192x192">
+
+    <!-- Call App Mode on ios devices -->
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <!-- Remove Tap Highlight on Windows Phone IE -->
+    <meta name="msapplication-tap-highlight" content="no">
+
+    <!-- Vendor css -->
+    <link rel="stylesheet" media="screen, print" href="plugins/waves/waves.min.css">
+
+    <!-- Base css -->
+    <link rel="stylesheet" media="screen, print" href="css/smartapp.min.css">
+
+    <!-- Icons css-->
+    <link rel="stylesheet" media="screen, print" href="webfonts/smartadmin/sa-icons.css">
+    <link rel="stylesheet" media="screen, print" href="webfonts/fontawesome/fontawesome.css">
+
+    <!-- Save/Load functionality JavaScript -->
+    <script src="scripts/core/saveloadscript.js"></script>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark position-fixed w-100 py-3" style="z-index: 1000;">
+        <div class="container">
+            <a class="navbar-brand" href="index.html">
+                <img src="img/logo-light.svg" alt="logo">
+            </a>
+            <div class="ms-auto d-flex gap-2">
+                <a href="auth-login.html" class="btn btn-link text-white border-0 text-decoration-none">Login</a>
+                <a href="auth-register.html" class="btn btn-link text-white border-0 text-decoration-none">Register</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Login Page -->
+    <section class="hero-section position-relative overflow-hidden">
+        <div class="container" style="position: relative; z-index: 1;">
+            <div class="row justify-content-center">
+                <div class="col-11 col-md-8 col-lg-6 col-xl-4">
+
+                    <div class="login-card p-4 p-md-5 bg-dark bg-opacity-50 translucent-dark rounded-4 text-center">
+                        <div class="mb-4">
+                            <img src="img/demo/avatars/avatar-admin-xl.png" alt="User Avatar" class="rounded-circle border border-light border-opacity-25" width="72" height="72">
+                        </div>
+                        <h4 class="text-white mb-2">Welcome back, Sunny A.</h4>
+                        <p class="text-white opacity-50 mb-4">Enter your password or 2FA code to unlock your session</p>
+
+                        <form>
+                            <div class="mb-3 text-start">
+                                <label for="password" class="form-label">Password</label>
+                                <input type="password" class="form-control form-control-lg text-white bg-dark border-light border-opacity-25 bg-opacity-25" id="password" placeholder="••••••••" required>
+                            </div>
+
+                            <div class="text-white opacity-50 my-2">OR</div>
+
+                            <div class="mb-3 text-start">
+                                <label for="otp" class="form-label">Authentication Code</label>
+                                <input type="text" class="form-control form-control-lg text-white bg-dark border-light border-opacity-25 bg-opacity-25 text-center" id="otp" placeholder="123456" maxlength="6">
+                            </div>
+
+                            <div class="mb-3 d-grid">
+                                <button type="submit" class="btn btn-primary btn-lg bg-primary bg-opacity-75">Unlock</button>
+                            </div>
+
+                            <div class="opacity-75">
+                                Not you? <a href="auth-login.html" class="text-decoration-underline text-white fw-500">Switch Account</a>
+                            </div>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div id="net"></div>
+
+    </section>
+
+    <script src="plugins/bootstrap/bootstrap.bundle.min.js"></script>
+
+    <!-- Animation Plugin -->
+    <script src="plugins/three/three.min.js"></script>
+    <script src="plugins/vanta/vanta.halo.min.js"></script>
+    <script src="plugins/vanta/vanta.net.min.js"></script>
+    <script src="scripts/pages/auth-animation.js"></script>
+
+
+</body>
+
+</html>
