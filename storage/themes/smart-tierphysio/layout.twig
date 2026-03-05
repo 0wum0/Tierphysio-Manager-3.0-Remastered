@@ -522,6 +522,9 @@
     });
 
     /* ── 5. Sync colour theme radio from localStorage ── */
+    /* NOTE: toggle-theme (dark/light) is handled natively by smartApp.js
+       via its handleAction listener → handlers.toggleTheme() → saveSettings()
+       DO NOT add a duplicate listener here. */
     (function () {
         try {
             var cfg = JSON.parse(localStorage.getItem('layoutSettings') || '{}');
@@ -535,22 +538,6 @@
             });
         } catch (e) {}
     })();
-
-    /* ── 6. Dark/Light toggle button (bridge to saveloadscript.js format) ── */
-    document.addEventListener('click', function (e) {
-        var btn = e.target.closest('[data-action="toggle-theme"]');
-        if (!btn) return;
-        var html  = document.documentElement;
-        var theme = html.getAttribute('data-bs-theme') === 'dark' ? 'light' : 'dark';
-        html.setAttribute('data-bs-theme', theme);
-        if (theme === 'dark') html.classList.add('set-nav-dark');
-        else html.classList.remove('set-nav-dark');
-        try {
-            var cfg = JSON.parse(localStorage.getItem('layoutSettings') || '{}');
-            cfg.theme = theme;
-            localStorage.setItem('layoutSettings', JSON.stringify(cfg));
-        } catch (ex) {}
-    });
 
 })();
 </script>

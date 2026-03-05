@@ -95,9 +95,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
         });
         /* Add class to app-content if sortable is active */
-        document.querySelector('.main-content').classList.add('sortable-active');
+        document.querySelector('.main-content')?.classList.add('sortable-active');
     } else {
-        document.querySelector('.main-content').classList.add('sortable-inactive');
+        document.querySelector('.main-content')?.classList.add('sortable-inactive');
     }
 
 
