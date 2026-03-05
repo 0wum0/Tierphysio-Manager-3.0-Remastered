@@ -197,6 +197,7 @@ class InviteController extends Controller
             || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json');
 
         $token  = $params['token'] ?? '';
+        error_log('[PatientInvite] submit() called, token=' . substr($token, 0, 8) . '... wantsJson=' . ($wantsJson ? 'yes' : 'no') . ' method=' . ($_SERVER['REQUEST_METHOD'] ?? '?'));
         $invite = $this->repo->findByToken($token);
 
         if (!$invite || !$this->repo->isTokenValid($token)) {
@@ -285,11 +286,16 @@ class InviteController extends Controller
                 "INSERT INTO patients (name, species, breed, gender, birth_date, color, chip_number, owner_id, photo, status, created_at, updated_at)
                  VALUES (?,?,?,?,?,?,?,?,?,'aktiv',NOW(),NOW())"
             );
+            $allowedGenders = ['männlich', 'weiblich', 'kastriert', 'sterilisiert', 'unbekannt'];
+            $gender = in_array($data['patient_gender'] ?? '', $allowedGenders, true)
+                ? $data['patient_gender']
+                : 'unbekannt';
+
             $ins2->execute([
                 $data['patient_name'],
                 $data['patient_species'],
                 $data['patient_breed']     ?? '',
-                $data['patient_gender']    ?? '',
+                $gender,
                 $data['patient_birth_date'] ?: null,
                 $data['patient_color']     ?? '',
                 $data['patient_chip']      ?? '',
@@ -337,6 +343,43 @@ class InviteController extends Controller
             return;
         }
         $this->redirect('/einladung/' . $token . '/danke');
+    }
+
+    public function testSubmit(array $params = []): void
+    {
+        $token  = $params['token'] ?? '';
+        $invite = $this->repo->findByToken($token);
+        $valid  = $this->repo->isTokenValid($token);
+
+        $result = [
+            'token_found'  => (bool)$invite,
+            'token_valid'  => $valid,
+            'token_status' => $invite['status'] ?? null,
+            'token_expires'=> $invite['expires_at'] ?? null,
+            'server_time'  => date('Y-m-d H:i:s'),
+        ];
+
+        if ($invite && $valid) {
+            try {
+                $db  = Application::getInstance()->getContainer()->get(Database::class);
+                $pdo = $db->getPdo();
+                $result['db_connected'] = true;
+
+                /* Dry-run owner lookup */
+                $stmt = $pdo->prepare("SELECT id FROM owners WHERE email = ? LIMIT 1");
+                $stmt->execute(['__dryrun_test@example.com']);
+                $result['owners_query_ok'] = true;
+
+                /* Check patients table columns */
+                $cols = array_column($pdo->query("SHOW COLUMNS FROM `patients`")->fetchAll(\PDO::FETCH_ASSOC), 'Field');
+                $result['patients_columns'] = $cols;
+
+            } catch (\Throwable $e) {
+                $result['db_error'] = $e->getMessage();
+            }
+        }
+
+        $this->json($result);
     }
 
     public function diagnose(array $params = []): void

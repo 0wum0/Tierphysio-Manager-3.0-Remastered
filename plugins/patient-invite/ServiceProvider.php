@@ -46,6 +46,7 @@ class ServiceProvider
 
         /* Admin — diagnose */
         $router->get('/einladungen/diagnose',      [InviteController::class, 'diagnose'],   ['auth']);
+        $router->get('/einladung/{token}/test',    [InviteController::class, 'testSubmit'], ['auth']);
 
         /* Public — magic link (no auth) */
         $router->get('/einladung/{token}',        [InviteController::class, 'landing'],    []);

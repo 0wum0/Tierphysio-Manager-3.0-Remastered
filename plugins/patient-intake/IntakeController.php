@@ -219,11 +219,16 @@ class IntakeController extends Controller
                 "INSERT INTO patients (name, species, breed, gender, birth_date, color, chip_number, owner_id, photo, status, created_at, updated_at)
                  VALUES (?,?,?,?,?,?,?,?,?,'aktiv',NOW(),NOW())"
             );
+            $allowedGenders = ['männlich', 'weiblich', 'kastriert', 'sterilisiert', 'unbekannt'];
+            $gender = in_array($submission['patient_gender'] ?? '', $allowedGenders, true)
+                ? $submission['patient_gender']
+                : 'unbekannt';
+
             $ins2->execute([
                 $submission['patient_name'],
                 $submission['patient_species'],
                 $submission['patient_breed'],
-                $submission['patient_gender'],
+                $gender,
                 $submission['patient_birth_date'] ?: null,
                 $submission['patient_color'],
                 $submission['patient_chip'],
