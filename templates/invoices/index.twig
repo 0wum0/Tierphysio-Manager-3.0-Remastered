@@ -4,7 +4,7 @@
 
 {# ── INVOICE DETAIL MODALS ─────────────────────────────────────────── #}
 {% for invoice in invoices %}
-<div class="modal-overlay" id="modal-invoice-{{ invoice.id }}" style="z-index:800;">
+<div class="modal-overlay" id="modal-invoice-{{ invoice.id }}">
     <div class="modal modal-xl" style="max-width:900px;width:95vw;max-height:90vh;display:flex;flex-direction:column;">
         <div class="modal-header" style="flex-shrink:0;">
             <div class="flex items-center gap-3">
@@ -281,7 +281,7 @@
             // Open modal via existing modal system
             const overlay = document.getElementById(modalId);
             if (overlay) {
-                overlay.classList.add('active');
+                window.openModal ? window.openModal(modalId) : overlay.classList.add('is-open');
                 document.body.style.overflow = 'hidden';
             }
 
