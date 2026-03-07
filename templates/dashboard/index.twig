@@ -34,7 +34,7 @@
    ════════════════════════════════════════════════════════════════ #}
 
 {# Build ordered panel list: saved order first, then any new panels appended #}
-{% set all_panels = ['panel-kpi-revenue', 'panel-revenue-chart', 'panel-activity-kpis', 'panel-quick-actions', 'panel-birthdays'] %}
+{% set all_panels = ['panel-appointments', 'panel-birthdays', 'panel-kpi-revenue', 'panel-revenue-chart', 'panel-activity-kpis', 'panel-mini-charts', 'panel-quick-actions'] %}
 {% for w in plugin_widgets %}{% set all_panels = all_panels|merge([w.id]) %}{% endfor %}
 {% set ordered_panels = saved_layout ?? all_panels %}
 {% for id in all_panels %}{% if id not in ordered_panels %}{% set ordered_panels = ordered_panels|merge([id]) %}{% endif %}{% endfor %}
@@ -45,6 +45,65 @@
     <div id="dashboard-grid" class="row g-3">
 
     {% for panel_id in ordered_panels %}
+
+        {# ── Panel: Upcoming Appointments ── #}
+        {% if panel_id == 'panel-appointments' %}
+        <div class="col-12" data-panel-id="panel-appointments">
+            <div class="panel" id="panel-appointments">
+                <div class="panel-hdr">
+                    <h2>
+                        <svg class="sa-icon sa-icon-primary me-2"><use href="/themes/smart-tierphysio/icons/sprite.svg#calendar"></use></svg>
+                        Nächste Termine
+                        <small class="text-muted fw-normal ms-2" style="font-size:.75rem;">kommende Termine</small>
+                    </h2>
+                    <div class="panel-toolbar ms-auto d-flex align-items-center gap-2">
+                        <a href="/kalender" class="btn btn-outline-primary btn-sm">Kalender öffnen</a>
+                        <button class="btn btn-panel" data-action="panel-collapse" title="Einklappen"><svg class="sa-icon"><use href="/themes/smart-tierphysio/icons/sprite.svg#minus"></use></svg></button>
+                    </div>
+                </div>
+                <div class="panel-container">
+                    <div class="panel-content p-0">
+                        {% if upcoming_appointments is empty %}
+                            <div class="d-flex align-items-center justify-content-center gap-2 py-4 text-muted">
+                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" class="opacity-50"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="1.5"/></svg>
+                                <span class="fs-sm">Keine anstehenden Termine</span>
+                            </div>
+                        {% else %}
+                        <div class="row g-0">
+                            {% for appt in upcoming_appointments %}
+                            {% set appt_date = appt.start_at|date('Y-m-d') %}
+                            {% set today_str = 'now'|date('Y-m-d') %}
+                            {% set is_today = appt_date == today_str %}
+                            {% set appt_color = appt.treatment_color ?? '#4f7cff' %}
+                            <div class="col-12 col-sm-6 col-xl-3">
+                                <a href="/kalender" class="d-flex align-items-center gap-3 px-3 py-2 text-decoration-none border-bottom border-end"
+                                   style="{% if is_today %}background:rgba(79,124,255,0.05);{% endif %}min-height:64px;">
+                                    <div class="flex-shrink-0 d-flex flex-column align-items-center justify-content-center rounded-2"
+                                         style="width:44px;height:44px;background:{{ appt_color }}18;border:1px solid {{ appt_color }}40;">
+                                        <div style="font-size:.65rem;font-weight:700;color:{{ appt_color }};line-height:1;text-transform:uppercase;">{{ appt.start_at|date('M') }}</div>
+                                        <div style="font-size:1.1rem;font-weight:800;color:{{ appt_color }};line-height:1.1;">{{ appt.start_at|date('d') }}</div>
+                                    </div>
+                                    <div class="flex-grow-1 min-width-0">
+                                        <div class="d-flex align-items-center gap-1 mb-1">
+                                            <span class="fw-600 fs-sm text-truncate">{{ appt.patient_name ?? appt.title ?? 'Termin' }}</span>
+                                            {% if is_today %}<span class="badge ms-1" style="background:#4f7cff;font-size:.6rem;">Heute</span>{% endif %}
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2" style="font-size:.72rem;color:var(--bs-secondary-color);">
+                                            <span>{{ appt.start_at|date('H:i') }} Uhr</span>
+                                            {% if appt.treatment_type_name %}<span>· {{ appt.treatment_type_name }}</span>{% endif %}
+                                            {% if appt.owner_name %}<span class="text-truncate">· {{ appt.owner_name }}</span>{% endif %}
+                                        </div>
+                                    </div>
+                                </a>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
 
         {# ── Panel: KPI Revenue ── #}
         {% if panel_id == 'panel-kpi-revenue' %}
@@ -125,10 +184,8 @@
                     </div>
                 </div>
                 <div class="panel-container">
-                    <div class="panel-content">
-                        <div style="height:260px;position:relative;">
-                            <canvas id="revenue-chart"></canvas>
-                        </div>
+                    <div class="panel-content p-2">
+                        <div id="dash-revenue-chart" style="min-height:270px;"></div>
                     </div>
                 </div>
             </div>
@@ -202,6 +259,78 @@
                                     <a href="/tierhalter" class="btn btn-sm" style="background:rgba(168,85,247,0.12);color:#a855f7;border:1px solid rgba(168,85,247,0.25);">→</a>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Panel: Mini Charts ── #}
+        {% if panel_id == 'panel-mini-charts' %}
+        <div class="col-12" data-panel-id="panel-mini-charts">
+            <div class="panel" id="panel-mini-charts">
+                <div class="panel-hdr">
+                    <h2>
+                        <svg class="sa-icon sa-icon-success me-2"><use href="/themes/smart-tierphysio/icons/sprite.svg#pie-chart"></use></svg>
+                        Kennzahlen
+                    </h2>
+                    <div class="panel-toolbar">
+                        <button class="btn btn-panel" data-action="panel-collapse" title="Einklappen"><svg class="sa-icon"><use href="/themes/smart-tierphysio/icons/sprite.svg#minus"></use></svg></button>
+                    </div>
+                </div>
+                <div class="panel-container">
+                    <div class="panel-content p-3">
+                        <div class="row g-3">
+
+                            {# Neue Patienten Trend #}
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <div class="d-flex flex-column p-3 rounded-3 h-100" style="background:rgba(79,124,255,0.05);border:1px solid rgba(79,124,255,0.12);">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <div class="stat-card-label">Neue Patienten</div>
+                                            <div class="fw-800 fs-3" style="color:#4f7cff;">{{ stats.new_patients }}</div>
+                                            <div class="fs-nano text-muted">letzte 30 Tage</div>
+                                        </div>
+                                        <div class="stat-card-icon" style="--stat-color:#4f7cff;">
+                                            <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                        </div>
+                                    </div>
+                                    <div id="dash-patient-sparkline" style="height:60px;margin:0 -4px;"></div>
+                                    <div class="fs-nano text-muted mt-1">Trend 6 Monate</div>
+                                </div>
+                            </div>
+
+                            {# Rechnungsstatus Radialbar #}
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <div class="d-flex flex-column align-items-center p-3 rounded-3 h-100" style="background:rgba(34,197,94,0.05);border:1px solid rgba(34,197,94,0.12);">
+                                    <div class="stat-card-label mb-1 align-self-start">Bezahlungsrate</div>
+                                    <div id="dash-paid-radial" style="height:120px;width:120px;"></div>
+                                    <div class="d-flex gap-3 mt-1" style="font-size:.72rem;color:var(--bs-secondary-color);">
+                                        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#22c55e;margin-right:3px;"></span>Bezahlt</span>
+                                        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:3px;"></span>Offen/Überfällig</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {# Gesamtpatienten vs. letzte 30 Tage #}
+                            <div class="col-12 col-md-6 col-xl-4">
+                                <div class="d-flex flex-column p-3 rounded-3 h-100" style="background:rgba(168,85,247,0.05);border:1px solid rgba(168,85,247,0.12);">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <div class="stat-card-label">Patienten gesamt</div>
+                                            <div class="fw-800 fs-3" style="color:#a855f7;">{{ stats.total_patients }}</div>
+                                            <div class="fs-nano text-muted">{{ stats.total_owners }} Tierhalter</div>
+                                        </div>
+                                        <div class="stat-card-icon" style="--stat-color:#a855f7;">
+                                            <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2"/></svg>
+                                        </div>
+                                    </div>
+                                    <div id="dash-owners-bar" style="height:60px;margin:0 -4px;"></div>
+                                    <div class="fs-nano text-muted mt-1">Patienten (blau) · Tierhalter (lila)</div>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -337,85 +466,186 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts@3/dist/apexcharts.min.js"></script>
 <script>
 (function(){
-    /* ── Revenue Chart ── */
-    var chartEl = document.getElementById('revenue-chart');
-    if (!chartEl || typeof Chart === 'undefined') return;
+    'use strict';
 
     var isDark     = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-    var gridColor  = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
-    var labelColor = isDark ? '#94a3b8' : '#6b7280';
-    var fontFamily = getComputedStyle(document.body).fontFamily;
+    var textColor  = isDark ? '#94a3b8' : '#6b7280';
+    var gridColor  = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
+    var bgCard     = isDark ? '#1e2a3a' : '#ffffff';
+
+    /* ── Revenue Area Chart ─────────────────────────────────── */
+    var revenueEl = document.getElementById('dash-revenue-chart');
 
     var weeklyData    = {{ stats.chart_weekly|default([])|json_encode|raw }};
     var monthlyData   = {{ stats.chart_monthly|default([])|json_encode|raw }};
     var weeklyLabels  = weeklyData.map(function(d){ return d.label; });
-    var weeklyValues  = weeklyData.map(function(d){ return d.value; });
+    var weeklyValues  = weeklyData.map(function(d){ return parseFloat(d.value) || 0; });
     var monthlyLabels = monthlyData.map(function(d){ return d.label; });
-    var monthlyValues = monthlyData.map(function(d){ return d.value; });
+    var monthlyValues = monthlyData.map(function(d){ return parseFloat(d.value) || 0; });
 
-    var gradient = chartEl.getContext('2d').createLinearGradient(0, 0, 0, 260);
-    gradient.addColorStop(0, 'rgba(79,124,255,0.35)');
-    gradient.addColorStop(1, 'rgba(79,124,255,0.00)');
-
-    var chart = new Chart(chartEl, {
-        type: 'line',
-        data: {
-            labels: weeklyLabels,
-            datasets: [{
-                label: 'Umsatz',
-                data: weeklyValues,
-                borderColor: '#4f7cff',
-                backgroundColor: gradient,
-                borderWidth: 2.5,
-                pointRadius: 3,
-                pointBackgroundColor: '#4f7cff',
-                tension: 0.4,
-                fill: true
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: isDark ? '#1e2a45' : '#fff',
-                    titleColor: labelColor,
-                    bodyColor: isDark ? '#f1f5f9' : '#111827',
-                    borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-                    borderWidth: 1,
-                    padding: 10,
-                    callbacks: {
-                        label: function(ctx) {
-                            return ' ' + parseFloat(ctx.parsed.y).toLocaleString('de-DE', {minimumFractionDigits:2}) + ' €';
-                        }
+    var revenueChart = null;
+    if (revenueEl) {
+        revenueChart = new ApexCharts(revenueEl, {
+            chart: {
+                type: 'area',
+                height: 280,
+                toolbar: { show: false },
+                background: 'transparent',
+                fontFamily: 'inherit',
+                animations: { enabled: true, easing: 'easeinout', speed: 500 },
+                zoom: { enabled: false }
+            },
+            series: [{ name: 'Umsatz', data: weeklyValues }],
+            xaxis: {
+                categories: weeklyLabels,
+                labels: { style: { colors: textColor, fontSize: '11px' } },
+                axisBorder: { show: false },
+                axisTicks: { show: false }
+            },
+            yaxis: {
+                labels: {
+                    style: { colors: textColor, fontSize: '11px' },
+                    formatter: function(v) {
+                        return v >= 1000 ? (v/1000).toFixed(1)+'k €' : v.toFixed(0)+' €';
                     }
                 }
             },
-            scales: {
-                x: { grid: { color: gridColor }, ticks: { color: labelColor, font: { size: 11, family: fontFamily } } },
-                y: { grid: { color: gridColor }, ticks: { color: labelColor, font: { size: 11, family: fontFamily }, callback: function(v){ return v.toLocaleString('de-DE') + ' €'; } } }
-            }
-        }
-    });
+            colors: ['#4f7cff'],
+            fill: {
+                type: 'gradient',
+                gradient: {
+                    shadeIntensity: 1,
+                    opacityFrom: 0.45,
+                    opacityTo: 0.02,
+                    stops: [0, 95]
+                }
+            },
+            stroke: { curve: 'smooth', width: 2.5 },
+            markers: { size: 3, colors: ['#4f7cff'], strokeColors: bgCard, strokeWidth: 2 },
+            grid: { borderColor: gridColor, strokeDashArray: 4, padding: { left: 4, right: 4 } },
+            dataLabels: { enabled: false },
+            tooltip: {
+                theme: isDark ? 'dark' : 'light',
+                x: { show: true },
+                y: { formatter: function(v) { return v.toFixed(2).replace('.',',') + ' €'; } }
+            },
+            legend: { show: false }
+        });
+        revenueChart.render();
+    }
 
     document.getElementById('btn-weekly')?.addEventListener('click', function(){
-        chart.data.labels = weeklyLabels;
-        chart.data.datasets[0].data = weeklyValues;
-        chart.update();
+        if (!revenueChart) return;
+        revenueChart.updateOptions({ xaxis: { categories: weeklyLabels } });
+        revenueChart.updateSeries([{ name: 'Umsatz', data: weeklyValues }]);
         this.classList.add('active');
         document.getElementById('btn-monthly').classList.remove('active');
     });
     document.getElementById('btn-monthly')?.addEventListener('click', function(){
-        chart.data.labels = monthlyLabels;
-        chart.data.datasets[0].data = monthlyValues;
-        chart.update();
+        if (!revenueChart) return;
+        revenueChart.updateOptions({ xaxis: { categories: monthlyLabels } });
+        revenueChart.updateSeries([{ name: 'Umsatz', data: monthlyValues }]);
         this.classList.add('active');
         document.getElementById('btn-weekly').classList.remove('active');
     });
+
+    /* ── Patient Sparkline ──────────────────────────────────── */
+    var sparkEl = document.getElementById('dash-patient-sparkline');
+    if (sparkEl) {
+        var pLabels = {{ patient_trend.labels|json_encode|raw }};
+        var pData   = {{ patient_trend.data|json_encode|raw }};
+        new ApexCharts(sparkEl, {
+            chart: {
+                type: 'area',
+                height: 60,
+                sparkline: { enabled: true },
+                background: 'transparent',
+                animations: { enabled: true, speed: 400 }
+            },
+            series: [{ data: pData }],
+            xaxis: { categories: pLabels },
+            colors: ['#4f7cff'],
+            fill: {
+                type: 'gradient',
+                gradient: { opacityFrom: 0.4, opacityTo: 0.0 }
+            },
+            stroke: { curve: 'smooth', width: 2 },
+            tooltip: {
+                theme: isDark ? 'dark' : 'light',
+                x: { show: true },
+                y: { formatter: function(v) { return v + ' Patient' + (v !== 1 ? 'en' : ''); } }
+            }
+        }).render();
+    }
+
+    /* ── Bezahlungsrate Radialbar ───────────────────────────── */
+    var radialEl = document.getElementById('dash-paid-radial');
+    if (radialEl) {
+        var paidCount  = {{ stats.paid_count ?? 0 }};
+        var openCount  = {{ stats.open_count ?? 0 }};
+        var ovdCount   = {{ stats.overdue_count ?? 0 }};
+        var totalInv   = paidCount + openCount + ovdCount;
+        var paidPct    = totalInv > 0 ? Math.round((paidCount / totalInv) * 100) : 0;
+        new ApexCharts(radialEl, {
+            chart: {
+                type: 'radialBar',
+                height: 120,
+                background: 'transparent',
+                sparkline: { enabled: true },
+                animations: { enabled: true, speed: 500 }
+            },
+            series: [paidPct],
+            colors: ['#22c55e'],
+            plotOptions: {
+                radialBar: {
+                    startAngle: -135,
+                    endAngle: 135,
+                    hollow: { size: '55%' },
+                    track: { background: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)', strokeWidth: '100%' },
+                    dataLabels: {
+                        name: { show: false },
+                        value: {
+                            fontSize: '18px',
+                            fontWeight: 700,
+                            color: '#22c55e',
+                            offsetY: 6,
+                            formatter: function(v) { return v + '%'; }
+                        }
+                    }
+                }
+            },
+            stroke: { lineCap: 'round' },
+            tooltip: { enabled: false }
+        }).render();
+    }
+
+    /* ── Patienten + Tierhalter Bar ─────────────────────────── */
+    var ownersEl = document.getElementById('dash-owners-bar');
+    if (ownersEl) {
+        var pLabels2 = {{ patient_trend.labels|json_encode|raw }};
+        var pData2   = {{ patient_trend.data|json_encode|raw }};
+        new ApexCharts(ownersEl, {
+            chart: {
+                type: 'bar',
+                height: 60,
+                sparkline: { enabled: true },
+                background: 'transparent',
+                animations: { enabled: true, speed: 400 }
+            },
+            series: [{ name: 'Neue Patienten', data: pData2 }],
+            xaxis: { categories: pLabels2 },
+            colors: ['#a855f7'],
+            plotOptions: { bar: { borderRadius: 2, columnWidth: '60%' } },
+            tooltip: {
+                theme: isDark ? 'dark' : 'light',
+                y: { formatter: function(v) { return v + ' neu'; } }
+            }
+        }).render();
+    }
+
 })();
 
 /* ── Sortable drag & drop with server-side persistence ── */

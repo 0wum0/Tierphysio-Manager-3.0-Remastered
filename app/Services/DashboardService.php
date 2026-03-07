@@ -37,6 +37,51 @@ class DashboardService
         return $this->invoiceRepository->getChartData($type);
     }
 
+    public function getUpcomingAppointments(int $limit = 8): array
+    {
+        return $this->db->fetchAll(
+            "SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.notes,
+                    p.name AS patient_name, p.species AS patient_species,
+                    CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
+                    tt.name AS treatment_type_name, tt.color AS treatment_color
+             FROM appointments a
+             LEFT JOIN patients p ON p.id = a.patient_id
+             LEFT JOIN owners o ON o.id = a.owner_id
+             LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+             WHERE a.start_at >= NOW() AND a.status NOT IN ('cancelled','noshow')
+             ORDER BY a.start_at ASC
+             LIMIT ?",
+            [$limit]
+        );
+    }
+
+    public function getPatientTrendData(): array
+    {
+        $months = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $months[] = date('Y-m', strtotime("-{$i} months"));
+        }
+
+        $rows = $this->db->fetchAll(
+            "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, COUNT(*) AS count
+             FROM patients
+             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+             GROUP BY month ORDER BY month ASC"
+        );
+
+        $indexed = [];
+        foreach ($rows as $r) { $indexed[$r['month']] = (int)$r['count']; }
+
+        $labels = [];
+        $data   = [];
+        foreach ($months as $m) {
+            $dt = \DateTime::createFromFormat('Y-m', $m);
+            $labels[] = $dt ? $dt->format('M') : $m;
+            $data[]   = $indexed[$m] ?? 0;
+        }
+        return ['labels' => $labels, 'data' => $data];
+    }
+
     public function getUpcomingBirthdays(int $days = 14): array
     {
         $today    = new \DateTimeImmutable('today');
