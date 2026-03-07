@@ -678,4 +678,12 @@
   font-size: 0.85rem;
   color: var(--bs-secondary-color);
   line-height: 1.6;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.timeline-card {
+  min-width: 0;
+  overflow: hidden;
 }
