@@ -278,8 +278,9 @@
             const invoiceId = row.dataset.invoiceId;
             const modalId   = 'modal-invoice-' + invoiceId;
 
-            // Open modal via existing modal system
-            window.openModal(modalId);
+            // Open modal via Bootstrap 5
+            const modalEl = document.getElementById(modalId);
+            if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
 
             // Lazy-load positions
             const posBox = document.getElementById('positions-' + invoiceId);

@@ -505,6 +505,65 @@
 }
 
 /* ═══════════════════════════════════════════
+   STATS GRID + STAT CARDS
+   ═══════════════════════════════════════════ */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.stat-card {
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow .2s, transform .2s;
+}
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--stat-color, var(--bs-primary));
+  border-radius: 12px 12px 0 0;
+}
+.stat-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.15); transform: translateY(-2px); }
+.stat-card-header { margin-bottom: .35rem; }
+.stat-card-label  { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--bs-secondary-color); }
+.stat-card-value  { font-size: 1.6rem; font-weight: 800; line-height: 1.1; color: var(--stat-color, var(--bs-primary)); }
+.stat-card-meta   { font-size: .75rem; color: var(--bs-secondary-color); margin-top: .25rem; display: flex; gap: .4rem; align-items: center; flex-wrap: wrap; }
+.trend-up   { color: #22c55e; font-weight: 700; }
+.trend-down { color: #ef4444; font-weight: 700; }
+.trend-flat { color: var(--bs-secondary-color); }
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE TABLE / MOBILE CARD TOGGLE
+   .mob-hide-table shows table on desktop,
+   hides mob-card-list; on mobile reverses.
+   ═══════════════════════════════════════════ */
+.mob-hide-table .mob-card-list { display: none; }
+@media (max-width: 640px) {
+  .mob-hide-table .table-container { display: none; }
+  .mob-hide-table .mob-card-list   { display: flex; flex-direction: column; gap: .75rem; }
+}
+.mob-card {
+  background: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 12px;
+  padding: .875rem 1rem;
+  cursor: pointer;
+  transition: box-shadow .15s;
+}
+.mob-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.12); }
+.mob-card-header { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .4rem; }
+.mob-card-title  { font-size: .9rem; font-weight: 700; }
+.mob-card-meta   { display: flex; flex-wrap: wrap; gap: .35rem .75rem; font-size: .8rem; color: var(--bs-secondary-color); }
+.mob-card-meta-item { white-space: nowrap; }
+
+/* ═══════════════════════════════════════════
    BOOTSTRAP MODAL CUSTOMIZATION
    Custom styles for our BS5 modals only —
    no overriding the BS5 modal mechanism.
