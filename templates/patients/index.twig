@@ -1542,7 +1542,8 @@ function renderTimeline(timeline, patientId) {
 
 function openPatientModal(patientId) {
     resetModal();
-    window.openModal('modal-patient-detail');
+    var modalEl = document.getElementById('modal-patient-detail');
+    if (modalEl) bootstrap.Modal.getOrCreateInstance(modalEl).show();
     initQuill();
     if (quillEditor) quillEditor.setContents([]);
 
@@ -1649,7 +1650,8 @@ function exportPatientPDF() {
     const p = currentPatientData.patient;
     window.location.href = '/patienten/' + p.id + '/pdf';
 }
-window.exportPatientPDF = exportPatientPDF;
+window.exportPatientPDF  = exportPatientPDF;
+window.showPatientModal  = openPatientModal;
 function exportPatientPDF_old_unused() {
     if (!currentPatientData) return;
     const p = currentPatientData.patient;

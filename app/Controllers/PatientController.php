@@ -351,6 +351,53 @@ class PatientController extends Controller
         ]);
     }
 
+    public function globalSearch(array $params = []): void
+    {
+        $q       = trim($this->get('q', ''));
+        $results = [];
+
+        if (strlen($q) >= 2) {
+            $qLower = strtolower($q);
+
+            // Patients
+            $patients = $this->patientService->getPaginated(1, 50, $q)['items'] ?? [];
+            foreach (array_slice($patients, 0, 6) as $p) {
+                $owner = $this->ownerService->findById((int)$p['owner_id']);
+                $results[] = [
+                    'type'       => 'patient',
+                    'id'         => (int)$p['id'],
+                    'name'       => $p['name'],
+                    'sub'        => trim(($p['species'] ?? '') . ($p['breed'] ? ' · ' . $p['breed'] : ''))
+                                    . ($owner ? ' — ' . $owner['first_name'] . ' ' . $owner['last_name'] : ''),
+                    'status'     => $p['status'] ?? '',
+                    'photo'      => $p['photo'] ?? null,
+                ];
+            }
+
+            // Owners
+            $owners = $this->ownerService->findAll();
+            $ownerCount = 0;
+            foreach ($owners as $o) {
+                if ($ownerCount >= 4) break;
+                $haystack = strtolower(($o['first_name'] ?? '') . ' ' . ($o['last_name'] ?? '') . ' ' . ($o['email'] ?? '') . ' ' . ($o['phone'] ?? ''));
+                if (!str_contains($haystack, $qLower)) continue;
+                $animals = $this->patientService->findByOwner((int)$o['id']);
+                $results[] = [
+                    'type'     => 'owner',
+                    'id'       => (int)$o['id'],
+                    'name'     => $o['first_name'] . ' ' . $o['last_name'],
+                    'sub'      => $o['email'] ?? ($o['phone'] ?? ''),
+                    'animals'  => array_map(fn($a) => ['id' => (int)$a['id'], 'name' => $a['name']], $animals),
+                ];
+                $ownerCount++;
+            }
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode($results);
+        exit;
+    }
+
     public function ownerSearch(array $params = []): void
     {
         $q      = trim($this->get('q', ''));

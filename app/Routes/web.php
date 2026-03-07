@@ -30,6 +30,7 @@ $router->get('/patienten', [PatientController::class, 'index'], ['auth']);
 $router->get('/patienten/neu', [PatientController::class, 'wizard'], ['auth']);
 $router->post('/patienten/wizard', [PatientController::class, 'wizardStore'], ['auth']);
 $router->get('/api/tierhalter/suche', [PatientController::class, 'ownerSearch'], ['auth']);
+$router->get('/api/global-search', [PatientController::class, 'globalSearch'], ['auth']);
 $router->post('/patienten', [PatientController::class, 'store'], ['auth']);
 $router->get('/patienten/{id}', [PatientController::class, 'show'], ['auth']);
 $router->get('/patienten/{id}/json', [PatientController::class, 'showJson'], ['auth']);

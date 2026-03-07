@@ -55,9 +55,141 @@
             </button>
 
             {# Search #}
-            <form class="app-search" role="search" action="/patienten" autocomplete="off">
-                <input type="text" class="form-control" placeholder="Suchen…" name="q">
-            </form>
+            <div class="app-search position-relative" id="global-search-wrap" autocomplete="off">
+                <input type="text" class="form-control" placeholder="Suchen…" id="global-search-input"
+                       autocomplete="off" spellcheck="false" role="combobox" aria-expanded="false"
+                       aria-autocomplete="list" aria-controls="global-search-dropdown">
+                <div id="global-search-dropdown"
+                     style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:9999;
+                            background:var(--bs-body-bg);border:1px solid var(--bs-border-color);
+                            border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.18);
+                            min-width:320px;max-height:420px;overflow-y:auto;">
+                </div>
+            </div>
+            <script>
+            (function(){
+                var inp   = document.getElementById('global-search-input');
+                var drop  = document.getElementById('global-search-dropdown');
+                var timer = null;
+                var currentPatientId = null;
+
+                function esc(s){ return String(s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];}); }
+
+                function statusColor(s){
+                    return s==='aktiv'?'#22c55e':s==='verstorben'?'#6b7280':s==='inaktiv'?'#6b7280':'#f59e0b';
+                }
+
+                function renderResults(items){
+                    if(!items.length){
+                        drop.innerHTML='<div style="padding:1rem 1.25rem;font-size:.85rem;color:var(--bs-secondary-color);">Keine Ergebnisse</div>';
+                        return;
+                    }
+                    var html='';
+                    var patients = items.filter(function(i){return i.type==='patient';});
+                    var owners   = items.filter(function(i){return i.type==='owner';});
+
+                    if(patients.length){
+                        html+='<div style="padding:.45rem 1rem .2rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--bs-secondary-color);">Patienten</div>';
+                        patients.forEach(function(p){
+                            html+='<button type="button" class="gs-item" data-type="patient" data-id="'+p.id+'" '
+                                +'style="display:flex;align-items:center;gap:.75rem;width:100%;border:none;background:transparent;'
+                                +'padding:.55rem 1rem;cursor:pointer;text-align:left;transition:background .12s;"'
+                                +' onmouseenter="this.style.background=\'var(--bs-tertiary-bg)\'" onmouseleave="this.style.background=\'transparent\'">';
+                            html+='<span style="width:32px;height:32px;border-radius:50%;background:var(--bs-tertiary-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;">';
+                            if(p.photo){
+                                html+='<img src="/patienten/'+p.id+'/foto/'+esc(p.photo)+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+                            } else {
+                                html+='<svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="1.5" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+                            }
+                            html+='</span>';
+                            html+='<span style="min-width:0;flex:1;">';
+                            html+='<span style="display:flex;align-items:center;gap:.4rem;"><strong style="font-size:.875rem;">'+esc(p.name)+'</strong>';
+                            if(p.status) html+='<span style="width:8px;height:8px;border-radius:50%;background:'+statusColor(p.status)+';flex-shrink:0;"></span>';
+                            html+='</span>';
+                            if(p.sub) html+='<span style="font-size:.75rem;color:var(--bs-secondary-color);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">'+esc(p.sub)+'</span>';
+                            html+='</span></button>';
+                        });
+                    }
+
+                    if(owners.length){
+                        html+='<div style="padding:.45rem 1rem .2rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--bs-secondary-color);border-top:1px solid var(--bs-border-color);margin-top:.25rem;">Tierhalter</div>';
+                        owners.forEach(function(o){
+                            html+='<button type="button" class="gs-item" data-type="owner" data-id="'+o.id+'" '
+                                +'style="display:flex;align-items:center;gap:.75rem;width:100%;border:none;background:transparent;'
+                                +'padding:.55rem 1rem;cursor:pointer;text-align:left;transition:background .12s;"'
+                                +' onmouseenter="this.style.background=\'var(--bs-tertiary-bg)\'" onmouseleave="this.style.background=\'transparent\'">';
+                            html+='<span style="width:32px;height:32px;border-radius:50%;background:var(--bs-tertiary-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.8rem;font-weight:700;color:var(--bs-secondary-color);">'
+                                +esc((o.name||'?').split(' ').map(function(w){return w[0]||'';}).join('').substring(0,2).toUpperCase())
+                                +'</span>';
+                            html+='<span style="min-width:0;flex:1;">';
+                            html+='<strong style="font-size:.875rem;">'+esc(o.name)+'</strong>';
+                            if(o.sub) html+='<span style="font-size:.75rem;color:var(--bs-secondary-color);display:block;">'+esc(o.sub)+'</span>';
+                            if(o.animals && o.animals.length){
+                                html+='<span style="font-size:.7rem;color:var(--bs-secondary-color);">🐾 ';
+                                html+=o.animals.map(function(a){return esc(a.name);}).join(', ');
+                                html+='</span>';
+                            }
+                            html+='</span></button>';
+                        });
+                    }
+                    drop.innerHTML = html;
+
+                    drop.querySelectorAll('.gs-item').forEach(function(btn){
+                        btn.addEventListener('click', function(){
+                            var type = this.dataset.type;
+                            var id   = parseInt(this.dataset.id);
+                            closeDropdown();
+                            inp.value = '';
+                            if(type === 'patient'){
+                                openPatientFromSearch(id);
+                            } else {
+                                window.location.href = '/tierhalter/' + id;
+                            }
+                        });
+                    });
+                }
+
+                function openPatientFromSearch(id){
+                    // If we are on the patient list page, use the existing modal
+                    var modal = document.getElementById('modal-patient-detail');
+                    if(modal && typeof showPatientModal === 'function'){
+                        showPatientModal(id);
+                        return;
+                    }
+                    // Otherwise navigate to the patient page
+                    window.location.href = '/patienten/' + id;
+                }
+
+                function closeDropdown(){
+                    drop.style.display = 'none';
+                    inp.setAttribute('aria-expanded','false');
+                }
+
+                inp.addEventListener('input', function(){
+                    clearTimeout(timer);
+                    var q = inp.value.trim();
+                    if(q.length < 2){ closeDropdown(); return; }
+                    timer = setTimeout(function(){
+                        fetch('/api/global-search?q=' + encodeURIComponent(q))
+                            .then(function(r){ return r.json(); })
+                            .then(function(data){
+                                drop.style.display = 'block';
+                                inp.setAttribute('aria-expanded','true');
+                                renderResults(data);
+                            })
+                            .catch(function(){ closeDropdown(); });
+                    }, 220);
+                });
+
+                inp.addEventListener('keydown', function(e){
+                    if(e.key === 'Escape') closeDropdown();
+                });
+
+                document.addEventListener('click', function(e){
+                    if(!document.getElementById('global-search-wrap').contains(e.target)) closeDropdown();
+                });
+            })();
+            </script>
         </div>
 
         {# Settings drawer toggle #}
