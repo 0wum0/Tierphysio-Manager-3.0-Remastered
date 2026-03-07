@@ -1,0 +1,806 @@
+{# ═══════════════════════════════════════════════════════════
+   GLOBAL PATIENT DETAIL MODAL
+   Eingebunden in layout.twig — steht auf jeder Seite bereit.
+   Geöffnet via: window._gsOpenPatient(id)
+   ═══════════════════════════════════════════════════════════ #}
+
+{# ── Patient Detail Modal ─────────────────────────────────── #}
+<div class="modal fade" id="modal-patient-detail" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">
+
+        <div id="pd-header" style="padding:0.6rem 1rem;border-bottom:1px solid var(--glass-border);flex-shrink:0;display:flex;align-items:center;gap:0.65rem;min-width:0;">
+            <div id="pd-photo" style="width:38px;height:38px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--bg-elevated);display:flex;align-items:center;justify-content:center;">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" style="opacity:0.3;"><path stroke="currentColor" stroke-width="1.5" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+            </div>
+            <div style="min-width:0;flex-shrink:1;flex-grow:0;">
+                <div style="display:flex;align-items:center;gap:0.35rem;">
+                    <span id="pd-name" style="font-size:0.95rem;font-weight:700;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;"></span>
+                    <span id="pd-badge" class="badge" style="display:none;flex-shrink:0;"></span>
+                </div>
+                <div id="pd-species" style="font-size:0.72rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;"></div>
+            </div>
+            <div style="display:flex;gap:0.35rem;align-items:center;overflow-x:auto;flex-shrink:0;-webkit-overflow-scrolling:touch;margin-left:auto;">
+                <button id="pd-invoice-btn" type="button" class="btn btn-secondary btn-sm" style="flex-shrink:0;padding:0.3rem 0.6rem;">
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
+                    <span class="d-none d-sm-inline">Rechnung</span>
+                </button>
+                <button id="pd-pdf-btn" type="button" class="btn btn-secondary btn-sm" onclick="exportPatientPDF()" style="flex-shrink:0;padding:0.3rem 0.6rem;">
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    <span class="d-none d-sm-inline">Akte als PDF</span>
+                </button>
+                <button id="pd-edit-btn" type="button" class="btn btn-primary btn-sm" style="flex-shrink:0;padding:0.3rem 0.6rem;">
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <span class="d-none d-sm-inline">Bearbeiten</span>
+                </button>
+                <button id="pd-delete-btn" type="button" class="btn btn-danger btn-sm" style="flex-shrink:0;padding:0.3rem 0.6rem;" onclick="deletePatient()">
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="3 6 5 6 21 6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M10 11v6M14 11v6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 6V4h6v2"/></svg>
+                    <span class="d-none d-sm-inline">Löschen</span>
+                </button>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen" style="flex-shrink:0;"></button>
+        </div>
+
+        <div id="pd-loading" style="display:flex;align-items:center;justify-content:center;padding:3rem;flex:1;">
+            <div style="width:32px;height:32px;border:3px solid var(--glass-border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+        </div>
+
+        <div id="pd-body" style="display:none;overflow-y:auto;flex:1;padding:1.5rem 1.25rem;flex-direction:column;gap:1.5rem;">
+
+            <div class="pd-info-card">
+                <div id="pd-photo-full" class="pd-info-photo">
+                    <svg width="36" height="36" fill="none" viewBox="0 0 24 24" style="opacity:0.2;"><path stroke="currentColor" stroke-width="1.5" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                </div>
+                <div class="pd-info-divider"></div>
+                <div class="pd-info-col">
+                    <div class="pd-info-col-label">Patient</div>
+                    <div id="pd-details" class="pd-info-grid"></div>
+                </div>
+                <div class="pd-info-divider"></div>
+                <div class="pd-info-col">
+                    <div class="pd-info-col-label">Besitzer</div>
+                    <div id="pd-owner"></div>
+                </div>
+            </div>
+
+            <div class="pd-entry-section">
+                <div class="pd-section-label">Neuer Akte-Eintrag</div>
+                <form id="pd-timeline-form" method="POST" enctype="multipart/form-data" class="pd-entry-form">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                    <div class="pd-form-grid4">
+                        <div class="pd-field">
+                            <label class="pd-label">Typ</label>
+                            <select name="type" class="pd-select" data-no-cs>
+                                <option value="note">📝 Notiz</option>
+                                <option value="treatment">💊 Behandlung</option>
+                                <option value="photo">📷 Foto</option>
+                                <option value="document">📄 Dokument</option>
+                                <option value="other">📌 Sonstiges</option>
+                            </select>
+                        </div>
+                        <div class="pd-field">
+                            <label class="pd-label">Behandlungsart</label>
+                            <select name="treatment_type_id" id="pd-treatment-type" class="pd-select" data-no-cs>
+                                <option value="">— keine —</option>
+                            </select>
+                        </div>
+                        <div class="pd-field">
+                            <label class="pd-label">Datum</label>
+                            <input type="datetime-local" name="entry_date" class="pd-input" value="{{ 'now'|date('Y-m-d\\TH:i') }}">
+                        </div>
+                        <div class="pd-field">
+                            <label class="pd-label">Status</label>
+                            <select name="status_badge" class="pd-select" data-no-cs>
+                                <option value="">— kein —</option>
+                                <option value="Schmerzfrei">Schmerzfrei</option>
+                                <option value="In Behandlung">In Behandlung</option>
+                                <option value="Kontrolltermin">Kontrolltermin</option>
+                                <option value="Notfall">Notfall</option>
+                                <option value="Gebessert">Gebessert</option>
+                                <option value="Entlassen">Entlassen</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="pd-field">
+                        <label class="pd-label">Titel</label>
+                        <input type="text" name="title" class="pd-input" placeholder="Kurzer Titel...">
+                    </div>
+                    <div class="pd-field">
+                        <label class="pd-label">Inhalt</label>
+                        <div id="pd-quill-editor"></div>
+                        <input type="hidden" name="content" id="pd-content-input">
+                    </div>
+                    <div class="pd-form-footer">
+                        <div class="pd-field" style="flex:1;min-width:0;">
+                            <label class="pd-label">Anhang</label>
+                            <input type="file" name="attachment" id="pd-attachment" class="pd-file" accept="image/*,application/pdf,.doc,.docx">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm pd-submit-btn">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            Speichern
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div style="border-top:1px solid var(--glass-border);margin-top:0.5rem;"></div>
+
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.25rem;">
+                <div style="position:relative;flex:1;">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="position:absolute;left:0.65rem;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none;"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    <input id="pd-timeline-search" type="text" class="form-control" placeholder="Timeline durchsuchen..." style="padding-left:2.1rem;font-size:0.83rem;">
+                </div>
+            </div>
+
+            <div style="margin-top:0.25rem;">
+                <div style="font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Akte</div>
+                <div id="pd-timeline" class="timeline"></div>
+            </div>
+
+        </div>
+
+    </div></div>
+</div>
+
+{# ── Timeline-Eintrag bearbeiten Modal ─────────────────────── #}
+<div class="modal fade" id="modal-timeline-edit" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Eintrag bearbeiten</h3>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="te-csrf" value="{{ csrf_token }}">
+            <input type="hidden" id="te-entry-id" value="">
+            <input type="hidden" id="te-patient-id" value="">
+            <div class="pd-form-grid4" style="margin-bottom:0.65rem;">
+                <div class="pd-field">
+                    <label class="pd-label">Typ</label>
+                    <select id="te-type" class="pd-select">
+                        <option value="note">📝 Notiz</option>
+                        <option value="treatment">💊 Behandlung</option>
+                        <option value="photo">📷 Foto</option>
+                        <option value="document">📄 Dokument</option>
+                        <option value="other">📌 Sonstiges</option>
+                    </select>
+                </div>
+                <div class="pd-field">
+                    <label class="pd-label">Behandlungsart</label>
+                    <select id="te-treatment-type" class="pd-select">
+                        <option value="">— keine —</option>
+                    </select>
+                </div>
+                <div class="pd-field">
+                    <label class="pd-label">Datum</label>
+                    <input type="datetime-local" id="te-date" class="pd-input">
+                </div>
+                <div class="pd-field">
+                    <label class="pd-label">Status</label>
+                    <select id="te-status" class="pd-select">
+                        <option value="">— kein —</option>
+                        <option value="Schmerzfrei">Schmerzfrei</option>
+                        <option value="In Behandlung">In Behandlung</option>
+                        <option value="Kontrolltermin">Kontrolltermin</option>
+                        <option value="Notfall">Notfall</option>
+                        <option value="Gebessert">Gebessert</option>
+                        <option value="Entlassen">Entlassen</option>
+                    </select>
+                </div>
+            </div>
+            <div class="pd-field" style="margin-bottom:0.65rem;">
+                <label class="pd-label">Titel</label>
+                <input type="text" id="te-title" class="pd-input" placeholder="Kurzer Titel...">
+            </div>
+            <div class="pd-field">
+                <label class="pd-label">Inhalt</label>
+                <div id="te-quill-editor"></div>
+                <input type="hidden" id="te-content" value="">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+            <button type="button" class="btn btn-primary" id="te-save-btn">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="17 21 17 13 7 13 7 21"/></svg>
+                Speichern
+            </button>
+        </div>
+    </div></div>
+</div>
+
+{# ── Edit Patient Modal ─────────────────────────────────────── #}
+<div class="modal fade" id="modal-edit-patient-inline" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title" id="edit-modal-title">Patient bearbeiten</h3>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+        </div>
+        <form id="edit-patient-form" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <div class="modal-body" style="overflow-y:auto;max-height:72vh;">
+                <div class="form-group mb-4">
+                    <label class="form-label">Profilbild</label>
+                    <div class="flex items-center gap-3">
+                        <div id="edit-photo-preview" style="width:64px;height:64px;border-radius:50%;overflow:hidden;background:var(--bg-elevated);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:2px solid var(--glass-border);">
+                            <svg width="28" height="28" fill="none" viewBox="0 0 24 24" style="opacity:0.3;"><path stroke="currentColor" stroke-width="1.5" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.5"/></svg>
+                        </div>
+                        <div style="flex:1;">
+                            <input type="file" name="photo" id="edit-photo-input" accept="image/*" class="form-control" style="font-size:0.8rem;padding:0.4rem;">
+                            <div class="form-hint">JPG, PNG, WEBP — max. 5 MB</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-grid form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Name *</label>
+                        <input type="text" name="name" id="edit-name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Tierart</label>
+                        <input type="text" name="species" id="edit-species" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Rasse</label>
+                        <input type="text" name="breed" id="edit-breed" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Geburtsdatum</label>
+                        <input type="date" name="birth_date" id="edit-birth" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Geschlecht</label>
+                        <select name="gender" id="edit-gender" class="form-control">
+                            <option value="unbekannt">Unbekannt</option>
+                            <option value="männlich">Männlich</option>
+                            <option value="weiblich">Weiblich</option>
+                            <option value="kastriert">Kastriert</option>
+                            <option value="sterilisiert">Sterilisiert</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Farbe</label>
+                        <input type="text" name="color" id="edit-color" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Chip-Nr.</label>
+                        <input type="text" name="chip_number" id="edit-chip" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select name="status" id="edit-status" class="form-control">
+                            <option value="aktiv">Aktiv</option>
+                            <option value="in_behandlung">In Behandlung</option>
+                            <option value="schmerzfrei">Schmerzfrei</option>
+                            <option value="kontrolltermin">Kontrolltermin</option>
+                            <option value="inaktiv">Inaktiv</option>
+                            <option value="verstorben">⚫ Verstorben</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group mt-3">
+                    <label class="form-label">Tierhalter</label>
+                    <select name="owner_id" id="edit-owner" class="form-control"></select>
+                </div>
+                <div class="form-group mt-3">
+                    <label class="form-label">Notizen</label>
+                    <textarea name="notes" id="edit-notes" class="form-control" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                <button type="submit" class="btn btn-primary">Speichern</button>
+            </div>
+        </form>
+    </div></div>
+</div>
+
+{# ── Datei-Viewer ──────────────────────────────────────────── #}
+<div id="fileviewer-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.88);align-items:center;justify-content:center;flex-direction:column;">
+    <div style="position:relative;width:96vw;max-width:960px;height:92vh;display:flex;flex-direction:column;background:var(--bg-surface,#1a1a2e);border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.7);">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0.85rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;gap:0.5rem;">
+            <span id="fv-filename" style="font-size:0.82rem;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;"></span>
+            <div style="display:flex;gap:0.4rem;align-items:center;flex-shrink:0;">
+                <a id="fv-open" href="" target="_blank" rel="noopener" style="background:rgba(255,255,255,0.12);color:#fff;border:none;padding:0.3rem 0.65rem;border-radius:6px;font-size:0.78rem;text-decoration:none;display:flex;align-items:center;gap:0.35rem;">Öffnen</a>
+                <a id="fv-download" href="" download style="background:rgba(255,255,255,0.12);color:#fff;border:none;padding:0.3rem 0.65rem;border-radius:6px;font-size:0.78rem;text-decoration:none;display:flex;align-items:center;gap:0.35rem;">Laden</a>
+                <button id="fv-close" style="background:rgba(255,255,255,0.12);border:none;color:#fff;width:32px;height:32px;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+        </div>
+        <div id="fv-body" style="flex:1;overflow:auto;display:flex;align-items:center;justify-content:center;background:#111;"></div>
+    </div>
+</div>
+
+{# ── Global Patient Modal JS ───────────────────────────────── #}
+<script>
+(function () {
+'use strict';
+
+/* Quill wird on-demand geladen */
+var quillLoaded = false;
+function loadQuill(cb) {
+    if (window.Quill) { cb(); return; }
+    if (quillLoaded) { var t = setInterval(function(){ if(window.Quill){ clearInterval(t); cb(); } }, 50); return; }
+    quillLoaded = true;
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/quill@2/dist/quill.js';
+    s.onload = cb;
+    document.head.appendChild(s);
+    var l = document.createElement('link');
+    l.rel = 'stylesheet';
+    l.href = 'https://cdn.jsdelivr.net/npm/quill@2/dist/quill.snow.css';
+    document.head.appendChild(l);
+}
+
+/* ── DOM Refs ─────────────────────────────────────────────── */
+var pdLoading    = document.getElementById('pd-loading');
+var pdBody       = document.getElementById('pd-body');
+var pdName       = document.getElementById('pd-name');
+var pdBadge      = document.getElementById('pd-badge');
+var pdSpecies    = document.getElementById('pd-species');
+var pdPhoto      = document.getElementById('pd-photo');
+var pdPhotoFull  = document.getElementById('pd-photo-full');
+var pdDetails    = document.getElementById('pd-details');
+var pdOwner      = document.getElementById('pd-owner');
+var pdTimeline   = document.getElementById('pd-timeline');
+var pdInvoiceBtn = document.getElementById('pd-invoice-btn');
+var pdEditBtn    = document.getElementById('pd-edit-btn');
+var pdForm       = document.getElementById('pd-timeline-form');
+var pdSearchInput = document.getElementById('pd-timeline-search');
+var currentPatientData = null;
+var quillEditor  = null;
+var teQuill      = null;
+var imgExts      = ['jpg','jpeg','png','gif','webp'];
+
+/* ── Spin keyframes ───────────────────────────────────────── */
+if (!document.getElementById('pd-spin-style')) {
+    var s = document.createElement('style');
+    s.id = 'pd-spin-style';
+    s.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(s);
+}
+
+/* ── Helpers ──────────────────────────────────────────────── */
+function esc(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtDate(str) {
+    if (!str) return '—';
+    var d = new Date(str.replace(' ', 'T'));
+    return d.toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function fmtDateTime(str) {
+    if (!str) return '—';
+    var d = new Date(str.replace(' ', 'T'));
+    return d.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' +
+           d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+}
+function typeIcon(t) {
+    return {note:'📝', treatment:'💊', photo:'📷', document:'📄', other:'📌'}[t] || '📌';
+}
+function detail(label, value) {
+    if (!value) return '';
+    return '<div><span>'+esc(label)+'</span><div>'+esc(value)+'</div></div>';
+}
+
+/* ── Quill init ───────────────────────────────────────────── */
+function initQuill() {
+    loadQuill(function() {
+        if (quillEditor) return;
+        var el = document.getElementById('pd-quill-editor');
+        if (!el) return;
+        quillEditor = new Quill(el, {
+            theme: 'snow',
+            placeholder: 'Notizen, Befunde, Behandlungsschritte...',
+            modules: { toolbar: [['bold','italic','underline','strike'],[{list:'ordered'},{list:'bullet'}],['blockquote'],[{color:[]}],['clean']] }
+        });
+    });
+}
+function initTeQuill() {
+    loadQuill(function() {
+        if (teQuill) return;
+        var el = document.getElementById('te-quill-editor');
+        if (!el) return;
+        teQuill = new Quill(el, {
+            theme: 'snow',
+            placeholder: 'Inhalt...',
+            modules: { toolbar: [['bold','italic','underline','strike'],[{list:'ordered'},{list:'bullet'}],['blockquote'],[{color:[]}],['clean']] }
+        });
+    });
+}
+
+/* ── File Viewer ──────────────────────────────────────────── */
+var fvOverlay = document.getElementById('fileviewer-overlay');
+var fvBody2   = document.getElementById('fv-body');
+var fvName    = document.getElementById('fv-filename');
+var fvDl      = document.getElementById('fv-download');
+var fvOpen    = document.getElementById('fv-open');
+var fvClose   = document.getElementById('fv-close');
+
+function isMobile() { return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent); }
+
+function openViewer(src, filename) {
+    fvName.textContent = filename;
+    fvDl.href = src; fvDl.download = filename;
+    if (fvOpen) fvOpen.href = src;
+    fvBody2.innerHTML = '';
+    var ext = (filename.split('.').pop() || '').toLowerCase();
+    if (imgExts.includes(ext)) {
+        var img = document.createElement('img');
+        img.src = src; img.alt = filename;
+        img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;';
+        fvBody2.appendChild(img);
+    } else if (ext === 'pdf') {
+        if (isMobile()) {
+            fvBody2.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.85);padding:2rem;"><div style="font-size:1rem;font-weight:600;margin-bottom:1rem;">'+esc(filename)+'</div><div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;"><a href="'+src+'" target="_blank" rel="noopener" style="background:#4f7cff;color:#fff;padding:0.65rem 1.4rem;border-radius:8px;text-decoration:none;">Im Browser öffnen</a><a href="'+src+'" download="'+esc(filename)+'" style="background:rgba(255,255,255,0.15);color:#fff;padding:0.65rem 1.4rem;border-radius:8px;text-decoration:none;">Herunterladen</a></div></div>';
+        } else {
+            var fr = document.createElement('iframe');
+            fr.src = src; fr.style.cssText = 'width:100%;height:100%;border:none;';
+            fr.title = filename; fvBody2.appendChild(fr);
+        }
+    } else {
+        fvBody2.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.7);padding:3rem;"><div style="font-size:1rem;font-weight:600;margin-bottom:0.5rem;">'+esc(filename)+'</div><a href="'+src+'" download="'+esc(filename)+'" style="background:#4f7cff;color:#fff;padding:0.6rem 1.4rem;border-radius:8px;text-decoration:none;">Herunterladen</a></div>';
+    }
+    fvOverlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+function closeViewer() {
+    fvOverlay.style.display = 'none';
+    fvBody2.innerHTML = '';
+    document.body.style.overflow = '';
+}
+if (fvClose) fvClose.addEventListener('click', closeViewer);
+if (fvOverlay) fvOverlay.addEventListener('click', function(e){ if(e.target===fvOverlay) closeViewer(); });
+
+/* ── Reset Modal ──────────────────────────────────────────── */
+function resetModal() {
+    pdLoading.style.display = 'flex';
+    pdBody.style.display    = 'none';
+    pdName.textContent      = '';
+    pdBadge.style.display   = 'none';
+    pdSpecies.textContent   = '';
+    pdPhoto.innerHTML       = '<svg width="24" height="24" fill="none" viewBox="0 0 24 24" style="opacity:0.3;"><path stroke="currentColor" stroke-width="1.5" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+    pdPhotoFull.innerHTML   = '<svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="opacity:0.2;"><path stroke="currentColor" stroke-width="1.5" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+    pdDetails.innerHTML     = '';
+    pdOwner.innerHTML       = '';
+    pdTimeline.innerHTML    = '';
+    if (pdSearchInput) pdSearchInput.value = '';
+}
+
+/* ── Timeline render ──────────────────────────────────────── */
+function renderTimeline(timeline, patientId) {
+    if (!timeline || !timeline.length) {
+        pdTimeline.innerHTML = '<div style="text-align:center;padding:2rem 1rem;color:var(--text-muted);font-size:0.85rem;">Noch keine Einträge</div>';
+        return;
+    }
+    var html = '<div class="timeline">';
+    timeline.forEach(function (e) {
+        var hasAttach = e.attachment;
+        var ext = hasAttach ? (e.attachment.split('.').pop() || '').toLowerCase() : '';
+        var isImg = imgExts.includes(ext);
+        var src = hasAttach ? '/patienten/'+patientId+'/dokumente/'+encodeURIComponent(e.attachment) : '';
+        var attachHtml = '';
+        if (hasAttach) {
+            if (isImg) {
+                attachHtml = '<div class="mt-2"><a href="'+src+'" data-lightbox-modal="'+src+'" data-filename="'+esc(e.attachment)+'" style="cursor:pointer;display:inline-block;"><img src="'+src+'" alt="'+esc(e.attachment)+'" style="max-height:100px;max-width:100%;border-radius:6px;border:1px solid var(--glass-border);display:block;"></a></div>';
+            } else {
+                attachHtml = '<div class="mt-2"><a href="'+src+'" data-lightbox-modal="'+src+'" data-filename="'+esc(e.attachment)+'" class="btn btn-secondary btn-sm" style="font-size:0.78rem;">📎 '+esc(e.attachment)+'</a></div>';
+            }
+        }
+        html += '<div class="timeline-item" data-entry-id="'+e.id+'">';
+        html += '<div class="timeline-dot timeline-dot-'+esc(e.type)+'"></div>';
+        html += '<div class="timeline-card">';
+        html += '<div class="timeline-meta">';
+        html += '<div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">';
+        html += '<span class="text-xs">'+typeIcon(e.type)+'</span>';
+        if (e.status_badge) html += '<span class="badge badge-primary" style="font-size:0.62rem;">'+esc(e.status_badge)+'</span>';
+        html += '<span class="timeline-date">'+fmtDateTime(e.entry_date)+'</span>';
+        if (e.treatment_type_name) html += '<span style="display:inline-block;padding:0.12rem 0.5rem;border-radius:999px;font-size:0.62rem;font-weight:600;background:'+esc(e.treatment_type_color)+'22;color:'+esc(e.treatment_type_color)+';border:1px solid '+esc(e.treatment_type_color)+'44;">'+esc(e.treatment_type_name)+'</span>';
+        html += '</div>';
+        html += '<div style="display:flex;align-items:center;gap:0.25rem;">';
+        if (e.user_name) html += '<span class="timeline-author">'+esc(e.user_name)+'</span>';
+        html += '<button type="button" class="tl-edit-btn" data-entry=\''+JSON.stringify(e)+'\' style="width:24px;height:24px;padding:0;color:var(--text-muted);border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:4px;" title="Bearbeiten"><svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>';
+        html += '<button type="button" class="tl-del-btn" data-entry-id="'+e.id+'" style="width:24px;height:24px;padding:0;color:var(--text-muted);border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:4px;" title="Löschen"><svg width="12" height="12" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="3 6 5 6 21 6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M10 11v6M14 11v6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 6V4h6v2"/></svg></button>';
+        html += '</div></div>';
+        if (e.title) html += '<div class="timeline-title">'+esc(e.title)+'</div>';
+        if (e.content) html += '<div class="timeline-content ql-view">'+e.content+'</div>';
+        html += attachHtml;
+        html += '</div></div>';
+    });
+    html += '</div>';
+    pdTimeline.innerHTML = html;
+
+    pdTimeline.querySelectorAll('[data-lightbox-modal]').forEach(function (el) {
+        el.addEventListener('click', function (e) { e.preventDefault(); openViewer(el.dataset.lightboxModal, el.dataset.filename); });
+    });
+    pdTimeline.querySelectorAll('.tl-edit-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () { openTimelineEditModal(JSON.parse(btn.dataset.entry), btn.closest('[data-entry-id]')?.closest('.timeline-item')?.dataset.entryId || currentPatientData?.patient?.id); });
+    });
+    pdTimeline.querySelectorAll('.tl-del-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            if (!confirm('Eintrag wirklich löschen?')) return;
+            var entryId = btn.dataset.entryId;
+            var patId   = currentPatientData ? currentPatientData.patient.id : null;
+            if (!patId) return;
+            var csrf = document.getElementById('te-csrf')?.value || '';
+            var fd = new FormData(); fd.append('_csrf_token', csrf);
+            fetch('/patienten/'+patId+'/timeline/'+entryId+'/delete-json', {method:'POST',body:fd})
+                .then(function(r){return r.json();})
+                .then(function(data){ if(data.ok) renderTimeline(data.timeline, patId); })
+                .catch(function(){ alert('Fehler beim Löschen.'); });
+        });
+    });
+}
+
+/* ── Timeline Edit Modal ─────────────────────────────────── */
+function openTimelineEditModal(entry, patientId) {
+    initTeQuill();
+    setTimeout(function() {
+        document.getElementById('te-entry-id').value   = entry.id;
+        document.getElementById('te-patient-id').value = patientId || (currentPatientData ? currentPatientData.patient.id : '');
+        var tySel = document.getElementById('te-type');
+        for (var i=0;i<tySel.options.length;i++) tySel.options[i].selected = tySel.options[i].value === (entry.type||'note');
+        var ttSel = document.getElementById('te-treatment-type');
+        ttSel.innerHTML = '<option value="">— keine —</option>';
+        if (currentPatientData && currentPatientData.treatment_types) {
+            currentPatientData.treatment_types.forEach(function(tt){
+                var o = document.createElement('option'); o.value=tt.id; o.textContent=tt.name;
+                o.selected = parseInt(entry.treatment_type_id) === parseInt(tt.id);
+                ttSel.appendChild(o);
+            });
+        }
+        if (entry.entry_date) {
+            var d = new Date(entry.entry_date.replace(' ','T'));
+            var pad = function(n){return String(n).padStart(2,'0');};
+            document.getElementById('te-date').value = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes());
+        }
+        var stSel = document.getElementById('te-status');
+        for (var i=0;i<stSel.options.length;i++) stSel.options[i].selected = stSel.options[i].value === (entry.status_badge||'');
+        document.getElementById('te-title').value = entry.title || '';
+        if (teQuill) {
+            if (entry.content) { teQuill.clipboard.dangerouslyPasteHTML(entry.content); }
+            else { teQuill.setContents([]); }
+        }
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-timeline-edit')).show();
+    }, 100);
+}
+
+var teSaveBtn = document.getElementById('te-save-btn');
+if (teSaveBtn) {
+    teSaveBtn.addEventListener('click', function () {
+        initTeQuill();
+        var entryId   = document.getElementById('te-entry-id').value;
+        var patientId = document.getElementById('te-patient-id').value;
+        var csrf      = document.getElementById('te-csrf').value;
+        if (!entryId || !patientId) return;
+        if (teQuill) document.getElementById('te-content').value = teQuill.root.innerHTML;
+        var fd = new FormData();
+        fd.append('_csrf_token', csrf);
+        fd.append('type',              document.getElementById('te-type').value);
+        fd.append('treatment_type_id', document.getElementById('te-treatment-type').value);
+        fd.append('title',             document.getElementById('te-title').value);
+        fd.append('content',           document.getElementById('te-content').value);
+        fd.append('status_badge',      document.getElementById('te-status').value);
+        fd.append('entry_date',        document.getElementById('te-date').value);
+        teSaveBtn.disabled = true; teSaveBtn.textContent = 'Speichern…';
+        fetch('/patienten/'+patientId+'/timeline/'+entryId+'/update-json', {method:'POST',body:fd})
+            .then(function(r){return r.json();})
+            .then(function(data){
+                if(data.ok){
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-timeline-edit')).hide();
+                    renderTimeline(data.timeline, patientId);
+                }
+            })
+            .catch(function(){ alert('Fehler beim Speichern.'); })
+            .finally(function(){ teSaveBtn.disabled=false; teSaveBtn.textContent='Speichern'; });
+    });
+}
+
+/* ── Timeline search ──────────────────────────────────────── */
+if (pdSearchInput) {
+    pdSearchInput.addEventListener('input', function () {
+        var q = pdSearchInput.value.trim().toLowerCase();
+        pdTimeline.querySelectorAll('.timeline-item').forEach(function (item) {
+            item.style.display = (!q || item.textContent.toLowerCase().includes(q)) ? '' : 'none';
+        });
+    });
+}
+
+/* ── Timeline form AJAX ───────────────────────────────────── */
+document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (form.id !== 'pd-timeline-form') return;
+    e.preventDefault();
+    var hidden = document.getElementById('pd-content-input');
+    if (hidden && quillEditor) hidden.value = quillEditor.root.innerHTML;
+    var patientId = form.dataset.patientId;
+    if (!patientId) return;
+    var btn = form.querySelector('[type=submit]');
+    var origText = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '…'; }
+    var fd = new FormData(form);
+    fetch('/patienten/'+patientId+'/timeline-json', {method:'POST',body:fd})
+        .then(function(r){return r.json();})
+        .then(function(data){ if(data.ok){ renderTimeline(data.timeline,patientId); form.reset(); if(quillEditor) quillEditor.setContents([]); } })
+        .catch(function(){})
+        .finally(function(){ if(btn){btn.disabled=false;btn.innerHTML=origText;} });
+}, true);
+
+/* ── Invoice button ───────────────────────────────────────── */
+if (pdInvoiceBtn) {
+    pdInvoiceBtn.addEventListener('click', function () {
+        if (!currentPatientData) return;
+        window.location.href = '/rechnungen/neu?patient_id=' + currentPatientData.patient.id;
+    });
+}
+
+/* ── Edit button ──────────────────────────────────────────── */
+if (pdEditBtn) {
+    pdEditBtn.addEventListener('click', function () {
+        if (!currentPatientData) return;
+        var p = currentPatientData.patient;
+        var o = currentPatientData.owner;
+        var form = document.getElementById('edit-patient-form');
+        form.action = '/patienten/' + p.id;
+        document.getElementById('edit-modal-title').textContent = (p.name||'Patient') + ' bearbeiten';
+        document.getElementById('edit-name').value    = p.name    || '';
+        document.getElementById('edit-species').value = p.species || '';
+        document.getElementById('edit-breed').value   = p.breed   || '';
+        document.getElementById('edit-birth').value   = p.birth_date ? p.birth_date.slice(0,10) : '';
+        document.getElementById('edit-color').value   = p.color   || '';
+        document.getElementById('edit-chip').value    = p.chip_number || '';
+        document.getElementById('edit-notes').value   = p.notes   || '';
+        var gSel = document.getElementById('edit-gender');
+        for (var i=0;i<gSel.options.length;i++) gSel.options[i].selected = gSel.options[i].value === (p.gender||'unbekannt');
+        var sSel = document.getElementById('edit-status');
+        for (var i=0;i<sSel.options.length;i++) sSel.options[i].selected = sSel.options[i].value === (p.status||'aktiv');
+        /* Owner dropdown */
+        var oSel = document.getElementById('edit-owner');
+        if (oSel.options.length <= 1) {
+            fetch('/api/tierhalter/suche?q=')
+                .then(function(r){return r.json();})
+                .then(function(owners){
+                    oSel.innerHTML = '<option value="">— wählen —</option>';
+                    owners.forEach(function(owner){
+                        var opt = document.createElement('option');
+                        opt.value = owner.id;
+                        opt.textContent = owner.last_name + ', ' + owner.first_name;
+                        opt.selected = parseInt(owner.id) === parseInt(p.owner_id||(o&&o.id));
+                        oSel.appendChild(opt);
+                    });
+                });
+        } else {
+            for (var i=0;i<oSel.options.length;i++) oSel.options[i].selected = parseInt(oSel.options[i].value) === parseInt(p.owner_id||(o&&o.id));
+        }
+        var prev = document.getElementById('edit-photo-preview');
+        if (p.photo) {
+            prev.innerHTML = '<img src="/patienten/'+p.id+'/foto/'+encodeURIComponent(p.photo)+'" style="width:100%;height:100%;object-fit:cover;">';
+        } else {
+            prev.innerHTML = '<svg width="28" height="28" fill="none" viewBox="0 0 24 24" style="opacity:0.3;"><path stroke="currentColor" stroke-width="1.5" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.5"/></svg>';
+        }
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-edit-patient-inline')).show();
+    });
+}
+
+/* ── Edit form AJAX ───────────────────────────────────────── */
+var editForm = document.getElementById('edit-patient-form');
+if (editForm) {
+    editForm.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var btn = editForm.querySelector('button[type="submit"]');
+        if (btn) { btn.disabled=true; btn.textContent='Speichern…'; }
+        var fd = new FormData(editForm);
+        fetch(editForm.action, {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}, body:fd})
+            .then(function(r){return r.json();})
+            .then(function(data){
+                if (data.ok) {
+                    if (currentPatientData && data.patient) {
+                        currentPatientData.patient = data.patient;
+                        pdName.textContent    = data.patient.name || '';
+                        pdSpecies.textContent = [data.patient.species,data.patient.breed].filter(Boolean).join(' · ');
+                    }
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-edit-patient-inline')).hide();
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-patient-detail')).show();
+                }
+            })
+            .catch(function(){ alert('Fehler beim Speichern.'); })
+            .finally(function(){ if(btn){btn.disabled=false;btn.textContent='Speichern';} });
+    });
+}
+
+/* ── Edit photo preview ───────────────────────────────────── */
+var editPhotoInput = document.getElementById('edit-photo-input');
+if (editPhotoInput) {
+    editPhotoInput.addEventListener('change', function () {
+        var file = this.files && this.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+            document.getElementById('edit-photo-preview').innerHTML = '<img src="'+ev.target.result+'" style="width:100%;height:100%;object-fit:cover;">';
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+/* ── Delete patient ───────────────────────────────────────── */
+window.deletePatient = function() {
+    if (!currentPatientData) return;
+    if (!confirm('Patient wirklich löschen? Alle Daten werden entfernt.')) return;
+    var p    = currentPatientData.patient;
+    var csrf = document.querySelector('meta[name="csrf-token"]')?.content
+            || document.querySelector('input[name="_csrf_token"]')?.value || '';
+    var fd = new FormData(); fd.append('_csrf_token', csrf);
+    fetch('/patienten/'+p.id+'/loeschen', {method:'POST',body:fd})
+        .then(function(){ window.location.href='/patienten'; });
+};
+
+/* ── PDF Export ───────────────────────────────────────────── */
+window.exportPatientPDF = function() {
+    if (!currentPatientData) return;
+    window.location.href = '/patienten/' + currentPatientData.patient.id + '/pdf';
+};
+
+/* ── Open patient modal (global entry point) ──────────────── */
+function openPatientModal(patientId) {
+    resetModal();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-patient-detail')).show();
+    initQuill();
+
+    fetch('/patienten/' + patientId + '/json')
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+            var p = data.patient;
+            var o = data.owner;
+            pdName.textContent = p.name || '';
+            if (p.status) {
+                pdBadge.textContent  = p.status;
+                pdBadge.className    = 'badge badge-' + p.status.toLowerCase().replace(/ /g,'_');
+                pdBadge.style.display = '';
+            }
+            pdSpecies.textContent = [p.species,p.breed].filter(Boolean).join(' · ');
+            if (p.photo) {
+                var imgH = document.createElement('img');
+                imgH.src = '/patienten/'+patientId+'/foto/'+p.photo;
+                imgH.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+                pdPhoto.innerHTML = ''; pdPhoto.appendChild(imgH);
+                var imgF = document.createElement('img');
+                imgF.src = '/patienten/'+patientId+'/foto/'+p.photo;
+                imgF.alt = p.name||'';
+                pdPhotoFull.innerHTML = ''; pdPhotoFull.appendChild(imgF);
+            }
+            pdDetails.innerHTML =
+                detail('Tierart', p.species) +
+                detail('Rasse', p.breed) +
+                detail('Geschlecht', p.gender) +
+                detail('Geburtsdatum', p.birth_date ? fmtDate(p.birth_date) : null) +
+                detail('Farbe', p.color) +
+                detail('Chip-Nr.', p.chip_number) +
+                (p.notes ? '<div style="grid-column:1/-1;border-top:1px solid var(--glass-border);padding-top:0.5rem;margin-top:0.1rem;"><span>Notizen</span><div style="line-height:1.5;">'+esc(p.notes)+'</div></div>' : '');
+            if (o) {
+                var kundenNr = 'Kunden-Nr. ' + String(o.id).padStart(4,'0');
+                pdOwner.innerHTML = '<a href="/tierhalter/'+o.id+'" class="pd-owner-link"><div class="pd-owner-avatar">'+esc((o.first_name||'').charAt(0)+(o.last_name||'').charAt(0))+'</div><div class="pd-owner-info"><div class="pd-owner-name">'+esc(o.first_name+' '+o.last_name)+' <span style="font-size:0.7rem;font-weight:600;color:var(--accent);background:var(--accent-soft,rgba(99,102,241,0.1));padding:0.1rem 0.45rem;border-radius:999px;margin-left:4px;">'+kundenNr+'</span></div>'+(o.phone?'<div class="pd-owner-meta">'+esc(o.phone)+'</div>':'')+(o.email?'<div class="pd-owner-meta">'+esc(o.email)+'</div>':'')+(o.street?'<div class="pd-owner-meta">'+esc(o.street)+(o.zip||o.city?', '+esc((o.zip||'')+' '+(o.city||'')).trim():'')+'</div>':'')+'</div></a>';
+            } else {
+                pdOwner.innerHTML = '<span style="color:var(--text-muted);font-size:0.82rem;">Kein Besitzer</span>';
+            }
+            if (pdForm) { pdForm.action='/patienten/'+patientId+'/timeline'; pdForm.dataset.patientId=patientId; }
+            var ttSel = document.getElementById('pd-treatment-type');
+            if (ttSel && data.treatment_types) {
+                ttSel.innerHTML = '<option value="">— keine —</option>';
+                data.treatment_types.forEach(function(tt){
+                    var opt=document.createElement('option'); opt.value=tt.id; opt.textContent=tt.name; opt.dataset.color=tt.color; ttSel.appendChild(opt);
+                });
+            }
+            currentPatientData = data;
+            renderTimeline(data.timeline, patientId);
+            pdLoading.style.display = 'none';
+            pdBody.style.display    = 'flex';
+        })
+        .catch(function() {
+            pdLoading.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;">Fehler beim Laden.</div>';
+        });
+}
+
+/* Export globally */
+window._gsOpenPatient   = openPatientModal;
+window.showPatientModal = openPatientModal;
+
+})();
+</script>
