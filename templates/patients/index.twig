@@ -1652,6 +1652,7 @@ function exportPatientPDF() {
 }
 window.exportPatientPDF  = exportPatientPDF;
 window.showPatientModal  = openPatientModal;
+window._gsOpenPatient    = openPatientModal;
 function exportPatientPDF_old_unused() {
     if (!currentPatientData) return;
     const p = currentPatientData.patient;

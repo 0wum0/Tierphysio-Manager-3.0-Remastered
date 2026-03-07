@@ -150,7 +150,11 @@
                 }
 
                 function openPatientFromSearch(id){
-                    window.location.href = '/patienten/' + id;
+                    if(typeof window._gsOpenPatient === 'function'){
+                        window._gsOpenPatient(id);
+                    } else {
+                        window.location.href = '/patienten/' + id;
+                    }
                 }
 
                 function closeDropdown(){
