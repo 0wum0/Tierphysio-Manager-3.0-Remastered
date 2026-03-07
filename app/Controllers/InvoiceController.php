@@ -93,6 +93,7 @@ class InvoiceController extends Controller
             'due_date'       => $this->post('due_date', null),
             'notes'          => $this->post('notes', ''),
             'payment_terms'  => $this->post('payment_terms', ''),
+            'payment_method' => $this->sanitize($this->post('payment_method', 'ueberweisung')),
         ];
 
         $positions = $this->parsePositions();
@@ -175,6 +176,7 @@ class InvoiceController extends Controller
             'due_date'       => $this->post('due_date', null),
             'notes'          => $this->post('notes', ''),
             'payment_terms'  => $this->post('payment_terms', ''),
+            'payment_method' => $this->sanitize($this->post('payment_method', 'ueberweisung')),
         ];
 
         $positions = $this->parsePositions();
