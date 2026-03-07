@@ -11,42 +11,53 @@
         </h1>
         <p class="page-subtitle">Besitzer per E-Mail oder WhatsApp einladen — direkte Aufnahme ohne manuelle Prüfung</p>
     </div>
-    <button class="btn btn-primary" onclick="document.getElementById('invite-modal').classList.add('open')">
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#invite-modal">
         <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
         Einladung senden
     </button>
 </div>
 
 {# Stats row #}
-<div class="mini-stats-grid">
-    <div class="lg-card" style="padding:1rem;text-align:center;">
-        <div style="font-size:1.6rem;font-weight:800;color:#f59e0b;line-height:1;">{{ counts.offen }}</div>
-        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">Offen</div>
+<div class="row g-3 mb-4">
+    <div class="col-4">
+        <div class="card text-center">
+            <div class="card-body p-3">
+                <div class="fw-bold" style="font-size:1.6rem;color:#f59e0b;line-height:1;">{{ counts.offen }}</div>
+                <div class="text-muted small text-uppercase fw-semibold mt-1" style="font-size:.7rem;letter-spacing:.05em;">Offen</div>
+            </div>
+        </div>
     </div>
-    <div class="lg-card" style="padding:1rem;text-align:center;">
-        <div style="font-size:1.6rem;font-weight:800;color:#22c55e;line-height:1;">{{ counts.angenommen }}</div>
-        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">Angenommen</div>
+    <div class="col-4">
+        <div class="card text-center">
+            <div class="card-body p-3">
+                <div class="fw-bold" style="font-size:1.6rem;color:#22c55e;line-height:1;">{{ counts.angenommen }}</div>
+                <div class="text-muted small text-uppercase fw-semibold mt-1" style="font-size:.7rem;letter-spacing:.05em;">Angenommen</div>
+            </div>
+        </div>
     </div>
-    <div class="lg-card" style="padding:1rem;text-align:center;">
-        <div style="font-size:1.6rem;font-weight:800;color:var(--text-muted);line-height:1;">{{ counts.abgelaufen }}</div>
-        <div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;">Abgelaufen</div>
+    <div class="col-4">
+        <div class="card text-center">
+            <div class="card-body p-3">
+                <div class="fw-bold text-muted" style="font-size:1.6rem;line-height:1;">{{ counts.abgelaufen }}</div>
+                <div class="text-muted small text-uppercase fw-semibold mt-1" style="font-size:.7rem;letter-spacing:.05em;">Abgelaufen</div>
+            </div>
+        </div>
     </div>
 </div>
 
 {% if submissions is empty %}
-<div class="lg-card" style="padding:3rem;text-align:center;">
+<div class="card"><div class="card-body" style="padding:3rem;text-align:center;">
     <div style="font-size:3rem;margin-bottom:1rem;">📨</div>
     <div style="font-weight:600;margin-bottom:0.5rem;">Noch keine Einladungen</div>
     <div style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.5rem;">Senden Sie Ihren Kunden einen persönlichen Einladungslink.</div>
-    <button class="btn btn-primary" onclick="document.getElementById('invite-modal').classList.add('open')">Erste Einladung senden</button>
-</div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#invite-modal">Erste Einladung senden</button>
+</div></div>
 {% else %}
 
-{# ── Wrapper: mob-hide-table zeigt auf ≤768px die Cards statt der Tabelle ── #}
-<div class="mob-hide-table">
+<div>
 
     {# ── Desktop: Tabelle ── #}
-    <div class="lg-card table-container" style="padding:0;overflow:hidden;">
+    <div class="d-none d-md-block card" style="overflow:hidden;">
         <table class="data-table">
             <thead>
                 <tr>
@@ -118,11 +129,12 @@
     </div>
 
     {# ── Mobile: Card List ── #}
-    <div class="mob-card-list">
+    <div class="d-md-none mt-3">
         {% for inv in submissions %}
-        <div class="mob-card">
-            <div class="mob-card-header">
-                <span class="mob-card-title">{{ inv.email ?: inv.phone ?: '—' }}</span>
+        <div class="card mb-2">
+            <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="fw-bold">{{ inv.email ?: inv.phone ?: '—' }}</span>
                 {% if inv.status == 'offen' %}
                     <span style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);border-radius:100px;padding:0.2rem 0.6rem;font-size:0.72rem;font-weight:700;white-space:nowrap;flex-shrink:0;">
                         <span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#f59e0b;margin-right:0.3rem;animation:pulse 2s infinite;vertical-align:1px;"></span>Offen
@@ -133,15 +145,13 @@
                     <span style="background:var(--glass-bg);color:var(--text-muted);border:1px solid var(--glass-border);border-radius:100px;padding:0.2rem 0.6rem;font-size:0.72rem;font-weight:700;white-space:nowrap;flex-shrink:0;">Abgelaufen</span>
                 {% endif %}
             </div>
-            <div class="mob-card-meta">
-                <span class="mob-card-meta-item">
-                    {% if inv.sent_via == 'email' %}📧 E-Mail{% elseif inv.sent_via == 'whatsapp' %}💬 WhatsApp{% else %}📧💬 Beides{% endif %}
-                </span>
-                <span class="mob-card-meta-item">🕐 {{ inv.expires_at|date_de }}</span>
-                {% if inv.created_by_name %}<span class="mob-card-meta-item">👤 {{ inv.created_by_name }}</span>{% endif %}
+            <div class="d-flex flex-wrap gap-2 text-muted small mb-2">
+                <span>{% if inv.sent_via == 'email' %}📧 E-Mail{% elseif inv.sent_via == 'whatsapp' %}💬 WhatsApp{% else %}📧💬 Beides{% endif %}</span>
+                <span>🕐 {{ inv.expires_at|date_de }}</span>
+                {% if inv.created_by_name %}<span>👤 {{ inv.created_by_name }}</span>{% endif %}
             </div>
             {% if inv.status == 'offen' or (inv.status == 'angenommen' and inv.accepted_patient_id) %}
-            <div class="mob-card-actions">
+            <div class="d-flex flex-wrap gap-2">
                 {% if inv.status == 'angenommen' and inv.accepted_patient_id %}
                     <a href="/patienten/{{ inv.accepted_patient_id }}" class="btn btn-sm btn-secondary" style="flex:1;justify-content:center;">Zur Akte</a>
                 {% endif %}
@@ -171,11 +181,12 @@
                 {% endif %}
             </div>
             {% endif %}
+            </div>
         </div>
         {% endfor %}
     </div>
 
-</div>{# /mob-hide-table #}
+</div>
 
 {% if pagination.last_page > 1 %}
 <div class="pagination">
@@ -186,12 +197,13 @@
 {% endif %}
 {% endif %}
 
-{# ── Send Invite Modal ── #}
-<div class="modal-overlay" id="invite-modal" onclick="if(event.target===this)this.classList.remove('open')">
-    <div class="modal" style="max-width:520px;">
+{# ── Send Invite Modal (Bootstrap 5) ── #}
+<div class="modal fade" id="invite-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog" style="max-width:520px;">
+        <div class="modal-content">
         <div class="modal-header">
-            <h3 class="modal-title">Einladung senden</h3>
-            <button class="modal-close" onclick="document.getElementById('invite-modal').classList.remove('open')">✕</button>
+            <h5 class="modal-title">Einladung senden</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
         </div>
         <form action="/einladungen/senden" method="POST" id="invite-form">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
@@ -233,13 +245,14 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="document.getElementById('invite-modal').classList.remove('open')">Abbrechen</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
                 <button type="submit" class="btn btn-primary" id="send-btn">
                     <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon points="22 2 15 22 11 13 2 9 22 2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     Einladung senden
                 </button>
             </div>
         </form>
+        </div>
     </div>
 </div>
 {% endblock %}
