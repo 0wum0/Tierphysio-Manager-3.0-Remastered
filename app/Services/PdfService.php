@@ -810,47 +810,47 @@ class PdfService
         $pdf->Cell($totLabelW, 7, 'Bezahlter Betrag', 0, 0, 'L');
         $pdf->Cell($cTotal, 7, number_format((float)$invoice['total_gross'], 2, ',', '.') . ' €', 0, 1, 'R');
 
-        // ── POST-TOTALS BLOCK — positions calculated FROM BOTTOM UP ─────
-        // Zone map (all mm from top of page):
-        //   Footer line   : 248
-        //   Vielen Dank   : 248 - 4 - 16  = 228
-        //   Box bottom    : 228 - 4        = 224
-        //   Box top       : 224 - 26       = 198  ($receiptBoxY)
-        //   Barzahlung    : left of box, same top row
+        // ── POST-TOTALS BLOCK — positions fixed from bottom up ──────────
+        // Zone map (mm from top):
+        //   248  Footer line
+        //   232  Vielen Dank (12mm tall, smaller)
+        //   228  gap
+        //   202  Box bottom  (box = 26mm)
+        //   176  Box top     = $receiptBoxY
+        //   164  Barzahlung top (12mm image above box, with 4mm gap)
 
         $footerTopY  = 248;
-        $receiptBoxH = 26;
-        $receiptBoxW = $contentW;
-        $receiptBoxX = $contentX;
-        $receiptBoxY = $footerTopY - 4 - 16 - 4 - $receiptBoxH;  // = 198mm
+        $vdH         = 12;   // Vielen Dank smaller
+        $vdY         = $footerTopY - 4 - $vdH;  // 232mm
 
-        // Safety: never draw over the totals
-        if ($receiptBoxY < $grossY + 14) {
-            $receiptBoxY = $grossY + 14;
+        $receiptBoxH = 26;
+        $receiptBoxY = $vdY - 2 - $receiptBoxH;  // 204mm
+
+        // Safety: never overlap totals
+        if ($receiptBoxY < $grossY + 16) {
+            $receiptBoxY = $grossY + 16;
         }
 
-        // ── BARZAHLUNG — left column, top-aligned with receipt box ──────
+        // ── BARZAHLUNG — above box, left-aligned ────────────────────────
         $barzahlungImgFile = !empty($settings['pdf_barzahlung_bild'])
             ? ROOT_PATH . '/public/assets/img/' . $settings['pdf_barzahlung_bild']
             : $this->resolveAssetImg('barzahlung-script.png');
-        $bzColW = 60;
         if (file_exists($barzahlungImgFile)) {
-            $bzImgW = 52;
+            $bzImgW = 48;
             [$bw, $bh] = @getimagesize($barzahlungImgFile) ?: [200, 80];
-            $bzImgH    = ($bh > 0 && $bw > 0) ? ($bh / $bw) * $bzImgW : 14;
-            // Center vertically within box height
-            $bzImgY    = $receiptBoxY + ($receiptBoxH / 2) - ($bzImgH / 2);
+            $bzImgH    = ($bh > 0 && $bw > 0) ? ($bh / $bw) * $bzImgW : 12;
+            $bzImgY    = $receiptBoxY - $bzImgH - 3;
             $pdf->Image($barzahlungImgFile, $contentX, $bzImgY, $bzImgW, 0, '');
         } else {
             $pdf->SetFont($font, 'I', 18);
             $pdf->SetTextColor(...$darkColor);
-            $pdf->SetXY($contentX, $receiptBoxY + ($receiptBoxH / 2) - 4);
-            $pdf->Cell($bzColW, 10, 'Barzahlung', 0, 0, 'L');
+            $pdf->SetXY($contentX, $receiptBoxY - 14);
+            $pdf->Cell(60, 10, 'Barzahlung', 0, 0, 'L');
         }
 
-        // ── BESTÄTIGUNGSBOX — right of Barzahlung ───────────────────────
-        $receiptBoxX = $contentX + $bzColW + 4;
-        $receiptBoxW = $contentW - $bzColW - 4;
+        // ── BESTÄTIGUNGSBOX — full content width ────────────────────────
+        $receiptBoxX = $contentX;
+        $receiptBoxW = $contentW;
 
         $pdf->SetFillColor(235, 247, 235);
         $pdf->SetDrawColor(...$accentColor);
@@ -876,18 +876,17 @@ class PdfService
         $pdf->SetXY($receiptBoxX + 3, $receiptBoxY + 19);
         $pdf->Cell($receiptBoxW - 6, 4, 'Rechnung-Nr.: ' . $invoice['invoice_number'], 0, 1, 'C');
 
-        // ── VIELEN DANK — fixed at 228mm (between box bottom and footer) ─
-        $vdY   = $footerTopY - 4 - 16;  // 228mm
+        // ── VIELEN DANK — smaller, above footer ─────────────────────────
         $vdImg = !empty($settings['pdf_vielen_dank_bild'])
             ? ROOT_PATH . '/public/assets/img/' . $settings['pdf_vielen_dank_bild']
             : $this->resolveAssetImg('vielen-dank-script.png');
         if (file_exists($vdImg)) {
-            $pdf->Image($vdImg, $contentX, $vdY, 68, 0, '');
+            $pdf->Image($vdImg, $contentX, $vdY, 50, 0, '');
         } else {
-            $pdf->SetFont($font, 'BI', 22);
+            $pdf->SetFont($font, 'BI', 16);
             $pdf->SetTextColor(...$darkColor);
             $pdf->SetXY($contentX, $vdY);
-            $pdf->Cell($contentW, 16, 'Vielen Dank!', 0, 1, 'L');
+            $pdf->Cell($contentW, $vdH, 'Vielen Dank!', 0, 1, 'L');
         }
 
         // ── FOOTER ────────────────────────────────────────────────────────
