@@ -49,6 +49,33 @@ class MailService
         }
     }
 
+    public function sendReceipt(array $invoice, array $owner, string $pdfContent): bool
+    {
+        try {
+            $mailer = $this->createMailer();
+            $mailer->addAddress($owner['email'], $owner['first_name'] . ' ' . $owner['last_name']);
+            $mailer->Subject = 'Ihre Quittung ' . $invoice['invoice_number'];
+
+            $companyName = $this->settingsRepository->get('company_name', 'Tierphysio Praxis');
+            $mailer->Body = "Sehr geehrte/r " . $owner['first_name'] . " " . $owner['last_name'] . ",\n\n"
+                . "anbei erhalten Sie Ihre Quittung für Rechnung " . $invoice['invoice_number'] . ".\n\n"
+                . "Mit freundlichen Grüßen\n" . $companyName;
+
+            $mailer->addStringAttachment(
+                $pdfContent,
+                'Quittung-' . $invoice['invoice_number'] . '.pdf',
+                PHPMailer::ENCODING_BASE64,
+                'application/pdf'
+            );
+
+            return $mailer->send();
+        } catch (\Throwable $e) {
+            $this->lastError = $e->getMessage();
+            error_log('[MailService::sendReceipt] ' . $e->getMessage());
+            return false;
+        }
+    }
+
     public function sendRaw(string $to, string $toName, string $subject, string $body, array $attachments = []): bool
     {
         try {

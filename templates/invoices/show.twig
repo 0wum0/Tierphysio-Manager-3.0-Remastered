@@ -19,6 +19,10 @@
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             {{ t('invoices.download_pdf') }}
         </a>
+        <a href="/rechnungen/{{ invoice.id }}/quittung" class="btn btn-success btn-sm" target="_blank">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 11l3 3L22 4"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Quittung PDF
+        </a>
         {% if owner and owner.email %}
         <form action="/rechnungen/{{ invoice.id }}/senden" method="POST" style="margin:0;">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
@@ -161,6 +165,10 @@
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                 {{ t('invoices.download_pdf') }}
             </a>
+            <a href="/rechnungen/{{ invoice.id }}/quittung" class="btn btn-success btn-sm w-full" target="_blank">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 11l3 3L22 4"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                Quittung PDF
+            </a>
 
             {% if owner and owner.email %}
             <form action="/rechnungen/{{ invoice.id }}/senden" method="POST" style="margin:0;">
@@ -170,6 +178,15 @@
                     {{ t('invoices.send_email') }}
                 </button>
             </form>
+            {% if owner.email %}
+            <form action="/rechnungen/{{ invoice.id }}/quittung-senden" method="POST" style="margin:0;">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="btn btn-success btn-sm w-full">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polygon stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    Quittung per E-Mail
+                </button>
+            </form>
+            {% endif %}
             {% endif %}
 
             <div class="divider"></div>

@@ -65,6 +65,8 @@ $router->get('/rechnungen/{id}/pdf', [InvoiceController::class, 'downloadPdf'], 
 $router->get('/rechnungen/{id}/vorschau', [InvoiceController::class, 'preview'], ['auth']);
 $router->get('/rechnungen/{id}/positionen-json', [InvoiceController::class, 'positionsJson'], ['auth']);
 $router->post('/rechnungen/{id}/senden', [InvoiceController::class, 'sendEmail'], ['auth']);
+$router->get('/rechnungen/{id}/quittung', [InvoiceController::class, 'downloadReceipt'], ['auth']);
+$router->post('/rechnungen/{id}/quittung-senden', [InvoiceController::class, 'sendReceiptEmail'], ['auth']);
 
 $router->get('/einstellungen', [SettingsController::class, 'index'], ['admin']);
 $router->post('/einstellungen', [SettingsController::class, 'update'], ['admin']);

@@ -316,6 +316,57 @@ class InvoiceController extends Controller
         $this->redirect("/rechnungen/{$params['id']}");
     }
 
+    public function downloadReceipt(array $params = []): void
+    {
+        $invoice = $this->invoiceService->findById((int)$params['id']);
+        if (!$invoice) {
+            $this->abort(404);
+        }
+
+        $positions = $this->invoiceService->getPositions((int)$params['id']);
+        $owner     = $invoice['owner_id'] ? $this->ownerService->findById((int)$invoice['owner_id']) : null;
+        $patient   = $invoice['patient_id'] ? $this->patientService->findById((int)$invoice['patient_id']) : null;
+
+        $pdf = $this->pdfService->generateReceiptPdf($invoice, $positions, $owner, $patient);
+
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: inline; filename="Quittung-' . $invoice['invoice_number'] . '.pdf"');
+        echo $pdf;
+        exit;
+    }
+
+    public function sendReceiptEmail(array $params = []): void
+    {
+        $this->validateCsrf();
+
+        $invoice = $this->invoiceService->findById((int)$params['id']);
+        if (!$invoice) {
+            $this->abort(404);
+        }
+
+        $owner = $invoice['owner_id'] ? $this->ownerService->findById((int)$invoice['owner_id']) : null;
+        if (!$owner || empty($owner['email'])) {
+            $this->session->flash('error', $this->translator->trans('invoices.no_email'));
+            $this->redirect("/rechnungen/{$params['id']}");
+            return;
+        }
+
+        $positions = $this->invoiceService->getPositions((int)$params['id']);
+        $patient   = $invoice['patient_id'] ? $this->patientService->findById((int)$invoice['patient_id']) : null;
+        $pdf       = $this->pdfService->generateReceiptPdf($invoice, $positions, $owner, $patient);
+
+        $sent = $this->mailService->sendReceipt($invoice, $owner, $pdf);
+
+        if ($sent) {
+            $this->session->flash('success', 'Quittung erfolgreich per E-Mail gesendet.');
+        } else {
+            $err = $this->mailService->getLastError();
+            $this->session->flash('error', 'Quittung konnte nicht gesendet werden' . ($err ? ': ' . $err : ''));
+        }
+
+        $this->redirect("/rechnungen/{$params['id']}");
+    }
+
     private function parsePositions(): array
     {
         $descriptions = $_POST['position_description'] ?? [];

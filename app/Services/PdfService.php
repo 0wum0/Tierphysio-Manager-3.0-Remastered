@@ -473,6 +473,384 @@ class PdfService
         return $pdf->Output('', 'S');
     }
 
+    public function generateReceiptPdf(
+        array $invoice,
+        array $positions,
+        ?array $owner,
+        ?array $patient
+    ): string {
+        $settings = $this->settingsRepository->all();
+
+        $sidebarColor      = $this->hexToRgb($settings['pdf_primary_color']              ?? '#8B9E8B');
+        $accentColor       = $this->hexToRgb($settings['pdf_accent_color']               ?? '#6B7F6B');
+        $colorCompanyName  = $this->hexToRgb($settings['pdf_color_company_name']         ?? '#1E1E1E');
+        $colorCompanyInfo  = $this->hexToRgb($settings['pdf_color_company_info']         ?? '#6E6E6E');
+        $colorRecipient    = $this->hexToRgb($settings['pdf_color_recipient']            ?? '#1E1E1E');
+        $colorTableHdrBg   = $this->hexToRgb($settings['pdf_color_table_header_bg']      ?? '#8B9E8B');
+        $colorTableHdrText = $this->hexToRgb($settings['pdf_color_table_header_text']    ?? '#FFFFFF');
+        $colorTableText    = $this->hexToRgb($settings['pdf_color_table_text']           ?? '#1E1E1E');
+        $colorLine         = $this->hexToRgb($settings['pdf_color_line']                 ?? '#B4B4B4');
+        $colorTotalLabel   = $this->hexToRgb($settings['pdf_color_total_label']          ?? '#1E1E1E');
+        $colorTotalGross   = $this->hexToRgb($settings['pdf_color_total_gross']          ?? '#1E1E1E');
+        $colorFooter       = $this->hexToRgb($settings['pdf_color_footer']               ?? '#6E6E6E');
+        $darkColor         = $colorCompanyName;
+        $grayColor         = $colorCompanyInfo;
+
+        $font          = $this->resolvePdfFont($settings['pdf_font'] ?? 'helvetica');
+        $fontSize      = (float)($settings['pdf_font_size'] ?? 9);
+        $showPatient   = ($settings['pdf_show_patient']    ?? '1') === '1';
+        $showChip      = ($settings['pdf_show_chip']       ?? '1') === '1';
+        $showIban      = ($settings['pdf_show_iban']       ?? '1') === '1';
+        $showTaxNum    = ($settings['pdf_show_tax_number'] ?? '1') === '1';
+        $showWebsite   = ($settings['pdf_show_website']    ?? '0') === '1';
+        $kleinunternehmer = ($settings['kleinunternehmer'] ?? '0') === '1';
+
+        $companyName    = $settings['company_name']    ?? '';
+        $companyStreet  = $settings['company_street']  ?? '';
+        $companyZip     = $settings['company_zip']     ?? '';
+        $companyCity    = $settings['company_city']    ?? '';
+        $companyPhone   = $settings['company_phone']   ?? '';
+        $companyEmail   = $settings['company_email']   ?? '';
+        $companyWebsite = $settings['company_website'] ?? '';
+        $bankName       = $settings['bank_name']       ?? '';
+        $bankIban       = $settings['bank_iban']       ?? '';
+        $bankBic        = $settings['bank_bic']        ?? '';
+        $taxNumber      = $settings['tax_number']      ?? '';
+        $logoFile       = !empty($settings['company_logo'])
+            ? STORAGE_PATH . '/uploads/' . $settings['company_logo']
+            : null;
+
+        $sidebarW  = 42;
+        $contentX  = 50;
+        $contentW  = 145;
+        $rightEdge = 195;
+        $pageH     = 297;
+
+        $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+        $pdf->SetMargins(0, 0, 0);
+        $pdf->SetAutoPageBreak(false);
+        $pdf->AddPage();
+
+        // ── LEFT SIDEBAR ─────────────────────────────────────────────────
+        $pdf->SetFillColor(...$sidebarColor);
+        $pdf->Rect(0, 0, $sidebarW, $pageH, 'F');
+
+        // Logo
+        $logoY = 14;
+        if ($logoFile && file_exists($logoFile)) {
+            $logoMaxW = $sidebarW - 10;
+            $pdf->Image($logoFile, 5, $logoY, $logoMaxW, 0, '', '', '', false, 300);
+            $logoY += 26;
+        } else {
+            $cx = $sidebarW / 2;
+            $cy = $logoY + 12;
+            $pdf->SetDrawColor(255, 255, 255);
+            $pdf->SetLineWidth(0.5);
+            $pdf->Circle($cx, $cy, 11, 0, 360, 'D');
+            $pdf->SetFont($font, 'B', 7);
+            $pdf->SetTextColor(255, 255, 255);
+            $pdf->SetXY(3, $cy - 4);
+            $pdf->Cell($sidebarW - 6, 8, 'LOGO', 0, 0, 'C');
+            $logoY += 28;
+        }
+
+        // Quittungsnummer in sidebar
+        $sideY = $logoY + 12;
+        $pdf->SetFont($font, '', $fontSize - 2);
+        $pdf->SetTextColor(220, 235, 220);
+        $pdf->SetXY(3, $sideY);
+        $pdf->Cell($sidebarW - 6, 4, 'Quittungs-Nr.', 0, 1, 'C');
+        $pdf->SetFont($font, 'B', $fontSize - 1);
+        $pdf->SetTextColor(255, 255, 255);
+        $pdf->SetXY(3, $sideY + 4);
+        $pdf->Cell($sidebarW - 6, 5, $invoice['invoice_number'], 0, 1, 'C');
+
+        // Datum
+        $sideY += 22;
+        $pdf->SetFont($font, '', $fontSize - 2);
+        $pdf->SetTextColor(220, 235, 220);
+        $pdf->SetXY(3, $sideY);
+        $pdf->Cell($sidebarW - 6, 4, 'Datum', 0, 1, 'C');
+        $pdf->SetFont($font, 'B', $fontSize - 1);
+        $pdf->SetTextColor(255, 255, 255);
+        $pdf->SetXY(3, $sideY + 4);
+        $pdf->Cell($sidebarW - 6, 5, $invoice['issue_date'] ? date('d.m.Y', strtotime($invoice['issue_date'])) : date('d.m.Y'), 0, 1, 'C');
+
+        // ── BEZAHLT Stempel in Sidebar ───────────────────────────────────
+        $stampY = $sideY + 36;
+        $pdf->SetFillColor(255, 255, 255);
+        $pdf->SetDrawColor(255, 255, 255);
+        $pdf->SetLineWidth(0.4);
+        $pdf->RoundedRect(4, $stampY, $sidebarW - 8, 14, 2, '1111', 'DF');
+        $pdf->SetFont($font, 'B', $fontSize + 1);
+        $pdf->SetTextColor(...$accentColor);
+        $pdf->SetXY(4, $stampY + 4);
+        $pdf->Cell($sidebarW - 8, 6, 'BEZAHLT', 0, 1, 'C');
+
+        // ── MAIN CONTENT ─────────────────────────────────────────────────
+
+        // Company info top right
+        $companyInfoTopY = 8;
+        $pdf->SetFont($font, 'B', $fontSize + 1);
+        $pdf->SetTextColor(...$darkColor);
+        $pdf->SetXY($contentX + ($contentW / 2), $companyInfoTopY);
+        $pdf->Cell($contentW / 2, 5, $companyName, 0, 1, 'R');
+
+        $pdf->SetFont($font, '', $fontSize - 1.5);
+        $pdf->SetTextColor(...$grayColor);
+        $infoLines = array_filter([
+            $companyStreet,
+            trim($companyZip . ' ' . $companyCity),
+            $companyPhone  ? 'Tel: ' . $companyPhone  : '',
+            $companyEmail,
+            ($showWebsite && $companyWebsite) ? $companyWebsite : '',
+        ]);
+        $infoY = $companyInfoTopY + 6;
+        foreach ($infoLines as $line) {
+            $pdf->SetXY($contentX + ($contentW / 2), $infoY);
+            $pdf->Cell($contentW / 2, 4, $line, 0, 1, 'R');
+            $infoY += 4;
+        }
+
+        // "Quittung" script heading
+        $quittungImgY = $infoY + 4;
+        $quittungImg  = $this->resolveAssetImg('quittung-script.png');
+        if (file_exists($quittungImg)) {
+            $imgW = 72;
+            $pdf->Image($quittungImg, $rightEdge - $imgW, $quittungImgY, $imgW, 0, '');
+            [$pw, $ph] = @getimagesize($quittungImg) ?: [300, 120];
+            $quittungImgH = ($ph > 0 && $pw > 0) ? ($ph / $pw) * $imgW : 28;
+        } else {
+            $quittungImgH = 18;
+            $pdf->SetFont($font, 'BI', 34);
+            $pdf->SetTextColor(...$darkColor);
+            $pdf->SetXY($contentX, $quittungImgY);
+            $pdf->Cell($contentW, $quittungImgH, 'Quittung', 0, 1, 'R');
+        }
+
+        $headerBottomY = $quittungImgY + $quittungImgH + 4;
+        $addrTopY = max($headerBottomY, 58);
+
+        // ── ADDRESS BLOCK ────────────────────────────────────────────────
+        $colW = $contentW / 2 - 4;
+        if ($owner) {
+            $pdf->SetFont($font, 'B', $fontSize);
+            $pdf->SetTextColor(...$colorRecipient);
+            $pdf->SetXY($contentX, $addrTopY);
+            $pdf->Cell($colW, 5.5, $owner['first_name'] . ' ' . $owner['last_name'], 0, 1);
+            $pdf->SetFont($font, '', $fontSize - 0.5);
+            $pdf->SetXY($contentX, $addrTopY + 6);
+            if (!empty($owner['street'])) {
+                $pdf->Cell($colW, 4.5, $owner['street'], 0, 1);
+                $pdf->SetX($contentX);
+            }
+            if (!empty($owner['zip'])) {
+                $pdf->Cell($colW, 4.5, $owner['zip'] . ' ' . ($owner['city'] ?? ''), 0, 1);
+                $pdf->SetX($contentX);
+            }
+            $pdf->SetFont($font, '', $fontSize - 1.5);
+            $pdf->SetTextColor(...$colorCompanyInfo);
+            $pdf->SetXY($contentX, $addrTopY + 21);
+            $pdf->Cell($colW, 4, 'Kunden-Nr. ' . str_pad((string)($owner['id'] ?? 1), 4, '0', STR_PAD_LEFT), 0, 1);
+        }
+
+        if ($showPatient && $patient) {
+            $patY = $addrTopY + 30;
+            $pdf->SetFont($font, '', $fontSize - 1.5);
+            $pdf->SetTextColor(...$colorCompanyInfo);
+            $pdf->SetXY($contentX, $patY);
+            $label = 'Patient: ' . $patient['name'];
+            if (!empty($patient['species'])) $label .= ' (' . $patient['species'] . ')';
+            $pdf->Cell($colW, 4, $label, 0, 1);
+            if ($showChip && !empty($patient['chip_number'])) {
+                $pdf->SetXY($contentX, $patY + 4);
+                $pdf->Cell($colW, 4, 'Chip-Nr.: ' . $patient['chip_number'], 0, 1);
+            }
+        }
+
+        // ── POSITIONS TABLE ───────────────────────────────────────────────
+        $tableTopY = max($addrTopY + 38, 100);
+
+        $pdf->SetDrawColor(...$colorLine);
+        $pdf->SetLineWidth(0.3);
+        $pdf->Line($contentX, $tableTopY, $rightEdge, $tableTopY);
+
+        $cQty   = 16;
+        $cPrice = 26;
+        $cTotal = 26;
+        $cDesc  = $contentW - $cQty - $cPrice - $cTotal;
+
+        $pdf->SetFillColor(...$colorTableHdrBg);
+        $pdf->Rect($contentX, $tableTopY, $contentW, 7.5, 'F');
+        $pdf->SetFont($font, '', $fontSize - 1.5);
+        $pdf->SetTextColor(...$colorTableHdrText);
+        $pdf->SetXY($contentX, $tableTopY + 1.5);
+        $pdf->Cell($cQty,  4, 'Anzahl', 0, 0, 'L');
+        $pdf->Cell($cDesc, 4, 'Produkt & Service', 0, 0, 'L');
+        $pdf->Cell($cPrice,4, 'Preis', 0, 0, 'R');
+        $pdf->Cell($cTotal,4, 'Total', 0, 1, 'R');
+
+        $pdf->SetDrawColor(...$colorLine);
+        $pdf->Line($contentX, $tableTopY + 7.5, $rightEdge, $tableTopY + 7.5);
+
+        $rowY = $tableTopY + 10;
+        $pdf->SetTextColor(...$colorTableText);
+
+        foreach ($positions as $pos) {
+            $lineNet  = (float)$pos['quantity'] * (float)$pos['unit_price'];
+            $qtyStr   = number_format((float)$pos['quantity'], 0, ',', '.');
+            $priceStr = number_format((float)$pos['unit_price'], 2, ',', '.') . ' €';
+            $totalStr = number_format($lineNet, 2, ',', '.') . ' €';
+
+            if ($rowY > 190) {
+                $pdf->AddPage();
+                $pdf->SetFillColor(...$sidebarColor);
+                $pdf->Rect(0, 0, $sidebarW, $pageH, 'F');
+                $pdf->SetFont($font, '', $fontSize - 2);
+                $pdf->SetTextColor(220, 235, 220);
+                $pdf->SetXY(3, 20);
+                $pdf->Cell($sidebarW - 6, 4, 'Quittungs-Nr.', 0, 1, 'C');
+                $pdf->SetFont($font, 'B', $fontSize - 1);
+                $pdf->SetTextColor(255, 255, 255);
+                $pdf->SetXY(3, 24);
+                $pdf->Cell($sidebarW - 6, 5, $invoice['invoice_number'], 0, 1, 'C');
+                $rowY = 15;
+            }
+
+            $pdf->SetFont($font, '', $fontSize - 0.5);
+            $pdf->SetTextColor(...$colorTableText);
+            $pdf->SetXY($contentX, $rowY);
+            $pdf->Cell($cQty,  5.5, $qtyStr, 0, 0, 'L');
+            $pdf->Cell($cDesc, 5.5, $pos['description'], 0, 0, 'L');
+            $pdf->Cell($cPrice,5.5, $priceStr, 0, 0, 'R');
+            $pdf->Cell($cTotal,5.5, $totalStr, 0, 1, 'R');
+
+            $pdf->SetDrawColor(...$colorLine);
+            $pdf->SetLineWidth(0.15);
+            $pdf->Line($contentX, $rowY + 6, $rightEdge, $rowY + 6);
+            $rowY += 7.5;
+        }
+
+        // ── TOTALS ────────────────────────────────────────────────────────
+        $totY = $rowY + 5;
+        $pdf->SetDrawColor(...$accentColor);
+        $pdf->SetLineWidth(0.5);
+        $pdf->Line($contentX, $totY, $rightEdge, $totY);
+
+        $totLabelX = $contentX + $cQty + $cDesc - 10;
+        $totLabelW = $cPrice + 10;
+
+        $pdf->SetFont($font, '', $fontSize);
+        $pdf->SetTextColor(...$colorTotalLabel);
+
+        if ($kleinunternehmer) {
+            $pdf->SetXY($totLabelX, $totY + 3);
+            $pdf->Cell($totLabelW, 6, 'Gesamtbetrag (netto)', 0, 0, 'L');
+            $pdf->Cell($cTotal, 6, number_format((float)$invoice['total_net'], 2, ',', '.') . ' €', 0, 1, 'R');
+            $grossY = $totY + 12;
+        } else {
+            $pdf->SetXY($totLabelX, $totY + 3);
+            $pdf->Cell($totLabelW, 6, 'Total exkl. MwSt.', 0, 0, 'L');
+            $pdf->Cell($cTotal, 6, number_format((float)$invoice['total_net'], 2, ',', '.') . ' €', 0, 1, 'R');
+
+            $taxGroups = [];
+            foreach ($positions as $pos) {
+                $rate = (float)$pos['tax_rate'];
+                $taxGroups[$rate] = ($taxGroups[$rate] ?? 0) + ((float)$pos['quantity'] * (float)$pos['unit_price'] * $rate / 100);
+            }
+            $taxOffsetY = $totY + 10;
+            foreach ($taxGroups as $rate => $taxAmt) {
+                $pdf->SetXY($totLabelX, $taxOffsetY);
+                $pdf->SetTextColor(...$colorTotalLabel);
+                $pdf->Cell($totLabelW, 6, 'MwSt. ' . number_format($rate, 0) . '%', 0, 0, 'L');
+                $pdf->Cell($cTotal, 6, number_format($taxAmt, 2, ',', '.') . ' €', 0, 1, 'R');
+                $taxOffsetY += 7;
+            }
+            $grossY = $taxOffsetY + 2;
+        }
+
+        // Gross total
+        $pdf->SetDrawColor(...$colorLine);
+        $pdf->SetLineWidth(0.2);
+        $pdf->Line($totLabelX, $grossY, $rightEdge, $grossY);
+
+        $pdf->SetFont($font, 'B', $fontSize + 0.5);
+        $pdf->SetTextColor(...$colorTotalGross);
+        $pdf->SetXY($totLabelX, $grossY + 3);
+        $pdf->Cell($totLabelW, 7, 'Bezahlter Betrag', 0, 0, 'L');
+        $pdf->Cell($cTotal, 7, number_format((float)$invoice['total_gross'], 2, ',', '.') . ' €', 0, 1, 'R');
+
+        // ── QUITTUNGSTEXT ─────────────────────────────────────────────────
+        $receiptBoxY = $grossY + 14;
+        $receiptBoxW = $totLabelW + $cTotal;
+        $receiptBoxH = 20;
+
+        $pdf->SetFillColor(235, 247, 235);
+        $pdf->SetDrawColor(...$accentColor);
+        $pdf->SetLineWidth(0.4);
+        $pdf->RoundedRect($totLabelX, $receiptBoxY, $receiptBoxW, $receiptBoxH, 2, '1111', 'DF');
+
+        $pdf->SetFont($font, 'B', $fontSize + 0.5);
+        $pdf->SetTextColor(...$accentColor);
+        $pdf->SetXY($totLabelX + 2, $receiptBoxY + 3);
+        $pdf->Cell($receiptBoxW - 4, 5, 'Hiermit wird der Zahlungseingang bestätigt', 0, 1, 'C');
+
+        $issueDate = !empty($invoice['issue_date']) ? date('d.m.Y', strtotime($invoice['issue_date'])) : date('d.m.Y');
+        $grossFormatted = number_format((float)$invoice['total_gross'], 2, ',', '.') . ' €';
+
+        $pdf->SetFont($font, '', $fontSize - 0.5);
+        $pdf->SetTextColor(...$colorTableText);
+        $pdf->SetXY($totLabelX + 2, $receiptBoxY + 9);
+        $pdf->Cell($receiptBoxW - 4, 5,
+            'Betrag von ' . $grossFormatted . ' am ' . $issueDate . ' in bar erhalten.',
+            0, 1, 'C');
+
+        $pdf->SetFont($font, 'I', $fontSize - 2);
+        $pdf->SetTextColor(...$grayColor);
+        $pdf->SetXY($totLabelX + 2, $receiptBoxY + 15);
+        $pdf->Cell($receiptBoxW - 4, 4,
+            'Rechnung-Nr.: ' . $invoice['invoice_number'],
+            0, 1, 'C');
+
+        // ── FOOTER ────────────────────────────────────────────────────────
+        $footerTopY = 248;
+        $pdf->SetDrawColor(...$colorLine);
+        $pdf->SetLineWidth(0.3);
+        $pdf->Line($contentX, $footerTopY, $rightEdge, $footerTopY);
+
+        $pdf->SetFont($font, 'B', $fontSize - 1);
+        $pdf->SetTextColor(...$colorFooter);
+        $pdf->SetXY($contentX, $footerTopY + 3);
+        $pdf->Cell(60, 4.5, 'Bankverbindung', 0, 1);
+
+        $pdf->SetFont($font, '', $fontSize - 1.5);
+        $pdf->SetTextColor(...$colorFooter);
+        $bankY = $footerTopY + 8;
+        if ($bankName) { $pdf->SetXY($contentX, $bankY); $pdf->Cell(60, 4, $bankName, 0, 1); $bankY += 4; }
+        if ($showIban && $bankIban) { $pdf->SetXY($contentX, $bankY); $pdf->Cell(12, 4, 'IBAN', 0, 0); $pdf->Cell(48, 4, $bankIban, 0, 1); $bankY += 4; }
+        if ($bankBic)  { $pdf->SetXY($contentX, $bankY); $pdf->Cell(12, 4, 'BIC',  0, 0); $pdf->Cell(48, 4, $bankBic, 0, 1); $bankY += 4; }
+        if ($showTaxNum && $taxNumber) { $pdf->SetXY($contentX, $bankY); $pdf->Cell(12, 4, 'St.-Nr.', 0, 0); $pdf->Cell(48, 4, $taxNumber, 0, 1); }
+
+        $contactParts = array_filter([$companyEmail, ($showWebsite ? $companyWebsite : '')]);
+        if ($contactParts) {
+            $pdf->SetFont($font, '', $fontSize - 1.5);
+            $pdf->SetTextColor(...$colorFooter);
+            $pdf->SetXY($contentX + 70, $footerTopY + 10);
+            $pdf->Cell($contentW - 70, 4, implode('   ', $contactParts), 0, 1, 'R');
+        }
+
+        if ($kleinunternehmer) {
+            $pdf->SetFont($font, 'I', $fontSize - 2);
+            $pdf->SetTextColor(...$colorFooter);
+            $pdf->SetXY($contentX, $footerTopY + 26);
+            $pdf->Cell($contentW, 4, 'Gemäß §19 UStG wird keine Umsatzsteuer berechnet.', 0, 1, 'C');
+        }
+
+        return $pdf->Output('', 'S');
+    }
+
     public function generatePatientPdf(
         array $patient,
         ?array $owner,
