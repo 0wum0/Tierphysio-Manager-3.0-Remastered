@@ -116,6 +116,26 @@
   box-shadow: 0 0 10px 2px color-mix(in srgb, var(--bs-primary) 35%, transparent);
 }
 
+/* ── Light Mode: btn-system icons must be dark, not white ── */
+[data-bs-theme="light"] .app-header .btn-system .sa-icon {
+  stroke: rgba(0, 0, 0, 0.65);
+  fill:   rgba(0, 0, 0, 0.0);
+}
+[data-bs-theme="light"] .app-header .btn-system:hover .sa-icon,
+[data-bs-theme="light"] .app-header .btn-system.show  .sa-icon {
+  stroke: var(--bs-primary);
+  fill:   rgba(var(--bs-primary-rgb), 0.12);
+}
+/* collapse icon (SVG polygon) */
+[data-bs-theme="light"] .app-header .collapse-icon svg polygon {
+  fill: rgba(0, 0, 0, 0.45);
+}
+/* mobile hamburger */
+[data-bs-theme="light"] .app-header .mobile-menu-icon .sa-icon {
+  stroke: rgba(0, 0, 0, 0.65);
+  fill:   none;
+}
+
 /* ═══════════════════════════════════════════
    GLASS CARD → Bootstrap card
    ═══════════════════════════════════════════ */
