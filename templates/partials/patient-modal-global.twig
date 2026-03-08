@@ -788,6 +788,35 @@ function openPatientModal(patientId) {
                     var opt=document.createElement('option'); opt.value=tt.id; opt.textContent=tt.name; opt.dataset.color=tt.color; ttSel.appendChild(opt);
                 });
             }
+            /* ── Rechnungs-Badge im Modal-Header ── */
+            var existingBadge = document.getElementById('pd-invoice-badge');
+            if (existingBadge) existingBadge.remove();
+            if (data.invoice_stats) {
+                var ib = document.createElement('a');
+                ib.id = 'pd-invoice-badge';
+                ib.style.cssText = 'flex-shrink:0;padding:0.25rem 0.55rem;border-radius:6px;font-size:0.72rem;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:0.3rem;position:relative;overflow:visible;';
+                if (data.invoice_stats.open_count > 0) {
+                    ib.href = '/rechnungen?search=' + encodeURIComponent(p.name || '');
+                    ib.style.background = 'rgba(220,53,69,0.15)';
+                    ib.style.color = '#dc3545';
+                    ib.style.border = '1.5px solid #dc3545';
+                    var pulse = document.createElement('span');
+                    pulse.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:100%;height:100%;border-radius:6px;border:2px solid #dc3545;animation:badgePulse 1.4s ease-out infinite;pointer-events:none;';
+                    ib.appendChild(pulse);
+                    ib.innerHTML += data.invoice_stats.open_count + ' Rechnung' + (data.invoice_stats.open_count !== 1 ? 'en' : '') + ' offen';
+                } else if (data.invoice_stats.paid_count > 0) {
+                    ib.href = '/rechnungen?search=' + encodeURIComponent(p.name || '');
+                    ib.style.background = 'rgba(25,135,84,0.15)';
+                    ib.style.color = '#198754';
+                    ib.style.border = '1.5px solid #198754';
+                    ib.innerHTML = '✓ Rechnung' + (data.invoice_stats.paid_count !== 1 ? 'en' : '') + ' bezahlt';
+                }
+                if (data.invoice_stats.open_count > 0 || data.invoice_stats.paid_count > 0) {
+                    var headerBtns = document.querySelector('#pd-header > div[style*="margin-left:auto"]');
+                    if (headerBtns) headerBtns.insertBefore(ib, headerBtns.firstChild);
+                }
+            }
+
             currentPatientData = data;
             renderTimeline(data.timeline, patientId);
             pdLoading.style.display = 'none';

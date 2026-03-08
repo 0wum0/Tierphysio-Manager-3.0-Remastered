@@ -106,12 +106,15 @@ class PatientController extends Controller
         $treatmentTypes = [];
         try { $treatmentTypes = $this->treatmentTypeRepository->findActive(); } catch (\Throwable) {}
 
+        $invoiceStats = $this->invoiceService->getInvoiceStatsByPatientId((int)$params['id']);
+
         header('Content-Type: application/json');
         echo json_encode([
             'patient'         => $patient,
             'owner'           => $owner,
             'timeline'        => $timeline,
             'treatment_types' => $treatmentTypes,
+            'invoice_stats'   => $invoiceStats,
         ]);
         exit;
     }
