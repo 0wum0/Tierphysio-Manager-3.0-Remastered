@@ -800,7 +800,7 @@ function openPatientModal(patientId) {
                     ib.style.background = 'rgba(220,53,69,0.18)';
                     ib.style.color = '#ff6b6b';
                     ib.style.border = '1.5px solid #dc3545';
-                    ib.style.animation = 'invoiceBadgePulse 1.4s ease-in-out infinite';
+                    ib.classList.add('invoice-badge-pulse');
                     ib.textContent = data.invoice_stats.open_count + ' Rechnung' + (data.invoice_stats.open_count !== 1 ? 'en' : '') + ' offen';
                 } else {
                     ib.href = '/rechnungen?search=' + encodeURIComponent(p.name || '');

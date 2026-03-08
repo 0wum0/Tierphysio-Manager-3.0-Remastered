@@ -902,7 +902,10 @@ img.custom-logo {
     100% { transform: translate(-50%, -50%) scale(1.35); opacity: 0; }
 }
 @keyframes invoiceBadgePulse {
-    0%   { opacity: 1;   box-shadow: 0 0 0 0 rgba(220,53,69,0.5); }
-    50%  { opacity: 0.8; box-shadow: 0 0 0 5px rgba(220,53,69,0); }
-    100% { opacity: 1;   box-shadow: 0 0 0 0 rgba(220,53,69,0); }
+    0%   { box-shadow: 0 0 0 0   rgba(220,53,69,0.7); }
+    70%  { box-shadow: 0 0 0 7px rgba(220,53,69,0); }
+    100% { box-shadow: 0 0 0 0   rgba(220,53,69,0); }
+}
+.invoice-badge-pulse {
+    animation: invoiceBadgePulse 1.2s ease-out infinite !important;
 }
