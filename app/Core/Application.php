@@ -135,6 +135,18 @@ class Application
         $config = $this->container->get(Config::class);
         $debug = $config->get('app.debug', false);
 
+        /* Always log to file */
+        $logDir  = $this->rootPath . '/storage/logs';
+        $logFile = $logDir . '/error.log';
+        if (!is_dir($logDir)) { @mkdir($logDir, 0755, true); }
+        @file_put_contents(
+            $logFile,
+            '[' . date('Y-m-d H:i:s') . '] ' . get_class($e) . ': ' . $e->getMessage()
+            . ' in ' . $e->getFile() . ':' . $e->getLine() . "\n"
+            . $e->getTraceAsString() . "\n\n",
+            FILE_APPEND
+        );
+
         http_response_code(500);
 
         if ($debug) {
