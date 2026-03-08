@@ -137,11 +137,36 @@ class InvoiceController extends Controller
             : $this->translator->trans('invoices.created');
         $this->session->flash('success', $msg);
 
+        /* ── Direkt E-Mail versenden wenn gewünscht ── */
         if ($sendEmail && !$isCash) {
-            $this->redirect("/rechnungen/{$id}?send_email=1");
-        } else {
-            $this->redirect("/rechnungen/{$id}");
+            $owner = !empty($data['owner_id'])
+                ? $this->ownerService->findById((int)$data['owner_id'])
+                : null;
+            if ($owner && !empty($owner['email'])) {
+                try {
+                    $invoice   = $this->invoiceService->findById((int)$id);
+                    $positions = $this->invoiceService->getPositions((int)$id);
+                    $patient   = !empty($data['patient_id'])
+                        ? $this->patientService->findById((int)$data['patient_id'])
+                        : null;
+                    $pdf  = $this->pdfService->generateInvoicePdf($invoice, $positions, $owner, $patient);
+                    $sent = $this->mailService->sendInvoice($invoice, $owner, $pdf);
+                    if ($sent) {
+                        $this->invoiceService->markEmailSent((int)$id);
+                        $this->session->flash('success', $this->translator->trans('invoices.email_sent'));
+                    } else {
+                        $err = $this->mailService->getLastError();
+                        $this->session->flash('error', $this->translator->trans('invoices.email_failed') . ($err ? ': ' . $err : ''));
+                    }
+                } catch (\Throwable $e) {
+                    $this->session->flash('error', 'E-Mail konnte nicht gesendet werden: ' . $e->getMessage());
+                }
+            } else {
+                $this->session->flash('warning', 'Rechnung gespeichert – kein E-Mail-Adresse beim Tierhalter hinterlegt.');
+            }
         }
+
+        $this->redirect("/rechnungen/{$id}");
     }
 
     public function show(array $params = []): void
