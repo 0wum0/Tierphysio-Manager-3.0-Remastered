@@ -39,6 +39,10 @@
         <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         Behandlungsarten
     </button>
+    <button class="settings-tab" data-tab="email-templates">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="22,6 12,13 2,6"/></svg>
+        E-Mail Templates
+    </button>
     <button class="settings-tab" data-tab="updates">
         <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="23 4 23 10 17 10"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="1 20 1 14 7 14"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         Updates
@@ -1392,6 +1396,89 @@
     updatePreview();
 })();
 </script>
+
+{# ════════════════════════════════════════════════════
+   TAB: E-MAIL TEMPLATES
+════════════════════════════════════════════════════ #}
+<div class="settings-tab-content" id="tab-email-templates">
+
+    {# Platzhalter-Referenz #}
+    <div class="glass-card mb-4">
+        <h3 class="section-title" style="display:flex;align-items:center;gap:0.5rem;">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Verfügbare Platzhalter
+        </h3>
+        <div style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.75rem;">
+            {% set placeholders = [
+                '{' ~ '{invoice_number}}',
+                '{' ~ '{owner_name}}',
+                '{' ~ '{owner_first}}',
+                '{' ~ '{owner_last}}',
+                '{' ~ '{owner_email}}',
+                '{' ~ '{issue_date}}',
+                '{' ~ '{due_date}}',
+                '{' ~ '{total_gross}}',
+                '{' ~ '{company_name}}'
+            ] %}
+            {% for ph in placeholders %}
+            <code onclick="navigator.clipboard?.writeText('{{ ph|e('html_attr') }}')" title="Klicken zum Kopieren" style="background:var(--bs-tertiary-bg,rgba(255,255,255,.06));border:1px solid var(--bs-border-color);border-radius:5px;padding:0.2rem 0.55rem;font-size:0.8rem;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='var(--bs-secondary-bg)'" onmouseout="this.style.background='var(--bs-tertiary-bg,rgba(255,255,255,.06))'">{{ ph }}</code>
+            {% endfor %}
+        </div>
+        <p class="text-muted mt-2" style="font-size:0.8rem;">Auf einen Platzhalter klicken um ihn in die Zwischenablage zu kopieren.</p>
+    </div>
+
+    <form action="/einstellungen" method="POST">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+        {# Rechnungs-E-Mail #}
+        <div class="glass-card mb-4">
+            <h3 class="section-title">
+                <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="14 2 14 8 20 8"/></svg>
+                Rechnung per E-Mail
+            </h3>
+            <div class="form-group mt-3">
+                <label class="form-label">Betreff</label>
+                <input type="text" name="email_invoice_subject" class="form-control"
+                       value="{{ settings.email_invoice_subject ?? email_tpl_defaults.invoice_subject }}">
+            </div>
+            <div class="form-group mt-3">
+                <label class="form-label" style="display:flex;justify-content:space-between;align-items:center;">
+                    <span>E-Mail Text</span>
+                    <small class="text-muted">Zeilenumbrüche werden als neue Zeile dargestellt</small>
+                </label>
+                <textarea name="email_invoice_body" class="form-control" rows="8" style="font-family:monospace;font-size:0.875rem;resize:vertical;">{{ settings.email_invoice_body ?? email_tpl_defaults.invoice_body }}</textarea>
+            </div>
+        </div>
+
+        {# Quittungs-E-Mail #}
+        <div class="glass-card mb-4">
+            <h3 class="section-title">
+                <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 11l3 3L22 4"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                Quittung per E-Mail (Barzahlung)
+            </h3>
+            <div class="form-group mt-3">
+                <label class="form-label">Betreff</label>
+                <input type="text" name="email_receipt_subject" class="form-control"
+                       value="{{ settings.email_receipt_subject ?? email_tpl_defaults.receipt_subject }}">
+            </div>
+            <div class="form-group mt-3">
+                <label class="form-label" style="display:flex;justify-content:space-between;align-items:center;">
+                    <span>E-Mail Text</span>
+                    <small class="text-muted">Zeilenumbrüche werden als neue Zeile dargestellt</small>
+                </label>
+                <textarea name="email_receipt_body" class="form-control" rows="8" style="font-family:monospace;font-size:0.875rem;resize:vertical;">{{ settings.email_receipt_body ?? email_tpl_defaults.receipt_body }}</textarea>
+            </div>
+        </div>
+
+        <div class="flex gap-2">
+            <button type="submit" class="btn btn-primary">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="17 21 17 13 7 13 7 21"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 3 7 8 15 8"/></svg>
+                Speichern
+            </button>
+        </div>
+
+    </form>
+</div>
 
 <script>
 function openEditTT(tt) {

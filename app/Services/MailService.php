@@ -27,12 +27,21 @@ class MailService
         try {
             $mailer = $this->createMailer();
             $mailer->addAddress($owner['email'], $owner['first_name'] . ' ' . $owner['last_name']);
-            $mailer->Subject = 'Ihre Rechnung ' . $invoice['invoice_number'];
 
-            $companyName = $this->settingsRepository->get('company_name', 'Tierphysio Praxis');
-            $mailer->Body = "Sehr geehrte/r " . $owner['first_name'] . " " . $owner['last_name'] . ",\n\n"
-                . "anbei erhalten Sie Ihre Rechnung " . $invoice['invoice_number'] . ".\n\n"
-                . "Mit freundlichen Grüßen\n" . $companyName;
+            $placeholders = $this->buildPlaceholders($invoice, $owner);
+            $mailer->Subject = $this->applyPlaceholders(
+                $this->settingsRepository->get('email_invoice_subject', 'Ihre Rechnung {{invoice_number}}'),
+                $placeholders
+            );
+            $body = $this->applyPlaceholders(
+                $this->settingsRepository->get('email_invoice_body',
+                    "Sehr geehrte/r {{owner_name}},\n\nanbei erhalten Sie Ihre Rechnung {{invoice_number}}.\n\nMit freundlichen Grüßen\n{{company_name}}"
+                ),
+                $placeholders
+            );
+            $mailer->Body    = nl2br(htmlspecialchars($body, ENT_QUOTES, 'UTF-8'));
+            $mailer->AltBody = $body;
+            $mailer->isHTML(true);
 
             $mailer->addStringAttachment(
                 $pdfContent,
@@ -54,12 +63,21 @@ class MailService
         try {
             $mailer = $this->createMailer();
             $mailer->addAddress($owner['email'], $owner['first_name'] . ' ' . $owner['last_name']);
-            $mailer->Subject = 'Ihre Quittung ' . $invoice['invoice_number'];
 
-            $companyName = $this->settingsRepository->get('company_name', 'Tierphysio Praxis');
-            $mailer->Body = "Sehr geehrte/r " . $owner['first_name'] . " " . $owner['last_name'] . ",\n\n"
-                . "anbei erhalten Sie Ihre Quittung für Rechnung " . $invoice['invoice_number'] . ".\n\n"
-                . "Mit freundlichen Grüßen\n" . $companyName;
+            $placeholders = $this->buildPlaceholders($invoice, $owner);
+            $mailer->Subject = $this->applyPlaceholders(
+                $this->settingsRepository->get('email_receipt_subject', 'Ihre Quittung {{invoice_number}}'),
+                $placeholders
+            );
+            $body = $this->applyPlaceholders(
+                $this->settingsRepository->get('email_receipt_body',
+                    "Sehr geehrte/r {{owner_name}},\n\nanbei erhalten Sie Ihre Quittung für Rechnung {{invoice_number}}.\n\nMit freundlichen Grüßen\n{{company_name}}"
+                ),
+                $placeholders
+            );
+            $mailer->Body    = nl2br(htmlspecialchars($body, ENT_QUOTES, 'UTF-8'));
+            $mailer->AltBody = $body;
+            $mailer->isHTML(true);
 
             $mailer->addStringAttachment(
                 $pdfContent,
@@ -74,6 +92,44 @@ class MailService
             error_log('[MailService::sendReceipt] ' . $e->getMessage());
             return false;
         }
+    }
+
+    private function buildPlaceholders(array $invoice, array $owner): array
+    {
+        $companyName = $this->settingsRepository->get('company_name', 'Tierphysio Praxis');
+        $ownerName   = trim(($owner['first_name'] ?? '') . ' ' . ($owner['last_name'] ?? ''));
+
+        $issueDate = '';
+        if (!empty($invoice['issue_date'])) {
+            try {
+                $issueDate = (new \DateTime($invoice['issue_date']))->format('d.m.Y');
+            } catch (\Throwable) { $issueDate = $invoice['issue_date']; }
+        }
+        $dueDate = '';
+        if (!empty($invoice['due_date'])) {
+            try {
+                $dueDate = (new \DateTime($invoice['due_date']))->format('d.m.Y');
+            } catch (\Throwable) { $dueDate = $invoice['due_date']; }
+        }
+
+        $gross = number_format((float)($invoice['total_gross'] ?? 0), 2, ',', '.') . ' €';
+
+        return [
+            '{{invoice_number}}' => $invoice['invoice_number'] ?? '',
+            '{{owner_name}}'     => $ownerName,
+            '{{owner_first}}'    => $owner['first_name'] ?? '',
+            '{{owner_last}}'     => $owner['last_name'] ?? '',
+            '{{owner_email}}'    => $owner['email'] ?? '',
+            '{{issue_date}}'     => $issueDate,
+            '{{due_date}}'       => $dueDate,
+            '{{total_gross}}'    => $gross,
+            '{{company_name}}'   => $companyName,
+        ];
+    }
+
+    private function applyPlaceholders(string $template, array $placeholders): string
+    {
+        return str_replace(array_keys($placeholders), array_values($placeholders), $template);
     }
 
     public function sendRaw(string $to, string $toName, string $subject, string $body, array $attachments = []): bool
