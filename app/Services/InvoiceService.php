@@ -35,6 +35,11 @@ class InvoiceService
         return $this->invoiceRepository->getInvoiceStatsByPatientId($patientId);
     }
 
+    public function getInvoiceStatsForPatients(array $patientIds): array
+    {
+        return $this->invoiceRepository->getInvoiceStatsForPatients($patientIds);
+    }
+
     public function getChartData(string $type): array
     {
         return $this->invoiceRepository->getChartData($type);

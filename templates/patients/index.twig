@@ -60,8 +60,18 @@
                             <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                         </div>
                     {% endif %}
-                    <div style="position:absolute;top:0.5rem;right:0.5rem;">
+                    <div style="position:absolute;top:0.5rem;right:0.5rem;display:flex;flex-direction:column;align-items:flex-end;gap:0.25rem;">
                         <span class="badge badge-{{ patient.status|lower|replace({' ':'_'}) }}">{{ patient.status }}</span>
+                        {% set stats = invoice_stats_map[patient.id] ?? null %}
+                        {% if stats and stats.open_count > 0 %}
+                            <span class="invoice-badge-pulse" style="background:rgba(220,53,69,0.18);color:#ff6b6b;border:1.5px solid #dc3545;border-radius:5px;font-size:0.62rem;font-weight:700;padding:0.15rem 0.4rem;white-space:nowrap;">
+                                {{ stats.open_count }} offen
+                            </span>
+                        {% elseif stats and stats.paid_count > 0 %}
+                            <span style="background:rgba(25,135,84,0.15);color:#2dbe6c;border:1.5px solid #198754;border-radius:5px;font-size:0.62rem;font-weight:700;padding:0.15rem 0.4rem;white-space:nowrap;">
+                                ✓ bezahlt
+                            </span>
+                        {% endif %}
                     </div>
                 </div>
                 <div class="patient-card-body">

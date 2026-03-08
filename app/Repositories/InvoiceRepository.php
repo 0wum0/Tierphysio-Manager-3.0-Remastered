@@ -51,6 +51,32 @@ class InvoiceRepository extends Repository
         }
     }
 
+    public function getInvoiceStatsForPatients(array $patientIds): array
+    {
+        if (empty($patientIds)) return [];
+
+        $ids = implode(',', array_map('intval', $patientIds));
+
+        $rows = $this->db->fetchAll(
+            "SELECT p.id AS patient_id,
+                    SUM(CASE WHEN i.status IN ('open','overdue','draft') THEN 1 ELSE 0 END) AS open_count,
+                    SUM(CASE WHEN i.status = 'paid' THEN 1 ELSE 0 END) AS paid_count
+             FROM patients p
+             LEFT JOIN invoices i ON (i.patient_id = p.id OR (i.patient_id IS NULL AND i.owner_id = p.owner_id))
+             WHERE p.id IN ({$ids})
+             GROUP BY p.id"
+        );
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(int)$row['patient_id']] = [
+                'open_count' => (int)$row['open_count'],
+                'paid_count' => (int)$row['paid_count'],
+            ];
+        }
+        return $map;
+    }
+
     public function getInvoiceStatsByPatientId(int $patientId): array
     {
         /* Find owner_id for this patient */

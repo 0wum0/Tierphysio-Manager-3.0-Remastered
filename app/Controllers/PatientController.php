@@ -45,17 +45,21 @@ class PatientController extends Controller
         $settings = $this->settingsRepository->all();
         $owners   = $this->ownerService->findAll();
 
+        $patientIds      = array_column($result['items'], 'id');
+        $invoiceStatsMap = $this->invoiceService->getInvoiceStatsForPatients($patientIds);
+
         $this->render('patients/index.twig', [
-            'page_title'       => $this->translator->trans('nav.patients'),
-            'patients'         => $result['items'],
-            'pagination'       => $result,
-            'search'           => $search,
-            'filter'           => $filter,
-            'owners'           => $owners,
-            'treatment_types'  => $treatmentTypes,
-            'next_number'      => $this->invoiceService->generateInvoiceNumber(),
-            'kleinunternehmer' => ($settings['kleinunternehmer'] ?? '0') === '1',
-            'default_tax_rate' => $settings['default_tax_rate'] ?? '19',
+            'page_title'        => $this->translator->trans('nav.patients'),
+            'patients'          => $result['items'],
+            'pagination'        => $result,
+            'search'            => $search,
+            'filter'            => $filter,
+            'owners'            => $owners,
+            'treatment_types'   => $treatmentTypes,
+            'next_number'       => $this->invoiceService->generateInvoiceNumber(),
+            'kleinunternehmer'  => ($settings['kleinunternehmer'] ?? '0') === '1',
+            'default_tax_rate'  => $settings['default_tax_rate'] ?? '19',
+            'invoice_stats_map' => $invoiceStatsMap,
         ]);
     }
 
