@@ -84,15 +84,24 @@ class InvoiceController extends Controller
     {
         $this->validateCsrf();
 
+        $paymentMethod = $this->sanitize($this->post('payment_method', 'rechnung'));
+        if (!in_array($paymentMethod, ['rechnung', 'bar'], true)) {
+            $paymentMethod = 'rechnung';
+        }
+
+        $isCash = ($paymentMethod === 'bar');
+
         $data = [
             'invoice_number' => $this->sanitize($this->post('invoice_number', '')),
             'patient_id'     => (int)$this->post('patient_id', 0) ?: null,
             'owner_id'       => (int)$this->post('owner_id', 0),
-            'status'         => $this->sanitize($this->post('status', 'draft')),
+            'status'         => $isCash ? 'paid' : $this->sanitize($this->post('status', 'draft')),
             'issue_date'     => $this->post('issue_date') ?: date('Y-m-d'),
-            'due_date'       => $this->post('due_date', null),
+            'due_date'       => $isCash ? null : ($this->post('due_date', null) ?: null),
             'notes'          => $this->post('notes', ''),
             'payment_terms'  => $this->post('payment_terms', ''),
+            'payment_method' => $paymentMethod,
+            'paid_at'        => $isCash ? date('Y-m-d H:i:s') : null,
         ];
 
         $positions = $this->parsePositions();
@@ -104,7 +113,10 @@ class InvoiceController extends Controller
         }
 
         $id = $this->invoiceService->create($data, $positions);
-        $this->session->flash('success', $this->translator->trans('invoices.created'));
+        $msg = $isCash
+            ? 'Quittung erstellt und als Barzahlung verbucht.'
+            : $this->translator->trans('invoices.created');
+        $this->session->flash('success', $msg);
         $this->redirect("/rechnungen/{$id}");
     }
 
@@ -215,7 +227,8 @@ class InvoiceController extends Controller
             return;
         }
 
-        $this->invoiceService->updateStatus((int)$params['id'], $status);
+        $paidAt = ($status === 'paid') ? date('Y-m-d H:i:s') : null;
+        $this->invoiceService->updateStatus((int)$params['id'], $status, $paidAt);
         $this->session->flash('success', $this->translator->trans('invoices.status_updated'));
         $this->redirect("/rechnungen/{$params['id']}");
     }

@@ -93,9 +93,15 @@ class InvoiceService
         $this->invoiceRepository->delete($id);
     }
 
-    public function updateStatus(int $id, string $status): void
+    public function updateStatus(int $id, string $status, ?string $paidAt = null): void
     {
-        $this->invoiceRepository->update($id, ['status' => $status, 'updated_at' => date('Y-m-d H:i:s')]);
+        $data = ['status' => $status, 'updated_at' => date('Y-m-d H:i:s')];
+        if ($status === 'paid' && $paidAt !== null) {
+            $data['paid_at'] = $paidAt;
+        } elseif ($status !== 'paid') {
+            $data['paid_at'] = null;
+        }
+        $this->invoiceRepository->update($id, $data);
     }
 
     public function markEmailSent(int $id): void
