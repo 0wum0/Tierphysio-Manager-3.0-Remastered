@@ -538,37 +538,37 @@
                     <input type="radio" id="sa-t0" name="options" data-action="theme-style" data-theme-style="" checked>
                     <label for="sa-t0" data-prefix="Standard" style="background:linear-gradient(135deg,#FF6A00,#F6A2D5,#4C91BF,#7A8B92,#AB7C9A);"></label>
 
-                    <input type="radio" id="sa-t1" name="options" data-action="theme-style" data-theme-style="nebula">
+                    <input type="radio" id="sa-t1" name="options" data-action="theme-style" data-theme-style="/themes/smart-tierphysio/css/themes/nebula.css">
                     <label for="sa-t1" data-prefix="Nebula" style="background:linear-gradient(135deg,#2a7dbf,#2a9d8f,#766cbc,#f4a261,#e76f51);"></label>
 
-                    <input type="radio" id="sa-t2" name="options" data-action="theme-style" data-theme-style="olive">
+                    <input type="radio" id="sa-t2" name="options" data-action="theme-style" data-theme-style="/themes/smart-tierphysio/css/themes/olive.css">
                     <label for="sa-t2" data-prefix="Olive" style="background:linear-gradient(135deg,#556B2F,#6B8E23,#8B9A3D,#A9B83E,#BDB76B);"></label>
 
-                    <input type="radio" id="sa-t3" name="options" data-action="theme-style" data-theme-style="solar">
+                    <input type="radio" id="sa-t3" name="options" data-action="theme-style" data-theme-style="/themes/smart-tierphysio/css/themes/solar.css">
                     <label for="sa-t3" data-prefix="Solar" style="background:linear-gradient(135deg,#FF8C00,#FFD700,#FF4500,#F1C40F,#F39C12);"></label>
 
-                    <input type="radio" id="sa-t4" name="options" data-action="theme-style" data-theme-style="lunar">
+                    <input type="radio" id="sa-t4" name="options" data-action="theme-style" data-theme-style="/themes/smart-tierphysio/css/themes/lunar.css">
                     <label for="sa-t4" data-prefix="Lunar" style="background:linear-gradient(135deg,#2C3E50,#34495E,#5F6368,#AAB7B8,#E6E6FA,#F1F3F4);"></label>
 
-                    <input type="radio" id="sa-t5" name="options" data-action="theme-style" data-theme-style="night">
+                    <input type="radio" id="sa-t5" name="options" data-action="theme-style" data-theme-style="/themes/smart-tierphysio/css/themes/night.css">
                     <label for="sa-t5" data-prefix="Night" style="background:linear-gradient(135deg,#1e2a47,#2b3654,#363d6c,#4f5d79,#717b91,#b6c4d1);"></label>
 
-                    <input type="radio" id="sa-t6" name="options" data-action="theme-style" data-theme-style="aurora">
+                    <input type="radio" id="sa-t6" name="options" data-action="theme-style" data-theme-style="/themes/smart-tierphysio/css/themes/aurora.css">
                     <label for="sa-t6" data-prefix="Aurora" style="background:linear-gradient(135deg,#337e7e,#527a4a,#63279b,#7FFF00,#87CEFA,#B0E0E6);"></label>
 
-                    <input type="radio" id="sa-t7" name="options" data-action="theme-style" data-theme-style="earth">
+                    <input type="radio" id="sa-t7" name="options" data-action="theme-style" data-theme-style="/themes/smart-tierphysio/css/themes/earth.css">
                     <label for="sa-t7" data-prefix="Earth" style="background:linear-gradient(135deg,#2198f3,#3173a5,#3f6888,#618d48,#52bf11);"></label>
 
-                    <input type="radio" id="sa-t8" name="options" data-action="theme-style" data-theme-style="flare">
+                    <input type="radio" id="sa-t8" name="options" data-action="theme-style" data-theme-style="/themes/smart-tierphysio/css/themes/flare.css">
                     <label for="sa-t8" data-prefix="Flare" style="background:linear-gradient(135deg,#FF4500,#FF6347,#F44336,#D32F2F,#B71C1C);"></label>
 
-                    <input type="radio" id="sa-t9" name="options" data-action="theme-style" data-theme-style="storm">
+                    <input type="radio" id="sa-t9" name="options" data-action="theme-style" data-theme-style="/themes/smart-tierphysio/css/themes/storm.css">
                     <label for="sa-t9" data-prefix="Storm" style="background:linear-gradient(135deg,#2F4F4F,#3B5360,#4B6A6E,#5A7980,#A9A9A9,#FFD700);"></label>
                 </div>
             </div>
 
             <div class="d-flex mt-3" style="gap:10px">
-                <button type="button" onclick="appDOM.resetStyle();"
+                <button type="button" onclick="if(typeof window.resetSettings==='function'){window.resetSettings();}else{localStorage.removeItem('layoutSettings');location.reload();}"
                         class="btn reset-button btn-outline-danger flex-grow-1">
                     <i class="sa sa-reload align-base me-1"></i> Factory Reset
                 </button>
@@ -681,19 +681,12 @@
     });
 
     /* ── 5. Sync colour theme radio from localStorage ── */
-    /* NOTE: toggle-theme (dark/light) is handled natively by smartApp.js
-       via its handleAction listener → handlers.toggleTheme() → saveSettings()
-       DO NOT add a duplicate listener here. */
     (function () {
         try {
             var cfg = JSON.parse(localStorage.getItem('layoutSettings') || '{}');
-            var style = '';
-            if (cfg.themeStyle) {
-                var m = cfg.themeStyle.match(/\/([^/]+)\.css$/);
-                if (m) style = m[1];
-            }
+            var savedStyle = cfg.themeStyle || '';
             document.querySelectorAll('[data-action="theme-style"]').forEach(function (r) {
-                r.checked = (r.getAttribute('data-theme-style') === style);
+                r.checked = (r.getAttribute('data-theme-style') === savedStyle);
             });
         } catch (e) {}
     })();
