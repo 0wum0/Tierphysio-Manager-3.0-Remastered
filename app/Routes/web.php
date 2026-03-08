@@ -10,6 +10,7 @@ use App\Controllers\InvoiceController;
 use App\Controllers\SettingsController;
 use App\Controllers\ProfileController;
 use App\Controllers\UiSettingsController;
+use App\Controllers\NotificationController;
 
 /** @var \App\Core\Router $router */
 
@@ -94,3 +95,5 @@ $router->get('/api/behandlungsarten', [SettingsController::class, 'treatmentType
 
 $router->post('/api/ui-settings', [UiSettingsController::class, 'save'], ['auth']);
 $router->get('/api/ui-settings', [UiSettingsController::class, 'load'], ['auth']);
+
+$router->get('/api/notifications', [NotificationController::class, 'index'], ['auth']);

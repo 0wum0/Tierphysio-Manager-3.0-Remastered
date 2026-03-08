@@ -818,25 +818,109 @@
 
 {% block scripts %}{% endblock %}
 
-{# Notification polling #}
-{% if intake_unread_count is defined %}
+{# ── Toast Container (SmartAdmin-style) ───────────────────── #}
+<div id="app-toast-container"
+     style="position:fixed;bottom:1.5rem;right:1.5rem;z-index:99999;display:flex;flex-direction:column-reverse;gap:0.6rem;max-width:360px;pointer-events:none;">
+</div>
+
+{# ── Notification Polling + Toast System ──────────────────── #}
 <script>
 (function(){
-    function poll(){
-        fetch('/api/intake/notifications',{headers:{'X-Requested-With':'XMLHttpRequest'}})
-        .then(function(r){return r.json();})
-        .then(function(d){
-            var c = d.count||0;
-            document.querySelectorAll('.badge.badge-icon').forEach(function(b){
-                b.textContent = c > 9 ? '9+' : c;
-                b.style.display = c > 0 ? '' : 'none';
+    var shown   = JSON.parse(sessionStorage.getItem('tp_shown_notifs') || '[]');
+    var container = document.getElementById('app-toast-container');
+
+    function esc(s){ return String(s||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];}); }
+
+    function showToast(notif) {
+        if (shown.indexOf(notif.id) !== -1) return;
+        shown.push(notif.id);
+        try { sessionStorage.setItem('tp_shown_notifs', JSON.stringify(shown.slice(-50))); } catch(e){}
+
+        var colors = {
+            primary: { bg: 'rgba(79,124,255,0.12)', border: '#4f7cff', icon: '#4f7cff' },
+            warning: { bg: 'rgba(245,158,11,0.12)', border: '#f59e0b', icon: '#f59e0b' },
+            success: { bg: 'rgba(34,197,94,0.12)',  border: '#22c55e', icon: '#22c55e' },
+        };
+        var c = colors[notif.color] || colors.primary;
+
+        var toast = document.createElement('div');
+        toast.style.cssText = [
+            'background:var(--bs-body-bg,#1e2228)',
+            'border:1.5px solid ' + c.border,
+            'border-left:4px solid ' + c.border,
+            'border-radius:10px',
+            'box-shadow:0 8px 32px rgba(0,0,0,.35)',
+            'padding:0.75rem 1rem',
+            'pointer-events:all',
+            'cursor:pointer',
+            'opacity:0',
+            'transform:translateX(30px)',
+            'transition:opacity .25s,transform .25s',
+            'min-width:280px',
+            'max-width:360px',
+        ].join(';');
+
+        toast.innerHTML =
+            '<div style="display:flex;align-items:flex-start;gap:0.6rem;">' +
+              '<div style="flex-shrink:0;width:34px;height:34px;border-radius:8px;background:' + c.bg + ';display:flex;align-items:center;justify-content:center;font-size:1.1rem;">' +
+                (notif.type === 'appointment' ? '📅' : '🐾') +
+              '</div>' +
+              '<div style="flex:1;min-width:0;">' +
+                '<div style="font-size:.78rem;font-weight:700;color:' + c.icon + ';margin-bottom:2px;">' + esc(notif.title) + '</div>' +
+                '<div style="font-size:.75rem;color:var(--bs-secondary-color,.9);line-height:1.4;word-break:break-word;">' + esc(notif.message) + '</div>' +
+              '</div>' +
+              '<button onclick="this.closest(\'[data-toast]\').remove()" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:var(--bs-secondary-color);font-size:1rem;line-height:1;padding:0 0 0 4px;">×</button>' +
+            '</div>';
+        toast.dataset.toast = notif.id;
+
+        if (notif.url) {
+            toast.addEventListener('click', function(e){
+                if (e.target.tagName !== 'BUTTON') window.location.href = notif.url;
             });
-        }).catch(function(){});
+        }
+
+        container.appendChild(toast);
+
+        /* Animate in */
+        requestAnimationFrame(function(){
+            requestAnimationFrame(function(){
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateX(0)';
+            });
+        });
+
+        /* Auto-dismiss after 8s */
+        setTimeout(function(){
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(30px)';
+            setTimeout(function(){ if(toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
+        }, 8000);
     }
-    setInterval(poll, 30000);
+
+    function poll() {
+        fetch('/api/notifications', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r){ return r.json(); })
+            .then(function(data) {
+                /* Update bell badge count (intakes only) */
+                var intakeCount = data.filter(function(n){ return n.type === 'intake'; }).length;
+                document.querySelectorAll('.badge.badge-icon').forEach(function(b){
+                    if (intakeCount > 0) {
+                        b.textContent = intakeCount > 9 ? '9+' : String(intakeCount);
+                        b.style.display = '';
+                    }
+                });
+
+                /* Show toasts for new items */
+                data.forEach(function(notif){ showToast(notif); });
+            })
+            .catch(function(){});
+    }
+
+    /* Initial poll after 3s (page settled), then every 60s */
+    setTimeout(poll, 3000);
+    setInterval(poll, 60000);
 })();
 </script>
-{% endif %}
 
 </body>
 </html>
