@@ -51,7 +51,9 @@ class View
         $this->twig->addGlobal('app_version', $this->config->get('app.version'));
         $this->twig->addGlobal('current_locale', $this->translator->getLocale());
         $this->twig->addGlobal('session', $this->session);
-        $this->twig->addGlobal('flash', $this->session->allFlash());
+        $flashData = $this->session->allFlash();
+        $this->twig->addGlobal('flash', $flashData);
+        $this->twig->addGlobal('flash_messages', $flashData);
         $this->twig->addGlobal('current_user', $this->session->getUser());
         $this->twig->addGlobal('csrf_token', $this->session->generateCsrfToken());
         $this->twig->addGlobal('theme', $this->session->get('theme', 'dark'));

@@ -229,7 +229,15 @@ class InvoiceController extends Controller
 
         $paidAt = ($status === 'paid') ? date('Y-m-d H:i:s') : null;
         $this->invoiceService->updateStatus((int)$params['id'], $status, $paidAt);
-        $this->session->flash('success', $this->translator->trans('invoices.status_updated'));
+
+        $msg = match($status) {
+            'paid'    => '✅ Rechnung als bezahlt markiert.',
+            'open'    => 'Rechnung auf "Offen" gesetzt.',
+            'draft'   => 'Rechnung als Entwurf gespeichert.',
+            'overdue' => '⚠️ Rechnung als überfällig markiert.',
+            default   => $this->translator->trans('invoices.status_updated'),
+        };
+        $this->session->flash($status === 'paid' ? 'paid' : 'success', $msg);
         $this->redirect("/rechnungen/{$params['id']}");
     }
 

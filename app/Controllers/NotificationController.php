@@ -27,6 +27,33 @@ class NotificationController extends Controller
     {
         $notifications = [];
 
+        /* ── Geburtstage heute ── */
+        try {
+            $birthdays = $this->db->fetchAll(
+                "SELECT p.id, p.name, p.species, p.birth_date,
+                        CONCAT(o.first_name, ' ', o.last_name) AS owner_name
+                 FROM patients p
+                 LEFT JOIN owners o ON o.id = p.owner_id
+                 WHERE DATE_FORMAT(p.birth_date, '%m-%d') = DATE_FORMAT(NOW(), '%m-%d')
+                   AND p.birth_date IS NOT NULL
+                   AND p.status NOT IN ('verstorben','inaktiv')
+                 ORDER BY p.name ASC
+                 LIMIT 10"
+            );
+            foreach ($birthdays as $b) {
+                $age  = (int)date('Y') - (int)date('Y', strtotime($b['birth_date']));
+                $notifications[] = [
+                    'id'      => 'bday_' . date('Ymd') . '_' . $b['id'],
+                    'type'    => 'birthday',
+                    'title'   => '🎂 Geburtstag heute!',
+                    'message' => $b['name'] . ' wird ' . $age . ' Jahre alt' . ($b['owner_name'] ? ' · ' . $b['owner_name'] : ''),
+                    'url'     => '/patienten/' . $b['id'],
+                    'time'    => date('Y-m-d H:i:s'),
+                    'color'   => 'birthday',
+                ];
+            }
+        } catch (\Throwable) {}
+
         /* ── Neue Patientenanmeldungen (ungelesen, letzte 24h) ── */
         try {
             $intakes = $this->db->fetchAll(

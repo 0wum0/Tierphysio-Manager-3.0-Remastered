@@ -826,22 +826,44 @@
 {# ── Notification Polling + Toast System ──────────────────── #}
 <script>
 (function(){
-    var shown   = JSON.parse(sessionStorage.getItem('tp_shown_notifs') || '[]');
+    var shown     = JSON.parse(sessionStorage.getItem('tp_shown_notifs') || '[]');
     var container = document.getElementById('app-toast-container');
+
+    var COLORS = {
+        primary:  { bg: 'rgba(79,124,255,0.13)',  border: '#4f7cff', text: '#4f7cff' },
+        success:  { bg: 'rgba(34,197,94,0.13)',   border: '#22c55e', text: '#22c55e' },
+        paid:     { bg: 'rgba(34,197,94,0.13)',   border: '#22c55e', text: '#22c55e' },
+        error:    { bg: 'rgba(239,68,68,0.13)',   border: '#ef4444', text: '#ef4444' },
+        warning:  { bg: 'rgba(245,158,11,0.13)',  border: '#f59e0b', text: '#f59e0b' },
+        info:     { bg: 'rgba(14,165,233,0.13)',  border: '#0ea5e9', text: '#0ea5e9' },
+        birthday: { bg: 'rgba(236,72,153,0.13)',  border: '#ec4899', text: '#ec4899' },
+    };
+
+    var ICONS = {
+        primary:     '🔔',
+        success:     '✅',
+        paid:        '💰',
+        error:       '❌',
+        warning:     '⚠️',
+        info:        'ℹ️',
+        birthday:    '🎂',
+        intake:      '🐾',
+        appointment: '📅',
+    };
 
     function esc(s){ return String(s||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];}); }
 
-    function showToast(notif) {
-        if (shown.indexOf(notif.id) !== -1) return;
-        shown.push(notif.id);
-        try { sessionStorage.setItem('tp_shown_notifs', JSON.stringify(shown.slice(-50))); } catch(e){}
+    function showToast(notif, autoDismissMs) {
+        if (notif.id && shown.indexOf(notif.id) !== -1) return;
+        if (notif.id) {
+            shown.push(notif.id);
+            try { sessionStorage.setItem('tp_shown_notifs', JSON.stringify(shown.slice(-80))); } catch(e){}
+        }
 
-        var colors = {
-            primary: { bg: 'rgba(79,124,255,0.12)', border: '#4f7cff', icon: '#4f7cff' },
-            warning: { bg: 'rgba(245,158,11,0.12)', border: '#f59e0b', icon: '#f59e0b' },
-            success: { bg: 'rgba(34,197,94,0.12)',  border: '#22c55e', icon: '#22c55e' },
-        };
-        var c = colors[notif.color] || colors.primary;
+        var colorKey = notif.color || notif.type || 'primary';
+        var c   = COLORS[colorKey] || COLORS.primary;
+        var ico = ICONS[notif.type] || ICONS[colorKey] || '🔔';
+        var ms  = autoDismissMs !== undefined ? autoDismissMs : (notif.type === 'birthday' ? 12000 : 8000);
 
         var toast = document.createElement('div');
         toast.style.cssText = [
@@ -852,7 +874,7 @@
             'box-shadow:0 8px 32px rgba(0,0,0,.35)',
             'padding:0.75rem 1rem',
             'pointer-events:all',
-            'cursor:pointer',
+            'cursor:' + (notif.url ? 'pointer' : 'default'),
             'opacity:0',
             'transform:translateX(30px)',
             'transition:opacity .25s,transform .25s',
@@ -862,16 +884,15 @@
 
         toast.innerHTML =
             '<div style="display:flex;align-items:flex-start;gap:0.6rem;">' +
-              '<div style="flex-shrink:0;width:34px;height:34px;border-radius:8px;background:' + c.bg + ';display:flex;align-items:center;justify-content:center;font-size:1.1rem;">' +
-                (notif.type === 'appointment' ? '📅' : '🐾') +
-              '</div>' +
+              '<div style="flex-shrink:0;width:34px;height:34px;border-radius:8px;background:' + c.bg + ';display:flex;align-items:center;justify-content:center;font-size:1.1rem;">' + ico + '</div>' +
               '<div style="flex:1;min-width:0;">' +
-                '<div style="font-size:.78rem;font-weight:700;color:' + c.icon + ';margin-bottom:2px;">' + esc(notif.title) + '</div>' +
-                '<div style="font-size:.75rem;color:var(--bs-secondary-color,.9);line-height:1.4;word-break:break-word;">' + esc(notif.message) + '</div>' +
+                '<div style="font-size:.78rem;font-weight:700;color:' + c.text + ';margin-bottom:2px;">' + esc(notif.title) + '</div>' +
+                (notif.message ? '<div style="font-size:.75rem;color:var(--bs-secondary-color);line-height:1.4;word-break:break-word;">' + esc(notif.message) + '</div>' : '') +
               '</div>' +
-              '<button onclick="this.closest(\'[data-toast]\').remove()" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:var(--bs-secondary-color);font-size:1rem;line-height:1;padding:0 0 0 4px;">×</button>' +
+              '<button type="button" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:var(--bs-secondary-color);font-size:1.1rem;line-height:1;padding:0 0 0 6px;opacity:.6;" onclick="(function(el){el.style.opacity=\'0\';el.style.transform=\'translateX(30px)\';setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},300);})(this.closest(\'div.tp-toast\'))">×</button>' +
             '</div>';
-        toast.dataset.toast = notif.id;
+        toast.classList.add('tp-toast');
+        if (notif.id) toast.dataset.toast = notif.id;
 
         if (notif.url) {
             toast.addEventListener('click', function(e){
@@ -880,43 +901,54 @@
         }
 
         container.appendChild(toast);
+        requestAnimationFrame(function(){ requestAnimationFrame(function(){
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateX(0)';
+        }); });
 
-        /* Animate in */
-        requestAnimationFrame(function(){
-            requestAnimationFrame(function(){
-                toast.style.opacity = '1';
-                toast.style.transform = 'translateX(0)';
-            });
-        });
-
-        /* Auto-dismiss after 8s */
-        setTimeout(function(){
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(30px)';
-            setTimeout(function(){ if(toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
-        }, 8000);
+        if (ms > 0) {
+            setTimeout(function(){
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(30px)';
+                setTimeout(function(){ if(toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
+            }, ms);
+        }
     }
 
+    /* ── Flash messages from PHP session → immediate toasts ── */
+    var flashMessages = {{ flash_messages|json_encode|raw }};
+    if (flashMessages && typeof flashMessages === 'object') {
+        Object.keys(flashMessages).forEach(function(type) {
+            var msg = flashMessages[type];
+            if (!msg) return;
+            var titles = {
+                success:  'Gespeichert',
+                paid:     'Bezahlt',
+                error:    'Fehler',
+                warning:  'Hinweis',
+                info:     'Info',
+            };
+            showToast({ id: null, type: type, color: type, title: titles[type] || 'Hinweis', message: msg, url: null }, 6000);
+        });
+    }
+
+    /* ── Poll /api/notifications ── */
     function poll() {
         fetch('/api/notifications', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function(r){ return r.json(); })
             .then(function(data) {
-                /* Update bell badge count (intakes only) */
                 var intakeCount = data.filter(function(n){ return n.type === 'intake'; }).length;
                 document.querySelectorAll('.badge.badge-icon').forEach(function(b){
-                    if (intakeCount > 0) {
-                        b.textContent = intakeCount > 9 ? '9+' : String(intakeCount);
-                        b.style.display = '';
-                    }
+                    if (intakeCount > 0) { b.textContent = intakeCount > 9 ? '9+' : String(intakeCount); b.style.display = ''; }
                 });
-
-                /* Show toasts for new items */
                 data.forEach(function(notif){ showToast(notif); });
             })
             .catch(function(){});
     }
 
-    /* Initial poll after 3s (page settled), then every 60s */
+    /* Expose globally so other scripts can trigger toasts */
+    window.showAppToast = showToast;
+
     setTimeout(poll, 3000);
     setInterval(poll, 60000);
 })();
