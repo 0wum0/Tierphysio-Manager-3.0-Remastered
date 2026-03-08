@@ -248,10 +248,13 @@ var htmlRoot = document.getElementsByTagName('HTML')[0],
     },
 
     //load page layout settings
-    layoutSettings = loadSettings();
+layoutSettings = loadSettings();
 layoutSettings.htmlRoot && (htmlRoot.className = layoutSettings.htmlRoot);
 
-// Load panel settings is triggered just before <script> tag
-
+// Expose on window so smartApp.js can call them via typeof window.saveSettings
+window.saveSettings   = saveSettings;
+window.loadSettings   = loadSettings;
+window.resetSettings  = resetSettings;
+window.loadThemeStyle = loadThemeStyle;
 
 loadPanelState();
