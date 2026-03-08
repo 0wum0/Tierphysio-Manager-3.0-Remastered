@@ -26,6 +26,7 @@ class InvoiceService
 
     public function getStats(): array
     {
+        $this->invoiceRepository->ensurePaymentMethodColumns();
         return $this->invoiceRepository->getStats();
     }
 
@@ -61,7 +62,10 @@ class InvoiceService
         $data['created_at']  = date('Y-m-d H:i:s');
         $data['updated_at']  = date('Y-m-d H:i:s');
 
-        /* Strip migration-006 columns — applied separately after INSERT */
+        /* Ensure columns exist before INSERT */
+        $this->invoiceRepository->ensurePaymentMethodColumns();
+
+        /* Strip migration-007 columns — applied separately after INSERT */
         $paymentMethod = $data['payment_method'] ?? null;
         $paidAt        = $data['paid_at'] ?? null;
         unset($data['payment_method'], $data['paid_at']);

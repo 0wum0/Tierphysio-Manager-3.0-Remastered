@@ -16,6 +16,29 @@ class InvoiceRepository extends Repository
         parent::__construct($db);
     }
 
+    /**
+     * Automatically adds payment_method + paid_at columns if they don't exist yet.
+     * Safe to call multiple times — uses IF NOT EXISTS.
+     */
+    public function ensurePaymentMethodColumns(): void
+    {
+        try {
+            $this->db->execute(
+                "ALTER TABLE `invoices`
+                    ADD COLUMN IF NOT EXISTS `payment_method` ENUM('rechnung','bar') NOT NULL DEFAULT 'rechnung',
+                    ADD COLUMN IF NOT EXISTS `paid_at` DATETIME NULL"
+            );
+            $this->db->execute(
+                "ALTER TABLE `invoices` DROP INDEX IF EXISTS `idx_payment_method`"
+            );
+            $this->db->execute(
+                "ALTER TABLE `invoices` ADD INDEX `idx_payment_method` (`payment_method`)"
+            );
+        } catch (\Throwable) {
+            /* Already exists or DB doesn't support it — safe to ignore */
+        }
+    }
+
     public function getPaginated(int $page, int $perPage, string $status = '', string $search = ''): array
     {
         $conditions = [];
