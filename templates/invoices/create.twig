@@ -13,6 +13,7 @@
 
 <form action="/rechnungen" method="POST" id="invoice-form">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="_send_email" id="invoice-send-email-flag" value="0">
 
     <div class="flex gap-4" style="align-items:flex-start;flex-wrap:wrap;">
 
@@ -167,9 +168,13 @@
 
                 <div class="divider mt-4 mb-4"></div>
 
-                <button type="submit" class="btn btn-primary w-full">
+                <button type="submit" id="invoice-save-btn" class="btn btn-primary w-full">
                     <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="17 21 17 13 7 13 7 21"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 3 7 8 15 8"/></svg>
                     {{ t('common.save') }}
+                </button>
+                <button type="button" id="invoice-save-send-btn" class="btn btn-secondary w-full mt-2" style="border-color:var(--bs-info,#0ea5e9);color:var(--bs-info,#0ea5e9);">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polygon points="22 2 15 22 11 13 2 9 22 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+                    Speichern &amp; Per E-Mail senden
                 </button>
                 <a href="/rechnungen" class="btn btn-secondary w-full mt-2">{{ t('common.cancel') }}</a>
             </div>
@@ -317,6 +322,16 @@
         r.addEventListener('change', updatePaymentUI);
     });
     updatePaymentUI();
+
+    /* ── Speichern & Per E-Mail senden ── */
+    const saveSendBtn  = document.getElementById('invoice-save-send-btn');
+    const sendFlag     = document.getElementById('invoice-send-email-flag');
+    if (saveSendBtn && sendFlag) {
+        saveSendBtn.addEventListener('click', function () {
+            sendFlag.value = '1';
+            document.getElementById('invoice-form').requestSubmit();
+        });
+    }
 })();
 </script>
 

@@ -214,3 +214,21 @@
     </div>
 </div>
 {% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+    var url = new URL(window.location.href);
+    if (url.searchParams.get('send_email') === '1') {
+        /* Remove param from URL without reload */
+        url.searchParams.delete('send_email');
+        history.replaceState(null, '', url.toString());
+        /* Submit the send-email form */
+        var sendForm = document.querySelector('form[action*="/senden"]');
+        if (sendForm) {
+            sendForm.submit();
+        }
+    }
+})();
+</script>
+{% endblock %}

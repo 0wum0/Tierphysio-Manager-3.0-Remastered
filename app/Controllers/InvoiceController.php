@@ -130,11 +130,18 @@ class InvoiceController extends Controller
             } catch (\Throwable) {}
         }
 
+        $sendEmail = $this->post('_send_email', '0') === '1';
+
         $msg = $isCash
             ? 'Quittung erstellt und als Barzahlung verbucht.'
             : $this->translator->trans('invoices.created');
         $this->session->flash('success', $msg);
-        $this->redirect("/rechnungen/{$id}");
+
+        if ($sendEmail && !$isCash) {
+            $this->redirect("/rechnungen/{$id}?send_email=1");
+        } else {
+            $this->redirect("/rechnungen/{$id}");
+        }
     }
 
     public function show(array $params = []): void
