@@ -41,6 +41,53 @@
     <header class="app-header">
         <div class="d-flex flex-grow-1 w-100 me-auto align-items-center">
 
+            {# App Logo — must be first element in header, exactly like dist #}
+            <a href="/dashboard" class="app-logo flex-shrink-0" data-prefix="v{{ app_version }}">
+                {% if global_settings is defined and global_settings.company_logo is defined and global_settings.company_logo %}
+                    <img src="/storage/uploads/{{ global_settings.company_logo }}" alt="{{ app_name }}" class="custom-logo">
+                {% else %}
+                    <svg class="custom-logo" width="36" height="36" viewBox="-2 -2 36 36" overflow="visible" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <g transform="translate(16,16)">
+                            <ellipse cx="0" cy="0" rx="14" ry="5.5" fill="url(#sg0)" opacity="0.9">
+                                <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="3s" repeatCount="indefinite"/>
+                            </ellipse>
+                            <ellipse cx="0" cy="0" rx="14" ry="5.5" fill="url(#sg1)" opacity="0.9">
+                                <animateTransform attributeName="transform" type="rotate" from="60" to="420" dur="3s" repeatCount="indefinite"/>
+                            </ellipse>
+                            <ellipse cx="0" cy="0" rx="14" ry="5.5" fill="url(#sg2)" opacity="0.9">
+                                <animateTransform attributeName="transform" type="rotate" from="120" to="480" dur="3s" repeatCount="indefinite"/>
+                            </ellipse>
+                            <circle cx="0" cy="0" r="4.5" fill="white" opacity="0.95"/>
+                        </g>
+                        <defs>
+                            <linearGradient id="sg0" x1="-14" y1="0" x2="14" y2="0" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#A8ECF9"/><stop offset="1" stop-color="#6EA8FE"/>
+                            </linearGradient>
+                            <linearGradient id="sg1" x1="-14" y1="0" x2="14" y2="0" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#6EA8FE"/><stop offset="1" stop-color="#a78bfa"/>
+                            </linearGradient>
+                            <linearGradient id="sg2" x1="-14" y1="0" x2="14" y2="0" gradientUnits="userSpaceOnUse">
+                                <stop stop-color="#a78bfa"/><stop offset="1" stop-color="#A8ECF9"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                {% endif %}
+                <div class="logo-backdrop">
+                    <div class="blobs">
+                        <svg viewBox="0 0 1200 1200">
+                            <g class="blob blob-1"><path d="M 100 600 q 0 -700, 500 -500 t 500 500 t -500 500 T 100 600 z"/></g>
+                            <g class="blob blob-2"><path d="M 100 600 q -50 -400, 500 -500 t 450 550 t -500 500 T 100 600 z"/></g>
+                            <g class="blob blob-3"><path d="M 100 600 q 0 -400, 500 -500 t 400 500 t -500 500 T 100 600 z"/></g>
+                            <g class="blob blob-4"><path d="M 150 600 q 0 -600, 500 -500 t 500 550 t -500 500 T 150 600 z"/></g>
+                            <g class="blob blob-1 alt"><path d="M 150 600 q 0 -600, 500 -500 t 500 550 t -500 500 T 150 600 z"/></g>
+                            <g class="blob blob-2 alt"><path d="M 100 600 q 100 -600, 500 -500 t 400 500 t -500 500 T 100 600 z"/></g>
+                            <g class="blob blob-3 alt"><path d="M 100 600 q 0 -400, 500 -500 t 400 500 t -500 500 T 100 600 z"/></g>
+                            <g class="blob blob-4 alt"><path d="M 150 600 q 0 -600, 500 -500 t 500 550 t -500 500 T 150 600 z"/></g>
+                        </svg>
+                    </div>
+                </div>
+            </a>
+
             {# Mobile hamburger #}
             <button class="mobile-menu-icon me-2 d-flex d-sm-flex d-md-flex d-lg-none flex-shrink-0"
                     data-action="toggle-swap" data-toggleclass="app-mobile-menu-open"
@@ -328,42 +375,11 @@
        ═══════════════════════════════════════════════════════ #}
     <aside class="app-sidebar d-flex flex-column">
 
-        {# Logo / Brand #}
-        <a href="/dashboard" class="app-logo flex-shrink-0" data-prefix="{{ app_version }}">
-            {% if global_settings is defined and global_settings.company_logo is defined and global_settings.company_logo %}
-                <img src="/storage/uploads/{{ global_settings.company_logo }}"
-                     alt="{{ app_name }}"
-                     class="profile-image rounded-circle"
-                     style="width:36px;height:36px;object-fit:contain;">
-            {% else %}
-                <svg class="custom-logo" width="36" height="36" viewBox="-2 -2 36 36" overflow="visible" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <g transform="translate(16,16)">
-                        <ellipse cx="0" cy="0" rx="14" ry="5.5" fill="url(#sg0)" opacity="0.9">
-                            <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="3s" repeatCount="indefinite"/>
-                        </ellipse>
-                        <ellipse cx="0" cy="0" rx="14" ry="5.5" fill="url(#sg1)" opacity="0.9">
-                            <animateTransform attributeName="transform" type="rotate" from="60" to="420" dur="3s" repeatCount="indefinite"/>
-                        </ellipse>
-                        <ellipse cx="0" cy="0" rx="14" ry="5.5" fill="url(#sg2)" opacity="0.9">
-                            <animateTransform attributeName="transform" type="rotate" from="120" to="480" dur="3s" repeatCount="indefinite"/>
-                        </ellipse>
-                        <circle cx="0" cy="0" r="4.5" fill="white" opacity="0.95"/>
-                    </g>
-                    <defs>
-                        <linearGradient id="sg0" x1="-14" y1="0" x2="14" y2="0" gradientUnits="userSpaceOnUse">
-                            <stop stop-color="#A8ECF9"/><stop offset="1" stop-color="#6EA8FE"/>
-                        </linearGradient>
-                        <linearGradient id="sg1" x1="-14" y1="0" x2="14" y2="0" gradientUnits="userSpaceOnUse">
-                            <stop stop-color="#6EA8FE"/><stop offset="1" stop-color="#a78bfa"/>
-                        </linearGradient>
-                        <linearGradient id="sg2" x1="-14" y1="0" x2="14" y2="0" gradientUnits="userSpaceOnUse">
-                            <stop stop-color="#a78bfa"/><stop offset="1" stop-color="#A8ECF9"/>
-                        </linearGradient>
-                    </defs>
-                </svg>
-            {% endif %}
-            <span class="nav-link-text">{{ app_name }}</span>
-        </a>
+        {# Logo / Brand — sidebar shows app name only (logo is in header) #}
+        <div class="app-logo-text px-3 py-2">
+            <span class="fw-700 fs-md">{{ app_name }}</span>
+            <span class="fs-nano text-muted d-block">v{{ app_version }}</span>
+        </div>
 
         {# Nav filter #}
         <form class="app-menu-filter-container px-4">
