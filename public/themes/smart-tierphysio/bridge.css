@@ -90,19 +90,13 @@
 }
 .btn-primary:hover::after { opacity: 1; }
 
-/* ── App logo brand area: never clip the animated SVG ── */
-.app-logo,
-.app-logo > div,
-.app-sidebar .app-logo,
-.app-sidebar .app-logo > div {
-  overflow: visible !important;
+/* ── Logo: override SmartAdmin defaults for icon-only logo ── */
+:root {
+  --logo-width: 2rem;
+  --logo-height: 2rem;
 }
-
-/* ── App header: glow around logo icon ── */
-.app-logo:hover [style*="background:var(--bs-primary)"],
-.app-logo:focus [style*="background:var(--bs-primary)"] {
-  box-shadow: 0 0 16px 4px color-mix(in srgb, var(--bs-primary) 45%, transparent) !important;
-  transition: box-shadow .25s;
+.app-logo {
+  padding: 0 1.25rem;
 }
 
 /* ── Header btn-system hover glow ── */
@@ -886,47 +880,8 @@
 .ql-editor p { margin: 0; }
 .ql-view { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; word-break: break-word; }
 
-/* ── custom-logo SVG sizing (SmartAdmin expects this) ── */
-svg.custom-logo {
-    width: 36px;
-    height: 36px;
-    display: block;
-    flex-shrink: 0;
-    position: relative;
-    z-index: 1;
-}
+/* ── custom-logo: img border-radius for uploaded logos ── */
 img.custom-logo {
-    width: 36px;
-    height: 36px;
-    object-fit: contain;
     border-radius: 8px;
-    flex-shrink: 0;
-    position: relative;
-    z-index: 1;
-}
-
-/* ── Logo Backdrop (SmartAdmin Blob Animation) ── */
-.app-logo {
-    position: relative;
-}
-.logo-backdrop {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    pointer-events: none;
-    z-index: 0;
-    overflow: visible;
-}
-.logo-backdrop .blobs {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    width: 200%;
-    height: 200%;
-}
-.logo-backdrop .blobs svg {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0.4;
+    object-fit: contain;
 }
