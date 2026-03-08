@@ -648,6 +648,12 @@
 .timeline-dot-treatment { background: var(--bs-success);  box-shadow: 0 0 0 2px var(--bs-success); }
 .timeline-dot-photo     { background: var(--bs-purple, #a855f7); box-shadow: 0 0 0 2px var(--bs-purple, #a855f7); }
 .timeline-dot-document  { background: var(--bs-warning);  box-shadow: 0 0 0 2px var(--bs-warning); }
+.timeline-dot-payment   { background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.35); }
+
+.timeline-item:has(.timeline-dot-payment) .timeline-card {
+    border-color: rgba(34,197,94,.35);
+    background: rgba(34,197,94,.04);
+}
 
 .timeline-card {
   background: var(--bs-body-bg);

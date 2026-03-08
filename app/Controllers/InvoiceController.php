@@ -113,6 +113,23 @@ class InvoiceController extends Controller
         }
 
         $id = $this->invoiceService->create($data, $positions);
+
+        /* ── Automatischer Timeline-Eintrag bei Barzahlung ── */
+        if ($isCash && !empty($data['patient_id'])) {
+            $paidAtFormatted = date('d.m.Y \u\m H:i \U\h\r');
+            try {
+                $this->patientService->addTimelineEntry([
+                    'patient_id'   => (int)$data['patient_id'],
+                    'type'         => 'payment',
+                    'title'        => 'Quittung ' . ($data['invoice_number'] ?? '') . ' bezahlt',
+                    'content'      => 'Barzahlung am ' . $paidAtFormatted . ' verbucht.',
+                    'status_badge' => 'bar',
+                    'entry_date'   => date('Y-m-d H:i:s'),
+                    'user_id'      => (int)$this->session->get('user_id'),
+                ]);
+            } catch (\Throwable) {}
+        }
+
         $msg = $isCash
             ? 'Quittung erstellt und als Barzahlung verbucht.'
             : $this->translator->trans('invoices.created');
@@ -229,6 +246,22 @@ class InvoiceController extends Controller
 
         $paidAt = ($status === 'paid') ? date('Y-m-d H:i:s') : null;
         $this->invoiceService->updateStatus((int)$params['id'], $status, $paidAt);
+
+        /* ── Automatischer Timeline-Eintrag bei Bezahlung ── */
+        if ($status === 'paid' && $invoice['patient_id']) {
+            $paidAtFormatted = date('d.m.Y \u\m H:i \U\h\r');
+            try {
+                $this->patientService->addTimelineEntry([
+                    'patient_id'   => (int)$invoice['patient_id'],
+                    'type'         => 'payment',
+                    'title'        => 'Rechnung ' . ($invoice['invoice_number'] ?? '') . ' bezahlt',
+                    'content'      => 'Rechnung am ' . $paidAtFormatted . ' als bezahlt markiert.',
+                    'status_badge' => 'bezahlt',
+                    'entry_date'   => date('Y-m-d H:i:s'),
+                    'user_id'      => (int)$this->session->get('user_id'),
+                ]);
+            } catch (\Throwable) {}
+        }
 
         $msg = match($status) {
             'paid'    => '✅ Rechnung als bezahlt markiert.',

@@ -496,9 +496,12 @@ class PatientController extends Controller
         }
 
         $owner    = $this->ownerService->findById((int)$patient['owner_id']);
-        $timeline = $this->patientService->getTimeline((int)$params['id']);
+        $timeline = array_filter(
+            $this->patientService->getTimeline((int)$params['id']),
+            fn($e) => ($e['type'] ?? '') !== 'payment'
+        );
 
-        $pdfBytes = $this->pdfService->generatePatientPdf($patient, $owner, $timeline);
+        $pdfBytes = $this->pdfService->generatePatientPdf($patient, $owner, array_values($timeline));
 
         $filename = 'Patientenakte_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $patient['name'] ?? 'Patient') . '_' . date('Y-m-d') . '.pdf';
 
