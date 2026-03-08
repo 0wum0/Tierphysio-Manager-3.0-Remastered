@@ -451,22 +451,20 @@
                                     </div>
                                 </div>
                                 <div class="divider mt-3 mb-3"></div>
-                                <div class="btn-group w-full">
-                                    <button type="submit" class="btn btn-primary" style="flex:1;" id="im-save-btn">
+                                <div style="display:flex;width:100%;">
+                                    <button type="submit" class="btn btn-primary" style="flex:1;border-top-right-radius:0;border-bottom-right-radius:0;" id="im-save-btn">
                                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="17 21 17 13 7 13 7 21"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 3 7 8 15 8"/></svg>
                                         Speichern
                                     </button>
-                                    <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
-                                        <span class="visually-hidden">Optionen</span>
+                                    <button type="button" id="im-split-arrow" class="btn btn-primary" style="border-left:1px solid rgba(255,255,255,.2);border-top-left-radius:0;border-bottom-left-radius:0;padding:0 0.6rem;" title="Weitere Optionen">
+                                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="6 9 12 15 18 9"/></svg>
                                     </button>
-                                    <ul class="dropdown-menu dropdown-menu-end">
-                                        <li>
-                                            <button type="button" id="im-save-send-btn" class="dropdown-item">
-                                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" class="me-2"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polygon points="22 2 15 22 11 13 2 9 22 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
-                                                Speichern &amp; E-Mail senden
-                                            </button>
-                                        </li>
-                                    </ul>
+                                </div>
+                                <div id="im-split-menu" style="display:none;position:fixed;z-index:99999;background:var(--bs-body-bg,#1e2228);border:1px solid var(--bs-border-color,rgba(255,255,255,.15));border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.4);min-width:220px;padding:0.35rem 0;">
+                                    <button type="button" id="im-save-send-btn" style="display:flex;align-items:center;gap:0.5rem;width:100%;padding:0.55rem 1rem;background:none;border:none;cursor:pointer;color:var(--bs-body-color);font-size:0.875rem;text-align:left;" onmouseover="this.style.background='var(--bs-tertiary-bg)'" onmouseout="this.style.background='none'">
+                                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polygon points="22 2 15 22 11 13 2 9 22 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+                                        Speichern &amp; E-Mail senden
+                                    </button>
                                 </div>
                                 <button type="button" class="btn btn-secondary w-full mt-2" data-bs-dismiss="modal">Abbrechen</button>
                             </div>
@@ -985,10 +983,10 @@ function initImPaymentToggle(form) {
             ? '<svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg> Quittung erstellen'
             : '<svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="17 21 17 13 7 13 7 21"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 3 7 8 15 8"/></svg> Speichern';
     }
-    var sendBtn = document.getElementById('im-save-send-btn');
+    var splitArrow = document.getElementById('im-split-arrow');
     function updateSendBtn() {
         var isCash = form.querySelector('[name="payment_method"]:checked')?.value === 'bar';
-        if (sendBtn) sendBtn.style.display = isCash ? 'none' : '';
+        if (splitArrow) splitArrow.style.display = isCash ? 'none' : '';
     }
     form.querySelectorAll('[name="payment_method"]').forEach(function(r){
         r.onchange = function() { update(); updateSendBtn(); };
@@ -997,23 +995,44 @@ function initImPaymentToggle(form) {
     updateSendBtn();
 }
 
-/* ── im-save-send-btn: set flag then submit ─────────────────── */
-document.addEventListener('click', function(e) {
-    var btn = e.target.closest('#im-save-send-btn');
-    if (!btn) return;
-    var flag = document.getElementById('im-send-email-flag');
-    if (flag) flag.value = '1';
-    var form = document.getElementById('im-form');
-    if (form) form.requestSubmit();
-}, false);
+/* ── Custom fixed split-dropdown for invoice modal ─────────── */
+(function(){
+    var arrowBtn  = document.getElementById('im-split-arrow');
+    var splitMenu = document.getElementById('im-split-menu');
+    var sendBtn   = document.getElementById('im-save-send-btn');
+    var saveBtn   = document.getElementById('im-save-btn');
+    var flag      = document.getElementById('im-send-email-flag');
 
-/* reset flag if normal save button is clicked */
-document.addEventListener('click', function(e) {
-    var btn = e.target.closest('#im-save-btn');
-    if (!btn) return;
-    var flag = document.getElementById('im-send-email-flag');
-    if (flag) flag.value = '0';
-}, false);
+    if (arrowBtn && splitMenu) {
+        arrowBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var rect = arrowBtn.getBoundingClientRect();
+            var menuW = 230;
+            splitMenu.style.top  = (rect.bottom + 4) + 'px';
+            splitMenu.style.left = Math.max(4, rect.right - menuW) + 'px';
+            splitMenu.style.display = splitMenu.style.display === 'none' ? 'block' : 'none';
+        });
+        document.addEventListener('click', function() {
+            if (splitMenu) splitMenu.style.display = 'none';
+        });
+        splitMenu.addEventListener('click', function(e) { e.stopPropagation(); });
+    }
+
+    if (sendBtn) {
+        sendBtn.addEventListener('click', function() {
+            if (splitMenu) splitMenu.style.display = 'none';
+            if (flag) flag.value = '1';
+            var form = document.getElementById('im-form');
+            if (form) form.requestSubmit();
+        });
+    }
+
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function() {
+            if (flag) flag.value = '0';
+        });
+    }
+})();
 
 /* ── Edit button ──────────────────────────────────────────── */
 if (pdEditBtn) {
