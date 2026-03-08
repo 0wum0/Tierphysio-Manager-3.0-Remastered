@@ -149,6 +149,15 @@ class Application
 
         http_response_code(500);
 
+        /* For AJAX/API requests always return JSON so devtools shows the real error */
+        $isAjax = strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'xmlhttprequest'
+               || (($_SERVER['HTTP_ACCEPT'] ?? '') && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'));
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['error' => $e->getMessage(), 'file' => basename($e->getFile()), 'line' => $e->getLine()]);
+            exit;
+        }
+
         if ($debug) {
             echo '<pre style="background:#1a1a2e;color:#e94560;padding:20px;font-family:monospace;">';
             echo '<strong>Exception:</strong> ' . htmlspecialchars($e->getMessage()) . "\n\n";
