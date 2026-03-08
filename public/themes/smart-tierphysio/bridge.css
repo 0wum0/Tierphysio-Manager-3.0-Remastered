@@ -886,29 +886,47 @@
 .ql-editor p { margin: 0; }
 .ql-view { font-size: 0.85rem; color: var(--text-muted); line-height: 1.6; word-break: break-word; }
 
+/* ── custom-logo SVG sizing (SmartAdmin expects this) ── */
+svg.custom-logo {
+    width: 36px;
+    height: 36px;
+    display: block;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+}
+img.custom-logo {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    border-radius: 8px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+}
+
 /* ── Logo Backdrop (SmartAdmin Blob Animation) ── */
 .app-logo {
     position: relative;
-    overflow: hidden;
 }
 .logo-backdrop {
     position: absolute;
-    inset: 0;
+    top: 0; left: 0; right: 0; bottom: 0;
     pointer-events: none;
-    overflow: hidden;
     z-index: 0;
+    overflow: visible;
 }
 .logo-backdrop .blobs {
     position: absolute;
-    inset: 0;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 200%;
+    height: 200%;
 }
 .logo-backdrop .blobs svg {
     position: absolute;
+    top: 0; left: 0;
     width: 100%;
     height: 100%;
-    opacity: 0.35;
-}
-.app-logo > div:not(.logo-backdrop) {
-    position: relative;
-    z-index: 1;
+    opacity: 0.4;
 }

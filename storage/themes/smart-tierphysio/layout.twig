@@ -42,11 +42,11 @@
         <div class="d-flex flex-grow-1 w-100 me-auto align-items-center">
 
             {# App Logo — must be first element in header, exactly like dist #}
-            <a href="/dashboard" class="app-logo flex-shrink-0" data-prefix="v{{ app_version }}">
+            <a href="/dashboard" class="app-logo flex-shrink-0">
                 {% if global_settings is defined and global_settings.company_logo is defined and global_settings.company_logo %}
-                    <img src="/storage/uploads/{{ global_settings.company_logo }}" alt="{{ app_name }}" class="custom-logo">
+                    <img src="/storage/uploads/{{ global_settings.company_logo }}" alt="{{ app_name }}" style="width:36px;height:36px;object-fit:contain;border-radius:8px;display:block;flex-shrink:0;position:relative;z-index:1;">
                 {% else %}
-                    <svg class="custom-logo" width="36" height="36" viewBox="-2 -2 36 36" overflow="visible" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg width="36" height="36" viewBox="-2 -2 36 36" overflow="visible" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;flex-shrink:0;position:relative;z-index:1;">
                         <g transform="translate(16,16)">
                             <ellipse cx="0" cy="0" rx="14" ry="5.5" fill="url(#sg0)" opacity="0.9">
                                 <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="3s" repeatCount="indefinite"/>
