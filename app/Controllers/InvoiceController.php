@@ -452,9 +452,9 @@ class InvoiceController extends Controller
         $positions = [];
         foreach ($descriptions as $i => $description) {
             if (empty(trim($description))) continue;
-            $quantity  = (float)str_replace(',', '.', $quantities[$i] ?? 1);
-            $price     = (float)str_replace(',', '.', $prices[$i] ?? 0);
-            $taxRate   = (float)str_replace(',', '.', $taxRates[$i] ?? 19);
+            $quantity  = (float)str_replace(',', '.', (string)($quantities[$i] ?? 1));
+            $price     = (float)str_replace(',', '.', (string)($prices[$i] ?? 0));
+            $taxRate   = (float)str_replace(',', '.', (string)($taxRates[$i] ?? 0));
             $positions[] = [
                 'description' => htmlspecialchars(trim($description), ENT_QUOTES, 'UTF-8'),
                 'quantity'    => $quantity,
