@@ -61,10 +61,31 @@ class InvoiceService
         $data['created_at']  = date('Y-m-d H:i:s');
         $data['updated_at']  = date('Y-m-d H:i:s');
 
+        /* Strip migration-006 columns — applied separately after INSERT */
+        $paymentMethod = $data['payment_method'] ?? null;
+        $paidAt        = $data['paid_at'] ?? null;
+        unset($data['payment_method'], $data['paid_at']);
+
         $id = $this->invoiceRepository->create($data);
 
         foreach ($positions as $i => $pos) {
             $this->invoiceRepository->addPosition((int)$id, $pos, $i + 1);
+        }
+
+        /* Apply payment_method + paid_at if the columns exist (migration 006) */
+        try {
+            $extra = [];
+            if ($paymentMethod !== null) {
+                $extra['payment_method'] = $paymentMethod;
+            }
+            if ($paidAt !== null) {
+                $extra['paid_at'] = $paidAt;
+            }
+            if (!empty($extra)) {
+                $this->invoiceRepository->update((int)$id, $extra);
+            }
+        } catch (\Throwable) {
+            /* migration 006 not yet run — ignore */
         }
 
         return $id;
@@ -95,13 +116,22 @@ class InvoiceService
 
     public function updateStatus(int $id, string $status, ?string $paidAt = null): void
     {
-        $data = ['status' => $status, 'updated_at' => date('Y-m-d H:i:s')];
-        if ($status === 'paid' && $paidAt !== null) {
-            $data['paid_at'] = $paidAt;
-        } elseif ($status !== 'paid') {
-            $data['paid_at'] = null;
+        $this->invoiceRepository->update($id, [
+            'status'     => $status,
+            'updated_at' => date('Y-m-d H:i:s'),
+        ]);
+
+        try {
+            if ($status === 'paid') {
+                $this->invoiceRepository->update($id, [
+                    'paid_at' => $paidAt ?? date('Y-m-d H:i:s'),
+                ]);
+            } else {
+                $this->invoiceRepository->update($id, ['paid_at' => null]);
+            }
+        } catch (\Throwable) {
+            /* paid_at column not yet migrated — ignore */
         }
-        $this->invoiceRepository->update($id, $data);
     }
 
     public function markEmailSent(int $id): void
