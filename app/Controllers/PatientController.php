@@ -75,6 +75,8 @@ class PatientController extends Controller
 
         $settings = $this->settingsRepository->all();
 
+        $invoiceStats = $this->invoiceService->getInvoiceStatsByPatientId((int)$params['id']);
+
         $this->render('patients/show.twig', [
             'page_title'       => $patient['name'],
             'patient'          => $patient,
@@ -85,6 +87,7 @@ class PatientController extends Controller
             'next_number'      => $this->invoiceService->generateInvoiceNumber(),
             'kleinunternehmer' => ($settings['kleinunternehmer'] ?? '0') === '1',
             'default_tax_rate' => $settings['default_tax_rate'] ?? '19',
+            'invoice_stats'    => $invoiceStats,
         ]);
     }
 

@@ -51,6 +51,22 @@ class InvoiceRepository extends Repository
         }
     }
 
+    public function getInvoiceStatsByPatientId(int $patientId): array
+    {
+        $openCount = (int)$this->db->fetchColumn(
+            "SELECT COUNT(*) FROM invoices WHERE patient_id = ? AND status IN ('open','overdue','draft')",
+            [$patientId]
+        );
+        $paidCount = (int)$this->db->fetchColumn(
+            "SELECT COUNT(*) FROM invoices WHERE patient_id = ? AND status = 'paid'",
+            [$patientId]
+        );
+        return [
+            'open_count' => $openCount,
+            'paid_count' => $paidCount,
+        ];
+    }
+
     public function getPaginated(int $page, int $perPage, string $status = '', string $search = ''): array
     {
         $conditions = [];
