@@ -1,0 +1,94 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'tenants' %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <a href="/admin/tenants/{{ tenant.id }}" class="btn btn-sm btn-outline-secondary me-3">
+        <i class="bi bi-arrow-left me-1"></i>Zurück
+    </a>
+</div>
+
+<div class="row justify-content-center">
+<div class="col-lg-8">
+<div class="card">
+    <div class="card-header px-4 py-3">
+        <span class="fw-semibold"><i class="bi bi-pencil me-2"></i>Praxis bearbeiten</span>
+    </div>
+    <div class="card-body px-4 py-4">
+        <form method="POST" action="/admin/tenants/{{ tenant.id }}/edit">
+            {{ csrf_field()|raw }}
+
+            <h6 class="text-secondary mb-3" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;">Praxis-Daten</h6>
+            <div class="row g-3 mb-4">
+                <div class="col-sm-6">
+                    <label class="form-label">Praxisname *</label>
+                    <input type="text" name="practice_name" class="form-control" required value="{{ tenant.practice_name }}">
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label">Name des Therapeuten</label>
+                    <input type="text" name="owner_name" class="form-control" value="{{ tenant.owner_name }}">
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label">E-Mail</label>
+                    <input type="email" class="form-control" value="{{ tenant.email }}" disabled>
+                    <div class="form-text" style="color:#64748b;">E-Mail kann nicht geändert werden.</div>
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label">Telefon</label>
+                    <input type="tel" name="phone" class="form-control" value="{{ tenant.phone }}">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Straße & Hausnummer</label>
+                    <input type="text" name="address" class="form-control" value="{{ tenant.address }}">
+                </div>
+                <div class="col-sm-4">
+                    <label class="form-label">PLZ</label>
+                    <input type="text" name="zip" class="form-control" value="{{ tenant.zip }}">
+                </div>
+                <div class="col-sm-5">
+                    <label class="form-label">Ort</label>
+                    <input type="text" name="city" class="form-control" value="{{ tenant.city }}">
+                </div>
+                <div class="col-sm-3">
+                    <label class="form-label">Land</label>
+                    <select name="country" class="form-select">
+                        <option value="DE" {{ tenant.country == 'DE' ? 'selected' : '' }}>Deutschland</option>
+                        <option value="AT" {{ tenant.country == 'AT' ? 'selected' : '' }}>Österreich</option>
+                        <option value="CH" {{ tenant.country == 'CH' ? 'selected' : '' }}>Schweiz</option>
+                    </select>
+                </div>
+            </div>
+
+            <hr style="border-color:#334155;">
+            <h6 class="text-secondary mb-3 mt-4" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;">Abo-Plan</h6>
+            <div class="row g-3 mb-4">
+                <div class="col-sm-6">
+                    <label class="form-label">Plan</label>
+                    <select name="plan_slug" class="form-select">
+                        {% for plan in plans %}
+                        <option value="{{ plan.slug }}" {{ tenant.plan_slug == plan.slug ? 'selected' : '' }}>
+                            {{ plan.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <hr style="border-color:#334155;">
+            <h6 class="text-secondary mb-3 mt-4" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;">Interne Notizen</h6>
+            <div class="mb-4">
+                <textarea name="notes" class="form-control" rows="3" placeholder="Interne Anmerkungen...">{{ tenant.notes }}</textarea>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg me-1"></i>Speichern
+                </button>
+                <a href="/admin/tenants/{{ tenant.id }}" class="btn btn-outline-secondary">Abbrechen</a>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+</div>
+{% endblock %}

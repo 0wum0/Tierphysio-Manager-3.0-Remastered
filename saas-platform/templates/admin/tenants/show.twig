@@ -1,0 +1,219 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'tenants' %}
+
+{% block content %}
+{% set statusMap = {
+    'active': 'badge-active',
+    'pending': 'badge-pending',
+    'suspended': 'badge-suspended',
+    'cancelled': 'badge-cancelled',
+    'paused': 'badge-paused'
+} %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <a href="/admin/tenants" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Zurück
+    </a>
+    <div class="d-flex gap-2">
+        <a href="/admin/tenants/{{ tenant.id }}/edit" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-pencil me-1"></i>Bearbeiten
+        </a>
+        {% if tenant.status == 'active' or tenant.status == 'paused' %}
+        <form method="POST" action="/admin/tenants/{{ tenant.id }}/suspend" class="d-inline" onsubmit="return confirm('Praxis wirklich sperren?')">
+            {{ csrf_field()|raw }}
+            <button class="btn btn-sm btn-warning"><i class="bi bi-pause-circle me-1"></i>Sperren</button>
+        </form>
+        {% endif %}
+        {% if tenant.status == 'suspended' or tenant.status == 'paused' %}
+        <form method="POST" action="/admin/tenants/{{ tenant.id }}/reactivate" class="d-inline">
+            {{ csrf_field()|raw }}
+            <button class="btn btn-sm btn-success"><i class="bi bi-play-circle me-1"></i>Reaktivieren</button>
+        </form>
+        {% endif %}
+        {% if tenant.status != 'cancelled' %}
+        <form method="POST" action="/admin/tenants/{{ tenant.id }}/cancel" class="d-inline" onsubmit="return confirm('Abo wirklich kündigen?')">
+            {{ csrf_field()|raw }}
+            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-x-circle me-1"></i>Kündigen</button>
+        </form>
+        {% endif %}
+        {% if auth_role == 'superadmin' %}
+        <form method="POST" action="/admin/tenants/{{ tenant.id }}/delete" class="d-inline" onsubmit="return confirm('Praxis ENDGÜLTIG löschen? Diese Aktion kann nicht rückgängig gemacht werden!')">
+            {{ csrf_field()|raw }}
+            <button class="btn btn-sm btn-danger"><i class="bi bi-trash me-1"></i>Löschen</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-3">
+    {# Left column #}
+    <div class="col-lg-8">
+        {# Praxis-Info #}
+        <div class="card mb-3">
+            <div class="card-header px-4 py-3 d-flex align-items-center justify-content-between">
+                <span class="fw-semibold">Praxis-Informationen</span>
+                <span class="badge {{ statusMap[tenant.status] ?? 'bg-secondary' }}">{{ tenant.status }}</span>
+            </div>
+            <div class="card-body px-4 py-3">
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <div class="text-secondary" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Praxisname</div>
+                        <div class="fw-medium mt-1">{{ tenant.practice_name }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-secondary" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Therapeut</div>
+                        <div class="fw-medium mt-1">{{ tenant.owner_name }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-secondary" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">E-Mail</div>
+                        <div class="mt-1"><a href="mailto:{{ tenant.email }}">{{ tenant.email }}</a></div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-secondary" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Telefon</div>
+                        <div class="mt-1">{{ tenant.phone ?: '–' }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-secondary" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Adresse</div>
+                        <div class="mt-1">
+                            {% if tenant.address %}{{ tenant.address }}<br>{% endif %}
+                            {% if tenant.zip or tenant.city %}{{ tenant.zip }} {{ tenant.city }}{% endif %}
+                            {% if tenant.country %}<br><span class="badge bg-secondary">{{ tenant.country }}</span>{% endif %}
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-secondary" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">UUID</div>
+                        <div class="mt-1 font-monospace" style="font-size:.75rem;color:#64748b;">{{ tenant.uuid }}</div>
+                    </div>
+                </div>
+                {% if tenant.notes %}
+                <hr style="border-color:#334155;">
+                <div class="text-secondary" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Notizen</div>
+                <div class="mt-1" style="font-size:.875rem;">{{ tenant.notes }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Subscription History #}
+        <div class="card mb-3">
+            <div class="card-header px-4 py-3"><span class="fw-semibold">Abo-Verlauf</span></div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th class="px-4">Plan</th>
+                            <th>Zyklus</th>
+                            <th>Betrag</th>
+                            <th>Status</th>
+                            <th>Start</th>
+                            <th>Ende</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sub in all_subs %}
+                        <tr>
+                            <td class="px-4"><span class="badge bg-secondary">{{ sub.plan_name }}</span></td>
+                            <td style="font-size:.8rem;">{{ sub.billing_cycle == 'monthly' ? 'Monatlich' : 'Jährlich' }}</td>
+                            <td class="fw-medium">{{ sub.amount|number_format(2, ',', '.') }} {{ sub.currency }}</td>
+                            <td>
+                                {% set subStatus = {'active':'badge-active','cancelled':'badge-cancelled','past_due':'badge-pending','trialing':'badge-paused'} %}
+                                <span class="badge {{ subStatus[sub.status] ?? 'bg-secondary' }}">{{ sub.status }}</span>
+                            </td>
+                            <td style="font-size:.8rem;">{{ sub.started_at|date('d.m.Y') }}</td>
+                            <td style="font-size:.8rem;">{{ sub.ends_at ? sub.ends_at|date('d.m.Y') : '–' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="text-center text-secondary py-3 px-4">Kein Abo vorhanden.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {# Right column #}
+    <div class="col-lg-4">
+        {# Current Plan #}
+        <div class="card mb-3">
+            <div class="card-header px-4 py-3"><span class="fw-semibold">Aktueller Plan</span></div>
+            <div class="card-body px-4">
+                <div class="fw-bold fs-5 mb-1">{{ tenant.plan_name ?? '–' }}</div>
+                <div class="text-secondary mb-2" style="font-size:.8rem;">{{ tenant.plan_slug ?? '' }}</div>
+                {% if tenant.plan_features %}
+                    {% set features = tenant.plan_features|json_decode ?? [] %}
+                    <div class="d-flex flex-wrap gap-1 mt-2">
+                        {% for f in features %}
+                        <span class="badge bg-primary bg-opacity-25 text-primary" style="font-size:.7rem;">{{ f }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <hr style="border-color:#334155;">
+                <div class="text-secondary" style="font-size:.75rem;">Max. Benutzer</div>
+                <div class="fw-medium">{{ tenant.max_users == -1 ? 'Unbegrenzt' : tenant.max_users }}</div>
+            </div>
+        </div>
+
+        {# Infrastructure #}
+        <div class="card mb-3">
+            <div class="card-header px-4 py-3"><span class="fw-semibold">Infrastruktur</span></div>
+            <div class="card-body px-4">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-secondary" style="font-size:.8rem;">Datenbank</span>
+                    {% if tenant.db_created %}
+                        <span class="text-success" style="font-size:.8rem;"><i class="bi bi-check-circle"></i> Erstellt</span>
+                    {% else %}
+                        <span class="text-warning" style="font-size:.8rem;"><i class="bi bi-clock"></i> Ausstehend</span>
+                    {% endif %}
+                </div>
+                {% if tenant.db_name %}
+                <div class="font-monospace text-secondary mb-3" style="font-size:.75rem;">{{ tenant.db_name }}</div>
+                {% endif %}
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-secondary" style="font-size:.8rem;">Admin-Benutzer</span>
+                    {% if tenant.admin_created %}
+                        <span class="text-success" style="font-size:.8rem;"><i class="bi bi-check-circle"></i> Erstellt</span>
+                    {% else %}
+                        <span class="text-warning" style="font-size:.8rem;"><i class="bi bi-clock"></i> Ausstehend</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# License Tokens #}
+        <div class="card mb-3">
+            <div class="card-header px-4 py-3 d-flex align-items-center justify-content-between">
+                <span class="fw-semibold">Lizenz-Tokens</span>
+                <form method="POST" action="/admin/tenants/{{ tenant.id }}/license">
+                    {{ csrf_field()|raw }}
+                    <button class="btn btn-xs btn-outline-primary" style="font-size:.75rem;padding:.2rem .6rem;">
+                        <i class="bi bi-key me-1"></i>Neu ausstellen
+                    </button>
+                </form>
+            </div>
+            <div class="card-body px-4 py-3">
+                {% if licenses %}
+                {% for lic in licenses %}
+                <div class="d-flex justify-content-between mb-1" style="font-size:.75rem;">
+                    <span class="text-secondary">Ausgestellt {{ lic.issued_at|date('d.m.Y H:i') }}</span>
+                    <span class="text-secondary">Läuft ab {{ lic.expires_at|date('d.m.Y') }}</span>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-secondary" style="font-size:.8rem;">Keine aktiven Tokens.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Meta #}
+        <div class="card">
+            <div class="card-body px-4 py-3" style="font-size:.8rem;color:#64748b;">
+                <div class="d-flex justify-content-between mb-1">
+                    <span>Erstellt</span><span>{{ tenant.created_at|date('d.m.Y H:i') }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>Aktualisiert</span><span>{{ tenant.updated_at|date('d.m.Y H:i') }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

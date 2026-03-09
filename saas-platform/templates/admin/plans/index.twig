@@ -1,0 +1,58 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'plans' %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header px-4 py-3">
+        <span class="fw-semibold">Abo-Pläne</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th class="px-4">Plan</th>
+                    <th>Preis / Monat</th>
+                    <th>Preis / Jahr</th>
+                    <th>Max. Benutzer</th>
+                    <th>Features</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for plan in plans %}
+                {% set features = plan.features|json_decode ?? [] %}
+                <tr>
+                    <td class="px-4">
+                        <div class="fw-semibold">{{ plan.name }}</div>
+                        <div style="font-size:.75rem;color:#64748b;">{{ plan.slug }}</div>
+                    </td>
+                    <td class="fw-medium">{{ plan.price_month|number_format(2,',','.') }} €</td>
+                    <td class="fw-medium">{{ plan.price_year|number_format(2,',','.') }} €</td>
+                    <td>{{ plan.max_users == -1 ? 'Unbegrenzt' : plan.max_users }}</td>
+                    <td>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for f in features %}
+                            <span class="badge bg-primary bg-opacity-25 text-primary" style="font-size:.7rem;">{{ f }}</span>
+                            {% endfor %}
+                        </div>
+                    </td>
+                    <td>
+                        {% if plan.is_active %}
+                            <span class="badge badge-active">Aktiv</span>
+                        {% else %}
+                            <span class="badge badge-cancelled">Inaktiv</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="/admin/plans/{{ plan.id }}/edit" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

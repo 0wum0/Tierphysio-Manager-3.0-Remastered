@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="de" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ page_title ?? 'Tierphysio SaaS' }}{% endblock %} – {{ app_name }}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --saas-primary: #2563eb;
+        }
+        [data-bs-theme="dark"] {
+            --bs-body-bg: #0f172a;
+            --bs-body-color: #e2e8f0;
+        }
+        body { font-family: 'Inter', sans-serif; background: #0f172a; }
+
+        .navbar-brand { font-weight: 700; color: #fff !important; }
+        .navbar-brand span { color: var(--saas-primary); }
+        .navbar { background: rgba(15,23,42,.95); backdrop-filter: blur(10px); border-bottom: 1px solid #1e293b; }
+
+        .form-control, .form-select {
+            background: #1e293b;
+            border-color: #334155;
+            color: #e2e8f0;
+        }
+        .form-control:focus, .form-select:focus {
+            background: #1e293b;
+            border-color: var(--saas-primary);
+            color: #e2e8f0;
+            box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+        }
+        .form-label { color: #94a3b8; font-size: .875rem; font-weight: 500; }
+        .card { background: #1e293b; border: 1px solid #334155; }
+        footer { background: #1e293b; border-top: 1px solid #334155; }
+    </style>
+    {% block styles %}{% endblock %}
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg sticky-top">
+    <div class="container">
+        <a class="navbar-brand" href="/">Tierphysio <span>SaaS</span></a>
+        <div class="ms-auto d-flex gap-2">
+            <a href="/admin/login" class="btn btn-sm btn-outline-secondary">Admin-Login</a>
+            <a href="/register" class="btn btn-sm btn-primary">Kostenlos testen</a>
+        </div>
+    </div>
+</nav>
+
+<main>
+    {% if flash_success %}
+        <div class="container mt-3">
+            <div class="alert alert-success alert-dismissible fade show">
+                <i class="bi bi-check-circle me-2"></i>{{ flash_success|raw }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        </div>
+    {% endif %}
+    {% if flash_error %}
+        <div class="container mt-3">
+            <div class="alert alert-danger alert-dismissible fade show">
+                <i class="bi bi-exclamation-triangle me-2"></i>{{ flash_error|raw }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="py-4 mt-5">
+    <div class="container d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span style="color:#64748b;font-size:.85rem;">&copy; {{ "now"|date("Y") }} Tierphysio SaaS &bull; DSGVO-konform &bull; EU-Hosting</span>
+        <div class="d-flex gap-3" style="font-size:.85rem;">
+            <a href="/legal/datenschutz" class="text-decoration-none" style="color:#64748b">Datenschutz</a>
+            <a href="/legal/agb" class="text-decoration-none" style="color:#64748b">AGB</a>
+            <a href="/legal/av-vertrag" class="text-decoration-none" style="color:#64748b">AVV</a>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

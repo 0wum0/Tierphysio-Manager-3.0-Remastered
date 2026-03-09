@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="de" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Installation – Tierphysio SaaS</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { font-family:'Inter',sans-serif; background:#0f172a; color:#e2e8f0; }
+        .installer-wrap { max-width:700px; margin:3rem auto; padding:0 1rem; }
+        .card { background:#1e293b; border:1px solid #334155; border-radius:.75rem; }
+        .form-control, .form-select { background:#0f172a; border-color:#334155; color:#e2e8f0; }
+        .form-control:focus, .form-select:focus { background:#0f172a; border-color:#2563eb; color:#e2e8f0; box-shadow:0 0 0 3px rgba(37,99,235,.15); }
+        .form-label { color:#94a3b8; font-size:.875rem; font-weight:500; }
+        .check-ok   { color:#10b981; }
+        .check-fail { color:#ef4444; }
+        h1 span { color:#2563eb; }
+    </style>
+</head>
+<body>
+<div class="installer-wrap">
+    <div class="text-center mb-4">
+        <h1 class="fw-bold text-white">Tierphysio <span>SaaS</span></h1>
+        <p class="text-secondary">Plattform-Installation</p>
+    </div>
+
+    {# System-Checks #}
+    <div class="card mb-4">
+        <div class="card-header px-4 py-3 fw-semibold">
+            <i class="bi bi-cpu me-2"></i>Systemvoraussetzungen
+        </div>
+        <div class="card-body px-4 py-3">
+            {% set allOk = true %}
+            {% for check in checks %}
+                {% if not check.ok %}{% set allOk = false %}{% endif %}
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span style="font-size:.875rem;">{{ check.name }}</span>
+                    {% if check.ok %}
+                        <span class="check-ok"><i class="bi bi-check-circle-fill"></i> OK</span>
+                    {% else %}
+                        <span class="check-fail"><i class="bi bi-x-circle-fill"></i> Fehlt</span>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% if errors is defined and errors %}
+    <div class="alert alert-danger mb-4">
+        {% for error in errors %}<div><i class="bi bi-exclamation-triangle me-1"></i>{{ error }}</div>{% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header px-4 py-3 fw-semibold">
+            <i class="bi bi-gear me-2"></i>Konfiguration
+        </div>
+        <div class="card-body px-4 py-4">
+            <form method="POST" action="/install">
+                <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+
+                <h6 class="text-secondary mb-3" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;">Datenbank</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-6">
+                        <label class="form-label">Host</label>
+                        <input type="text" name="db_host" class="form-control" value="{{ old.db_host ?? 'localhost' }}">
+                    </div>
+                    <div class="col-sm-2">
+                        <label class="form-label">Port</label>
+                        <input type="number" name="db_port" class="form-control" value="{{ old.db_port ?? '3306' }}">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label">Datenbankname</label>
+                        <input type="text" name="db_name" class="form-control" value="{{ old.db_name ?? 'tierphysio_saas' }}">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label">Benutzer *</label>
+                        <input type="text" name="db_user" class="form-control" required value="{{ old.db_user ?? '' }}">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label">Passwort</label>
+                        <input type="password" name="db_pass" class="form-control" value="">
+                    </div>
+                </div>
+
+                <hr style="border-color:#334155;">
+                <h6 class="text-secondary mb-3 mt-4" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;">Plattform</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-12">
+                        <label class="form-label">App-URL (ohne abschließenden Slash)</label>
+                        <input type="url" name="app_url" class="form-control" value="{{ old.app_url ?? 'https://saas.meinedomain.de' }}">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Lizenz-Geheimnis (min. 32 Zeichen, geheim halten!)</label>
+                        <input type="text" name="license_secret" class="form-control" value="{{ old.license_secret ?? '' }}" placeholder="Mindestens 32 zufällige Zeichen">
+                    </div>
+                </div>
+
+                <hr style="border-color:#334155;">
+                <h6 class="text-secondary mb-3 mt-4" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;">Erster Administrator</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-4">
+                        <label class="form-label">Name *</label>
+                        <input type="text" name="admin_name" class="form-control" required value="{{ old.admin_name ?? '' }}">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label">E-Mail *</label>
+                        <input type="email" name="admin_email" class="form-control" required value="{{ old.admin_email ?? '' }}">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label">Passwort * (min. 8 Zeichen)</label>
+                        <input type="password" name="admin_password" class="form-control" required minlength="8">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">
+                    <i class="bi bi-rocket-takeoff me-2"></i>Installation starten
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

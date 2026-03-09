@@ -1,0 +1,90 @@
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-lg-7">
+
+<div class="card">
+    <div class="card-header px-4 py-3">
+        <span class="fw-semibold"><i class="bi bi-key me-2"></i>Lizenz-Konfiguration</span>
+    </div>
+    <div class="card-body px-4 py-4">
+
+        {# Current status badge #}
+        <div class="mb-4">
+            {% set statusLabels = {
+                'active':         ['success', 'Lizenz aktiv'],
+                'offline_grace':  ['warning', 'Offline-Modus (Gnadenfrist)'],
+                'expired_offline':['danger',  'Offline-Frist abgelaufen'],
+                'unconfigured':   ['secondary','Nicht konfiguriert'],
+                'restricted':     ['danger',  'Lizenz gesperrt'],
+                'invalid':        ['danger',  'Lizenz ungültig'],
+                'unknown':        ['secondary','Unbekannt']
+            } %}
+            {% set sl = statusLabels[settings.license_status] ?? ['secondary','Unbekannt'] %}
+            <span class="badge bg-{{ sl[0] }} fs-6 py-2 px-3">
+                <i class="bi bi-shield-{{ sl[0] == 'success' ? 'check' : 'x' }} me-1"></i>
+                {{ sl[1] }}
+            </span>
+            {% if settings.license_plan %}
+                <span class="badge bg-primary ms-2">Plan: {{ settings.license_plan }}</span>
+            {% endif %}
+            {% if settings.license_checked_at and settings.license_checked_at != '0' %}
+                <div class="text-secondary mt-2" style="font-size:.8rem;">
+                    Zuletzt geprüft: {{ settings.license_checked_at|date('d.m.Y H:i') }}
+                </div>
+            {% endif %}
+        </div>
+
+        <form method="POST" action="/license-setup">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+            <div class="mb-3">
+                <label class="form-label">SaaS-Plattform URL *</label>
+                <input type="url" name="saas_url" class="form-control"
+                       value="{{ settings.saas_url }}"
+                       placeholder="https://saas.meinedomain.de" required>
+                <div class="form-text">Die URL Ihrer Tierphysio SaaS-Verwaltungsplattform.</div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Tenant UUID *</label>
+                <input type="text" name="tenant_uuid" class="form-control font-monospace"
+                       value="{{ settings.tenant_uuid }}"
+                       placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" required>
+                <div class="form-text">Ihre eindeutige Praxis-ID. Diese finden Sie in Ihrer Willkommens-E-Mail.</div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">Lizenz-Token (optional)</label>
+                <input type="text" name="license_token" class="form-control font-monospace"
+                       value="{{ settings.license_token ? '••••••••••••' : '' }}"
+                       placeholder="Leer lassen – wird automatisch vom Server abgerufen"
+                       autocomplete="off">
+                <div class="form-text">Nur erforderlich falls die automatische Prüfung nicht funktioniert.</div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save me-1"></i>Einstellungen speichern
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card mt-3">
+    <div class="card-header px-4 py-3"><span class="fw-semibold">Informationen zum Lizenzmodell</span></div>
+    <div class="card-body px-4 py-3" style="font-size:.875rem;color:#94a3b8;line-height:1.8;">
+        <ul class="mb-0 ps-3">
+            <li>Die Lizenz wird alle <strong class="text-white">24 Stunden</strong> automatisch online geprüft.</li>
+            <li>Bei fehlender Internetverbindung ist ein Offline-Betrieb von bis zu <strong class="text-white">30 Tagen</strong> möglich.</li>
+            <li>Nach Ablauf der Offline-Frist wird eine Warnmeldung angezeigt.</li>
+            <li>Freigeschaltete Funktionen richten sich nach Ihrem Abo-Plan.</li>
+        </ul>
+    </div>
+</div>
+
+</div>
+</div>
+{% endblock %}

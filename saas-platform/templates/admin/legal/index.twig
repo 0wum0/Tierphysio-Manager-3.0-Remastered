@@ -1,0 +1,55 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'legal' %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header px-4 py-3 d-flex align-items-center justify-content-between">
+        <span class="fw-semibold"><i class="bi bi-file-earmark-text me-2"></i>Rechtliche Dokumente</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th class="px-4">Dokument</th>
+                    <th>Slug</th>
+                    <th>Version</th>
+                    <th>Status</th>
+                    <th>Aktualisiert</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in docs %}
+                <tr>
+                    <td class="px-4 fw-medium">{{ doc.title }}</td>
+                    <td><span class="badge bg-secondary font-monospace" style="font-size:.75rem;">{{ doc.slug }}</span></td>
+                    <td>v{{ doc.version }}</td>
+                    <td>
+                        {% if doc.is_active %}
+                            <span class="badge badge-active">Aktiv</span>
+                        {% else %}
+                            <span class="badge badge-cancelled">Inaktiv</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-secondary" style="font-size:.8rem;">{{ doc.updated_at|date('d.m.Y H:i') }}</td>
+                    <td>
+                        <div class="d-flex gap-1">
+                            <a href="/legal/{{ doc.slug }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="/admin/legal/{{ doc.id }}/edit" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center text-secondary py-4 px-4">Keine Dokumente vorhanden.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

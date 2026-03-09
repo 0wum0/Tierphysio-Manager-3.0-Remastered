@@ -1,0 +1,111 @@
+{% extends 'layouts/public.twig' %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+        <div class="col-lg-7">
+
+        <div class="text-center mb-4">
+            <h1 class="fw-bold text-white">Jetzt registrieren</h1>
+            <p class="text-secondary">Tarif: <strong class="text-white">{{ plan.name }}</strong> –
+                {{ plan.price_month|number_format(2,',','.') }} €/Monat</p>
+        </div>
+
+        <div class="card">
+            <div class="card-body p-4">
+                <form method="POST" action="/register">
+                    {{ csrf_field()|raw }}
+                    <input type="hidden" name="plan_slug" value="{{ plan.slug }}">
+
+                    <h6 class="text-secondary mb-3" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;">Ihre Praxis</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-sm-6">
+                            <label class="form-label">Praxisname *</label>
+                            <input type="text" name="practice_name" class="form-control" required placeholder="Tierphysiotherapie Muster">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label">Ihr Name *</label>
+                            <input type="text" name="owner_name" class="form-control" required placeholder="Max Mustermann">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label">Telefon</label>
+                            <input type="tel" name="phone" class="form-control" placeholder="+49 ...">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label">PLZ & Ort</label>
+                            <div class="input-group">
+                                <input type="text" name="zip" class="form-control" placeholder="PLZ" style="max-width:100px;">
+                                <input type="text" name="city" class="form-control" placeholder="Ort">
+                            </div>
+                        </div>
+                        <div class="col-sm-8">
+                            <label class="form-label">Straße</label>
+                            <input type="text" name="address" class="form-control" placeholder="Musterstraße 1">
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label">Land</label>
+                            <select name="country" class="form-select">
+                                <option value="DE">Deutschland</option>
+                                <option value="AT">Österreich</option>
+                                <option value="CH">Schweiz</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <hr style="border-color:#334155;">
+                    <h6 class="text-secondary mb-3 mt-4" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;">Ihr Konto</h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-sm-6">
+                            <label class="form-label">E-Mail-Adresse *</label>
+                            <input type="email" name="email" class="form-control" required placeholder="info@praxis.de">
+                            <div class="form-text" style="color:#64748b;">Diese E-Mail wird Ihr Login-Name.</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label">Passwort * (min. 8 Zeichen)</label>
+                            <input type="password" name="password" class="form-control" required minlength="8" placeholder="••••••••">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label">Abrechnungszyklus</label>
+                            <select name="billing_cycle" class="form-select">
+                                <option value="monthly">Monatlich ({{ plan.price_month|number_format(2,',','.') }} €/Monat)</option>
+                                <option value="yearly">Jährlich ({{ plan.price_year|number_format(2,',','.') }} €/Jahr)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <hr style="border-color:#334155;">
+                    <h6 class="text-secondary mb-3 mt-4" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;">Rechtliche Zustimmungen</h6>
+                    <div class="mb-4">
+                        {% for doc in legal_docs %}
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="legal_{{ doc.slug }}" id="legal_{{ doc.slug }}" required>
+                            <label class="form-check-label" for="legal_{{ doc.slug }}" style="font-size:.875rem;">
+                                Ich stimme der
+                                <a href="/legal/{{ doc.slug }}" target="_blank" class="text-primary">{{ doc.title }}</a>
+                                (v{{ doc.version }}) zu. *
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">
+                        <i class="bi bi-rocket-takeoff me-2"></i>Jetzt Konto erstellen
+                    </button>
+
+                    <p class="text-center text-secondary mt-3 mb-0" style="font-size:.8rem;">
+                        <i class="bi bi-shield-lock me-1"></i>
+                        Ihre Daten werden DSGVO-konform auf EU-Servern gespeichert.
+                    </p>
+                </form>
+            </div>
+        </div>
+
+        <div class="text-center mt-3">
+            <a href="/register" class="text-secondary" style="font-size:.8rem;">Anderen Tarif wählen</a>
+        </div>
+        </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

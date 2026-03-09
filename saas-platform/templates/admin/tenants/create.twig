@@ -1,0 +1,115 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'tenants' %}
+
+{% block content %}
+<div class="d-flex align-items-center mb-4">
+    <a href="/admin/tenants" class="btn btn-sm btn-outline-secondary me-3">
+        <i class="bi bi-arrow-left me-1"></i>Zurück
+    </a>
+</div>
+
+<div class="row justify-content-center">
+<div class="col-lg-8">
+<div class="card">
+    <div class="card-header px-4 py-3">
+        <span class="fw-semibold"><i class="bi bi-building-add me-2"></i>Neue Praxis erstellen & provisionieren</span>
+    </div>
+    <div class="card-body px-4 py-4">
+        <form method="POST" action="/admin/tenants/create">
+            {{ csrf_field()|raw }}
+
+            <h6 class="text-secondary mb-3" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;">Praxis-Daten</h6>
+            <div class="row g-3 mb-4">
+                <div class="col-sm-6">
+                    <label class="form-label">Praxisname *</label>
+                    <input type="text" name="practice_name" class="form-control" required placeholder="Tierphysiotherapie Muster">
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label">Name des Therapeuten *</label>
+                    <input type="text" name="owner_name" class="form-control" required placeholder="Max Mustermann">
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label">E-Mail-Adresse *</label>
+                    <input type="email" name="email" class="form-control" required placeholder="info@praxis.de">
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label">Telefon</label>
+                    <input type="tel" name="phone" class="form-control" placeholder="+49 ...">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Straße & Hausnummer</label>
+                    <input type="text" name="address" class="form-control" placeholder="Musterstraße 1">
+                </div>
+                <div class="col-sm-4">
+                    <label class="form-label">PLZ</label>
+                    <input type="text" name="zip" class="form-control" placeholder="12345">
+                </div>
+                <div class="col-sm-5">
+                    <label class="form-label">Ort</label>
+                    <input type="text" name="city" class="form-control" placeholder="Musterstadt">
+                </div>
+                <div class="col-sm-3">
+                    <label class="form-label">Land</label>
+                    <select name="country" class="form-select">
+                        <option value="DE">Deutschland</option>
+                        <option value="AT">Österreich</option>
+                        <option value="CH">Schweiz</option>
+                    </select>
+                </div>
+            </div>
+
+            <hr style="border-color:#334155;">
+            <h6 class="text-secondary mb-3 mt-4" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;">Abo & Zahlung</h6>
+            <div class="row g-3 mb-4">
+                <div class="col-sm-6">
+                    <label class="form-label">Abo-Plan *</label>
+                    <select name="plan_slug" class="form-select">
+                        {% for plan in plans %}
+                        <option value="{{ plan.slug }}">{{ plan.name }} ({{ plan.price_month|number_format(2,',','.') }} €/Monat)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label">Abrechnungszyklus</label>
+                    <select name="billing_cycle" class="form-select">
+                        <option value="monthly">Monatlich</option>
+                        <option value="yearly">Jährlich</option>
+                    </select>
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label">Zahlungsmethode</label>
+                    <select name="payment_method" class="form-select">
+                        <option value="manual">Manuell / Überweisung</option>
+                        <option value="stripe">Stripe</option>
+                        <option value="paypal">PayPal</option>
+                    </select>
+                </div>
+            </div>
+
+            <hr style="border-color:#334155;">
+            <h6 class="text-secondary mb-3 mt-4" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;">Admin-Zugangsdaten</h6>
+            <div class="row g-3 mb-4">
+                <div class="col-sm-6">
+                    <label class="form-label">Admin-Passwort</label>
+                    <input type="text" name="admin_password" class="form-control" placeholder="Leer lassen für automatische Generierung">
+                    <div class="form-text" style="color:#64748b;">Wird per E-Mail an den Therapeuten gesendet.</div>
+                </div>
+            </div>
+
+            <div class="alert alert-info py-2" style="font-size:.8rem;">
+                <i class="bi bi-info-circle me-1"></i>
+                Nach dem Erstellen wird automatisch eine Praxis-Datenbank erstellt, ein Admin-Benutzer angelegt und eine Willkommens-E-Mail mit den Zugangsdaten gesendet.
+            </div>
+
+            <div class="d-flex gap-2 mt-3">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-rocket-takeoff me-1"></i>Praxis erstellen & provisionieren
+                </button>
+                <a href="/admin/tenants" class="btn btn-outline-secondary">Abbrechen</a>
+            </div>
+        </form>
+    </div>
+</div>
+</div>
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends 'layouts/public.twig' %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+        <div class="col-lg-6 text-center">
+            <div style="font-size:4rem;margin-bottom:1rem;">🎉</div>
+            <h1 class="fw-bold text-white mb-3">Willkommen, {{ owner_name }}!</h1>
+            <p class="text-secondary mb-4">
+                Ihre Praxis <strong class="text-white">{{ practice_name }}</strong> wurde erfolgreich eingerichtet.
+                Ihr <strong class="text-white">{{ plan_name }}</strong>-Abo ist jetzt aktiv.
+            </p>
+
+            <div class="card mb-4">
+                <div class="card-body p-4 text-start">
+                    <h5 class="fw-semibold text-white mb-3"><i class="bi bi-envelope-check me-2 text-success"></i>Nächste Schritte</h5>
+                    <ol class="mb-0" style="color:#94a3b8;line-height:2;">
+                        <li>Prüfen Sie Ihr E-Mail-Postfach (<strong class="text-white">{{ email }}</strong>) für Ihre Zugangsdaten.</li>
+                        <li>Melden Sie sich mit Ihrer E-Mail und dem zugesandten Passwort an.</li>
+                        <li>Ändern Sie Ihr Passwort nach dem ersten Login.</li>
+                        <li>Konfigurieren Sie Ihre Praxisdaten in den Einstellungen.</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="alert alert-success py-3 mb-4" style="background:rgba(5,150,105,.1);border-color:#065f46;color:#6ee7b7;">
+                <i class="bi bi-shield-check me-2"></i>
+                Ihre Zugangsdaten wurden sicher an <strong>{{ email }}</strong> gesendet.
+            </div>
+
+            <div class="d-flex gap-3 justify-content-center">
+                <a href="/" class="btn btn-outline-secondary">Zur Startseite</a>
+            </div>
+        </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

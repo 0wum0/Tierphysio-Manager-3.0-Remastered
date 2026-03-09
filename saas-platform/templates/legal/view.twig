@@ -1,0 +1,30 @@
+{% extends 'layouts/public.twig' %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="d-flex align-items-center justify-content-between mb-4">
+                <h1 class="fw-bold text-white mb-0">{{ doc.title }}</h1>
+                <span class="badge bg-secondary">v{{ doc.version }}</span>
+            </div>
+            <div class="text-secondary mb-4" style="font-size:.8rem;">
+                Zuletzt aktualisiert: {{ doc.updated_at|date('d.m.Y') }}
+            </div>
+
+            <div class="card">
+                <div class="card-body p-4" style="line-height:1.8;color:#cbd5e1;">
+                    {{ doc.content|nl2br }}
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="/register" class="btn btn-outline-primary me-2">Zur Registrierung</a>
+                <a href="javascript:history.back()" class="btn btn-outline-secondary">Zurück</a>
+            </div>
+        </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

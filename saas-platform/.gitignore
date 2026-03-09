@@ -1,0 +1,6 @@
+.env
+vendor/
+storage/logs/*.log
+storage/cache/twig/
+*.DS_Store
+Thumbs.db

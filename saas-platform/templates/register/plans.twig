@@ -1,0 +1,79 @@
+{% extends 'layouts/public.twig' %}
+
+{% block content %}
+<section class="py-5">
+    <div class="container">
+        <div class="text-center mb-5">
+            <h1 class="fw-bold" style="color:#fff;">Tarif wählen</h1>
+            <p class="text-secondary" style="max-width:540px;margin:auto;">
+                Starten Sie noch heute mit Ihrem Tierphysio Manager. Alle Tarife beinhalten eine kostenlose Einrichtung.
+            </p>
+        </div>
+
+        <div class="row g-4 justify-content-center">
+            {% for plan in plans %}
+            {% set features = plan.features|json_decode ?? [] %}
+            {% set isPro = plan.slug == 'pro' %}
+            <div class="col-md-4">
+                <div class="card h-100 position-relative {{ isPro ? 'border-primary' : '' }}" style="{{ isPro ? 'border-color:#2563eb!important;' : '' }}">
+                    {% if isPro %}
+                    <div class="position-absolute top-0 start-50 translate-middle">
+                        <span class="badge bg-primary px-3 py-2">Beliebtester Tarif</span>
+                    </div>
+                    {% endif %}
+                    <div class="card-body p-4 d-flex flex-column">
+                        <div class="mb-3">
+                            <h4 class="fw-bold text-white mb-1">{{ plan.name }}</h4>
+                            <p class="text-secondary mb-0" style="font-size:.875rem;">{{ plan.description }}</p>
+                        </div>
+                        <div class="mb-4">
+                            <span class="display-6 fw-bold text-white">{{ plan.price_month|number_format(0,',','.') }} €</span>
+                            <span class="text-secondary">/Monat</span>
+                            {% if plan.price_year > 0 %}
+                            <div class="text-success" style="font-size:.8rem;">
+                                oder {{ plan.price_year|number_format(0,',','.') }} €/Jahr (2 Monate gratis)
+                            </div>
+                            {% endif %}
+                        </div>
+                        <ul class="list-unstyled mb-4 flex-grow-1">
+                            <li class="mb-2" style="font-size:.875rem;">
+                                <i class="bi bi-people text-primary me-2"></i>
+                                {% if plan.max_users == -1 %}Unbegrenzte Benutzer{% else %}Bis zu {{ plan.max_users }} Benutzer{% endif %}
+                            </li>
+                            {% for f in features %}
+                            <li class="mb-2" style="font-size:.875rem;">
+                                <i class="bi bi-check-lg text-success me-2"></i>
+                                {% set featureNames = {
+                                    'invoices': 'Rechnungen',
+                                    'appointments': 'Terminkalender',
+                                    'patients': 'Patientenverwaltung',
+                                    'owners': 'Besitzerverwaltung',
+                                    'dashboard': 'Dashboard & Statistiken',
+                                    'waitlist': 'Warteliste',
+                                    'intake': 'Patientenanmeldung',
+                                    'staff': 'Mitarbeiterverwaltung',
+                                    'reports': 'Erweiterte Reports',
+                                    'premium': 'Premium-Funktionen'
+                                } %}
+                                {{ featureNames[f] ?? f }}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        <a href="/register/{{ plan.slug }}" class="btn {{ isPro ? 'btn-primary' : 'btn-outline-primary' }} w-100 fw-semibold">
+                            Jetzt mit {{ plan.name }} starten
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="text-center mt-5">
+            <p class="text-secondary" style="font-size:.875rem;">
+                <i class="bi bi-shield-check text-success me-1"></i>
+                DSGVO-konform &bull; EU-Hosting &bull; Jederzeit kündbar &bull; Keine Einrichtungsgebühr
+            </p>
+        </div>
+    </div>
+</section>
+{% endblock %}
