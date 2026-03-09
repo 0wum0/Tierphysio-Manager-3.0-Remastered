@@ -45,7 +45,7 @@
                         <select name="month" class="form-select form-select-sm">
                             <option value="">Ganzes Jahr</option>
                             {% for m in 1..12 %}
-                                <option value="{{ m }}" {% if m|string == month %}selected{% endif %}>
+                                <option value="{{ m }}" {% if (m ~ '') == month %}selected{% endif %}>
                                     {{ ['', 'Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'][m] }}
                                 </option>
                             {% endfor %}
