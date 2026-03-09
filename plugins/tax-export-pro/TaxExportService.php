@@ -359,18 +359,28 @@ class TaxExportService
         }
 
         // ── CSV files ────────────────────────────────────────────────────────
-        $zip->addFromString(
-            'export/einnahmen.csv',
-            $this->buildEinnahmenCsv($invoices, $delimiter)
-        );
-        $zip->addFromString(
-            'export/rechnungsjournal.csv',
-            $this->buildRechnungsjournalCsv($invoices, $delimiter)
-        );
+        $hashes = [];
+
+        $einnahmenCsv = $this->buildEinnahmenCsv($invoices, $delimiter);
+        $zip->addFromString('export/einnahmen.csv', $einnahmenCsv);
+        $hashes['export/einnahmen.csv'] = hash('sha256', $einnahmenCsv);
+
+        $journalCsv = $this->buildRechnungsjournalCsv($invoices, $delimiter);
+        $zip->addFromString('export/rechnungsjournal.csv', $journalCsv);
+        $hashes['export/rechnungsjournal.csv'] = hash('sha256', $journalCsv);
+
+        $datevCsv = $this->buildDatevCsv($invoices, $dateFrom, $dateTo);
+        $zip->addFromString('export/datev_buchungsstapel.csv', $datevCsv);
+        $hashes['export/datev_buchungsstapel.csv'] = hash('sha256', $datevCsv);
 
         // ── PDF report ───────────────────────────────────────────────────────
         $pdfReport = $this->buildPdfReport($invoices, $stats, $dateFrom, $dateTo, $statusFilter);
         $zip->addFromString('export/steuerbericht.pdf', $pdfReport);
+        $hashes['export/steuerbericht.pdf'] = hash('sha256', $pdfReport);
+
+        // ── GoBD Manifest with SHA-256 hashes ────────────────────────────────
+        $manifest = $this->buildZipManifest($invoices, $dateFrom, $dateTo, $statusFilter, $hashes);
+        $zip->addFromString('export/MANIFEST.txt', $manifest);
 
         // ── README ───────────────────────────────────────────────────────────
         $readme  = "TaxExportPro – Steuerexport\r\n";
@@ -380,17 +390,233 @@ class TaxExportService
         $readme .= "Filter:        " . $this->translateStatusLabel($statusFilter) . "\r\n";
         $readme .= "Rechnungen:    " . count($invoices) . "\r\n\r\n";
         $readme .= "Inhalt:\r\n";
-        $readme .= "  /rechnungen/         Einzel-PDFs aller Rechnungen im Zeitraum\r\n";
-        $readme .= "  /export/einnahmen.csv            Einnahmen-Übersicht (Excel-kompatibel)\r\n";
-        $readme .= "  /export/rechnungsjournal.csv     Vollständiges Journal\r\n";
-        $readme .= "  /export/steuerbericht.pdf        Kompakter Steuerbericht\r\n\r\n";
-        $readme .= "Hinweis: Dieser Export dient als Buchführungshilfe. Kein Ersatz für\r\n";
-        $readme .= "steuerliche oder rechtliche Beratung.\r\n";
+        $readme .= "  /rechnungen/                         Einzel-PDFs aller Rechnungen\r\n";
+        $readme .= "  /export/einnahmen.csv                Einnahmen-Übersicht (Excel)\r\n";
+        $readme .= "  /export/rechnungsjournal.csv         Vollständiges Rechnungsjournal\r\n";
+        $readme .= "  /export/datev_buchungsstapel.csv     DATEV-Import-Datei (Format EXTF v510)\r\n";
+        $readme .= "  /export/steuerbericht.pdf            Kompakter Steuerbericht\r\n";
+        $readme .= "  /export/MANIFEST.txt                 SHA-256 Prüfsummen (GoBD)\r\n\r\n";
+        $readme .= "GoBD-Hinweis:\r\n";
+        $readme .= "  Dieser Export dient als maschinell auswertbare Buchführungshilfe\r\n";
+        $readme .= "  gem. GoBD (BMF-Schreiben v. 28.11.2019). Die DATEV-CSV kann direkt\r\n";
+        $readme .= "  an Ihren Steuerberater / in DATEV Unternehmen Online übermittelt werden.\r\n";
+        $readme .= "  Kein Ersatz für steuerliche oder rechtliche Beratung.\r\n";
         $zip->addFromString('README.txt', $readme);
 
         $zip->close();
 
         return $zipPath;
+    }
+
+    // ── DATEV Export ─────────────────────────────────────────────────────────
+
+    /**
+     * Erzeugt eine DATEV-kompatible Buchungsstapel-CSV (Datenformat DATEV v510).
+     * Kann direkt in DATEV Unternehmen Online / Kanzlei-Rechnungswesen importiert werden.
+     */
+    public function buildDatevCsv(array $invoices, string $dateFrom, string $dateTo): string
+    {
+        $settings        = $this->settingsRepo->all();
+        $beraterNr       = $this->repo->getSetting('datev_berater_nummer',    '0');
+        $mandantenNr     = $this->repo->getSetting('datev_mandanten_nummer',  '0');
+        $wirtschaftsjahr = $this->repo->getSetting('datev_wirtschaftsjahr',   '01');
+        $kontoErloese    = $this->repo->getSetting('datev_konto_erloese',     '8400');
+        $kontoKasse      = $this->repo->getSetting('datev_konto_kasse',       '1000');
+        $kontoForderung  = $this->repo->getSetting('datev_konto_forderungen', '1400');
+        $kleinunternehmer = ($settings['kleinunternehmer'] ?? '0') === '1';
+
+        $fromDt = new \DateTime($dateFrom);
+        $toDt   = new \DateTime($dateTo);
+
+        // ── DATEV Header (Zeile 1 — Metadaten-Header) ────────────────────────
+        $header1 = implode(';', [
+            '"EXTF"',               // Kennzeichen
+            '510',                  // Versionsnummer
+            '21',                   // Datenkategorie (21 = Buchungsstapel)
+            '"Buchungsstapel"',
+            '7',                    // Format-Version
+            date('YmdHis') . '000', // Erstellt am (YYYYMMDDHHmmssmmm)
+            '',                     // Importiert
+            '"RE"',                 // Herkunft
+            '"TaxExportPro"',       // Exportiert von
+            '',                     // Importiert von
+            $beraterNr,             // Beraternummer
+            $mandantenNr,           // Mandantennummer
+            $fromDt->format('Y') . $wirtschaftsjahr . '01', // WJ-Beginn (YYYYMMDD)
+            '4',                    // Sachkontenlänge
+            $fromDt->format('Ymd'), // Datum von
+            $toDt->format('Ymd'),   // Datum bis
+            '"' . date('d.m.Y') . ' Steuerexport"', // Bezeichnung
+            '',                     // Diktatkürzel
+            '1',                    // Buchungstyp (1=Fibu, 2=Jahresabschluss)
+            '0',                    // Rechnungslegungszweck
+            '0',                    // Festschreibung (0=nein)
+            '',                     // WKZ
+            '',                     // reserviert
+            '',                     // Derivatskennzeichen
+            '',                     // reserviert
+            '',                     // reserviert
+            '',                     // SKR
+            '',                     // Branchen-Lösungs-ID
+            '',                     // reserviert
+            '',                     // reserviert
+            '',                     // Anwendungsinformation
+        ]);
+
+        // ── DATEV Header (Zeile 2 — Spaltenköpfe) ────────────────────────────
+        $header2 = implode(';', [
+            '"Umsatz (ohne Soll/Haben-Kz)"',
+            '"Soll/Haben-Kennzeichen"',
+            '"WKZ Umsatz"',
+            '"Kurs"',
+            '"Basis-Umsatz"',
+            '"WKZ Basis-Umsatz"',
+            '"Konto"',
+            '"Gegenkonto (ohne BU-Schlüssel)"',
+            '"BU-Schlüssel"',
+            '"Belegdatum"',
+            '"Belegfeld 1"',
+            '"Belegfeld 2"',
+            '"Skonto"',
+            '"Buchungstext"',
+            '"Postensperre"',
+            '"Diverse Adressnummer"',
+            '"Geschäftspartnerbank"',
+            '"Sachverhalt"',
+            '"Zinssperre"',
+            '"Beleglink"',
+            '"Beleginfo - Art 1"',
+            '"Beleginfo - Inhalt 1"',
+            '"Beleginfo - Art 2"',
+            '"Beleginfo - Inhalt 2"',
+            '"Beleginfo - Art 3"',
+            '"Beleginfo - Inhalt 3"',
+            '"Beleginfo - Art 4"',
+            '"Beleginfo - Inhalt 4"',
+            '"Beleginfo - Art 5"',
+            '"Beleginfo - Inhalt 5"',
+            '"Beleginfo - Art 6"',
+            '"Beleginfo - Inhalt 6"',
+            '"Beleginfo - Art 7"',
+            '"Beleginfo - Inhalt 7"',
+            '"Beleginfo - Art 8"',
+            '"Beleginfo - Inhalt 8"',
+            '"KOST1 - Kostenstelle"',
+            '"KOST2 - Kostenstelle"',
+            '"Kost-Menge"',
+            '"EU-Land u. UStID"',
+            '"EU-Steuersatz"',
+            '"Abw. Versteuerungsart"',
+            '"Sachverhalt L+L"',
+            '"Funktionsergänzung L+L"',
+            '"BU 49 Hauptfunktionstyp"',
+            '"BU 49 Hauptfunktionsnummer"',
+            '"BU 49 Funktionsergänzung"',
+            '"Zusatzinformation - Art 1"',
+            '"Zusatzinformation - Inhalt 1"',
+            '"Zusatzinformation - Art 2"',
+            '"Zusatzinformation - Inhalt 2"',
+            '"Stück"',
+            '"Gewicht"',
+            '"Zahlweise"',
+            '"Forderungsart"',
+            '"Veranlagungsjahr"',
+            '"Zugeordnete Fälligkeit"',
+            '"Skontotyp"',
+            '"Auftragsnummer"',
+            '"Land"',
+            '"Abrechnungsreferenz"',
+            '"BVV-Position"',
+            '"EU-Mitgliedstaat u. UStID (Ursprung)"',
+            '"EU-Steuersatz (Ursprung)"',
+        ]);
+
+        $rows = ["\xEF\xBB\xBF" . $header1, $header2];
+
+        foreach ($invoices as $inv) {
+            $status = $inv['status'] ?? '';
+            // Nur finanzwirksame Buchungen: paid, open, overdue
+            if (in_array($status, ['draft', 'cancelled'], true)) continue;
+
+            $bruttoAmt = abs((float)($inv['total_gross'] ?? 0));
+            if ($bruttoAmt == 0.0) continue;
+
+            $sollHaben  = ($status === 'paid') ? 'H' : 'S';
+            $datum      = (new \DateTime($inv['issue_date'] ?? date('Y-m-d')))->format('dm'); // DATEV: TTMM
+            $belegnr    = preg_replace('/[^A-Za-z0-9\-]/', '', $inv['invoice_number'] ?? '');
+            $buchtext   = $this->truncate(($inv['owner_name'] ?? '') . ' ' . ($inv['patient_name'] ?? ''), 60);
+
+            // Konto-Logik:
+            // Bezahlt Bar     → Kasse (1000) an Erlöse (8400)
+            // Bezahlt Überweis → Forderungen (1400) an Erlöse (8400)
+            // Offen/Überfällig → Forderungen (1400) an Erlöse (8400)
+            $isCash     = ($inv['payment_method'] ?? 'rechnung') === 'bar';
+            $konto      = ($status === 'paid' && $isCash) ? $kontoKasse : $kontoForderung;
+            $gegenkonto = $kontoErloese;
+
+            // BU-Schlüssel: leer bei 19% (Normalsteuersatz), oder für § 19 UStG Kleinunternehmer
+            $buKey = '';
+            if ($kleinunternehmer) {
+                $buKey = '40'; // § 19 UStG — keine USt
+            }
+
+            // Umsatz im DATEV-Format: Komma als Dezimaltrennzeichen, kein Tausenderpunkt
+            $umsatzStr = number_format($bruttoAmt, 2, ',', '');
+
+            $row = implode(';', [
+                $umsatzStr,      // Umsatz
+                $sollHaben,      // S/H
+                'EUR',           // WKZ
+                '',              // Kurs
+                '',              // Basis-Umsatz
+                '',              // WKZ Basis
+                $konto,          // Konto
+                $gegenkonto,     // Gegenkonto
+                $buKey,          // BU-Schlüssel
+                $datum,          // Belegdatum TTMM
+                '"' . $belegnr . '"', // Belegfeld 1
+                '',              // Belegfeld 2
+                '',              // Skonto
+                '"' . str_replace('"', '', $buchtext) . '"', // Buchungstext
+            ]);
+
+            $rows[] = $row;
+        }
+
+        return implode("\r\n", $rows) . "\r\n";
+    }
+
+    /**
+     * Adds SHA-256 hashes per invoice PDF to the ZIP manifest.
+     * Called internally by buildZip.
+     */
+    private function buildZipManifest(array $invoices, string $dateFrom, string $dateTo, string $statusFilter, array $hashes): string
+    {
+        $lines   = [];
+        $lines[] = 'TaxExportPro – Exportmanifest (GoBD-Prüfprotokoll)';
+        $lines[] = str_repeat('=', 55);
+        $lines[] = '';
+        $lines[] = 'Erstellt am:   ' . date('d.m.Y H:i:s') . ' UTC';
+        $lines[] = 'Zeitraum:      ' . $this->formatDate($dateFrom) . ' – ' . $this->formatDate($dateTo);
+        $lines[] = 'Statusfilter:  ' . $this->translateStatusLabel($statusFilter);
+        $lines[] = 'Rechnungen:    ' . count($invoices);
+        $lines[] = 'Hash-Algo:     SHA-256';
+        $lines[] = '';
+        $lines[] = str_repeat('-', 55);
+        $lines[] = sprintf('%-40s  %s', 'Datei', 'SHA-256');
+        $lines[] = str_repeat('-', 55);
+
+        foreach ($hashes as $filename => $hash) {
+            $lines[] = sprintf('%-40s  %s', $filename, $hash);
+        }
+
+        $lines[] = '';
+        $lines[] = str_repeat('-', 55);
+        $lines[] = 'Dieses Manifest dient dem Nachweis der Unverändertheit';
+        $lines[] = 'der exportierten Dateien gemäß GoBD Rn. 91 ff.';
+        $lines[] = 'Software: TaxExportPro Plugin – Tierphysio Manager';
+
+        return implode("\r\n", $lines) . "\r\n";
     }
 
     // ── Logging ──────────────────────────────────────────────────────────────

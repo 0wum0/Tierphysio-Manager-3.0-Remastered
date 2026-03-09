@@ -164,6 +164,126 @@ class TaxExportController extends Controller
     }
 
     /**
+     * GET /steuerexport/export-datev — download DATEV Buchungsstapel CSV
+     */
+    public function exportDatev(array $params = []): void
+    {
+        [$dateFrom, $dateTo, $status] = $this->resolveExportParams();
+        $invoices = $this->taxService->getInvoices($dateFrom, $dateTo, $status);
+
+        $this->taxService->logExport('datev', $dateFrom, $dateTo, $status, count($invoices));
+
+        $csv = $this->taxService->buildDatevCsv($invoices, $dateFrom, $dateTo);
+        $this->sendDownload(
+            $csv,
+            'text/csv; charset=UTF-8',
+            'DATEV-Buchungsstapel-' . $dateFrom . '_' . $dateTo . '.csv'
+        );
+    }
+
+    /**
+     * POST /steuerexport/{id}/stornieren — GoBD-konforme Stornierung (Gegenbuchung)
+     */
+    public function cancel(array $params = []): void
+    {
+        $this->validateCsrf();
+
+        $db        = Application::getInstance()->getContainer()->get(Database::class);
+        $audit     = new \Plugins\TaxExportPro\GobdAuditService($db);
+        $userId    = (int)$this->session->get('user_id');
+
+        $invoiceId = (int)($params['id'] ?? 0);
+
+        /* Load original invoice to get number */
+        $invoice = $db->fetch("SELECT id, invoice_number, status, finalized_at FROM invoices WHERE id = ? LIMIT 1", [$invoiceId]);
+        if (!$invoice) {
+            $this->session->flash('error', 'Rechnung nicht gefunden.');
+            $this->redirect('/steuerexport');
+            return;
+        }
+
+        if (($invoice['status'] ?? '') === 'cancelled') {
+            $this->session->flash('error', 'Diese Rechnung ist bereits storniert.');
+            $this->redirect('/rechnungen/' . $invoiceId);
+            return;
+        }
+
+        $cancelId = $audit->cancel($invoiceId, $invoice['invoice_number'], $userId);
+
+        if ($cancelId) {
+            $this->session->flash('success', 'Rechnung ' . $invoice['invoice_number'] . ' wurde storniert. Stornorechnung #' . $cancelId . ' wurde angelegt.');
+        } else {
+            $this->session->flash('error', 'Stornierung fehlgeschlagen. Bitte prüfen Sie die Datenbankstruktur.');
+        }
+
+        $this->redirect('/rechnungen/' . $invoiceId);
+    }
+
+    /**
+     * POST /steuerexport/{id}/finalisieren — Rechnung GoBD-finalisieren (unveränderlich machen)
+     */
+    public function finalize(array $params = []): void
+    {
+        $this->validateCsrf();
+
+        $db        = Application::getInstance()->getContainer()->get(Database::class);
+        $audit     = new \Plugins\TaxExportPro\GobdAuditService($db);
+        $userId    = (int)$this->session->get('user_id');
+        $invoiceId = (int)($params['id'] ?? 0);
+
+        $invoice = $db->fetch("SELECT id, invoice_number, finalized_at FROM invoices WHERE id = ? LIMIT 1", [$invoiceId]);
+        if (!$invoice) {
+            $this->session->flash('error', 'Rechnung nicht gefunden.');
+            $this->redirect('/steuerexport');
+            return;
+        }
+
+        if (!empty($invoice['finalized_at'])) {
+            $this->session->flash('warning', 'Diese Rechnung ist bereits finalisiert.');
+            $this->redirect('/rechnungen/' . $invoiceId);
+            return;
+        }
+
+        $audit->finalize($invoiceId, $invoice['invoice_number'], $userId);
+        $this->session->flash('success', 'Rechnung ' . $invoice['invoice_number'] . ' wurde finalisiert und ist jetzt GoBD-unveränderlich.');
+        $this->redirect('/rechnungen/' . $invoiceId);
+    }
+
+    /**
+     * GET /steuerexport/audit-log — full audit log overview
+     */
+    public function auditLog(array $params = []): void
+    {
+        $db    = Application::getInstance()->getContainer()->get(Database::class);
+        $audit = new \Plugins\TaxExportPro\GobdAuditService($db);
+        $logs  = $audit->getRecentLog(100);
+
+        $this->render('@tax-export-pro/audit-log.twig', [
+            'page_title' => 'GoBD-Audit-Protokoll',
+            'logs'       => $logs,
+        ]);
+    }
+
+    /**
+     * GET /steuerexport/audit-log/{id} — audit log for a single invoice
+     */
+    public function auditLogInvoice(array $params = []): void
+    {
+        $db        = Application::getInstance()->getContainer()->get(Database::class);
+        $audit     = new \Plugins\TaxExportPro\GobdAuditService($db);
+        $invoiceId = (int)($params['id'] ?? 0);
+        $logs      = $audit->getLog($invoiceId);
+
+        $invoice = $db->fetch("SELECT id, invoice_number FROM invoices WHERE id = ? LIMIT 1", [$invoiceId]);
+
+        $this->render('@tax-export-pro/audit-log.twig', [
+            'page_title'     => 'Audit-Protokoll: ' . ($invoice['invoice_number'] ?? $invoiceId),
+            'logs'           => $logs,
+            'single_invoice' => $invoice ?: ['id' => $invoiceId, 'invoice_number' => '#' . $invoiceId],
+        ]);
+    }
+
+    /**
      * POST /steuerexport/settings — save plugin settings
      */
     public function saveSettings(array $params = []): void
@@ -175,6 +295,12 @@ class TaxExportController extends Controller
             'filename_schema',
             'company_tax_info',
             'consider_paid_at',
+            'datev_konto_erloese',
+            'datev_konto_kasse',
+            'datev_konto_forderungen',
+            'datev_berater_nummer',
+            'datev_mandanten_nummer',
+            'datev_wirtschaftsjahr',
         ];
 
         foreach ($allowed as $key) {

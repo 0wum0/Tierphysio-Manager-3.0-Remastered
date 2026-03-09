@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS `tax_export_settings` (
 
 CREATE TABLE IF NOT EXISTS `tax_export_logs` (
     `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    `export_type`   ENUM('csv','zip','pdf') NOT NULL DEFAULT 'csv',
+    `export_type`   ENUM('csv','zip','pdf','datev') NOT NULL DEFAULT 'csv',
     `date_from`     DATE         NOT NULL,
     `date_to`       DATE         NOT NULL,
     `status_filter` VARCHAR(30)  NOT NULL DEFAULT '',

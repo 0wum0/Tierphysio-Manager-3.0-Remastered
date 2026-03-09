@@ -16,6 +16,7 @@ class ServiceProvider
         require_once __DIR__ . '/TaxExportRepository.php';
         require_once __DIR__ . '/TaxExportService.php';
         require_once __DIR__ . '/TaxExportController.php';
+        require_once __DIR__ . '/GobdAuditService.php';
 
         $this->runMigrations();
 
@@ -37,15 +38,51 @@ class ServiceProvider
 
         /* invoiceTabs hook — adds a "Steuerexport" tab link to the invoice index */
         $pluginManager->hook('invoiceTabs', [$this, 'invoiceTab']);
+
+        /* GoBD: Audit-Log hooks — listen to invoice mutations fired from InvoiceController */
+        $pluginManager->hook('invoice.updated', function(array $payload): void {
+            try {
+                $db      = Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+                $audit   = new GobdAuditService($db);
+                $audit->log(
+                    (int)($payload['invoice_id']     ?? 0),
+                    (string)($payload['invoice_number'] ?? ''),
+                    'updated',
+                    $payload['old_values'] ?? null,
+                    $payload['new_values'] ?? null,
+                    (int)($payload['user_id'] ?? 0) ?: null
+                );
+            } catch (\Throwable) {}
+        });
+
+        $pluginManager->hook('invoice.deleted', function(array $payload): void {
+            try {
+                $db    = Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+                $audit = new GobdAuditService($db);
+                $audit->log(
+                    (int)($payload['invoice_id']     ?? 0),
+                    (string)($payload['invoice_number'] ?? ''),
+                    'deleted',
+                    $payload['old_values'] ?? null,
+                    null,
+                    (int)($payload['user_id'] ?? 0) ?: null
+                );
+            } catch (\Throwable) {}
+        });
     }
 
     public function registerRoutes(Router $router): void
     {
-        $router->get('/steuerexport',              [TaxExportController::class, 'index'],      ['admin']);
-        $router->get('/steuerexport/export-csv',   [TaxExportController::class, 'exportCsv'],  ['admin']);
-        $router->get('/steuerexport/export-zip',   [TaxExportController::class, 'exportZip'],  ['admin']);
-        $router->get('/steuerexport/export-pdf',   [TaxExportController::class, 'exportPdf'],  ['admin']);
-        $router->post('/steuerexport/settings',    [TaxExportController::class, 'saveSettings'], ['admin']);
+        $router->get('/steuerexport',                          [TaxExportController::class, 'index'],        ['admin']);
+        $router->get('/steuerexport/export-csv',               [TaxExportController::class, 'exportCsv'],    ['admin']);
+        $router->get('/steuerexport/export-zip',               [TaxExportController::class, 'exportZip'],    ['admin']);
+        $router->get('/steuerexport/export-pdf',               [TaxExportController::class, 'exportPdf'],    ['admin']);
+        $router->get('/steuerexport/export-datev',             [TaxExportController::class, 'exportDatev'],  ['admin']);
+        $router->post('/steuerexport/settings',                [TaxExportController::class, 'saveSettings'], ['admin']);
+        $router->post('/steuerexport/{id}/stornieren',         [TaxExportController::class, 'cancel'],       ['admin']);
+        $router->post('/steuerexport/{id}/finalisieren',       [TaxExportController::class, 'finalize'],     ['admin']);
+        $router->get('/steuerexport/audit-log',                [TaxExportController::class, 'auditLog'],     ['admin']);
+        $router->get('/steuerexport/audit-log/{id}',           [TaxExportController::class, 'auditLogInvoice'], ['admin']);
     }
 
     public function invoiceTab(): array

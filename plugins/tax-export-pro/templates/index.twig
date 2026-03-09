@@ -13,10 +13,28 @@
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M19 12H5M12 5l-7 7 7 7"/></svg>
             Rechnungen
         </a>
+        <a href="/steuerexport/audit-log" class="btn btn-secondary btn-sm">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" stroke-width="2"/></svg>
+            Audit-Protokoll
+        </a>
         <button class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-settings">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/><path stroke="currentColor" stroke-width="2" d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             Einstellungen
         </button>
+    </div>
+</div>
+
+{# ── GoBD Info Banner ── #}
+<div class="alert mb-3 d-flex align-items-start gap-2" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:0.85rem 1rem;">
+    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" class="flex-shrink-0 mt-1" style="color:#2563eb;"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <div>
+        <div class="fw-600 fs-sm" style="color:#1e40af;">GoBD-konforme Buchführungshilfe (BMF-Schreiben 28.11.2019 · § 147 AO)</div>
+        <p class="fs-nano text-muted mb-0">
+            Bezahlte &amp; finalisierte Rechnungen können <strong>nicht gelöscht oder geändert</strong> werden.
+            Jede Mutation wird im Audit-Protokoll unveränderlich erfasst.
+            ZIP-Export enthält DATEV-Buchungsstapel (EXTF v510) + SHA-256-Prüfsummen-Manifest.
+            <a href="/steuerexport/audit-log" class="ms-2">→ Audit-Protokoll öffnen</a>
+        </p>
     </div>
 </div>
 
@@ -176,8 +194,9 @@
                             <li>Alle Rechnungs-PDFs</li>
                             <li>einnahmen.csv</li>
                             <li>rechnungsjournal.csv</li>
+                            <li>datev_buchungsstapel.csv (EXTF v510)</li>
                             <li>steuerbericht.pdf</li>
-                            <li>README.txt</li>
+                            <li>MANIFEST.txt (SHA-256)</li>
                         </ul>
                         <a href="/steuerexport/export-zip?{{ query_string }}" class="btn btn-primary btn-sm">
                             <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -207,6 +226,31 @@
                         <a href="/steuerexport/export-csv?{{ query_string }}" class="btn btn-sm" style="background:#0ea5e9;color:#fff;">
                             <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                             Export als CSV
+                        </a>
+                    </div>
+                </div>
+
+                {# DATEV Export #}
+                <div class="col-md-4">
+                    <div class="d-flex flex-column gap-2 p-3 rounded" style="background:var(--bs-light,#f8fafc);border:1px solid var(--bs-border-color,#dee2e6);">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <div class="rounded d-flex align-items-center justify-content-center" style="width:36px;height:36px;background:#7c3aed;color:#fff;flex-shrink:0;">
+                                <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                            </div>
+                            <div>
+                                <div class="fw-600 fs-sm">DATEV-Export</div>
+                                <div class="fs-nano text-muted">Buchungsstapel EXTF v510</div>
+                            </div>
+                        </div>
+                        <ul class="mb-2 ps-3 fs-nano text-muted" style="line-height:1.8;">
+                            <li>DATEV Unternehmen Online</li>
+                            <li>Kanzlei-Rechnungswesen Import</li>
+                            <li>Konto / Gegenkonto / BU-Schlüssel</li>
+                            <li>§ 19 UStG Kleinunternehmer</li>
+                        </ul>
+                        <a href="/steuerexport/export-datev?{{ query_string }}" class="btn btn-sm" style="background:#7c3aed;color:#fff;">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            Export für DATEV
                         </a>
                     </div>
                 </div>
@@ -266,6 +310,7 @@
                         <th class="text-end">MwSt</th>
                         <th class="text-end">Brutto</th>
                         <th class="text-center" style="width:60px;">PDF</th>
+                        <th class="text-center" style="width:50px;">GoBD</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -299,12 +344,24 @@
                                 <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="1.5" points="14 2 14 8 20 8"/></svg>
                             </a>
                         </td>
+                        <td class="text-center">
+                            {% if inv.finalized_at is defined and inv.finalized_at %}
+                                <span class="badge bg-dark fs-nano" title="Finalisiert am {{ inv.finalized_at|date('d.m.Y') }}">🔒</span>
+                            {% elseif inv.status in ['paid', 'open', 'overdue'] %}
+                                <form method="POST" action="/steuerexport/{{ inv.id }}/finalisieren" style="display:inline;" onsubmit="return confirm('Rechnung {{ inv.invoice_number }} unwiderruflich finalisieren?');">
+                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                    <button type="submit" class="btn btn-xs btn-outline-dark" title="GoBD-finalisieren" style="font-size:.6rem;padding:1px 4px;">🔒</button>
+                                </form>
+                            {% else %}
+                                <span class="text-muted" style="font-size:.7rem;">—</span>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
                 <tfoot>
                     <tr class="fw-600" style="background:var(--bs-light,#f8fafc);">
-                        <td colspan="6" class="fs-sm text-muted">
+                        <td colspan="7" class="fs-sm text-muted">
                             Summen (Seite {{ preview_page }} — {{ invoices|length }} Einträge)
                         </td>
                         <td class="text-end fs-sm text-nowrap">
@@ -316,6 +373,7 @@
                         <td class="text-end fs-sm fw-700 text-nowrap">
                             {{ invoices|map(i => i.total_gross)|reduce((a, b) => a + b, 0)|number_format(2, ',', '.') }} €
                         </td>
+                        <td></td>
                         <td></td>
                     </tr>
                 </tfoot>
@@ -455,6 +513,45 @@
                                 Wenn aktiviert, wird für bezahlte Rechnungen das Zahlungsdatum statt des Rechnungsdatums für den Zeitraumfilter verwendet.
                                 (Vorbereitung — noch nicht aktiv.)
                             </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-3">
+                    <div class="fw-600 fs-sm mb-3">DATEV-Einstellungen</div>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-500">Erlöskonto</label>
+                            <input type="text" name="datev_konto_erloese" class="form-control form-control-sm"
+                                   value="{{ settings.datev_konto_erloese ?? '8400' }}" placeholder="8400">
+                            <div class="fs-nano text-muted mt-1">SKR 03: 8400 · SKR 04: 4400</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-500">Kassenkonto</label>
+                            <input type="text" name="datev_konto_kasse" class="form-control form-control-sm"
+                                   value="{{ settings.datev_konto_kasse ?? '1000' }}" placeholder="1000">
+                            <div class="fs-nano text-muted mt-1">SKR 03: 1000 · SKR 04: 1600</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-500">Forderungskonto</label>
+                            <input type="text" name="datev_konto_forderungen" class="form-control form-control-sm"
+                                   value="{{ settings.datev_konto_forderungen ?? '1400' }}" placeholder="1400">
+                            <div class="fs-nano text-muted mt-1">SKR 03: 1400 · SKR 04: 1200</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-500">Beraternummer</label>
+                            <input type="text" name="datev_berater_nummer" class="form-control form-control-sm"
+                                   value="{{ settings.datev_berater_nummer ?? '' }}" placeholder="z.B. 12345">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-500">Mandantennummer</label>
+                            <input type="text" name="datev_mandanten_nummer" class="form-control form-control-sm"
+                                   value="{{ settings.datev_mandanten_nummer ?? '' }}" placeholder="z.B. 67890">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-500">WJ-Beginn (MM)</label>
+                            <input type="text" name="datev_wirtschaftsjahr" class="form-control form-control-sm"
+                                   value="{{ settings.datev_wirtschaftsjahr ?? '01' }}" placeholder="01">
+                            <div class="fs-nano text-muted mt-1">Monat des Wirtschaftsjahresbeginns</div>
                         </div>
                     </div>
 

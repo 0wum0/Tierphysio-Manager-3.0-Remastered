@@ -227,6 +227,13 @@ class InvoiceController extends Controller
             $this->abort(404);
         }
 
+        /* GoBD: finalisierte Rechnungen sind unveränderlich */
+        if (!empty($invoice['finalized_at'])) {
+            $this->session->flash('error', 'Diese Rechnung ist finalisiert und kann nicht mehr bearbeitet werden (GoBD). Erstellen Sie stattdessen eine Stornorechnung.');
+            $this->redirect("/rechnungen/{$params['id']}");
+            return;
+        }
+
         $data = [
             'invoice_number' => $this->sanitize($this->post('invoice_number', '')),
             'patient_id'     => (int)$this->post('patient_id', 0) ?: null,
@@ -240,6 +247,19 @@ class InvoiceController extends Controller
 
         $positions = $this->parsePositions();
         $this->invoiceService->update((int)$params['id'], $data, $positions);
+
+        /* GoBD: Audit-Log via Plugin-Hook */
+        try {
+            $pluginManager = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\PluginManager::class);
+            $pluginManager->fireHook('invoice.updated', [
+                'invoice_id'     => (int)$params['id'],
+                'invoice_number' => $invoice['invoice_number'] ?? '',
+                'old_values'     => $invoice,
+                'new_values'     => $data,
+                'user_id'        => (int)$this->session->get('user_id'),
+            ]);
+        } catch (\Throwable) {}
+
         $this->session->flash('success', $this->translator->trans('invoices.updated'));
         $this->redirect("/rechnungen/{$params['id']}");
     }
@@ -252,6 +272,29 @@ class InvoiceController extends Controller
         if (!$invoice) {
             $this->abort(404);
         }
+
+        /* GoBD: finalisierte und bezahlte Rechnungen dürfen nicht gelöscht werden */
+        if (!empty($invoice['finalized_at'])) {
+            $this->session->flash('error', 'Finalisierte Rechnungen dürfen nicht gelöscht werden (GoBD §147 AO). Erstellen Sie stattdessen eine Stornorechnung.');
+            $this->redirect("/rechnungen/{$params['id']}");
+            return;
+        }
+        if (in_array($invoice['status'] ?? '', ['paid', 'cancelled'], true)) {
+            $this->session->flash('error', 'Bezahlte oder stornierte Rechnungen dürfen nicht gelöscht werden (GoBD). Nutzen Sie den Steuerexport für eine Stornorechnung.');
+            $this->redirect("/rechnungen/{$params['id']}");
+            return;
+        }
+
+        /* GoBD: Audit-Log vor dem Löschen */
+        try {
+            $pluginManager = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\PluginManager::class);
+            $pluginManager->fireHook('invoice.deleted', [
+                'invoice_id'     => (int)$params['id'],
+                'invoice_number' => $invoice['invoice_number'] ?? '',
+                'old_values'     => $invoice,
+                'user_id'        => (int)$this->session->get('user_id'),
+            ]);
+        } catch (\Throwable) {}
 
         $this->invoiceService->delete((int)$params['id']);
         $this->session->flash('success', $this->translator->trans('invoices.deleted'));
