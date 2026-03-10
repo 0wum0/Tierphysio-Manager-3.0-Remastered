@@ -30,10 +30,13 @@ class PatientRepository extends Repository
 
     public function findByOwner(int $ownerId): array
     {
-        return $this->db->fetchAll(
+        error_log("Repository: Finding patients for owner ID: " . $ownerId);
+        $patients = $this->db->fetchAll(
             "SELECT * FROM patients WHERE owner_id = ? ORDER BY name ASC",
             [$ownerId]
         );
+        error_log("Repository: Found " . count($patients) . " patients in database");
+        return $patients;
     }
 
     public function findWithOwner(int $id): array|false
