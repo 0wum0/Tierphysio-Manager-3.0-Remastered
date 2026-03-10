@@ -12,6 +12,7 @@ use App\Controllers\ProfileController;
 use App\Controllers\UiSettingsController;
 use App\Controllers\NotificationController;
 use App\Controllers\CronController;
+use App\Controllers\HomeworkController;
 
 /** @var \App\Core\Router $router */
 
@@ -96,6 +97,12 @@ $router->get('/api/behandlungsarten', [SettingsController::class, 'treatmentType
 
 $router->post('/api/ui-settings', [UiSettingsController::class, 'save'], ['auth']);
 $router->get('/api/ui-settings', [UiSettingsController::class, 'load'], ['auth']);
+
+// Hausaufgaben-Routes
+$router->get('/api/homework/templates', [HomeworkController::class, 'getTemplates'], ['auth']);
+$router->get('/api/patients/{patient_id}/homework', [HomeworkController::class, 'getPatientHomework'], ['auth']);
+$router->post('/api/patients/{patient_id}/homework', [HomeworkController::class, 'createPatientHomework'], ['auth']);
+$router->delete('/api/patients/{patient_id}/homework/{homework_id}', [HomeworkController::class, 'deletePatientHomework'], ['auth']);
 
 $router->get('/api/notifications', [NotificationController::class, 'index'], ['auth']);
 $router->get('/api/invoice-form-data', [InvoiceController::class, 'formData'], ['auth']);
