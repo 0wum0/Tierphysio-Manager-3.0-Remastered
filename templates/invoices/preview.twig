@@ -426,7 +426,7 @@
     {# Fällig #}
     {% if invoice.due_date %}
     <div class="sb-divider"></div>
-    <div class="sb-label">Fällig am</div>
+    <div class="sb-label">Fällig bis zum</div>
     <div class="sb-value" style="{{ invoice.status == 'overdue' ? 'color:#ffcccc;' : '' }}">{{ invoice.due_date|date_de }}</div>
     {% endif %}
 

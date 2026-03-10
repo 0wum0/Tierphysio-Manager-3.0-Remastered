@@ -133,7 +133,7 @@ return [
         'invoice_number'    => 'Rechnungsnummer',
         'status'            => 'Status',
         'issue_date'        => 'Rechnungsdatum',
-        'due_date'          => 'Fälligkeitsdatum',
+        'due_date'          => 'Fällig bis zum',
         'owner'             => 'Tierhalter',
         'patient'           => 'Patient',
         'positions'         => 'Positionen',
