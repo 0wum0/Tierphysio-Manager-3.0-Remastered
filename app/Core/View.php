@@ -133,6 +133,16 @@ class View
         $this->twig->addFilter(new TwigFilter('nl2br', function (string $value) {
             return nl2br(htmlspecialchars($value, ENT_QUOTES, 'UTF-8'));
         }, ['is_safe' => ['html']]));
+
+        // Plugin Hook Function
+        $this->twig->addFunction(new TwigFunction('hooks', function () {
+            return new class {
+                public function apply(string $hook, array $context = []) {
+                    $pluginManager = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\PluginManager::class);
+                    return $pluginManager->fireHook($hook, $context);
+                }
+            };
+        }));
     }
 
     public function addGlobal(string $name, mixed $value): void

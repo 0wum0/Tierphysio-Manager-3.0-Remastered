@@ -1,0 +1,10 @@
+{
+    "name": "Hausaufgaben System",
+    "slug": "homework",
+    "version": "1.0.0",
+    "description": "Hausaufgaben-Verwaltung für Tierphysiotherapeuten mit Besitzer-Portal Integration",
+    "author": "Tierphysio Manager",
+    "min_app_version": "3.0.0",
+    "service_provider": "Plugins\\Homework\\ServiceProvider",
+    "hooks": ["registerRoutes", "patientDetailTabs"]
+}
