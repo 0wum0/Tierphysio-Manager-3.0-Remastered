@@ -4,10 +4,10 @@ require_once 'vendor/autoload.php';
 // Bootstrap
 $db = require_once 'app/bootstrap.php';
 
-echo "=== Hausaufgaben-System Migration ===\n\n";
+echo "=== Hausaufgaben-System Migration (Version 012) ===\n\n";
 
 // Migration ausführen
-$sql = file_get_contents('migrations/006_homework_migration.sql');
+$sql = file_get_contents('migrations/012_homework_system.sql');
 $statements = array_filter(array_map('trim', explode(';', $sql)));
 
 foreach ($statements as $statement) {
@@ -23,7 +23,7 @@ foreach ($statements as $statement) {
 }
 
 echo "\n=== Migration abgeschlossen! ===\n";
-echo "\nDie Migration ist jetzt bereit für den Import über:\n";
+echo "\nDie Migration 012_homework_system.sql ist jetzt bereit für:\n";
 echo "Einstellungen → Updates → Migrationen ausführen\n";
 echo "\nDie folgenden Tabellen wurden erstellt:\n";
 echo "- homework_templates (Hausaufgaben-Vorlagen)\n";
