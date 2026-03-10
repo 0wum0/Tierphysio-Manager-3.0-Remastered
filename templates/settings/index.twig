@@ -1542,7 +1542,7 @@
 
             <div class="form-group mb-3">
                 <label class="form-label fw-semibold">Betreff</label>
-                <input type="text" name="birthday_mail_subject" class="form-control"
+                <input type="text" name="birthday_mail_subject" id="etpl-birthday-subject" class="form-control"
                        value="{{ settings.birthday_mail_subject ?? '🎂 Alles Gute zum Geburtstag, {{patient_name}}!' }}">
             </div>
 
@@ -1621,7 +1621,7 @@ tplTabs.forEach(function(b) {
 /* ── Live Preview ── */
 var companyName = {{ settings.company_name is defined ? ('"' ~ settings.company_name|e('js') ~ '"') : '"Tierphysio Praxis"' }};
 
-var previewIcons = { invoice:'📄', receipt:'✅', reminder:'📅', invite:'🐾' };
+var previewIcons = { invoice:'📄', receipt:'✅', reminder:'📅', invite:'🐾', birthday:'🎂' };
 
 function buildPreviewHtml(title, bodyText, icon) {
     var escaped = bodyText
@@ -1655,15 +1655,15 @@ function updateEmailPreview(tplName) {
     if (!frame) return;
     var subjectEl = document.getElementById('etpl-' + tplName + '-subject');
     var bodyEl    = document.getElementById('etpl-' + tplName + '-body');
-    if (!subjectEl || !bodyEl) return;
+    if (!subjectEl) return;
     var subject = subjectEl.value || '(Kein Betreff)';
-    var body    = bodyEl.value   || '';
+    var body    = bodyEl ? bodyEl.value : '(Das Template wird automatisch generiert.)';
     var icon    = previewIcons[tplName] || '📧';
     frame.srcdoc = buildPreviewHtml(subject, body, icon);
 }
 
 /* live update on keystroke */
-['invoice','receipt','reminder','invite'].forEach(function(tpl) {
+['invoice','receipt','reminder','invite','birthday'].forEach(function(tpl) {
     var s = document.getElementById('etpl-' + tpl + '-subject');
     var b = document.getElementById('etpl-' + tpl + '-body');
     if (s) s.addEventListener('input', function() { updateEmailPreview(tpl); });
