@@ -297,6 +297,7 @@
         <div class="panel-content p-0">
 
         {% if invoices %}
+            <div class="table-responsive">
             <table class="table table-hover table-striped table-bordered mb-0">
                 <thead>
                     <tr>
@@ -378,6 +379,7 @@
                     </tr>
                 </tfoot>
             </table>
+            </div>
 
             {# Pagination #}
             {% if total_pages > 1 %}

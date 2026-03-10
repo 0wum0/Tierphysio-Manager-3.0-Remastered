@@ -39,6 +39,7 @@
         <div class="panel-content p-0">
 
         {% if owners %}
+            <div class="table-responsive">
             <table class="table table-hover table-striped table-bordered mb-0">
                 <thead>
                     <tr>
@@ -117,6 +118,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
 
             {# Pagination #}
             {% if pagination.last_page > 1 %}
