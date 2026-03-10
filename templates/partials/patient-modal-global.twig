@@ -120,6 +120,19 @@
                         </div>
                         <button type="submit" class="btn btn-primary btn-sm pd-submit-btn">
                             <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            Speichern
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="pd-appointments-section" style="display:none;">
+                <div style="border-top:1px solid var(--glass-border);padding-top:1rem;"></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;">
+                    <div style="font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">Termine</div>
+                    <a href="/kalender" style="font-size:0.72rem;color:var(--accent,#4f7cff);text-decoration:none;">Alle im Kalender →</a>
+                </div>
+                <div id="pd-appointments-list" style="display:flex;flex-direction:column;gap:0.4rem;"></div>
             </div>
 
             <div style="border-top:1px solid var(--glass-border);margin-top:0.5rem;"></div>
@@ -1070,24 +1083,23 @@ if (pdEditBtn) {
         for (var i=0;i<gSel.options.length;i++) gSel.options[i].selected = gSel.options[i].value === (p.gender||'unbekannt');
         var sSel = document.getElementById('edit-status');
         for (var i=0;i<sSel.options.length;i++) sSel.options[i].selected = sSel.options[i].value === (p.status||'aktiv');
-        /* Owner dropdown */
+        /* Owner dropdown — always reload so pre-selection is reliable */
+        var currentOwnerId = parseInt(p.owner_id || (o && o.id) || 0);
         var oSel = document.getElementById('edit-owner');
-        if (oSel.options.length <= 1) {
-            fetch('/api/tierhalter/suche?q=')
-                .then(function(r){return r.json();})
-                .then(function(owners){
-                    oSel.innerHTML = '<option value="">— wählen —</option>';
-                    owners.forEach(function(owner){
-                        var opt = document.createElement('option');
-                        opt.value = owner.id;
-                        opt.textContent = owner.last_name + ', ' + owner.first_name;
-                        opt.selected = parseInt(owner.id) === parseInt(p.owner_id||(o&&o.id));
-                        oSel.appendChild(opt);
-                    });
+        oSel.innerHTML = '<option value="">— wird geladen… —</option>';
+        fetch('/api/tierhalter/suche?q=')
+            .then(function(r){ return r.json(); })
+            .then(function(owners){
+                oSel.innerHTML = '<option value="">— wählen —</option>';
+                owners.forEach(function(owner){
+                    var opt = document.createElement('option');
+                    opt.value = owner.id;
+                    opt.textContent = owner.last_name + ', ' + owner.first_name;
+                    if (parseInt(owner.id) === currentOwnerId) opt.selected = true;
+                    oSel.appendChild(opt);
                 });
-        } else {
-            for (var i=0;i<oSel.options.length;i++) oSel.options[i].selected = parseInt(oSel.options[i].value) === parseInt(p.owner_id||(o&&o.id));
-        }
+            })
+            .catch(function(){ oSel.innerHTML = '<option value="">— Fehler beim Laden —</option>'; });
         var prev = document.getElementById('edit-photo-preview');
         if (p.photo) {
             prev.innerHTML = '<img src="/patienten/'+p.id+'/foto/'+encodeURIComponent(p.photo)+'" style="width:100%;height:100%;object-fit:cover;">';

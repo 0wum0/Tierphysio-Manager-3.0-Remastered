@@ -1124,7 +1124,7 @@
         document.getElementById('gapt-start').value = fmtLocal(now);
         document.getElementById('gapt-end').value   = fmtLocal(end);
         document.getElementById('gapt-color').value = '#4f7cff';
-        new bootstrap.Modal(document.getElementById('modal-global-apt')).show();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-global-apt')).show();
         setTimeout(function(){ document.getElementById('gapt-title').focus(); }, 300);
     });
 
@@ -1151,7 +1151,7 @@
             var res  = await fetch('/api/kalender/events', { method:'POST', body:data });
             var json = await res.json();
             if (json.success) {
-                bootstrap.Modal.getInstance(document.getElementById('modal-global-apt')).hide();
+                bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-global-apt')).hide();
                 if (typeof window.showAppToast === 'function') {
                     window.showAppToast({ type:'success', title:'Termin erstellt', message: json.event?.title || 'Neuer Termin gespeichert' }, 4000);
                 }
@@ -1183,7 +1183,7 @@
         if (opts.owner_id) {
             setTimeout(function(){ document.getElementById('gapt-owner').value = opts.owner_id; }, 400);
         }
-        new bootstrap.Modal(document.getElementById('modal-global-apt')).show();
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-global-apt')).show();
         setTimeout(function(){ document.getElementById('gapt-title').focus(); }, 300);
     };
 })();

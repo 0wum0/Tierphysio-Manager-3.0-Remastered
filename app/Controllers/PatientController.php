@@ -116,17 +116,32 @@ class PatientController extends Controller
 
         $appointments = [];
         try {
+            $pid = (int)$params['id'];
             $stmt = $this->db->query(
                 'SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.color, a.all_day,
                         tt.name AS treatment_type_name
                  FROM appointments a
                  LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
-                 WHERE a.patient_id = ?
-                 ORDER BY a.start_at DESC
-                 LIMIT 10',
-                [(int)$params['id']]
+                 WHERE a.patient_id = ? AND a.start_at >= NOW()
+                   AND a.status NOT IN (\'cancelled\',\'noshow\')
+                 ORDER BY a.start_at ASC
+                 LIMIT 5',
+                [$pid]
             );
             $appointments = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            if (empty($appointments)) {
+                $stmt2 = $this->db->query(
+                    'SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.color, a.all_day,
+                            tt.name AS treatment_type_name
+                     FROM appointments a
+                     LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+                     WHERE a.patient_id = ?
+                     ORDER BY a.start_at DESC
+                     LIMIT 5',
+                    [$pid]
+                );
+                $appointments = $stmt2->fetchAll(\PDO::FETCH_ASSOC);
+            }
         } catch (\Throwable) {}
 
         header('Content-Type: application/json');
