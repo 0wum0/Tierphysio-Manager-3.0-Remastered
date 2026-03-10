@@ -1510,6 +1510,45 @@ window.openAddHomeworkModal = function() {
         console.log('Form data being sent:');
         for (var pair of formData.entries()) {
             console.log(pair[0] + ': ' + pair[1]);
+        }
+        
+        fetch('/api/patients/' + p.id + '/homework', {
+            method: 'POST',
+            body: formData
+        })
+        .then(function(response) { 
+            console.log('Response status:', response.status);
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json(); 
+        })
+        .then(function(data) {
+            console.log('Response data:', data);
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('modal-add-homework')).hide();
+                bootstrap.Modal.getInstance(document.getElementById('modal-patient-homework')).hide();
+                loadPatientHomework(p.id);
+                
+                // Erfolgsmeldung
+                var alert = document.createElement('div');
+                alert.className = 'alert alert-success alert-dismissible fade show';
+                alert.innerHTML = 'Hausaufgabe erfolgreich zugewiesen!<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+                document.querySelector('.modal-body').prepend(alert);
+                
+                setTimeout(function() { alert.remove(); }, 3000);
+            } else {
+                throw new Error(data.error || 'Fehler beim Speichern');
+            }
+        })
+        .catch(function(error) {
+            console.error('Fehler:', error);
+            alert('Fehler beim Speichern der Hausaufgabe: ' + error.message);
+        });
+    });
+    
+    // Modal nach dem Schließen entfernen
+    document.getElementById('modal-add-homework').addEventListener('hidden.bs.modal', function() {
+        this.remove();
+    });
 };
 
 function loadHomeworkTemplates() {
