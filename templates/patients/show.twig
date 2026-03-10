@@ -136,160 +136,421 @@
         <div class="glass-card">
             <h3 class="font-semibold mb-4" style="font-size:0.95rem;">Akte</h3>
             
-            <!-- Plugin Hook für patientDetailTabs -->
-            {% set tabs = [] %}
-            {% set tabs = hooks.apply('patientDetailTabs', {patient: patient, tabs: tabs})|default([]) %}
-            
-            <!-- Standard Tabs -->
-            {% set tabs = tabs|merge([{
-                'id': 'neuer-eintrag',
-                'title': 'Neuer Akteneintrag',
-                'icon': '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
-                'content': block('neuer_eintrag_content'),
-                'active': true
-            }]) %}
-            
-            {% set tabs = tabs|merge([{
-                'id': 'historie',
-                'title': 'Historie',
-                'icon': '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><path stroke="currentColor" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
-                'content': block('historie_content'),
-                'active': false
-            }]) %}
-            
             <!-- Tabs Navigation -->
             <ul class="nav nav-tabs" id="akteTabs" role="tablist" style="border-bottom:1px solid var(--glass-border);margin-bottom:1rem;">
-                {% for tab in tabs %}
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link {{ tab.active ? 'active' : '' }}" 
-                                id="{{ tab.id }}-tab" 
-                                data-bs-toggle="tab" 
-                                data-bs-target="#{{ tab.id }}" 
-                                type="button" 
-                                role="tab" 
-                                aria-controls="{{ tab.id }}" 
-                                aria-selected="{{ tab.active ? 'true' : 'false' }}">
-                            {{ tab.icon|raw }} {{ tab.title }}
-                        </button>
-                    </li>
-                {% endfor %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="neuer-eintrag-tab" data-bs-toggle="tab" data-bs-target="#neuer-eintrag" type="button" role="tab" aria-controls="neuer-eintrag" aria-selected="true">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        Neuer Akteneintrag
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="hausaufgaben-tab" data-bs-toggle="tab" data-bs-target="#hausaufgaben" type="button" role="tab" aria-controls="hausaufgaben" aria-selected="false">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><path stroke="currentColor" stroke-width="2" d="M9 11l3 3L22 4"/><path stroke="currentColor" stroke-width="2" d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                        Hausaufgaben
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="historie-tab" data-bs-toggle="tab" data-bs-target="#historie" type="button" role="tab" aria-controls="historie" aria-selected="false">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><path stroke="currentColor" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Historie
+                    </button>
+                </li>
             </ul>
             
             <!-- Tab Content -->
             <div class="tab-content" id="akteTabsContent">
-                {% for tab in tabs %}
-                    <div class="tab-pane fade {{ tab.active ? 'show active' : '' }}" 
-                         id="{{ tab.id }}" 
-                         role="tabpanel" 
-                         aria-labelledby="{{ tab.id }}-tab">
-                        {{ tab.content|raw }}
-                    </div>
-                {% endfor %}
-            </div>
-        </div>
-
-{% block neuer_eintrag_content %}
-<form action="/patienten/{{ patient.id }}/timeline" method="POST" enctype="multipart/form-data">
-    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-    <div class="form-grid form-grid-2" style="margin-bottom:0.75rem;">
-        <div class="form-group">
-            <label class="form-label">{{ t('patients.entry_type') }}</label>
-            <select name="type" class="form-control">
-                <option value="note">📝 Notiz</option>
-                <option value="treatment">💊 Behandlung</option>
-                <option value="photo">📷 Foto</option>
-                <option value="document">📄 Dokument</option>
-                <option value="other">📌 Sonstiges</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label class="form-label">{{ t('patients.entry_date') }}</label>
-            <input type="datetime-local" name="entry_date" class="form-control" value="{{ 'now'|date('Y-m-d\\TH:i') }}">
-        </div>
-    </div>
-    <div class="form-group mb-2">
-        <label class="form-label">{{ t('patients.entry_title') }}</label>
-        <input type="text" name="title" class="form-control" placeholder="{{ t('patients.entry_title_placeholder') }}">
-    </div>
-    <div class="form-group mb-3">
-        <label class="form-label">{{ t('patients.entry_content') }}</label>
-        <textarea name="content" class="form-control" rows="4" placeholder="{{ t('patients.entry_content_placeholder') }}"></textarea>
-    </div>
-    <div class="form-group mb-3">
-        <label class="form-label">{{ t('patients.attachment') }} ({{ t('common.optional') }})</label>
-        <input type="file" name="attachment" class="form-control" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx">
-    </div>
-    <button type="submit" class="btn btn-primary">
-        <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        {{ t('patients.add_entry') }}
-    </button>
-</form>
-{% endblock %}
-
-{% block historie_content %}
-{% if timeline %}
-    <div class="timeline">
-        {% for entry in timeline %}
-            <div class="timeline-item">
-                <div class="timeline-dot timeline-dot-{{ entry.type }}"></div>
-                <div class="timeline-card">
-                    <div class="timeline-meta">
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs" style="color:{% if entry.type == 'payment' %}#22c55e{% else %}var(--text-muted){% endif %};">
-                                {% if entry.type == 'note' %}📝
-                                {% elseif entry.type == 'treatment' %}💊
-                                {% elseif entry.type == 'photo' %}📷
-                                {% elseif entry.type == 'document' %}📄
-                                {% elseif entry.type == 'payment' %}
-                                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" style="vertical-align:middle;"><rect x="2" y="5" width="20" height="14" rx="2" stroke="#22c55e" stroke-width="2"/><path d="M2 10h20" stroke="#22c55e" stroke-width="2"/><path d="M6 15h4" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/></svg>
-                                {% else %}📌{% endif %}
-                            </span>
-                            {% if entry.status_badge %}
-                                <span class="badge" style="font-size:0.65rem;{% if entry.type == 'payment' %}background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid #22c55e;{% else %}background:var(--bs-primary-bg-subtle,rgba(79,124,255,0.15));color:var(--bs-primary);{% endif %}">{{ entry.status_badge }}</span>
-                            {% endif %}
-                            <span class="timeline-date" style="{% if entry.type == 'payment' %}color:#22c55e;font-weight:600;{% endif %}">{{ entry.entry_date|datetime_de }}</span>
+                <!-- Neuer Eintrag Tab -->
+                <div class="tab-pane fade show active" id="neuer-eintrag" role="tabpanel" aria-labelledby="neuer-eintrag-tab">
+                    <form action="/patienten/{{ patient.id }}/timeline" method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <div class="form-grid form-grid-2" style="margin-bottom:0.75rem;">
+                            <div class="form-group">
+                                <label class="form-label">{{ t('patients.entry_type') }}</label>
+                                <select name="type" class="form-control">
+                                    <option value="note">📝 Notiz</option>
+                                    <option value="treatment">💊 Behandlung</option>
+                                    <option value="photo">📷 Foto</option>
+                                    <option value="document">📄 Dokument</option>
+                                    <option value="other">📌 Sonstiges</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">{{ t('patients.entry_date') }}</label>
+                                <input type="datetime-local" name="entry_date" class="form-control" value="{{ 'now'|date('Y-m-d\\TH:i') }}">
+                            </div>
                         </div>
-                        <div class="flex items-center gap-2">
-                            {% if entry.can_edit %}
-                                <button class="btn btn-xs btn-outline-secondary timeline-edit-btn" data-entry-id="{{ entry.id }}">
-                                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                </button>
-                            {% endif %}
-                            {% if entry.can_delete %}
-                                <form method="POST" action="/patienten/{{ patient.id }}/timeline/{{ entry.id }}/loeschen" style="display:inline;" onsubmit="return confirm('{{ t('common.confirm_delete') }}');">
-                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-                                    <button type="submit" class="btn btn-xs btn-outline-danger">
-                                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                                    </button>
-                                </form>
-                            {% endif %}
+                        <div class="form-group mb-2">
+                            <label class="form-label">{{ t('patients.entry_title') }}</label>
+                            <input type="text" name="title" class="form-control" placeholder="{{ t('patients.entry_title_placeholder') }}">
+                        </div>
+                        <div class="form-group mb-3">
+                            <label class="form-label">{{ t('patients.entry_content') }}</label>
+                            <textarea name="content" class="form-control" rows="4" placeholder="{{ t('patients.entry_content_placeholder') }}"></textarea>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label class="form-label">{{ t('patients.attachment') }} ({{ t('common.optional') }})</label>
+                            <input type="file" name="attachment" class="form-control" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx">
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            {{ t('patients.add_entry') }}
+                        </button>
+                    </form>
+                </div>
+                
+                <!-- Hausaufgaben Tab -->
+                <div class="tab-pane fade" id="hausaufgaben" role="tabpanel" aria-labelledby="hausaufgaben-tab">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 style="font-size:0.9rem;color:var(--text-muted);margin:0;">Hausaufgaben für {{ patient.name }}</h5>
+                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-add-homework">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            Hausaufgabe hinzufügen
+                        </button>
+                    </div>
+                    
+                    <div id="homework-list">
+                        <div class="text-center py-4" style="color:var(--text-muted);">
+                            <div class="spinner-border spinner-border-sm me-2"></div>
+                            Lade Hausaufgaben...
                         </div>
                     </div>
-                    {% if entry.title %}
-                        <h5 class="timeline-title">{{ entry.title }}</h5>
-                    {% endif %}
-                    {% if entry.content %}
-                        <div class="timeline-content">{{ entry.content|nl2br }}</div>
-                    {% endif %}
-                    {% if entry.attachment %}
-                        <div class="timeline-attachment">
-                            <a href="/patienten/{{ patient.id }}/dokumente/{{ entry.attachment }}" class="btn btn-sm btn-outline-secondary" target="_blank">
-                                <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" points="7 10 12 15 17 10"/><line stroke="currentColor" stroke-width="2" x1="12" y1="15" x2="12" y2="3"/></svg>
-                                {{ entry.attachment }}
-                            </a>
+                </div>
+                
+                <!-- Historie Tab -->
+                <div class="tab-pane fade" id="historie" role="tabpanel" aria-labelledby="historie-tab">
+                    {% if timeline %}
+                        <div class="timeline">
+                            {% for entry in timeline %}
+                                <div class="timeline-item">
+                                    <div class="timeline-dot timeline-dot-{{ entry.type }}"></div>
+                                    <div class="timeline-card">
+                                        <div class="timeline-meta">
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-xs" style="color:{% if entry.type == 'payment' %}#22c55e{% else %}var(--text-muted){% endif %};">
+                                                    {% if entry.type == 'note' %}📝
+                                                    {% elseif entry.type == 'treatment' %}💊
+                                                    {% elseif entry.type == 'photo' %}📷
+                                                    {% elseif entry.type == 'document' %}📄
+                                                    {% elseif entry.type == 'payment' %}
+                                                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" style="vertical-align:middle;"><rect x="2" y="5" width="20" height="14" rx="2" stroke="#22c55e" stroke-width="2"/><path d="M2 10h20" stroke="#22c55e" stroke-width="2"/><path d="M6 15h4" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/></svg>
+                                                    {% else %}📌{% endif %}
+                                                </span>
+                                                {% if entry.status_badge %}
+                                                    <span class="badge" style="font-size:0.65rem;{% if entry.type == 'payment' %}background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid #22c55e;{% else %}background:var(--bs-primary-bg-subtle,rgba(79,124,255,0.15));color:var(--bs-primary);{% endif %}">{{ entry.status_badge }}</span>
+                                                {% endif %}
+                                                <span class="timeline-date" style="{% if entry.type == 'payment' %}color:#22c55e;font-weight:600;{% endif %}">{{ entry.entry_date|datetime_de }}</span>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                {% if entry.can_edit %}
+                                                    <button class="btn btn-xs btn-outline-secondary timeline-edit-btn" data-entry-id="{{ entry.id }}">
+                                                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                                    </button>
+                                                {% endif %}
+                                                {% if entry.can_delete %}
+                                                    <form method="POST" action="/patienten/{{ patient.id }}/timeline/{{ entry.id }}/loeschen" style="display:inline;" onsubmit="return confirm('{{ t('common.confirm_delete') }}');">
+                                                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                                        <button type="submit" class="btn btn-xs btn-outline-danger">
+                                                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                                                        </button>
+                                                    </form>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        {% if entry.title %}
+                                            <h5 class="timeline-title">{{ entry.title }}</h5>
+                                        {% endif %}
+                                        {% if entry.content %}
+                                            <div class="timeline-content">{{ entry.content|nl2br }}</div>
+                                        {% endif %}
+                                        {% if entry.attachment %}
+                                            <div class="timeline-attachment">
+                                                <a href="/patienten/{{ patient.id }}/dokumente/{{ entry.attachment }}" class="btn btn-sm btn-outline-secondary" target="_blank">
+                                                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" points="7 10 12 15 17 10"/><line stroke="currentColor" stroke-width="2" x1="12" y1="15" x2="12" y2="3"/></svg>
+                                                    {{ entry.attachment }}
+                                                </a>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state" style="text-align:center;padding:3rem 1rem;">
+                            <div class="empty-state-icon"><svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"/></svg></div>
+                            <div class="empty-state-title">Noch keine Einträge</div>
                         </div>
                     {% endif %}
                 </div>
             </div>
-        {% endfor %}
+        </div>
+
+{# Hausaufgaben Modal #}
+<div class="modal fade" id="modal-add-homework" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Hausaufgabe hinzufügen</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            </div>
+            <form id="homework-form" action="/api/patients/{{ patient.id }}/homework" method="POST">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <div class="modal-body">
+                    <div class="form-group mb-3">
+                        <label class="form-label">Hausaufgabe auswählen</label>
+                        <select name="homework_template_id" id="homework-template-select" class="form-control">
+                            <option value="">— Vordefinierte Hausaufgabe —</option>
+                            <option value="custom">— Eigene Hausaufgabe —</option>
+                        </select>
+                    </div>
+                    
+                    <div id="custom-homework" style="display:none;">
+                        <div class="form-group mb-3">
+                            <label class="form-label">Titel der Hausaufgabe</label>
+                            <input type="text" name="title" class="form-control" placeholder="z.B. tägliche Spaziergänge">
+                        </div>
+                        <div class="form-group mb-3">
+                            <label class="form-label">Beschreibung</label>
+                            <textarea name="description" class="form-control" rows="3" placeholder="Detaillierte Anweisungen für den Besitzer..."></textarea>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label class="form-label">Kategorie</label>
+                            <select name="category" class="form-control">
+                                <option value="bewegung">🏃 Bewegung</option>
+                                <option value="dehnung">🤸 Dehnung</option>
+                                <option value="massage">💆 Massage</option>
+                                <option value="kalt_warm">🌡️ Kalt/Warm-Anwendungen</option>
+                                <option value="medikamente">💊 Medikamente</option>
+                                <option value="fuetterung">🍽️ Fütterung</option>
+                                <option value="beobachtung">👁️ Beobachtung</option>
+                                <option value="sonstiges">📌 Sonstiges</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label class="form-label">Häufigkeit</label>
+                        <select name="frequency" class="form-control">
+                            <option value="daily">Täglich</option>
+                            <option value="twice_daily">2x täglich</option>
+                            <option value="three_times_daily">3x täglich</option>
+                            <option value="weekly">Wöchentlich</option>
+                            <option value="as_needed">Bei Bedarf</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label class="form-label">Dauer</label>
+                        <div class="input-group">
+                            <input type="number" name="duration_value" class="form-control" min="1" value="10">
+                            <select name="duration_unit" class="form-control">
+                                <option value="minutes">Minuten</option>
+                                <option value="hours">Stunden</option>
+                                <option value="days">Tage</option>
+                                <option value="weeks">Wochen</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label class="form-label">Startdatum</label>
+                        <input type="date" name="start_date" class="form-control" value="{{ "now"|date("Y-m-d") }}">
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label class="form-label">Enddatum (optional)</label>
+                        <input type="date" name="end_date" class="form-control" placeholder="Kein Ende">
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label class="form-label">Notizen für den Therapeuten</label>
+                        <textarea name="therapist_notes" class="form-control" rows="2" placeholder="Interne Notizen..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Hausaufgabe zuweisen</button>
+                </div>
+            </form>
+        </div>
     </div>
-{% else %}
-    <div class="empty-state" style="text-align:center;padding:3rem 1rem;">
-        <div class="empty-state-icon"><svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"/></svg></div>
-        <div class="empty-state-title">Noch keine Einträge</div>
-    </div>
-{% endif %}
-{% endblock %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let patientId = {{ patient.id }};
+    let homeworkTemplates = [];
+    
+    // Hausaufgaben-Templates laden
+    async function loadHomeworkTemplates() {
+        try {
+            const response = await fetch('/api/homework/templates');
+            homeworkTemplates = await response.json();
+            
+            const select = document.getElementById('homework-template-select');
+            if (select) {
+                select.innerHTML = '<option value="">— Vordefinierte Hausaufgabe —</option><option value="custom">— Eigene Hausaufgabe —</option>';
+                
+                homeworkTemplates.forEach(template => {
+                    const option = document.createElement('option');
+                    option.value = template.id;
+                    option.textContent = `${template.category_emoji} ${template.title}`;
+                    select.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Fehler beim Laden der Hausaufgaben-Templates:', error);
+        }
+    }
+    
+    // Hausaufgaben für Patienten laden
+    async function loadPatientHomework() {
+        try {
+            const response = await fetch(`/api/patients/${patientId}/homework`);
+            const homework = await response.json();
+            
+            const container = document.getElementById('homework-list');
+            if (container) {
+                if (homework.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-4" style="color:var(--text-muted);">
+                            <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="margin:0 auto 1rem;opacity:0.4;"><path stroke="currentColor" stroke-width="1.5" d="M9 11l3 3L22 4"/><path stroke="currentColor" stroke-width="1.5" d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                            <div style="font-size:0.9rem;margin-bottom:0.5rem;">Noch keine Hausaufgaben zugewiesen</div>
+                            <div style="font-size:0.8rem;opacity:0.7;">Klicke auf "Hausaufgabe hinzufügen" um zu beginnen</div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                container.innerHTML = homework.map(hw => `
+                    <div class="homework-item" data-id="${hw.id}" style="border:1px solid var(--glass-border);border-radius:8px;padding:1rem;margin-bottom:0.75rem;background:var(--glass-bg);">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 style="margin:0;font-size:0.9rem;font-weight:600;">
+                                    ${hw.category_emoji} ${hw.title}
+                                </h6>
+                                <div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.25rem;">
+                                    ${hw.frequency_display} • ${hw.duration_display}
+                                </div>
+                            </div>
+                            <div class="d-flex gap-1">
+                                <button class="btn btn-sm btn-outline-secondary" onclick="editHomework(${hw.id})" style="padding:0.25rem 0.5rem;font-size:0.75rem;">
+                                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteHomework(${hw.id})" style="padding:0.25rem 0.5rem;font-size:0.75rem;">
+                                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div style="font-size:0.85rem;line-height:1.4;color:var(--text-secondary);margin-bottom:0.5rem;">
+                            ${hw.description}
+                        </div>
+                        <div style="font-size:0.8rem;color:var(--text-muted);">
+                            <div>📅 ${hw.start_date} ${hw.end_date ? 'bis ' + hw.end_date : ''}</div>
+                            ${hw.therapist_notes ? '<div>📝 ' + hw.therapist_notes + '</div>' : ''}
+                        </div>
+                        ${hw.status === 'completed' ? '<div class="badge bg-success" style="font-size:0.7rem;margin-top:0.5rem;">✓ Erledigt</div>' : ''}
+                    </div>
+                `).join('');
+            }
+            
+        } catch (error) {
+            console.error('Fehler beim Laden der Hausaufgaben:', error);
+            const container = document.getElementById('homework-list');
+            if (container) {
+                container.innerHTML = `
+                    <div class="text-center py-4" style="color:var(--text-danger);">
+                        <div style="font-size:0.9rem;">Fehler beim Laden der Hausaufgaben</div>
+                    </div>
+                `;
+            }
+        }
+    }
+    
+    // Template-Auswahl-Handler
+    document.getElementById('homework-template-select')?.addEventListener('change', function() {
+        const customDiv = document.getElementById('custom-homework');
+        if (this.value === 'custom') {
+            customDiv.style.display = 'block';
+        } else if (this.value) {
+            const template = homeworkTemplates.find(t => t.id == this.value);
+            if (template) {
+                customDiv.style.display = 'none';
+            }
+        } else {
+            customDiv.style.display = 'none';
+        }
+    });
+    
+    // Hausaufgaben-Formular-Handler
+    document.getElementById('homework-form')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        
+        try {
+            const response = await fetch(`/api/patients/${patientId}/homework`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('modal-add-homework')).hide();
+                this.reset();
+                loadPatientHomework();
+                
+                // Erfolgsmeldung anzeigen
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-success alert-dismissible fade show';
+                alert.innerHTML = `
+                    Hausaufgabe erfolgreich zugewiesen!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.querySelector('.glass-card').prepend(alert);
+                
+                setTimeout(() => alert.remove(), 5000);
+            } else {
+                throw new Error('Fehler beim Speichern');
+            }
+        } catch (error) {
+            console.error('Fehler:', error);
+            alert('Fehler beim Speichern der Hausaufgabe');
+        }
+    });
+    
+    // Hausaufgabe löschen
+    window.deleteHomework = async function(id) {
+        if (!confirm('Hausaufgabe wirklich löschen?')) return;
+        
+        try {
+            const response = await fetch(`/api/patients/${patientId}/homework/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-Token': '{{ csrf_token }}'
+                }
+            });
+            
+            if (response.ok) {
+                loadPatientHomework();
+            } else {
+                throw new Error('Fehler beim Löschen');
+            }
+        } catch (error) {
+            console.error('Fehler:', error);
+            alert('Fehler beim Löschen der Hausaufgabe');
+        }
+    };
+    
+    // Initialisierung
+    loadHomeworkTemplates();
+    loadPatientHomework();
+    
+    // Tab-Wechsel-Handler
+    document.getElementById('hausaufgaben-tab')?.addEventListener('shown.bs.tab', function() {
+        loadPatientHomework();
+    });
+});
+</script>
 
 {# Edit Patient Modal #}
 <div class="modal fade" id="modal-edit-patient" tabindex="-1" aria-hidden="true">
