@@ -43,6 +43,14 @@
         <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="22,6 12,13 2,6"/></svg>
         E-Mail Templates
     </button>
+    <button class="settings-tab" data-tab="geburtstag">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="2"/></svg>
+        Geburtstag
+    </button>
+    <button class="settings-tab" data-tab="cronjob">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="12 6 12 12 16 14"/></svg>
+        Cron-Jobs
+    </button>
     <button class="settings-tab" data-tab="updates">
         <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="23 4 23 10 17 10"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="1 20 1 14 7 14"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         Updates
@@ -1155,6 +1163,189 @@
 </div>
 
 {# ═════════════════════════════════════════════════════
+   TAB: GEBURTSTAG
+════════════════════════════════════════════════════ #}
+<div class="settings-tab-content" id="tab-geburtstag">
+    <form action="/einstellungen" method="POST">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+        <div class="glass-card mb-4">
+            <h3 class="section-title mb-3">🎂 Geburtstagsmail</h3>
+
+            <div class="alert mb-4" style="background:rgba(124,46,248,0.12);border:1px solid rgba(180,100,255,0.3);border-radius:10px;padding:1rem 1.25rem;">
+                <div class="fw-600 mb-1" style="color:#c8a0ff;">Automatische Geburtstagsmail</div>
+                <p class="mb-0" style="font-size:0.85rem;color:rgba(255,255,255,0.7);line-height:1.6;">
+                    Wird täglich per Cron-Job aufgerufen und sendet automatisch eine Glückwunschmail an Tierhalter,
+                    deren Patient heute Geburtstag hat. Jedes Tier erhält pro Jahr nur eine Mail.
+                    Den Cron-Job richtest du im Tab <strong>Cron-Jobs</strong> ein.
+                </p>
+            </div>
+
+            <div class="form-group mb-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" name="birthday_mail_enabled" value="1" id="birthday-enabled"
+                           {{ (settings.birthday_mail_enabled ?? '0') == '1' ? 'checked' : '' }}>
+                    <label class="form-check-label fw-500" for="birthday-enabled">
+                        Geburtstagsmail aktivieren
+                    </label>
+                </div>
+                <div class="fs-nano text-muted ms-4 mt-1">Wenn deaktiviert, werden keine Geburtstagsmails versendet.</div>
+            </div>
+
+            <div class="form-group mb-3">
+                <label class="form-label fw-semibold">Betreff</label>
+                <input type="text" name="birthday_mail_subject" class="form-control"
+                       value="{{ settings.birthday_mail_subject ?? '🎂 Alles Gute zum Geburtstag, {{patient_name}}!' }}">
+                <div class="fs-nano text-muted mt-1">
+                    Platzhalter:
+                    <code style="background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:4px;padding:1px 6px;">{{patient_name}}</code>
+                    <code style="background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:4px;padding:1px 6px;">{{owner_name}}</code>
+                    <code style="background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:4px;padding:1px 6px;">{{age}}</code>
+                    <code style="background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:4px;padding:1px 6px;">{{company_name}}</code>
+                </div>
+            </div>
+
+            <div class="form-group mb-3">
+                <label class="form-label fw-semibold">Cron-Token <span class="text-muted fw-400">(Sicherheitstoken für den Cron-Aufruf)</span></label>
+                <div class="d-flex gap-2">
+                    <input type="text" name="birthday_cron_token" class="form-control font-monospace"
+                           value="{{ settings.birthday_cron_token ?? '' }}"
+                           placeholder="Sicheres zufälliges Token eingeben..."
+                           id="bday-token-input"
+                           oninput="updateBdayCronUrl()">
+                    <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;" onclick="
+                        var chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+                        var t=''; for(var i=0;i<40;i++) t+=chars[Math.floor(Math.random()*chars.length)];
+                        document.getElementById('bday-token-input').value=t;
+                        updateBdayCronUrl();
+                    ">🎲 Generieren</button>
+                </div>
+                <div class="fs-nano text-muted mt-1">Dieser Token schützt den Cron-Endpunkt vor unautorisierten Aufrufen.</div>
+            </div>
+
+            <div class="form-group mb-3" id="bday-cron-url-box" style="{{ (settings.birthday_cron_token ?? '') ? '' : 'display:none;' }}">
+                <label class="form-label fw-semibold">Cron-URL <span class="text-muted fw-400">(diese URL täglich aufrufen lassen)</span></label>
+                <div class="d-flex gap-2 align-items-center">
+                    <input type="text" id="bday-cron-url-display" class="form-control font-monospace" readonly
+                           value="{{ (app_url ?? ('https://' ~ (app_host ?? _SERVER.HTTP_HOST ?? 'ihre-domain.de'))) }}/cron/geburtstag?token={{ settings.birthday_cron_token ?? '' }}"
+                           style="font-size:0.78rem;">
+                    <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;"
+                            id="bday-copy-btn"
+                            onclick="var u=document.getElementById('bday-cron-url-display');navigator.clipboard&&navigator.clipboard.writeText(u.value);this.textContent='\u2713 Kopiert';var me=this;setTimeout(function(){me.textContent='\uD83D\uDCCB Kopieren';},1500);">
+                        📋 Kopieren
+                    </button>
+                </div>
+                <div class="fs-nano text-muted mt-1">Trage diese URL im Tab <strong>Cron-Jobs</strong> ein.</div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="17 21 17 13 7 13 7 21"/></svg>
+                Speichern
+            </button>
+        </div>
+    </form>
+</div>
+
+{# ═════════════════════════════════════════════════════
+   TAB: CRON-JOBS
+════════════════════════════════════════════════════ #}
+<div class="settings-tab-content" id="tab-cronjob">
+
+    <div class="glass-card mb-4">
+        <h3 class="section-title mb-3">⏱ Cron-Jobs — Hostinger cURL</h3>
+
+        <div class="alert mb-4" style="background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.3);border-radius:10px;padding:1rem 1.25rem;">
+            <div class="fw-600 mb-1" style="color:#38bdf8;">Hostinger Cron-Job Service (cURL)</div>
+            <p class="mb-0 fs-sm" style="color:rgba(255,255,255,0.75);line-height:1.6;">
+                Hostinger bietet unter <strong>hPanel → Erweitert → Cron-Jobs</strong> einen integrierten Cron-Job-Dienst an.
+                Trage dort den cURL-Befehl oder die URL ein — kein externes Tool notwendig.
+            </p>
+        </div>
+
+        {# ── Geburtstagsmail Cron ── #}
+        <div class="mb-4 p-3 rounded" style="background:rgba(124,46,248,0.08);border:1px solid rgba(180,100,255,0.2);">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span style="font-size:1.3rem;">🎂</span>
+                <div class="fw-600">Geburtstagsmail — täglich 08:00 Uhr</div>
+            </div>
+            {% if settings.birthday_cron_token ?? '' %}
+            <div class="mb-2">
+                <label class="form-label fs-nano fw-600 text-muted mb-1">Hostinger URL (GET-Aufruf):</label>
+                <div class="d-flex gap-2 align-items-center">
+                    <input type="text" class="form-control font-monospace" readonly
+                           id="hst-bday-url"
+                           value="{{ (app_url ?? ('https://' ~ (app_host ?? _SERVER.HTTP_HOST ?? 'ihre-domain.de'))) }}/cron/geburtstag?token={{ settings.birthday_cron_token }}"
+                           style="font-size:0.77rem;">
+                    <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;"
+                            onclick="var u=document.getElementById('hst-bday-url');navigator.clipboard&&navigator.clipboard.writeText(u.value);this.textContent='\u2713';setTimeout(function(){this.textContent='\uD83D\uDCCB';}.bind(this),1500);">📋</button>
+                </div>
+            </div>
+            <div class="mb-2">
+                <label class="form-label fs-nano fw-600 text-muted mb-1">Oder als cURL-Befehl:</label>
+                <div class="d-flex gap-2 align-items-center">
+                    <input type="text" class="form-control font-monospace" readonly
+                           id="hst-bday-curl"
+                           value="curl -s &quot;{{ (app_url ?? ('https://' ~ (app_host ?? _SERVER.HTTP_HOST ?? 'ihre-domain.de'))) }}/cron/geburtstag?token={{ settings.birthday_cron_token }}&quot;"
+                           style="font-size:0.77rem;">
+                    <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;"
+                            onclick="var u=document.getElementById('hst-bday-curl');navigator.clipboard&&navigator.clipboard.writeText(u.value);this.textContent='\u2713';setTimeout(function(){this.textContent='\uD83D\uDCCB';}.bind(this),1500);">📋</button>
+                </div>
+            </div>
+            <div class="fs-nano text-muted">Zeitplan in Hostinger: <code>0 8 * * *</code> (täglich 08:00 Uhr)</div>
+            {% else %}
+            <div class="alert mb-0" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:0.75rem 1rem;">
+                <span class="fs-sm">⚠️ Kein Cron-Token gesetzt. Bitte zuerst im Tab <strong>Geburtstag</strong> einen Token generieren und speichern.</span>
+            </div>
+            {% endif %}
+        </div>
+
+        {# ── Kalender-Erinnerungen Cron ── #}
+        <div class="mb-4 p-3 rounded" style="background:rgba(14,165,233,0.08);border:1px solid rgba(14,165,233,0.2);">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span style="font-size:1.3rem;">📅</span>
+                <div class="fw-600">Kalender-Erinnerungen — alle 15 Minuten</div>
+            </div>
+            {% if settings.calendar_cron_secret ?? '' %}
+            <div class="mb-2">
+                <label class="form-label fs-nano fw-600 text-muted mb-1">cURL-Befehl:</label>
+                <div class="d-flex gap-2 align-items-center">
+                    <input type="text" class="form-control font-monospace" readonly
+                           id="hst-cal-curl"
+                           value="curl -s &quot;{{ (app_url ?? ('https://' ~ (app_host ?? _SERVER.HTTP_HOST ?? 'ihre-domain.de'))) }}/kalender/cron/erinnerungen?token={{ settings.calendar_cron_secret }}&quot;"
+                           style="font-size:0.77rem;">
+                    <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;"
+                            onclick="var u=document.getElementById('hst-cal-curl');navigator.clipboard&&navigator.clipboard.writeText(u.value);this.textContent='\u2713';setTimeout(function(){this.textContent='\uD83D\uDCCB';}.bind(this),1500);">📋</button>
+                </div>
+            </div>
+            <div class="fs-nano text-muted">Zeitplan in Hostinger: <code>*/15 * * * *</code> (alle 15 Minuten)</div>
+            {% else %}
+            <div class="alert mb-0" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:0.75rem 1rem;">
+                <span class="fs-sm">⚠️ Kein Kalender-Cron-Secret gesetzt. Bitte im Tab <strong>Plugins → Kalender</strong> ein Secret generieren.</span>
+            </div>
+            {% endif %}
+        </div>
+
+        {# ── Anleitung Hostinger ── #}
+        <div class="glass-card" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);">
+            <h4 class="fw-600 mb-3" style="font-size:0.9rem;">📖 Schritt-für-Schritt: Hostinger Cron-Job einrichten</h4>
+            <ol class="mb-0 ps-3 fs-sm" style="line-height:2.2;color:rgba(255,255,255,0.8);">
+                <li>Im <strong>Hostinger hPanel</strong> anmelden</li>
+                <li>Zu <strong>Erweitert → Cron-Jobs</strong> navigieren</li>
+                <li>Auf <strong>„Neuer Cron-Job"</strong> klicken</li>
+                <li>Beim Feld <strong>Befehl</strong>: den cURL-Befehl von oben einfügen</li>
+                <li>Beim Feld <strong>Zeitplan</strong>: für Geburtstag <code>0 8 * * *</code>, für Kalender <code>*/15 * * * *</code></li>
+                <li>Auf <strong>„Erstellen"</strong> klicken — fertig!</li>
+            </ol>
+            <div class="mt-3 fs-nano text-muted">
+                💡 Alternativ kannst du unter <strong>Hostinger → Cron-Jobs</strong> auch nur die URL (ohne <code>curl -s</code>) eintragen,
+                falls Hostinger einen URL-basierten Cron anbietet.
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{# ═════════════════════════════════════════════════════
    TAB: UPDATES
 ════════════════════════════════════════════════════ #}
 <div class="settings-tab-content" id="tab-updates">
@@ -1731,6 +1922,18 @@ if (document.readyState === 'loading') {
 </script>
 
 <script>
+function updateBdayCronUrl() {
+    var token = (document.getElementById('bday-token-input') || {}).value || '';
+    var box   = document.getElementById('bday-cron-url-box');
+    var disp  = document.getElementById('bday-cron-url-display');
+    if (!box || !disp) return;
+    if (token) {
+        disp.value = location.protocol + '//' + location.host + '/cron/geburtstag?token=' + token;
+        box.style.display = '';
+    } else {
+        box.style.display = 'none';
+    }
+}
 function updateBirthdayCronUrl() {
     var token = (document.getElementById('birthday-token-input') || {}).value || '';
     var box   = document.getElementById('birthday-cron-url-box');
