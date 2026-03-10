@@ -434,8 +434,6 @@
             const response = await fetch(`/api/kalender/patients-by-owner?owner_id=${ownerId}`);
             const patients = await response.json();
             
-            console.log('Patients for owner', ownerId, ':', patients);
-            
             patientSelect.innerHTML = '<option value="">— kein Patient —</option>';
             patients.forEach(p => {
                 const opt = document.createElement('option');
@@ -444,17 +442,13 @@
                 patientSelect.appendChild(opt);
             });
             
-            console.log('Patient dropdown now has:', patientSelect.options.length, 'options');
-            
             // Auto-select first patient if none was selected before
             if (!currentPatientId && patients.length > 0) {
                 patientSelect.value = patients[0].id;
-                console.log('Auto-selected first patient:', patients[0].id);
             } else if (currentPatientId) {
                 // Try to restore previous selection if it's still in the list
                 const exists = Array.from(patientSelect.options).some(opt => opt.value === currentPatientId);
                 if (exists) patientSelect.value = currentPatientId;
-                console.log('Restored patient selection:', currentPatientId);
             }
             updateAutoTitle();
         } catch (error) {

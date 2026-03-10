@@ -136,18 +136,13 @@ class CalendarController extends Controller
     {
         $ownerId = (int)($params['owner_id'] ?? 0);
         
-        // Debug logging
-        error_log("API: Looking for patients for owner ID: " . $ownerId);
-        
         if ($ownerId === 0) {
             header('Content-Type: application/json');
             echo json_encode([]);
             exit;
         }
 
-        $patients = $this->patientRepository->findByOwner($ownerId);
-        error_log("API: Found " . count($patients) . " patients for owner " . $ownerId);
-        
+        $patients = $this->ownerRepository->findPatients($ownerId);
         $patients = array_map(fn($p) => [
             'id'      => $p['id'],
             'name'    => $p['name'],
