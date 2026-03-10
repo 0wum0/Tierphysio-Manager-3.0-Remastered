@@ -1,0 +1,59 @@
+{% extends '@owner-portal/portal_layout.twig' %}
+{% set active_nav = 'tiere' %}
+{% block content %}
+
+<div style="margin-bottom:1rem;">
+    <a href="/portal/tiere/{{ pet.id }}" style="color:rgba(255,255,255,0.45);font-size:0.82rem;text-decoration:none;">← {{ pet.name }}</a>
+</div>
+
+<h1 class="portal-page-title">💪 Heimübungen — {{ pet.name }}</h1>
+
+{% if exercises %}
+    {% for ex in exercises %}
+    <div class="portal-card exercise-card" style="margin-bottom:1rem;">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+            <div style="flex:1;min-width:0;">
+                <div class="exercise-title" style="font-size:1rem;">{{ ex.title }}</div>
+                {% if ex.description %}
+                    <div class="exercise-desc" style="margin-top:0.4rem;">{{ ex.description }}</div>
+                {% endif %}
+            </div>
+            {% if ex.image %}
+            <div style="flex-shrink:0;">
+                <img src="/storage/uploads/exercises/{{ ex.image }}" alt="{{ ex.title }}"
+                     style="width:100px;height:80px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,0.08);">
+            </div>
+            {% endif %}
+        </div>
+
+        {% if ex.video_url %}
+        <div class="exercise-video" style="margin-top:0.75rem;">
+            {% set vid = ex.video_url %}
+            {% if 'youtube.com' in vid or 'youtu.be' in vid %}
+                {# Convert YouTube URL to embed #}
+                {% set ytid = vid|replace({'https://www.youtube.com/watch?v=': '', 'https://youtu.be/': '', 'https://youtube.com/watch?v=': ''}) %}
+                {% set ytid = ytid|split('&')|first %}
+                <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:8px;">
+                    <iframe src="https://www.youtube.com/embed/{{ ytid }}"
+                            style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;border-radius:8px;"
+                            allowfullscreen loading="lazy"></iframe>
+                </div>
+            {% else %}
+                <a href="{{ vid }}" target="_blank" rel="noopener"
+                   class="portal-btn portal-btn-secondary portal-btn-sm">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><polygon stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="5 3 19 12 5 21 5 3"/></svg>
+                    Video ansehen
+                </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="portal-card" style="text-align:center;padding:3rem;">
+        <div style="font-size:2.5rem;margin-bottom:0.75rem;opacity:.3;">💪</div>
+        <p style="color:rgba(255,255,255,0.4);">Noch keine Übungen hinterlegt.</p>
+    </div>
+{% endif %}
+
+{% endblock %}

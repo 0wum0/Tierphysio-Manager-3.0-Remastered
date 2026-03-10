@@ -1,0 +1,137 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Plugins\OwnerPortal;
+
+use App\Core\PluginManager;
+use App\Core\Router;
+use App\Core\View;
+use App\Core\Application;
+
+class ServiceProvider
+{
+    public function register(PluginManager $pluginManager): void
+    {
+        require_once __DIR__ . '/OwnerPortalRepository.php';
+        require_once __DIR__ . '/OwnerPortalMailService.php';
+        require_once __DIR__ . '/OwnerAuthController.php';
+        require_once __DIR__ . '/OwnerPortalController.php';
+        require_once __DIR__ . '/OwnerPortalAdminController.php';
+
+        $this->runMigrations();
+
+        $view = Application::getInstance()->getContainer()->get(View::class);
+        $view->addTemplatePath(__DIR__ . '/templates', 'owner-portal');
+
+        $pluginManager->hook('registerRoutes', [$this, 'registerRoutes']);
+        $pluginManager->hook('dashboardWidgets', [$this, 'dashboardWidget']);
+
+        /* Admin nav item */
+        $navItems   = $view->getTwig()->getGlobals()['plugin_nav_items'] ?? [];
+        $navItems[] = [
+            'label' => 'Besitzerportal',
+            'href'  => '/portal-admin',
+            'icon'  => '<svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="9 22 9 12 15 12 15 22"/></svg>',
+        ];
+        $view->addGlobal('plugin_nav_items', $navItems);
+
+        $pluginManager->hook('navItems', [$this, 'navItem']);
+    }
+
+    public function registerRoutes(Router $router): void
+    {
+        /* ── Public portal routes (no admin auth) ── */
+        $router->get('/portal/login',                    [OwnerAuthController::class,        'showLogin'],      []);
+        $router->post('/portal/login',                   [OwnerAuthController::class,        'login'],          []);
+        $router->get('/portal/logout',                   [OwnerAuthController::class,        'logout'],         []);
+        $router->get('/portal/einladung/{token}',        [OwnerAuthController::class,        'showSetPassword'],[]);
+        $router->post('/portal/einladung/{token}',       [OwnerAuthController::class,        'setPassword'],    []);
+
+        /* ── Portal pages (owner session handled in controller) ── */
+        $router->get('/portal/dashboard',                [OwnerPortalController::class,      'dashboard'],      []);
+        $router->get('/portal/tiere',                    [OwnerPortalController::class,      'petList'],        []);
+        $router->get('/portal/tiere/{id}',               [OwnerPortalController::class,      'petDetail'],      []);
+        $router->get('/portal/tiere/{id}/uebungen',      [OwnerPortalController::class,      'exercises'],      []);
+        $router->get('/portal/rechnungen',               [OwnerPortalController::class,      'invoices'],       []);
+        $router->get('/portal/rechnungen/{id}/pdf',      [OwnerPortalController::class,      'invoicePdf'],     []);
+        $router->get('/portal/termine',                  [OwnerPortalController::class,      'appointments'],   []);
+
+        /* ── Admin portal management (requires staff auth) ── */
+        $router->get('/portal-admin',                            [OwnerPortalAdminController::class, 'index'],          ['auth']);
+        $router->get('/portal-admin/einladen',                   [OwnerPortalAdminController::class, 'showInvite'],     ['auth']);
+        $router->post('/portal-admin/einladen',                  [OwnerPortalAdminController::class, 'sendInvite'],     ['auth']);
+        $router->post('/portal-admin/{id}/deaktivieren',         [OwnerPortalAdminController::class, 'deactivate'],     ['auth']);
+        $router->post('/portal-admin/{id}/aktivieren',           [OwnerPortalAdminController::class, 'activate'],       ['auth']);
+        $router->post('/portal-admin/{id}/neu-einladen',         [OwnerPortalAdminController::class, 'resendInvite'],   ['auth']);
+        $router->get('/portal-admin/tiere/{patient_id}/uebungen',[OwnerPortalAdminController::class, 'exerciseIndex'],  ['auth']);
+        $router->post('/portal-admin/tiere/{patient_id}/uebungen',[OwnerPortalAdminController::class,'exerciseStore'],  ['auth']);
+        $router->post('/portal-admin/uebungen/{id}/loeschen',    [OwnerPortalAdminController::class, 'exerciseDelete'], ['auth']);
+        $router->post('/portal-admin/uebungen/{id}/bearbeiten',  [OwnerPortalAdminController::class, 'exerciseUpdate'], ['auth']);
+    }
+
+    public function dashboardWidget(array $context): array
+    {
+        try {
+            $db   = Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $repo = new OwnerPortalRepository($db);
+            $users = $repo->getAllPortalUsers();
+            $active   = count(array_filter($users, fn($u) => $u['is_active'] && $u['password_hash']));
+            $pending  = count(array_filter($users, fn($u) => !$u['invite_used_at'] && $u['invite_token']));
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $html  = '<div class="d-flex gap-3 mb-3">';
+        $html .= '<div class="text-center flex-fill"><div class="fs-3 fw-800" style="color:var(--bs-primary)">' . $active . '</div><div class="fs-nano text-muted">Aktiv</div></div>';
+        $html .= '<div class="text-center flex-fill"><div class="fs-3 fw-800" style="color:#f59e0b">' . $pending . '</div><div class="fs-nano text-muted">Eingeladen</div></div>';
+        $html .= '</div>';
+        $html .= '<a href="/portal-admin" class="btn btn-sm btn-outline-primary w-100">Verwaltung öffnen →</a>';
+
+        return [
+            'id'      => 'panel-widget-owner-portal',
+            'title'   => 'Besitzerportal',
+            'icon'    => '<svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
+            'content' => $html,
+            'col'     => 'col-xl-4 col-lg-5 col-12',
+        ];
+    }
+
+    public function navItem(array $context): array
+    {
+        return [
+            'label' => 'Besitzerportal',
+            'href'  => '/portal-admin',
+            'icon'  => '<svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
+        ];
+    }
+
+    private function runMigrations(): void
+    {
+        try {
+            $db           = Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $migrationDir = __DIR__ . '/migrations';
+            if (!is_dir($migrationDir)) return;
+
+            $files = glob($migrationDir . '/*.sql');
+            if (!$files) return;
+            sort($files);
+
+            foreach ($files as $file) {
+                $sql        = file_get_contents($file);
+                $statements = array_filter(array_map('trim', explode(';', $sql)));
+                foreach ($statements as $stmt) {
+                    if (!empty($stmt)) {
+                        try {
+                            $db->execute($stmt);
+                        } catch (\Throwable) {
+                            /* Table already exists — skip */
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable) {
+            /* DB not available yet */
+        }
+    }
+}

@@ -1,0 +1,10 @@
+{
+    "name": "Besitzerportal",
+    "slug": "owner-portal",
+    "version": "1.0.0",
+    "description": "Kundenportal für Tierhalter: Login, Tierübersicht, Rechnungen, Termine, Übungen und Dokumente.",
+    "author": "Tierphysio Manager",
+    "min_app_version": "3.0.0",
+    "service_provider": "Plugins\\OwnerPortal\\ServiceProvider",
+    "hooks": ["registerRoutes", "dashboardWidgets", "navItems"]
+}

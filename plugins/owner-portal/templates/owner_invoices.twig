@@ -1,0 +1,60 @@
+{% extends '@owner-portal/portal_layout.twig' %}
+{% set active_nav = 'rechnungen' %}
+{% block content %}
+
+<h1 class="portal-page-title">🧾 Meine Rechnungen</h1>
+
+{% if invoices %}
+<div class="portal-card" style="padding:0;overflow:hidden;">
+    <div class="table-responsive">
+    <table class="portal-table">
+        <thead>
+            <tr>
+                <th>Nr.</th>
+                <th>Datum</th>
+                <th>Tier</th>
+                <th>Betrag</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for inv in invoices %}
+            <tr>
+                <td data-label="Nr.">{{ inv.invoice_number }}</td>
+                <td data-label="Datum">{{ inv.issue_date|date('d.m.Y') }}</td>
+                <td data-label="Tier">{{ inv.patient_name ?? '—' }}</td>
+                <td data-label="Betrag" style="font-weight:600;white-space:nowrap;">{{ inv.total_gross|number_format(2,',','.') }} €</td>
+                <td data-label="Status">
+                    {% if inv.status == 'paid' %}
+                        <span class="badge-status badge-paid">Bezahlt</span>
+                    {% elseif inv.status == 'overdue' %}
+                        <span class="badge-status badge-overdue">Überfällig</span>
+                    {% elseif inv.status == 'open' %}
+                        <span class="badge-status badge-open">Offen</span>
+                    {% else %}
+                        <span class="badge-status badge-draft">{{ inv.status }}</span>
+                    {% endif %}
+                </td>
+                <td data-label="PDF">
+                    <a href="/portal/rechnungen/{{ inv.id }}/pdf"
+                       class="portal-btn portal-btn-secondary portal-btn-sm"
+                       target="_blank">
+                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>
+                        PDF
+                    </a>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    </div>
+</div>
+{% else %}
+<div class="portal-card" style="text-align:center;padding:3rem;">
+    <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="opacity:.2;margin-bottom:1rem;"><path stroke="currentColor" stroke-width="1.5" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="1.5" points="14 2 14 8 20 8"/></svg>
+    <p style="color:rgba(255,255,255,0.4);">Keine Rechnungen vorhanden.</p>
+</div>
+{% endif %}
+
+{% endblock %}

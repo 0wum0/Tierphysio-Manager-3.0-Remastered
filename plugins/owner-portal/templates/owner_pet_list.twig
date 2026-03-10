@@ -1,0 +1,52 @@
+{% extends '@owner-portal/portal_layout.twig' %}
+{% set active_nav = 'tiere' %}
+{% block content %}
+
+<h1 class="portal-page-title">🐾 Meine Tiere</h1>
+
+{% if pets %}
+    <div class="pet-grid">
+    {% for pet in pets %}
+        <a href="/portal/tiere/{{ pet.id }}" class="pet-card">
+            <div class="pet-card-img">
+                {% if pet.photo %}
+                    <img src="/storage/uploads/{{ pet.photo }}" alt="{{ pet.name }}" style="width:100%;height:140px;object-fit:cover;">
+                {% else %}
+                    <div style="width:100%;height:140px;display:flex;align-items:center;justify-content:center;background:rgba(79,124,255,0.07);">
+                        <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="opacity:.25;"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.5"/><path stroke="currentColor" stroke-width="1.5" d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="pet-card-body">
+                <div class="pet-card-name">{{ pet.name }}</div>
+                <div class="pet-card-meta">
+                    {% if pet.species %}{{ pet.species }}{% endif %}
+                    {% if pet.breed %} · {{ pet.breed }}{% endif %}
+                </div>
+                {% if pet.birth_date %}
+                    <div class="pet-card-meta" style="margin-top:0.2rem;">
+                        geb. {{ pet.birth_date|date('d.m.Y') }}
+                    </div>
+                {% endif %}
+                {% if pet.last_treatment %}
+                    <div class="pet-card-meta" style="margin-top:0.3rem;color:rgba(79,124,255,0.8);">
+                        Letzte Behandlung: {{ pet.last_treatment|date('d.m.Y') }}
+                    </div>
+                {% endif %}
+                <div style="margin-top:0.6rem;">
+                    <span class="badge-status {% if pet.status == 'aktiv' %}badge-paid{% elseif pet.status == 'verstorben' %}badge-draft{% else %}badge-open{% endif %}">
+                        {{ pet.status }}
+                    </span>
+                </div>
+            </div>
+        </a>
+    {% endfor %}
+    </div>
+{% else %}
+    <div class="portal-card" style="text-align:center;padding:3rem;">
+        <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="opacity:.2;margin-bottom:1rem;"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.5"/><path stroke="currentColor" stroke-width="1.5" d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        <p style="color:rgba(255,255,255,0.4);">Keine Tiere vorhanden.</p>
+    </div>
+{% endif %}
+
+{% endblock %}

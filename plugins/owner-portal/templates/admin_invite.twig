@@ -1,0 +1,84 @@
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+{% block content %}
+
+<div id="content">
+<div class="subheader">
+    <h1 class="subheader-title">
+        <i class="subheader-icon fal fa-envelope"></i> Besitzer einladen
+        <small>Einladungslink per E-Mail senden</small>
+    </h1>
+    <div class="subheader-action">
+        <a href="/portal-admin" class="btn btn-outline-secondary btn-sm">
+            <i class="fal fa-arrow-left mr-1"></i> Zurück
+        </a>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    {{ error }}
+    <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+</div>
+{% endif %}
+
+<div class="row">
+    <div class="col-12 col-md-7 col-lg-6">
+        <div id="panel-1" class="panel">
+            <div class="panel-hdr">
+                <h2>Einladung senden</h2>
+            </div>
+            <div class="panel-container show">
+                <div class="panel-content">
+                    <form action="/portal-admin/einladen" method="POST">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+                        <div class="form-group">
+                            <label class="form-label" for="owner_id">Besitzer auswählen</label>
+                            <select name="owner_id" id="owner_id" class="form-control" required>
+                                <option value="">— Besitzer wählen —</option>
+                                {% for owner in owners %}
+                                    {% if owner.id not in linked_owner_ids %}
+                                    <option value="{{ owner.id }}" {% if owner.email %}data-email="{{ owner.email }}"{% endif %}>
+                                        {{ owner.last_name }}, {{ owner.first_name }}
+                                        {% if owner.email %} ({{ owner.email }}){% endif %}
+                                    </option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                            <div class="help-block fs-sm text-muted mt-1">Besitzer die bereits ein Portal-Konto haben werden nicht angezeigt.</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="email">E-Mail-Adresse für das Portal-Konto</label>
+                            <input type="email" name="email" id="email" class="form-control"
+                                   placeholder="email@example.com" required autocomplete="off">
+                            <div class="help-block fs-sm text-muted mt-1">An diese Adresse wird der Einladungslink gesendet.</div>
+                        </div>
+
+                        <div class="alert alert-info fs-sm" role="alert">
+                            <i class="fal fa-info-circle mr-1"></i>
+                            Der Besitzer erhält eine E-Mail mit einem Einladungslink, über den er sein Passwort festlegen kann.
+                            Der Link ist <strong>7 Tage</strong> gültig.
+                        </div>
+
+                        <button type="submit" class="btn btn-primary waves-effect waves-themed">
+                            <i class="fal fa-envelope mr-1"></i> Einladung senden
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<script>
+document.getElementById('owner_id').addEventListener('change', function() {
+    var opt = this.options[this.selectedIndex];
+    var email = opt.getAttribute('data-email') || '';
+    document.getElementById('email').value = email;
+});
+</script>
+
+{% endblock %}

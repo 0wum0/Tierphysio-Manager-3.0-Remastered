@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Besitzerportal — Login</title>
+    <link rel="stylesheet" href="/themes/smart-tierphysio/css/smartapp.min.css">
+    <style>
+        body { background:#0f1117; color:rgba(255,255,255,0.87); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; }
+        .login-wrap { width:100%; max-width:400px; padding:1.5rem; }
+        .login-card { background:#1a1d27; border:1px solid rgba(255,255,255,0.08); border-radius:16px; padding:2rem; }
+        .login-logo { text-align:center; margin-bottom:1.5rem; }
+        .login-logo svg { opacity:.7; }
+        h1 { font-size:1.3rem; font-weight:700; margin:0 0 0.3rem; text-align:center; }
+        .login-sub { font-size:0.85rem; color:rgba(255,255,255,0.45); text-align:center; margin-bottom:1.75rem; }
+        .form-group { margin-bottom:1rem; }
+        label { display:block; font-size:0.8rem; font-weight:600; margin-bottom:0.35rem; color:rgba(255,255,255,0.6); }
+        input[type=email], input[type=password] {
+            width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12);
+            border-radius:8px; padding:0.65rem 0.85rem; color:#fff; font-size:0.9rem; outline:none;
+            transition:border-color .2s;
+        }
+        input[type=email]:focus, input[type=password]:focus { border-color:#4f7cff; }
+        .btn-login { width:100%; background:#4f7cff; color:#fff; border:none; border-radius:8px; padding:0.75rem; font-size:0.9rem; font-weight:600; cursor:pointer; margin-top:0.5rem; transition:opacity .15s; }
+        .btn-login:hover { opacity:.85; }
+        .alert-error { background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.3); color:#fca5a5; padding:0.75rem 1rem; border-radius:8px; margin-bottom:1rem; font-size:0.875rem; }
+        .alert-success { background:rgba(34,197,94,.12); border:1px solid rgba(34,197,94,.3); color:#86efac; padding:0.75rem 1rem; border-radius:8px; margin-bottom:1rem; font-size:0.875rem; }
+        .login-footer { text-align:center; margin-top:1.25rem; font-size:0.78rem; color:rgba(255,255,255,0.3); }
+    </style>
+</head>
+<body>
+<div class="login-wrap">
+    <div class="login-card">
+        <div class="login-logo">
+            <svg width="40" height="40" fill="none" viewBox="0 0 24 24">
+                <path stroke="#4f7cff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline stroke="#4f7cff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="9 22 9 12 15 12 15 22"/>
+            </svg>
+        </div>
+        <h1>Besitzerportal</h1>
+        <p class="login-sub">Melden Sie sich an, um Ihre Tiere, Termine und Rechnungen zu sehen.</p>
+
+        {% if error %}
+            <div class="alert-error">{{ error }}</div>
+        {% endif %}
+        {% if success %}
+            <div class="alert-success">{{ success }}</div>
+        {% endif %}
+
+        <form action="/portal/login" method="POST">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <div class="form-group">
+                <label for="email">E-Mail-Adresse</label>
+                <input type="email" id="email" name="email" required autocomplete="email" autofocus>
+            </div>
+            <div class="form-group">
+                <label for="password">Passwort</label>
+                <input type="password" id="password" name="password" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn-login">Anmelden</button>
+        </form>
+    </div>
+    <div class="login-footer">Tierphysio Praxis &mdash; Besitzerportal</div>
+</div>
+</body>
+</html>
