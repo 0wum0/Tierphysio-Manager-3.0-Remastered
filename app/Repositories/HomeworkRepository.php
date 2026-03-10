@@ -31,29 +31,41 @@ class HomeworkRepository
 
     public function findPatientHomework(int $patientId): array
     {
-        return $this->db->fetchAll(
-            "SELECT ph.*, u.first_name, u.last_name,
-                    CASE 
-                        WHEN ph.frequency = 'daily' THEN 'Täglich'
-                        WHEN ph.frequency = 'twice_daily' THEN '2x täglich'
-                        WHEN ph.frequency = 'three_times_daily' THEN '3x täglich'
-                        WHEN ph.frequency = 'weekly' THEN 'Wöchentlich'
-                        WHEN ph.frequency = 'as_needed' THEN 'Bei Bedarf'
-                    END as frequency_display,
-                    CONCAT(ph.duration_value, ' ', 
-                        CASE ph.duration_unit
-                            WHEN 'minutes' THEN 'Minuten'
-                            WHEN 'hours' THEN 'Stunden'
-                            WHEN 'days' THEN 'Tage'
-                            WHEN 'weeks' THEN 'Wochen'
-                        END
-                    ) as duration_display
-            FROM patient_homework ph
-            JOIN users u ON ph.assigned_by = u.id
-            WHERE ph.patient_id = ? AND ph.status != 'cancelled'
-            ORDER BY ph.created_at DESC",
-            [$patientId]
-        );
+        error_log('HomeworkRepository::findPatientHomework - Patient ID: ' . $patientId);
+        
+        try {
+            $result = $this->db->fetchAll(
+                "SELECT ph.*, u.first_name, u.last_name,
+                        CASE 
+                            WHEN ph.frequency = 'daily' THEN 'Täglich'
+                            WHEN ph.frequency = 'twice_daily' THEN '2x täglich'
+                            WHEN ph.frequency = 'three_times_daily' THEN '3x täglich'
+                            WHEN ph.frequency = 'weekly' THEN 'Wöchentlich'
+                            WHEN ph.frequency = 'as_needed' THEN 'Bei Bedarf'
+                        END as frequency_display,
+                        CONCAT(ph.duration_value, ' ', 
+                            CASE ph.duration_unit
+                                WHEN 'minutes' THEN 'Minuten'
+                                WHEN 'hours' THEN 'Stunden'
+                                WHEN 'days' THEN 'Tage'
+                                WHEN 'weeks' THEN 'Wochen'
+                            END
+                        ) as duration_display
+                FROM patient_homework ph
+                LEFT JOIN users u ON ph.assigned_by = u.id
+                WHERE ph.patient_id = ? AND ph.status != 'cancelled'
+                ORDER BY ph.created_at DESC",
+                [$patientId]
+            );
+            
+            error_log('HomeworkRepository::findPatientHomework - Result count: ' . count($result));
+            
+            return $result;
+        } catch (\Exception $e) {
+            error_log('HomeworkRepository::findPatientHomework - Exception: ' . $e->getMessage());
+            error_log('HomeworkRepository::findPatientHomework - Exception trace: ' . $e->getTraceAsString());
+            return [];
+        }
     }
 
     public function createPatientHomework(array $data): int
