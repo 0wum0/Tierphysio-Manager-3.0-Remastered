@@ -31,10 +31,6 @@ class OwnerPortalMailService
                  . "Mit freundlichen Grüßen\n"
                  . $companyName;
 
-        $this->mailer->send(
-            to: $email,
-            subject: $subject,
-            body: $body
-        );
+        $this->mailer->sendRaw($email, '', $subject, nl2br(htmlspecialchars($body, ENT_QUOTES, 'UTF-8')));
     }
 }
