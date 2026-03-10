@@ -40,7 +40,7 @@ class OwnerPortalAdminController extends Controller
         $this->render('@owner-portal/admin_index.twig', [
             'page_title'   => 'Besitzerportal — Verwaltung',
             'portal_users' => $users,
-            'csrf_token'   => $this->session->getCsrfToken(),
+            'csrf_token'   => $this->session->generateCsrfToken(),
             'success'      => $this->session->getFlash('success'),
             'error'        => $this->session->getFlash('error'),
         ]);
@@ -63,7 +63,7 @@ class OwnerPortalAdminController extends Controller
             'page_title'      => 'Besitzer einladen',
             'owners'          => $owners,
             'linked_owner_ids'=> $linkedOwnerIds,
-            'csrf_token'      => $this->session->getCsrfToken(),
+            'csrf_token'      => $this->session->generateCsrfToken(),
             'error'           => $this->session->getFlash('error'),
         ]);
     }
@@ -183,7 +183,7 @@ class OwnerPortalAdminController extends Controller
             'page_title'  => 'Übungen — ' . $patient['name'],
             'patient'     => $patient,
             'exercises'   => $exercises,
-            'csrf_token'  => $this->session->getCsrfToken(),
+            'csrf_token'  => $this->session->generateCsrfToken(),
             'success'     => $this->session->getFlash('success'),
             'error'       => $this->session->getFlash('error'),
         ]);

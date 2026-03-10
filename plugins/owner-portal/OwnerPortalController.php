@@ -70,7 +70,7 @@ class OwnerPortalController extends Controller
             'upcoming_appointments'=> array_values($upcomingAppointments),
             'open_invoices'        => array_values($openInvoices),
             'exercises'            => $allExercises,
-            'csrf_token'           => $this->session->getCsrfToken(),
+            'csrf_token'           => $this->session->generateCsrfToken(),
         ]);
     }
 

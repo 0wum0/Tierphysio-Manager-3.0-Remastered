@@ -37,7 +37,7 @@ class OwnerAuthController extends Controller
         }
         $this->render('@owner-portal/owner_login.twig', [
             'page_title' => 'Besitzerportal — Login',
-            'csrf_token' => $this->session->getCsrfToken(),
+            'csrf_token' => $this->session->generateCsrfToken(),
             'error'      => $this->session->getFlash('error'),
             'success'    => $this->session->getFlash('success'),
         ]);
@@ -105,7 +105,7 @@ class OwnerAuthController extends Controller
         $this->render('@owner-portal/owner_set_password.twig', [
             'page_title' => 'Passwort festlegen',
             'token'      => $token,
-            'csrf_token' => $this->session->getCsrfToken(),
+            'csrf_token' => $this->session->generateCsrfToken(),
             'error'      => $this->session->getFlash('error'),
         ]);
     }
