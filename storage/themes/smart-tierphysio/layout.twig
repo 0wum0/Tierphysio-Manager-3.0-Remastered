@@ -243,6 +243,19 @@
             </script>
         </div>
 
+        {# Neuer Termin — global header button #}
+        <button type="button" class="btn btn-system" id="btn-global-new-apt"
+                title="Neuen Termin erstellen" aria-label="Neuen Termin erstellen">
+            <svg class="sa-icon sa-icon-2x" fill="none" viewBox="0 0 24 24">
+                <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.7"/>
+                <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="1.7"/>
+                <line x1="12" y1="14" x2="12" y2="18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                <line x1="10" y1="16" x2="14" y2="16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+        </button>
+
         {# Settings drawer toggle #}
         <button type="button" class="btn btn-system hidden-mobile"
                 data-action="toggle-swap" data-toggleclass="open"
@@ -951,6 +964,228 @@
 
     setTimeout(poll, 3000);
     setInterval(poll, 60000);
+})();
+</script>
+
+{# ══════════════════════════════════════════════════════════
+   GLOBAL NEW APPOINTMENT MODAL
+   Opened by #btn-global-new-apt in the header from any page.
+   Data (patients / owners / treatment_types) is loaded lazily
+   via /api/kalender/form-data on first open.
+   ══════════════════════════════════════════════════════════ #}
+<div class="modal fade" id="modal-global-apt" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" class="me-2" style="vertical-align:-2px;">
+                        <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/>
+                        <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/>
+                    </svg>
+                    Neuer Termin
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            </div>
+            <div class="modal-body">
+                <form id="form-global-apt">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">Titel <span class="text-danger">*</span></label>
+                            <input type="text" id="gapt-title" name="title" class="form-control" required placeholder="Behandlung, Kontrolle...">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Start <span class="text-danger">*</span></label>
+                            <input type="datetime-local" id="gapt-start" name="start_at" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ende <span class="text-danger">*</span></label>
+                            <input type="datetime-local" id="gapt-end" name="end_at" class="form-control" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Patient</label>
+                            <select id="gapt-patient" name="patient_id" class="form-control">
+                                <option value="">— kein Patient —</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Tierhalter</label>
+                            <select id="gapt-owner" name="owner_id" class="form-control">
+                                <option value="">— kein Tierhalter —</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Behandlungsart</label>
+                            <select id="gapt-treatment" name="treatment_type_id" class="form-control">
+                                <option value="">— keine —</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Status</label>
+                            <select id="gapt-status" name="status" class="form-control">
+                                <option value="scheduled">Geplant</option>
+                                <option value="confirmed">Bestätigt</option>
+                                <option value="completed">Abgeschlossen</option>
+                                <option value="cancelled">Abgesagt</option>
+                                <option value="noshow">Nicht erschienen</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Erinnerung (Minuten vorher)</label>
+                            <select id="gapt-reminder" name="reminder_minutes" class="form-control">
+                                <option value="0">Keine</option>
+                                <option value="15">15 Minuten</option>
+                                <option value="30">30 Minuten</option>
+                                <option value="60" selected>1 Stunde</option>
+                                <option value="120">2 Stunden</option>
+                                <option value="1440">1 Tag</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Farbe</label>
+                            <input type="color" id="gapt-color" name="color" class="form-control" value="#4f7cff" style="height:40px;padding:.2rem;cursor:pointer;">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Beschreibung</label>
+                            <textarea id="gapt-desc" name="description" class="form-control" rows="2" placeholder="Optionale Beschreibung..."></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Notizen (intern)</label>
+                            <textarea id="gapt-notes" name="notes" class="form-control" rows="2" placeholder="Interne Notizen..."></textarea>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input type="checkbox" id="gapt-allday" name="all_day" value="1" class="form-check-input">
+                                <label class="form-check-label" for="gapt-allday">Ganztägig</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <a href="/kalender" class="btn btn-outline-secondary btn-sm">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/></svg>
+                    Zum Kalender
+                </a>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" form="form-global-apt" class="btn btn-primary">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M20 6L9 17l-5-5"/></svg>
+                        Termin speichern
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+(function(){
+    var _formDataLoaded = false;
+    var _gapt_csrf     = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token }}';
+
+    function pad(n){ return String(n).padStart(2,'0'); }
+    function fmtLocal(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes()); }
+
+    function loadFormData() {
+        if (_formDataLoaded) return;
+        _formDataLoaded = true;
+        fetch('/api/kalender/form-data')
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+                var pSel = document.getElementById('gapt-patient');
+                var oSel = document.getElementById('gapt-owner');
+                var tSel = document.getElementById('gapt-treatment');
+                (data.patients||[]).forEach(function(p){
+                    var o = new Option(p.name + (p.species ? ' ('+p.species+')' : ''), p.id);
+                    pSel.appendChild(o);
+                });
+                (data.owners||[]).forEach(function(o){
+                    var opt = new Option(o.first_name + ' ' + o.last_name, o.id);
+                    oSel.appendChild(opt);
+                });
+                (data.treatment_types||[]).forEach(function(tt){
+                    var opt = new Option(tt.name, tt.id);
+                    if (tt.color) opt.dataset.color = tt.color;
+                    tSel.appendChild(opt);
+                });
+            })
+            .catch(function(){});
+    }
+
+    document.getElementById('btn-global-new-apt').addEventListener('click', function(){
+        loadFormData();
+        var now = new Date();
+        var end = new Date(now.getTime() + 60*60*1000);
+        document.getElementById('gapt-start').value = fmtLocal(now);
+        document.getElementById('gapt-end').value   = fmtLocal(end);
+        document.getElementById('form-global-apt').reset();
+        document.getElementById('gapt-start').value = fmtLocal(now);
+        document.getElementById('gapt-end').value   = fmtLocal(end);
+        document.getElementById('gapt-color').value = '#4f7cff';
+        new bootstrap.Modal(document.getElementById('modal-global-apt')).show();
+        setTimeout(function(){ document.getElementById('gapt-title').focus(); }, 300);
+    });
+
+    document.getElementById('gapt-treatment').addEventListener('change', function(){
+        var opt = this.options[this.selectedIndex];
+        if (opt && opt.dataset.color) document.getElementById('gapt-color').value = opt.dataset.color;
+    });
+
+    document.getElementById('gapt-start').addEventListener('change', function(){
+        var s = new Date(this.value);
+        if (!isNaN(s)){
+            document.getElementById('gapt-end').value = fmtLocal(new Date(s.getTime()+60*60*1000));
+        }
+    });
+
+    document.getElementById('form-global-apt').addEventListener('submit', async function(e){
+        e.preventDefault();
+        var data = new FormData(this);
+        data.set('_csrf_token', _gapt_csrf);
+        if (document.getElementById('gapt-allday').checked) data.set('all_day','1');
+        var btn = this.querySelector('[type=submit]');
+        btn.disabled = true;
+        try {
+            var res  = await fetch('/api/kalender/events', { method:'POST', body:data });
+            var json = await res.json();
+            if (json.success) {
+                bootstrap.Modal.getInstance(document.getElementById('modal-global-apt')).hide();
+                if (typeof window.showAppToast === 'function') {
+                    window.showAppToast({ type:'success', title:'Termin erstellt', message: json.event?.title || 'Neuer Termin gespeichert' }, 4000);
+                }
+                if (typeof window._globalCalendar !== 'undefined' && window._globalCalendar?.refetchEvents) {
+                    window._globalCalendar.refetchEvents();
+                }
+            } else {
+                alert(json.error || 'Fehler beim Speichern.');
+            }
+        } catch(err) {
+            alert('Netzwerkfehler: ' + err.message);
+        }
+        btn.disabled = false;
+    });
+
+    /* Expose opener globally so other scripts can trigger it with pre-filled data */
+    window.openGlobalNewApt = function(opts) {
+        loadFormData();
+        opts = opts || {};
+        document.getElementById('form-global-apt').reset();
+        var now = new Date();
+        var end = new Date(now.getTime()+60*60*1000);
+        document.getElementById('gapt-start').value = opts.start || fmtLocal(now);
+        document.getElementById('gapt-end').value   = opts.end   || fmtLocal(end);
+        document.getElementById('gapt-color').value = '#4f7cff';
+        if (opts.patient_id) {
+            setTimeout(function(){ document.getElementById('gapt-patient').value = opts.patient_id; }, 400);
+        }
+        if (opts.owner_id) {
+            setTimeout(function(){ document.getElementById('gapt-owner').value = opts.owner_id; }, 400);
+        }
+        new bootstrap.Modal(document.getElementById('modal-global-apt')).show();
+        setTimeout(function(){ document.getElementById('gapt-title').focus(); }, 300);
+    };
 })();
 </script>
 

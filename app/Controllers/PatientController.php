@@ -15,6 +15,7 @@ use App\Services\InvoiceService;
 use App\Services\PdfService;
 use App\Repositories\TreatmentTypeRepository;
 use App\Repositories\SettingsRepository;
+use App\Core\Database;
 
 class PatientController extends Controller
 {
@@ -28,7 +29,8 @@ class PatientController extends Controller
         private readonly TreatmentTypeRepository $treatmentTypeRepository,
         private readonly InvoiceService $invoiceService,
         private readonly SettingsRepository $settingsRepository,
-        private readonly PdfService $pdfService
+        private readonly PdfService $pdfService,
+        private readonly Database $db
     ) {
         parent::__construct($view, $session, $config, $translator);
     }
@@ -112,6 +114,21 @@ class PatientController extends Controller
 
         $invoiceStats = $this->invoiceService->getInvoiceStatsByPatientId((int)$params['id']);
 
+        $appointments = [];
+        try {
+            $stmt = $this->db->query(
+                'SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.color, a.all_day,
+                        tt.name AS treatment_type_name
+                 FROM appointments a
+                 LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+                 WHERE a.patient_id = ?
+                 ORDER BY a.start_at DESC
+                 LIMIT 10',
+                [(int)$params['id']]
+            );
+            $appointments = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Throwable) {}
+
         header('Content-Type: application/json');
         echo json_encode([
             'patient'         => $patient,
@@ -119,6 +136,7 @@ class PatientController extends Controller
             'timeline'        => $timeline,
             'treatment_types' => $treatmentTypes,
             'invoice_stats'   => $invoiceStats,
+            'appointments'    => $appointments,
         ]);
         exit;
     }

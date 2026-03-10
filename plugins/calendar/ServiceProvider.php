@@ -59,6 +59,7 @@ class ServiceProvider
         $router->get('/kalender/cron/erinnerungen',  [CalendarController::class, 'cronReminders'],   []);
 
         /* JSON API */
+        $router->get('/api/kalender/form-data',      [CalendarController::class, 'apiFormData'],     ['auth']);
         $router->get('/api/kalender/events',         [CalendarController::class, 'apiEvents'],       ['auth']);
         $router->get('/api/kalender/events/{id}',    [CalendarController::class, 'apiShow'],         ['auth']);
         $router->post('/api/kalender/events',        [CalendarController::class, 'apiStore'],        ['auth']);

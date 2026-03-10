@@ -99,6 +99,36 @@ class CalendarController extends Controller
         exit;
     }
 
+    /* ── API: form data for global new-appointment modal ── */
+    public function apiFormData(array $params = []): void
+    {
+        $patients = array_map(fn($p) => [
+            'id'      => $p['id'],
+            'name'    => $p['name'],
+            'species' => $p['species'] ?? '',
+        ], $this->patientRepository->findAll());
+
+        $owners = array_map(fn($o) => [
+            'id'         => $o['id'],
+            'first_name' => $o['first_name'] ?? '',
+            'last_name'  => $o['last_name'] ?? '',
+        ], $this->ownerRepository->findAll());
+
+        $treatmentTypes = array_map(fn($tt) => [
+            'id'    => $tt['id'],
+            'name'  => $tt['name'],
+            'color' => $tt['color'] ?? null,
+        ], $this->treatmentTypeRepository->findActive());
+
+        header('Content-Type: application/json');
+        echo json_encode([
+            'patients'        => $patients,
+            'owners'          => $owners,
+            'treatment_types' => $treatmentTypes,
+        ]);
+        exit;
+    }
+
     /* ── API: single appointment ── */
     public function apiShow(array $params = []): void
     {

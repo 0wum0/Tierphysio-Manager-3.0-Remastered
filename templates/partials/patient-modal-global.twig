@@ -20,6 +20,10 @@
                 <div id="pd-species" style="font-size:0.72rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;"></div>
             </div>
             <div style="display:flex;gap:0.35rem;align-items:center;overflow-x:auto;flex-shrink:0;-webkit-overflow-scrolling:touch;margin-left:auto;">
+                <button id="pd-new-apt-btn" type="button" class="btn btn-secondary btn-sm" style="flex-shrink:0;padding:0.3rem 0.6rem;" title="Neuen Termin erstellen">
+                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/><line x1="12" y1="14" x2="12" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="16" x2="14" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    <span class="d-none d-sm-inline">Termin</span>
+                </button>
                 <button id="pd-invoice-btn" type="button" class="btn btn-secondary btn-sm" style="flex-shrink:0;padding:0.3rem 0.6rem;">
                     <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
                     <span class="d-none d-sm-inline">Rechnung</span>
@@ -116,10 +120,6 @@
                         </div>
                         <button type="submit" class="btn btn-primary btn-sm pd-submit-btn">
                             <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                            Speichern
-                        </button>
-                    </div>
-                </form>
             </div>
 
             <div style="border-top:1px solid var(--glass-border);margin-top:0.5rem;"></div>
@@ -1236,12 +1236,71 @@ function openPatientModal(patientId) {
 
             currentPatientData = data;
             renderTimeline(data.timeline, patientId);
+            renderAppointments(data.appointments || [], data.patient);
             pdLoading.style.display = 'none';
             pdBody.style.display    = 'flex';
         })
         .catch(function() {
             pdLoading.innerHTML = '<div style="color:var(--text-muted);font-size:0.85rem;">Fehler beim Laden.</div>';
         });
+}
+
+/* ── Appointments section ─────────────────────────────────── */
+var aptStatusLabels = {
+    scheduled:  { label: 'Geplant',       color: '#6c757d' },
+    confirmed:  { label: 'Bestätigt',     color: '#0d6efd' },
+    completed:  { label: 'Abgeschlossen', color: '#198754' },
+    cancelled:  { label: 'Abgesagt',      color: '#dc3545' },
+    noshow:     { label: 'Nicht ersch.',  color: '#fd7e14' },
+};
+
+function renderAppointments(appointments, patient) {
+    var sec  = document.getElementById('pd-appointments-section');
+    var list = document.getElementById('pd-appointments-list');
+    if (!sec || !list) return;
+
+    if (!appointments || appointments.length === 0) {
+        sec.style.display = 'none';
+        return;
+    }
+
+    sec.style.display = '';
+    var html = '';
+    appointments.forEach(function(a) {
+        var statusInfo = aptStatusLabels[a.status] || { label: a.status, color: '#6c757d' };
+        var dotColor   = a.color || statusInfo.color;
+        var dateStr    = a.all_day ? fmtDate(a.start_at) : fmtDateTime(a.start_at);
+        var isPast     = new Date(a.start_at.replace(' ','T')) < new Date();
+        html += '<div style="display:flex;align-items:center;gap:0.55rem;padding:0.45rem 0.6rem;border-radius:7px;background:var(--bg-elevated,rgba(255,255,255,0.04));border:1px solid var(--glass-border);">';
+        html += '<div style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:'+esc(dotColor)+';'+(isPast?'opacity:0.45;':'')+'"></div>';
+        html += '<div style="flex:1;min-width:0;">';
+        html += '<div style="font-size:0.8rem;font-weight:600;color:var(--text-primary);'+(isPast?'opacity:0.6;':'')+'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(a.title)+'</div>';
+        html += '<div style="font-size:0.7rem;color:var(--text-muted);">'+esc(dateStr);
+        if (a.treatment_type_name) html += ' · '+esc(a.treatment_type_name);
+        html += '</div></div>';
+        html += '<span style="font-size:0.62rem;font-weight:700;padding:0.1rem 0.45rem;border-radius:999px;flex-shrink:0;background:'+esc(statusInfo.color)+'22;color:'+esc(statusInfo.color)+';border:1px solid '+esc(statusInfo.color)+'44;">'+esc(statusInfo.label)+'</span>';
+        html += '</div>';
+    });
+    list.innerHTML = html;
+}
+
+/* ── "Neuer Termin" button in patient modal header ─────────── */
+var pdNewAptBtn = document.getElementById('pd-new-apt-btn');
+if (pdNewAptBtn) {
+    pdNewAptBtn.addEventListener('click', function () {
+        if (!currentPatientData) return;
+        var p = currentPatientData.patient;
+        var o = currentPatientData.owner;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-patient-detail')).hide();
+        setTimeout(function () {
+            if (typeof window.openGlobalNewApt === 'function') {
+                window.openGlobalNewApt({
+                    patient_id: p.id,
+                    owner_id:   o ? o.id : null,
+                });
+            }
+        }, 350);
+    });
 }
 
 /* Export globally */

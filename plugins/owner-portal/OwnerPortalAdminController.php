@@ -167,34 +167,51 @@ class OwnerPortalAdminController extends Controller
         $this->redirect('/portal-admin');
     }
 
-    /* ── GET /portal-admin/tiere/{patient_id}/uebungen ── */
+    /* ── GET /portal-admin/tiere/{owner_id}/uebungen ── */
     public function exerciseIndex(array $params = []): void
     {
-        $patientId = (int)($params['patient_id'] ?? 0);
-        $db        = \App\Core\Application::getInstance()->getContainer()->get(Database::class);
-        $stmt      = $db->query('SELECT * FROM patients WHERE id = ? LIMIT 1', [$patientId]);
-        $patient   = $stmt->fetch(\PDO::FETCH_ASSOC);
+        $ownerId = (int)($params['owner_id'] ?? 0);
+        $db      = \App\Core\Application::getInstance()->getContainer()->get(Database::class);
 
-        if (!$patient) { $this->abort(404); return; }
+        $ownerStmt = $db->query(
+            'SELECT o.*, u.email AS portal_email FROM owners o LEFT JOIN owner_portal_users u ON u.owner_id = o.id WHERE o.id = ? LIMIT 1',
+            [$ownerId]
+        );
+        $owner = $ownerStmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$owner) { $this->abort(404); return; }
 
-        $exercises = $this->repo->getExercisesByPatient($patientId);
+        $patients = $this->repo->getPetsByOwnerId($ownerId);
+
+        /* Build exercises map keyed by patient_id */
+        $exercisesByPatient = [];
+        foreach ($patients as $p) {
+            $exercisesByPatient[$p['id']] = $this->repo->getExercisesByPatient((int)$p['id']);
+        }
 
         $this->render('@owner-portal/admin_exercises.twig', [
-            'page_title'  => 'Übungen — ' . $patient['name'],
-            'patient'     => $patient,
-            'exercises'   => $exercises,
-            'csrf_token'  => $this->session->generateCsrfToken(),
-            'success'     => $this->session->getFlash('success'),
-            'error'       => $this->session->getFlash('error'),
+            'page_title'          => 'Übungen — ' . trim($owner['first_name'] . ' ' . $owner['last_name']),
+            'owner'               => $owner,
+            'patients'            => $patients,
+            'exercises_by_patient'=> $exercisesByPatient,
+            'csrf_token'          => $this->session->generateCsrfToken(),
+            'success'             => $this->session->getFlash('success'),
+            'error'               => $this->session->getFlash('error'),
         ]);
     }
 
-    /* ── POST /portal-admin/tiere/{patient_id}/uebungen ── */
+    /* ── POST /portal-admin/tiere/{owner_id}/uebungen ── */
     public function exerciseStore(array $params = []): void
     {
         $this->validateCsrf();
-        $patientId = (int)($params['patient_id'] ?? 0);
+        $ownerId   = (int)($params['owner_id'] ?? 0);
+        $patientId = (int)$this->post('patient_id', 0);
         $userId    = $this->session->getUser()['id'] ?? null;
+
+        if (!$patientId) {
+            $this->session->flash('error', 'Bitte einen Patienten auswählen.');
+            $this->redirect('/portal-admin/tiere/' . $ownerId . '/uebungen');
+            return;
+        }
 
         $image = null;
         if (!empty($_FILES['image']['name'])) {
@@ -214,7 +231,7 @@ class OwnerPortalAdminController extends Controller
         ]);
 
         $this->session->flash('success', 'Übung hinzugefügt.');
-        $this->redirect('/portal-admin/tiere/' . $patientId . '/uebungen');
+        $this->redirect('/portal-admin/tiere/' . $ownerId . '/uebungen');
     }
 
     /* ── POST /portal-admin/uebungen/{id}/loeschen ── */

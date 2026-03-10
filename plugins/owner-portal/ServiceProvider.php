@@ -64,8 +64,8 @@ class ServiceProvider
         $router->post('/portal-admin/{id}/deaktivieren',         [OwnerPortalAdminController::class, 'deactivate'],     ['auth']);
         $router->post('/portal-admin/{id}/aktivieren',           [OwnerPortalAdminController::class, 'activate'],       ['auth']);
         $router->post('/portal-admin/{id}/neu-einladen',         [OwnerPortalAdminController::class, 'resendInvite'],   ['auth']);
-        $router->get('/portal-admin/tiere/{patient_id}/uebungen',[OwnerPortalAdminController::class, 'exerciseIndex'],  ['auth']);
-        $router->post('/portal-admin/tiere/{patient_id}/uebungen',[OwnerPortalAdminController::class,'exerciseStore'],  ['auth']);
+        $router->get('/portal-admin/tiere/{owner_id}/uebungen', [OwnerPortalAdminController::class, 'exerciseIndex'],  ['auth']);
+        $router->post('/portal-admin/tiere/{owner_id}/uebungen', [OwnerPortalAdminController::class, 'exerciseStore'],  ['auth']);
         $router->post('/portal-admin/uebungen/{id}/loeschen',    [OwnerPortalAdminController::class, 'exerciseDelete'], ['auth']);
         $router->post('/portal-admin/uebungen/{id}/bearbeiten',  [OwnerPortalAdminController::class, 'exerciseUpdate'], ['auth']);
     }

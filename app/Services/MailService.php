@@ -31,12 +31,12 @@ class MailService
         try {
             $placeholders = $this->buildInvoicePlaceholders($invoice, $owner);
             $subject = $this->applyPlaceholders(
-                $this->settingsRepository->get('email_invoice_subject', 'Ihre Rechnung {{invoice_number}}'),
+                $this->settingsRepository->get('email_invoice_subject', 'Deine Rechnung {{invoice_number}}'),
                 $placeholders
             );
             $bodyText = $this->applyPlaceholders(
                 $this->settingsRepository->get('email_invoice_body',
-                    "Sehr geehrte/r {{owner_name}},\n\nanbei erhalten Sie Ihre Rechnung {{invoice_number}} vom {{issue_date}}.\n\nGesamtbetrag: {{total_gross}}\nBitte überweisen Sie den Betrag bis zum {{due_date}}.\n\nMit freundlichen Grüßen\n{{company_name}}"
+                    "Hallo {{owner_name}},\n\nanbei erhältst du deine Rechnung {{invoice_number}} vom {{issue_date}}.\n\nGesamtbetrag: {{total_gross}}\nBitte überweise den Betrag bis zum {{due_date}}.\n\nViele Grüße\n{{company_name}}"
                 ),
                 $placeholders
             );
@@ -62,12 +62,12 @@ class MailService
         try {
             $placeholders = $this->buildInvoicePlaceholders($invoice, $owner);
             $subject = $this->applyPlaceholders(
-                $this->settingsRepository->get('email_receipt_subject', 'Ihre Quittung {{invoice_number}}'),
+                $this->settingsRepository->get('email_receipt_subject', 'Deine Quittung {{invoice_number}}'),
                 $placeholders
             );
             $bodyText = $this->applyPlaceholders(
                 $this->settingsRepository->get('email_receipt_body',
-                    "Sehr geehrte/r {{owner_name}},\n\nvielen Dank für Ihre Zahlung. Anbei erhalten Sie Ihre Quittung für Rechnung {{invoice_number}} vom {{issue_date}}.\n\nBezahlter Betrag: {{total_gross}}\n\nMit freundlichen Grüßen\n{{company_name}}"
+                    "Hallo {{owner_name}},\n\nvielen Dank für deine Zahlung. Anbei erhältst du deine Quittung für Rechnung {{invoice_number}} vom {{issue_date}}.\n\nBezahlter Betrag: {{total_gross}}\n\nViele Grüße\n{{company_name}}"
                 ),
                 $placeholders
             );
@@ -98,7 +98,7 @@ class MailService
             );
             $bodyText = $this->applyPlaceholders(
                 $this->settingsRepository->get('email_reminder_body',
-                    "Hallo {{owner_name}},\n\nwir möchten Sie an Ihren bevorstehenden Termin erinnern:\n\n📅 {{appointment_title}}\nDatum: {{appointment_date}}\nUhrzeit: {{appointment_time}}\n{{appointment_patient}}\n\nFalls Sie den Termin absagen oder verschieben möchten, kontaktieren Sie uns bitte rechtzeitig.\n\nMit freundlichen Grüßen\n{{company_name}}"
+                    "Hallo {{owner_name}},\n\nwir möchten dich an deinen bevorstehenden Termin erinnern:\n\n📅 {{appointment_title}}\nDatum: {{appointment_date}}\nUhrzeit: {{appointment_time}}\n{{appointment_patient}}\n\nFalls du den Termin absagen oder verschieben möchtest, melde dich gerne bei uns.\n\nViele Grüße\n{{company_name}}"
                 ),
                 $placeholders
             );
@@ -132,12 +132,12 @@ class MailService
             ];
 
             $subject = $this->applyPlaceholders(
-                $this->settingsRepository->get('email_invite_subject', 'Ihre Einladung zur Anmeldung — {{company_name}}'),
+                $this->settingsRepository->get('email_invite_subject', 'Deine Einladung zur Anmeldung — {{company_name}}'),
                 $placeholders
             );
             $bodyText = $this->applyPlaceholders(
                 $this->settingsRepository->get('email_invite_body',
-                    "Sie wurden eingeladen!\n\n{{from_name}} lädt Sie ein, Ihr Tier und sich als Besitzer direkt in unserem System zu registrieren.\n\n{{note}}\n\nJetzt registrieren:\n{{invite_url}}\n\nDieser Link ist 7 Tage gültig.\n\nMit freundlichen Grüßen\n{{company_name}}"
+                    "Du wurdest eingeladen!\n\n{{from_name}} lädt dich ein, dein Tier und dich als Besitzer direkt in unserem System zu registrieren.\n\n{{note}}\n\nJetzt registrieren:\n{{invite_url}}\n\nDieser Link ist 7 Tage gültig.\n\nViele Grüße\n{{company_name}}"
                 ),
                 $placeholders
             );

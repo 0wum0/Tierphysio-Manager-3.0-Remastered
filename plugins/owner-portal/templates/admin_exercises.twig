@@ -4,7 +4,8 @@
 <div id="content">
 <div class="subheader">
     <h1 class="subheader-title">
-        <i class="subheader-icon fal fa-dumbbell"></i> Übungen — {{ patient.name }}
+        <i class="subheader-icon fal fa-dumbbell"></i>
+        Übungen — {{ owner.first_name }} {{ owner.last_name }}
         <small>Heimtraining für Tierbesitzer verwalten</small>
     </h1>
     <div class="subheader-action">
@@ -17,174 +18,184 @@
 {% if success %}
 <div class="alert alert-success alert-dismissible fade show" role="alert">
     {{ success }}
-    <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 {% endif %}
 {% if error %}
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
     {{ error }}
-    <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 {% endif %}
 
-<div class="row">
+{% if patients is empty %}
+<div class="alert alert-warning">Keine Patienten für diesen Tierhalter gefunden.</div>
+{% else %}
 
-    {# ── Add Exercise Form ── #}
-    <div class="col-12 col-lg-4">
-        <div id="panel-add" class="panel">
-            <div class="panel-hdr">
-                <h2>Neue Übung hinzufügen</h2>
-            </div>
-            <div class="panel-container show">
-                <div class="panel-content">
-                    <form action="/portal-admin/tiere/{{ patient.id }}/uebungen" method="POST"
-                          enctype="multipart/form-data">
-                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-
-                        <div class="form-group">
-                            <label class="form-label">Titel <span class="text-danger">*</span></label>
-                            <input type="text" name="title" class="form-control" required
-                                   placeholder="z.B. Passive Mobilisation Hüfte">
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">Beschreibung</label>
-                            <textarea name="description" class="form-control" rows="4"
-                                      placeholder="Schritt-für-Schritt-Anleitung..."></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">Video-URL <span class="text-muted fs-nano">(optional, YouTube oder direkt)</span></label>
-                            <input type="url" name="video_url" class="form-control"
-                                   placeholder="https://youtube.com/watch?v=...">
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">Bild <span class="text-muted fs-nano">(optional, JPG/PNG/WebP)</span></label>
-                            <input type="file" name="image" class="form-control" accept="image/*">
-                        </div>
-
-                        <div class="form-group">
-                            <label class="form-label">Reihenfolge</label>
-                            <input type="number" name="sort_order" class="form-control" value="0" min="0">
-                        </div>
-
-                        <button type="submit" class="btn btn-primary btn-block waves-effect waves-themed">
-                            <i class="fal fa-plus mr-1"></i> Übung hinzufügen
-                        </button>
-                    </form>
-                </div>
-            </div>
+{# ── Per-patient accordion ── #}
+<div class="accordion" id="acc-patients">
+{% for patient in patients %}
+{% set exList = exercises_by_patient[patient.id] ?? [] %}
+<div class="card mb-3">
+    <div class="card-header d-flex align-items-center justify-content-between gap-2 py-2 px-3"
+         style="cursor:pointer;" data-bs-toggle="collapse"
+         data-bs-target="#acc-pat-{{ patient.id }}" aria-expanded="true">
+        <div class="d-flex align-items-center gap-2">
+            <span class="fw-600">🐾 {{ patient.name }}</span>
+            <span class="badge bg-secondary fs-nano">{{ patient.species }}</span>
+            <span class="badge bg-primary fs-nano">{{ exList|length }} Übung{{ exList|length != 1 ? 'en' : '' }}</span>
         </div>
+        <button type="button" class="btn btn-xs btn-primary"
+                onclick="event.stopPropagation(); openAddExercise({{ patient.id }}, {{ patient.name|json_encode }});">
+            <i class="fal fa-plus mr-1"></i> Übung hinzufügen
+        </button>
     </div>
-
-    {# ── Exercise List ── #}
-    <div class="col-12 col-lg-8">
-        <div id="panel-list" class="panel">
-            <div class="panel-hdr">
-                <h2>Übungen ({{ exercises|length }})</h2>
-            </div>
-            <div class="panel-container show">
-                <div class="panel-content p-0">
-                    {% if exercises %}
-                        {% for ex in exercises %}
-                        <div class="d-flex align-items-start gap-3 p-3 border-bottom">
-                            {% if ex.image %}
-                            <div style="flex-shrink:0;">
-                                <img src="/storage/uploads/exercises/{{ ex.image }}" alt=""
-                                     style="width:64px;height:52px;object-fit:cover;border-radius:6px;">
-                            </div>
-                            {% endif %}
-                            <div style="flex:1;min-width:0;">
-                                <div class="fw-500">{{ ex.title }}</div>
-                                {% if ex.description %}
-                                <div class="text-muted fs-sm mt-1" style="white-space:pre-line;">{{ ex.description|slice(0,120) }}{% if ex.description|length > 120 %}…{% endif %}</div>
-                                {% endif %}
-                                {% if ex.video_url %}
-                                <div class="mt-1">
-                                    <a href="{{ ex.video_url }}" target="_blank" class="btn btn-xs btn-outline-info">
-                                        <i class="fal fa-play mr-1"></i>Video
-                                    </a>
-                                </div>
-                                {% endif %}
-                                <div class="mt-1">
-                                    {% if ex.is_active %}
-                                        <span class="badge badge-success fs-nano">Aktiv</span>
-                                    {% else %}
-                                        <span class="badge badge-secondary fs-nano">Inaktiv</span>
-                                    {% endif %}
-                                    <span class="text-muted fs-nano ms-2">Reihenf. {{ ex.sort_order }}</span>
-                                </div>
-                            </div>
-                            <div class="d-flex flex-column gap-1" style="flex-shrink:0;">
-                                {# Edit modal trigger #}
-                                <button class="btn btn-xs btn-outline-primary"
-                                        onclick="openEditExercise({{ ex|json_encode }})">
-                                    <i class="fal fa-edit"></i>
-                                </button>
-                                {# Delete #}
-                                <form method="POST" action="/portal-admin/uebungen/{{ ex.id }}/loeschen">
-                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-                                    <button type="submit" class="btn btn-xs btn-outline-danger"
-                                            onclick="return confirm('Übung löschen?');">
-                                        <i class="fal fa-trash"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    {% else %}
-                    <div class="p-4 text-center text-muted">
-                        <i class="fal fa-dumbbell fa-3x mb-3 d-block opacity-30"></i>
-                        Noch keine Übungen für {{ patient.name }}.
+    <div id="acc-pat-{{ patient.id }}" class="collapse show">
+        <div class="card-body p-0">
+            {% if exList %}
+                {% for ex in exList %}
+                <div class="d-flex align-items-start gap-3 p-3 border-bottom">
+                    {% if ex.image %}
+                    <div style="flex-shrink:0;">
+                        <img src="/storage/uploads/exercises/{{ ex.image }}" alt=""
+                             style="width:64px;height:52px;object-fit:cover;border-radius:6px;">
                     </div>
                     {% endif %}
+                    <div style="flex:1;min-width:0;">
+                        <div class="fw-500">{{ ex.title }}</div>
+                        {% if ex.description %}
+                        <div class="text-muted fs-sm mt-1" style="white-space:pre-line;">{{ ex.description|slice(0,120) }}{% if ex.description|length > 120 %}…{% endif %}</div>
+                        {% endif %}
+                        {% if ex.video_url %}
+                        <div class="mt-1">
+                            <a href="{{ ex.video_url }}" target="_blank" class="btn btn-xs btn-outline-info">
+                                <i class="fal fa-play mr-1"></i> Video
+                            </a>
+                        </div>
+                        {% endif %}
+                        <div class="mt-1">
+                            {% if ex.is_active %}
+                                <span class="badge badge-success fs-nano">Aktiv</span>
+                            {% else %}
+                                <span class="badge badge-secondary fs-nano">Inaktiv</span>
+                            {% endif %}
+                            <span class="text-muted fs-nano ms-2">Reihenf. {{ ex.sort_order }}</span>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-column gap-1" style="flex-shrink:0;">
+                        <button class="btn btn-xs btn-outline-primary"
+                                onclick="openEditExercise({{ ex|json_encode }})">
+                            <i class="fal fa-edit"></i>
+                        </button>
+                        <form method="POST" action="/portal-admin/uebungen/{{ ex.id }}/loeschen">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                            <button type="submit" class="btn btn-xs btn-outline-danger"
+                                    onclick="return confirm('Übung löschen?');">
+                                <i class="fal fa-trash"></i>
+                            </button>
+                        </form>
+                    </div>
                 </div>
-            </div>
+                {% endfor %}
+            {% else %}
+            <div class="p-3 text-muted fs-sm">Noch keine Übungen für {{ patient.name }}.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endfor %}
+</div>
+{% endif %}
+
+{# ── Add Exercise Modal ── #}
+<div class="modal fade" id="modal-add-ex" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="form-add-ex" method="POST"
+                  action="/portal-admin/tiere/{{ owner.id }}/uebungen"
+                  enctype="multipart/form-data">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="patient_id" id="add-ex-patient-id" value="">
+                <div class="modal-header">
+                    <h5 class="modal-title">Neue Übung — <span id="add-ex-patient-name"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group mb-3">
+                        <label class="form-label">Titel <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" required
+                               placeholder="z.B. Passive Mobilisation Hüfte">
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label">Beschreibung</label>
+                        <textarea name="description" class="form-control" rows="4"
+                                  placeholder="Schritt-für-Schritt-Anleitung..."></textarea>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label">Video-URL <span class="text-muted fs-nano">(optional)</span></label>
+                        <input type="url" name="video_url" class="form-control"
+                               placeholder="https://youtube.com/watch?v=...">
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label">Bild <span class="text-muted fs-nano">(optional)</span></label>
+                        <input type="file" name="image" class="form-control" accept="image/*">
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label">Reihenfolge</label>
+                        <input type="number" name="sort_order" class="form-control" value="0" min="0">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary waves-effect waves-themed">
+                        <i class="fal fa-plus mr-1"></i> Hinzufügen
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
-{# ── Edit Modal ── #}
-<div class="modal fade" id="modal-edit-ex" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
+{# ── Edit Exercise Modal ── #}
+<div class="modal fade" id="modal-edit-ex" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
         <div class="modal-content">
             <form id="form-edit-ex" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                 <div class="modal-header">
                     <h5 class="modal-title">Übung bearbeiten</h5>
-                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="form-group">
+                    <div class="form-group mb-3">
                         <label class="form-label">Titel</label>
                         <input type="text" name="title" id="ex-edit-title" class="form-control" required>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group mb-3">
                         <label class="form-label">Beschreibung</label>
                         <textarea name="description" id="ex-edit-desc" class="form-control" rows="4"></textarea>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group mb-3">
                         <label class="form-label">Video-URL</label>
                         <input type="url" name="video_url" id="ex-edit-video" class="form-control">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group mb-3">
                         <label class="form-label">Neues Bild (optional)</label>
                         <input type="file" name="image" class="form-control" accept="image/*">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group mb-3">
                         <label class="form-label">Reihenfolge</label>
                         <input type="number" name="sort_order" id="ex-edit-sort" class="form-control" min="0">
                     </div>
                     <div class="form-group">
-                        <div class="custom-control custom-switch">
-                            <input type="checkbox" class="custom-control-input" id="ex-edit-active" name="is_active" value="1">
-                            <label class="custom-control-label" for="ex-edit-active">Aktiv</label>
+                        <div class="form-check form-switch">
+                            <input type="checkbox" class="form-check-input" id="ex-edit-active" name="is_active" value="1">
+                            <label class="form-check-label" for="ex-edit-active">Aktiv</label>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
                     <button type="submit" class="btn btn-primary">Speichern</button>
                 </div>
             </form>
@@ -193,14 +204,21 @@
 </div>
 
 <script>
+function openAddExercise(patientId, patientName) {
+    document.getElementById('add-ex-patient-id').value = patientId;
+    document.getElementById('add-ex-patient-name').textContent = patientName;
+    document.getElementById('form-add-ex').reset();
+    document.getElementById('add-ex-patient-id').value = patientId;
+    new bootstrap.Modal(document.getElementById('modal-add-ex')).show();
+}
 function openEditExercise(ex) {
     document.getElementById('form-edit-ex').action = '/portal-admin/uebungen/' + ex.id + '/bearbeiten';
-    document.getElementById('ex-edit-title').value  = ex.title  || '';
-    document.getElementById('ex-edit-desc').value   = ex.description || '';
-    document.getElementById('ex-edit-video').value  = ex.video_url   || '';
-    document.getElementById('ex-edit-sort').value   = ex.sort_order  || 0;
-    document.getElementById('ex-edit-active').checked = ex.is_active == 1;
-    $('#modal-edit-ex').modal('show');
+    document.getElementById('ex-edit-title').value     = ex.title       || '';
+    document.getElementById('ex-edit-desc').value      = ex.description || '';
+    document.getElementById('ex-edit-video').value     = ex.video_url   || '';
+    document.getElementById('ex-edit-sort').value      = ex.sort_order  || 0;
+    document.getElementById('ex-edit-active').checked  = ex.is_active == 1;
+    new bootstrap.Modal(document.getElementById('modal-edit-ex')).show();
 }
 </script>
 
