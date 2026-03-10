@@ -22,15 +22,18 @@ class ApiController
         header('Content-Type: application/json');
         
         try {
+            error_log('API getHomeworkTemplates - Starting query');
             $templates = $this->homeworkRepository->findAllTemplates();
+            error_log('API getHomeworkTemplates - Found ' . count($templates) . ' templates');
             
             // Kategorie-Emoji hinzufügen
             foreach ($templates as &$template) {
-                $template['category_emoji'] = $this->getCategoryEmoji($template['category']);
+                $template['category_emoji'] = $this->getCategoryEmoji($template['category'] ?? 'sonstiges');
             }
             
             echo json_encode($templates);
         } catch (\Exception $e) {
+            error_log('API getHomeworkTemplates - Exception: ' . $e->getMessage());
             http_response_code(500);
             echo json_encode(['error' => 'Fehler beim Laden der Templates: ' . $e->getMessage()]);
         }
@@ -43,21 +46,25 @@ class ApiController
         
         header('Content-Type: application/json');
         
-        if ($patientId === 0) {
-            echo json_encode([]);
-            exit;
-        }
-
         try {
-            // Prüfen ob Patient existiert
+            error_log('API getPatientHomework - Patient ID: ' . $patientId);
+            
+            if ($patientId === 0) {
+                echo json_encode([]);
+                exit;
+            }
+
+            // Prüfen ob Patient existiert und Zugriff erlaubt
             $patient = $this->patientRepository->findById($patientId);
             if (!$patient) {
+                error_log('API getPatientHomework - Patient not found: ' . $patientId);
                 http_response_code(404);
                 echo json_encode(['error' => 'Patient nicht gefunden']);
                 exit;
             }
 
             $homework = $this->homeworkRepository->findPatientHomework($patientId);
+            error_log('API getPatientHomework - Found ' . count($homework) . ' homework items');
             
             // Kategorie-Emoji hinzufügen
             foreach ($homework as &$hw) {
@@ -66,6 +73,7 @@ class ApiController
             
             echo json_encode($homework);
         } catch (\Exception $e) {
+            error_log('API getPatientHomework - Exception: ' . $e->getMessage());
             http_response_code(500);
             echo json_encode(['error' => 'Fehler beim Laden der Hausaufgaben: ' . $e->getMessage()]);
         }
@@ -102,12 +110,16 @@ class ApiController
             // Template-Prüfung
             $templateId = (int)($data['homework_template_id'] ?? 0);
             if ($templateId > 0) {
+                error_log('API createPatientHomework - Looking for template ID: ' . $templateId);
                 $template = $this->homeworkRepository->findTemplateById($templateId);
                 if (!$template) {
+                    error_log('API createPatientHomework - Template not found for ID: ' . $templateId);
                     http_response_code(400);
                     echo json_encode(['error' => 'Template nicht gefunden']);
                     exit;
                 }
+                
+                error_log('API createPatientHomework - Template found: ' . print_r($template, true));
                 
                 // Template-Daten übernehmen
                 $data['title'] = $template['title'];
