@@ -1552,14 +1552,30 @@
                     <input type="text" name="birthday_cron_token" class="form-control font-monospace"
                            value="{{ settings.birthday_cron_token ?? '' }}"
                            placeholder="Sicheres zufälliges Token eingeben..."
-                           id="birthday-token-input">
+                           id="birthday-token-input"
+                           oninput="updateBirthdayCronUrl()">
                     <button type="button" class="btn btn-secondary btn-sm" onclick="
                         var chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
                         var t=''; for(var i=0;i<40;i++) t+=chars[Math.floor(Math.random()*chars.length)];
                         document.getElementById('birthday-token-input').value=t;
+                        updateBirthdayCronUrl();
                     " style="white-space:nowrap;">🎲 Generieren</button>
                 </div>
                 <div class="fs-nano text-muted mt-1">Dieser Token schützt den Cron-Endpunkt vor unautorisierten Aufrufen.</div>
+            </div>
+
+            <div class="form-group mb-3" id="birthday-cron-url-box" style="{{ (settings.birthday_cron_token ?? '') ? '' : 'display:none;' }}">
+                <label class="form-label fw-semibold">Cron-URL <span class="text-muted fw-400">(täglich aufrufen, z.B. via cron-job.org)</span></label>
+                <div class="d-flex gap-2 align-items-center">
+                    <input type="text" id="birthday-cron-url-display" class="form-control font-monospace" readonly
+                           value="https://{{ app_host ?? _SERVER.HTTP_HOST ?? 'ihre-domain.de' }}/cron/geburtstag?token={{ settings.birthday_cron_token ?? '' }}"
+                           style="font-size:0.78rem;color:var(--bs-secondary-color);">
+                    <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;"
+                            onclick="var u=document.getElementById('birthday-cron-url-display');u.select();navigator.clipboard&&navigator.clipboard.writeText(u.value).then(function(){var b=this;},function(){});this.textContent='\u2713 Kopiert';var me=this;setTimeout(function(){me.textContent='\uD83D\uDCCB Kopieren';},1500);">
+                        📋 Kopieren
+                    </button>
+                </div>
+                <div class="fs-nano text-muted mt-1">Trage diese URL bei <a href="https://cron-job.org" target="_blank" rel="noopener">cron-job.org</a> als täglichen GET-Aufruf ein (z.B. 08:00 Uhr).</div>
             </div>
 
             <div class="mt-3" style="font-size:0.78rem;color:var(--bs-secondary-color);">
@@ -1712,6 +1728,21 @@ if (document.readyState === 'loading') {
 }
 
 })();
+</script>
+
+<script>
+function updateBirthdayCronUrl() {
+    var token = (document.getElementById('birthday-token-input') || {}).value || '';
+    var box   = document.getElementById('birthday-cron-url-box');
+    var disp  = document.getElementById('birthday-cron-url-display');
+    if (!box || !disp) return;
+    if (token) {
+        disp.value = location.protocol + '//' + location.host + '/cron/geburtstag?token=' + token;
+        box.style.display = '';
+    } else {
+        box.style.display = 'none';
+    }
+}
 </script>
 
 <script>
