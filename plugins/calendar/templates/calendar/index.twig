@@ -445,10 +445,16 @@
             // Auto-select first patient if none was selected before
             if (!currentPatientId && patients.length > 0) {
                 patientSelect.value = patients[0].id;
+                console.log('Auto-selected first patient:', patients[0].id);
             } else if (currentPatientId) {
                 // Try to restore previous selection if it's still in the list
                 const exists = Array.from(patientSelect.options).some(opt => opt.value === currentPatientId);
-                if (exists) patientSelect.value = currentPatientId;
+                if (exists) {
+                    patientSelect.value = currentPatientId;
+                    console.log('Restored patient selection:', currentPatientId);
+                } else {
+                    console.log('Previous patient not found in new list');
+                }
             }
             updateAutoTitle();
         } catch (error) {
@@ -462,6 +468,8 @@
         const ownerSelect = document.getElementById('apt-owner');
         const patientId = patientSelect.value;
         
+        console.log('Patient changed to:', patientId);
+        
         if (!patientId) {
             // Don't change owner when patient is cleared
             updateAutoTitle();
@@ -474,9 +482,13 @@
             const data = await response.json();
             const patient = data.patients.find(p => p.id == patientId);
             
+            console.log('Found patient:', patient);
+            
             if (patient && patient.owner_id) {
                 // Check if owner is already selected to avoid circular updates
                 if (ownerSelect.value != patient.owner_id) {
+                    console.log('Changing owner from', ownerSelect.value, 'to', patient.owner_id);
+                    
                     // Auto-select the owner
                     ownerSelect.value = patient.owner_id;
                     
@@ -489,10 +501,12 @@
                     
                     // Restore patient selection after filtering
                     setTimeout(() => {
+                        console.log('Restoring patient selection to:', currentPatientId);
                         patientSelect.value = currentPatientId;
                         updateAutoTitle();
                     }, 100);
                 } else {
+                    console.log('Owner already selected, just updating title');
                     updateAutoTitle();
                 }
             }
@@ -515,6 +529,8 @@
         const ownerName = ownerSelect.value ? (ownerOption.textContent || '') : '';
         const patientName = patientSelect.value ? (patientOption.textContent || '') : '';
         const treatmentName = treatmentSelect.value ? (treatmentOption.textContent || '') : '';
+        
+        console.log('Title update - Owner:', ownerName, 'Patient:', patientName, 'Treatment:', treatmentName);
         
         // Only auto-generate if user hasn't manually changed the title
         if (!titleField.hasAttribute('data-manual')) {
@@ -539,9 +555,14 @@
                 newTitle = patientCleanName;
             }
             
+            console.log('Generated title:', newTitle);
+            
             if (newTitle && newTitle !== titleField.value) {
                 titleField.value = newTitle;
+                console.log('Title updated to:', newTitle);
             }
+        } else {
+            console.log('Title has manual flag, not updating');
         }
     }
 
