@@ -1,0 +1,10 @@
+{
+    "name": "Google Kalender Sync",
+    "slug": "google-calendar-sync",
+    "version": "1.0.0",
+    "description": "Synchronisiert Tierphysio-Termine mit Google Kalender (Einweg: Praxissoftware → Google). Alle Termine erscheinen in Lila.",
+    "author": "Tierphysio Manager",
+    "min_app_version": "3.0.0",
+    "service_provider": "Plugins\\GoogleCalendarSync\\ServiceProvider",
+    "hooks": ["registerRoutes", "dashboardWidgets", "navItems"]
+}

@@ -954,5 +954,55 @@
 })();
 </script>
 
+{% if google_sync_bridge_url is defined and google_sync_bridge_url %}
+{# ── Google Calendar Sync Bridge — injected by google-calendar-sync plugin ── #}
+<script>
+(function() {
+    var SYNC_URL  = {{ google_sync_bridge_url|json_encode|raw }};
+    var CSRF_META = document.querySelector('meta[name="csrf-token"]');
+    var csrfToken = CSRF_META ? CSRF_META.getAttribute('content') : '';
+
+    function syncAppointment(id, action) {
+        if (!id) return;
+        var fd = new FormData();
+        fd.append('_csrf_token', csrfToken);
+        fd.append('action', action);
+        fetch(SYNC_URL + '/' + id, { method: 'POST', body: fd })
+            .catch(function() { /* never crash the UI */ });
+    }
+
+    /* Patch fetch to intercept calendar API responses */
+    var _origFetch = window.fetch;
+    window.fetch = function(input, init) {
+        return _origFetch.apply(this, arguments).then(function(response) {
+            try {
+                var url    = typeof input === 'string' ? input : (input.url || '');
+                var method = (init && init.method ? init.method : 'GET').toUpperCase();
+
+                /* Only care about calendar API mutations */
+                if (url.indexOf('/api/kalender/events') !== -1 && method === 'POST') {
+                    var cloned = response.clone();
+                    cloned.json().then(function(data) {
+                        if (!data || !data.success) return;
+                        var id = data.id || (data.event && data.event.id) || null;
+                        if (!id) return;
+
+                        /* Determine action from URL pattern */
+                        var isDelete    = url.indexOf('/loeschen') !== -1;
+                        var isReschedule = url.indexOf('/reschedule') !== -1;
+                        var isUpdate    = !isDelete && url.match(/\/api\/kalender\/events\/\d+$/);
+                        var action = isDelete ? 'delete' : (isUpdate || isReschedule ? 'update' : 'create');
+
+                        syncAppointment(id, action);
+                    }).catch(function() {});
+                }
+            } catch (e) {}
+            return response;
+        });
+    };
+})();
+</script>
+{% endif %}
+
 </body>
 </html>
