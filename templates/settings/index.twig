@@ -1619,7 +1619,7 @@ tplTabs.forEach(function(b) {
 });
 
 /* ── Live Preview ── */
-var companyName = {{ settings.company_name is defined ? ('"' ~ settings.company_name|e('js') ~ '"') : '"Tierphysio Praxis"' }};
+var companyName = {{ (settings.company_name ?? 'Tierphysio Praxis')|json_encode }};
 
 var previewIcons = { invoice:'📄', receipt:'✅', reminder:'📅', invite:'🐾', birthday:'🎂' };
 
