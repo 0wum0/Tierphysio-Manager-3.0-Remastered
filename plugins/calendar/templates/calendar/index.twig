@@ -451,6 +451,67 @@
         }
     });
 
+    /* Auto-generate title from owner, patient, and treatment type */
+    function updateAutoTitle() {
+        const titleField = document.getElementById('apt-title');
+        const ownerSelect = document.getElementById('apt-owner');
+        const patientSelect = document.getElementById('apt-patient');
+        const treatmentSelect = document.getElementById('apt-treatment');
+        
+        const ownerOption = ownerSelect.options[ownerSelect.selectedIndex];
+        const patientOption = patientSelect.options[patientSelect.selectedIndex];
+        const treatmentOption = treatmentSelect.options[treatmentSelect.selectedIndex];
+        
+        const ownerName = ownerSelect.value ? (ownerOption.textContent || '') : '';
+        const patientName = patientSelect.value ? (patientOption.textContent || '') : '';
+        const treatmentName = treatmentSelect.value ? (treatmentOption.textContent || '') : '';
+        
+        // Only auto-generate if user hasn't manually changed the title
+        if (!titleField.hasAttribute('data-manual')) {
+            let newTitle = '';
+            
+            if (ownerName && patientName) {
+                // Format: "Nachname, Tiername – Behandlung"
+                const ownerLastName = ownerName.split(',')[0] || ownerName.split(' ').pop() || ownerName;
+                const patientCleanName = patientName.split(' (')[0] || patientName; // Remove species from patient name
+                newTitle = `${ownerLastName}, ${patientCleanName}`;
+                
+                if (treatmentName) {
+                    newTitle += ` – ${treatmentName}`;
+                }
+            } else if (patientName && treatmentName) {
+                // Fallback: "Tiername – Behandlung"
+                const patientCleanName = patientName.split(' (')[0] || patientName;
+                newTitle = `${patientCleanName} – ${treatmentName}`;
+            } else if (patientName) {
+                // Fallback: Just patient name
+                const patientCleanName = patientName.split(' (')[0] || patientName;
+                newTitle = patientCleanName;
+            }
+            
+            if (newTitle && newTitle !== titleField.value) {
+                titleField.value = newTitle;
+            }
+        }
+    }
+
+    // Track manual title changes
+    document.getElementById('apt-title').addEventListener('input', function() {
+        this.setAttribute('data-manual', 'true');
+    });
+
+    // Clear manual flag when opening new modal
+    const originalOpenNewModal = openNewModal;
+    openNewModal = function(start, end, allDay) {
+        originalOpenNewModal(start, end, allDay);
+        document.getElementById('apt-title').removeAttribute('data-manual');
+    };
+
+    // Add event listeners for auto-title generation
+    document.getElementById('apt-owner').addEventListener('change', updateAutoTitle);
+    document.getElementById('apt-patient').addEventListener('change', updateAutoTitle);
+    document.getElementById('apt-treatment').addEventListener('change', updateAutoTitle);
+
     /* ── Form submit ── */
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
