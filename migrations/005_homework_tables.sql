@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS homework_templates (
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Patienten-Hausaufgaben Tabelle
 CREATE TABLE IF NOT EXISTS patient_homework (
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS patient_homework (
     FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
     FOREIGN KEY (homework_template_id) REFERENCES homework_templates(id) ON DELETE SET NULL,
     FOREIGN KEY (assigned_by) REFERENCES users(id)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Hausaufgaben-Completion Tabelle (für Besitzer-Portal)
 CREATE TABLE IF NOT EXISTS homework_completions (
@@ -51,16 +51,16 @@ CREATE TABLE IF NOT EXISTS homework_completions (
     FOREIGN KEY (completed_by) REFERENCES users(id),
     
     UNIQUE KEY unique_completion (homework_id, DATE(completed_at))
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Indizes
-CREATE INDEX idx_patient_homework_patient ON patient_homework(patient_id);
-CREATE INDEX idx_patient_homework_status ON patient_homework(status);
-CREATE INDEX idx_patient_homework_dates ON patient_homework(start_date, end_date);
-CREATE INDEX idx_homework_completions_homework ON homework_completions(homework_id);
+CREATE INDEX IF NOT EXISTS idx_patient_homework_patient ON patient_homework(patient_id);
+CREATE INDEX IF NOT EXISTS idx_patient_homework_status ON patient_homework(status);
+CREATE INDEX IF NOT EXISTS idx_patient_homework_dates ON patient_homework(start_date, end_date);
+CREATE INDEX IF NOT EXISTS idx_homework_completions_homework ON homework_completions(homework_id);
 
 -- Vordefinierte Tierphysio-Hausaufgaben Templates
-INSERT INTO homework_templates (title, description, category, category_emoji, frequency, duration_value, duration_unit, therapist_notes) VALUES
+INSERT IGNORE INTO homework_templates (title, description, category, category_emoji, frequency, duration_value, duration_unit, therapist_notes) VALUES
 -- Bewegung
 ('Tägliche Spaziergänge', 'Kurze, kontrollierte Spaziergänge auf weichem Untergrund zur Förderung der Bewegung und Durchblutung.', 'bewegung', '🏃', 'daily', 15, 'minutes', 'Wichtig bei Gelenkerkrankungen'),
 ('Sanfte Bewegungsübungen', 'Leichte Dehn- und Bewegungsübungen zur Erhaltung der Muskelfunktion.', 'bewegung', '🏃', 'twice_daily', 10, 'minutes', 'Nur nach Absprache durchführen'),
