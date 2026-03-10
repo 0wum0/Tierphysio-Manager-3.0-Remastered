@@ -1500,6 +1500,16 @@ window.openAddHomeworkModal = function() {
     // Templates laden
     loadHomeworkTemplates();
     
+    // Template-Auswahl-Handler
+    document.getElementById('homework-template-select').addEventListener('change', function() {
+        var customDiv = document.getElementById('custom-homework');
+        if (this.value === 'custom') {
+            customDiv.style.display = 'block';
+        } else {
+            customDiv.style.display = 'none';
+        }
+    });
+    
     // Formular-Handler
     document.getElementById('homework-form').addEventListener('submit', function(e) {
         e.preventDefault();

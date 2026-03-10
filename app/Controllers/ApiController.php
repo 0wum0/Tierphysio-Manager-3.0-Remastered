@@ -113,6 +113,13 @@ class ApiController
                 $data['title'] = $template['title'];
                 $data['description'] = $template['description'];
                 $data['category'] = $template['category'];
+            } else {
+                // Wenn keine Template-ID, aber "custom" ausgewählt, dann prüfe ob Titel und Beschreibung manuell eingegeben wurden
+                if (empty($data['title']) || empty($data['description'])) {
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Titel und Beschreibung sind erforderlich. Titel: "' . ($data['title'] ?? 'empty') . '", Beschreibung: "' . ($data['description'] ?? 'empty') . '". Bitte wählen Sie eine Vorlage ODER füllen Sie die Felder "Titel der Hausaufgabe" und "Beschreibung" aus.']);
+                    exit;
+                }
             }
 
             // Pflichtfelder prüfen
