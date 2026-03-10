@@ -11,6 +11,7 @@ use App\Core\Session;
 use App\Core\View;
 use App\Core\PluginManager;
 use App\Core\Translator;
+use App\Core\Auth;
 use Dotenv\Dotenv;
 
 class Application
@@ -52,6 +53,9 @@ class Application
         $session = new Session($config);
         $session->start();
         $this->container->singleton(Session::class, fn() => $session);
+        
+        // Initialize Auth with Session
+        Auth::init($session);
 
         $translator = new Translator($config->get('app.locale', 'de'), $this->rootPath . '/lang');
         $this->container->singleton(Translator::class, fn() => $translator);
