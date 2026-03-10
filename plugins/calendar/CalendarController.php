@@ -136,13 +136,21 @@ class CalendarController extends Controller
     {
         $ownerId = (int)($params['owner_id'] ?? 0);
         
+        error_log("API: Looking for patients for owner ID: " . $ownerId);
+        
         if ($ownerId === 0) {
             header('Content-Type: application/json');
             echo json_encode([]);
             exit;
         }
 
+        // Test direct database query
+        $directQuery = $this->db->fetchAll("SELECT * FROM patients WHERE owner_id = ? ORDER BY name ASC", [$ownerId]);
+        error_log("Direct query found: " . count($directQuery) . " patients");
+        
         $patients = $this->ownerRepository->findPatients($ownerId);
+        error_log("Repository found: " . count($patients) . " patients");
+        
         $patients = array_map(fn($p) => [
             'id'      => $p['id'],
             'name'    => $p['name'],

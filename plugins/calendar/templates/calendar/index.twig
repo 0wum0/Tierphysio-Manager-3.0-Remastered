@@ -434,6 +434,8 @@
             const response = await fetch(`/api/kalender/patients-by-owner?owner_id=${ownerId}`);
             const patients = await response.json();
             
+            console.log('Loading patients for owner', ownerId, ':', patients);
+            
             patientSelect.innerHTML = '<option value="">— kein Patient —</option>';
             patients.forEach(p => {
                 const opt = document.createElement('option');
@@ -501,10 +503,19 @@
                     
                     // Restore patient selection after filtering
                     setTimeout(() => {
-                        console.log('Restoring patient selection to:', currentPatientId);
-                        patientSelect.value = currentPatientId;
+                        console.log('Attempting to restore patient selection to:', currentPatientId);
+                        const patientOptions = Array.from(patientSelect.options);
+                        const exists = patientOptions.some(opt => opt.value === currentPatientId);
+                        console.log('Available patient options:', patientOptions.map(opt => ({value: opt.value, text: opt.textContent})));
+                        
+                        if (exists) {
+                            patientSelect.value = currentPatientId;
+                            console.log('Successfully restored patient selection to:', currentPatientId);
+                        } else {
+                            console.log('Failed to restore patient - not found in options');
+                        }
                         updateAutoTitle();
-                    }, 100);
+                    }, 200);
                 } else {
                     console.log('Owner already selected, just updating title');
                     updateAutoTitle();
