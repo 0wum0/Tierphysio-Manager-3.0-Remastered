@@ -285,26 +285,60 @@ class CalendarController extends Controller
     /* ── Cron: send pending reminders ── */
     public function cronReminders(array $params = []): void
     {
-        $secret = $this->settingsRepository->get('calendar_cron_secret', '');
-        $token  = $_GET['token'] ?? ($_SERVER['HTTP_X_CRON_TOKEN'] ?? '');
+        $this->calCronLog('START calendar reminder cron at ' . date('Y-m-d H:i:s'));
 
-        if (empty($secret) || !hash_equals($secret, $token)) {
-            http_response_code(403);
-            echo json_encode(['error' => 'Unauthorized']);
+        try {
+            $secret = $this->settingsRepository->get('calendar_cron_secret', '');
+            $token  = $_GET['token'] ?? ($_SERVER['HTTP_X_CRON_TOKEN'] ?? '');
+
+            if (empty($secret) || !hash_equals($secret, $token)) {
+                http_response_code(403);
+                $this->calCronLog('ERROR calendar cron: Unauthorized token');
+                header('Content-Type: application/json');
+                echo json_encode(['error' => 'Unauthorized']);
+                echo "\nCron completed\n";
+                exit;
+            }
+
+            $reminderService = new ReminderService(
+                $this->appointmentRepository,
+                $this->mailService,
+                $this->settingsRepository
+            );
+
+            $result = $reminderService->processPending();
+
+            $this->calCronLog('SUCCESS calendar cron: sent=' . ($result['sent'] ?? 0) . ', skipped=' . ($result['skipped'] ?? 0));
+
+            header('Content-Type: application/json');
+            echo json_encode(array_merge($result, ['ok' => true, 'time' => date('c')]));
+            echo "\nCron completed\n";
+            exit;
+
+        } catch (\Throwable $e) {
+            $this->calCronLog('EXCEPTION calendar cron: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            http_response_code(200);
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
+            echo "\nCron completed\n";
             exit;
         }
+    }
 
-        $reminderService = new ReminderService(
-            $this->appointmentRepository,
-            $this->mailService,
-            $this->settingsRepository
-        );
-
-        $result = $reminderService->processPending();
-
-        header('Content-Type: application/json');
-        echo json_encode(array_merge($result, ['ok' => true, 'time' => date('c')]));
-        exit;
+    private function calCronLog(string $message): void
+    {
+        try {
+            $logDir  = defined('ROOT_PATH') ? ROOT_PATH . '/logs' : dirname(__DIR__, 3) . '/logs';
+            $logFile = $logDir . '/cron.log';
+            if (!is_dir($logDir)) {
+                @mkdir($logDir, 0755, true);
+            }
+            @file_put_contents(
+                $logFile,
+                '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n",
+                FILE_APPEND | LOCK_EX
+            );
+        } catch (\Throwable) {}
     }
 
     /* ── Create invoice from appointment ── */

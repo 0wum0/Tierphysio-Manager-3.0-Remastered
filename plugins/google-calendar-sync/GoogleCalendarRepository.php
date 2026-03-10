@@ -11,6 +11,22 @@ class GoogleCalendarRepository
 {
     public function __construct(private readonly Database $db) {}
 
+    /* ─── App Settings bridge (reads from core settings table) ─── */
+
+    public function getSetting(string $key): ?string
+    {
+        try {
+            $stmt = $this->db->query(
+                "SELECT value FROM settings WHERE `key` = ? LIMIT 1",
+                [$key]
+            );
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return ($row && $row['value'] !== null && $row['value'] !== '') ? $row['value'] : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
     /* ─── Connections ─── */
 
     public function getConnection(): ?array

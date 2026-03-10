@@ -45,6 +45,10 @@ class SettingsController extends Controller
             $treatmentTypes = $this->treatmentTypeRepository->findAll();
         } catch (\Throwable) {}
 
+        $scheme   = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+        $httpHost = $_SERVER['HTTP_HOST'] ?? ($this->config->get('app.url', '') ? parse_url($this->config->get('app.url', ''), PHP_URL_HOST) : 'localhost');
+        $appUrl   = $scheme . '://' . $httpHost;
+
         $this->render('settings/index.twig', [
             'page_title'       => $this->translator->trans('nav.settings'),
             'settings'         => $settings,
@@ -58,6 +62,8 @@ class SettingsController extends Controller
             'app_env'          => $this->config->get('app.env', 'production'),
             'active_tab'       => $params['tab'] ?? ($_GET['tab'] ?? 'firma'),
             'treatment_types'  => $treatmentTypes,
+            'app_host'         => $httpHost,
+            'app_url'          => $appUrl,
             'email_tpl_defaults' => [
                 'invoice_subject'  => 'Ihre Rechnung {{invoice_number}}',
                 'invoice_body'     => "Sehr geehrte/r {{owner_name}},\n\nanbei erhalten Sie Ihre Rechnung {{invoice_number}} vom {{issue_date}}.\n\nGesamtbetrag: {{total_gross}}\nBitte überweisen Sie den Betrag bis zum {{due_date}}.\n\nMit freundlichen Grüßen\n{{company_name}}",
@@ -103,6 +109,7 @@ class SettingsController extends Controller
             'email_invite_subject',   'email_invite_body',
             'birthday_mail_subject',  'birthday_cron_token',
             'birthday_mail_enabled',
+            'google_client_id', 'google_client_secret', 'google_redirect_uri',
         ];
 
         $data = [];

@@ -56,6 +56,10 @@
         Updates
         {% if not up_to_date %}<span class="tab-badge">{{ pending|length }}</span>{% endif %}
     </button>
+    <button class="settings-tab" data-tab="integrationen">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Integrationen
+    </button>
 </div>
 
 {# ════════════════════════════════════════════════════
@@ -1227,7 +1231,7 @@
                 <label class="form-label fw-semibold">Cron-URL <span class="text-muted fw-400">(diese URL täglich aufrufen lassen)</span></label>
                 <div class="d-flex gap-2 align-items-center">
                     <input type="text" id="bday-cron-url-display" class="form-control font-monospace" readonly
-                           value="{{ (app_url ?? ('https://' ~ (app_host ?? _SERVER.HTTP_HOST ?? 'ihre-domain.de'))) }}/cron/geburtstag?token={{ settings.birthday_cron_token ?? '' }}"
+                           value="{{ app_url }}/cron/geburtstag?token={{ settings.birthday_cron_token ?? '' }}"
                            style="font-size:0.78rem;">
                     <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;"
                             id="bday-copy-btn"
@@ -1274,7 +1278,7 @@
                 <div class="d-flex gap-2 align-items-center">
                     <input type="text" class="form-control font-monospace" readonly
                            id="hst-bday-url"
-                           value="{{ (app_url ?? ('https://' ~ (app_host ?? _SERVER.HTTP_HOST ?? 'ihre-domain.de'))) }}/cron/geburtstag?token={{ settings.birthday_cron_token }}"
+                           value="{{ app_url }}/cron/geburtstag?token={{ settings.birthday_cron_token }}"
                            style="font-size:0.77rem;">
                     <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;"
                             onclick="var u=document.getElementById('hst-bday-url');navigator.clipboard&&navigator.clipboard.writeText(u.value);this.textContent='\u2713';setTimeout(function(){this.textContent='\uD83D\uDCCB';}.bind(this),1500);">📋</button>
@@ -1285,7 +1289,7 @@
                 <div class="d-flex gap-2 align-items-center">
                     <input type="text" class="form-control font-monospace" readonly
                            id="hst-bday-curl"
-                           value="curl -s &quot;{{ (app_url ?? ('https://' ~ (app_host ?? _SERVER.HTTP_HOST ?? 'ihre-domain.de'))) }}/cron/geburtstag?token={{ settings.birthday_cron_token }}&quot;"
+                           value="curl -s &quot;{{ app_url }}/cron/geburtstag?token={{ settings.birthday_cron_token }}&quot;"
                            style="font-size:0.77rem;">
                     <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;"
                             onclick="var u=document.getElementById('hst-bday-curl');navigator.clipboard&&navigator.clipboard.writeText(u.value);this.textContent='\u2713';setTimeout(function(){this.textContent='\uD83D\uDCCB';}.bind(this),1500);">📋</button>
@@ -1311,7 +1315,7 @@
                 <div class="d-flex gap-2 align-items-center">
                     <input type="text" class="form-control font-monospace" readonly
                            id="hst-cal-curl"
-                           value="curl -s &quot;{{ (app_url ?? ('https://' ~ (app_host ?? _SERVER.HTTP_HOST ?? 'ihre-domain.de'))) }}/kalender/cron/erinnerungen?token={{ settings.calendar_cron_secret }}&quot;"
+                           value="curl -s &quot;{{ app_url }}/kalender/cron/erinnerungen?token={{ settings.calendar_cron_secret }}&quot;"
                            style="font-size:0.77rem;">
                     <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;"
                             onclick="var u=document.getElementById('hst-cal-curl');navigator.clipboard&&navigator.clipboard.writeText(u.value);this.textContent='\u2713';setTimeout(function(){this.textContent='\uD83D\uDCCB';}.bind(this),1500);">📋</button>
@@ -1715,7 +1719,7 @@
                 <p class="mb-0" style="font-size:0.8rem;color:rgba(255,255,255,0.5);">
                     <strong>Cron-Befehl (täglich 08:00 Uhr):</strong><br>
                     <code style="background:rgba(0,0,0,0.3);padding:4px 8px;border-radius:6px;font-size:0.78rem;display:inline-block;margin-top:4px;">
-                        0 8 * * * curl -s "https://ihre-domain.de/cron/geburtstag?token=IHR_TOKEN" &gt; /dev/null
+                        0 8 * * * curl -s "{{ app_url }}/cron/geburtstag?token=IHR_TOKEN" &gt; /dev/null
                     </code>
                 </p>
             </div>
@@ -1759,7 +1763,7 @@
                 <label class="form-label fw-semibold">Cron-URL <span class="text-muted fw-400">(täglich aufrufen, z.B. via cron-job.org)</span></label>
                 <div class="d-flex gap-2 align-items-center">
                     <input type="text" id="birthday-cron-url-display" class="form-control font-monospace" readonly
-                           value="https://{{ app_host ?? _SERVER.HTTP_HOST ?? 'ihre-domain.de' }}/cron/geburtstag?token={{ settings.birthday_cron_token ?? '' }}"
+                           value="{{ app_url }}/cron/geburtstag?token={{ settings.birthday_cron_token ?? '' }}"
                            style="font-size:0.78rem;color:var(--bs-secondary-color);">
                     <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;"
                             onclick="var u=document.getElementById('birthday-cron-url-display');u.select();navigator.clipboard&&navigator.clipboard.writeText(u.value).then(function(){var b=this;},function(){});this.textContent='\u2713 Kopiert';var me=this;setTimeout(function(){me.textContent='\uD83D\uDCCB Kopieren';},1500);">
@@ -1960,5 +1964,102 @@ function openEditTT(tt) {
     window.openModal('modal-edit-tt');
 }
 </script>
+
+{# ════════════════════════════════════════════════════
+   TAB: INTEGRATIONEN
+════════════════════════════════════════════════════ #}
+<div class="settings-tab-content" id="tab-integrationen">
+
+    {# ── Google Kalender ── #}
+    <div class="glass-card mb-4">
+        <h3 class="section-title mb-3">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" style="vertical-align:-3px;margin-right:6px;"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+            Google Kalender Sync
+        </h3>
+
+        <p class="text-muted fs-sm mb-3">
+            Synchronisiert Tierphysio-Termine automatisch in deinen Google Kalender (Einweg-Sync).
+            Alle synchronisierten Termine erscheinen in <strong style="color:#a78bfa;">Lila (Grape)</strong>.
+        </p>
+
+        {# Connection Status Badge #}
+        {% set gc_configured = (settings.google_client_id ?? '') != '' %}
+        <div class="d-flex align-items-center gap-3 mb-4 p-3 rounded" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);">
+            <div>
+                {% if gc_configured %}
+                    <span class="badge" style="background:#22c55e;color:#fff;">✓ API konfiguriert</span>
+                {% else %}
+                    <span class="badge" style="background:#f59e0b;color:#fff;">⚠ API nicht konfiguriert</span>
+                {% endif %}
+            </div>
+            <a href="/google-kalender" class="btn btn-primary btn-sm">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:-2px;"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/></svg>
+                Google Kalender öffnen
+            </a>
+        </div>
+
+        {# API Credentials Form #}
+        <form action="/einstellungen" method="POST">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+            <div class="row g-3 mb-3">
+                <div class="col-12 col-md-6">
+                    <div class="form-group">
+                        <label class="form-label fw-semibold">Google API Client ID</label>
+                        <input type="text" name="google_client_id" class="form-control font-monospace"
+                               value="{{ settings.google_client_id ?? '' }}"
+                               placeholder="xxxxxxxxx.apps.googleusercontent.com"
+                               autocomplete="off">
+                        <div class="fs-nano text-muted mt-1">Aus der <a href="https://console.cloud.google.com/" target="_blank" rel="noopener">Google Cloud Console</a> → OAuth 2.0 Client-IDs</div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <div class="form-group">
+                        <label class="form-label fw-semibold">Google API Client Secret</label>
+                        <input type="password" name="google_client_secret" class="form-control font-monospace"
+                               value="{{ settings.google_client_secret ?? '' }}"
+                               placeholder="GOCSPX-..."
+                               autocomplete="new-password">
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="form-group">
+                        <label class="form-label fw-semibold">Autorisierte Weiterleitungs-URI (Redirect URI)</label>
+                        <div class="d-flex gap-2 align-items-center">
+                            <input type="text" name="google_redirect_uri" class="form-control font-monospace"
+                                   id="gc-redirect-uri"
+                                   value="{{ settings.google_redirect_uri ?? (app_url ~ '/google-kalender/callback') }}"
+                                   placeholder="{{ app_url }}/google-kalender/callback">
+                            <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;"
+                                    onclick="navigator.clipboard&&navigator.clipboard.writeText(document.getElementById('gc-redirect-uri').value);this.textContent='✓';setTimeout(function(){this.textContent='📋 Kopieren';},1500);">
+                                📋 Kopieren
+                            </button>
+                        </div>
+                        <div class="fs-nano text-muted mt-1">
+                            Diese URI muss exakt so in der Google Cloud Console unter „Autorisierte Weiterleitungs-URIs" eingetragen sein.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="alert fs-sm p-3 mb-3" style="background:rgba(66,133,244,0.1);border:1px solid rgba(66,133,244,0.3);border-radius:8px;">
+                <strong>Setup-Anleitung:</strong>
+                <ol class="mb-0 mt-2 ps-3" style="line-height:2;">
+                    <li><a href="https://console.cloud.google.com/" target="_blank" rel="noopener">console.cloud.google.com</a> öffnen → Projekt erstellen</li>
+                    <li><strong>APIs &amp; Dienste → Bibliothek</strong> → „Google Calendar API" aktivieren</li>
+                    <li><strong>APIs &amp; Dienste → Anmeldedaten</strong> → „OAuth 2.0 Client-ID" erstellen (Typ: Webanwendung)</li>
+                    <li>Redirect-URI von oben eintragen und Zugangsdaten hier speichern</li>
+                    <li>Auf <strong>„Google Kalender öffnen"</strong> klicken und Konto verbinden</li>
+                </ol>
+            </div>
+
+            <button type="submit" class="btn btn-primary">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="17 21 17 13 7 13 7 21"/></svg>
+                API-Zugangsdaten speichern
+            </button>
+        </form>
+    </div>
+
+</div>
 
 {% endblock %}

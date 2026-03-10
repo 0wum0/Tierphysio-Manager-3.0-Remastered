@@ -27,14 +27,8 @@ class ServiceProvider
         /* Expose sync JS bridge URL as Twig global so calendar templates can use it */
         $view->addGlobal('google_sync_bridge_url', '/google-kalender/sync/termin');
 
-        /* Nav item */
-        $navItems   = $view->getTwig()->getGlobals()['plugin_nav_items'] ?? [];
-        $navItems[] = [
-            'label' => 'Google Kalender',
-            'href'  => '/google-kalender',
-            'icon'  => '<svg width="18" height="18" fill="none" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
-        ];
-        $view->addGlobal('plugin_nav_items', $navItems);
+        /* Google Kalender is NOT added to the main sidebar nav.
+           It is accessible via Einstellungen → Integrationen → Google Kalender (/google-kalender). */
 
         $pluginManager->hook('registerRoutes', [$this, 'registerRoutes']);
         $pluginManager->hook('dashboardWidgets', [$this, 'dashboardWidget']);
