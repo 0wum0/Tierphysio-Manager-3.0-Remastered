@@ -1506,37 +1506,10 @@ window.openAddHomeworkModal = function() {
         
         var formData = new FormData(this);
         
-        fetch('/api/patients/' + p.id + '/homework', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => {
-            if (response.ok) {
-                bootstrap.Modal.getInstance(document.getElementById('modal-add-homework')).hide();
-                bootstrap.Modal.getInstance(document.getElementById('modal-patient-homework')).hide();
-                loadPatientHomework(p.id);
-                
-                // Erfolgsmeldung
-                var alert = document.createElement('div');
-                alert.className = 'alert alert-success alert-dismissible fade show';
-                alert.innerHTML = 'Hausaufgabe erfolgreich zugewiesen!<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-                document.querySelector('.modal-body').prepend(alert);
-                
-                setTimeout(() => alert.remove(), 3000);
-            } else {
-                throw new Error('Fehler beim Speichern');
-            }
-        })
-        .catch(error => {
-            console.error('Fehler:', error);
-            alert('Fehler beim Speichern der Hausaufgabe');
-        });
-    });
-    
-    // Modal nach dem Schließen entfernen
-    document.getElementById('modal-add-homework').addEventListener('hidden.bs.modal', function() {
-        this.remove();
-    });
+        // Debug: Log form data
+        console.log('Form data being sent:');
+        for (var pair of formData.entries()) {
+            console.log(pair[0] + ': ' + pair[1]);
 };
 
 function loadHomeworkTemplates() {

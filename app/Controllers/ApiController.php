@@ -95,9 +95,13 @@ class ApiController
 
             $data = $_POST;
             
+            // Debug: Log incoming data
+            error_log('API createPatientHomework - Raw POST data: ' . print_r($_POST, true));
+            error_log('API createPatientHomework - Processed data: ' . print_r($data, true));
+            
             // Template-Prüfung
             $templateId = (int)($data['homework_template_id'] ?? 0);
-            if ($templateId > 0 && $templateId !== 'custom') {
+            if ($templateId > 0) {
                 $template = $this->homeworkRepository->findTemplateById($templateId);
                 if (!$template) {
                     http_response_code(400);
@@ -114,14 +118,14 @@ class ApiController
             // Pflichtfelder prüfen
             if (empty($data['title']) || empty($data['description'])) {
                 http_response_code(400);
-                echo json_encode(['error' => 'Titel und Beschreibung sind erforderlich']);
+                echo json_encode(['error' => 'Titel und Beschreibung sind erforderlich. Titel: "' . ($data['title'] ?? 'empty') . '", Beschreibung: "' . ($data['description'] ?? 'empty') . '"']);
                 exit;
             }
 
             // Hausaufgabe erstellen
-            $homeworkId = $this->homeworkRepository->createPatientHomework([
+            $homeworkData = [
                 'patient_id' => $patientId,
-                'homework_template_id' => $templateId > 0 && $templateId !== 'custom' ? $templateId : null,
+                'homework_template_id' => $templateId > 0 ? $templateId : null,
                 'title' => $data['title'],
                 'description' => $data['description'],
                 'category' => $data['category'] ?? 'sonstiges',
@@ -133,10 +137,15 @@ class ApiController
                 'therapist_notes' => $data['therapist_notes'] ?? '',
                 'assigned_by' => Auth::user()['id'],
                 'status' => 'active'
-            ]);
+            ];
+            
+            error_log('API createPatientHomework - Final homework data: ' . print_r($homeworkData, true));
+            
+            $homeworkId = $this->homeworkRepository->createPatientHomework($homeworkData);
 
             echo json_encode(['success' => true, 'homework_id' => $homeworkId]);
         } catch (\Exception $e) {
+            error_log('API createPatientHomework - Exception: ' . $e->getMessage());
             http_response_code(500);
             echo json_encode(['error' => 'Fehler beim Erstellen der Hausaufgabe: ' . $e->getMessage()]);
         }
