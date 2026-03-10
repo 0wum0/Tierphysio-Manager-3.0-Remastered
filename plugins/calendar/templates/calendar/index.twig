@@ -425,6 +425,7 @@
             });
             // Restore selection if possible
             if (currentPatientId) patientSelect.value = currentPatientId;
+            updateAutoTitle();
             return;
         }
 
@@ -441,13 +442,48 @@
                 patientSelect.appendChild(opt);
             });
             
-            // Try to restore previous selection if it's still in the list
-            if (currentPatientId) {
+            // Auto-select first patient if none was selected before
+            if (!currentPatientId && patients.length > 0) {
+                patientSelect.value = patients[0].id;
+            } else if (currentPatientId) {
+                // Try to restore previous selection if it's still in the list
                 const exists = Array.from(patientSelect.options).some(opt => opt.value === currentPatientId);
                 if (exists) patientSelect.value = currentPatientId;
             }
+            updateAutoTitle();
         } catch (error) {
             console.error('Failed to load patients:', error);
+        }
+    });
+
+    /* Patient change → auto-select owner */
+    document.getElementById('apt-patient').addEventListener('change', async function() {
+        const patientSelect = this;
+        const ownerSelect = document.getElementById('apt-owner');
+        const patientId = patientSelect.value;
+        
+        if (!patientId) {
+            // Don't change owner when patient is cleared
+            updateAutoTitle();
+            return;
+        }
+
+        // Get patient data to find owner
+        try {
+            const response = await fetch('/api/kalender/form-data');
+            const data = await response.json();
+            const patient = data.patients.find(p => p.id == patientId);
+            
+            if (patient && patient.owner_id) {
+                // Auto-select the owner
+                ownerSelect.value = patient.owner_id;
+                
+                // Trigger owner change to filter patients properly
+                const event = new Event('change', { bubbles: true });
+                ownerSelect.dispatchEvent(event);
+            }
+        } catch (error) {
+            console.error('Failed to get patient data:', error);
         }
     });
 

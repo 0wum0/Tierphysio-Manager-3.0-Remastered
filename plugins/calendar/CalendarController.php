@@ -106,6 +106,7 @@ class CalendarController extends Controller
             'id'      => $p['id'],
             'name'    => $p['name'],
             'species' => $p['species'] ?? '',
+            'owner_id'=> $p['owner_id'] ?? null,
         ], $this->patientRepository->findAll());
 
         $owners = array_map(fn($o) => [
@@ -144,6 +145,7 @@ class CalendarController extends Controller
             'id'      => $p['id'],
             'name'    => $p['name'],
             'species' => $p['species'] ?? '',
+            'owner_id'=> $p['owner_id'] ?? null,
         ], $patients);
 
         header('Content-Type: application/json');
