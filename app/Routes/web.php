@@ -13,8 +13,15 @@ use App\Controllers\UiSettingsController;
 use App\Controllers\NotificationController;
 use App\Controllers\CronController;
 use App\Controllers\HomeworkController;
+use App\Controllers\ApiController;
 
 /** @var \App\Core\Router $router */
+
+// API Routes für Hausaufgaben (direkt, ohne Plugin)
+$router->get('/api/homework/templates', [ApiController::class, 'getHomeworkTemplates'], ['auth']);
+$router->get('/api/patients/{patient_id}/homework', [ApiController::class, 'getPatientHomework'], ['auth']);
+$router->post('/api/patients/{patient_id}/homework', [ApiController::class, 'createPatientHomework'], ['auth']);
+$router->delete('/api/patients/{patient_id}/homework/{homework_id}', [ApiController::class, 'deletePatientHomework'], ['auth']);
 
 $router->get('/', [DashboardController::class, 'index'], ['auth']);
 $router->get('/dashboard', [DashboardController::class, 'index'], ['auth']);

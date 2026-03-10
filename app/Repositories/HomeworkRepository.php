@@ -107,9 +107,13 @@ class HomeworkRepository
         return $this->db->rowCount() > 0;
     }
 
-    public function deletePatientHomework(int $id): bool
+    public function deletePatientHomework(int $id, int $patientId = null): bool
     {
-        $this->db->query("DELETE FROM patient_homework WHERE id = ?", [$id]);
+        if ($patientId) {
+            $this->db->query("DELETE FROM patient_homework WHERE id = ? AND patient_id = ?", [$id, $patientId]);
+        } else {
+            $this->db->query("DELETE FROM patient_homework WHERE id = ?", [$id]);
+        }
         return $this->db->rowCount() > 0;
     }
 

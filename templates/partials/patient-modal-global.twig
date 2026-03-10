@@ -1541,27 +1541,39 @@ window.openAddHomeworkModal = function() {
 
 function loadHomeworkTemplates() {
     fetch('/api/homework/templates')
-        .then(response => response.json())
-        .then(templates => {
+        .then(function(response) { 
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json(); 
+        })
+        .then(function(templates) {
             var select = document.getElementById('homework-template-select');
             if (select) {
                 select.innerHTML = '<option value="">— Vordefinierte Hausaufgabe —</option><option value="custom">— Eigene Hausaufgabe —</option>';
                 
-                templates.forEach(template => {
+                templates.forEach(function(template) {
                     var option = document.createElement('option');
                     option.value = template.id;
-                    option.textContent = template.category_emoji + ' ' + template.title;
+                    option.textContent = (template.category_emoji || '📌') + ' ' + template.title;
                     select.appendChild(option);
                 });
             }
         })
-        .catch(error => console.error('Fehler beim Laden der Templates:', error));
+        .catch(function(error) {
+            console.error('Fehler beim Laden der Templates:', error);
+            var container = document.getElementById('homework-list');
+            if (container) {
+                container.innerHTML = '<div class="text-center py-4" style="color:var(--text-danger);">Fehler beim Laden der Vorlagen</div>';
+            }
+        });
 }
 
 function loadPatientHomework(patientId) {
     fetch('/api/patients/' + patientId + '/homework')
-        .then(response => response.json())
-        .then(homework => {
+        .then(function(response) { 
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json(); 
+        })
+        .then(function(homework) {
             var container = document.getElementById('homework-list');
             if (container) {
                 if (homework.length === 0) {
@@ -1575,33 +1587,35 @@ function loadPatientHomework(patientId) {
                     return;
                 }
                 
-                container.innerHTML = homework.map(hw => `
-                    <div style="border:1px solid var(--glass-border);border-radius:8px;padding:1rem;margin-bottom:0.75rem;background:var(--glass-bg);">
-                        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.5rem;">
-                            <div>
-                                <h6 style="margin:0;font-size:0.9rem;font-weight:600;">
-                                    ${hw.category_emoji} ${hw.title}
-                                </h6>
-                                <div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.25rem;">
-                                    ${hw.frequency_display} • ${hw.duration_display}
+                container.innerHTML = homework.map(function(hw) {
+                    return `
+                        <div style="border:1px solid var(--glass-border);border-radius:8px;padding:1rem;margin-bottom:0.75rem;background:var(--glass-bg);">
+                            <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:0.5rem;">
+                                <div>
+                                    <h6 style="margin:0;font-size:0.9rem;font-weight:600;">
+                                        ${(hw.category_emoji || '📌')} ${hw.title}
+                                    </h6>
+                                    <div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.25rem;">
+                                        ${(hw.frequency_display || hw.frequency)} • ${(hw.duration_display || hw.duration_value + ' ' + hw.duration_unit)}
+                                    </div>
                                 </div>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteHomework(${hw.id})" style="padding:0.25rem 0.5rem;font-size:0.75rem;">
+                                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                                </button>
                             </div>
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteHomework(${hw.id})" style="padding:0.25rem 0.5rem;font-size:0.75rem;">
-                                <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                            </button>
+                            <div style="font-size:0.85rem;line-height:1.4;color:var(--text-secondary);margin-bottom:0.5rem;">
+                                ${hw.description}
+                            </div>
+                            <div style="font-size:0.8rem;color:var(--text-muted);">
+                                <div>📅 ${hw.start_date} ${hw.end_date ? 'bis ' + hw.end_date : ''}</div>
+                                ${hw.therapist_notes ? '<div>📝 ' + hw.therapist_notes + '</div>' : ''}
+                            </div>
                         </div>
-                        <div style="font-size:0.85rem;line-height:1.4;color:var(--text-secondary);margin-bottom:0.5rem;">
-                            ${hw.description}
-                        </div>
-                        <div style="font-size:0.8rem;color:var(--text-muted);">
-                            <div>📅 ${hw.start_date} ${hw.end_date ? 'bis ' + hw.end_date : ''}</div>
-                            ${hw.therapist_notes ? '<div>📝 ' + hw.therapist_notes + '</div>' : ''}
-                        </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             }
         })
-        .catch(error => {
+        .catch(function(error) {
             console.error('Fehler beim Laden der Hausaufgaben:', error);
             var container = document.getElementById('homework-list');
             if (container) {
@@ -1622,14 +1636,18 @@ window.deleteHomework = function(id) {
             'X-CSRF-Token': '{{ csrf_token }}'
         }
     })
-    .then(response => {
-        if (response.ok) {
+    .then(function(response) { 
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.json(); 
+    })
+    .then(function(data) {
+        if (data.success) {
             loadPatientHomework(p.id);
         } else {
-            throw new Error('Fehler beim Löschen');
+            throw new Error(data.error || 'Fehler beim Löschen');
         }
     })
-    .catch(error => {
+    .catch(function(error) {
         console.error('Fehler:', error);
         alert('Fehler beim Löschen der Hausaufgabe');
     });
