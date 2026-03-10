@@ -11,6 +11,7 @@ use App\Controllers\SettingsController;
 use App\Controllers\ProfileController;
 use App\Controllers\UiSettingsController;
 use App\Controllers\NotificationController;
+use App\Controllers\CronController;
 
 /** @var \App\Core\Router $router */
 
@@ -98,3 +99,5 @@ $router->get('/api/ui-settings', [UiSettingsController::class, 'load'], ['auth']
 
 $router->get('/api/notifications', [NotificationController::class, 'index'], ['auth']);
 $router->get('/api/invoice-form-data', [InvoiceController::class, 'formData'], ['auth']);
+
+$router->get('/cron/geburtstag', [CronController::class, 'birthday']);

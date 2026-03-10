@@ -101,12 +101,20 @@ class SettingsController extends Controller
             'email_receipt_subject',  'email_receipt_body',
             'email_reminder_subject', 'email_reminder_body',
             'email_invite_subject',   'email_invite_body',
+            'birthday_mail_subject',  'birthday_cron_token',
+            'birthday_mail_enabled',
         ];
 
         $data = [];
         foreach ($allowed as $key) {
             if (isset($_POST[$key])) {
                 $data[$key] = $this->sanitize($_POST[$key]);
+            }
+        }
+        /* Checkboxes: explicitly write '0' when unchecked (not present in POST) */
+        foreach (['birthday_mail_enabled'] as $cbKey) {
+            if (!isset($data[$cbKey])) {
+                $data[$cbKey] = '0';
             }
         }
 
