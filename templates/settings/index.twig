@@ -1598,92 +1598,118 @@
 
 <script>
 (function() {
-/* ── E-Mail Template: Tab Switcher ── */
-var tplTabs = document.querySelectorAll('.email-tpl-tab');
-var tplPanels = document.querySelectorAll('.email-tpl-panel');
+'use strict';
 
-function switchTpl(name) {
+var _companyName = {{ (settings.company_name ?? 'Tierphysio Praxis')|json_encode }};
+
+/* ── Tab Switcher ── */
+function initEmailTplTabs() {
+    var tplTabs   = document.querySelectorAll('.email-tpl-tab');
+    var tplPanels = document.querySelectorAll('.email-tpl-panel');
+
+    if (!tplTabs.length) return;
+
+    function switchTpl(name) {
+        tplTabs.forEach(function(b) {
+            var active = b.getAttribute('data-tpl') === name;
+            b.classList.toggle('btn-primary',   active);
+            b.classList.toggle('btn-secondary', !active);
+        });
+        tplPanels.forEach(function(p) {
+            p.style.display = (p.id === 'etpl-' + name) ? '' : 'none';
+        });
+        updateEmailPreview(name);
+    }
+
     tplTabs.forEach(function(b) {
-        var active = b.getAttribute('data-tpl') === name;
-        b.classList.toggle('btn-primary', active);
-        b.classList.toggle('btn-secondary', !active);
+        b.addEventListener('click', function() {
+            switchTpl(b.getAttribute('data-tpl'));
+        });
     });
-    tplPanels.forEach(function(p) {
-        p.style.display = p.id === 'etpl-' + name ? '' : 'none';
+
+    /* ── Preview ── */
+    var previewIcons = {
+        invoice:  '\uD83D\uDCC4',
+        receipt:  '\u2705',
+        reminder: '\uD83D\uDCC5',
+        invite:   '\uD83D\uDC3E',
+        birthday: '\uD83C\uDF82'
+    };
+
+    function esc(s) {
+        return String(s || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
+    function buildPreviewHtml(title, bodyText, icon) {
+        var body = esc(bodyText).replace(/\n/g, '<br>');
+        var ttl  = esc(title);
+        var co   = esc(_companyName);
+        return '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">'
+            + '<meta name="viewport" content="width=device-width,initial-scale=1.0"></head>'
+            + '<body style="margin:0;padding:0;background:#0f0f1a;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;">'
+            + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f1a;padding:24px 12px;">'
+            + '<tr><td align="center">'
+            + '<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:14px;overflow:hidden;">'
+            + '<tr><td style="background:linear-gradient(135deg,rgba(79,124,255,0.35),rgba(139,92,246,0.35));padding:26px 32px;text-align:center;">'
+            + '<div style="font-size:2rem;margin-bottom:8px;">' + icon + '</div>'
+            + '<h1 style="margin:0;color:#fff;font-size:1.2rem;font-weight:700;line-height:1.3;">' + ttl + '</h1>'
+            + '<p style="margin:5px 0 0;color:rgba(255,255,255,0.5);font-size:0.75rem;">' + co + '</p>'
+            + '</td></tr>'
+            + '<tr><td style="padding:28px 32px;">'
+            + '<div style="color:rgba(255,255,255,0.82);font-size:0.9rem;line-height:1.8;">' + body + '</div>'
+            + '</td></tr>'
+            + '<tr><td style="padding:14px 32px 20px;text-align:center;border-top:1px solid rgba(255,255,255,0.08);">'
+            + '<span style="color:rgba(255,255,255,0.25);font-size:0.72rem;">' + co + ' &middot; Automatisch generierte Nachricht</span>'
+            + '</td></tr>'
+            + '</table></td></tr></table></body></html>';
+    }
+
+    function updateEmailPreview(tplName) {
+        var frame     = document.getElementById('email-preview-frame');
+        if (!frame) return;
+        var subjectEl = document.getElementById('etpl-' + tplName + '-subject');
+        var bodyEl    = document.getElementById('etpl-' + tplName + '-body');
+        if (!subjectEl) { frame.srcdoc = ''; return; }
+        var subject   = subjectEl.value || '(Kein Betreff)';
+        var body      = bodyEl ? bodyEl.value : '(Das Template wird automatisch generiert.)';
+        var icon      = previewIcons[tplName] || '\uD83D\uDCE7';
+        frame.srcdoc  = buildPreviewHtml(subject, body, icon);
+    }
+
+    /* live keystroke update */
+    ['invoice','receipt','reminder','invite','birthday'].forEach(function(tpl) {
+        var s = document.getElementById('etpl-' + tpl + '-subject');
+        var b = document.getElementById('etpl-' + tpl + '-body');
+        if (s) s.addEventListener('input', function() { updateEmailPreview(tpl); });
+        if (b) b.addEventListener('input', function() { updateEmailPreview(tpl); });
     });
-    updateEmailPreview(name);
+
+    /* init active tab */
+    switchTpl('invoice');
 }
-
-tplTabs.forEach(function(b) {
-    b.addEventListener('click', function() { switchTpl(b.getAttribute('data-tpl')); });
-});
-
-/* ── Live Preview ── */
-var companyName = {{ (settings.company_name ?? 'Tierphysio Praxis')|json_encode }};
-
-var previewIcons = { invoice:'📄', receipt:'✅', reminder:'📅', invite:'🐾', birthday:'🎂' };
-
-function buildPreviewHtml(title, bodyText, icon) {
-    var escaped = bodyText
-        .replace(/&/g,'&amp;')
-        .replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;')
-        .replace(/\n/g,'<br>');
-    var titleEsc = title.replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    return '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">'
-        + '<meta name="viewport" content="width=device-width,initial-scale=1.0"></head>'
-        + '<body style="margin:0;padding:0;background:#0f0f1a;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;">'
-        + '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0f0f1a;padding:24px 12px;">'
-        + '<tr><td align="center">'
-        + '<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:14px;overflow:hidden;">'
-        + '<tr><td style="background:linear-gradient(135deg,rgba(79,124,255,0.35),rgba(139,92,246,0.35));padding:26px 32px;text-align:center;">'
-        + '<div style="font-size:2rem;margin-bottom:8px;">' + icon + '</div>'
-        + '<h1 style="margin:0;color:#fff;font-size:1.2rem;font-weight:700;line-height:1.3;">' + titleEsc + '</h1>'
-        + '<p style="margin:5px 0 0;color:rgba(255,255,255,0.5);font-size:0.75rem;">' + companyName + '</p>'
-        + '</td></tr>'
-        + '<tr><td style="padding:28px 32px;">'
-        + '<div style="color:rgba(255,255,255,0.82);font-size:0.9rem;line-height:1.8;">' + escaped + '</div>'
-        + '</td></tr>'
-        + '<tr><td style="padding:14px 32px 20px;text-align:center;border-top:1px solid rgba(255,255,255,0.08);">'
-        + '<span style="color:rgba(255,255,255,0.25);font-size:0.72rem;">' + companyName + ' &middot; Automatisch generierte Nachricht</span>'
-        + '</td></tr>'
-        + '</table></td></tr></table></body></html>';
-}
-
-function updateEmailPreview(tplName) {
-    var frame = document.getElementById('email-preview-frame');
-    if (!frame) return;
-    var subjectEl = document.getElementById('etpl-' + tplName + '-subject');
-    var bodyEl    = document.getElementById('etpl-' + tplName + '-body');
-    if (!subjectEl) return;
-    var subject = subjectEl.value || '(Kein Betreff)';
-    var body    = bodyEl ? bodyEl.value : '(Das Template wird automatisch generiert.)';
-    var icon    = previewIcons[tplName] || '📧';
-    frame.srcdoc = buildPreviewHtml(subject, body, icon);
-}
-
-/* live update on keystroke */
-['invoice','receipt','reminder','invite','birthday'].forEach(function(tpl) {
-    var s = document.getElementById('etpl-' + tpl + '-subject');
-    var b = document.getElementById('etpl-' + tpl + '-body');
-    if (s) s.addEventListener('input', function() { updateEmailPreview(tpl); });
-    if (b) b.addEventListener('input', function() { updateEmailPreview(tpl); });
-});
-
-/* init */
-switchTpl('invoice');
 
 /* ── Platzhalter Clipboard ── */
 document.addEventListener('click', function(e) {
     var el = e.target.closest('[data-ph]');
     if (!el) return;
     var ph = el.getAttribute('data-ph');
-    navigator.clipboard?.writeText(ph).then(function() {
-        var orig = el.textContent;
-        el.textContent = '✓';
-        setTimeout(function(){ el.textContent = orig; }, 1000);
-    });
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(ph).then(function() {
+            var orig = el.textContent;
+            el.textContent = '\u2713';
+            setTimeout(function(){ el.textContent = orig; }, 1000);
+        });
+    }
 });
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initEmailTplTabs);
+} else {
+    initEmailTplTabs();
+}
 
 })();
 </script>
