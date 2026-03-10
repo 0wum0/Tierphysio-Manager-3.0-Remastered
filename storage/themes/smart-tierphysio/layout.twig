@@ -1174,8 +1174,6 @@
             const allPatients = data.patients || [];
             const patients = allPatients.filter(p => p.owner_id == ownerId);
             
-            console.log('Global modal - Loading patients for owner', ownerId, ':', patients);
-            
             patientSelect.innerHTML = '<option value="">— kein Patient —</option>';
             patients.forEach(p => {
                 const opt = document.createElement('option');
@@ -1187,15 +1185,11 @@
             // Auto-select first patient if none was selected before
             if (!currentPatientId && patients.length > 0) {
                 patientSelect.value = patients[0].id;
-                console.log('Global modal - Auto-selected first patient:', patients[0].id);
             } else if (currentPatientId) {
                 // Try to restore previous selection if it's still in the list
                 const exists = Array.from(patientSelect.options).some(opt => opt.value === currentPatientId);
                 if (exists) {
                     patientSelect.value = currentPatientId;
-                    console.log('Global modal - Restored patient selection:', currentPatientId);
-                } else {
-                    console.log('Global modal - Previous patient not found in new list');
                 }
             }
             updateGlobalAutoTitle();
@@ -1237,9 +1231,14 @@
                     
                     // Restore patient selection after filtering
                     setTimeout(() => {
-                        patientSelect.value = currentPatientId;
+                        const patientOptions = Array.from(patientSelect.options);
+                        const exists = patientOptions.some(opt => opt.value === currentPatientId);
+                        
+                        if (exists) {
+                            patientSelect.value = currentPatientId;
+                        }
                         updateGlobalAutoTitle();
-                    }, 100);
+                    }, 200);
                 } else {
                     updateGlobalAutoTitle();
                 }
