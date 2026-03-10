@@ -240,18 +240,35 @@ class PatientController extends Controller
             $this->abort(404);
         }
 
+        $wantsJson = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
+            || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json');
+
         $destination = STORAGE_PATH . '/patients/' . $params['id'];
+        if (!is_dir($destination)) {
+            mkdir($destination, 0755, true);
+        }
         $filename = $this->uploadFile('photo', $destination, [
             'image/jpeg', 'image/png', 'image/gif', 'image/webp'
         ]);
 
         if ($filename === false) {
+            if ($wantsJson) {
+                $this->json(['ok' => false, 'error' => 'photo_upload_failed', 'message' => $this->translator->trans('patients.photo_upload_failed')], 400);
+                return;
+            }
+
             $this->session->flash('error', $this->translator->trans('patients.photo_upload_failed'));
             $this->redirect("/patienten/{$params['id']}");
             return;
         }
 
         $this->patientService->update((int)$params['id'], ['photo' => $filename]);
+
+        if ($wantsJson) {
+            $this->json(['ok' => true, 'photo' => $filename]);
+            return;
+        }
+
         $this->session->flash('success', $this->translator->trans('patients.photo_updated'));
         $this->redirect("/patienten/{$params['id']}");
     }
