@@ -1,8 +1,25 @@
 <?php
 // Check if homework_templates table exists and has data
 try {
+    // Load config like the app does
+    require_once 'app/Core/Config.php';
+    $config = new \App\Core\Config(__DIR__);
+    
     // Database connection - use same config as app
-    $pdo = new PDO('mysql:host=localhost;dbname=tierphysio', 'tierphysio', 'tierphysio123');
+    $host = $config->get('db.host');
+    $port = $config->get('db.port');
+    $database = $config->get('db.database');
+    $username = $config->get('db.username');
+    $password = $config->get('db.password');
+    
+    echo "=== Database Config ===\n";
+    echo "Host: $host\n";
+    echo "Port: $port\n";
+    echo "Database: $database\n";
+    echo "Username: $username\n";
+    echo "Password: " . ($password ? '***' : 'empty') . "\n\n";
+    
+    $pdo = new PDO("mysql:host={$host};port={$port};dbname={$database}", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
     echo "=== Checking homework_templates table ===\n";
