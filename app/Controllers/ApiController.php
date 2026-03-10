@@ -93,17 +93,18 @@ class ApiController
         }
 
         try {
+            error_log('API createPatientHomework - Starting for patient ID: ' . $patientId);
+            
             // Prüfen ob Patient existiert
             $patient = $this->patientRepository->findById($patientId);
             if (!$patient) {
+                error_log('API createPatientHomework - Patient not found: ' . $patientId);
                 http_response_code(404);
                 echo json_encode(['error' => 'Patient nicht gefunden']);
                 exit;
             }
 
             $data = $_POST;
-            
-            // Debug: Log incoming data
             error_log('API createPatientHomework - Raw POST data: ' . print_r($_POST, true));
             error_log('API createPatientHomework - Processed data: ' . print_r($data, true));
             
@@ -125,6 +126,7 @@ class ApiController
                 $data['title'] = $template['title'];
                 $data['description'] = $template['description'];
                 $data['category'] = $template['category'];
+                $data['category_emoji'] = $template['category_emoji'];
             } else {
                 // Wenn keine Template-ID, aber "custom" ausgewählt, dann prüfe ob Titel und Beschreibung manuell eingegeben wurden
                 if (empty($data['title']) || empty($data['description'])) {
@@ -132,6 +134,8 @@ class ApiController
                     echo json_encode(['error' => 'Titel und Beschreibung sind erforderlich. Titel: "' . ($data['title'] ?? 'empty') . '", Beschreibung: "' . ($data['description'] ?? 'empty') . '". Bitte wählen Sie eine Vorlage ODER füllen Sie die Felder "Titel der Hausaufgabe" und "Beschreibung" aus.']);
                     exit;
                 }
+                // Custom Emoji setzen
+                $data['category_emoji'] = $this->getCategoryEmoji($data['category'] ?? 'sonstiges');
             }
 
             // Pflichtfelder prüfen
@@ -148,6 +152,7 @@ class ApiController
                 'title' => $data['title'],
                 'description' => $data['description'],
                 'category' => $data['category'] ?? 'sonstiges',
+                'category_emoji' => $data['category_emoji'] ?? '📌',
                 'frequency' => $data['frequency'] ?? 'daily',
                 'duration_value' => (int)($data['duration_value'] ?? 10),
                 'duration_unit' => $data['duration_unit'] ?? 'minutes',
@@ -164,7 +169,8 @@ class ApiController
 
             echo json_encode(['success' => true, 'homework_id' => $homeworkId]);
         } catch (\Exception $e) {
-            error_log('API createPatientHomework - Exception: ' . $e->getMessage());
+            error_log('API createPatientHomework - Exception: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            error_log('API createPatientHomework - Exception trace: ' . $e->getTraceAsString());
             http_response_code(500);
             echo json_encode(['error' => 'Fehler beim Erstellen der Hausaufgabe: ' . $e->getMessage()]);
         }

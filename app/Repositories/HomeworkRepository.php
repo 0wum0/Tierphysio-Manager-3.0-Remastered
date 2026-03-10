@@ -58,11 +58,13 @@ class HomeworkRepository
 
     public function createPatientHomework(array $data): int
     {
+        error_log('HomeworkRepository::createPatientHomework - Data: ' . print_r($data, true));
+        
         $sql = "INSERT INTO patient_homework (
             patient_id, homework_template_id, title, description, 
             category, category_emoji, frequency, duration_value, duration_unit,
-            start_date, end_date, therapist_notes, assigned_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            start_date, end_date, therapist_notes, status, assigned_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $params = [
             $data['patient_id'],
@@ -77,11 +79,19 @@ class HomeworkRepository
             $data['start_date'],
             $data['end_date'] ?? null,
             $data['therapist_notes'] ?? null,
+            $data['status'] ?? 'pending',
             $data['assigned_by']
         ];
 
+        error_log('HomeworkRepository::createPatientHomework - SQL: ' . $sql);
+        error_log('HomeworkRepository::createPatientHomework - Params: ' . print_r($params, true));
+
         $this->db->query($sql, $params);
-        return $this->db->lastInsertId();
+        $id = $this->db->lastInsertId();
+        
+        error_log('HomeworkRepository::createPatientHomework - Inserted ID: ' . $id);
+        
+        return $id;
     }
 
     public function updatePatientHomework(int $id, array $data): bool
