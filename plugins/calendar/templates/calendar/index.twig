@@ -431,8 +431,11 @@
 
         // Load patients for this owner
         try {
-            const response = await fetch(`/api/kalender/patients-by-owner?owner_id=${ownerId}`);
-            const patients = await response.json();
+            // Use the existing form-data API since patients-by-owner API is not working
+            const response = await fetch('/api/kalender/form-data');
+            const data = await response.json();
+            const allPatients = data.patients || [];
+            const patients = allPatients.filter(p => p.owner_id == ownerId);
             
             console.log('Loading patients for owner', ownerId, ':', patients);
             

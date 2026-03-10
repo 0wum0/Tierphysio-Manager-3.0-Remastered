@@ -1168,8 +1168,13 @@
 
         // Load patients for this owner
         try {
-            const response = await fetch(`/api/kalender/patients-by-owner?owner_id=${ownerId}`);
-            const patients = await response.json();
+            // Use the existing form-data API since patients-by-owner API is not working
+            const response = await fetch('/api/kalender/form-data');
+            const data = await response.json();
+            const allPatients = data.patients || [];
+            const patients = allPatients.filter(p => p.owner_id == ownerId);
+            
+            console.log('Global modal - Loading patients for owner', ownerId, ':', patients);
             
             patientSelect.innerHTML = '<option value="">— kein Patient —</option>';
             patients.forEach(p => {
@@ -1182,10 +1187,16 @@
             // Auto-select first patient if none was selected before
             if (!currentPatientId && patients.length > 0) {
                 patientSelect.value = patients[0].id;
+                console.log('Global modal - Auto-selected first patient:', patients[0].id);
             } else if (currentPatientId) {
                 // Try to restore previous selection if it's still in the list
                 const exists = Array.from(patientSelect.options).some(opt => opt.value === currentPatientId);
-                if (exists) patientSelect.value = currentPatientId;
+                if (exists) {
+                    patientSelect.value = currentPatientId;
+                    console.log('Global modal - Restored patient selection:', currentPatientId);
+                } else {
+                    console.log('Global modal - Previous patient not found in new list');
+                }
             }
             updateGlobalAutoTitle();
         } catch (error) {
