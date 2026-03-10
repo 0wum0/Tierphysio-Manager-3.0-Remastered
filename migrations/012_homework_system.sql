@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS homework_templates (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Patienten-Hausaufgaben Tabelle
+-- Patienten-Hausaufgaben Tabelle (ohne Foreign Keys zuerst)
 CREATE TABLE IF NOT EXISTS patient_homework (
     id INT AUTO_INCREMENT PRIMARY KEY,
     patient_id INT NOT NULL,
@@ -32,25 +32,16 @@ CREATE TABLE IF NOT EXISTS patient_homework (
     status ENUM('pending', 'in_progress', 'completed', 'cancelled') DEFAULT 'pending',
     assigned_by INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    
-    FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
-    FOREIGN KEY (homework_template_id) REFERENCES homework_templates(id) ON DELETE SET NULL,
-    FOREIGN KEY (assigned_by) REFERENCES users(id)
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Hausaufgaben-Completion Tabelle (für Besitzer-Portal)
+-- Hausaufgaben-Completion Tabelle (ohne Foreign Keys zuerst)
 CREATE TABLE IF NOT EXISTS homework_completions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     homework_id INT NOT NULL,
     completed_by INT NOT NULL,
     completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    notes TEXT,
-    
-    FOREIGN KEY (homework_id) REFERENCES patient_homework(id) ON DELETE CASCADE,
-    FOREIGN KEY (completed_by) REFERENCES users(id),
-    
-    UNIQUE KEY unique_completion (homework_id, DATE(completed_at))
+    notes TEXT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Indizes
@@ -58,6 +49,32 @@ CREATE INDEX IF NOT EXISTS idx_patient_homework_patient ON patient_homework(pati
 CREATE INDEX IF NOT EXISTS idx_patient_homework_status ON patient_homework(status);
 CREATE INDEX IF NOT EXISTS idx_patient_homework_dates ON patient_homework(start_date, end_date);
 CREATE INDEX IF NOT EXISTS idx_homework_completions_homework ON homework_completions(homework_id);
+
+-- Foreign Keys (nach Tabellenerstellung)
+ALTER TABLE patient_homework 
+ADD CONSTRAINT IF NOT EXISTS fk_patient_homework_patient 
+FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE;
+
+ALTER TABLE patient_homework 
+ADD CONSTRAINT IF NOT EXISTS fk_patient_homework_template 
+FOREIGN KEY (homework_template_id) REFERENCES homework_templates(id) ON DELETE SET NULL;
+
+ALTER TABLE patient_homework 
+ADD CONSTRAINT IF NOT EXISTS fk_patient_homework_assigned_by 
+FOREIGN KEY (assigned_by) REFERENCES users(id);
+
+ALTER TABLE homework_completions 
+ADD CONSTRAINT IF NOT EXISTS fk_homework_completions_homework 
+FOREIGN KEY (homework_id) REFERENCES patient_homework(id) ON DELETE CASCADE;
+
+ALTER TABLE homework_completions 
+ADD CONSTRAINT IF NOT EXISTS fk_homework_completions_completed_by 
+FOREIGN KEY (completed_by) REFERENCES users(id);
+
+-- Unique Key für Completions
+ALTER TABLE homework_completions 
+ADD CONSTRAINT IF NOT EXISTS unique_completion 
+UNIQUE (homework_id, DATE(completed_at));
 
 -- Vordefinierte Tierphysio-Hausaufgaben Templates
 INSERT IGNORE INTO homework_templates (title, description, category, category_emoji, frequency, duration_value, duration_unit, therapist_notes) VALUES
