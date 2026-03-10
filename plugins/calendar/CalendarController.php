@@ -129,6 +129,28 @@ class CalendarController extends Controller
         exit;
     }
 
+    /* ── API: patients filtered by owner ── */
+    public function apiPatientsByOwner(array $params = []): void
+    {
+        $ownerId = (int)($params['owner_id'] ?? 0);
+        if ($ownerId === 0) {
+            header('Content-Type: application/json');
+            echo json_encode([]);
+            exit;
+        }
+
+        $patients = $this->patientRepository->findByOwner($ownerId);
+        $patients = array_map(fn($p) => [
+            'id'      => $p['id'],
+            'name'    => $p['name'],
+            'species' => $p['species'] ?? '',
+        ], $patients);
+
+        header('Content-Type: application/json');
+        echo json_encode($patients);
+        exit;
+    }
+
     /* ── API: single appointment ── */
     public function apiShow(array $params = []): void
     {

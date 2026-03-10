@@ -67,10 +67,10 @@
         </div>
         <h2 class="cal-title" id="cal-title"></h2>
         <div class="flex gap-1">
-            <button class="cal-view-btn active" data-view="dayGridMonth">Monat</button>
+            <button class="cal-view-btn cal-hide-mobile" data-view="dayGridMonth">Monat</button>
             <button class="cal-view-btn cal-hide-mobile" data-view="timeGridWeek">Woche</button>
             <button class="cal-view-btn cal-hide-mobile" data-view="timeGridDay">Tag</button>
-            <button class="cal-view-btn" data-view="listWeek">Liste</button>
+            <button class="cal-view-btn active" data-view="listWeek">Liste</button>
         </div>
     </div>
     <div class="cal-body">
@@ -263,7 +263,7 @@
 
         calendar = new FullCalendar.Calendar(el, {
             locale: 'de',
-            initialView: 'dayGridMonth',
+            initialView: 'listWeek',
             headerToolbar: false,
             firstDay: 1,
             height: 'auto',
@@ -400,6 +400,54 @@
             const end = new Date(start.getTime() + 60*60*1000);
             const pad = n => String(n).padStart(2,'0');
             document.getElementById('apt-end').value = `${end.getFullYear()}-${pad(end.getMonth()+1)}-${pad(end.getDate())}T${pad(end.getHours())}:${pad(end.getMinutes())}`;
+        }
+    });
+
+    /* Owner change → filter patients */
+    document.getElementById('apt-owner').addEventListener('change', async function() {
+        const ownerSelect = this;
+        const patientSelect = document.getElementById('apt-patient');
+        const ownerId = ownerSelect.value;
+        
+        // Store current patient value
+        const currentPatientId = patientSelect.value;
+        
+        if (!ownerId) {
+            // Reset to all patients
+            const response = await fetch('/api/kalender/form-data');
+            const data = await response.json();
+            patientSelect.innerHTML = '<option value="">— kein Patient —</option>';
+            data.patients.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = `${p.name} (${p.species})`;
+                patientSelect.appendChild(opt);
+            });
+            // Restore selection if possible
+            if (currentPatientId) patientSelect.value = currentPatientId;
+            return;
+        }
+
+        // Load patients for this owner
+        try {
+            const response = await fetch(`/api/kalender/patients-by-owner?owner_id=${ownerId}`);
+            const patients = await response.json();
+            
+            patientSelect.innerHTML = '<option value="">— kein Patient —</option>';
+            patients.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = `${p.name} (${p.species})`;
+                patientSelect.appendChild(opt);
+            });
+            
+            // Try to restore previous selection if it's still in the list
+            if (currentPatientId) {
+                const exists = Array.from(patientSelect.options).some(opt => opt.value === currentPatientId);
+                if (exists) patientSelect.value = currentPatientId;
+            }
+        } catch (error) {
+            console.error('Failed to load patients:', error);
         }
     });
 
