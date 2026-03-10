@@ -445,19 +445,39 @@ class PatientController extends Controller
     {
         $q      = trim($this->get('q', ''));
         $owners = [];
-        if (strlen($q) >= 2) {
-            $all = $this->ownerService->findAll();
-            foreach ($all as $o) {
-                $name = strtolower(($o['first_name'] ?? '') . ' ' . ($o['last_name'] ?? '') . ' ' . ($o['email'] ?? ''));
-                if (str_contains($name, strtolower($q))) {
-                    $animals = $this->patientService->findByOwner((int)$o['id']);
-                    $o['animal_count'] = count($animals);
-                    $o['animals']      = array_map(fn($a) => ['id' => $a['id'], 'name' => $a['name'], 'species' => $a['species'] ?? ''], $animals);
-                    $owners[] = $o;
-                }
-                if (count($owners) >= 8) break;
+
+        $allOwners = $this->ownerService->findAll();
+        $needle    = strtolower($q);
+
+        foreach ($allOwners as $o) {
+            $matchesSearch = $needle === ''
+                ? true
+                : str_contains(strtolower(($o['first_name'] ?? '') . ' ' . ($o['last_name'] ?? '') . ' ' . ($o['email'] ?? '')), $needle);
+
+            if (!$matchesSearch && strlen($needle) >= 2) {
+                continue;
+            }
+            if (!$matchesSearch && $needle !== '') {
+                continue;
+            }
+
+            $animals = $this->patientService->findByOwner((int)$o['id']);
+            $o['animal_count'] = count($animals);
+            $o['animals']      = array_map(fn($a) => [
+                'id'      => $a['id'],
+                'name'    => $a['name'],
+                'species' => $a['species'] ?? '',
+            ], $animals);
+            $owners[] = $o;
+
+            if ($needle === '' && count($owners) >= 25) {
+                break;
+            }
+            if ($needle !== '' && strlen($needle) >= 2 && count($owners) >= 8) {
+                break;
             }
         }
+
         header('Content-Type: application/json');
         echo json_encode($owners);
         exit;
