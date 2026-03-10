@@ -1,8 +1,8 @@
 <?php
 // Check if homework_templates table exists and has data
 try {
-    // Database connection
-    $pdo = new PDO('mysql:host=localhost;dbname=tierphysio', 'root', '');
+    // Database connection - use same config as app
+    $pdo = new PDO('mysql:host=localhost;dbname=tierphysio', 'tierphysio', 'tierphysio123');
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
     echo "=== Checking homework_templates table ===\n";
