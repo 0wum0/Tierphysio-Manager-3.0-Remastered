@@ -475,12 +475,26 @@
             const patient = data.patients.find(p => p.id == patientId);
             
             if (patient && patient.owner_id) {
-                // Auto-select the owner
-                ownerSelect.value = patient.owner_id;
-                
-                // Trigger owner change to filter patients properly
-                const event = new Event('change', { bubbles: true });
-                ownerSelect.dispatchEvent(event);
+                // Check if owner is already selected to avoid circular updates
+                if (ownerSelect.value != patient.owner_id) {
+                    // Auto-select the owner
+                    ownerSelect.value = patient.owner_id;
+                    
+                    // Store current patient selection
+                    const currentPatientId = patientSelect.value;
+                    
+                    // Trigger owner change to filter patients properly
+                    const event = new Event('change', { bubbles: true });
+                    ownerSelect.dispatchEvent(event);
+                    
+                    // Restore patient selection after filtering
+                    setTimeout(() => {
+                        patientSelect.value = currentPatientId;
+                        updateAutoTitle();
+                    }, 100);
+                } else {
+                    updateAutoTitle();
+                }
             }
         } catch (error) {
             console.error('Failed to get patient data:', error);
