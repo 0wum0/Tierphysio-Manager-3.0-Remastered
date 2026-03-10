@@ -113,6 +113,7 @@ class CalendarController extends Controller
             'id'         => $o['id'],
             'first_name' => $o['first_name'] ?? '',
             'last_name'  => $o['last_name'] ?? '',
+            'display_name' => trim($o['last_name'] ?? ''),
         ], $this->ownerRepository->findAll());
 
         $treatmentTypes = array_map(fn($tt) => [

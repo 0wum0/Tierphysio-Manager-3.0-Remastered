@@ -133,7 +133,7 @@
                         <select id="apt-owner" name="owner_id" class="form-control">
                             <option value="">— kein Tierhalter —</option>
                             {% for o in owners %}
-                            <option value="{{ o.id }}">{{ o.first_name }} {{ o.last_name }}</option>
+                            <option value="{{ o.id }}">{{ o.last_name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -508,7 +508,7 @@
             
             if (ownerName && patientName) {
                 // Format: "Nachname, Tiername – Behandlung"
-                const ownerLastName = ownerName.split(',')[0] || ownerName.split(' ').pop() || ownerName;
+                const ownerLastName = ownerName.split(' ').pop() || ownerName; // Get last word (last name)
                 const patientCleanName = patientName.split(' (')[0] || patientName; // Remove species from patient name
                 newTitle = `${ownerLastName}, ${patientCleanName}`;
                 

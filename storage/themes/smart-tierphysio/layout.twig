@@ -1102,7 +1102,7 @@
                     pSel.appendChild(o);
                 });
                 (data.owners||[]).forEach(function(o){
-                    var opt = new Option(o.first_name + ' ' + o.last_name, o.id);
+                    var opt = new Option(o.last_name || (o.first_name + ' ' + o.last_name), o.id);
                     oSel.appendChild(opt);
                 });
                 (data.treatment_types||[]).forEach(function(tt){
@@ -1245,7 +1245,7 @@
             
             if (ownerName && patientName) {
                 // Format: "Nachname, Tiername – Behandlung"
-                const ownerLastName = ownerName.split(',')[0] || ownerName.split(' ').pop() || ownerName;
+                const ownerLastName = ownerName.split(' ').pop() || ownerName; // Get last word (last name)
                 const patientCleanName = patientName.split(' (')[0] || patientName; // Remove species from patient name
                 newTitle = `${ownerLastName}, ${patientCleanName}`;
                 
