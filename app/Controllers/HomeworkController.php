@@ -182,6 +182,55 @@ class HomeworkController
         }
     }
 
+    public function getPlanMeta(array $params = []): void
+    {
+        $patientId = (int)($params['patient_id'] ?? 0);
+        if ($patientId === 0) {
+            http_response_code(400);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Patient-ID fehlt']);
+            exit;
+        }
+
+        $meta = $this->homeworkRepository->getPatientPlanMeta($patientId);
+
+        header('Content-Type: application/json');
+        echo json_encode($meta ?? (object)[]);
+        exit;
+    }
+
+    public function savePlanMeta(array $params = []): void
+    {
+        $patientId = (int)($params['patient_id'] ?? 0);
+        if ($patientId === 0) {
+            http_response_code(400);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Patient-ID fehlt']);
+            exit;
+        }
+
+        if (!isset($_POST['_csrf_token']) || !Auth::validateCsrfToken($_POST['_csrf_token'])) {
+            http_response_code(403);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Ungültiger CSRF-Token']);
+            exit;
+        }
+
+        $this->homeworkRepository->savePatientPlanMeta($patientId, [
+            'physiotherapeutische_grundsaetze' => $_POST['physiotherapeutische_grundsaetze'] ?? null,
+            'kurzfristige_ziele'               => $_POST['kurzfristige_ziele'] ?? null,
+            'langfristige_ziele'               => $_POST['langfristige_ziele'] ?? null,
+            'therapiemittel'                   => $_POST['therapiemittel'] ?? null,
+            'beachte_hinweise'                 => $_POST['beachte_hinweise'] ?? null,
+            'wiedervorstellung_date'           => $_POST['wiedervorstellung_date'] ?? null,
+            'therapist_name'                   => $_POST['therapist_name'] ?? null,
+        ]);
+
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
     private function getCategoryEmoji(string $category): string
     {
         $emojis = [
@@ -194,7 +243,7 @@ class HomeworkController
             'beobachtung' => '👁️',
             'sonstiges' => '📌'
         ];
-        
+
         return $emojis[$category] ?? '📌';
     }
 }

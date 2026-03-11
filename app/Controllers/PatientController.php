@@ -13,8 +13,10 @@ use App\Services\PatientService;
 use App\Services\OwnerService;
 use App\Services\InvoiceService;
 use App\Services\PdfService;
+use App\Services\MailService;
 use App\Repositories\TreatmentTypeRepository;
 use App\Repositories\SettingsRepository;
+use App\Repositories\HomeworkRepository;
 use App\Core\Database;
 
 class PatientController extends Controller
@@ -30,6 +32,8 @@ class PatientController extends Controller
         private readonly InvoiceService $invoiceService,
         private readonly SettingsRepository $settingsRepository,
         private readonly PdfService $pdfService,
+        private readonly MailService $mailService,
+        private readonly HomeworkRepository $homeworkRepository,
         private readonly Database $db
     ) {
         parent::__construct($view, $session, $config, $translator);
@@ -747,5 +751,85 @@ class PatientController extends Controller
         header('Cache-Control: public, max-age=86400');
         readfile($path);
         exit;
+    }
+
+    public function downloadHomeworkPdf(array $params = []): void
+    {
+        $patient = $this->patientService->findById((int)$params['id']);
+        if (!$patient) {
+            $this->abort(404);
+        }
+
+        $owner    = $patient['owner_id'] ? $this->ownerService->findById((int)$patient['owner_id']) : null;
+        $tasks    = $this->homeworkRepository->findPatientHomework((int)$params['id']);
+        $meta     = $this->homeworkRepository->getPatientPlanMeta((int)$params['id']) ?? [];
+
+        $plan = [
+            'plan_date'          => date('Y-m-d'),
+            'physio_principles'  => $meta['physiotherapeutische_grundsaetze'] ?? '',
+            'short_term_goals'   => $meta['kurzfristige_ziele'] ?? '',
+            'long_term_goals'    => $meta['langfristige_ziele'] ?? '',
+            'therapy_means'      => $meta['therapiemittel'] ?? '',
+            'general_notes'      => $meta['beachte_hinweise'] ?? '',
+            'next_appointment'   => !empty($meta['wiedervorstellung_date'])
+                ? date('d.m.Y', strtotime($meta['wiedervorstellung_date']))
+                : '',
+            'therapist_name'     => $meta['therapist_name'] ?? ($this->settingsRepository->get('company_name', '') ?: ''),
+        ];
+
+        $pdfBytes = $this->pdfService->generateHomeworkPdf($plan, $tasks, $owner, $patient);
+        $filename = 'Hausaufgaben_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $patient['name'] ?? 'Patient') . '_' . date('Y-m-d') . '.pdf';
+
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: inline; filename="' . $filename . '"');
+        header('Content-Length: ' . strlen($pdfBytes));
+        header('Cache-Control: private, max-age=0');
+        echo $pdfBytes;
+        exit;
+    }
+
+    public function sendHomeworkEmail(array $params = []): void
+    {
+        $this->validateCsrf();
+
+        $patient = $this->patientService->findById((int)$params['id']);
+        if (!$patient) {
+            $this->abort(404);
+        }
+
+        $owner = $patient['owner_id'] ? $this->ownerService->findById((int)$patient['owner_id']) : null;
+        if (!$owner || empty($owner['email'])) {
+            $this->session->flash('error', 'Kein E-Mail-Adresse beim Tierhalter hinterlegt.');
+            $this->redirect("/patienten/{$params['id']}?tab=hausaufgaben");
+            return;
+        }
+
+        $tasks = $this->homeworkRepository->findPatientHomework((int)$params['id']);
+        $meta  = $this->homeworkRepository->getPatientPlanMeta((int)$params['id']) ?? [];
+
+        $plan = [
+            'plan_date'          => date('Y-m-d'),
+            'physio_principles'  => $meta['physiotherapeutische_grundsaetze'] ?? '',
+            'short_term_goals'   => $meta['kurzfristige_ziele'] ?? '',
+            'long_term_goals'    => $meta['langfristige_ziele'] ?? '',
+            'therapy_means'      => $meta['therapiemittel'] ?? '',
+            'general_notes'      => $meta['beachte_hinweise'] ?? '',
+            'next_appointment'   => !empty($meta['wiedervorstellung_date'])
+                ? date('d.m.Y', strtotime($meta['wiedervorstellung_date']))
+                : '',
+            'therapist_name'     => $meta['therapist_name'] ?? ($this->settingsRepository->get('company_name', '') ?: ''),
+        ];
+
+        $pdfBytes = $this->pdfService->generateHomeworkPdf($plan, $tasks, $owner, $patient);
+        $sent     = $this->mailService->sendHomework($patient, $owner, $pdfBytes);
+
+        if ($sent) {
+            $this->session->flash('success', 'Hausaufgaben erfolgreich per E-Mail gesendet.');
+        } else {
+            $err = $this->mailService->getLastError();
+            $this->session->flash('error', 'E-Mail konnte nicht gesendet werden.' . ($err ? ': ' . $err : ''));
+        }
+
+        $this->redirect("/patienten/{$params['id']}?tab=hausaufgaben");
     }
 }

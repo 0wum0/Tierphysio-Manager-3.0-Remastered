@@ -23,6 +23,10 @@ $router->get('/api/patients/{patient_id}/homework', [ApiController::class, 'getP
 $router->post('/api/patients/{patient_id}/homework', [ApiController::class, 'createPatientHomework'], ['auth']);
 $router->delete('/api/patients/{patient_id}/homework/{homework_id}', [ApiController::class, 'deletePatientHomework'], ['auth']);
 
+// Hausaufgaben Plan-Meta API
+$router->get('/api/patients/{patient_id}/homework/plan-meta', [HomeworkController::class, 'getPlanMeta'], ['auth']);
+$router->post('/api/patients/{patient_id}/homework/plan-meta', [HomeworkController::class, 'savePlanMeta'], ['auth']);
+
 $router->get('/', [DashboardController::class, 'index'], ['auth']);
 $router->get('/dashboard', [DashboardController::class, 'index'], ['auth']);
 $router->get('/dashboard/chart-data', [DashboardController::class, 'chartData'], ['auth']);
@@ -55,6 +59,8 @@ $router->post('/patienten/{id}/timeline/{entryId}/loeschen', [PatientController:
 $router->post('/patienten/{id}/timeline/{entryId}/update-json', [PatientController::class, 'updateTimelineEntryJson'], ['auth']);
 $router->post('/patienten/{id}/timeline/{entryId}/delete-json', [PatientController::class, 'deleteTimelineEntryJson'], ['auth']);
 $router->get('/patienten/{id}/pdf', [PatientController::class, 'downloadPatientPdf'], ['auth']);
+$router->get('/patienten/{id}/hausaufgaben/pdf', [PatientController::class, 'downloadHomeworkPdf'], ['auth']);
+$router->post('/patienten/{id}/hausaufgaben/email', [PatientController::class, 'sendHomeworkEmail'], ['auth']);
 $router->get('/patienten/{id}/dokumente/{file}', [PatientController::class, 'downloadDocument'], ['auth']);
 $router->get('/patienten/{id}/foto/{file}', [PatientController::class, 'servePhoto'], ['auth']);
 $router->post('/patienten/{id}/dokumente', [PatientController::class, 'uploadDocument'], ['auth']);
@@ -101,6 +107,11 @@ $router->post('/einstellungen/benutzer/{id}/loeschen', [SettingsController::clas
 $router->post('/einstellungen/behandlungsarten', [SettingsController::class, 'createTreatmentType'], ['admin']);
 $router->post('/einstellungen/behandlungsarten/{id}', [SettingsController::class, 'updateTreatmentType'], ['admin']);
 $router->post('/einstellungen/behandlungsarten/{id}/loeschen', [SettingsController::class, 'deleteTreatmentType'], ['admin']);
+
+// Hausaufgaben-Templates (Admin)
+$router->post('/einstellungen/hausaufgaben-templates', [SettingsController::class, 'createHomeworkTemplate'], ['admin']);
+$router->post('/einstellungen/hausaufgaben-templates/{id}', [SettingsController::class, 'updateHomeworkTemplate'], ['admin']);
+$router->post('/einstellungen/hausaufgaben-templates/{id}/loeschen', [SettingsController::class, 'deleteHomeworkTemplate'], ['admin']);
 $router->get('/api/behandlungsarten', [SettingsController::class, 'treatmentTypesJson'], ['auth']);
 
 $router->post('/api/ui-settings', [UiSettingsController::class, 'save'], ['auth']);
