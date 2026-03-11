@@ -1,0 +1,130 @@
+{% extends '@owner-portal/portal_layout.twig' %}
+{% set active_nav = 'tiere' %}
+{% block content %}
+
+<div style="margin-bottom:1rem;">
+    <a href="/portal/tiere/{{ pet.id }}" style="color:rgba(255,255,255,0.45);font-size:0.82rem;text-decoration:none;">← {{ pet.name }}</a>
+</div>
+
+<h1 class="portal-page-title">📋 Hausaufgaben — {{ pet.name }}</h1>
+
+{% if plans %}
+    {% for plan in plans %}
+    {% set tasks = tasks_by_plan[plan.id] ?? [] %}
+    <div class="portal-card" style="margin-bottom:1.5rem;">
+
+        {# ── Plan header ── #}
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid rgba(255,255,255,0.08);">
+            <div>
+                <div style="font-size:1rem;font-weight:600;color:var(--portal-text);">
+                    📅 Hausaufgabenplan vom {{ plan.plan_date|date('d.m.Y') }}
+                </div>
+                {% if plan.therapist_name %}
+                <div style="font-size:0.82rem;color:var(--portal-muted);margin-top:0.2rem;">
+                    {{ plan.therapist_name }}
+                </div>
+                {% endif %}
+            </div>
+            {% if plan.next_appointment %}
+            <div style="font-size:0.82rem;color:var(--portal-muted);background:rgba(255,255,255,0.05);padding:0.3rem 0.75rem;border-radius:20px;">
+                🔄 Wiedervorstellung: {{ plan.next_appointment }}
+            </div>
+            {% endif %}
+        </div>
+
+        {# ── Physio principles ── #}
+        {% if plan.physio_principles %}
+        <div style="margin-bottom:1rem;">
+            <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--portal-muted);margin-bottom:0.4rem;">
+                Physiotherapeutische Grundsätze
+            </div>
+            <div style="font-size:0.88rem;color:var(--portal-text);line-height:1.5;white-space:pre-line;">{{ plan.physio_principles }}</div>
+        </div>
+        {% endif %}
+
+        {# ── Goals ── #}
+        {% if plan.short_term_goals or plan.long_term_goals %}
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+            {% if plan.short_term_goals %}
+            <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:0.75rem;">
+                <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--portal-muted);margin-bottom:0.35rem;">
+                    Kurzfristige Ziele
+                </div>
+                <div style="font-size:0.85rem;color:var(--portal-text);white-space:pre-line;">{{ plan.short_term_goals }}</div>
+            </div>
+            {% endif %}
+            {% if plan.long_term_goals %}
+            <div style="background:rgba(255,255,255,0.03);border-radius:8px;padding:0.75rem;">
+                <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--portal-muted);margin-bottom:0.35rem;">
+                    Langfristige Ziele
+                </div>
+                <div style="font-size:0.85rem;color:var(--portal-text);white-space:pre-line;">{{ plan.long_term_goals }}</div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {# ── Therapy means ── #}
+        {% if plan.therapy_means %}
+        <div style="margin-bottom:1rem;">
+            <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--portal-muted);margin-bottom:0.4rem;">
+                Therapiemittel
+            </div>
+            <div style="font-size:0.88rem;color:var(--portal-text);">{{ plan.therapy_means }}</div>
+        </div>
+        {% endif %}
+
+        {# ── Tasks / Therapieplan ── #}
+        {% if tasks %}
+        <div style="margin-bottom:1rem;">
+            <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--portal-muted);margin-bottom:0.75rem;">
+                Therapieplan
+            </div>
+            {% for task in tasks %}
+            <div style="border:1px solid rgba(255,255,255,0.07);border-radius:8px;margin-bottom:0.6rem;overflow:hidden;">
+                <div style="background:rgba(79,124,255,0.12);padding:0.55rem 0.9rem;display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">
+                    <div style="font-weight:600;font-size:0.9rem;color:var(--portal-text);">{{ task.title }}</div>
+                    {% if task.frequency or task.duration %}
+                    <div style="font-size:0.78rem;color:var(--portal-muted);white-space:nowrap;">
+                        {% if task.frequency %}{{ task.frequency }}{% endif %}
+                        {% if task.frequency and task.duration %} · {% endif %}
+                        {% if task.duration %}{{ task.duration }}{% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% if task.description or task.therapist_notes %}
+                <div style="padding:0.65rem 0.9rem;">
+                    {% if task.description %}
+                    <div style="font-size:0.85rem;color:var(--portal-text);line-height:1.55;white-space:pre-line;">{{ task.description }}</div>
+                    {% endif %}
+                    {% if task.therapist_notes %}
+                    <div style="font-size:0.8rem;color:var(--portal-muted);margin-top:0.4rem;font-style:italic;">{{ task.therapist_notes }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {# ── General notes / Beachte ── #}
+        {% if plan.general_notes %}
+        <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:0.75rem;margin-bottom:1rem;">
+            <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:0.08em;color:#f59e0b;margin-bottom:0.4rem;font-weight:600;">
+                ⚠️ Beachte
+            </div>
+            <div style="font-size:0.85rem;color:var(--portal-text);line-height:1.55;white-space:pre-line;">{{ plan.general_notes }}</div>
+        </div>
+        {% endif %}
+
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="portal-card" style="text-align:center;padding:3rem;">
+        <div style="font-size:2.5rem;margin-bottom:0.75rem;opacity:.3;">📋</div>
+        <p style="color:rgba(255,255,255,0.4);">Noch keine Hausaufgaben hinterlegt.</p>
+        <p style="color:rgba(255,255,255,0.25);font-size:0.82rem;">Ihr Therapeut wird bald einen Plan für {{ pet.name }} erstellen.</p>
+    </div>
+{% endif %}
+
+{% endblock %}
