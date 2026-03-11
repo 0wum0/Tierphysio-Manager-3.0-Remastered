@@ -301,6 +301,8 @@ class PatientController extends Controller
                 'image/jpeg', 'image/png', 'image/gif', 'image/webp',
                 'application/pdf', 'application/msword',
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
+                'video/x-msvideo', 'video/x-matroska', 'video/x-m4v',
             ]);
             if ($file) {
                 $data['attachment'] = $file;
@@ -335,7 +337,17 @@ class PatientController extends Controller
             'user_id'           => (int)$this->session->get('user_id'),
         ];
 
-        if (!empty($_FILES['attachment']['name'])) {
+        // Bereits hochgeladener Dateiname (vom uploadAttachment-Endpoint)
+        $preUploaded = $this->post('uploaded_filename', '');
+        if ($preUploaded !== '') {
+            // Sicherheitscheck: nur Dateiname, kein Pfad-Traversal
+            $safeFilename = basename($preUploaded);
+            $uploadedPath = STORAGE_PATH . '/patients/' . (int)$params['id'] . '/timeline/' . $safeFilename;
+            if (file_exists($uploadedPath)) {
+                $data['attachment'] = $safeFilename;
+            }
+        } elseif (!empty($_FILES['attachment']['name']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
+            // Fallback: direkter Upload (kleine Dateien / Bilder)
             $destination = STORAGE_PATH . '/patients/' . $params['id'] . '/timeline';
             if (!is_dir($destination)) {
                 mkdir($destination, 0755, true);
@@ -344,6 +356,8 @@ class PatientController extends Controller
                 'image/jpeg', 'image/png', 'image/gif', 'image/webp',
                 'application/pdf', 'application/msword',
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
+                'video/x-msvideo', 'video/x-matroska', 'video/x-m4v',
             ]);
             if ($file) {
                 $data['attachment'] = $file;
@@ -355,6 +369,73 @@ class PatientController extends Controller
 
         header('Content-Type: application/json');
         echo json_encode(['ok' => true, 'timeline' => $timeline]);
+        exit;
+    }
+    public function uploadAttachment(array $params = []): void
+    {
+        $this->validateCsrf();
+        $patient = $this->patientService->findById((int)$params['id']);
+        if (!$patient) {
+            http_response_code(404);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'not found']);
+            exit;
+        }
+
+        // Kein Timeout für große Uploads
+        set_time_limit(0);
+        ini_set('memory_limit', '256M');
+
+        if (empty($_FILES['attachment']['name']) || $_FILES['attachment']['error'] !== UPLOAD_ERR_OK) {
+            $errCode = $_FILES['attachment']['error'] ?? -1;
+            $errMsg  = match ($errCode) {
+                UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'Datei zu groß. Bitte php.ini upload_max_filesize prüfen.',
+                UPLOAD_ERR_PARTIAL  => 'Upload wurde unterbrochen.',
+                UPLOAD_ERR_NO_FILE  => 'Keine Datei ausgewählt.',
+                default             => 'Upload-Fehler (Code ' . $errCode . ').',
+            };
+            http_response_code(400);
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'error' => $errMsg]);
+            exit;
+        }
+
+        $destination = STORAGE_PATH . '/patients/' . (int)$params['id'] . '/timeline';
+        if (!is_dir($destination)) {
+            mkdir($destination, 0755, true);
+        }
+
+        $finfo      = new \finfo(FILEINFO_MIME_TYPE);
+        $uploadMime = $finfo->file($_FILES['attachment']['tmp_name']);
+
+        $allowedMimes = [
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+            'application/pdf', 'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
+            'video/x-msvideo', 'video/x-matroska', 'video/x-m4v', 'video/mpeg',
+        ];
+
+        if (!in_array($uploadMime, $allowedMimes, true)) {
+            http_response_code(415);
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'error' => 'Dateityp nicht erlaubt: ' . $uploadMime]);
+            exit;
+        }
+
+        $ext      = strtolower(pathinfo($_FILES['attachment']['name'], PATHINFO_EXTENSION));
+        $filename = bin2hex(random_bytes(16)) . '.' . $ext;
+        $fullPath = $destination . '/' . $filename;
+
+        if (!move_uploaded_file($_FILES['attachment']['tmp_name'], $fullPath)) {
+            http_response_code(500);
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'error' => 'Datei konnte nicht gespeichert werden.']);
+            exit;
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode(['ok' => true, 'filename' => $filename, 'mime' => $uploadMime]);
         exit;
     }
 
@@ -389,7 +470,7 @@ class PatientController extends Controller
         echo json_encode(['ok' => true, 'timeline' => $timeline]);
         exit;
     }
-
+    
     public function deleteTimelineEntryJson(array $params = []): void
     {
         $this->validateCsrf();
@@ -619,7 +700,9 @@ class PatientController extends Controller
         $finfo    = new \finfo(FILEINFO_MIME_TYPE);
         $mimeType = $finfo->file($path);
 
-        $isInline = str_starts_with($mimeType, 'image/') || $mimeType === 'application/pdf';
+        $isInline = str_starts_with($mimeType, 'image/')
+            || str_starts_with($mimeType, 'video/')
+            || $mimeType === 'application/pdf';
 
         header('Content-Type: ' . $mimeType);
         header('Content-Disposition: ' . ($isInline ? 'inline' : 'attachment') . '; filename="' . $file . '"');
