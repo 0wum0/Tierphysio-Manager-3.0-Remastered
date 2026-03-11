@@ -682,7 +682,7 @@ function renderTimeline(timeline, patientId) {
         pdTimeline.innerHTML = '<div style="text-align:center;padding:2rem 1rem;color:var(--text-muted);font-size:0.85rem;">Noch keine Einträge</div>';
         return;
     }
-    var html = '<div class="timeline">';
+    var html = '';
     timeline.forEach(function (e) {
         var entryPayload = encodeURIComponent(JSON.stringify(e));
         var hasAttach = e.attachment;
@@ -718,7 +718,6 @@ function renderTimeline(timeline, patientId) {
         html += attachHtml;
         html += '</div></div>';
     });
-    html += '</div>';
     pdTimeline.innerHTML = html;
 
     pdTimeline.querySelectorAll('[data-lightbox-modal]').forEach(function (el) {
