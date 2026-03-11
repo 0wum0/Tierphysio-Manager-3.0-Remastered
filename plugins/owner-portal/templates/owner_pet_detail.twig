@@ -34,9 +34,14 @@
             </span>
         </div>
     </div>
-    <a href="/portal/tiere/{{ pet.id }}/uebungen" class="portal-btn portal-btn-secondary portal-btn-sm">
-        💪 Übungen
-    </a>
+    <div style="display:flex;flex-direction:column;gap:0.4rem;">
+        <a href="/portal/tiere/{{ pet.id }}/uebungen" class="portal-btn portal-btn-secondary portal-btn-sm">
+            💪 Übungen
+        </a>
+        <a href="/portal/tiere/{{ pet.id }}/hausaufgaben" class="portal-btn portal-btn-secondary portal-btn-sm">
+            📋 Hausaufgaben
+        </a>
+    </div>
 </div>
 
 {# ── Tab Navigation ── #}

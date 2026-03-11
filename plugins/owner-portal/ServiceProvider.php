@@ -68,6 +68,18 @@ class ServiceProvider
         $router->post('/portal-admin/tiere/{owner_id}/uebungen', [OwnerPortalAdminController::class, 'exerciseStore'],  ['auth']);
         $router->post('/portal-admin/uebungen/{id}/loeschen',    [OwnerPortalAdminController::class, 'exerciseDelete'], ['auth']);
         $router->post('/portal-admin/uebungen/{id}/bearbeiten',  [OwnerPortalAdminController::class, 'exerciseUpdate'], ['auth']);
+
+        /* ── Homework plans ── */
+        $router->get('/portal-admin/tiere/{owner_id}/hausaufgaben',  [OwnerPortalAdminController::class, 'homeworkPlanIndex'],  ['auth']);
+        $router->post('/portal-admin/tiere/{owner_id}/hausaufgaben', [OwnerPortalAdminController::class, 'homeworkPlanStore'],  ['auth']);
+        $router->get('/portal-admin/hausaufgaben/{id}/bearbeiten',   [OwnerPortalAdminController::class, 'homeworkPlanEdit'],   ['auth']);
+        $router->post('/portal-admin/hausaufgaben/{id}/bearbeiten',  [OwnerPortalAdminController::class, 'homeworkPlanUpdate'], ['auth']);
+        $router->post('/portal-admin/hausaufgaben/{id}/loeschen',    [OwnerPortalAdminController::class, 'homeworkPlanDelete'], ['auth']);
+        $router->get('/portal-admin/hausaufgaben/{id}/pdf',          [OwnerPortalAdminController::class, 'homeworkPlanPdf'],    ['auth']);
+        $router->post('/portal-admin/hausaufgaben/{id}/senden',      [OwnerPortalAdminController::class, 'homeworkPlanSend'],   ['auth']);
+
+        /* ── Owner portal homework view ── */
+        $router->get('/portal/tiere/{id}/hausaufgaben', [OwnerPortalController::class, 'homework'], []);
     }
 
     public function dashboardWidget(array $context): array

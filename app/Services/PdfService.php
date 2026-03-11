@@ -1254,6 +1254,445 @@ class PdfService
         }
     }
 
+    public function generateHomeworkPdf(
+        array $plan,
+        array $tasks,
+        ?array $owner,
+        ?array $patient
+    ): string {
+        $settings = $this->settingsRepository->all();
+
+        $sidebarColor      = $this->hexToRgb($settings['pdf_primary_color']           ?? '#8B9E8B');
+        $accentColor       = $this->hexToRgb($settings['pdf_accent_color']            ?? '#6B7F6B');
+        $colorCompanyName  = $this->hexToRgb($settings['pdf_color_company_name']      ?? '#1E1E1E');
+        $colorCompanyInfo  = $this->hexToRgb($settings['pdf_color_company_info']      ?? '#6E6E6E');
+        $colorTableHdrBg   = $this->hexToRgb($settings['pdf_color_table_header_bg']   ?? '#8B9E8B');
+        $colorTableHdrText = $this->hexToRgb($settings['pdf_color_table_header_text'] ?? '#FFFFFF');
+        $colorTableText    = $this->hexToRgb($settings['pdf_color_table_text']        ?? '#1E1E1E');
+        $colorLine         = $this->hexToRgb($settings['pdf_color_line']              ?? '#B4B4B4');
+        $colorFooter       = $this->hexToRgb($settings['pdf_color_footer']            ?? '#6E6E6E');
+        $darkColor         = $colorCompanyName;
+        $grayColor         = $colorCompanyInfo;
+
+        $font     = $this->resolvePdfFont($settings['pdf_font'] ?? 'helvetica');
+        $fontSize = (float)($settings['pdf_font_size'] ?? 9);
+
+        $companyName    = $settings['company_name']    ?? '';
+        $companyStreet  = $settings['company_street']  ?? '';
+        $companyZip     = $settings['company_zip']     ?? '';
+        $companyCity    = $settings['company_city']    ?? '';
+        $companyPhone   = $settings['company_phone']   ?? '';
+        $companyEmail   = $settings['company_email']   ?? '';
+        $companyWebsite = $settings['company_website'] ?? '';
+        $bankName       = $settings['bank_name']       ?? '';
+        $bankIban       = $settings['bank_iban']       ?? '';
+        $bankBic        = $settings['bank_bic']        ?? '';
+        $taxNumber      = $settings['tax_number']      ?? '';
+        $showIban       = ($settings['pdf_show_iban']       ?? '1') === '1';
+        $showTaxNum     = ($settings['pdf_show_tax_number'] ?? '1') === '1';
+        $showWebsite    = ($settings['pdf_show_website']    ?? '0') === '1';
+
+        $logoFile = !empty($settings['company_logo'])
+            ? STORAGE_PATH . '/uploads/' . $settings['company_logo']
+            : null;
+
+        $sidebarW  = 42;
+        $contentX  = 50;
+        $contentW  = 145;
+        $rightEdge = 195;
+        $pageH     = 297;
+
+        $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+        $pdf->SetMargins(0, 0, 0);
+        $pdf->SetAutoPageBreak(true, 20);
+        $pdf->AddPage();
+
+        // ── Helper closure: draw sidebar on each page ──────────────────
+        $drawSidebar = function () use (
+            $pdf, $sidebarColor, $accentColor, $sidebarW, $pageH,
+            $font, $fontSize, $logoFile, $owner, $patient
+        ): void {
+            $pdf->SetFillColor(...$sidebarColor);
+            $pdf->Rect(0, 0, $sidebarW, $pageH, 'F');
+
+            $logoY = 14;
+            if ($logoFile && file_exists($logoFile)) {
+                $logoMaxW = $sidebarW - 10;
+                $pdf->Image($logoFile, 5, $logoY, $logoMaxW, 0, '', '', '', false, 300);
+                $logoY += 26;
+            } else {
+                $cx = $sidebarW / 2;
+                $cy = $logoY + 12;
+                $pdf->SetDrawColor(255, 255, 255);
+                $pdf->SetLineWidth(0.5);
+                $pdf->Circle($cx, $cy, 11, 0, 360, 'D');
+                $pdf->SetFont($font, 'B', 7);
+                $pdf->SetTextColor(255, 255, 255);
+                $pdf->SetXY(3, $cy - 4);
+                $pdf->Cell($sidebarW - 6, 8, 'LOGO', 0, 0, 'C');
+                $logoY += 28;
+            }
+
+            // "Hausaufgaben" label in sidebar
+            $sideY = $logoY + 8;
+            $pdf->SetFont($font, '', $fontSize - 2.5);
+            $pdf->SetTextColor(200, 225, 200);
+            $pdf->SetXY(3, $sideY);
+            $pdf->Cell($sidebarW - 6, 4, 'HAUSAUFGABEN', 0, 1, 'C');
+
+            // Datum
+            $sideY += 10;
+            $pdf->SetFont($font, '', $fontSize - 2.5);
+            $pdf->SetTextColor(200, 225, 200);
+            $pdf->SetXY(3, $sideY);
+            $pdf->Cell($sidebarW - 6, 4, 'Datum', 0, 1, 'C');
+            $dateStr = !empty($plan['plan_date'])
+                ? date('d.m.Y', strtotime($plan['plan_date']))
+                : date('d.m.Y');
+            $pdf->SetFont($font, 'B', $fontSize - 1);
+            $pdf->SetTextColor(255, 255, 255);
+            $pdf->SetXY(3, $sideY + 4);
+            $pdf->Cell($sidebarW - 6, 5, $dateStr, 0, 1, 'C');
+
+            // Patient in sidebar
+            if ($patient) {
+                $sideY += 22;
+                $pdf->SetFont($font, '', $fontSize - 2.5);
+                $pdf->SetTextColor(200, 225, 200);
+                $pdf->SetXY(3, $sideY);
+                $pdf->Cell($sidebarW - 6, 4, 'PATIENT', 0, 1, 'C');
+                $pdf->SetFont($font, 'B', $fontSize - 1);
+                $pdf->SetTextColor(255, 255, 255);
+                $pdf->SetXY(3, $sideY + 4);
+                $pdf->MultiCell($sidebarW - 6, 4.5, $patient['name'] ?? '', 0, 'C');
+            }
+
+            // Owner in sidebar
+            if ($owner) {
+                $owY = max($sideY + 32, $pdf->GetY() + 6);
+                $pdf->SetFont($font, '', $fontSize - 2.5);
+                $pdf->SetTextColor(200, 225, 200);
+                $pdf->SetXY(3, $owY);
+                $pdf->Cell($sidebarW - 6, 4, 'TIERHALTER', 0, 1, 'C');
+                $ownerName = trim(($owner['first_name'] ?? '') . ' ' . ($owner['last_name'] ?? ''));
+                $pdf->SetFont($font, 'B', $fontSize - 1.5);
+                $pdf->SetTextColor(255, 255, 255);
+                $pdf->SetXY(3, $owY + 5);
+                $pdf->MultiCell($sidebarW - 6, 4.5, $ownerName, 0, 'C');
+            }
+        };
+
+        $drawSidebar();
+
+        // ── Company info top right ────────────────────────────────────
+        $pdf->SetFont($font, 'B', $fontSize + 1);
+        $pdf->SetTextColor(...$darkColor);
+        $pdf->SetXY($contentX + ($contentW / 2), 8);
+        $pdf->Cell($contentW / 2, 5, $companyName, 0, 1, 'R');
+
+        $pdf->SetFont($font, '', $fontSize - 1.5);
+        $pdf->SetTextColor(...$grayColor);
+        $infoLines = array_filter([
+            $companyStreet,
+            trim($companyZip . ' ' . $companyCity),
+            $companyPhone  ? 'Tel: ' . $companyPhone  : '',
+            $companyEmail,
+            ($showWebsite && $companyWebsite) ? $companyWebsite : '',
+        ]);
+        $infoY = 14;
+        foreach ($infoLines as $line) {
+            $pdf->SetXY($contentX + ($contentW / 2), $infoY);
+            $pdf->Cell($contentW / 2, 4, $line, 0, 1, 'R');
+            $infoY += 4;
+        }
+
+        // ── "Hausaufgaben" heading ────────────────────────────────────
+        $headingY = $infoY + 4;
+        $pdf->SetFont($font, 'B', 20);
+        $pdf->SetTextColor(...$accentColor);
+        $pdf->SetXY($contentX, $headingY);
+        $pdf->Cell($contentW, 10, 'Hausaufgaben', 0, 1, 'L');
+
+        $y = $headingY + 12;
+
+        // ── Owner + Pet info block ────────────────────────────────────
+        $pdf->SetDrawColor(...$colorLine);
+        $pdf->SetLineWidth(0.3);
+        $pdf->Line($contentX, $y, $rightEdge, $y);
+
+        // Header row
+        $pdf->SetFillColor(...$colorTableHdrBg);
+        $pdf->Rect($contentX, $y, $contentW, 7, 'F');
+        $pdf->SetFont($font, 'B', $fontSize - 0.5);
+        $pdf->SetTextColor(...$colorTableHdrText);
+        $pdf->SetXY($contentX + 2, $y + 1.5);
+        $pdf->Cell($contentW - 4, 4, 'Angaben zum Besitzer', 0, 1, 'L');
+        $y += 9;
+
+        $colW = $contentW / 3;
+        $ownerName  = $owner ? trim(($owner['last_name'] ?? '') . ', ' . ($owner['first_name'] ?? '')) : '—';
+        $planDate   = !empty($plan['plan_date']) ? date('d.m.Y', strtotime($plan['plan_date'])) : date('d.m.Y');
+
+        $ownerFields = [
+            ['Name', $owner['last_name'] ?? '—'],
+            ['Vorname', $owner['first_name'] ?? '—'],
+            ['Datum', $planDate],
+        ];
+        $pdf->SetFont($font, '', $fontSize - 1);
+        $pdf->SetTextColor(...$grayColor);
+        foreach ($ownerFields as $idx => $f) {
+            $xPos = $contentX + ($idx * $colW);
+            $pdf->SetXY($xPos + 2, $y);
+            $pdf->Cell($colW - 4, 4, $f[0], 0, 0, 'L');
+            $pdf->SetFont($font, 'B', $fontSize - 0.5);
+            $pdf->SetTextColor(...$darkColor);
+            $pdf->SetXY($xPos + 2, $y + 4);
+            $pdf->Cell($colW - 4, 4.5, $f[1], 0, 0, 'L');
+            $pdf->SetFont($font, '', $fontSize - 1);
+            $pdf->SetTextColor(...$grayColor);
+        }
+        $y += 11;
+
+        // Pet info
+        $pdf->SetDrawColor(...$colorLine);
+        $pdf->SetLineWidth(0.2);
+        $pdf->Line($contentX, $y, $rightEdge, $y);
+
+        $pdf->SetFillColor(...$accentColor);
+        $pdf->Rect($contentX, $y, $contentW, 7, 'F');
+        $pdf->SetFont($font, 'B', $fontSize - 0.5);
+        $pdf->SetTextColor(...$colorTableHdrText);
+        $pdf->SetXY($contentX + 2, $y + 1.5);
+        $pdf->Cell($contentW - 4, 4, 'Angaben zum Tier', 0, 1, 'L');
+        $y += 9;
+
+        $patFields = [
+            ['Name', $patient['name'] ?? '—'],
+            ['Geb. Datum', !empty($patient['birth_date']) ? date('d.m.Y', strtotime($patient['birth_date'])) : '—'],
+            ['Art', $patient['species'] ?? '—'],
+            ['Rasse', $patient['breed'] ?? '—'],
+        ];
+        $colW2 = $contentW / 2;
+        $pdf->SetFont($font, '', $fontSize - 1);
+        $pdf->SetTextColor(...$grayColor);
+        for ($i = 0; $i < count($patFields); $i++) {
+            $col = $i % 2;
+            $row = intdiv($i, 2);
+            $xPos = $contentX + ($col * $colW2);
+            $rowY = $y + ($row * 10);
+            $pdf->SetXY($xPos + 2, $rowY);
+            $pdf->Cell($colW2 - 4, 4, $patFields[$i][0], 0, 0, 'L');
+            $pdf->SetFont($font, 'B', $fontSize - 0.5);
+            $pdf->SetTextColor(...$darkColor);
+            $pdf->SetXY($xPos + 2, $rowY + 4);
+            $pdf->Cell($colW2 - 4, 4.5, $patFields[$i][1], 0, 0, 'L');
+            $pdf->SetFont($font, '', $fontSize - 1);
+            $pdf->SetTextColor(...$grayColor);
+        }
+        $y += ceil(count($patFields) / 2) * 10 + 4;
+
+        // ── Physio info sections ──────────────────────────────────────
+        $sections = [
+            ['Physiotherapeutische Grundsätze', $plan['physio_principles'] ?? ''],
+            ['Kurzfristige Ziele (innerhalb 3 Behandlungen)', $plan['short_term_goals'] ?? ''],
+            ['Langfristige Ziele (Endziele)', $plan['long_term_goals'] ?? ''],
+            ['Therapiemittel', $plan['therapy_means'] ?? ''],
+        ];
+
+        foreach ($sections as [$label, $text]) {
+            if (empty(trim($text))) continue;
+            if ($pdf->GetY() > 240) {
+                $pdf->AddPage();
+                $drawSidebar();
+                $y = 15;
+            } else {
+                $y = $pdf->GetY() + 2;
+            }
+
+            $pdf->SetDrawColor(...$colorLine);
+            $pdf->SetLineWidth(0.2);
+            $pdf->Line($contentX, $y, $rightEdge, $y);
+            $y += 2;
+
+            $pdf->SetFont($font, 'B', $fontSize - 0.5);
+            $pdf->SetTextColor(...$accentColor);
+            $pdf->SetXY($contentX + 2, $y);
+            $pdf->Cell($contentW - 4, 5, $label, 0, 1, 'L');
+            $y += 6;
+
+            $pdf->SetFont($font, '', $fontSize - 0.5);
+            $pdf->SetTextColor(...$darkColor);
+            $pdf->SetXY($contentX + 2, $y);
+            $pdf->MultiCell($contentW - 4, 4.5, $text, 0, 'L');
+            $y = $pdf->GetY() + 2;
+        }
+
+        // ── Therapy plan (tasks) ──────────────────────────────────────
+        if (!empty($tasks)) {
+            $y = $pdf->GetY() + 3;
+            if ($y > 240) {
+                $pdf->AddPage();
+                $drawSidebar();
+                $y = 15;
+            }
+
+            $pdf->SetDrawColor(...$colorLine);
+            $pdf->SetLineWidth(0.3);
+            $pdf->Line($contentX, $y, $rightEdge, $y);
+
+            $pdf->SetFillColor(...$colorTableHdrBg);
+            $pdf->Rect($contentX, $y, $contentW, 7, 'F');
+            $pdf->SetFont($font, 'B', $fontSize - 0.5);
+            $pdf->SetTextColor(...$colorTableHdrText);
+            $pdf->SetXY($contentX + 2, $y + 1.5);
+            $pdf->Cell($contentW - 4, 4, 'Therapieplan', 0, 1, 'L');
+            $y += 10;
+
+            foreach ($tasks as $task) {
+                // Estimate needed height
+                $descText  = $task['description'] ?? '';
+                $notesText = $task['therapist_notes'] ?? '';
+                $descLines = max(1, (int)ceil(mb_strlen($descText) / 80));
+                $noteLines = $notesText ? max(1, (int)ceil(mb_strlen($notesText) / 80)) : 0;
+                $taskH = 7 + ($descLines * 4.5) + ($noteLines ? $noteLines * 4.5 + 5 : 0) + 4;
+
+                if ($y + $taskH > 258) {
+                    $pdf->AddPage();
+                    $drawSidebar();
+                    $y = 15;
+                    // Repeat section header
+                    $pdf->SetFillColor(...$colorTableHdrBg);
+                    $pdf->Rect($contentX, $y, $contentW, 7, 'F');
+                    $pdf->SetFont($font, 'B', $fontSize - 0.5);
+                    $pdf->SetTextColor(...$colorTableHdrText);
+                    $pdf->SetXY($contentX + 2, $y + 1.5);
+                    $pdf->Cell($contentW - 4, 4, 'Therapieplan (Fortsetzung)', 0, 1, 'L');
+                    $y += 10;
+                }
+
+                // Task title bar
+                $pdf->SetFillColor(...array_map(fn($c) => min(255, $c + 60), $accentColor));
+                $pdf->Rect($contentX, $y, $contentW, 6.5, 'F');
+                $pdf->SetFont($font, 'B', $fontSize);
+                $pdf->SetTextColor(...$darkColor);
+                $pdf->SetXY($contentX + 2, $y + 1);
+                $pdf->Cell($contentW - 4, 4.5, $task['title'], 0, 0, 'L');
+
+                // Frequency / duration on right
+                $freqDur = implode('   ', array_filter([
+                    $task['frequency'] ?? '',
+                    $task['duration'] ?? '',
+                ]));
+                if ($freqDur) {
+                    $pdf->SetFont($font, '', $fontSize - 1.5);
+                    $pdf->SetTextColor(...$grayColor);
+                    $pdf->SetXY($contentX + 2, $y + 1);
+                    $pdf->Cell($contentW - 4, 4.5, $freqDur, 0, 0, 'R');
+                }
+
+                $y += 7.5;
+
+                if ($descText) {
+                    $pdf->SetFont($font, '', $fontSize - 0.5);
+                    $pdf->SetTextColor(...$darkColor);
+                    $pdf->SetXY($contentX + 4, $y);
+                    $pdf->MultiCell($contentW - 8, 4.5, $descText, 0, 'L');
+                    $y = $pdf->GetY() + 1;
+                }
+
+                if ($notesText) {
+                    $pdf->SetFont($font, 'I', $fontSize - 1);
+                    $pdf->SetTextColor(...$grayColor);
+                    $pdf->SetXY($contentX + 4, $y);
+                    $pdf->MultiCell($contentW - 8, 4, $notesText, 0, 'L');
+                    $y = $pdf->GetY() + 1;
+                }
+
+                $pdf->SetDrawColor(...$colorLine);
+                $pdf->SetLineWidth(0.15);
+                $pdf->Line($contentX, $y, $rightEdge, $y);
+                $y += 3;
+            }
+        }
+
+        // ── Beachte / Hinweise ────────────────────────────────────────
+        if (!empty(trim($plan['general_notes'] ?? ''))) {
+            $y = $pdf->GetY() + 3;
+            if ($y > 230) {
+                $pdf->AddPage();
+                $drawSidebar();
+                $y = 15;
+            }
+
+            $pdf->SetDrawColor(...$colorLine);
+            $pdf->SetLineWidth(0.2);
+            $pdf->Line($contentX, $y, $rightEdge, $y);
+            $y += 2;
+
+            $pdf->SetFont($font, 'B', $fontSize - 0.5);
+            $pdf->SetTextColor(...$accentColor);
+            $pdf->SetXY($contentX + 2, $y);
+            $pdf->Cell($contentW - 4, 5, 'Beachte:', 0, 1, 'L');
+            $y += 6;
+
+            $pdf->SetFont($font, '', $fontSize - 0.5);
+            $pdf->SetTextColor(...$darkColor);
+            $pdf->SetXY($contentX + 2, $y);
+            $pdf->MultiCell($contentW - 4, 4.5, $plan['general_notes'], 0, 'L');
+            $y = $pdf->GetY() + 3;
+        }
+
+        // ── Next appointment + Therapist signature ────────────────────
+        $y = $pdf->GetY() + 5;
+        if ($y > 240) {
+            $pdf->AddPage();
+            $drawSidebar();
+            $y = 15;
+        }
+
+        $pdf->SetDrawColor(...$colorLine);
+        $pdf->SetLineWidth(0.2);
+        $pdf->Line($contentX, $y, $rightEdge, $y);
+        $y += 4;
+
+        if (!empty(trim($plan['next_appointment'] ?? ''))) {
+            $pdf->SetFont($font, '', $fontSize - 0.5);
+            $pdf->SetTextColor(...$darkColor);
+            $pdf->SetXY($contentX + 2, $y);
+            $pdf->Cell($contentW / 2 - 4, 5, 'Wiedervorstellung: ' . $plan['next_appointment'], 0, 0, 'L');
+        }
+
+        if (!empty(trim($plan['therapist_name'] ?? ''))) {
+            $pdf->SetFont($font, 'I', $fontSize - 0.5);
+            $pdf->SetTextColor(...$grayColor);
+            $pdf->SetXY($contentX + $contentW / 2 + 2, $y);
+            $pdf->Cell($contentW / 2 - 4, 5, $plan['therapist_name'], 0, 0, 'R');
+        }
+
+        // ── FOOTER ────────────────────────────────────────────────────
+        $footerTopY = 268;
+
+        // Ensure footer doesn't overlap content — put it at bottom of last page
+        $pdf->SetDrawColor(...$colorLine);
+        $pdf->SetLineWidth(0.3);
+        $pdf->Line($contentX, $footerTopY, $rightEdge, $footerTopY);
+
+        $pdf->SetFont($font, '', $fontSize - 1.5);
+        $pdf->SetTextColor(...$colorFooter);
+        $footerParts = array_filter([
+            $companyName,
+            $companyEmail,
+            $companyPhone ? 'Tel: ' . $companyPhone : '',
+            ($showWebsite && $companyWebsite) ? $companyWebsite : '',
+        ]);
+        $pdf->SetXY($contentX, $footerTopY + 3);
+        $pdf->Cell($contentW, 4, implode('   ·   ', $footerParts), 0, 1, 'C');
+
+        return $pdf->Output('', 'S');
+    }
+
     public function getSettings(): array
     {
         return $this->settingsRepository->all();

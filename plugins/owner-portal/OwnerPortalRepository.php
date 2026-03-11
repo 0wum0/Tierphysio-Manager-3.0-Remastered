@@ -283,4 +283,130 @@ class OwnerPortalRepository
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    /* ─── Homework Plans ─── */
+
+    public function getHomeworkPlansByPatient(int $patientId): array
+    {
+        $stmt = $this->db->query(
+            'SELECT hp.*, u.name AS created_by_name
+             FROM portal_homework_plans hp
+             LEFT JOIN users u ON u.id = hp.created_by
+             WHERE hp.patient_id = ?
+             ORDER BY hp.plan_date DESC, hp.id DESC',
+            [$patientId]
+        );
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getHomeworkPlanById(int $id): ?array
+    {
+        $stmt = $this->db->query(
+            'SELECT hp.*, u.name AS created_by_name
+             FROM portal_homework_plans hp
+             LEFT JOIN users u ON u.id = hp.created_by
+             WHERE hp.id = ? LIMIT 1',
+            [$id]
+        );
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    public function getHomeworkPlansByOwner(int $ownerId): array
+    {
+        $stmt = $this->db->query(
+            'SELECT hp.*, p.name AS patient_name
+             FROM portal_homework_plans hp
+             JOIN patients p ON p.id = hp.patient_id
+             WHERE hp.owner_id = ? AND hp.status = \'active\'
+             ORDER BY hp.plan_date DESC',
+            [$ownerId]
+        );
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function createHomeworkPlan(array $data): int
+    {
+        $this->db->execute(
+            'INSERT INTO portal_homework_plans
+             (patient_id, owner_id, plan_date, physio_principles, short_term_goals,
+              long_term_goals, therapy_means, general_notes, next_appointment, therapist_name,
+              status, created_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+                $data['patient_id'],
+                $data['owner_id'],
+                $data['plan_date'],
+                $data['physio_principles'] ?? null,
+                $data['short_term_goals'] ?? null,
+                $data['long_term_goals'] ?? null,
+                $data['therapy_means'] ?? null,
+                $data['general_notes'] ?? null,
+                $data['next_appointment'] ?? null,
+                $data['therapist_name'] ?? null,
+                $data['status'] ?? 'active',
+                $data['created_by'] ?? null,
+            ]
+        );
+        return (int)$this->db->lastInsertId();
+    }
+
+    public function updateHomeworkPlan(int $id, array $data): void
+    {
+        $sets   = implode(', ', array_map(fn($k) => "`{$k}` = ?", array_keys($data)));
+        $values = array_values($data);
+        $values[] = $id;
+        $this->db->execute("UPDATE portal_homework_plans SET {$sets} WHERE id = ?", $values);
+    }
+
+    public function deleteHomeworkPlan(int $id): void
+    {
+        $this->db->execute('DELETE FROM portal_homework_plans WHERE id = ?', [$id]);
+    }
+
+    /* ─── Homework Plan Tasks ─── */
+
+    public function getTasksByPlan(int $planId): array
+    {
+        $stmt = $this->db->query(
+            'SELECT * FROM portal_homework_plan_tasks WHERE plan_id = ? ORDER BY sort_order ASC, id ASC',
+            [$planId]
+        );
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function saveTasksForPlan(int $planId, array $tasks): void
+    {
+        $this->db->execute('DELETE FROM portal_homework_plan_tasks WHERE plan_id = ?', [$planId]);
+        foreach ($tasks as $i => $task) {
+            if (empty(trim($task['title'] ?? ''))) continue;
+            $this->db->execute(
+                'INSERT INTO portal_homework_plan_tasks
+                 (plan_id, template_id, title, description, frequency, duration, therapist_notes, sort_order)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                [
+                    $planId,
+                    $task['template_id'] ?? null,
+                    trim($task['title']),
+                    $task['description'] ?? null,
+                    $task['frequency'] ?? null,
+                    $task['duration'] ?? null,
+                    $task['therapist_notes'] ?? null,
+                    $i,
+                ]
+            );
+        }
+    }
+
+    public function getAllHomeworkTemplates(): array
+    {
+        try {
+            $stmt = $this->db->query(
+                'SELECT * FROM homework_templates WHERE is_active = 1 ORDER BY category ASC, title ASC'
+            );
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable) {
+            return [];
+        }
+    }
 }

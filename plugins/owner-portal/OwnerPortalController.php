@@ -192,4 +192,34 @@ class OwnerPortalController extends Controller
             'exercises'   => $exercises,
         ]);
     }
+
+    /* ── GET /portal/tiere/{id}/hausaufgaben ── */
+    public function homework(array $params = []): void
+    {
+        $user    = $this->requireOwnerAuth();
+        $ownerId = (int)$user['owner_id'];
+        $petId   = (int)($params['id'] ?? 0);
+
+        $pet = $this->repo->getPetByIdAndOwner($petId, $ownerId);
+        if (!$pet) {
+            $this->abort(404);
+            return;
+        }
+
+        $plans = $this->repo->getHomeworkPlansByPatient($petId);
+
+        // Load tasks for each plan
+        $tasksByPlan = [];
+        foreach ($plans as $p) {
+            $tasksByPlan[$p['id']] = $this->repo->getTasksByPlan((int)$p['id']);
+        }
+
+        $this->render('@owner-portal/owner_homework.twig', [
+            'page_title'   => 'Hausaufgaben – ' . $pet['name'],
+            'portal_user'  => $user,
+            'pet'          => $pet,
+            'plans'        => $plans,
+            'tasks_by_plan'=> $tasksByPlan,
+        ]);
+    }
 }
