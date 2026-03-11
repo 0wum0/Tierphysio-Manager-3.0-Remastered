@@ -116,7 +116,7 @@
                     <div class="pd-form-footer">
                         <div class="pd-field" style="flex:1;min-width:0;">
                             <label class="pd-label">Anhang</label>
-                            <input type="file" name="attachment" id="pd-attachment" class="pd-file" accept="image/*,application/pdf,.doc,.docx">
+                            <input type="file" name="attachment" id="pd-attachment" class="pd-file" accept="image/*,video/*,application/pdf,.doc,.docx">
                         </div>
                         <button type="submit" class="btn btn-primary btn-sm pd-submit-btn">
                             <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -540,6 +540,7 @@ var currentPatientData = null;
 var quillEditor  = null;
 var teQuill      = null;
 var imgExts      = ['jpg','jpeg','png','gif','webp'];
+var videoExts    = ['mp4','webm','ogg','mov','avi','mkv','m4v'];
 
 /* ── Spin keyframes ───────────────────────────────────────── */
 if (!document.getElementById('pd-spin-style')) {
@@ -639,6 +640,19 @@ function openViewer(src, filename) {
         img.src = src; img.alt = filename;
         img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;';
         fvBody2.appendChild(img);
+    } else if (videoExts.includes(ext)) {
+        var vid = document.createElement('video');
+        vid.src = src;
+        vid.controls = true;
+        vid.autoplay = false;
+        vid.style.cssText = 'max-width:100%;max-height:100%;border-radius:6px;outline:none;background:#000;';
+        var mimeMap = {mp4:'video/mp4',webm:'video/webm',ogg:'video/ogg',mov:'video/quicktime',avi:'video/x-msvideo',mkv:'video/x-matroska',m4v:'video/mp4'};
+        var srcEl = document.createElement('source');
+        srcEl.src  = src;
+        srcEl.type = mimeMap[ext] || 'video/mp4';
+        vid.appendChild(srcEl);
+        fvBody2.style.background = '#000';
+        fvBody2.appendChild(vid);
     } else if (ext === 'pdf') {
         if (isMobile()) {
             fvBody2.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.85);padding:2rem;"><div style="font-size:1rem;font-weight:600;margin-bottom:1rem;">'+esc(filename)+'</div><div style="display:flex;gap:0.75rem;justify-content:center;flex-wrap:wrap;"><a href="'+src+'" target="_blank" rel="noopener" style="background:#4f7cff;color:#fff;padding:0.65rem 1.4rem;border-radius:8px;text-decoration:none;">Im Browser öffnen</a><a href="'+src+'" download="'+esc(filename)+'" style="background:rgba(255,255,255,0.15);color:#fff;padding:0.65rem 1.4rem;border-radius:8px;text-decoration:none;">Herunterladen</a></div></div>';
@@ -654,8 +668,11 @@ function openViewer(src, filename) {
     document.body.style.overflow = 'hidden';
 }
 function closeViewer() {
+    var vid = fvBody2.querySelector('video');
+    if (vid) { vid.pause(); vid.src = ''; }
     fvOverlay.style.display = 'none';
     fvBody2.innerHTML = '';
+    fvBody2.style.background = '#111';
     document.body.style.overflow = '';
 }
 if (fvClose) fvClose.addEventListener('click', closeViewer);
@@ -688,12 +705,15 @@ function renderTimeline(timeline, patientId) {
         var hasAttach = e.attachment;
 
         var ext = hasAttach ? (e.attachment.split('.').pop() || '').toLowerCase() : '';
-        var isImg = imgExts.includes(ext);
+        var isImg   = imgExts.includes(ext);
+        var isVideo = videoExts.includes(ext);
         var src = hasAttach ? '/patienten/'+patientId+'/dokumente/'+encodeURIComponent(e.attachment) : '';
         var attachHtml = '';
         if (hasAttach) {
             if (isImg) {
                 attachHtml = '<div class="mt-2"><a href="'+src+'" data-lightbox-modal="'+src+'" data-filename="'+esc(e.attachment)+'" style="cursor:pointer;display:inline-block;"><img src="'+src+'" alt="'+esc(e.attachment)+'" style="max-height:100px;max-width:100%;border-radius:6px;border:1px solid var(--glass-border);display:block;"></a></div>';
+            } else if (isVideo) {
+                attachHtml = '<div class="mt-2"><a href="'+src+'" data-lightbox-modal="'+src+'" data-filename="'+esc(e.attachment)+'" style="cursor:pointer;display:inline-block;position:relative;"><video src="'+src+'" style="max-height:120px;max-width:100%;border-radius:6px;border:1px solid var(--glass-border);display:block;background:#000;" preload="metadata"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);border-radius:6px;"><svg width="36" height="36" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="rgba(0,0,0,0.55)"/><polygon points="10,8 18,12 10,16" fill="white"/></svg></div></a></div>';
             } else {
                 attachHtml = '<div class="mt-2"><a href="'+src+'" data-lightbox-modal="'+src+'" data-filename="'+esc(e.attachment)+'" class="btn btn-secondary btn-sm" style="font-size:0.78rem;">📎 '+esc(e.attachment)+'</a></div>';
             }
@@ -831,24 +851,129 @@ if (pdSearchInput) {
     });
 }
 
-/* ── Timeline form AJAX ───────────────────────────────────── */
+/* ── Timeline form AJAX (zweistufig für Videos) ───────────── */
 document.addEventListener('submit', function (e) {
     var form = e.target;
     if (form.id !== 'pd-timeline-form') return;
     e.preventDefault();
+
     var hidden = document.getElementById('pd-content-input');
     if (hidden && quillEditor) hidden.value = quillEditor.root.innerHTML;
+
     var patientId = form.dataset.patientId;
     if (!patientId) return;
-    var btn = form.querySelector('[type=submit]');
+
+    var btn      = form.querySelector('[type=submit]');
     var origText = btn ? btn.innerHTML : '';
+    var fileInput = document.getElementById('pd-attachment');
+    var file      = fileInput && fileInput.files && fileInput.files[0];
+    var isVideo   = file && file.type.startsWith('video/');
+
+    /* Progressbar-Element */
+    var progressWrap = document.getElementById('pd-upload-progress');
+    if (!progressWrap) {
+        progressWrap = document.createElement('div');
+        progressWrap.id = 'pd-upload-progress';
+        progressWrap.style.cssText = 'display:none;margin-top:0.5rem;';
+        progressWrap.innerHTML =
+            '<div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.3rem;" id="pd-upload-label">Video wird hochgeladen…</div>' +
+            '<div style="background:var(--bg-elevated);border-radius:999px;height:6px;overflow:hidden;">' +
+            '<div id="pd-upload-bar" style="height:100%;width:0%;background:var(--accent);border-radius:999px;transition:width 0.2s;"></div>' +
+            '</div>';
+        form.querySelector('.pd-form-footer').appendChild(progressWrap);
+    }
+    var uploadBar   = document.getElementById('pd-upload-bar');
+    var uploadLabel = document.getElementById('pd-upload-label');
+
+    function setProgress(pct, label) {
+        progressWrap.style.display = '';
+        uploadBar.style.width = pct + '%';
+        if (label) uploadLabel.textContent = label;
+    }
+    function hideProgress() {
+        progressWrap.style.display = 'none';
+        uploadBar.style.width = '0%';
+    }
+
+    function submitEntry(uploadedFilename) {
+        var fd = new FormData(form);
+        if (uploadedFilename) {
+            fd.delete('attachment'); /* nicht nochmal hochladen */
+            fd.append('uploaded_filename', uploadedFilename);
+        }
+        fetch('/patienten/'+patientId+'/timeline-json', {method:'POST', body:fd})
+            .then(function(r){ return r.json(); })
+            .then(function(data) {
+                if (data.ok) {
+                    renderTimeline(data.timeline, patientId);
+                    form.reset();
+                    if (quillEditor) quillEditor.setContents([]);
+                    hideProgress();
+                } else {
+                    alert('Fehler beim Speichern des Eintrags.');
+                }
+            })
+            .catch(function() { alert('Netzwerkfehler beim Speichern.'); })
+            .finally(function() {
+                if (btn) { btn.disabled = false; btn.innerHTML = origText; }
+            });
+    }
+
     if (btn) { btn.disabled = true; btn.innerHTML = '…'; }
-    var fd = new FormData(form);
-    fetch('/patienten/'+patientId+'/timeline-json', {method:'POST',body:fd})
-        .then(function(r){return r.json();})
-        .then(function(data){ if(data.ok){ renderTimeline(data.timeline,patientId); form.reset(); if(quillEditor) quillEditor.setContents([]); } })
-        .catch(function(){})
-        .finally(function(){ if(btn){btn.disabled=false;btn.innerHTML=origText;} });
+
+    if (isVideo) {
+        /* Phase 1: Video separat hochladen mit XHR für Fortschritt */
+        setProgress(0, 'Video wird hochgeladen…');
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/patienten/'+patientId+'/attachment-upload', true);
+
+        xhr.upload.addEventListener('progress', function(ev) {
+            if (ev.lengthComputable) {
+                var pct = Math.round((ev.loaded / ev.total) * 100);
+                setProgress(pct, 'Video wird hochgeladen… ' + pct + '%');
+            }
+        });
+
+        xhr.addEventListener('load', function() {
+            if (xhr.status === 200) {
+                try {
+                    var resp = JSON.parse(xhr.responseText);
+                    if (resp.ok) {
+                        setProgress(100, 'Eintrag wird gespeichert…');
+                        submitEntry(resp.filename);
+                        return;
+                    }
+                    alert('Upload-Fehler: ' + (resp.error || 'Unbekannt'));
+                } catch(ex) {
+                    alert('Ungültige Server-Antwort.');
+                }
+            } else {
+                alert('Upload fehlgeschlagen (HTTP ' + xhr.status + ').');
+            }
+            hideProgress();
+            if (btn) { btn.disabled = false; btn.innerHTML = origText; }
+        });
+
+        xhr.addEventListener('error', function() {
+            alert('Netzwerkfehler beim Video-Upload.');
+            hideProgress();
+            if (btn) { btn.disabled = false; btn.innerHTML = origText; }
+        });
+
+        xhr.addEventListener('abort', function() {
+            hideProgress();
+            if (btn) { btn.disabled = false; btn.innerHTML = origText; }
+        });
+
+        var fd2 = new FormData();
+        fd2.append('_csrf_token', form.querySelector('[name="_csrf_token"]').value);
+        fd2.append('attachment', file);
+        xhr.send(fd2);
+
+    } else {
+        /* Keine Video-Datei → direkt wie bisher */
+        submitEntry(null);
+    }
 }, true);
 
 /* ── Invoice button → open create-invoice modal ──────────── */
