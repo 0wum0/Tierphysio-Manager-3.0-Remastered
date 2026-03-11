@@ -160,7 +160,7 @@ class ApiController
                 'end_date' => !empty($data['end_date']) ? $data['end_date'] : null,
                 'therapist_notes' => $data['therapist_notes'] ?? '',
                 'assigned_by' => Auth::user()['id'],
-                'status' => 'active'
+                'status' => 'pending'
             ];
             
             error_log('API createPatientHomework - Final homework data: ' . print_r($homeworkData, true));
