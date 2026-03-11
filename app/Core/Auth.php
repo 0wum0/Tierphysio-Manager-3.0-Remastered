@@ -36,4 +36,18 @@ class Auth
         }
         return self::$session->isAdmin();
     }
+
+    public static function validateCsrfToken(string $token): bool
+    {
+        if (!self::$session) {
+            return false;
+        }
+        return self::$session->validateCsrfToken($token);
+    }
+
+    public static function getCurrentUserId(): ?int
+    {
+        $user = self::user();
+        return $user ? (int)$user['id'] : null;
+    }
 }
