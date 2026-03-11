@@ -1395,7 +1395,8 @@ window.openHomeworkModal = function() {
 window.openAddHomeworkModal = function() {
     if (!currentPatientData) return;
     var p = currentPatientData.patient;
-    
+    var today = new Date().toISOString().split('T')[0];
+
     var modalHtml = `
         <div class="modal fade" id="modal-add-homework" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -1404,25 +1405,25 @@ window.openAddHomeworkModal = function() {
                         <h3 class="modal-title">Hausaufgabe hinzufügen</h3>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
                     </div>
-                    <form id="homework-form">
-                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-                        <div class="modal-body">
+                    <div class="modal-body">
+                        <form id="homework-form">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                             <div class="form-group mb-3">
                                 <label class="form-label">Hausaufgabe auswählen</label>
                                 <select name="homework_template_id" id="homework-template-select" class="form-control">
-                                    <option value="">— Vordefinierte Hausaufgabe —</option>
-                                    <option value="custom">— Eigene Hausaufgabe —</option>
+                                    <option value="">— Vordefinierte Hausaufgabe wählen —</option>
+                                    <option value="custom">— Eigene Hausaufgabe erstellen —</option>
                                 </select>
                             </div>
-                            
+
                             <div id="custom-homework" style="display:none;">
                                 <div class="form-group mb-3">
-                                    <label class="form-label">Titel der Hausaufgabe</label>
-                                    <input type="text" name="title" class="form-control" placeholder="z.B. tägliche Spaziergänge">
+                                    <label class="form-label">Titel *</label>
+                                    <input type="text" name="title" class="form-control" placeholder="z.B. Tägliche Spaziergänge">
                                 </div>
                                 <div class="form-group mb-3">
-                                    <label class="form-label">Beschreibung</label>
-                                    <textarea name="description" class="form-control" rows="3" placeholder="Detaillierte Anweisungen für den Besitzer..."></textarea>
+                                    <label class="form-label">Beschreibung / Anleitung *</label>
+                                    <textarea name="description" class="form-control" rows="4" placeholder="Genaue Anleitung für den Besitzer..."></textarea>
                                 </div>
                                 <div class="form-group mb-3">
                                     <label class="form-label">Kategorie</label>
@@ -1438,7 +1439,7 @@ window.openAddHomeworkModal = function() {
                                     </select>
                                 </div>
                             </div>
-                            
+
                             <div class="form-group mb-3">
                                 <label class="form-label">Häufigkeit</label>
                                 <select name="frequency" class="form-control">
@@ -1449,7 +1450,7 @@ window.openAddHomeworkModal = function() {
                                     <option value="as_needed">Bei Bedarf</option>
                                 </select>
                             </div>
-                            
+
                             <div class="form-group mb-3">
                                 <label class="form-label">Dauer</label>
                                 <div class="input-group">
@@ -1462,100 +1463,123 @@ window.openAddHomeworkModal = function() {
                                     </select>
                                 </div>
                             </div>
-                            
+
                             <div class="form-group mb-3">
                                 <label class="form-label">Startdatum</label>
-                                <input type="date" name="start_date" class="form-control" value="${new Date().toISOString().split('T')[0]}">
+                                <input type="date" name="start_date" class="form-control" value="${today}">
                             </div>
-                            
+
                             <div class="form-group mb-3">
-                                <label class="form-label">Enddatum (optional)</label>
-                                <input type="date" name="end_date" class="form-control" placeholder="Kein Ende">
+                                <label class="form-label" id="end-date-label">Bis Wiedervorstellung</label>
+                                <input type="date" name="end_date" id="hw-end-date" class="form-control">
+                                <small id="end-date-hint" style="color:var(--text-muted);font-size:0.78rem;margin-top:0.25rem;display:block;"></small>
                             </div>
-                            
+
                             <div class="form-group mb-3">
-                                <label class="form-label">Notizen für den Therapeuten</label>
-                                <textarea name="therapist_notes" class="form-control" rows="2" placeholder="Interne Notizen..."></textarea>
+                                <label class="form-label">Therapeut</label>
+                                <input type="text" name="therapist_notes_therapist" id="hw-therapist" class="form-control" value="{{ current_user.name }}" readonly style="background:var(--glass-bg);opacity:0.75;">
                             </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
-                            <button type="submit" class="btn btn-primary">Hausaufgabe zuweisen</button>
-                        </div>
-                    </form>
+
+                            <div class="form-group mb-3">
+                                <label class="form-label">Interne Notiz (optional)</label>
+                                <textarea name="therapist_notes" class="form-control" rows="2" placeholder="Interne Hinweise, nicht im PDF..."></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                        <button type="button" class="btn btn-primary" id="btn-submit-homework">Hausaufgabe zuweisen</button>
+                    </div>
                 </div>
             </div>
         </div>
     `;
-    
+
     // Modal zum DOM hinzufügen
     var tempDiv = document.createElement('div');
     tempDiv.innerHTML = modalHtml;
     document.body.appendChild(tempDiv.firstElementChild);
-    
+
     // Modal öffnen
     var modal = new bootstrap.Modal(document.getElementById('modal-add-homework'));
     modal.show();
-    
+
     // Templates laden
     loadHomeworkTemplates();
-    
+
+    // Plan-Meta laden → Wiedervorstellung als End-Datum vorausfüllen
+    fetch('/api/patients/' + p.id + '/homework/plan-meta')
+        .then(function(r) { return r.json(); })
+        .then(function(meta) {
+            var endInput = document.getElementById('hw-end-date');
+            var hint     = document.getElementById('end-date-hint');
+            if (!endInput) return;
+            if (meta && meta.wiedervorstellung_date) {
+                endInput.value = meta.wiedervorstellung_date;
+                hint.textContent = 'Automatisch gesetzt: Wiedervorstellung am ' +
+                    new Date(meta.wiedervorstellung_date).toLocaleDateString('de-DE');
+            } else {
+                hint.textContent = 'Kein Wiedervorstellungstermin gesetzt – bitte manuell wählen.';
+            }
+        })
+        .catch(function() {});
+
     // Template-Auswahl-Handler
     document.getElementById('homework-template-select').addEventListener('change', function() {
         var customDiv = document.getElementById('custom-homework');
-        if (this.value === 'custom') {
-            customDiv.style.display = 'block';
-        } else {
-            customDiv.style.display = 'none';
-        }
+        customDiv.style.display = (this.value === 'custom') ? 'block' : 'none';
     });
-    
-    // Formular-Handler
-    document.getElementById('homework-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        var formData = new FormData(this);
-        
-        // Debug: Log form data
-        console.log('Form data being sent:');
-        for (var pair of formData.entries()) {
-            console.log(pair[0] + ': ' + pair[1]);
+
+    // Absenden per Button
+    document.getElementById('btn-submit-homework').addEventListener('click', function() {
+        var form = document.getElementById('homework-form');
+        var templateSelect = document.getElementById('homework-template-select');
+
+        // Validierung: custom ohne Titel/Beschreibung abfangen
+        if (templateSelect.value === 'custom') {
+            var title = form.querySelector('[name="title"]').value.trim();
+            var desc  = form.querySelector('[name="description"]').value.trim();
+            if (!title || !desc) {
+                alert('Bitte Titel und Beschreibung ausfüllen.');
+                return;
+            }
+        } else if (!templateSelect.value) {
+            alert('Bitte eine Hausaufgabe auswählen.');
+            return;
         }
-        
+
+        var btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Wird gespeichert…';
+
+        var formData = new FormData(form);
+
         fetch('/api/patients/' + p.id + '/homework', {
             method: 'POST',
             body: formData
         })
-        .then(function(response) { 
-            console.log('Response status:', response.status);
-            if (!response.ok) throw new Error('Network response was not ok');
-            return response.json(); 
+        .then(function(response) {
+            return response.json().then(function(data) {
+                return { ok: response.ok, data: data };
+            });
         })
-        .then(function(data) {
-            console.log('Response data:', data);
-            if (data.success) {
+        .then(function(result) {
+            if (result.ok && result.data.success) {
                 bootstrap.Modal.getInstance(document.getElementById('modal-add-homework')).hide();
-                bootstrap.Modal.getInstance(document.getElementById('modal-patient-homework')).hide();
+                // Hausaufgaben-Liste im Hintergrund-Modal neu laden
                 loadPatientHomework(p.id);
-                
-                // Erfolgsmeldung
-                var alert = document.createElement('div');
-                alert.className = 'alert alert-success alert-dismissible fade show';
-                alert.innerHTML = 'Hausaufgabe erfolgreich zugewiesen!<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-                document.querySelector('.modal-body').prepend(alert);
-                
-                setTimeout(function() { alert.remove(); }, 3000);
             } else {
-                throw new Error(data.error || 'Fehler beim Speichern');
+                throw new Error(result.data.error || 'Fehler beim Speichern');
             }
         })
         .catch(function(error) {
-            console.error('Fehler:', error);
-            alert('Fehler beim Speichern der Hausaufgabe: ' + error.message);
+            alert('Fehler: ' + error.message);
+            btn.disabled = false;
+            btn.textContent = 'Hausaufgabe zuweisen';
         });
     });
-    
-    // Modal nach dem Schließen entfernen
+
+    // Modal nach dem Schließen aus DOM entfernen
     document.getElementById('modal-add-homework').addEventListener('hidden.bs.modal', function() {
         this.remove();
     });
