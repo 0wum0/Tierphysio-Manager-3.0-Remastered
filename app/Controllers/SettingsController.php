@@ -14,6 +14,7 @@ use App\Services\SettingsService;
 use App\Services\MigrationService;
 use App\Repositories\UserRepository;
 use App\Repositories\TreatmentTypeRepository;
+use App\Repositories\HomeworkRepository;
 
 class SettingsController extends Controller
 {
@@ -26,7 +27,8 @@ class SettingsController extends Controller
         private readonly PluginManager $pluginManager,
         private readonly MigrationService $migrationService,
         private readonly UserRepository $userRepository,
-        private readonly TreatmentTypeRepository $treatmentTypeRepository
+        private readonly TreatmentTypeRepository $treatmentTypeRepository,
+        private readonly HomeworkRepository $homeworkRepository
     ) {
         parent::__construct($view, $session, $config, $translator);
     }
@@ -45,6 +47,11 @@ class SettingsController extends Controller
             $treatmentTypes = $this->treatmentTypeRepository->findAll();
         } catch (\Throwable) {}
 
+        $homeworkTemplates = [];
+        try {
+            $homeworkTemplates = $this->homeworkRepository->findAllTemplatesAdmin();
+        } catch (\Throwable) {}
+
         $scheme   = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
         $httpHost = $_SERVER['HTTP_HOST'] ?? ($this->config->get('app.url', '') ? parse_url($this->config->get('app.url', ''), PHP_URL_HOST) : 'localhost');
         $appUrl   = $scheme . '://' . $httpHost;
@@ -60,8 +67,9 @@ class SettingsController extends Controller
             'up_to_date'       => empty($pendingMigrations),
             'php_version'      => PHP_VERSION,
             'app_env'          => $this->config->get('app.env', 'production'),
-            'active_tab'       => $params['tab'] ?? ($_GET['tab'] ?? 'firma'),
-            'treatment_types'  => $treatmentTypes,
+            'active_tab'         => $params['tab'] ?? ($_GET['tab'] ?? 'firma'),
+            'treatment_types'    => $treatmentTypes,
+            'homework_templates' => $homeworkTemplates,
             'app_host'         => $httpHost,
             'app_url'          => $appUrl,
             'email_tpl_defaults' => [
@@ -415,5 +423,83 @@ class SettingsController extends Controller
         header('Content-Type: application/json');
         echo json_encode($types);
         exit;
+    }
+
+    // ── Hausaufgaben-Templates ─────────────────────────────────────────────
+
+    public function createHomeworkTemplate(array $params = []): void
+    {
+        $this->validateCsrf();
+
+        $title = $this->sanitize($this->post('title', ''));
+        if (empty($title)) {
+            $this->session->flash('error', 'Titel ist erforderlich.');
+            $this->redirect('/einstellungen?tab=hausaufgaben');
+            return;
+        }
+
+        $category = $this->post('category', 'sonstiges');
+        $emojis = [
+            'bewegung' => '🏃', 'dehnung' => '🤸', 'massage' => '💆',
+            'kalt_warm' => '🌡️', 'medikamente' => '💊', 'fuetterung' => '🍽️',
+            'beobachtung' => '👁️', 'sonstiges' => '📌',
+        ];
+
+        $this->homeworkRepository->createTemplate([
+            'title'           => $title,
+            'description'     => $this->sanitize($this->post('description', '')),
+            'category'        => $category,
+            'category_emoji'  => $emojis[$category] ?? '📌',
+            'frequency'       => $this->post('frequency', 'daily'),
+            'duration_value'  => $this->post('duration_value', 10),
+            'duration_unit'   => $this->post('duration_unit', 'minutes'),
+            'therapist_notes' => $this->sanitize($this->post('therapist_notes', '')),
+        ]);
+
+        $this->session->flash('success', 'Hausaufgaben-Template erstellt.');
+        $this->redirect('/einstellungen?tab=hausaufgaben');
+    }
+
+    public function updateHomeworkTemplate(array $params = []): void
+    {
+        $this->validateCsrf();
+
+        $id    = (int)$params['id'];
+        $title = $this->sanitize($this->post('title', ''));
+        if (empty($title)) {
+            $this->session->flash('error', 'Titel ist erforderlich.');
+            $this->redirect('/einstellungen?tab=hausaufgaben');
+            return;
+        }
+
+        $category = $this->post('category', 'sonstiges');
+        $emojis = [
+            'bewegung' => '🏃', 'dehnung' => '🤸', 'massage' => '💆',
+            'kalt_warm' => '🌡️', 'medikamente' => '💊', 'fuetterung' => '🍽️',
+            'beobachtung' => '👁️', 'sonstiges' => '📌',
+        ];
+
+        $this->homeworkRepository->updateTemplate($id, [
+            'title'           => $title,
+            'description'     => $this->sanitize($this->post('description', '')),
+            'category'        => $category,
+            'category_emoji'  => $emojis[$category] ?? '📌',
+            'frequency'       => $this->post('frequency', 'daily'),
+            'duration_value'  => $this->post('duration_value', 10),
+            'duration_unit'   => $this->post('duration_unit', 'minutes'),
+            'therapist_notes' => $this->sanitize($this->post('therapist_notes', '')),
+            'is_active'       => $this->post('is_active', 1),
+        ]);
+
+        $this->session->flash('success', 'Hausaufgaben-Template aktualisiert.');
+        $this->redirect('/einstellungen?tab=hausaufgaben');
+    }
+
+    public function deleteHomeworkTemplate(array $params = []): void
+    {
+        $this->validateCsrf();
+        $this->homeworkRepository->deleteTemplate((int)$params['id']);
+        $this->session->flash('success', 'Hausaufgaben-Template gelöscht.');
+        $this->redirect('/einstellungen?tab=hausaufgaben');
     }
 }

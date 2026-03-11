@@ -302,6 +302,40 @@ HTML;
         return str_replace(array_keys($placeholders), array_values($placeholders), $template);
     }
 
+    public function sendHomework(array $patient, array $owner, string $pdfContent): bool
+    {
+        try {
+            $companyName = $this->settingsRepository->get('company_name', 'Tierphysio Praxis');
+            $ownerName   = trim(($owner['first_name'] ?? '') . ' ' . ($owner['last_name'] ?? ''));
+            $patientName = $patient['name'] ?? '';
+
+            $subject = $this->settingsRepository->get(
+                'email_homework_subject',
+                'Hausaufgaben für ' . $patientName
+            );
+            $bodyText = $this->settingsRepository->get(
+                'email_homework_body',
+                "Hallo {$ownerName},\n\nanbei erhältst du die Hausaufgaben für {$patientName}.\n\nBitte führe die Übungen regelmäßig durch.\n\nViele Grüße\n{$companyName}"
+            );
+
+            $filename = 'Hausaufgaben-' . preg_replace('/[^A-Za-z0-9_\-]/', '_', $patientName) . '.pdf';
+
+            $mailer = $this->createMailer();
+            $mailer->addAddress($owner['email'], $ownerName);
+            $mailer->Subject = $subject;
+            $mailer->isHTML(true);
+            $mailer->Body    = $this->wrapInEmailLayout($subject, $bodyText, '📋');
+            $mailer->AltBody = $bodyText;
+            $mailer->addStringAttachment($pdfContent, $filename, PHPMailer::ENCODING_BASE64, 'application/pdf');
+
+            return $mailer->send();
+        } catch (\Throwable $e) {
+            $this->lastError = $e->getMessage();
+            error_log('[MailService::sendHomework] ' . $e->getMessage());
+            return false;
+        }
+    }
+
     /* ══════════════════════════════════════════════════════════
        MAILER FACTORY
     ══════════════════════════════════════════════════════════ */

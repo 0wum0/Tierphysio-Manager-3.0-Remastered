@@ -156,4 +156,124 @@ class HomeworkRepository
         );
         return $homework ?: null;
     }
+
+    // ── Plan-Meta (PDF-relevante Felder pro Patient) ──────────────────────
+
+    public function getPatientPlanMeta(int $patientId): ?array
+    {
+        $row = $this->db->fetch(
+            "SELECT * FROM homework_plan_meta WHERE patient_id = ?",
+            [$patientId]
+        );
+        return $row ?: null;
+    }
+
+    public function savePatientPlanMeta(int $patientId, array $data): void
+    {
+        $existing = $this->getPatientPlanMeta($patientId);
+
+        if ($existing) {
+            $this->db->query(
+                "UPDATE homework_plan_meta SET
+                    physiotherapeutische_grundsaetze = ?,
+                    kurzfristige_ziele = ?,
+                    langfristige_ziele = ?,
+                    therapiemittel = ?,
+                    beachte_hinweise = ?,
+                    wiedervorstellung_date = ?,
+                    therapist_name = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE patient_id = ?",
+                [
+                    $data['physiotherapeutische_grundsaetze'] ?? null,
+                    $data['kurzfristige_ziele'] ?? null,
+                    $data['langfristige_ziele'] ?? null,
+                    $data['therapiemittel'] ?? null,
+                    $data['beachte_hinweise'] ?? null,
+                    !empty($data['wiedervorstellung_date']) ? $data['wiedervorstellung_date'] : null,
+                    $data['therapist_name'] ?? null,
+                    $patientId,
+                ]
+            );
+        } else {
+            $this->db->query(
+                "INSERT INTO homework_plan_meta
+                    (patient_id, physiotherapeutische_grundsaetze, kurzfristige_ziele,
+                     langfristige_ziele, therapiemittel, beachte_hinweise,
+                     wiedervorstellung_date, therapist_name)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                [
+                    $patientId,
+                    $data['physiotherapeutische_grundsaetze'] ?? null,
+                    $data['kurzfristige_ziele'] ?? null,
+                    $data['langfristige_ziele'] ?? null,
+                    $data['therapiemittel'] ?? null,
+                    $data['beachte_hinweise'] ?? null,
+                    !empty($data['wiedervorstellung_date']) ? $data['wiedervorstellung_date'] : null,
+                    $data['therapist_name'] ?? null,
+                ]
+            );
+        }
+    }
+
+    // ── Template-Verwaltung (Admin) ───────────────────────────────────────
+
+    public function findAllTemplatesAdmin(): array
+    {
+        return $this->db->fetchAll(
+            "SELECT * FROM homework_templates ORDER BY category, title"
+        );
+    }
+
+    public function createTemplate(array $data): int
+    {
+        $this->db->query(
+            "INSERT INTO homework_templates
+                (title, description, category, category_emoji, frequency,
+                 duration_value, duration_unit, therapist_notes, is_active)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)",
+            [
+                $data['title'],
+                $data['description'],
+                $data['category'],
+                $data['category_emoji'],
+                $data['frequency'],
+                (int)$data['duration_value'],
+                $data['duration_unit'],
+                $data['therapist_notes'] ?? null,
+            ]
+        );
+        return $this->db->lastInsertId();
+    }
+
+    public function updateTemplate(int $id, array $data): bool
+    {
+        $this->db->query(
+            "UPDATE homework_templates SET
+                title = ?, description = ?, category = ?, category_emoji = ?,
+                frequency = ?, duration_value = ?, duration_unit = ?,
+                therapist_notes = ?, is_active = ?,
+                updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?",
+            [
+                $data['title'],
+                $data['description'],
+                $data['category'],
+                $data['category_emoji'],
+                $data['frequency'],
+                (int)$data['duration_value'],
+                $data['duration_unit'],
+                $data['therapist_notes'] ?? null,
+                isset($data['is_active']) ? (int)(bool)$data['is_active'] : 1,
+                $id,
+            ]
+        );
+        return $this->db->rowCount() > 0;
+    }
+
+    public function deleteTemplate(int $id): bool
+    {
+        $this->db->query("DELETE FROM homework_templates WHERE id = ?", [$id]);
+        return $this->db->rowCount() > 0;
+    }
 }
