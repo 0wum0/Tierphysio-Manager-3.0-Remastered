@@ -1739,13 +1739,15 @@ function openEditHT(ht) {
         tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
         panels.forEach(p => p.classList.toggle('active', p.id === 'tab-' + tabId));
         try { localStorage.setItem('settingsTab', tabId); } catch(e) {}
+        document.dispatchEvent(new CustomEvent('settingsTabActivated', { detail: { tab: tabId } }));
     }
+    window._settingsActivateTab = activate;
 
     tabs.forEach(tab => tab.addEventListener('click', () => activate(tab.dataset.tab)));
 
     const hash    = location.hash.replace('#', '');
     const saved   = (function(){ try { return localStorage.getItem('settingsTab'); } catch(e) { return null; } })();
-    activate(hash || saved || 'firma');
+    setTimeout(function() { activate(hash || saved || 'firma'); }, 0);
 
     // ── PDF Design Live Preview ──────────────────────
     function syncColorPicker(pickerId, textId) {
@@ -2118,8 +2120,30 @@ function initEmailTplTabs() {
         if (b) b.addEventListener('input', function() { updateEmailPreview(tpl); });
     });
 
-    /* init active tab */
-    switchTpl('invoice');
+    /* Re-render preview when settings tab becomes visible */
+    document.addEventListener('settingsTabActivated', function(e) {
+        if (e.detail.tab === 'email-templates') {
+            var active = document.querySelector('.email-tpl-tab.btn-primary');
+            var name   = active ? active.getAttribute('data-tpl') : 'invoice';
+            updateEmailPreview(name);
+        }
+    });
+
+    /* init active tab — but only render preview if already visible */
+    var emailTab = document.getElementById('tab-email-templates');
+    if (emailTab && emailTab.classList.contains('active')) {
+        switchTpl('invoice');
+    } else {
+        /* just set button states without triggering preview while hidden */
+        tplTabs.forEach(function(b) {
+            var active = b.getAttribute('data-tpl') === 'invoice';
+            b.classList.toggle('btn-primary',   active);
+            b.classList.toggle('btn-secondary', !active);
+        });
+        tplPanels.forEach(function(p) {
+            p.style.display = (p.id === 'etpl-invoice') ? '' : 'none';
+        });
+    }
 }
 
 /* ── Platzhalter Clipboard ── */
@@ -2136,11 +2160,7 @@ document.addEventListener('click', function(e) {
     }
 });
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initEmailTplTabs);
-} else {
-    initEmailTplTabs();
-}
+initEmailTplTabs();
 
 })();
 </script>
