@@ -79,7 +79,8 @@ class ServiceProvider
         $router->post('/portal-admin/hausaufgaben/{id}/senden',      [OwnerPortalAdminController::class, 'homeworkPlanSend'],   ['auth']);
 
         /* ── Owner portal homework view ── */
-        $router->get('/portal/tiere/{id}/hausaufgaben', [OwnerPortalController::class, 'homework'], []);
+        $router->get('/portal/tiere/{id}/hausaufgaben',                    [OwnerPortalController::class, 'homework'],    []);
+        $router->get('/portal/tiere/{id}/hausaufgaben/{plan_id}/pdf',      [OwnerPortalController::class, 'homeworkPdf'], []);
     }
 
     public function dashboardWidget(array $context): array

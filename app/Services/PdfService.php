@@ -1306,13 +1306,13 @@ class PdfService
         $pdf->setPrintHeader(false);
         $pdf->setPrintFooter(false);
         $pdf->SetMargins(0, 0, 0);
-        $pdf->SetAutoPageBreak(true, 20);
+        $pdf->SetAutoPageBreak(false);
         $pdf->AddPage();
 
         // ── Helper closure: draw sidebar on each page ──────────────────
         $drawSidebar = function () use (
             $pdf, $sidebarColor, $accentColor, $sidebarW, $pageH,
-            $font, $fontSize, $logoFile, $owner, $patient
+            $font, $fontSize, $logoFile, $owner, $patient, $plan
         ): void {
             $pdf->SetFillColor(...$sidebarColor);
             $pdf->Rect(0, 0, $sidebarW, $pageH, 'F');
@@ -1671,10 +1671,16 @@ class PdfService
             $pdf->Cell($contentW / 2 - 4, 5, $plan['therapist_name'], 0, 0, 'R');
         }
 
-        // ── FOOTER ────────────────────────────────────────────────────
-        $footerTopY = 268;
+        // ── FOOTER — drawn at the bottom of the last page only ─────────
+        $footerTopY = 275;
 
-        // Ensure footer doesn't overlap content — put it at bottom of last page
+        // If content is close to footer, add a new page for the footer
+        $currentY = $pdf->GetY();
+        if ($currentY > $footerTopY - 10) {
+            $pdf->AddPage();
+            $drawSidebar();
+        }
+
         $pdf->SetDrawColor(...$colorLine);
         $pdf->SetLineWidth(0.3);
         $pdf->Line($contentX, $footerTopY, $rightEdge, $footerTopY);

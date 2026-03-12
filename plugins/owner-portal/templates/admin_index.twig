@@ -17,13 +17,13 @@
 {% if success %}
 <div class="alert alert-success alert-dismissible fade show" role="alert">
     {{ success }}
-    <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 {% endif %}
 {% if error %}
 <div class="alert alert-danger alert-dismissible fade show" role="alert">
     {{ error }}
-    <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 {% endif %}
 
@@ -60,13 +60,13 @@
                                 <td>{{ u.email }}</td>
                                 <td>
                                     {% if u.is_active and u.password_hash %}
-                                        <span class="badge badge-success">Aktiv</span>
+                                        <span class="badge bg-success">Aktiv</span>
                                     {% elseif u.invite_token and not u.invite_used_at %}
-                                        <span class="badge badge-warning">Eingeladen</span>
+                                        <span class="badge bg-warning text-dark">Eingeladen</span>
                                     {% elseif not u.is_active %}
-                                        <span class="badge badge-secondary">Deaktiviert</span>
+                                        <span class="badge bg-secondary">Deaktiviert</span>
                                     {% else %}
-                                        <span class="badge badge-info">Unbekannt</span>
+                                        <span class="badge bg-info text-dark">Unbekannt</span>
                                     {% endif %}
                                 </td>
                                 <td class="fs-sm text-muted">

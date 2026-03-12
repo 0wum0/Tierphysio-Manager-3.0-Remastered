@@ -65,9 +65,9 @@
                                 Hausaufgabenplan vom {{ plan.plan_date|date('d.m.Y') }}
                             </span>
                             {% if plan.status == 'active' %}
-                                <span class="badge badge-success fs-nano">Aktiv</span>
+                                <span class="badge bg-success fs-nano">Aktiv</span>
                             {% else %}
-                                <span class="badge badge-secondary fs-nano">Archiviert</span>
+                                <span class="badge bg-secondary fs-nano">Archiviert</span>
                             {% endif %}
                         </div>
                         {% if plan.therapist_name %}

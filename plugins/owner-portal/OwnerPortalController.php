@@ -10,20 +10,24 @@ use App\Core\Session;
 use App\Core\Translator;
 use App\Core\View;
 use App\Core\Database;
+use App\Services\PdfService;
 
 class OwnerPortalController extends Controller
 {
     private OwnerPortalRepository $repo;
+    private PdfService $pdfService;
 
     public function __construct(
         View $view,
         Session $session,
         Config $config,
         Translator $translator,
-        Database $db
+        Database $db,
+        PdfService $pdfService
     ) {
         parent::__construct($view, $session, $config, $translator);
-        $this->repo = new OwnerPortalRepository($db);
+        $this->repo       = new OwnerPortalRepository($db);
+        $this->pdfService = $pdfService;
     }
 
     /* ── Auth guard helper ── */
@@ -191,6 +195,38 @@ class OwnerPortalController extends Controller
             'pet'         => $pet,
             'exercises'   => $exercises,
         ]);
+    }
+
+    /* ── GET /portal/tiere/{id}/hausaufgaben/{plan_id}/pdf ── */
+    public function homeworkPdf(array $params = []): void
+    {
+        $user    = $this->requireOwnerAuth();
+        $ownerId = (int)$user['owner_id'];
+        $petId   = (int)($params['id'] ?? 0);
+        $planId  = (int)($params['plan_id'] ?? 0);
+
+        $pet  = $this->repo->getPetByIdAndOwner($petId, $ownerId);
+        $plan = $this->repo->getHomeworkPlanById($planId);
+
+        if (!$pet || !$plan || (int)$plan['owner_id'] !== $ownerId) {
+            $this->abort(403);
+            return;
+        }
+
+        $tasks   = $this->repo->getTasksByPlan($planId);
+        $db      = \App\Core\Application::getInstance()->getContainer()->get(Database::class);
+        $ownerStmt = $db->query('SELECT * FROM owners WHERE id = ? LIMIT 1', [$ownerId]);
+        $owner   = $ownerStmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+        $patient = $pet;
+
+        $pdfContent = $this->pdfService->generateHomeworkPdf($plan, $tasks, $owner, $patient);
+        $filename   = 'Hausaufgaben-' . ($pet['name'] ?? 'Plan') . '-' . date('Y-m-d', strtotime($plan['plan_date'])) . '.pdf';
+
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: inline; filename="' . $filename . '"');
+        header('Content-Length: ' . strlen($pdfContent));
+        echo $pdfContent;
+        exit;
     }
 
     /* ── GET /portal/tiere/{id}/hausaufgaben ── */
