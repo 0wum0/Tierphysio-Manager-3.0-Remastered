@@ -127,17 +127,17 @@
 <div class="modal fade" id="modal-create-plan" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fal fa-clipboard-list mr-2"></i>
+                    Neuer Hausaufgabenplan — <span id="create-patient-name"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
             <form id="form-create-plan" method="POST"
                   action="/portal-admin/tiere/{{ owner.id }}/hausaufgaben">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="patient_id" id="create-patient-id" value="">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="fal fa-clipboard-list mr-2"></i>
-                        Neuer Hausaufgabenplan — <span id="create-patient-name"></span>
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
                 <div class="modal-body">
                     <div class="row mb-3">
                         <div class="col-md-4">
@@ -211,13 +211,14 @@
                                   placeholder="z.B. WICHTIG! Aufwärmphasen sind bei älteren Patienten..."></textarea>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
-                    <button type="submit" class="btn btn-primary waves-effect waves-themed">
-                        <i class="fal fa-save mr-1"></i> Plan speichern
-                    </button>
-                </div>
             </form>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                <button type="submit" form="form-create-plan" class="btn btn-primary">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" class="me-1"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="17 21 17 13 7 13 7 21"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 3 7 8 15 8"/></svg>
+                    Plan speichern
+                </button>
+            </div>
         </div>
     </div>
 </div>
