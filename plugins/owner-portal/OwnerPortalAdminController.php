@@ -315,6 +315,7 @@ class OwnerPortalAdminController extends Controller
             'patients'         => $patients,
             'plans_by_patient' => $plansByPatient,
             'templates'        => $templates,
+            'current_user'     => $this->session->getUser(),
             'csrf_token'       => $this->session->generateCsrfToken(),
             'success'          => $this->session->getFlash('success'),
             'error'            => $this->session->getFlash('error'),

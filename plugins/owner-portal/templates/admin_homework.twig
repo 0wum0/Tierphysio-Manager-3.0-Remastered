@@ -134,11 +134,11 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form id="form-create-plan" method="POST"
-                  action="/portal-admin/tiere/{{ owner.id }}/hausaufgaben">
+            <div class="modal-body">
+                <form id="form-create-plan" method="POST"
+                      action="/portal-admin/tiere/{{ owner.id }}/hausaufgaben">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="patient_id" id="create-patient-id" value="">
-                <div class="modal-body">
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <label class="form-label fw-500">Datum <span class="text-danger">*</span></label>
@@ -147,7 +147,8 @@
                         </div>
                         <div class="col-md-4">
                             <label class="form-label fw-500">Therapeutin</label>
-                            <input type="text" name="therapist_name" class="form-control"
+                            <input type="text" name="therapist_name" class="form-control" id="create-therapist-name"
+                                   value="{{ current_user.name ?? '' }}"
                                    placeholder="z.B. Eileen Wenzel (Physiotherapeutin)">
                         </div>
                         <div class="col-md-4">
@@ -210,8 +211,8 @@
                         <textarea name="general_notes" class="form-control" rows="4"
                                   placeholder="z.B. WICHTIG! Aufwärmphasen sind bei älteren Patienten..."></textarea>
                     </div>
-                </div>
-            </form>
+                </form>
+            </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
                 <button type="submit" form="form-create-plan" class="btn btn-primary">
