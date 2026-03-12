@@ -1,17 +1,15 @@
 {% extends active_theme_layout ?? 'layouts/base.twig' %}
 {% block content %}
 
-<div id="content">
-<div class="subheader">
-    <h1 class="subheader-title">
-        <i class="subheader-icon fal fa-home"></i> Besitzerportal
-        <small>Verwaltung der Portal-Zugänge für Tierhalter</small>
-    </h1>
-    <div class="subheader-action">
-        <a href="/portal-admin/einladen" class="btn btn-primary btn-sm waves-effect waves-themed">
-            <i class="fal fa-plus mr-1"></i> Besitzer einladen
-        </a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Besitzerportal</h1>
+        <p class="page-subtitle">Verwaltung der Portal-Zugänge für Tierhalter</p>
     </div>
+    <a href="/portal-admin/einladen" class="btn btn-primary btn-sm">
+        <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Besitzer einladen
+    </a>
 </div>
 
 {% if success %}
@@ -27,19 +25,7 @@
 </div>
 {% endif %}
 
-<div class="row">
-    <div class="col-12">
-        <div id="panel-1" class="panel">
-            <div class="panel-hdr">
-                <h2>Portal-Zugänge</h2>
-                <div class="panel-toolbar">
-                    <a href="/portal-admin/einladen" class="btn btn-sm btn-primary waves-effect waves-themed">
-                        <i class="fal fa-envelope mr-1"></i> Neuen Besitzer einladen
-                    </a>
-                </div>
-            </div>
-            <div class="panel-container show">
-                <div class="panel-content p-0">
+<div class="glass-card p-0">
                     {% if portal_users %}
                     <div class="table-responsive">
                     <table class="table table-hover table-striped table-bordered mb-0">
@@ -128,11 +114,6 @@
                         <a href="/portal-admin/einladen" class="btn btn-primary btn-sm">Ersten Besitzer einladen</a>
                     </div>
                     {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
-</div>
 {% endblock %}

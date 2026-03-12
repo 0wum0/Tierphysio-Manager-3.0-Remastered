@@ -1,19 +1,19 @@
 {% extends active_theme_layout ?? 'layouts/base.twig' %}
 {% block content %}
 
-<div id="content">
-<div class="subheader">
-    <h1 class="subheader-title">
-        <i class="subheader-icon fal fa-clipboard-list"></i>
-        Hausaufgaben — {{ owner.first_name }} {{ owner.last_name }}
-        <small>Therapiepläne für Tierbesitzer verwalten</small>
-    </h1>
-    <div class="subheader-action">
-        <a href="/portal-admin/tiere/{{ owner.id }}/uebungen" class="btn btn-outline-secondary btn-sm mr-2">
-            <i class="fal fa-dumbbell mr-1"></i> Übungen
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Hausaufgaben — {{ owner.first_name }} {{ owner.last_name }}</h1>
+        <p class="page-subtitle">Therapiepläne für Tierbesitzer verwalten</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/portal-admin/tiere/{{ owner.id }}/uebungen" class="btn btn-secondary btn-sm">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M6 4v16M18 4v16M6 12h12"/></svg>
+            Übungen
         </a>
-        <a href="/portal-admin" class="btn btn-outline-secondary btn-sm">
-            <i class="fal fa-arrow-left mr-1"></i> Portal-Verwaltung
+        <a href="/portal-admin" class="btn btn-secondary btn-sm">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="15 18 9 12 15 6"/></svg>
+            Portal-Verwaltung
         </a>
     </div>
 </div>

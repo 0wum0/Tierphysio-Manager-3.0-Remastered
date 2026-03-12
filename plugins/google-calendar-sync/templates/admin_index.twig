@@ -1,175 +1,161 @@
 {% extends active_theme_layout ?? 'layouts/base.twig' %}
 {% block content %}
 
-<div id="content">
-<div class="subheader">
-    <h1 class="subheader-title">
-        <i class="subheader-icon fal fa-calendar-check"></i> Google Kalender Sync
-        <small>Einweg-Synchronisation: Praxissoftware → Google Kalender (Lila)</small>
-    </h1>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Google Kalender Sync</h1>
+        <p class="page-subtitle">Einweg-Synchronisation: Praxissoftware → Google Kalender</p>
+    </div>
 </div>
 
 {% if success %}
-<div class="alert alert-success alert-dismissible fade show" role="alert">
-    <i class="fal fa-check-circle mr-2"></i>{{ success }}
-    <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+<div class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-3" role="alert">
+    <svg class="sa-icon sa-icon-success me-2 flex-shrink-0"><use href="/themes/smart-tierphysio/icons/sprite.svg#check-circle"></use></svg>
+    <span>{{ success }}</span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 {% endif %}
 {% if error %}
-<div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <i class="fal fa-exclamation-circle mr-2"></i>{{ error }}
-    <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+<div class="alert alert-danger alert-dismissible fade show d-flex align-items-center mb-3" role="alert">
+    <svg class="sa-icon sa-icon-danger me-2 flex-shrink-0"><use href="/themes/smart-tierphysio/icons/sprite.svg#alert-circle"></use></svg>
+    <span>{{ error }}</span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 {% endif %}
 
 {% if not is_configured %}
-<div class="alert alert-warning" role="alert">
-    <h5 class="alert-heading"><i class="fal fa-tools mr-2"></i>API Zugangsdaten fehlen</h5>
-    <p>Damit Google Kalender Sync funktioniert, müssen zuerst Google API Zugangsdaten eingetragen werden.</p>
-    <hr>
+<div class="alert alert-warning mb-3" role="alert">
+    <strong>⚠️ API Zugangsdaten fehlen</strong>
+    <p class="mb-2 mt-1">Damit Google Kalender Sync funktioniert, müssen zuerst Google API Zugangsdaten eingetragen werden.</p>
+    <hr class="my-2">
     <ol class="mb-0 fs-sm">
         <li>Öffne die <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></li>
         <li>Erstelle ein Projekt und aktiviere die <strong>Google Calendar API</strong></li>
         <li>Erstelle eine OAuth 2.0 Client-ID (Typ: Webanwendung)</li>
-        <li>Füge folgende Weiterleitungs-URI hinzu: <code>{{ app.request.schemeAndHttpHost ?? 'https://deine-domain.de' }}/google-kalender/callback</code></li>
-        <li>Kopiere <code>plugins/google-calendar-sync/google.config.example.php</code> nach <code>storage/config/google.php</code> und trage deine Daten ein</li>
+        <li>Füge folgende Weiterleitungs-URI hinzu: <code>/google-kalender/callback</code></li>
+        <li>Kopiere <code>plugins/google-calendar-sync/google.config.example.php</code> nach <code>storage/config/google.php</code></li>
     </ol>
 </div>
 {% endif %}
 
-<div class="row">
+<div class="row g-3">
 
-    {# ── LEFT: Connection Status ── #}
+    {# ── LEFT: Connection + Calendar ── #}
     <div class="col-12 col-lg-5">
 
         {# Connection Card #}
-        <div id="panel-connection" class="panel">
-            <div class="panel-hdr">
-                <h2>
-                    <span class="mr-2">🔗</span> Google Konto
-                </h2>
-            </div>
-            <div class="panel-container show">
-                <div class="panel-content">
-                    {% if connection and connection.access_token %}
-                        {# Connected #}
-                        <div class="d-flex align-items-center gap-3 mb-3">
-                            <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                                <svg width="22" height="22" fill="white" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                            </div>
-                            <div>
-                                <div class="fw-700">{{ connection.google_email ?? 'Verbunden' }}</div>
-                                <div class="fs-nano text-muted">
-                                    {% if connection.sync_enabled %}
-                                        <span class="text-success"><i class="fal fa-check-circle mr-1"></i>Sync aktiv</span>
-                                    {% else %}
-                                        <span class="text-warning"><i class="fal fa-pause-circle mr-1"></i>Sync pausiert</span>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mb-3 fs-sm">
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="text-muted">Kalender:</span>
-                                <span class="fw-500">{{ connection.calendar_name ?? connection.calendar_id ?? 'primary' }}</span>
-                            </div>
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="text-muted">Letzter Sync:</span>
-                                <span>{% if last_success %}{{ last_success|date('d.m.Y H:i') }}{% else %}<span class="text-muted">–</span>{% endif %}</span>
-                            </div>
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="text-muted">Heute synced:</span>
-                                <span class="fw-600" style="color:#a78bfa;">{{ synced_count }}</span>
-                            </div>
-                            {% if last_error %}
-                            <div class="mt-2 p-2 border border-warning rounded fs-nano text-warning">
-                                <i class="fal fa-exclamation-triangle mr-1"></i>
-                                Letzter Fehler: {{ last_error.message|slice(0,100) }}
-                                <span class="text-muted">({{ last_error.created_at|date('d.m.Y H:i') }})</span>
-                            </div>
-                            {% endif %}
-                        </div>
-
-                        {# Action buttons #}
-                        <div class="d-flex flex-wrap gap-2">
-                            <form method="POST" action="/google-kalender/test-sync">
-                                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-                                <button type="submit" class="btn btn-sm btn-outline-primary waves-effect waves-themed">
-                                    <i class="fal fa-vial mr-1"></i> Test-Sync
-                                </button>
-                            </form>
-                            <form method="POST" action="/google-kalender/bulk-sync">
-                                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-                                <button type="submit" class="btn btn-sm btn-outline-info waves-effect waves-themed"
-                                        onclick="return confirm('Alle unsynced Termine der letzten 30 Tage synchronisieren?');">
-                                    <i class="fal fa-sync mr-1"></i> Bulk-Sync
-                                </button>
-                            </form>
-                            <form method="POST" action="/google-kalender/trennen">
-                                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-                                <button type="submit" class="btn btn-sm btn-outline-danger waves-effect waves-themed"
-                                        onclick="return confirm('Google Konto wirklich trennen? Bestehende Google-Events werden NICHT gelöscht.');">
-                                    <i class="fal fa-unlink mr-1"></i> Trennen
-                                </button>
-                            </form>
-                        </div>
-
-                    {% else %}
-                        {# Not connected #}
-                        <div class="text-center py-3">
-                            <svg width="48" height="48" viewBox="0 0 24 24" style="opacity:.25;margin-bottom:1rem;">
-                                <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/>
-                                <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="1.5"/>
-                                <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                                <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                            </svg>
-                            <p class="text-muted fs-sm mb-3">Noch kein Google Konto verbunden.<br>Termine werden nicht synchronisiert.</p>
-                            {% if is_configured %}
-                            <a href="/google-kalender/verbinden" class="btn btn-primary waves-effect waves-themed">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="white" style="margin-right:6px;vertical-align:-3px;"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-                                Mit Google verbinden
-                            </a>
+        <div class="glass-card mb-3">
+            <h3 class="font-semibold mb-3" style="font-size:0.95rem;">🔗 Google Konto</h3>
+            {% if connection and connection.access_token %}
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#a78bfa,#7c3aed);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <svg width="22" height="22" fill="white" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                    </div>
+                    <div>
+                        <div class="fw-700">{{ connection.google_email ?? 'Verbunden' }}</div>
+                        <div class="fs-nano text-muted">
+                            {% if connection.sync_enabled %}
+                                <span class="text-success">● Sync aktiv</span>
                             {% else %}
-                            <p class="text-muted fs-nano">API Zugangsdaten fehlen (siehe Hinweis oben).</p>
+                                <span class="text-warning">⏸ Sync pausiert</span>
                             {% endif %}
                         </div>
+                    </div>
+                </div>
+
+                <div class="mb-3 fs-sm" style="display:flex;flex-direction:column;gap:0.35rem;">
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Kalender:</span>
+                        <span class="fw-500">{{ connection.calendar_name ?? connection.calendar_id ?? 'primary' }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Letzter Sync:</span>
+                        <span>{% if last_success %}{{ last_success|date('d.m.Y H:i') }}{% else %}<span class="text-muted">–</span>{% endif %}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Heute synced:</span>
+                        <span class="fw-600" style="color:#a78bfa;">{{ synced_count }}</span>
+                    </div>
+                    {% if last_error %}
+                    <div class="mt-2 p-2 rounded fs-nano text-warning" style="border:1px solid rgba(245,158,11,0.3);background:rgba(245,158,11,0.08);">
+                        ⚠️ Letzter Fehler: {{ last_error.message|slice(0,100) }}
+                        <span class="text-muted">({{ last_error.created_at|date('d.m.Y H:i') }})</span>
+                    </div>
                     {% endif %}
                 </div>
-            </div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    <form method="POST" action="/google-kalender/test-sync">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="btn btn-secondary btn-sm">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M5 3l14 9-14 9V3z"/></svg>
+                            Test-Sync
+                        </button>
+                    </form>
+                    <form method="POST" action="/google-kalender/bulk-sync">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="btn btn-secondary btn-sm"
+                                data-confirm="Alle unsynced Termine der letzten 30 Tage synchronisieren?">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="23 4 23 10 17 10"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="1 20 1 14 7 14"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                            Bulk-Sync
+                        </button>
+                    </form>
+                    <form method="POST" action="/google-kalender/trennen">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="btn btn-danger btn-sm"
+                                data-confirm="Google Konto wirklich trennen? Bestehende Google-Events werden NICHT gelöscht.">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            Trennen
+                        </button>
+                    </form>
+                </div>
+
+            {% else %}
+                <div class="text-center py-3">
+                    <svg width="48" height="48" viewBox="0 0 24 24" style="opacity:.25;margin-bottom:1rem;display:block;margin-left:auto;margin-right:auto;">
+                        <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                        <line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="1.5"/>
+                        <line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                        <line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    <p class="text-muted fs-sm mb-3">Noch kein Google Konto verbunden.<br>Termine werden nicht synchronisiert.</p>
+                    {% if is_configured %}
+                    <a href="/google-kalender/verbinden" class="btn btn-primary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right:4px;vertical-align:-3px;"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                        Mit Google verbinden
+                    </a>
+                    {% else %}
+                    <p class="text-muted fs-nano">API Zugangsdaten fehlen (siehe Hinweis oben).</p>
+                    {% endif %}
+                </div>
+            {% endif %}
         </div>
 
         {# Calendar Selector #}
         {% if connection and connection.access_token and calendars %}
-        <div id="panel-calendar-select" class="panel">
-            <div class="panel-hdr">
-                <h2><i class="fal fa-list mr-2"></i> Kalender auswählen</h2>
-            </div>
-            <div class="panel-container show">
-                <div class="panel-content">
-                    <form method="POST" action="/google-kalender/kalender-auswaehlen">
-                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-                        <div class="form-group">
-                            <label class="form-label">Google Kalender</label>
-                            <select name="calendar_id" id="calendar_id" class="form-control" onchange="updateCalendarName(this)">
-                                {% for cal in calendars %}
-                                <option value="{{ cal.id }}"
-                                        data-name="{{ cal.summary }}"
-                                        {% if cal.id == connection.calendar_id %}selected{% endif %}>
-                                    {{ cal.summary }}
-                                    {% if cal.primary %} (Primär){% endif %}
-                                </option>
-                                {% endfor %}
-                            </select>
-                            <input type="hidden" name="calendar_name" id="calendar_name_hidden"
-                                   value="{{ connection.calendar_name ?? '' }}">
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-sm waves-effect waves-themed">
-                            <i class="fal fa-save mr-1"></i> Kalender speichern
-                        </button>
-                    </form>
+        <div class="glass-card mb-3">
+            <h3 class="font-semibold mb-3" style="font-size:0.95rem;">Kalender auswählen</h3>
+            <form method="POST" action="/google-kalender/kalender-auswaehlen">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <div class="form-group">
+                    <label class="form-label">Google Kalender</label>
+                    <select name="calendar_id" id="calendar_id" class="form-control" onchange="updateCalendarName(this)">
+                        {% for cal in calendars %}
+                        <option value="{{ cal.id }}"
+                                data-name="{{ cal.summary }}"
+                                {% if cal.id == connection.calendar_id %}selected{% endif %}>
+                            {{ cal.summary }}{% if cal.primary %} (Primär){% endif %}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <input type="hidden" name="calendar_name" id="calendar_name_hidden"
+                           value="{{ connection.calendar_name ?? '' }}">
                 </div>
-            </div>
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="17 21 17 13 7 13 7 21"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 3 7 8 15 8"/></svg>
+                    Kalender speichern
+                </button>
+            </form>
         </div>
         {% endif %}
 
@@ -180,171 +166,146 @@
 
         {# Settings #}
         {% if connection and connection.access_token %}
-        <div id="panel-settings" class="panel">
-            <div class="panel-hdr">
-                <h2><i class="fal fa-cog mr-2"></i> Einstellungen</h2>
-            </div>
-            <div class="panel-container show">
-                <div class="panel-content">
-                    <form method="POST" action="/google-kalender/einstellungen">
-                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+        <div class="glass-card mb-3">
+            <h3 class="font-semibold mb-3" style="font-size:0.95rem;">Einstellungen</h3>
+            <form method="POST" action="/google-kalender/einstellungen">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
 
-                        <div class="row">
-                            <div class="col-12 col-sm-6">
-                                <div class="form-group">
-                                    <div class="custom-control custom-switch">
-                                        <input type="checkbox" class="custom-control-input" id="sync_enabled"
-                                               name="sync_enabled" value="1"
-                                               {% if connection.sync_enabled %}checked{% endif %}>
-                                        <label class="custom-control-label" for="sync_enabled">
-                                            <strong>Sync aktiviert</strong>
-                                        </label>
-                                    </div>
-                                    <div class="help-block fs-nano text-muted mt-1">Neue Termine werden automatisch zu Google übertragen.</div>
-                                </div>
-                            </div>
-                            <div class="col-12 col-sm-6">
-                                <div class="form-group">
-                                    <div class="custom-control custom-switch">
-                                        <input type="checkbox" class="custom-control-input" id="auto_sync"
-                                               name="auto_sync" value="1"
-                                               {% if connection.auto_sync %}checked{% endif %}>
-                                        <label class="custom-control-label" for="auto_sync">
-                                            <strong>Auto-Sync bei Erstellung/Änderung</strong>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-12 col-sm-6">
-                                <div class="form-group">
-                                    <div class="custom-control custom-switch">
-                                        <input type="checkbox" class="custom-control-input" id="skip_waitlist"
-                                               name="skip_waitlist" value="1"
-                                               {% if connection.skip_waitlist %}checked{% endif %}>
-                                        <label class="custom-control-label" for="skip_waitlist">
-                                            Warteliste überspringen
-                                        </label>
-                                    </div>
-                                    <div class="help-block fs-nano text-muted mt-1">Wartelisten-Einträge werden nicht synchronisiert.</div>
-                                </div>
-                            </div>
-                            <div class="col-12 col-sm-6">
-                                <div class="form-group">
-                                    <label class="form-label">Standard-Erinnerung (Minuten)</label>
-                                    <input type="number" name="default_reminder_minutes" class="form-control"
-                                           value="{{ connection.default_reminder_minutes ?? '' }}"
-                                           min="0" max="10080" placeholder="Leer = Termin-Einstellung">
-                                    <div class="help-block fs-nano text-muted mt-1">Leer lassen = Wert aus dem Termin verwenden.</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="alert alert-info fs-sm p-2" role="alert">
-                            <i class="fal fa-paint-brush mr-1" style="color:#a78bfa;"></i>
-                            Alle Tierphysio-Termine erscheinen in Google Kalender immer in <strong style="color:#a78bfa;">Lila (Grape)</strong> — diese Farbe ist fest eingestellt und wird bei jeder Synchronisation gesetzt.
-                        </div>
-
-                        <button type="submit" class="btn btn-primary waves-effect waves-themed">
-                            <i class="fal fa-save mr-1"></i> Einstellungen speichern
-                        </button>
-                    </form>
+                <div class="form-grid form-grid-2">
+                    <div class="form-group">
+                        <label class="form-label d-flex align-items-center gap-2">
+                            <input type="hidden" name="sync_enabled" value="0">
+                            <input type="checkbox" class="form-check-input" id="sync_enabled"
+                                   name="sync_enabled" value="1"
+                                   {% if connection.sync_enabled %}checked{% endif %}
+                                   style="width:16px;height:16px;accent-color:var(--accent);">
+                            <strong>Sync aktiviert</strong>
+                        </label>
+                        <div class="form-hint">Neue Termine werden automatisch zu Google übertragen.</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label d-flex align-items-center gap-2">
+                            <input type="hidden" name="auto_sync" value="0">
+                            <input type="checkbox" class="form-check-input" id="auto_sync"
+                                   name="auto_sync" value="1"
+                                   {% if connection.auto_sync %}checked{% endif %}
+                                   style="width:16px;height:16px;accent-color:var(--accent);">
+                            <strong>Auto-Sync bei Erstellung/Änderung</strong>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label d-flex align-items-center gap-2">
+                            <input type="hidden" name="skip_waitlist" value="0">
+                            <input type="checkbox" class="form-check-input" id="skip_waitlist"
+                                   name="skip_waitlist" value="1"
+                                   {% if connection.skip_waitlist %}checked{% endif %}
+                                   style="width:16px;height:16px;accent-color:var(--accent);">
+                            Warteliste überspringen
+                        </label>
+                        <div class="form-hint">Wartelisten-Einträge werden nicht synchronisiert.</div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Standard-Erinnerung (Minuten)</label>
+                        <input type="number" name="default_reminder_minutes" class="form-control"
+                               value="{{ connection.default_reminder_minutes ?? '' }}"
+                               min="0" max="10080" placeholder="Leer = Termin-Einstellung">
+                        <div class="form-hint">Leer lassen = Wert aus dem Termin verwenden.</div>
+                    </div>
                 </div>
-            </div>
+
+                <div class="alert alert-info fs-sm mb-3" role="alert">
+                    🎨 Alle Tierphysio-Termine erscheinen in Google Kalender immer in <strong style="color:#a78bfa;">Lila (Grape)</strong> — diese Farbe ist fest eingestellt.
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="17 21 17 13 7 13 7 21"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 3 7 8 15 8"/></svg>
+                    Einstellungen speichern
+                </button>
+            </form>
         </div>
         {% endif %}
 
         {# Sync Log #}
-        <div id="panel-log" class="panel">
-            <div class="panel-hdr">
-                <h2><i class="fal fa-history mr-2"></i> Sync-Protokoll</h2>
-                <div class="panel-toolbar">
-                    <span class="fs-nano text-muted">Letzte 15 Einträge</span>
-                </div>
+        <div class="glass-card mb-3">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-semibold" style="font-size:0.95rem;margin:0;">Sync-Protokoll</h3>
+                <span class="fs-nano text-muted">Letzte 15 Einträge</span>
             </div>
-            <div class="panel-container show">
-                <div class="panel-content p-0">
-                    {% if recent_logs %}
-                    <div class="table-responsive">
-                    <table class="table table-sm table-hover mb-0">
-                        <thead>
-                            <tr>
-                                <th>Zeit</th>
-                                <th>Aktion</th>
-                                <th>Status</th>
-                                <th>Nachricht</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        {% for log in recent_logs %}
-                            <tr>
-                                <td class="fs-nano text-muted white-space-nowrap">{{ log.created_at|date('d.m. H:i') }}</td>
-                                <td>
-                                    {% if log.action == 'create' %}<span class="badge badge-success">Erstellt</span>
-                                    {% elseif log.action == 'update' %}<span class="badge badge-info">Aktualisiert</span>
-                                    {% elseif log.action == 'delete' %}<span class="badge badge-secondary">Gelöscht</span>
-                                    {% elseif log.action == 'test' %}<span class="badge badge-primary">Test</span>
-                                    {% elseif log.action == 'auth' %}<span class="badge badge-warning">Auth</span>
-                                    {% else %}<span class="badge badge-danger">Fehler</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if log.success %}
-                                        <i class="fal fa-check-circle text-success"></i>
-                                    {% else %}
-                                        <i class="fal fa-times-circle text-danger"></i>
-                                    {% endif %}
-                                </td>
-                                <td class="fs-nano text-truncate" style="max-width:300px;" title="{{ log.message }}">
-                                    {{ log.message|slice(0,80) }}{% if log.message|length > 80 %}…{% endif %}
-                                </td>
-                            </tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
-                    </div>
-                    {% else %}
-                    <div class="p-4 text-center text-muted">
-                        <i class="fal fa-history fa-2x mb-2 d-block opacity-30"></i>
-                        Noch keine Sync-Einträge.
-                    </div>
-                    {% endif %}
-                </div>
+            {% if recent_logs %}
+            <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Zeit</th>
+                        <th>Aktion</th>
+                        <th>Status</th>
+                        <th>Nachricht</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for log in recent_logs %}
+                    <tr>
+                        <td class="fs-nano text-muted" style="white-space:nowrap;">{{ log.created_at|date('d.m. H:i') }}</td>
+                        <td>
+                            {% if log.action == 'create' %}<span class="badge bg-success">Erstellt</span>
+                            {% elseif log.action == 'update' %}<span class="badge bg-info text-dark">Aktualisiert</span>
+                            {% elseif log.action == 'delete' %}<span class="badge bg-secondary">Gelöscht</span>
+                            {% elseif log.action == 'test' %}<span class="badge-primary badge">Test</span>
+                            {% elseif log.action == 'auth' %}<span class="badge-warning badge">Auth</span>
+                            {% else %}<span class="badge bg-danger">Fehler</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.success %}
+                                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="color:#22c55e;"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></svg>
+                            {% else %}
+                                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="color:#ef4444;"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            {% endif %}
+                        </td>
+                        <td class="fs-nano" style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ log.message }}">
+                            {{ log.message|slice(0,80) }}{% if log.message|length > 80 %}…{% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
             </div>
+            {% else %}
+            <div class="empty-state" style="padding:2rem 1rem;">
+                <div class="empty-state-icon">
+                    <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="1.5" stroke-linecap="round" d="M3 12h18M3 6h18M3 18h12"/></svg>
+                </div>
+                <div class="empty-state-text">Noch keine Sync-Einträge.</div>
+            </div>
+            {% endif %}
         </div>
 
-        {# Setup Guide #}
-        <div id="panel-guide" class="panel">
-            <div class="panel-hdr">
-                <h2><i class="fal fa-info-circle mr-2"></i> Setup-Anleitung</h2>
-                <div class="panel-toolbar">
-                    <button class="btn btn-icon btn-sm btn-outline-secondary waves-effect" data-toggle="collapse" data-target="#guide-body">
-                        <i class="fal fa-chevron-down"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="panel-container collapse" id="guide-body">
-                <div class="panel-content">
-                    <ol class="fs-sm">
-                        <li class="mb-2"><strong>Google Cloud Console</strong> öffnen: <a href="https://console.cloud.google.com/" target="_blank">console.cloud.google.com</a></li>
-                        <li class="mb-2">Neues Projekt erstellen (z.B. „Tierphysio Manager")</li>
-                        <li class="mb-2">Unter „APIs &amp; Dienste" → „Bibliothek" die <strong>Google Calendar API</strong> aktivieren</li>
-                        <li class="mb-2">Unter „APIs &amp; Dienste" → „Anmeldedaten" eine <strong>OAuth 2.0 Client-ID</strong> erstellen (Typ: Webanwendung)</li>
-                        <li class="mb-2">Autorisierte Weiterleitungs-URI hinzufügen:<br>
-                            <code class="fs-nano">{{ 'https://' }}{{ app.request.host ?? 'deine-domain.de' }}/google-kalender/callback</code>
-                        </li>
-                        <li class="mb-2">Datei <code>plugins/google-calendar-sync/google.config.example.php</code> nach <code>storage/config/google.php</code> kopieren und Zugangsdaten eintragen</li>
-                        <li class="mb-2">Seite neu laden → „Mit Google verbinden" klicken</li>
-                        <li>Kalender auswählen und Einstellungen speichern</li>
-                    </ol>
-                    <div class="alert alert-info fs-sm p-2">
-                        <strong>Automatischer Sync:</strong> Damit Termine direkt beim Erstellen/Ändern synchronisiert werden, müssen die Hooks im Kalender-Plugin gefeuert werden. Alternativ: Cron-Job einrichten für <code>/google-kalender/cron?token=DEIN_CRON_SECRET</code>
-                    </div>
+        {# Setup Guide — collapsible #}
+        <div class="glass-card">
+            <button class="btn btn-secondary btn-sm w-full d-flex align-items-center justify-content-between"
+                    type="button" data-bs-toggle="collapse" data-bs-target="#guide-body" aria-expanded="false">
+                <span>📋 Setup-Anleitung anzeigen</span>
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="collapse mt-3" id="guide-body">
+                <ol class="fs-sm" style="padding-left:1.25rem;line-height:1.8;">
+                    <li><strong>Google Cloud Console</strong> öffnen: <a href="https://console.cloud.google.com/" target="_blank">console.cloud.google.com</a></li>
+                    <li>Neues Projekt erstellen (z.B. „Tierphysio Manager")</li>
+                    <li>Unter „APIs &amp; Dienste" → „Bibliothek" die <strong>Google Calendar API</strong> aktivieren</li>
+                    <li>Unter „APIs &amp; Dienste" → „Anmeldedaten" eine <strong>OAuth 2.0 Client-ID</strong> erstellen (Typ: Webanwendung)</li>
+                    <li>Autorisierte Weiterleitungs-URI hinzufügen: <code class="fs-nano">/google-kalender/callback</code></li>
+                    <li>Datei <code>google.config.example.php</code> nach <code>storage/config/google.php</code> kopieren und Daten eintragen</li>
+                    <li>Seite neu laden → „Mit Google verbinden" klicken</li>
+                    <li>Kalender auswählen und Einstellungen speichern</li>
+                </ol>
+                <div class="alert alert-info fs-sm mt-2 mb-0">
+                    <strong>Auto-Sync:</strong> Für automatische Synchronisation beim Erstellen/Ändern von Terminen, Cron-Job einrichten für
+                    <code>/google-kalender/cron?token=CRON_SECRET</code>
                 </div>
             </div>
         </div>
 
     </div>
-</div>
 </div>
 
 <script>

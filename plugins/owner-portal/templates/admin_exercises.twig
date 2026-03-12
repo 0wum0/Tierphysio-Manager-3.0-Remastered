@@ -1,18 +1,15 @@
 {% extends active_theme_layout ?? 'layouts/base.twig' %}
 {% block content %}
 
-<div id="content">
-<div class="subheader">
-    <h1 class="subheader-title">
-        <i class="subheader-icon fal fa-dumbbell"></i>
-        Übungen — {{ owner.first_name }} {{ owner.last_name }}
-        <small>Heimtraining für Tierbesitzer verwalten</small>
-    </h1>
-    <div class="subheader-action">
-        <a href="/portal-admin" class="btn btn-outline-secondary btn-sm">
-            <i class="fal fa-arrow-left mr-1"></i> Portal-Verwaltung
-        </a>
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Übungen — {{ owner.first_name }} {{ owner.last_name }}</h1>
+        <p class="page-subtitle">Heimtraining für Tierbesitzer verwalten</p>
     </div>
+    <a href="/portal-admin" class="btn btn-secondary btn-sm">
+        <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="15 18 9 12 15 6"/></svg>
+        Portal-Verwaltung
+    </a>
 </div>
 
 {% if success %}
@@ -147,8 +144,9 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
-                    <button type="submit" class="btn btn-primary waves-effect waves-themed">
-                        <i class="fal fa-plus mr-1"></i> Hinzufügen
+                    <button type="submit" class="btn btn-primary">
+                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        Hinzufügen
                     </button>
                 </div>
             </form>
@@ -222,5 +220,4 @@ function openEditExercise(ex) {
 }
 </script>
 
-</div>
 {% endblock %}

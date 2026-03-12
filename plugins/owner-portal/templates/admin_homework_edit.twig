@@ -1,21 +1,20 @@
 {% extends active_theme_layout ?? 'layouts/base.twig' %}
 {% block content %}
 
-<div id="content">
-<div class="subheader">
-    <h1 class="subheader-title">
-        <i class="subheader-icon fal fa-clipboard-list"></i>
-        Hausaufgabenplan bearbeiten
-        {% if owner %}<small>{{ owner.first_name }} {{ owner.last_name }}</small>{% endif %}
-    </h1>
-    <div class="subheader-action d-flex gap-2">
-        <a href="/portal-admin/hausaufgaben/{{ plan.id }}/pdf" target="_blank"
-           class="btn btn-outline-info btn-sm">
-            <i class="fal fa-file-pdf mr-1"></i> PDF Vorschau
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Hausaufgabenplan bearbeiten</h1>
+        {% if owner %}<p class="page-subtitle">{{ owner.first_name }} {{ owner.last_name }}</p>{% endif %}
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/portal-admin/hausaufgaben/{{ plan.id }}/pdf" target="_blank" class="btn btn-secondary btn-sm">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="14 2 14 8 20 8"/></svg>
+            PDF Vorschau
         </a>
         {% if owner %}
-        <a href="/portal-admin/tiere/{{ owner.id }}/hausaufgaben" class="btn btn-outline-secondary btn-sm">
-            <i class="fal fa-arrow-left mr-1"></i> Zurück
+        <a href="/portal-admin/tiere/{{ owner.id }}/hausaufgaben" class="btn btn-secondary btn-sm">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="15 18 9 12 15 6"/></svg>
+            Zurück
         </a>
         {% endif %}
     </div>
