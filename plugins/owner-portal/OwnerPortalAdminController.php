@@ -309,16 +309,35 @@ class OwnerPortalAdminController extends Controller
 
         $templates = $this->repo->getAllHomeworkTemplates();
 
+        // Next upcoming appointment per patient
+        $nextAppointmentByPatient = [];
+        try {
+            foreach ($patients as $p) {
+                $stmt = $db->query(
+                    'SELECT id, title, start_at FROM appointments
+                     WHERE patient_id = ? AND start_at >= NOW()
+                     AND status NOT IN ("cancelled","noshow")
+                     ORDER BY start_at ASC LIMIT 1',
+                    [(int)$p['id']]
+                );
+                $appt = $stmt->fetch(\PDO::FETCH_ASSOC);
+                if ($appt) {
+                    $nextAppointmentByPatient[$p['id']] = $appt;
+                }
+            }
+        } catch (\Throwable) {}
+
         $this->render('@owner-portal/admin_homework.twig', [
-            'page_title'       => 'Hausaufgaben — ' . trim($owner['first_name'] . ' ' . $owner['last_name']),
-            'owner'            => $owner,
-            'patients'         => $patients,
-            'plans_by_patient' => $plansByPatient,
-            'templates'        => $templates,
-            'current_user'     => $this->session->getUser(),
-            'csrf_token'       => $this->session->generateCsrfToken(),
-            'success'          => $this->session->getFlash('success'),
-            'error'            => $this->session->getFlash('error'),
+            'page_title'                => 'Hausaufgaben — ' . trim($owner['first_name'] . ' ' . $owner['last_name']),
+            'owner'                     => $owner,
+            'patients'                  => $patients,
+            'plans_by_patient'          => $plansByPatient,
+            'templates'                 => $templates,
+            'current_user'              => $this->session->getUser(),
+            'next_appointment_by_patient' => $nextAppointmentByPatient,
+            'csrf_token'                => $this->session->generateCsrfToken(),
+            'success'                   => $this->session->getFlash('success'),
+            'error'                     => $this->session->getFlash('error'),
         ]);
     }
 

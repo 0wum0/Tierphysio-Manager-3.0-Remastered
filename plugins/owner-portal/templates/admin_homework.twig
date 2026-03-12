@@ -152,9 +152,12 @@
                                    placeholder="z.B. Eileen Wenzel (Physiotherapeutin)">
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label fw-500">Wiedervorstellung</label>
-                            <input type="text" name="next_appointment" class="form-control"
-                                   placeholder="z.B. in 2 Wochen">
+                            <label class="form-label fw-500">Wiedervorstellung
+                                <span id="next-appt-badge" class="badge bg-info text-dark fs-nano ms-1" style="display:none;"></span>
+                            </label>
+                            <input type="date" name="next_appointment" id="create-next-appointment"
+                                   class="form-control">
+                            <div class="fs-nano text-muted mt-1" id="next-appt-hint"></div>
                         </div>
                     </div>
 
@@ -224,6 +227,13 @@
     </div>
 </div>
 
+{# ── Next appointments data for JS ── #}
+<script>
+var _nextApptByPatient = {{ next_appointment_by_patient|default({})|json_encode|raw }};
+var _ownerLastName     = {{ owner.last_name|json_encode|raw }};
+var _csrfToken         = {{ csrf_token|json_encode|raw }};
+</script>
+
 {# ── Template Selector Modal ── #}
 {% if templates %}
 <div class="modal fade" id="modal-template-select" tabindex="-1" aria-hidden="true">
@@ -274,6 +284,28 @@ function openCreatePlan(patientId, patientName) {
     document.getElementById('tasks-container').innerHTML = '';
     taskCount = 0;
     updateTasksEmpty();
+
+    // Pre-fill Wiedervorstellung from next appointment
+    var dateInput = document.getElementById('create-next-appointment');
+    var badge     = document.getElementById('next-appt-badge');
+    var hint      = document.getElementById('next-appt-hint');
+    var appt      = _nextApptByPatient[patientId];
+    dateInput.value = '';
+    badge.style.display = 'none';
+    hint.textContent = '';
+    if (appt && appt.start_at) {
+        var d = appt.start_at.substring(0, 10);
+        dateInput.value = d;
+        var fmt = new Date(d).toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit', year:'numeric'});
+        badge.textContent = 'Termin vorhanden';
+        badge.style.display = '';
+        hint.textContent = 'Nächster Termin: ' + fmt + (appt.title ? ' – ' + appt.title : '');
+    }
+
+    // Store current patient info for appointment creation
+    dateInput.dataset.patientId   = patientId;
+    dateInput.dataset.patientName = patientName;
+
     new bootstrap.Modal(document.getElementById('modal-create-plan')).show();
 }
 
@@ -343,6 +375,53 @@ function selectTemplate(tpl) {
     var modal = bootstrap.Modal.getInstance(document.getElementById('modal-template-select'));
     if (modal) modal.hide();
 }
+
+// On date pick: offer to create appointment if none exists on that date
+document.getElementById('create-next-appointment').addEventListener('change', function() {
+    var val         = this.value;
+    var patientId   = this.dataset.patientId;
+    var patientName = this.dataset.patientName;
+    if (!val || !patientId) return;
+
+    var appt = _nextApptByPatient[patientId];
+    // If there's already an appointment on exactly that date, skip creation
+    if (appt && appt.start_at && appt.start_at.substring(0, 10) === val) return;
+
+    var fmt = new Date(val).toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit', year:'numeric'});
+    var title = _ownerLastName + ', ' + patientName + ' – Wiedervorstellung';
+
+    if (!confirm('Soll ein Termin erstellt werden?\n\n' + title + '\n' + fmt)) return;
+
+    var fd = new FormData();
+    fd.append('_csrf_token', _csrfToken);
+    fd.append('title',       title);
+    fd.append('start_at',    val + ' 09:00:00');
+    fd.append('end_at',      val + ' 10:00:00');
+    fd.append('all_day',     '0');
+    fd.append('status',      'scheduled');
+    fd.append('patient_id',  patientId);
+
+    fetch('/api/kalender/events', {
+        method: 'POST',
+        body: fd
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+        if (d.success) {
+            var hint  = document.getElementById('next-appt-hint');
+            var badge = document.getElementById('next-appt-badge');
+            badge.textContent = 'Termin erstellt';
+            badge.className = 'badge bg-success fs-nano ms-1';
+            badge.style.display = '';
+            hint.textContent = 'Termin angelegt: ' + title + ' am ' + fmt;
+            // Update local cache so re-open won't offer again
+            _nextApptByPatient[patientId] = {id: d.id, title: title, start_at: val + ' 09:00:00'};
+        } else {
+            alert('Termin konnte nicht erstellt werden.');
+        }
+    })
+    .catch(function(){ alert('Fehler beim Erstellen des Termins.'); });
+});
 
 function escHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
