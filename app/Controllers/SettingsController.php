@@ -490,7 +490,7 @@ class SettingsController extends Controller
             'duration_value'  => $this->post('duration_value', 10),
             'duration_unit'   => $this->post('duration_unit', 'minutes'),
             'therapist_notes' => $this->sanitize($this->post('therapist_notes', '')),
-            'is_active'       => $this->post('is_active', 1),
+            'is_active'       => $this->post('is_active', 0),
         ]);
 
         $this->session->flash('success', 'Hausaufgaben-Template aktualisiert.');
