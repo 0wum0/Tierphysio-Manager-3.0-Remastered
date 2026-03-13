@@ -20,7 +20,8 @@ class ServiceProvider
         $container->singleton(HomeworkRepository::class, fn() => new HomeworkRepository($container->get('App\Core\Database')));
         $container->singleton(HomeworkController::class, fn() => new HomeworkController(
             $container->get(HomeworkRepository::class),
-            $container->get('App\Repositories\PatientRepository')
+            $container->get('App\Repositories\PatientRepository'),
+            $container->get('App\Core\Database')
         ));
 
         // Template-Pfad hinzufügen
