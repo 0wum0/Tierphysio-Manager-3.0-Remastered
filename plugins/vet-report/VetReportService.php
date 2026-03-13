@@ -178,10 +178,15 @@ class VetReportService
         $patInfoW = $colW - 4;
         $patY     = $addrTopY;
 
-        $patPhoto = STORAGE_PATH . '/patients/' . (int)$patient['id'] . '/' . ($patient['photo'] ?? '');
-        if (!empty($patient['photo']) && file_exists($patPhoto)) {
-            $pdf->Image($patPhoto, $patInfoX + $patInfoW - 22, $patY, 22, 22, '', '', '', true, 150, '', false, false, 1);
+        $photoImgW = 24;
+        $patPhoto  = STORAGE_PATH . '/patients/' . (int)$patient['id'] . '/' . ($patient['photo'] ?? '');
+        $hasPhoto  = !empty($patient['photo']) && file_exists($patPhoto);
+        if ($hasPhoto) {
+            $pdf->Image($patPhoto, $patInfoX + $patInfoW - $photoImgW, $patY, $photoImgW, $photoImgW, '', '', '', true, 150, '', false, false, 1);
         }
+
+        // Text width shrinks to avoid overlapping the photo
+        $textW = $hasPhoto ? ($patInfoW - $photoImgW - 3) : $patInfoW;
 
         $patFields = array_filter([
             'Patient'      => $patient['name']       ?? '',
@@ -197,10 +202,10 @@ class VetReportService
             $pdf->SetFont($font, '', $fontSize - 1.5);
             $pdf->SetTextColor(...$grayColor);
             $pdf->SetXY($patInfoX, $pfy);
-            $pdf->Cell($patInfoW * 0.42, 4.5, $lbl, 0, 0);
+            $pdf->Cell($textW * 0.42, 4.5, $lbl, 0, 0);
             $pdf->SetFont($font, 'B', $fontSize - 1.5);
             $pdf->SetTextColor(...$darkColor);
-            $pdf->Cell($patInfoW * 0.58, 4.5, $val, 0, 1);
+            $pdf->Cell($textW * 0.58, 4.5, $val, 0, 1);
             $pfy += 4.5;
         }
 
