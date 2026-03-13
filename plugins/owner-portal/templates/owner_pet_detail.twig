@@ -38,9 +38,11 @@
         <a href="/portal/tiere/{{ pet.id }}/uebungen" class="portal-btn portal-btn-secondary portal-btn-sm">
             💪 Übungen
         </a>
+        {% if show_homework ?? true %}
         <a href="/portal/tiere/{{ pet.id }}/hausaufgaben" class="portal-btn portal-btn-secondary portal-btn-sm">
             📋 Hausaufgaben
         </a>
+        {% endif %}
     </div>
 </div>
 

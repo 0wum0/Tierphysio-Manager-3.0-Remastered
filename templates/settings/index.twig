@@ -959,6 +959,30 @@
         </p>
     </div>
 
+    {# ── Besitzerportal: Funktionen ein-/ausblenden ── #}
+    {% if plugins['owner-portal'] is defined and plugins['owner-portal'].enabled %}
+    <div class="glass-card mt-4">
+        <h3 class="section-title" style="display:flex;align-items:center;gap:0.5rem;">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            Besitzerportal – Sichtbare Bereiche
+        </h3>
+        <form action="/einstellungen" method="POST">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <div class="form-group mb-3">
+                <label class="flex items-center gap-2" style="cursor:pointer;">
+                    <input type="hidden" name="portal_show_homework" value="0">
+                    <input type="checkbox" name="portal_show_homework" value="1"
+                           {% if (settings.portal_show_homework ?? '1') == '1' %}checked{% endif %}
+                           style="width:16px;height:16px;accent-color:var(--accent);">
+                    <span class="text-sm">Hausaufgaben im Besitzerportal anzeigen</span>
+                </label>
+                <p class="text-xs text-muted mt-1" style="margin-left:24px;">Wenn deaktiviert, ist der Hausaufgaben-Bereich für Tierhalter im Portal nicht sichtbar.</p>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">Speichern</button>
+        </form>
+    </div>
+    {% endif %}
+
     {# ── Kalender Plugin: Cron-Konfiguration ── #}
     {% if plugins['calendar'] is defined and plugins['calendar'].enabled %}
     <div class="glass-card mt-4">

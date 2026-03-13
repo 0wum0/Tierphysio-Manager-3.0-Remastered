@@ -119,6 +119,7 @@ class SettingsController extends Controller
             'birthday_mail_subject',  'birthday_mail_body', 'birthday_cron_token',
             'birthday_mail_enabled',
             'google_client_id', 'google_client_secret', 'google_redirect_uri',
+            'portal_show_homework',
         ];
 
         $data = [];
@@ -128,7 +129,7 @@ class SettingsController extends Controller
             }
         }
         /* Checkboxes: explicitly write '0' when unchecked (not present in POST) */
-        foreach (['birthday_mail_enabled'] as $cbKey) {
+        foreach (['birthday_mail_enabled', 'portal_show_homework'] as $cbKey) {
             if (!isset($data[$cbKey])) {
                 $data[$cbKey] = '0';
             }

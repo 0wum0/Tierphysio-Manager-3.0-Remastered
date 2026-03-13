@@ -11,11 +11,13 @@ use App\Core\Translator;
 use App\Core\View;
 use App\Core\Database;
 use App\Services\PdfService;
+use App\Repositories\SettingsRepository;
 
 class OwnerPortalController extends Controller
 {
     private OwnerPortalRepository $repo;
     private PdfService $pdfService;
+    private SettingsRepository $settingsRepository;
 
     public function __construct(
         View $view,
@@ -23,11 +25,19 @@ class OwnerPortalController extends Controller
         Config $config,
         Translator $translator,
         Database $db,
-        PdfService $pdfService
+        PdfService $pdfService,
+        SettingsRepository $settingsRepository
     ) {
         parent::__construct($view, $session, $config, $translator);
-        $this->repo       = new OwnerPortalRepository($db);
-        $this->pdfService = $pdfService;
+        $this->repo               = new OwnerPortalRepository($db);
+        $this->pdfService         = $pdfService;
+        $this->settingsRepository = $settingsRepository;
+    }
+
+    private function isHomeworkEnabled(): bool
+    {
+        $settings = $this->settingsRepository->all();
+        return ($settings['portal_show_homework'] ?? '1') === '1';
     }
 
     /* ── Auth guard helper ── */
@@ -114,14 +124,15 @@ class OwnerPortalController extends Controller
         $documents  = array_filter($timeline, fn($e) => $e['type'] === 'document');
 
         $this->render('@owner-portal/owner_pet_detail.twig', [
-            'page_title'  => $pet['name'],
-            'portal_user' => $user,
-            'pet'         => $pet,
-            'treatments'  => array_values($treatments),
-            'notes'       => array_values($notes),
-            'photos'      => array_values($photos),
-            'documents'   => array_values($documents),
-            'exercises'   => $exercises,
+            'page_title'          => $pet['name'],
+            'portal_user'         => $user,
+            'pet'                 => $pet,
+            'treatments'          => array_values($treatments),
+            'notes'               => array_values($notes),
+            'photos'              => array_values($photos),
+            'documents'           => array_values($documents),
+            'exercises'           => $exercises,
+            'show_homework'       => $this->isHomeworkEnabled(),
         ]);
     }
 
@@ -200,6 +211,7 @@ class OwnerPortalController extends Controller
     /* ── GET /portal/tiere/{id}/hausaufgaben/{plan_id}/pdf ── */
     public function homeworkPdf(array $params = []): void
     {
+        if (!$this->isHomeworkEnabled()) { $this->abort(403); return; }
         $user    = $this->requireOwnerAuth();
         $ownerId = (int)$user['owner_id'];
         $petId   = (int)($params['id'] ?? 0);
@@ -232,6 +244,7 @@ class OwnerPortalController extends Controller
     /* ── GET /portal/tiere/{id}/hausaufgaben ── */
     public function homework(array $params = []): void
     {
+        if (!$this->isHomeworkEnabled()) { $this->abort(403); return; }
         $user    = $this->requireOwnerAuth();
         $ownerId = (int)$user['owner_id'];
         $petId   = (int)($params['id'] ?? 0);
