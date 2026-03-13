@@ -1459,13 +1459,277 @@ if (pdNewAptBtn) {
                     patient_id: p.id,
                     owner_id:   o ? o.id : null,
                 });
+            }
         }, 350);
     });
 }
 
-/* ── Hausaufgaben-Pläne Modal ───────────────────────────────── */
+/* ── Hausaufgaben-Plaene Modal ─────────────────────────────── */
 
 var _hwTemplates = [];
-// ... (rest of the code remains the same)
+
+window.openHomeworkModal = function() {
+    if (!currentPatientData) return;
+    var p = currentPatientData.patient;
+    var old = document.getElementById('modal-patient-homework');
+    if (old) { try { var mi = bootstrap.Modal.getInstance(old); if (mi) mi.dispose(); } catch(e){} old.remove(); }
+    var modalEl = document.createElement('div');
+    modalEl.className = 'modal fade';
+    modalEl.id = 'modal-patient-homework';
+    modalEl.tabIndex = -1;
+    modalEl.setAttribute('aria-hidden','true');
+    modalEl.innerHTML =
+        '<div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">' +
+        '<div class="modal-header">' +
+        '<h3 class="modal-title">&#x1F4CB; Hausaufgabenpl&auml;ne &mdash; ' + _hwEsc(p.name) + '</h3>' +
+        '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schlie&szlig;en"></button>' +
+        '</div><div class="modal-body">' +
+        '<div class="d-flex justify-content-between align-items-center mb-3">' +
+        '<span style="font-size:0.82rem;color:var(--bs-secondary-color);">Alle Therapiepl&auml;ne f&uuml;r diesen Patienten</span>' +
+        '<button class="btn btn-primary btn-sm" onclick="openCreatePlanModal()">' +
+        '<svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>' +
+        ' Neuer Hausaufgabenplan</button></div>' +
+        '<div id="hw-plans-list"><div class="text-center py-5" style="color:var(--bs-secondary-color);">' +
+        '<div class="spinner-border spinner-border-sm me-2"></div> Lade Pl&auml;ne&hellip;</div></div>' +
+        '</div></div></div>';
+    document.body.appendChild(modalEl);
+    var modal = new bootstrap.Modal(modalEl);
+    modal.show();
+    _loadPlans(p.id);
+    modalEl.addEventListener('hidden.bs.modal', function() { this.remove(); });
+};
+
+function _hwEsc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function _hwFmtDate(d) {
+    if (!d) return '';
+    var parts = String(d).split('-');
+    return parts.length === 3 ? parts[2]+'.'+parts[1]+'.'+parts[0] : d;
+}
+
+function _loadPlans(patientId) {
+    var container = document.getElementById('hw-plans-list');
+    if (!container) return;
+    fetch('/api/patients/' + patientId + '/plans')
+        .then(function(r) { return r.json(); })
+        .then(function(plans) {
+            container = document.getElementById('hw-plans-list');
+            if (!container) return;
+            if (!plans.length) {
+                container.innerHTML =
+                    '<div class="text-center py-5" style="color:var(--bs-secondary-color);">' +
+                    '<svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="opacity:0.35;display:block;margin:0 auto 1rem;">' +
+                    '<path stroke="currentColor" stroke-width="1.5" d="M9 11l3 3L22 4"/>' +
+                    '<path stroke="currentColor" stroke-width="1.5" d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>' +
+                    '<div style="font-size:0.9rem;font-weight:600;margin-bottom:0.4rem;">Noch keine Hausaufgabenpl&auml;ne vorhanden</div>' +
+                    '<div style="font-size:0.8rem;opacity:0.7;">Klicke auf &bdquo;Neuer Hausaufgabenplan&ldquo; um zu beginnen</div></div>';
+                return;
+            }
+            container.innerHTML = plans.map(function(plan) {
+                var taskRows = (plan.tasks || []).map(function(t) {
+                    return '<tr>' +
+                        '<td style="padding:0.3rem 0.5rem;font-size:0.8rem;">' + _hwEsc(t.title) + '</td>' +
+                        '<td style="padding:0.3rem 0.5rem;font-size:0.8rem;color:var(--bs-secondary-color);">' + _hwEsc(t.frequency||'') + '</td>' +
+                        '<td style="padding:0.3rem 0.5rem;font-size:0.8rem;color:var(--bs-secondary-color);">' + _hwEsc(t.duration||'') + '</td>' +
+                        '<td style="padding:0.3rem 0.5rem;font-size:0.8rem;color:var(--bs-secondary-color);">' + _hwEsc(t.description||'') + '</td></tr>';
+                }).join('');
+                var badge = plan.status === 'active'
+                    ? '<span class="badge bg-success ms-2" style="font-size:0.7rem;">Aktiv</span>'
+                    : '<span class="badge bg-secondary ms-2" style="font-size:0.7rem;">Archiviert</span>';
+                return '<div class="card mb-3">' +
+                    '<div class="card-header d-flex align-items-center justify-content-between py-2 px-3"><div>' +
+                    '<span class="fw-600">&#x1F4C5; Hausaufgabenplan vom ' + _hwFmtDate(plan.plan_date) + '</span>' + badge +
+                    (plan.therapist_name ? '<span class="text-muted ms-2" style="font-size:0.8rem;">&middot; ' + _hwEsc(plan.therapist_name) + '</span>' : '') +
+                    (plan.next_appointment ? '<span class="text-muted ms-2" style="font-size:0.8rem;">&middot; Wiedervorstellung: ' + _hwEsc(plan.next_appointment) + '</span>' : '') +
+                    '</div><div class="d-flex gap-1">' +
+                    '<a href="/portal-admin/hausaufgaben/' + plan.id + '/pdf" target="_blank" class="btn btn-xs btn-outline-secondary" style="font-size:0.75rem;padding:0.2rem 0.5rem;">' +
+                    '<svg width="11" height="11" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg> PDF</a>' +
+                    '<button class="btn btn-xs btn-outline-danger" style="font-size:0.75rem;padding:0.2rem 0.5rem;" onclick="_deletePlan(' + plan.id + ')">' +
+                    '<svg width="11" height="11" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" points="3 6 5 6 21 6"/><path stroke="currentColor" stroke-width="2" d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>' +
+                    '</div></div>' +
+                    (taskRows ?
+                        '<div class="card-body p-0"><table class="table table-sm mb-0"><thead><tr>' +
+                        '<th style="padding:0.3rem 0.5rem;font-size:0.75rem;">Aufgabe</th>' +
+                        '<th style="padding:0.3rem 0.5rem;font-size:0.75rem;">H&auml;ufigkeit</th>' +
+                        '<th style="padding:0.3rem 0.5rem;font-size:0.75rem;">Dauer</th>' +
+                        '<th style="padding:0.3rem 0.5rem;font-size:0.75rem;">Beschreibung</th>' +
+                        '</tr></thead><tbody>' + taskRows + '</tbody></table></div>' : '') +
+                    (plan.general_notes ? '<div class="card-footer py-2 px-3" style="font-size:0.8rem;color:var(--bs-secondary-color);">&#x1F4DD; ' + _hwEsc(plan.general_notes) + '</div>' : '') +
+                    '</div>';
+            }).join('');
+        })
+        .catch(function(err) {
+            var c = document.getElementById('hw-plans-list');
+            if (c) c.innerHTML = '<div class="alert alert-danger">Fehler beim Laden: ' + _hwEsc(String(err.message||err)) + '</div>';
+        });
+}
+
+window._deletePlan = function(planId) {
+    if (!confirm('Hausaufgabenplan wirklich l\u00f6schen?')) return;
+    if (!currentPatientData) return;
+    var patientId = currentPatientData.patient.id;
+    fetch('/api/patients/' + patientId + '/plans/' + planId, {
+        method: 'DELETE',
+        headers: { 'X-CSRF-Token': '{{ csrf_token }}' }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+        if (d.success) { _loadPlans(patientId); }
+        else { alert(d.error || 'Fehler beim L\u00f6schen'); }
+    })
+    .catch(function() { alert('Fehler beim L\u00f6schen'); });
+};
+
+window.openCreatePlanModal = function() {
+    if (!currentPatientData) return;
+    var p = currentPatientData.patient;
+    var today = new Date().toISOString().split('T')[0];
+    var old = document.getElementById('modal-create-plan');
+    if (old) { try { var mi = bootstrap.Modal.getInstance(old); if (mi) mi.dispose(); } catch(e){} old.remove(); }
+    var modalEl = document.createElement('div');
+    modalEl.className = 'modal fade';
+    modalEl.id = 'modal-create-plan';
+    modalEl.tabIndex = -1;
+    modalEl.setAttribute('aria-hidden','true');
+    modalEl.innerHTML =
+        '<div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">' +
+        '<div class="modal-header"><h3 class="modal-title">Neuer Hausaufgabenplan &mdash; ' + _hwEsc(p.name) + '</h3>' +
+        '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schlie&szlig;en"></button></div>' +
+        '<form id="create-plan-form"><input type="hidden" name="_csrf_token" value="{{ csrf_token }}">' +
+        '<div class="modal-body">' +
+        '<div class="row g-3 mb-3">' +
+        '<div class="col-md-4"><label class="form-label fw-semibold">Datum</label>' +
+        '<input type="date" name="plan_date" class="form-control" value="' + today + '"></div>' +
+        '<div class="col-md-4"><label class="form-label fw-semibold">Therapeut</label>' +
+        '<input type="text" name="therapist_name" class="form-control" value="{{ current_user.name ?? \'\' }}"></div>' +
+        '<div class="col-md-4"><label class="form-label fw-semibold">Wiedervorstellung</label>' +
+        '<input type="date" name="next_appointment" class="form-control" id="cp-next-apt"></div></div>' +
+        '<div class="row g-3 mb-3">' +
+        '<div class="col-md-6"><label class="form-label fw-semibold">Physiotherapeutische Grunds&auml;tze</label>' +
+        '<textarea name="physio_principles" class="form-control" rows="3" placeholder="Grundlagen und Prinzipien&hellip;"></textarea></div>' +
+        '<div class="col-md-6"><label class="form-label fw-semibold">Therapiemittel</label>' +
+        '<textarea name="therapy_means" class="form-control" rows="3" placeholder="Verwendete Therapiemittel&hellip;"></textarea></div></div>' +
+        '<div class="row g-3 mb-3">' +
+        '<div class="col-md-6"><label class="form-label fw-semibold">Kurzfristige Ziele</label>' +
+        '<textarea name="short_term_goals" class="form-control" rows="2" placeholder="Ziele f&uuml;r die n&auml;chsten 2&ndash;4 Wochen&hellip;"></textarea></div>' +
+        '<div class="col-md-6"><label class="form-label fw-semibold">Langfristige Ziele</label>' +
+        '<textarea name="long_term_goals" class="form-control" rows="2" placeholder="Langfristige Therapieziele&hellip;"></textarea></div></div>' +
+        '<div class="mb-4"><label class="form-label fw-semibold">Allgemeine Hinweise</label>' +
+        '<textarea name="general_notes" class="form-control" rows="2" placeholder="Wichtige Hinweise f&uuml;r den Besitzer&hellip;"></textarea></div>' +
+        '<hr><div class="d-flex align-items-center justify-content-between mb-3">' +
+        '<h6 class="mb-0 fw-600">&#x1F3C3; Aufgaben</h6>' +
+        '<div class="d-flex gap-2">' +
+        '<select id="cp-template-select" class="form-select form-select-sm" style="max-width:260px;"><option value="">— Vorlage einf&uuml;gen —</option></select>' +
+        '<button type="button" class="btn btn-secondary btn-sm" onclick="_cpAddTaskFromTemplate()">Hinzuf&uuml;gen</button>' +
+        '<button type="button" class="btn btn-outline-secondary btn-sm" onclick="_cpAddTask(\'\',\'\',\'\',\'\',\'\')">' +
+        '<svg width="12" height="12" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Leer</button>' +
+        '</div></div>' +
+        '<div id="cp-tasks-container"></div>' +
+        '</div>' +
+        '<div class="modal-footer">' +
+        '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>' +
+        '<button type="button" class="btn btn-primary" id="cp-save-btn">' +
+        '<svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline stroke="currentColor" stroke-width="2" points="17 21 17 13 7 13 7 21"/></svg>' +
+        ' Plan speichern</button></div>' +
+        '</form></div></div>';
+    document.body.appendChild(modalEl);
+    var modal = new bootstrap.Modal(modalEl);
+    modal.show();
+
+    fetch('/api/patients/' + p.id + '/homework/plan-meta')
+        .then(function(r) { return r.json(); })
+        .then(function(meta) {
+            var el = document.getElementById('cp-next-apt');
+            if (el && meta && meta.wiedervorstellung_date) el.value = meta.wiedervorstellung_date;
+        }).catch(function(){});
+
+    _loadCpTemplates();
+
+    document.getElementById('cp-save-btn').addEventListener('click', function() {
+        var btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Speichert\u2026';
+        var fd = new FormData(document.getElementById('create-plan-form'));
+        fetch('/api/patients/' + p.id + '/plans', { method: 'POST', body: fd })
+            .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, d: d }; }); })
+            .then(function(res) {
+                if (res.ok && res.d.success) {
+                    bootstrap.Modal.getInstance(modalEl).hide();
+                    _loadPlans(p.id);
+                } else {
+                    throw new Error(res.d.error || 'Fehler beim Speichern');
+                }
+            })
+            .catch(function(err) {
+                alert('Fehler: ' + err.message);
+                btn.disabled = false;
+                btn.textContent = 'Plan speichern';
+            });
+    });
+    modalEl.addEventListener('hidden.bs.modal', function() { this.remove(); });
+};
+
+function _loadCpTemplates() {
+    if (_hwTemplates.length) { _fillCpTemplateSelect(); return; }
+    fetch('/api/homework/templates')
+        .then(function(r) { return r.json(); })
+        .then(function(tpls) { _hwTemplates = tpls; _fillCpTemplateSelect(); })
+        .catch(function(){});
+}
+
+function _fillCpTemplateSelect() {
+    var sel = document.getElementById('cp-template-select');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— Vorlage einf\u00fcgen —</option>';
+    _hwTemplates.forEach(function(t) {
+        var o = document.createElement('option');
+        o.value = t.id;
+        o.textContent = (t.category_emoji || '\uD83D\uDCCC') + ' ' + t.title;
+        o.dataset.description = t.description || '';
+        o.dataset.frequency   = t.frequency   || '';
+        o.dataset.duration    = t.duration_value ? (t.duration_value + ' ' + (t.duration_unit||'')) : '';
+        o.dataset.notes       = t.therapist_notes || '';
+        sel.appendChild(o);
+    });
+}
+
+var _cpTaskIdx = 0;
+window._cpAddTask = function(title, description, frequency, duration, notes) {
+    var idx = _cpTaskIdx++;
+    var container = document.getElementById('cp-tasks-container');
+    if (!container) return;
+    var row = document.createElement('div');
+    row.className = 'card mb-2';
+    row.id = 'cp-task-' + idx;
+    row.innerHTML =
+        '<div class="card-body py-2 px-3"><div class="d-flex gap-2 align-items-start"><div style="flex:1;">' +
+        '<div class="row g-2 mb-2">' +
+        '<div class="col-md-6"><input type="text" name="task_title[]" class="form-control form-control-sm" placeholder="Aufgabentitel *" value="' + _hwEsc(title||'') + '"></div>' +
+        '<div class="col-md-3"><input type="text" name="task_frequency[]" class="form-control form-control-sm" placeholder="H\u00e4ufigkeit" value="' + _hwEsc(frequency||'') + '"></div>' +
+        '<div class="col-md-3"><input type="text" name="task_duration[]" class="form-control form-control-sm" placeholder="Dauer" value="' + _hwEsc(duration||'') + '"></div>' +
+        '</div><div class="row g-2">' +
+        '<div class="col-md-8"><textarea name="task_description[]" class="form-control form-control-sm" rows="2" placeholder="Beschreibung / Anleitung f\u00fcr den Besitzer\u2026">' + _hwEsc(description||'') + '</textarea></div>' +
+        '<div class="col-md-4"><textarea name="task_notes[]" class="form-control form-control-sm" rows="2" placeholder="Interne Notiz (optional)">' + _hwEsc(notes||'') + '</textarea></div>' +
+        '</div></div>' +
+        '<button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" onclick="document.getElementById(\'cp-task-' + idx + '\').remove()" style="margin-top:0.1rem;">' +
+        '<svg width="12" height="12" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>' +
+        '</div></div>';
+    container.appendChild(row);
+};
+
+window._cpAddTaskFromTemplate = function() {
+    var sel = document.getElementById('cp-template-select');
+    if (!sel || !sel.value) return;
+    var opt = sel.options[sel.selectedIndex];
+    var title = opt.textContent.replace(/^.\s/,'').trim();
+    _cpAddTask(title, opt.dataset.description, opt.dataset.frequency, opt.dataset.duration, opt.dataset.notes);
+    sel.value = '';
+};
+
+/* Export globally */
+window._gsOpenPatient   = openPatientModal;
+window.showPatientModal = openPatientModal;
+
 })();
 </script>
