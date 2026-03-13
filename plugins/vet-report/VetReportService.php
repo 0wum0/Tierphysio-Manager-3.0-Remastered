@@ -21,18 +21,13 @@ class VetReportService
     ): string {
         $settings = $this->settingsRepository->all();
 
-        // ── Exact same colors as PdfService (from settings) ────────────────────
-        $sidebarColor      = $this->hexToRgb($settings['pdf_primary_color']           ?? '#8B9E8B');
-        $colorCompanyName  = $this->hexToRgb($settings['pdf_color_company_name']      ?? '#1E1E1E');
-        $colorCompanyInfo  = $this->hexToRgb($settings['pdf_color_company_info']      ?? '#6E6E6E');
-        $colorRecipient    = $this->hexToRgb($settings['pdf_color_recipient']         ?? '#1E1E1E');
-        $colorTableHdrBg   = $this->hexToRgb($settings['pdf_color_table_header_bg']   ?? '#8B9E8B');
-        $colorTableHdrText = $this->hexToRgb($settings['pdf_color_table_header_text'] ?? '#FFFFFF');
-        $colorTableText    = $this->hexToRgb($settings['pdf_color_table_text']        ?? '#1E1E1E');
-        $colorLine         = $this->hexToRgb($settings['pdf_color_line']              ?? '#B4B4B4');
-        $colorFooter       = $this->hexToRgb($settings['pdf_color_footer']            ?? '#6E6E6E');
-        $darkColor         = $colorCompanyName;
-        $grayColor         = $colorCompanyInfo;
+        // ── Colors: only sidebar from settings, ALL text hardcoded neutral ─────
+        $sidebarColor      = $this->hexToRgb($settings['pdf_primary_color'] ?? '#8B9E8B');
+        $colorTableHdrBg   = $sidebarColor; // table header matches sidebar
+        $colorTableHdrText = [255, 255, 255];
+        $colorTableText    = [30,  30,  30];
+        $colorLine         = [180, 180, 180];
+        $colorFooter       = [120, 120, 120];
 
         $font        = $this->resolvePdfFont($settings['pdf_font'] ?? 'helvetica');
         $fontSize    = (float)($settings['pdf_font_size'] ?? 9);
@@ -137,12 +132,12 @@ class VetReportService
             $infoY += 4;
         }
 
-        // "Tierarztbericht" heading — always black, never italic/calligraphy
+        // "Tierarztbericht" heading — calligraphy style, always black
         $titleY = $infoY + 4;
-        $pdf->SetFont($font, 'BI', 28);
+        $pdf->SetFont('dejavusans', 'I', 28);
         $pdf->SetTextColor(30, 30, 30);
         $pdf->SetXY($contentX, $titleY);
-        $pdf->Cell($contentW, 14, 'Tierarztbericht', 0, 1, 'R');
+        $pdf->Cell($contentW, 14, 'Tierarztbericht', 0, 0, 'R');
         $titleBottomY = $titleY + 16;
 
         // ── Recipient block ───────────────────────────────────────────────
@@ -204,7 +199,7 @@ class VetReportService
             $pdf->Cell($textW * 0.42, 4.5, $lbl, 0, 0);
             $pdf->SetFont($font, 'B', $fontSize - 1.5);
             $pdf->SetTextColor(30, 30, 30);
-            $pdf->Cell($textW * 0.58, 4.5, $val, 0, 1);
+            $pdf->Cell($textW * 0.58, 4.5, $val, 0, 0);
             $pfy += 4.5;
         }
 
@@ -224,7 +219,7 @@ class VetReportService
             $pdf->Cell($contentW, 6, '  ANAMNESE / NOTIZEN', 0, 1, 'L', true);
             $curY = $pdf->GetY() + 3;
             $pdf->SetFont($font, '', $fontSize - 0.5);
-            $pdf->SetTextColor(...$darkColor);
+            $pdf->SetTextColor(30, 30, 30);
             $pdf->SetXY($contentX, $curY);
             $pdf->MultiCell($contentW, 5, $this->htmlToPlainText($patient['notes']), 0, 'L');
             $curY = $pdf->GetY() + 5;
