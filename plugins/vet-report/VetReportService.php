@@ -117,12 +117,12 @@ class VetReportService
 
         // ── Company info top right ────────────────────────────────────────
         $pdf->SetFont($font, 'B', $fontSize + 1);
-        $pdf->SetTextColor(...$darkColor);
+        $pdf->SetTextColor(30, 30, 30);
         $pdf->SetXY($contentX + ($contentW / 2), 8);
         $pdf->Cell($contentW / 2, 5, $companyName, 0, 1, 'R');
 
         $pdf->SetFont($font, '', $fontSize - 1.5);
-        $pdf->SetTextColor(...$grayColor);
+        $pdf->SetTextColor(100, 100, 100);
         $infoLines = array_filter([
             $companyStreet,
             trim($companyZip . ' ' . $companyCity),
@@ -137,10 +137,10 @@ class VetReportService
             $infoY += 4;
         }
 
-        // "Tierarztbericht" heading
+        // "Tierarztbericht" heading — always black, never italic/calligraphy
         $titleY = $infoY + 4;
         $pdf->SetFont($font, 'BI', 28);
-        $pdf->SetTextColor(...$darkColor);
+        $pdf->SetTextColor(30, 30, 30);
         $pdf->SetXY($contentX, $titleY);
         $pdf->Cell($contentW, 14, 'Tierarztbericht', 0, 1, 'R');
         $titleBottomY = $titleY + 16;
@@ -151,11 +151,11 @@ class VetReportService
 
         if ($owner) {
             $pdf->SetFont($font, 'B', $fontSize);
-            $pdf->SetTextColor(...$colorRecipient);
+            $pdf->SetTextColor(30, 30, 30);
             $pdf->SetXY($contentX, $addrTopY);
             $pdf->Cell($colW, 5.5, trim(($owner['first_name'] ?? '') . ' ' . ($owner['last_name'] ?? '')), 0, 1);
             $pdf->SetFont($font, '', $fontSize - 0.5);
-            $pdf->SetTextColor(...$colorRecipient);
+            $pdf->SetTextColor(30, 30, 30);
             if (!empty($owner['street'])) {
                 $pdf->SetXY($contentX, $addrTopY + 6);
                 $pdf->Cell($colW, 4.5, $owner['street'], 0, 1);
@@ -166,7 +166,7 @@ class VetReportService
             }
             if (!empty($owner['phone'])) {
                 $pdf->SetFont($font, '', $fontSize - 1.5);
-                $pdf->SetTextColor(...$grayColor);
+                $pdf->SetTextColor(100, 100, 100);
                 $pdf->SetXY($contentX, $addrTopY + 21);
                 $pdf->Cell($colW, 4, 'Tel: ' . $owner['phone'], 0, 1);
             }
@@ -199,11 +199,11 @@ class VetReportService
         $pfy = $patY;
         foreach ($patFields as $lbl => $val) {
             $pdf->SetFont($font, '', $fontSize - 1.5);
-            $pdf->SetTextColor(...$grayColor);
+            $pdf->SetTextColor(100, 100, 100);
             $pdf->SetXY($patInfoX, $pfy);
             $pdf->Cell($textW * 0.42, 4.5, $lbl, 0, 0);
             $pdf->SetFont($font, 'B', $fontSize - 1.5);
-            $pdf->SetTextColor(...$darkColor);
+            $pdf->SetTextColor(30, 30, 30);
             $pdf->Cell($textW * 0.58, 4.5, $val, 0, 1);
             $pfy += 4.5;
         }
