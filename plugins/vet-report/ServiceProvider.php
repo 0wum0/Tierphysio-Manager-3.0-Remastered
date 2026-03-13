@@ -20,7 +20,10 @@ class ServiceProvider
 
     public function registerRoutes(Router $router): void
     {
-        $router->get('/patienten/{id}/tierarztbericht', [VetReportController::class, 'generate'], ['auth']);
+        $router->get(   '/patienten/{id}/tierarztbericht',                          [VetReportController::class, 'generate'], ['auth']);
+        $router->get(   '/patienten/{id}/tierarztbericht/verlauf',                  [VetReportController::class, 'history'],  ['auth']);
+        $router->get(   '/patienten/{id}/tierarztbericht/{reportId}/download',      [VetReportController::class, 'download'], ['auth']);
+        $router->delete('/patienten/{id}/tierarztbericht/{reportId}',               [VetReportController::class, 'delete'],   ['auth']);
     }
 
     public function patientHeaderAction(array $context): string

@@ -34,64 +34,180 @@ class VetReportController extends Controller
     public function generate(array $params = []): void
     {
         $patientId = (int)($params['id'] ?? 0);
+        $patient   = $this->loadPatient($patientId);
+        if (!$patient) { $this->abort(404); return; }
 
-        /* Load patient */
-        $stmt = $this->db->query('SELECT p.*, o.first_name, o.last_name, o.phone, o.email, o.street, o.zip, o.city, o.id AS owner_id_val FROM patients p LEFT JOIN owners o ON o.id = p.owner_id WHERE p.id = ? LIMIT 1', [$patientId]);
-        $row  = $stmt->fetch(\PDO::FETCH_ASSOC);
-        if (!$row) {
-            $this->abort(404);
-            return;
+        $owner        = $this->extractOwner($patient);
+        $timeline     = $this->loadTimeline($patientId);
+        $appointments = $this->loadAppointments($patientId);
+
+        $pdfContent = $this->service->generate($patient, $owner, $timeline, $appointments);
+        $filename   = $this->buildFilename($patient['name'] ?? 'Patient');
+
+        /* Save to storage and record in DB */
+        $this->saveReport($patientId, $filename, $pdfContent);
+
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: inline; filename="' . $filename . '"');
+        header('Content-Length: ' . strlen($pdfContent));
+        header('Cache-Control: private, max-age=0, must-revalidate');
+        echo $pdfContent;
+        exit;
+    }
+
+    /* ── GET /patienten/{id}/tierarztbericht/verlauf (JSON) ── */
+    public function history(array $params = []): void
+    {
+        $patientId = (int)($params['id'] ?? 0);
+
+        try {
+            $rows = $this->db->query(
+                "SELECT vr.id, vr.filename, vr.created_at, u.name AS created_by_name
+                 FROM vet_reports vr
+                 LEFT JOIN users u ON u.id = vr.created_by
+                 WHERE vr.patient_id = ?
+                 ORDER BY vr.created_at DESC
+                 LIMIT 20",
+                [$patientId]
+            )->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Throwable) {
+            $rows = [];
         }
 
-        $patient = $row;
-        $owner   = null;
-        if (!empty($row['owner_id_val'])) {
-            $owner = [
-                'id'         => $row['owner_id_val'],
-                'first_name' => $row['first_name'],
-                'last_name'  => $row['last_name'],
-                'phone'      => $row['phone'],
-                'email'      => $row['email'],
-                'street'     => $row['street'],
-                'zip'        => $row['zip'],
-                'city'       => $row['city'],
-            ];
+        $this->json(['reports' => $rows]);
+    }
+
+    /* ── GET /patienten/{id}/tierarztbericht/{reportId}/download ── */
+    public function download(array $params = []): void
+    {
+        $patientId = (int)($params['id']       ?? 0);
+        $reportId  = (int)($params['reportId'] ?? 0);
+
+        try {
+            $row = $this->db->query(
+                "SELECT filename FROM vet_reports WHERE id = ? AND patient_id = ? LIMIT 1",
+                [$reportId, $patientId]
+            )->fetch(\PDO::FETCH_ASSOC);
+        } catch (\Throwable) {
+            $row = null;
         }
 
-        /* Load timeline (treatments + notes) */
-        $tlStmt  = $this->db->query(
+        if (!$row) { $this->abort(404); return; }
+
+        $path = STORAGE_PATH . '/vet-reports/' . $row['filename'];
+        if (!file_exists($path)) { $this->abort(404); return; }
+
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: inline; filename="' . $row['filename'] . '"');
+        header('Content-Length: ' . filesize($path));
+        header('Cache-Control: private, max-age=0, must-revalidate');
+        readfile($path);
+        exit;
+    }
+
+    /* ── DELETE /patienten/{id}/tierarztbericht/{reportId} ── */
+    public function delete(array $params = []): void
+    {
+        $patientId = (int)($params['id']       ?? 0);
+        $reportId  = (int)($params['reportId'] ?? 0);
+
+        try {
+            $row = $this->db->query(
+                "SELECT filename FROM vet_reports WHERE id = ? AND patient_id = ? LIMIT 1",
+                [$reportId, $patientId]
+            )->fetch(\PDO::FETCH_ASSOC);
+
+            if ($row) {
+                $path = STORAGE_PATH . '/vet-reports/' . $row['filename'];
+                if (file_exists($path)) {
+                    unlink($path);
+                }
+                $this->db->query("DELETE FROM vet_reports WHERE id = ?", [$reportId]);
+            }
+        } catch (\Throwable) {}
+
+        $this->json(['ok' => true]);
+    }
+
+    /* ── Private helpers ─────────────────────────────────────────────── */
+
+    private function loadPatient(int $id): ?array
+    {
+        $row = $this->db->query(
+            'SELECT p.*, o.first_name, o.last_name, o.phone, o.email,
+                    o.street, o.zip, o.city, o.id AS owner_id_val
+             FROM patients p
+             LEFT JOIN owners o ON o.id = p.owner_id
+             WHERE p.id = ? LIMIT 1',
+            [$id]
+        )->fetch(\PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    private function extractOwner(array $row): ?array
+    {
+        if (empty($row['owner_id_val'])) return null;
+        return [
+            'id'         => $row['owner_id_val'],
+            'first_name' => $row['first_name'],
+            'last_name'  => $row['last_name'],
+            'phone'      => $row['phone'],
+            'email'      => $row['email'],
+            'street'     => $row['street'],
+            'zip'        => $row['zip'],
+            'city'       => $row['city'],
+        ];
+    }
+
+    private function loadTimeline(int $patientId): array
+    {
+        return $this->db->query(
             "SELECT t.*, u.name AS user_name FROM patient_timeline t
              LEFT JOIN users u ON u.id = t.user_id
              WHERE t.patient_id = ? AND t.type IN ('treatment','note')
              ORDER BY t.entry_date DESC",
             [$patientId]
-        );
-        $timeline = $tlStmt->fetchAll(\PDO::FETCH_ASSOC);
+        )->fetchAll(\PDO::FETCH_ASSOC);
+    }
 
-        /* Load upcoming appointments */
+    private function loadAppointments(int $patientId): array
+    {
         try {
-            $apptStmt = $this->db->query(
+            return $this->db->query(
                 "SELECT a.*, tt.name AS treatment_type_name
                  FROM appointments a
                  LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
                  WHERE a.patient_id = ? AND a.start_at >= NOW()
-                 ORDER BY a.start_at ASC
-                 LIMIT 10",
+                 ORDER BY a.start_at ASC LIMIT 10",
                 [$patientId]
-            );
-            $appointments = $apptStmt->fetchAll(\PDO::FETCH_ASSOC);
+            )->fetchAll(\PDO::FETCH_ASSOC);
         } catch (\Throwable) {
-            $appointments = [];
+            return [];
         }
+    }
 
-        $pdf      = $this->service->generate($patient, $owner, $timeline, $appointments);
-        $filename = 'Tierarztbericht-' . preg_replace('/[^A-Za-z0-9\-]/', '_', $patient['name'] ?? 'Patient') . '-' . date('Y-m-d') . '.pdf';
+    private function buildFilename(string $patientName): string
+    {
+        $safe = preg_replace('/[^A-Za-z0-9\-]/', '_', $patientName);
+        return 'Tierarztbericht-' . $safe . '-' . date('Y-m-d_His') . '.pdf';
+    }
 
-        header('Content-Type: application/pdf');
-        header('Content-Disposition: inline; filename="' . $filename . '"');
-        header('Content-Length: ' . strlen($pdf));
-        header('Cache-Control: private, max-age=0, must-revalidate');
-        echo $pdf;
-        exit;
+    private function saveReport(int $patientId, string $filename, string $pdfContent): void
+    {
+        try {
+            $dir = STORAGE_PATH . '/vet-reports';
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            file_put_contents($dir . '/' . $filename, $pdfContent);
+
+            $userId = $this->session->get('user_id');
+            $this->db->query(
+                "INSERT INTO vet_reports (patient_id, created_by, filename) VALUES (?, ?, ?)",
+                [$patientId, $userId ?: null, $filename]
+            );
+        } catch (\Throwable) {
+            /* Non-fatal — PDF is still returned even if saving fails */
+        }
     }
 }

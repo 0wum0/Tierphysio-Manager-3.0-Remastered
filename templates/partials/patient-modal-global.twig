@@ -147,6 +147,15 @@
 
             <div style="border-top:1px solid var(--glass-border);margin-top:0.5rem;"></div>
 
+            {# ── Tierarztbericht-Verlauf ── #}
+            <div id="pd-vetreport-section" style="display:none;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+                    <div style="font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">Tierarztberichte</div>
+                </div>
+                <div id="pd-vetreport-list" style="display:flex;flex-direction:column;gap:0.35rem;"></div>
+                <div style="border-top:1px solid var(--glass-border);margin-top:0.75rem;"></div>
+            </div>
+
             <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.25rem;">
                 <div style="position:relative;flex:1;">
                     <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="position:absolute;left:0.65rem;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none;"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -1412,6 +1421,7 @@ function openPatientModal(patientId) {
             currentPatientData = data;
             renderTimeline(data.timeline, patientId);
             renderAppointments(data.appointments || [], data.patient);
+            loadVetReportHistory(patientId);
             pdLoading.style.display = 'none';
             pdBody.style.display    = 'flex';
         })
@@ -1457,6 +1467,50 @@ function renderAppointments(appointments, patient) {
         html += '</div>';
     });
     list.innerHTML = html;
+}
+
+/* ── Tierarztbericht-Verlauf laden & anzeigen ──────────────── */
+function loadVetReportHistory(patientId) {
+    var sec  = document.getElementById('pd-vetreport-section');
+    var list = document.getElementById('pd-vetreport-list');
+    if (!sec || !list) return;
+
+    sec.style.display = 'none';
+    list.innerHTML    = '';
+
+    fetch('/patienten/' + patientId + '/tierarztbericht/verlauf')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var reports = data.reports || [];
+            if (reports.length === 0) return;
+
+            sec.style.display = '';
+            var html = '';
+            reports.forEach(function(r) {
+                var date = r.created_at ? r.created_at.substring(0, 10).split('-').reverse().join('.') : '—';
+                var time = r.created_at ? r.created_at.substring(11, 16) : '';
+                var by   = r.created_by_name ? ' · ' + esc(r.created_by_name) : '';
+                html += '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;border-radius:7px;background:var(--bg-elevated,rgba(255,255,255,0.04));border:1px solid var(--glass-border);">';
+                html += '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;opacity:0.5;"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>';
+                html += '<div style="flex:1;min-width:0;">';
+                html += '<div style="font-size:0.78rem;font-weight:600;color:var(--text-primary);">Tierarztbericht ' + esc(date) + ' ' + esc(time) + '</div>';
+                html += '<div style="font-size:0.68rem;color:var(--text-muted);">Erstellt' + by + '</div>';
+                html += '</div>';
+                html += '<a href="/patienten/' + patientId + '/tierarztbericht/' + r.id + '/download" target="_blank" title="Öffnen" style="flex-shrink:0;color:var(--accent,#4f7cff);font-size:0.72rem;text-decoration:none;padding:0.2rem 0.45rem;border:1px solid var(--glass-border);border-radius:5px;">Öffnen</a>';
+                html += '<button onclick="deleteVetReport(' + patientId + ',' + r.id + ',this)" title="Löschen" style="flex-shrink:0;background:none;border:none;cursor:pointer;color:var(--text-muted);padding:0.2rem 0.3rem;opacity:0.6;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">';
+                html += '<svg width="12" height="12" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" points="3 6 5 6 21 6"/><path stroke="currentColor" stroke-width="2" d="M19 6l-1 14H6L5 6"/><path stroke="currentColor" stroke-width="2" d="M10 11v6M14 11v6"/></svg>';
+                html += '</button>';
+                html += '</div>';
+            });
+            list.innerHTML = html;
+        })
+        .catch(function() { /* Tabelle noch nicht migriert – ignorieren */ });
+}
+
+function deleteVetReport(patientId, reportId, btn) {
+    if (!confirm('Diesen Bericht wirklich löschen?')) return;
+    fetch('/patienten/' + patientId + '/tierarztbericht/' + reportId, { method: 'DELETE' })
+        .then(function() { loadVetReportHistory(patientId); });
 }
 
 /* ── "Neuer Termin" button in patient modal header ─────────── */
