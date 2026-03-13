@@ -132,79 +132,81 @@ class VetReportService
             $infoY += 4;
         }
 
-        // "Tierarztbericht" heading — calligraphy style, always black
+        // "Tierarztbericht" heading — freeserif italic = calligraphy, always black
         $titleY = $infoY + 4;
-        $pdf->SetFont('dejavusans', 'I', 28);
+        $pdf->SetFont('freeserif', 'I', 28);
         $pdf->SetTextColor(30, 30, 30);
         $pdf->SetXY($contentX, $titleY);
         $pdf->Cell($contentW, 14, 'Tierarztbericht', 0, 0, 'R');
         $titleBottomY = $titleY + 16;
 
-        // ── Recipient block ───────────────────────────────────────────────
-        $addrTopY = max($titleBottomY + 4, 58);
-        $colW     = $contentW / 2 - 4;
+        // ── Info block: owner LEFT (58mm), patient RIGHT (87mm) ────────────
+        $blockTopY  = max($titleBottomY + 4, 58);
+        $ownerW     = 58;   // left column width
+        $patColX    = $contentX + $ownerW + 4; // right column starts here
+        $patColW    = $contentW - $ownerW - 4; // right column width
+        $photoW     = 24;   // photo size
+        $lblW       = 24;   // label column inside right block
+        $valW       = $patColW - $photoW - $lblW - 2; // value column
+        $rowH       = 5.0;
 
+        // Owner block (left)
         if ($owner) {
             $pdf->SetFont($font, 'B', $fontSize);
             $pdf->SetTextColor(30, 30, 30);
-            $pdf->SetXY($contentX, $addrTopY);
-            $pdf->Cell($colW, 5.5, trim(($owner['first_name'] ?? '') . ' ' . ($owner['last_name'] ?? '')), 0, 1);
+            $pdf->SetXY($contentX, $blockTopY);
+            $pdf->Cell($ownerW, $rowH, trim(($owner['first_name'] ?? '') . ' ' . ($owner['last_name'] ?? '')), 0, 0);
+            $owY = $blockTopY + $rowH;
             $pdf->SetFont($font, '', $fontSize - 0.5);
-            $pdf->SetTextColor(30, 30, 30);
-            if (!empty($owner['street'])) {
-                $pdf->SetXY($contentX, $addrTopY + 6);
-                $pdf->Cell($colW, 4.5, $owner['street'], 0, 1);
-            }
-            if (!empty($owner['zip'])) {
-                $pdf->SetXY($contentX, $addrTopY + 11);
-                $pdf->Cell($colW, 4.5, trim(($owner['zip'] ?? '') . ' ' . ($owner['city'] ?? '')), 0, 1);
+            foreach (array_filter([
+                $owner['street'] ?? '',
+                trim(($owner['zip'] ?? '') . ' ' . ($owner['city'] ?? '')),
+            ]) as $line) {
+                $pdf->SetXY($contentX, $owY);
+                $pdf->Cell($ownerW, $rowH, $line, 0, 0);
+                $owY += $rowH;
             }
             if (!empty($owner['phone'])) {
+                $owY += 2;
                 $pdf->SetFont($font, '', $fontSize - 1.5);
                 $pdf->SetTextColor(100, 100, 100);
-                $pdf->SetXY($contentX, $addrTopY + 21);
-                $pdf->Cell($colW, 4, 'Tel: ' . $owner['phone'], 0, 1);
+                $pdf->SetXY($contentX, $owY);
+                $pdf->Cell($ownerW, $rowH - 1, 'Tel: ' . $owner['phone'], 0, 0);
             }
         }
 
-        // ── Patient info (right column) ───────────────────────────────────
-        $patInfoX = $contentX + $colW + 8;
-        $patInfoW = $colW - 4;
-        $patY     = $addrTopY;
-
-        $photoImgW = 24;
-        $patPhoto  = STORAGE_PATH . '/patients/' . (int)$patient['id'] . '/' . ($patient['photo'] ?? '');
-        $hasPhoto  = !empty($patient['photo']) && file_exists($patPhoto);
+        // Photo (far right of patient column)
+        $patPhoto = STORAGE_PATH . '/patients/' . (int)$patient['id'] . '/' . ($patient['photo'] ?? '');
+        $hasPhoto = !empty($patient['photo']) && file_exists($patPhoto);
+        $photoX   = $patColX + $patColW - $photoW;
         if ($hasPhoto) {
-            $pdf->Image($patPhoto, $patInfoX + $patInfoW - $photoImgW, $patY, $photoImgW, $photoImgW, '', '', '', true, 150, '', false, false, 1);
+            $pdf->Image($patPhoto, $photoX, $blockTopY, $photoW, $photoW, '', '', '', true, 150, '', false, false, 1);
         }
 
-        // Text width shrinks to avoid overlapping the photo
-        $textW = $hasPhoto ? ($patInfoW - $photoImgW - 3) : $patInfoW;
-
+        // Patient fields (label + value, left of photo)
         $patFields = array_filter([
-            'Patient'      => $patient['name']       ?? '',
-            'Tierart'      => $patient['species']    ?? '',
-            'Rasse'        => $patient['breed']      ?? '',
-            'Geburtsdatum' => !empty($patient['birth_date']) ? date('d.m.Y', strtotime($patient['birth_date'])) : '',
-            'Geschlecht'   => $patient['gender']     ?? '',
-            'Chip-Nr.'     => $patient['chip_number'] ?? '',
-            'Status'       => $patient['status']     ?? '',
+            'Patient'   => $patient['name']        ?? '',
+            'Tierart'   => $patient['species']     ?? '',
+            'Rasse'     => $patient['breed']       ?? '',
+            'Geb.datum' => !empty($patient['birth_date']) ? date('d.m.Y', strtotime($patient['birth_date'])) : '',
+            'Geschlecht'=> $patient['gender']      ?? '',
+            'Status'    => $patient['status']      ?? '',
         ]);
-        $pfy = $patY;
+        $pfy = $blockTopY;
         foreach ($patFields as $lbl => $val) {
             $pdf->SetFont($font, '', $fontSize - 1.5);
             $pdf->SetTextColor(100, 100, 100);
-            $pdf->SetXY($patInfoX, $pfy);
-            $pdf->Cell($textW * 0.42, 4.5, $lbl, 0, 0);
+            $pdf->SetXY($patColX, $pfy);
+            $pdf->Cell($lblW, $rowH, $lbl, 0, 0);
             $pdf->SetFont($font, 'B', $fontSize - 1.5);
             $pdf->SetTextColor(30, 30, 30);
-            $pdf->Cell($textW * 0.58, 4.5, $val, 0, 0);
-            $pfy += 4.5;
+            $pdf->SetXY($patColX + $lblW, $pfy);
+            $pdf->Cell($valW, $rowH, $val, 0, 0);
+            $pfy += $rowH;
         }
 
-        // ── Divider ───────────────────────────────────────────────────────
-        $tableTopY = max($addrTopY + 38, 100);
+        // ── Divider ─────────────────────────────────────────────────────
+        $tableTopY = max($blockTopY + ($hasPhoto ? $photoW : count($patFields) * $rowH) + 6, 100);
         $pdf->SetDrawColor(...$colorLine);
         $pdf->SetLineWidth(0.3);
         $pdf->Line($contentX, $tableTopY, $rightEdge, $tableTopY);
