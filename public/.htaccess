@@ -1,6 +1,9 @@
 Options -Indexes
 RewriteEngine On
 
+# Serve storage/uploads and storage/patients via storage.php (storage/ is outside DocumentRoot)
+RewriteRule ^storage/(uploads|patients)/([^/]+)$ storage.php?dir=$1&file=$2 [QSA,L]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ index.php [QSA,L]
