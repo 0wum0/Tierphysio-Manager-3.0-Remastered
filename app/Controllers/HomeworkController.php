@@ -379,7 +379,52 @@ class HomeworkController
             );
         }
 
-        echo json_encode(['success' => true, 'plan_id' => $planId]);
+        /* ── Auto-create owner portal account if needed ── */
+        $portalInviteSent = false;
+        $portalInviteError = null;
+        if ($ownerId > 0) {
+            try {
+                $ownerRow = $this->db->query(
+                    'SELECT id, email, first_name, last_name FROM owners WHERE id = ? LIMIT 1',
+                    [$ownerId]
+                )->fetch(\PDO::FETCH_ASSOC);
+
+                if ($ownerRow && !empty($ownerRow['email'])) {
+                    $existing = $this->db->query(
+                        'SELECT id FROM owner_portal_users WHERE owner_id = ? LIMIT 1',
+                        [$ownerId]
+                    )->fetch(\PDO::FETCH_ASSOC);
+
+                    if (!$existing) {
+                        $token   = bin2hex(random_bytes(32));
+                        $expires = date('Y-m-d H:i:s', strtotime('+7 days'));
+                        $this->db->execute(
+                            'INSERT INTO owner_portal_users (owner_id, email, password_hash, is_active, invite_token, invite_expires)
+                             VALUES (?, ?, NULL, 0, ?, ?)',
+                            [$ownerId, $ownerRow['email'], $token, $expires]
+                        );
+
+                        /* Send invite email via OwnerPortalMailService */
+                        if (class_exists(\Plugins\OwnerPortal\OwnerPortalMailService::class)) {
+                            $settingsRepo = new \App\Repositories\SettingsRepository($this->db);
+                            $mailService  = new \App\Services\MailService($settingsRepo);
+                            $mailer       = new \Plugins\OwnerPortal\OwnerPortalMailService($settingsRepo, $mailService);
+                            $mailer->sendInvite($ownerRow['email'], $token);
+                            $portalInviteSent = true;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                $portalInviteError = $e->getMessage();
+            }
+        }
+
+        echo json_encode([
+            'success'            => true,
+            'plan_id'            => $planId,
+            'portal_invite_sent' => $portalInviteSent,
+            'portal_invite_error'=> $portalInviteError,
+        ]);
         exit;
     }
 

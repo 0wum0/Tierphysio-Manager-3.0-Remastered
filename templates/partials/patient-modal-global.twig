@@ -1468,6 +1468,23 @@ if (pdNewAptBtn) {
 
 var _hwTemplates = [];
 
+function _hwEsc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function _hwFmtDate(d) {
+    if (!d) return '';
+    var parts = String(d).split('-');
+    return parts.length === 3 ? parts[2]+'.'+parts[1]+'.'+parts[0] : d;
+}
+function _hwShowToast(msg, type) {
+    var t = document.createElement('div');
+    var bg = type === 'success' ? '#198754' : type === 'warning' ? '#f59e0b' : '#dc3545';
+    t.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;background:'+bg+';color:#fff;padding:0.75rem 1.25rem;border-radius:8px;font-size:0.85rem;max-width:380px;box-shadow:0 4px 20px rgba(0,0,0,0.3);';
+    t.innerHTML = msg;
+    document.body.appendChild(t);
+    setTimeout(function(){ t.style.opacity='0'; t.style.transition='opacity 0.4s'; setTimeout(function(){ t.remove(); },400); },4000);
+}
+
 window.openHomeworkModal = function() {
     if (!currentPatientData) return;
     var p = currentPatientData.patient;
@@ -1499,19 +1516,10 @@ window.openHomeworkModal = function() {
     modalEl.addEventListener('hidden.bs.modal', function() { this.remove(); });
 };
 
-function _hwEsc(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-function _hwFmtDate(d) {
-    if (!d) return '';
-    var parts = String(d).split('-');
-    return parts.length === 3 ? parts[2]+'.'+parts[1]+'.'+parts[0] : d;
-}
-
 function _loadPlans(patientId) {
     var container = document.getElementById('hw-plans-list');
     if (!container) return;
-    fetch('/api/patients/' + patientId + '/plans')
+    fetch('/api/patients/' + patientId + '/plans', { headers: { 'Accept': 'application/json' } })
         .then(function(r) { return r.json(); })
         .then(function(plans) {
             container = document.getElementById('hw-plans-list');
@@ -1571,7 +1579,7 @@ window._deletePlan = function(planId) {
     var patientId = currentPatientData.patient.id;
     fetch('/api/patients/' + patientId + '/plans/' + planId, {
         method: 'DELETE',
-        headers: { 'X-CSRF-Token': '{{ csrf_token }}' }
+        headers: { 'X-CSRF-Token': '{{ csrf_token }}', 'Accept': 'application/json' }
     })
     .then(function(r) { return r.json(); })
     .then(function(d) {
@@ -1620,7 +1628,7 @@ window.openCreatePlanModal = function() {
         '<hr><div class="d-flex align-items-center justify-content-between mb-3">' +
         '<h6 class="mb-0 fw-600">&#x1F3C3; Aufgaben</h6>' +
         '<div class="d-flex gap-2">' +
-        '<select id="cp-template-select" class="form-select form-select-sm" style="max-width:260px;"><option value="">— Vorlage einf&uuml;gen —</option></select>' +
+        '<select id="cp-template-select" class="form-select form-select-sm" style="max-width:260px;"><option value="">&#8212; Vorlage einf&uuml;gen &#8212;</option></select>' +
         '<button type="button" class="btn btn-secondary btn-sm" onclick="_cpAddTaskFromTemplate()">Hinzuf&uuml;gen</button>' +
         '<button type="button" class="btn btn-outline-secondary btn-sm" onclick="_cpAddTask(\'\',\'\',\'\',\'\',\'\')">' +
         '<svg width="12" height="12" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Leer</button>' +
@@ -1637,7 +1645,7 @@ window.openCreatePlanModal = function() {
     var modal = new bootstrap.Modal(modalEl);
     modal.show();
 
-    fetch('/api/patients/' + p.id + '/homework/plan-meta')
+    fetch('/api/patients/' + p.id + '/homework/plan-meta', { headers: { 'Accept': 'application/json' } })
         .then(function(r) { return r.json(); })
         .then(function(meta) {
             var el = document.getElementById('cp-next-apt');
@@ -1651,12 +1659,17 @@ window.openCreatePlanModal = function() {
         btn.disabled = true;
         btn.textContent = 'Speichert\u2026';
         var fd = new FormData(document.getElementById('create-plan-form'));
-        fetch('/api/patients/' + p.id + '/plans', { method: 'POST', body: fd })
+        fetch('/api/patients/' + p.id + '/plans', { method: 'POST', body: fd, headers: { 'Accept': 'application/json' } })
             .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, d: d }; }); })
             .then(function(res) {
                 if (res.ok && res.d.success) {
                     bootstrap.Modal.getInstance(modalEl).hide();
                     _loadPlans(p.id);
+                    if (res.d.portal_invite_sent) {
+                        _hwShowToast('&#x2709; Besitzerportal-Einladung per E-Mail gesendet.', 'success');
+                    } else if (res.d.portal_invite_error) {
+                        _hwShowToast('Plan gespeichert. E-Mail fehlgeschlagen: ' + _hwEsc(res.d.portal_invite_error), 'warning');
+                    }
                 } else {
                     throw new Error(res.d.error || 'Fehler beim Speichern');
                 }
@@ -1672,7 +1685,7 @@ window.openCreatePlanModal = function() {
 
 function _loadCpTemplates() {
     if (_hwTemplates.length) { _fillCpTemplateSelect(); return; }
-    fetch('/api/homework/templates')
+    fetch('/api/homework/templates', { headers: { 'Accept': 'application/json' } })
         .then(function(r) { return r.json(); })
         .then(function(tpls) { _hwTemplates = tpls; _fillCpTemplateSelect(); })
         .catch(function(){});
@@ -1681,7 +1694,7 @@ function _loadCpTemplates() {
 function _fillCpTemplateSelect() {
     var sel = document.getElementById('cp-template-select');
     if (!sel) return;
-    sel.innerHTML = '<option value="">— Vorlage einf\u00fcgen —</option>';
+    sel.innerHTML = '<option value="">&#8212; Vorlage einf\u00fcgen &#8212;</option>';
     _hwTemplates.forEach(function(t) {
         var o = document.createElement('option');
         o.value = t.id;
