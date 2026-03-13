@@ -21,17 +21,17 @@ class VetReportService
     ): string {
         $settings = $this->settingsRepository->all();
 
-        // ── Exact same settings as PdfService::generateInvoicePdf ────────
-        $sidebarColor      = $this->hexToRgb($settings['pdf_primary_color']           ?? '#8B9E8B');
-        $accentColor       = $this->hexToRgb($settings['pdf_accent_color']            ?? '#6B7F6B');
-        $colorCompanyName  = $this->hexToRgb($settings['pdf_color_company_name']      ?? '#1E1E1E');
-        $colorCompanyInfo  = $this->hexToRgb($settings['pdf_color_company_info']      ?? '#6E6E6E');
-        $colorRecipient    = $this->hexToRgb($settings['pdf_color_recipient']         ?? '#1E1E1E');
-        $colorTableHdrBg   = $this->hexToRgb($settings['pdf_color_table_header_bg']   ?? '#8B9E8B');
-        $colorTableHdrText = $this->hexToRgb($settings['pdf_color_table_header_text'] ?? '#FFFFFF');
-        $colorTableText    = $this->hexToRgb($settings['pdf_color_table_text']        ?? '#1E1E1E');
-        $colorLine         = $this->hexToRgb($settings['pdf_color_line']              ?? '#B4B4B4');
-        $colorFooter       = $this->hexToRgb($settings['pdf_color_footer']            ?? '#6E6E6E');
+        // ── Colors: sidebar from settings, all text/table colors hardcoded neutral ──
+        // (avoids the user's invoice accent color — e.g. pink — bleeding into the report)
+        $sidebarColor      = $this->hexToRgb($settings['pdf_primary_color'] ?? '#5C7A5C');
+        $colorCompanyName  = [30,  30,  30];   // always dark, never pink
+        $colorCompanyInfo  = [100, 100, 100];  // always gray
+        $colorRecipient    = [30,  30,  30];
+        $colorTableHdrBg   = [70,  90,  70];   // neutral dark green header
+        $colorTableHdrText = [255, 255, 255];
+        $colorTableText    = [30,  30,  30];
+        $colorLine         = [180, 180, 180];
+        $colorFooter       = [120, 120, 120];
         $darkColor         = $colorCompanyName;
         $grayColor         = $colorCompanyInfo;
 
