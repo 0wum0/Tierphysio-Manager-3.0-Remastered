@@ -1262,17 +1262,18 @@ class PdfService
     ): string {
         $settings = $this->settingsRepository->all();
 
-        $sidebarColor      = $this->hexToRgb($settings['pdf_primary_color']           ?? '#8B9E8B');
-        $accentColor       = $this->hexToRgb($settings['pdf_accent_color']            ?? '#6B7F6B');
-        $colorCompanyName  = $this->hexToRgb($settings['pdf_color_company_name']      ?? '#1E1E1E');
-        $colorCompanyInfo  = $this->hexToRgb($settings['pdf_color_company_info']      ?? '#6E6E6E');
-        $colorTableHdrBg   = $this->hexToRgb($settings['pdf_color_table_header_bg']   ?? '#8B9E8B');
-        $colorTableHdrText = $this->hexToRgb($settings['pdf_color_table_header_text'] ?? '#FFFFFF');
-        $colorTableText    = $this->hexToRgb($settings['pdf_color_table_text']        ?? '#1E1E1E');
-        $colorLine         = $this->hexToRgb($settings['pdf_color_line']              ?? '#B4B4B4');
-        $colorFooter       = $this->hexToRgb($settings['pdf_color_footer']            ?? '#6E6E6E');
-        $darkColor         = $colorCompanyName;
-        $grayColor         = $colorCompanyInfo;
+        $sidebarColor      = $this->hexToRgb($settings['pdf_primary_color'] ?? '#8B9E8B');
+        /* Homework PDF always uses neutral/dark colors regardless of PDF design settings */
+        $accentColor       = [30, 30, 30];
+        $colorCompanyName  = [30, 30, 30];
+        $colorCompanyInfo  = [100, 100, 100];
+        $colorTableHdrBg   = [60, 60, 60];
+        $colorTableHdrText = [255, 255, 255];
+        $colorTableText    = [30, 30, 30];
+        $colorLine         = [180, 180, 180];
+        $colorFooter       = [110, 110, 110];
+        $darkColor         = [30, 30, 30];
+        $grayColor         = [100, 100, 100];
 
         $font     = $this->resolvePdfFont($settings['pdf_font'] ?? 'helvetica');
         $fontSize = (float)($settings['pdf_font_size'] ?? 9);
