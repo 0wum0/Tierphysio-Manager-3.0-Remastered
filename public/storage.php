@@ -11,18 +11,19 @@ $allowed = ['uploads', 'patients'];
 $dir  = $_GET['dir']  ?? '';
 $file = $_GET['file'] ?? '';
 
-if (
-    !in_array($dir, $allowed, true)
-    || $file === ''
-    || str_contains($file, '/')
-    || str_contains($file, '\\')
-    || str_contains($file, '..')
-) {
+if (!in_array($dir, $allowed, true) || $file === '') {
     http_response_code(403);
     exit;
 }
 
-$storagePath = dirname(__DIR__) . '/storage/' . $dir . '/' . basename($file);
+// Resolve and verify the path stays within the allowed directory
+$base        = realpath(dirname(__DIR__) . '/storage/' . $dir);
+$storagePath = realpath($base . '/' . $file);
+
+if ($base === false || $storagePath === false || !str_starts_with($storagePath, $base . DIRECTORY_SEPARATOR)) {
+    http_response_code(403);
+    exit;
+}
 
 if (!is_file($storagePath)) {
     http_response_code(404);

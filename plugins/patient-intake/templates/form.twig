@@ -115,7 +115,7 @@
     <div class="intake-header">
         <div class="intake-logo">
             {% if global_settings is defined and global_settings.company_logo is defined and global_settings.company_logo %}
-                <img src="/storage/uploads/{{ global_settings.company_logo }}" alt="{{ app_name }}" style="width:64px;height:64px;border-radius:16px;object-fit:contain;">
+                <img src="/uploads/{{ global_settings.company_logo }}" alt="{{ app_name }}" style="width:64px;height:64px;border-radius:16px;object-fit:contain;">
             {% else %}
                 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <g transform="translate(32,32)">

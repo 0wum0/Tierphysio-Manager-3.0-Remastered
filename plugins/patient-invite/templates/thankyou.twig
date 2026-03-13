@@ -28,7 +28,7 @@
     <div class="lg-card" style="padding:2.5rem 2rem;">
         <div class="ty-icon">
             {% if global_settings is defined and global_settings.company_logo is defined and global_settings.company_logo %}
-                <img src="/storage/uploads/{{ global_settings.company_logo }}" alt="{{ app_name }}" style="width:72px;height:72px;border-radius:16px;object-fit:contain;">
+                <img src="/uploads/{{ global_settings.company_logo }}" alt="{{ app_name }}" style="width:72px;height:72px;border-radius:16px;object-fit:contain;">
             {% else %}
                 <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <g transform="translate(36,36)">
