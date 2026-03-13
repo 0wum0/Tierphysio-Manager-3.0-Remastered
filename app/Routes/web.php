@@ -151,11 +151,11 @@ function serveStorageFile(string $dir, string $file): void {
     readfile($path);
     exit;
 }
-$router->get('/uploads/{file}', function(array $p) {
-    serveStorageFile('uploads', $p['file'] ?? '');
-});
 $router->get('/uploads/exercises/{file}', function(array $p) {
     serveStorageFile('uploads/exercises', $p['file'] ?? '');
+});
+$router->get('/uploads/{file}', function(array $p) {
+    serveStorageFile('uploads', $p['file'] ?? '');
 });
 $router->get('/patients/{file}', function(array $p) {
     serveStorageFile('patients', $p['file'] ?? '');
