@@ -1,6 +1,9 @@
 Options -Indexes
 RewriteEngine On
 
+# Serve storage/uploads and storage/patients from parent directory
+RewriteRule ^storage/(uploads|patients)/(.+)$ ../storage/$1/$2 [L]
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ index.php [QSA,L]

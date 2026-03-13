@@ -479,8 +479,8 @@
     /* ── Revenue Area Chart ─────────────────────────────────── */
     var revenueEl = document.getElementById('dash-revenue-chart');
 
-    var weeklyData    = {{ stats.chart_weekly|default([])|json_encode|raw }};
-    var monthlyData   = {{ stats.chart_monthly|default([])|json_encode|raw }};
+    var weeklyData    = {{ stats.chart_weekly|default([])|json_encode|replace({'</': '<\/'})|raw }};
+    var monthlyData   = {{ stats.chart_monthly|default([])|json_encode|replace({'</': '<\/'})|raw }};
     var weeklyLabels  = weeklyData.map(function(d){ return d.label; });
     var weeklyValues  = weeklyData.map(function(d){ return parseFloat(d.value) || 0; });
     var monthlyLabels = monthlyData.map(function(d){ return d.label; });
@@ -555,8 +555,8 @@
     /* ── Patient Sparkline ──────────────────────────────────── */
     var sparkEl = document.getElementById('dash-patient-sparkline');
     if (sparkEl) {
-        var pLabels = {{ patient_trend.labels|json_encode|raw }};
-        var pData   = {{ patient_trend.data|json_encode|raw }};
+        var pLabels = {{ patient_trend.labels|json_encode|replace({'</': '<\/'})|raw }};
+        var pData   = {{ patient_trend.data|json_encode|replace({'</': '<\/'})|raw }};
         new ApexCharts(sparkEl, {
             chart: {
                 type: 'area',
@@ -625,8 +625,8 @@
     /* ── Patienten + Tierhalter Bar ─────────────────────────── */
     var ownersEl = document.getElementById('dash-owners-bar');
     if (ownersEl) {
-        var pLabels2 = {{ patient_trend.labels|json_encode|raw }};
-        var pData2   = {{ patient_trend.data|json_encode|raw }};
+        var pLabels2 = {{ patient_trend.labels|json_encode|replace({'</': '<\/'})|raw }};
+        var pData2   = {{ patient_trend.data|json_encode|replace({'</': '<\/'})|raw }};
         new ApexCharts(ownersEl, {
             chart: {
                 type: 'bar',

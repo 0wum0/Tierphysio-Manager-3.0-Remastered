@@ -57,7 +57,7 @@
     {% if flash_success %}
         <div class="container mt-3">
             <div class="alert alert-success alert-dismissible fade show">
-                <i class="bi bi-check-circle me-2"></i>{{ flash_success|raw }}
+                <i class="bi bi-check-circle me-2"></i>{{ flash_success }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         </div>
@@ -65,7 +65,7 @@
     {% if flash_error %}
         <div class="container mt-3">
             <div class="alert alert-danger alert-dismissible fade show">
-                <i class="bi bi-exclamation-triangle me-2"></i>{{ flash_error|raw }}
+                <i class="bi bi-exclamation-triangle me-2"></i>{{ flash_error }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         </div>

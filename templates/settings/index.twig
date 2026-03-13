@@ -2065,7 +2065,7 @@ function openEditHT(ht) {
 (function() {
 'use strict';
 
-var _companyName = {{ (settings.company_name ?? 'Tierphysio Praxis')|json_encode|raw }};
+var _companyName = {{ (settings.company_name ?? 'Tierphysio Praxis')|json_encode|replace({'</': '<\/'})|raw }};
 
 /* ── Tab Switcher ── */
 function initEmailTplTabs() {

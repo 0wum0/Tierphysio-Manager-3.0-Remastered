@@ -301,6 +301,8 @@
              + ' ' + d.toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'});
     }
 
+    function esc(s) { return String(s||'').replace(/[&<>"']/g, function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];}); }
+
     function poll() {
         fetch('/api/intake/notifications', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
         .then(function (r) { return r.json(); })
@@ -330,13 +332,13 @@
             if (listEl) {
                 if (data.items && data.items.length > 0) {
                     listEl.innerHTML = data.items.map(function (item) {
-                        return '<a href="/eingangsmeldungen/' + item.id + '" class="dropdown-item" style="flex-direction:column;align-items:flex-start;gap:0.15rem;padding:0.65rem 1rem;">'
+                        return '<a href="/eingangsmeldungen/' + parseInt(item.id) + '" class="dropdown-item" style="flex-direction:column;align-items:flex-start;gap:0.15rem;padding:0.65rem 1rem;">'
                             + '<div style="display:flex;align-items:center;gap:0.5rem;width:100%;">'
                             + '<span style="width:7px;height:7px;border-radius:50%;background:#ef4444;flex-shrink:0;animation:notif-pulse 2s infinite;"></span>'
-                            + '<strong style="font-size:0.85rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🐾 ' + (item.patient_name || '') + '</strong>'
-                            + '<span style="font-size:0.72rem;color:var(--text-muted);flex-shrink:0;">' + formatDe(item.created_at) + '</span>'
+                            + '<strong style="font-size:0.85rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">🐾 ' + esc(item.patient_name) + '</strong>'
+                            + '<span style="font-size:0.72rem;color:var(--text-muted);flex-shrink:0;">' + esc(formatDe(item.created_at)) + '</span>'
                             + '</div>'
-                            + '<span style="font-size:0.78rem;color:var(--text-muted);padding-left:1.1rem;">' + (item.owner_first_name || '') + ' ' + (item.owner_last_name || '') + ' · hat eine Terminanfrage</span>'
+                            + '<span style="font-size:0.78rem;color:var(--text-muted);padding-left:1.1rem;">' + esc(item.owner_first_name) + ' ' + esc(item.owner_last_name) + ' · hat eine Terminanfrage</span>'
                             + '</a>';
                     }).join('');
                 } else {

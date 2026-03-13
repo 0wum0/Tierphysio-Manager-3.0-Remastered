@@ -486,9 +486,9 @@
     /* ── Monatsumsatz Balkendiagramm ───────────────────────── */
     var monthlyEl = document.getElementById('inv-chart-monthly');
     if (monthlyEl) {
-        var chartLabels = {{ chart_data.labels|json_encode|raw }};
-        var chartPaid   = {{ chart_data.paid|json_encode|raw }};
-        var chartOpen   = {{ chart_data.open|json_encode|raw }};
+        var chartLabels = {{ chart_data.labels|json_encode|replace({'</': '<\/'})|raw }};
+        var chartPaid   = {{ chart_data.paid|json_encode|replace({'</': '<\/'})|raw }};
+        var chartOpen   = {{ chart_data.open|json_encode|replace({'</': '<\/'})|raw }};
 
         new ApexCharts(monthlyEl, {
             chart: {

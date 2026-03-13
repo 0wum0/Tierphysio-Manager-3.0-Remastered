@@ -25,7 +25,7 @@
     <link rel="stylesheet" media="screen, print" href="/themes/smart-tierphysio/bridge.css?v=20260308f">
 
     {# Per-user UI settings from DB — must be before saveloadscript.js #}
-    <script>window.__serverUiSettings = {{ (server_ui_settings ?? 'null')|raw }};</script>
+    <script>window.__serverUiSettings = {{ (server_ui_settings ?? 'null')|json_encode|raw }};</script>
     {# Save/Load functionality — MUST be in <head> so theme is applied before CSS renders #}
     <script src="/themes/smart-tierphysio/scripts/core/saveloadscript.js"></script>
 
@@ -929,7 +929,7 @@
     }
 
     /* ── Flash messages from PHP session → immediate toasts ── */
-    var flashMessages = {{ flash_messages|json_encode|raw }};
+    var flashMessages = {{ flash_messages|json_encode|replace({'</': '<\\/'})|raw }};
     if (flashMessages && typeof flashMessages === 'object') {
         Object.keys(flashMessages).forEach(function(type) {
             var msg = flashMessages[type];

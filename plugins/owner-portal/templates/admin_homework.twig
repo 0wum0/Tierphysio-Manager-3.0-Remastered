@@ -48,8 +48,9 @@
             <span class="badge bg-secondary fs-nano">{{ patient.species }}</span>
             <span class="badge bg-primary fs-nano">{{ planList|length }} Plan{{ planList|length != 1 ? '&#8203;' : '' }}</span>
         </div>
-        <button type="button" class="btn btn-xs btn-primary"
-                onclick="event.stopPropagation(); openCreatePlan({{ patient.id }}, {{ patient.name|json_encode }});">
+        <button type="button" class="btn btn-xs btn-primary btn-open-create-plan"
+                data-patient-id="{{ patient.id }}"
+                data-patient-name="{{ patient.name }}">
             <i class="fal fa-plus mr-1"></i> Hausaufgabenplan erstellen
         </button>
     </div>
@@ -229,9 +230,9 @@
 
 {# ── Next appointments data for JS ── #}
 <script>
-var _nextApptByPatient = {{ next_appointment_by_patient|default({})|json_encode|raw }};
-var _ownerLastName     = {{ owner.last_name|json_encode|raw }};
-var _csrfToken         = {{ csrf_token|json_encode|raw }};
+var _nextApptByPatient = {{ next_appointment_by_patient|default({})|json_encode|replace({'</': '<\/'})|raw }};
+var _ownerLastName     = {{ owner.last_name|json_encode|replace({'</': '<\/'})|raw }};
+var _csrfToken         = {{ csrf_token|json_encode|replace({'</': '<\/'})|raw }};
 </script>
 
 {# ── Template Selector Modal ── #}
@@ -247,8 +248,8 @@ var _csrfToken         = {{ csrf_token|json_encode|raw }};
                 <div class="row g-2">
                 {% for tpl in templates %}
                 <div class="col-md-6">
-                    <div class="card card-hover h-100" style="cursor:pointer;"
-                         onclick="selectTemplate({{ tpl|json_encode }})">
+                    <div class="card card-hover h-100 tpl-select-card" style="cursor:pointer;"
+                         data-tpl="{{ tpl|json_encode|e('html_attr') }}">
                         <div class="card-body p-3">
                             <div class="fw-500 mb-1">
                                 {% if tpl.category_emoji %}{{ tpl.category_emoji }} {% endif %}{{ tpl.title }}
@@ -356,6 +357,26 @@ function updateTasksEmpty() {
 function openTemplateSelector() {
     new bootstrap.Modal(document.getElementById('modal-template-select')).show();
 }
+
+/* Delegated click handler for template cards (replaces inline onclick) */
+document.addEventListener('click', function(e) {
+    var card = e.target.closest('.tpl-select-card');
+    if (!card) return;
+    try {
+        var tpl = JSON.parse(card.getAttribute('data-tpl') || '{}');
+        selectTemplate(tpl);
+    } catch(err) {}
+});
+
+/* Delegated click handler for "Hausaufgabenplan erstellen" buttons */
+document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.btn-open-create-plan');
+    if (!btn) return;
+    e.stopPropagation();
+    var patientId   = parseInt(btn.getAttribute('data-patient-id')) || 0;
+    var patientName = btn.getAttribute('data-patient-name') || '';
+    openCreatePlan(patientId, patientName);
+});
 
 function selectTemplate(tpl) {
     // Map frequency enum to readable text

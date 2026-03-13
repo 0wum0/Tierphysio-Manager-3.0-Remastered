@@ -115,7 +115,7 @@
                         <strong>Betreff:</strong> {{ reply_message.subject }}</p>
                         {% if reply_message.body_html %}
                         <blockquote style="border-left:3px solid #4f7cff;margin:0;padding-left:1rem;color:var(--bs-secondary-color);">
-                            {{ reply_message.body_html|raw }}
+                            {{ reply_message.body_html|striptags('<p><br><b><strong><i><em><u><ul><ol><li><a><span><div><blockquote><pre>')|raw }}
                         </blockquote>
                         {% elseif reply_message.body_text %}
                         <blockquote style="border-left:3px solid #4f7cff;margin:0;padding-left:1rem;color:var(--bs-secondary-color);">

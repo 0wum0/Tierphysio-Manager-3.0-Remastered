@@ -329,7 +329,7 @@
 /* ── Owner dropdown for new-patient modal ─────────────────── */
 var ownerSelect = document.getElementById('p-owner');
 if (ownerSelect) {
-    var owners = {{ owners is defined ? owners|json_encode|raw : '[]' }};
+    var owners = {{ owners is defined ? owners|json_encode|replace({'</': '<\/'}) |raw : '[]' }};
     owners.forEach(function (o) {
         var opt = document.createElement('option');
         opt.value = o.id;
