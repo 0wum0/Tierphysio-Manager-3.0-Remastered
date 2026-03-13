@@ -216,14 +216,29 @@ class CalendarController extends Controller
         $a  = $this->appointmentRepository->findById($id);
         if (!$a) { http_response_code(404); echo json_encode(['error' => 'not found']); exit; }
 
-        $body     = json_decode(file_get_contents('php://input'), true) ?? [];
-        $startAt  = $body['start_at'] ?? null;
-        $endAt    = $body['end_at']   ?? null;
+        $body    = json_decode(file_get_contents('php://input'), true) ?? [];
+        $startAt = $body['start_at'] ?? null;
+        $endAt   = $body['end_at']   ?? null;
         if (!$startAt || !$endAt) { http_response_code(422); echo json_encode(['error' => 'Missing dates']); exit; }
 
+        /* Validate that values are actual datetime strings */
+        try {
+            $startDt = new \DateTime($startAt);
+            $endDt   = new \DateTime($endAt);
+        } catch (\Throwable) {
+            http_response_code(422);
+            echo json_encode(['error' => 'Ungültige Datumswerte.']);
+            exit;
+        }
+        if ($endDt <= $startDt) {
+            http_response_code(422);
+            echo json_encode(['error' => 'Endzeit muss nach Startzeit liegen.']);
+            exit;
+        }
+
         $this->appointmentRepository->update($id, array_merge($a, [
-            'start_at' => $startAt,
-            'end_at'   => $endAt,
+            'start_at' => $startDt->format('Y-m-d H:i:s'),
+            'end_at'   => $endDt->format('Y-m-d H:i:s'),
         ]));
 
         header('Content-Type: application/json');

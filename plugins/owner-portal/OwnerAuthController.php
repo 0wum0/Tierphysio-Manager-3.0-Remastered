@@ -81,9 +81,14 @@ class OwnerAuthController extends Controller
         $this->redirect('/portal/dashboard');
     }
 
-    /* ── GET /portal/logout ── */
+    /* ── POST /portal/logout ── */
     public function logout(array $params = []): void
     {
+        $token = $this->post('_csrf_token', '');
+        if (!$this->session->validateCsrfToken($token)) {
+            $this->redirect('/portal/dashboard');
+            return;
+        }
         $this->session->remove('owner_portal_user_id');
         $this->session->remove('owner_portal_owner_id');
         $this->redirect('/portal/login');

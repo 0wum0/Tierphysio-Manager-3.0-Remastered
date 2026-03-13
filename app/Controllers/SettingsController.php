@@ -154,7 +154,7 @@ class SettingsController extends Controller
         $this->validateCsrf();
 
         $destination = STORAGE_PATH . '/uploads';
-        $filename    = $this->uploadFile('logo', $destination, ['image/jpeg', 'image/png', 'image/svg+xml', 'image/gif']);
+        $filename    = $this->uploadFile('logo', $destination, ['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 
         if ($filename === false) {
             $this->session->flash('error', $this->translator->trans('settings.logo_upload_failed'));

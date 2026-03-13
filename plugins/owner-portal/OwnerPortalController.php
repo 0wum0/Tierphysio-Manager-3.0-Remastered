@@ -163,8 +163,27 @@ class OwnerPortalController extends Controller
             return;
         }
 
-        /* Delegate to the main invoice PDF endpoint — just redirect */
-        $this->redirect('/rechnungen/' . $invoiceId . '/pdf');
+        /* Generate PDF directly — do NOT redirect to the admin route */
+        $db        = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+        $posStmt   = $db->query('SELECT * FROM invoice_positions WHERE invoice_id = ? ORDER BY sort_order ASC', [$invoiceId]);
+        $positions = $posStmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        $ownerStmt = $db->query('SELECT * FROM owners WHERE id = ? LIMIT 1', [$ownerId]);
+        $owner     = $ownerStmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+
+        $patient = null;
+        if (!empty($invoice['patient_id'])) {
+            $patStmt = $db->query('SELECT * FROM patients WHERE id = ? LIMIT 1', [(int)$invoice['patient_id']]);
+            $patient = $patStmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+        }
+
+        $pdf = $this->pdfService->generateInvoicePdf($invoice, $positions, $owner, $patient);
+
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: inline; filename="Rechnung-' . htmlspecialchars($invoice['invoice_number'], ENT_QUOTES, 'UTF-8') . '.pdf"');
+        header('Content-Length: ' . strlen($pdf));
+        echo $pdf;
+        exit;
     }
 
     /* ── GET /portal/termine ── */
@@ -257,13 +276,13 @@ class OwnerPortalController extends Controller
         if (!$pet) { $this->abort(404); return; }
 
         $data = [
-            'name'        => trim($this->post('name', '')),
-            'species'     => trim($this->post('species', '')),
-            'breed'       => trim($this->post('breed', '')),
+            'name'        => $this->sanitize($this->post('name', '')),
+            'species'     => $this->sanitize($this->post('species', '')),
+            'breed'       => $this->sanitize($this->post('breed', '')),
             'birth_date'  => $this->post('birth_date', '') ?: null,
-            'gender'      => $this->post('gender', ''),
-            'color'       => trim($this->post('color', '')),
-            'chip_number' => trim($this->post('chip_number', '')),
+            'gender'      => $this->sanitize($this->post('gender', '')),
+            'color'       => $this->sanitize($this->post('color', '')),
+            'chip_number' => $this->sanitize($this->post('chip_number', '')),
         ];
 
         if (empty($data['name'])) {

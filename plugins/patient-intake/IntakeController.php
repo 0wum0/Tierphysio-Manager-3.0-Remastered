@@ -163,6 +163,13 @@ class IntakeController extends Controller
 
     public function accept(array $params = []): void
     {
+        /* CSRF validation */
+        $token = $_POST['_csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+        if (!$this->session->validateCsrfToken($token)) {
+            $this->jsonError('CSRF-Token ungültig', 403);
+            return;
+        }
+
         /* AJAX: create owner + patient from submission */
         $submission = $this->repo->findById((int)$params['id']);
         if (!$submission) {
@@ -260,6 +267,13 @@ class IntakeController extends Controller
 
     public function reject(array $params = []): void
     {
+        /* CSRF validation */
+        $token = $_POST['_csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+        if (!$this->session->validateCsrfToken($token)) {
+            $this->jsonError('CSRF-Token ungültig', 403);
+            return;
+        }
+
         $submission = $this->repo->findById((int)$params['id']);
         if (!$submission) {
             $this->jsonError('Nicht gefunden', 404);
@@ -275,6 +289,13 @@ class IntakeController extends Controller
 
     public function updateStatus(array $params = []): void
     {
+        /* CSRF validation */
+        $token = $_POST['_csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+        if (!$this->session->validateCsrfToken($token)) {
+            $this->jsonError('CSRF-Token ungültig', 403);
+            return;
+        }
+
         $submission = $this->repo->findById((int)$params['id']);
         if (!$submission) {
             $this->jsonError('Nicht gefunden', 404);

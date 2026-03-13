@@ -441,7 +441,18 @@ class PatientController extends Controller
             exit;
         }
 
-        $ext      = strtolower(pathinfo($_FILES['attachment']['name'], PATHINFO_EXTENSION));
+        $mimeExtMap = [
+            'image/jpeg'      => 'jpg',  'image/png'  => 'png',
+            'image/gif'       => 'gif',  'image/webp' => 'webp',
+            'application/pdf' => 'pdf',
+            'application/msword' => 'doc',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
+            'video/mp4'       => 'mp4',  'video/webm'  => 'webm',
+            'video/ogg'       => 'ogv',  'video/quicktime' => 'mov',
+            'video/x-msvideo' => 'avi',  'video/x-matroska' => 'mkv',
+            'video/x-m4v'     => 'm4v',  'video/mpeg'  => 'mpeg',
+        ];
+        $ext      = $mimeExtMap[$uploadMime] ?? 'bin';
         $filename = bin2hex(random_bytes(16)) . '.' . $ext;
         $fullPath = $destination . '/' . $filename;
 

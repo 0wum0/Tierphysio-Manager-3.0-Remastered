@@ -3,7 +3,10 @@ RewriteEngine On
 
 # Block direct access to sensitive files and directories
 RewriteRule ^(\.env|composer\.(json|lock)|\.git) - [F,L]
-RewriteRule ^(app|lang|migrations|templates|plugins)/ - [F,L]
+RewriteRule ^(app|lang|migrations|templates|plugins|storage|vendor)/ - [F,L]
+
+# Block debug/test scripts in root directory
+RewriteRule ^(check_db|debug_homework|test_error_log|test_migration|debug|test)\.php$ - [F,L]
 
 # Serve storage/uploads/ and storage/patients/ directly (images, logos)
 RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} -f

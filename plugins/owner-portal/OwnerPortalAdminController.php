@@ -531,11 +531,11 @@ class OwnerPortalAdminController extends Controller
         $tasks = [];
         foreach ($titles as $i => $title) {
             $tasks[] = [
-                'title'           => $title,
+                'title'           => htmlspecialchars(strip_tags(trim($title)), ENT_QUOTES, 'UTF-8'),
                 'description'     => $descriptions[$i] ?? '',
-                'frequency'       => $frequencies[$i]  ?? '',
-                'duration'        => $durations[$i]    ?? '',
-                'therapist_notes' => $notes[$i]        ?? '',
+                'frequency'       => htmlspecialchars(strip_tags(trim($frequencies[$i] ?? '')), ENT_QUOTES, 'UTF-8'),
+                'duration'        => htmlspecialchars(strip_tags(trim($durations[$i] ?? '')), ENT_QUOTES, 'UTF-8'),
+                'therapist_notes' => $notes[$i] ?? '',
                 'template_id'     => !empty($templateIds[$i]) ? (int)$templateIds[$i] : null,
             ];
         }

@@ -36,8 +36,16 @@ abstract class Controller
 
     protected function redirectBack(string $fallback = '/'): void
     {
-        $referer = $_SERVER['HTTP_REFERER'] ?? $fallback;
-        $this->redirect($referer);
+        $referer = $_SERVER['HTTP_REFERER'] ?? '';
+        /* Only allow same-origin redirects — reject external URLs */
+        if ($referer !== '') {
+            $host = parse_url($referer, PHP_URL_HOST);
+            $selfHost = $_SERVER['HTTP_HOST'] ?? '';
+            if ($host !== $selfHost) {
+                $referer = '';
+            }
+        }
+        $this->redirect($referer !== '' ? $referer : $fallback);
     }
 
     protected function json(mixed $data, int $status = 200): void
@@ -90,6 +98,7 @@ abstract class Controller
             http_response_code(403);
             $this->flash('error', $this->translator->trans('errors.csrf_invalid'));
             $this->redirectBack();
+            exit;
         }
     }
 
@@ -141,8 +150,32 @@ abstract class Controller
             }
         }
 
-        $ext      = pathinfo($file['name'], PATHINFO_EXTENSION);
-        $filename = bin2hex(random_bytes(16)) . '.' . strtolower($ext);
+        /* Derive extension from MIME type — never trust client-supplied filename extension */
+        $mimeExtMap = [
+            'image/jpeg'      => 'jpg',
+            'image/png'       => 'png',
+            'image/gif'       => 'gif',
+            'image/webp'      => 'webp',
+            'image/svg+xml'   => 'svg',
+            'application/pdf' => 'pdf',
+            'application/msword' => 'doc',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
+            'video/mp4'       => 'mp4',
+            'video/webm'      => 'webm',
+            'video/ogg'       => 'ogv',
+            'video/quicktime' => 'mov',
+            'video/x-msvideo' => 'avi',
+            'video/x-matroska'=> 'mkv',
+            'video/x-m4v'     => 'm4v',
+            'video/mpeg'      => 'mpeg',
+        ];
+        if (!empty($allowedTypes)) {
+            $ext = $mimeExtMap[$mimeType] ?? 'bin';
+        } else {
+            $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            $ext = preg_replace('/[^a-z0-9]/', '', $ext) ?: 'bin';
+        }
+        $filename = bin2hex(random_bytes(16)) . '.' . $ext;
         $fullPath = $destination . '/' . $filename;
 
         if (!is_dir($destination)) {

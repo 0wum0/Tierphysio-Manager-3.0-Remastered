@@ -158,7 +158,11 @@ class Application
                || (($_SERVER['HTTP_ACCEPT'] ?? '') && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'));
         if ($isAjax) {
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['error' => $e->getMessage(), 'file' => basename($e->getFile()), 'line' => $e->getLine()]);
+            if ($debug) {
+                echo json_encode(['error' => $e->getMessage(), 'file' => basename($e->getFile()), 'line' => $e->getLine()]);
+            } else {
+                echo json_encode(['error' => 'Interner Serverfehler. Bitte versuchen Sie es später erneut.']);
+            }
             exit;
         }
 

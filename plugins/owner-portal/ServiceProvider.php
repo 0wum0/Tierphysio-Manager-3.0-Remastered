@@ -44,7 +44,7 @@ class ServiceProvider
         /* ── Public portal routes (no admin auth) ── */
         $router->get('/portal/login',                    [OwnerAuthController::class,        'showLogin'],      []);
         $router->post('/portal/login',                   [OwnerAuthController::class,        'login'],          []);
-        $router->get('/portal/logout',                   [OwnerAuthController::class,        'logout'],         []);
+        $router->post('/portal/logout',                  [OwnerAuthController::class,        'logout'],         []);
         $router->get('/portal/einladung/{token}',        [OwnerAuthController::class,        'showSetPassword'],[]);
         $router->post('/portal/einladung/{token}',       [OwnerAuthController::class,        'setPassword'],    []);
 
