@@ -248,7 +248,7 @@ class HomeworkRepository
 
     public function updateTemplate(int $id, array $data): bool
     {
-        $this->db->query(
+        $affected = $this->db->execute(
             "UPDATE homework_templates SET
                 title = ?, description = ?, category = ?, category_emoji = ?,
                 frequency = ?, duration_value = ?, duration_unit = ?,
@@ -268,12 +268,11 @@ class HomeworkRepository
                 $id,
             ]
         );
-        return $this->db->rowCount() > 0;
+        return $affected > 0;
     }
 
     public function deleteTemplate(int $id): bool
     {
-        $this->db->query("DELETE FROM homework_templates WHERE id = ?", [$id]);
-        return $this->db->rowCount() > 0;
+        return $this->db->execute("DELETE FROM homework_templates WHERE id = ?", [$id]) > 0;
     }
 }
