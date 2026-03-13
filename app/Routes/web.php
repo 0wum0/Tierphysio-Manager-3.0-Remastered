@@ -126,17 +126,16 @@ $router->get('/api/invoice-form-data', [InvoiceController::class, 'formData'], [
 
 $router->get('/cron/geburtstag', [CronController::class, 'birthday']);
 
-// Serve storage files (uploads/patients) — outside DocumentRoot when public/ is the root
-$router->get('/storage/{dir}/{file}', function(array $params) {
-    $allowed = ['uploads', 'patients'];
-    $dir  = $params['dir']  ?? '';
-    $file = $params['file'] ?? '';
-    if (!in_array($dir, $allowed, true) || $file === '' || str_contains($file, '..') || str_contains($file, '/')) {
+// Serve storage files via index.php — storage/ is outside DocumentRoot when public/ is the root
+function serveStorageFile(string $dir, string $file): void {
+    $base = realpath(STORAGE_PATH . '/' . $dir);
+    if ($base === false || $file === '') { http_response_code(403); exit; }
+    $path = realpath($base . '/' . $file);
+    if ($path === false || !str_starts_with($path, $base . DIRECTORY_SEPARATOR)) {
         http_response_code(403); exit;
     }
-    $path = STORAGE_PATH . '/' . $dir . '/' . $file;
     if (!is_file($path)) { http_response_code(404); exit; }
-    $ext  = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+    $ext  = strtolower(pathinfo($path, PATHINFO_EXTENSION));
     $mime = match($ext) {
         'jpg', 'jpeg' => 'image/jpeg',
         'png'         => 'image/png',
@@ -151,4 +150,13 @@ $router->get('/storage/{dir}/{file}', function(array $params) {
     header('Cache-Control: public, max-age=86400');
     readfile($path);
     exit;
+}
+$router->get('/uploads/{file}', function(array $p) {
+    serveStorageFile('uploads', $p['file'] ?? '');
+});
+$router->get('/uploads/exercises/{file}', function(array $p) {
+    serveStorageFile('uploads/exercises', $p['file'] ?? '');
+});
+$router->get('/patients/{file}', function(array $p) {
+    serveStorageFile('patients', $p['file'] ?? '');
 });
