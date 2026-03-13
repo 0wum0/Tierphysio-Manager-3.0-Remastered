@@ -1412,7 +1412,7 @@ class PdfService
         // ── "Hausaufgaben" heading ────────────────────────────────────
         $headingY = max($infoY + 4, 36);
         $pdf->SetFont($font, 'B', 20);
-        $pdf->SetTextColor(...$accentColor);
+        $pdf->SetTextColor(30, 30, 30);
         $pdf->SetXY($contentX, $headingY);
         $pdf->Cell($contentW, 10, 'Hausaufgaben', 0, 1, 'L');
 
@@ -1461,7 +1461,7 @@ class PdfService
         $pdf->SetLineWidth(0.2);
         $pdf->Line($contentX, $y, $rightEdge, $y);
 
-        $pdf->SetFillColor(...$accentColor);
+        $pdf->SetFillColor(...$colorTableHdrBg);
         $pdf->Rect($contentX, $y, $contentW, 7, 'F');
         $pdf->SetFont($font, 'B', $fontSize - 0.5);
         $pdf->SetTextColor(...$colorTableHdrText);
@@ -1519,7 +1519,7 @@ class PdfService
             $y += 2;
 
             $pdf->SetFont($font, 'B', $fontSize - 0.5);
-            $pdf->SetTextColor(...$accentColor);
+            $pdf->SetTextColor(30, 30, 30);
             $pdf->SetXY($contentX + 2, $y);
             $pdf->Cell($contentW - 4, 5, $label, 0, 1, 'L');
             $y += 6;
@@ -1592,10 +1592,10 @@ class PdfService
                 }
 
                 // Task title bar
-                $pdf->SetFillColor(...array_map(fn($c) => min(255, $c + 60), $accentColor));
+                $pdf->SetFillColor(230, 230, 230);
                 $pdf->Rect($contentX, $y, $contentW, 6.5, 'F');
                 $pdf->SetFont($font, 'B', $fontSize);
-                $pdf->SetTextColor(...$darkColor);
+                $pdf->SetTextColor(30, 30, 30);
                 $pdf->SetXY($contentX + 2, $y + 1);
                 $pdf->Cell($contentW - 4, 4.5, $task['title'], 0, 0, 'L');
 
@@ -1658,7 +1658,7 @@ class PdfService
             $y += 2;
 
             $pdf->SetFont($font, 'B', $fontSize - 0.5);
-            $pdf->SetTextColor(...$accentColor);
+            $pdf->SetTextColor(30, 30, 30);
             $pdf->SetXY($contentX + 2, $y);
             $pdf->Cell($contentW - 4, 5, 'Beachte:', 0, 1, 'L');
             $y += 6;
