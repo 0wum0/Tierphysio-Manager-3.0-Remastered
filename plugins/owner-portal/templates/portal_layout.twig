@@ -1,65 +1,65 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" data-bs-theme="dark" class="set-nav-dark">
 <head>
-    <meta charset="utf-8">
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>{{ page_title ?? 'Besitzerportal' }}</title>
+
+    <link rel="stylesheet" href="/themes/smart-tierphysio/plugins/waves/waves.min.css">
     <link rel="stylesheet" href="/themes/smart-tierphysio/css/smartapp.min.css">
+    <link rel="stylesheet" href="/themes/smart-tierphysio/webfonts/smartadmin/sa-icons.css">
+    <link rel="stylesheet" href="/themes/smart-tierphysio/bridge.css?v=20260308f">
+
+    <script src="/themes/smart-tierphysio/scripts/core/saveloadscript.js"></script>
+
     <style>
-        :root {
-            --portal-primary: #4f7cff;
-            --portal-bg: #0f1117;
-            --portal-surface: #1a1d27;
-            --portal-border: rgba(255,255,255,0.08);
-            --portal-text: rgba(255,255,255,0.87);
-            --portal-muted: rgba(255,255,255,0.45);
-        }
-        * { box-sizing: border-box; }
-        body {
-            background: var(--portal-bg);
-            color: var(--portal-text);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            margin: 0; min-height: 100vh;
-        }
-        .portal-nav {
-            background: var(--portal-surface);
-            border-bottom: 1px solid var(--portal-border);
-            padding: 0 1rem;
-            display: flex; align-items: center; gap: 0;
-            height: 56px; position: sticky; top: 0; z-index: 100;
-        }
-        .portal-nav-brand {
-            font-weight: 700; font-size: 1rem; color: var(--portal-text);
-            text-decoration: none; margin-right: auto;
+        /* ── Portal-specific overrides ── */
+        body { min-height: 100vh; }
+
+        .portal-topbar {
+            position: sticky; top: 0; z-index: 1030;
+            background: var(--bs-body-bg);
+            border-bottom: 1px solid var(--bs-border-color);
+            padding: 0 1.25rem;
+            height: 56px;
             display: flex; align-items: center; gap: 0.5rem;
         }
-        .portal-nav-links { display: flex; align-items: center; gap: 0.25rem; }
-        .portal-nav-links a {
-            color: var(--portal-muted); text-decoration: none; font-size: 0.85rem;
-            padding: 0.4rem 0.7rem; border-radius: 6px; transition: all 0.15s;
-            white-space: nowrap;
+        .portal-topbar-brand {
+            font-weight: 700; font-size: 0.95rem;
+            color: var(--bs-body-color); text-decoration: none;
+            display: flex; align-items: center; gap: 0.5rem;
+            margin-right: auto;
         }
-        .portal-nav-links a:hover, .portal-nav-links a.active {
-            color: var(--portal-text); background: rgba(255,255,255,0.06);
+        .portal-topbar-brand:hover { color: var(--bs-body-color); }
+        .portal-topbar-nav { display: flex; align-items: center; gap: 0.15rem; }
+        .portal-topbar-nav .nav-link {
+            font-size: 0.82rem; padding: 0.35rem 0.65rem;
+            border-radius: 6px; white-space: nowrap;
+            color: var(--bs-secondary-color);
+            display: flex; align-items: center; gap: 0.35rem;
         }
-        .portal-nav-links a.active { color: var(--portal-primary); }
-        .portal-body { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
-        .portal-card {
-            background: var(--portal-surface);
-            border: 1px solid var(--portal-border);
-            border-radius: 12px; padding: 1.25rem;
-            margin-bottom: 1rem;
-        }
-        .portal-card h2 { font-size: 1rem; font-weight: 600; margin: 0 0 1rem; }
-        .portal-page-title { font-size: 1.4rem; font-weight: 700; margin: 0 0 1.25rem; }
+        .portal-topbar-nav .nav-link:hover { color: var(--bs-body-color); background: var(--bs-tertiary-bg); }
+        .portal-topbar-nav .nav-link.active { color: var(--bs-primary); background: var(--bs-tertiary-bg); }
+        .portal-topbar-nav .nav-link-logout { color: var(--bs-danger) !important; }
+
+        .portal-body { max-width: 960px; margin: 0 auto; padding: 1.75rem 1rem 3rem; }
+
+        /* Portal cards use Bootstrap card style */
+        .portal-card { margin-bottom: 1rem; }
+
+        /* Badges */
         .badge-status {
             display: inline-block; padding: 2px 8px; border-radius: 20px;
             font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em;
         }
-        .badge-paid   { background: rgba(34,197,94,.15); color: #22c55e; }
-        .badge-open   { background: rgba(245,158,11,.15); color: #f59e0b; }
-        .badge-overdue{ background: rgba(239,68,68,.15);  color: #ef4444; }
-        .badge-draft  { background: rgba(148,163,184,.15);color: #94a3b8; }
+        .badge-paid    { background: rgba(34,197,94,.15);  color: #22c55e; }
+        .badge-open    { background: rgba(245,158,11,.15); color: #f59e0b; }
+        .badge-overdue { background: rgba(239,68,68,.15);  color: #ef4444; }
+        .badge-draft   { background: rgba(148,163,184,.15);color: #94a3b8; }
+        .badge-aktiv   { background: rgba(34,197,94,.15);  color: #22c55e; }
+        .badge-inaktiv { background: rgba(148,163,184,.15);color: #94a3b8; }
+
+        /* Portal buttons */
         .portal-btn {
             display: inline-flex; align-items: center; gap: 0.4rem;
             padding: 0.45rem 1rem; border-radius: 8px; font-size: 0.85rem;
@@ -67,85 +67,105 @@
             transition: opacity 0.15s;
         }
         .portal-btn:hover { opacity: 0.85; }
-        .portal-btn-primary { background: var(--portal-primary); color: #fff; }
-        .portal-btn-secondary { background: rgba(255,255,255,0.08); color: var(--portal-text); }
+        .portal-btn-primary   { background: var(--bs-primary); color: #fff; }
+        .portal-btn-secondary { background: var(--bs-tertiary-bg); color: var(--bs-body-color); }
+        .portal-btn-danger    { background: var(--bs-danger); color: #fff; }
         .portal-btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
-        .portal-alert {
-            padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.875rem;
-        }
+
+        /* Alerts */
+        .portal-alert { padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.875rem; }
         .portal-alert-error   { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.3); color: #fca5a5; }
         .portal-alert-success { background: rgba(34,197,94,.12);  border: 1px solid rgba(34,197,94,.3);  color: #86efac; }
+
+        /* Pet grid */
         .pet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap: 1rem; }
         .pet-card {
-            background: var(--portal-surface); border: 1px solid var(--portal-border);
-            border-radius: 12px; overflow: hidden; text-decoration: none; color: var(--portal-text);
+            background: var(--bs-secondary-bg); border: 1px solid var(--bs-border-color);
+            border-radius: 12px; overflow: hidden; text-decoration: none; color: var(--bs-body-color);
             transition: border-color 0.15s, transform 0.15s; display: block;
         }
-        .pet-card:hover { border-color: var(--portal-primary); transform: translateY(-2px); }
-        .pet-card-img { width: 100%; height: 140px; object-fit: cover; background: rgba(79,124,255,.1); display: flex; align-items: center; justify-content: center; }
+        .pet-card:hover { border-color: var(--bs-primary); transform: translateY(-2px); }
+        .pet-card-img { width: 100%; height: 140px; object-fit: cover; background: var(--bs-tertiary-bg); display: flex; align-items: center; justify-content: center; }
         .pet-card-body { padding: 0.85rem; }
         .pet-card-name { font-weight: 600; margin-bottom: 0.2rem; }
-        .pet-card-meta { font-size: 0.78rem; color: var(--portal-muted); }
-        .timeline-entry { padding: 0.75rem 0; border-bottom: 1px solid var(--portal-border); }
+        .pet-card-meta { font-size: 0.78rem; color: var(--bs-secondary-color); }
+
+        /* Timeline */
+        .timeline-entry { padding: 0.75rem 0; border-bottom: 1px solid var(--bs-border-color); }
         .timeline-entry:last-child { border-bottom: none; }
-        .timeline-date { font-size: 0.75rem; color: var(--portal-muted); margin-bottom: 0.2rem; }
+        .timeline-date  { font-size: 0.75rem; color: var(--bs-secondary-color); margin-bottom: 0.2rem; }
         .timeline-title { font-weight: 500; font-size: 0.875rem; }
-        .timeline-content { font-size: 0.8rem; color: var(--portal-muted); margin-top: 0.25rem; white-space: pre-line; }
+        .timeline-content { font-size: 0.8rem; color: var(--bs-secondary-color); margin-top: 0.25rem; white-space: pre-line; }
+
+        /* Table */
         table.portal-table { width: 100%; border-collapse: collapse; }
-        table.portal-table th { text-align: left; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--portal-muted); padding: 0 0.75rem 0.5rem; }
-        table.portal-table td { padding: 0.65rem 0.75rem; border-top: 1px solid var(--portal-border); font-size: 0.875rem; vertical-align: middle; }
-        .exercise-card { padding: 1rem; border: 1px solid var(--portal-border); border-radius: 10px; margin-bottom: 0.75rem; }
+        table.portal-table th { text-align: left; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--bs-secondary-color); padding: 0 0.75rem 0.5rem; }
+        table.portal-table td { padding: 0.65rem 0.75rem; border-top: 1px solid var(--bs-border-color); font-size: 0.875rem; vertical-align: middle; }
+
+        /* Exercises */
+        .exercise-card { padding: 1rem; border: 1px solid var(--bs-border-color); border-radius: 10px; margin-bottom: 0.75rem; background: var(--bs-secondary-bg); }
         .exercise-title { font-weight: 600; margin-bottom: 0.4rem; }
-        .exercise-desc { font-size: 0.85rem; color: rgba(255,255,255,0.7); white-space: pre-line; }
+        .exercise-desc  { font-size: 0.85rem; color: var(--bs-secondary-color); white-space: pre-line; }
         .exercise-video { margin-top: 0.75rem; }
+
+        /* Page title */
+        .portal-page-title { font-size: 1.4rem; font-weight: 700; margin: 0 0 1.25rem; }
+
+        /* Modal */
+        .portal-modal { overflow-y: auto !important; -webkit-overflow-scrolling: touch; }
+
         @media(max-width:600px) {
-            .portal-nav-links a span { display:none; }
-            .portal-nav-links a { padding: 0.4rem; }
+            .portal-topbar-nav .nav-link span { display: none; }
+            .portal-topbar-nav .nav-link { padding: 0.4rem; }
             .pet-grid { grid-template-columns: 1fr 1fr; }
             table.portal-table thead { display: none; }
-            table.portal-table tr { display: block; padding: 0.5rem 0; border-bottom: 1px solid var(--portal-border); }
+            table.portal-table tr { display: block; padding: 0.5rem 0; border-bottom: 1px solid var(--bs-border-color); }
             table.portal-table td { display: block; padding: 0.2rem 0; border: none; }
-            table.portal-table td::before { content: attr(data-label); font-size: 0.7rem; color: var(--portal-muted); display: block; }
+            table.portal-table td::before { content: attr(data-label); font-size: 0.7rem; color: var(--bs-secondary-color); display: block; }
             .homework-goals-grid { grid-template-columns: 1fr !important; }
-            .portal-modal { overflow-y: auto !important; -webkit-overflow-scrolling: touch; }
-            .portal-card { padding: 1rem 0.75rem; }
+            .portal-body { padding: 1rem 0.75rem 3rem; }
         }
     </style>
 </head>
 <body>
-<nav class="portal-nav">
-    <a href="/portal/dashboard" class="portal-nav-brand">
-        <svg width="22" height="22" fill="none" viewBox="0 0 24 24"><path stroke="#4f7cff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+
+{# ── Top Navigation Bar ── #}
+<header class="portal-topbar">
+    <a href="/portal/dashboard" class="portal-topbar-brand">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="var(--bs-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
         Mein Tierportal
     </a>
     {% if portal_user is defined and portal_user %}
-    <div class="portal-nav-links">
-        <a href="/portal/dashboard" {% if active_nav == 'dashboard' %}class="active"{% endif %}>
-            <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="2"/><rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="2"/><rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="2"/><rect x="14" y="14" width="7" height="7" stroke="currentColor" stroke-width="2"/></svg>
+    <nav class="portal-topbar-nav">
+        <a href="/portal/dashboard" class="nav-link {% if active_nav == 'dashboard' %}active{% endif %}">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="2"/><rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="2"/><rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="2"/><rect x="14" y="14" width="7" height="7" stroke="currentColor" stroke-width="2"/></svg>
             <span>Übersicht</span>
         </a>
-        <a href="/portal/tiere" {% if active_nav == 'tiere' %}class="active"{% endif %}>
-            <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="2"/><path stroke="currentColor" stroke-width="2" d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        <a href="/portal/tiere" class="nav-link {% if active_nav == 'tiere' %}active{% endif %}">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
             <span>Tiere</span>
         </a>
-        <a href="/portal/termine" {% if active_nav == 'termine' %}class="active"{% endif %}>
-            <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/></svg>
+        <a href="/portal/termine" class="nav-link {% if active_nav == 'termine' %}active{% endif %}">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/></svg>
             <span>Termine</span>
         </a>
-        <a href="/portal/rechnungen" {% if active_nav == 'rechnungen' %}class="active"{% endif %}>
-            <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>
+        <a href="/portal/rechnungen" class="nav-link {% if active_nav == 'rechnungen' %}active{% endif %}">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>
             <span>Rechnungen</span>
         </a>
-        <a href="/portal/logout" style="color:#ef4444;">
-            <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <a href="/portal/logout" class="nav-link nav-link-logout">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             <span>Abmelden</span>
         </a>
-    </div>
+    </nav>
     {% endif %}
-</nav>
+</header>
+
 <div class="portal-body">
     {% block content %}{% endblock %}
 </div>
+
 <script src="/themes/smart-tierphysio/scripts/bootstrap.bundle.min.js"></script>
+<script src="/themes/smart-tierphysio/scripts/core/smartApp.js"></script>
 </body>
 </html>
