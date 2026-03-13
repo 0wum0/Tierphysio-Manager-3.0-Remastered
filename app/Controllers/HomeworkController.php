@@ -23,7 +23,25 @@ class HomeworkController
     public function getTemplates(): void
     {
         header('Content-Type: application/json');
-        echo json_encode($this->homeworkRepository->findAllTemplates());
+        $freqMap = [
+            'daily'             => 'Täglich',
+            'twice_daily'       => '2x täglich',
+            'three_times_daily' => '3x täglich',
+            'weekly'            => 'Wöchentlich',
+            'as_needed'         => 'Bei Bedarf',
+        ];
+        $unitMap = [
+            'minutes' => 'Minuten',
+            'hours'   => 'Stunden',
+            'days'    => 'Tage',
+            'weeks'   => 'Wochen',
+        ];
+        $templates = $this->homeworkRepository->findAllTemplates();
+        foreach ($templates as &$t) {
+            $t['frequency']     = $freqMap[$t['frequency']]     ?? $t['frequency'];
+            $t['duration_unit'] = $unitMap[$t['duration_unit']] ?? $t['duration_unit'];
+        }
+        echo json_encode($templates);
         exit;
     }
 

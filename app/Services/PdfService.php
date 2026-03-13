@@ -1553,6 +1553,21 @@ class PdfService
             $pdf->Cell($contentW - 4, 4, 'Therapieplan', 0, 1, 'L');
             $y += 10;
 
+            /* translate any stored English ENUM values to German */
+            $freqDe = [
+                'daily'             => 'Täglich',
+                'twice_daily'       => '2x täglich',
+                'three_times_daily' => '3x täglich',
+                'weekly'            => 'Wöchentlich',
+                'as_needed'         => 'Bei Bedarf',
+            ];
+            $unitDe = [
+                'minutes' => 'Minuten',
+                'hours'   => 'Stunden',
+                'days'    => 'Tage',
+                'weeks'   => 'Wochen',
+            ];
+
             foreach ($tasks as $task) {
                 // Estimate needed height
                 $descText  = $task['description'] ?? '';
@@ -1584,10 +1599,16 @@ class PdfService
                 $pdf->SetXY($contentX + 2, $y + 1);
                 $pdf->Cell($contentW - 4, 4.5, $task['title'], 0, 0, 'L');
 
-                // Frequency / duration on right
-                $freqDur = implode('   ', array_filter([
-                    $task['frequency'] ?? '',
-                    $task['duration'] ?? '',
+                // Frequency / duration on right (translate English ENUM keys → German)
+                $rawFreq = $task['frequency'] ?? '';
+                $rawDur  = $task['duration']  ?? '';
+                /* duration may be stored as "10 minutes" or "10 Minuten" — translate unit part */
+                $rawDur = preg_replace_callback('/\b(minutes|hours|days|weeks)\b/i', function($m) use ($unitDe) {
+                    return $unitDe[strtolower($m[1])] ?? $m[1];
+                }, $rawDur);
+                $freqDur = implode('   ·   ', array_filter([
+                    $freqDe[$rawFreq] ?? $rawFreq,
+                    $rawDur,
                 ]));
                 if ($freqDur) {
                     $pdf->SetFont($font, '', $fontSize - 1.5);
