@@ -1385,6 +1385,7 @@ class PdfService
         };
 
         $drawSidebar();
+        $pdf->SetXY($contentX, 8); /* reset cursor after sidebar drawing */
 
         // ── Company info top right ────────────────────────────────────
         $pdf->SetFont($font, 'B', $fontSize + 1);
@@ -1401,7 +1402,7 @@ class PdfService
             $companyEmail,
             ($showWebsite && $companyWebsite) ? $companyWebsite : '',
         ]);
-        $infoY = 14;
+        $infoY = 14; /* start below the bold company name (8+5=13, round up to 14) */
         foreach ($infoLines as $line) {
             $pdf->SetXY($contentX + ($contentW / 2), $infoY);
             $pdf->Cell($contentW / 2, 4, $line, 0, 1, 'R');
@@ -1409,13 +1410,13 @@ class PdfService
         }
 
         // ── "Hausaufgaben" heading ────────────────────────────────────
-        $headingY = $infoY + 4;
+        $headingY = max($infoY + 4, 36);
         $pdf->SetFont($font, 'B', 20);
         $pdf->SetTextColor(...$accentColor);
         $pdf->SetXY($contentX, $headingY);
         $pdf->Cell($contentW, 10, 'Hausaufgaben', 0, 1, 'L');
 
-        $y = $headingY + 12;
+        $y = $headingY + 13;
 
         // ── Owner + Pet info block ────────────────────────────────────
         $pdf->SetDrawColor(...$colorLine);
@@ -1503,12 +1504,13 @@ class PdfService
 
         foreach ($sections as [$label, $text]) {
             if (empty(trim($text))) continue;
-            if ($pdf->GetY() > 240) {
+            if ($y > 240 || $pdf->GetY() > 240) {
                 $pdf->AddPage();
                 $drawSidebar();
+                $pdf->SetXY($contentX, 15);
                 $y = 15;
             } else {
-                $y = $pdf->GetY() + 2;
+                $y = max($y, $pdf->GetY()) + 2;
             }
 
             $pdf->SetDrawColor(...$colorLine);
@@ -1531,10 +1533,11 @@ class PdfService
 
         // ── Therapy plan (tasks) ──────────────────────────────────────
         if (!empty($tasks)) {
-            $y = $pdf->GetY() + 3;
+            $y = max($y, $pdf->GetY()) + 3;
             if ($y > 240) {
                 $pdf->AddPage();
                 $drawSidebar();
+                $pdf->SetXY($contentX, 15);
                 $y = 15;
             }
 
@@ -1561,6 +1564,7 @@ class PdfService
                 if ($y + $taskH > 258) {
                     $pdf->AddPage();
                     $drawSidebar();
+                    $pdf->SetXY($contentX, 15);
                     $y = 15;
                     // Repeat section header
                     $pdf->SetFillColor(...$colorTableHdrBg);
@@ -1619,10 +1623,11 @@ class PdfService
 
         // ── Beachte / Hinweise ────────────────────────────────────────
         if (!empty(trim($plan['general_notes'] ?? ''))) {
-            $y = $pdf->GetY() + 3;
+            $y = max($y, $pdf->GetY()) + 3;
             if ($y > 230) {
                 $pdf->AddPage();
                 $drawSidebar();
+                $pdf->SetXY($contentX, 15);
                 $y = 15;
             }
 
@@ -1645,10 +1650,11 @@ class PdfService
         }
 
         // ── Next appointment + Therapist signature ────────────────────
-        $y = $pdf->GetY() + 5;
+        $y = max($y, $pdf->GetY()) + 5;
         if ($y > 240) {
             $pdf->AddPage();
             $drawSidebar();
+            $pdf->SetXY($contentX, 15);
             $y = 15;
         }
 
@@ -1679,6 +1685,7 @@ class PdfService
         if ($currentY > $footerTopY - 10) {
             $pdf->AddPage();
             $drawSidebar();
+            $pdf->SetXY($contentX, 15);
         }
 
         $pdf->SetDrawColor(...$colorLine);
