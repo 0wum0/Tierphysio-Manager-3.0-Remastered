@@ -1610,8 +1610,8 @@ window.openCreatePlanModal = function() {
         '<div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">' +
         '<div class="modal-header"><h3 class="modal-title">Neuer Hausaufgabenplan &mdash; ' + _hwEsc(p.name) + '</h3>' +
         '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schlie&szlig;en"></button></div>' +
-        '<form id="create-plan-form"><input type="hidden" name="_csrf_token" value="{{ csrf_token }}">' +
         '<div class="modal-body">' +
+        '<form id="create-plan-form"><input type="hidden" name="_csrf_token" value="{{ csrf_token }}">' +
         '<div class="row g-3 mb-3">' +
         '<div class="col-md-4"><label class="form-label fw-semibold">Datum</label>' +
         '<input type="date" name="plan_date" class="form-control" value="' + today + '"></div>' +
@@ -1629,24 +1629,32 @@ window.openCreatePlanModal = function() {
         '<textarea name="short_term_goals" class="form-control" rows="2" placeholder="Ziele f&uuml;r die n&auml;chsten 2&ndash;4 Wochen&hellip;"></textarea></div>' +
         '<div class="col-md-6"><label class="form-label fw-semibold">Langfristige Ziele</label>' +
         '<textarea name="long_term_goals" class="form-control" rows="2" placeholder="Langfristige Therapieziele&hellip;"></textarea></div></div>' +
-        '<div class="mb-4"><label class="form-label fw-semibold">Allgemeine Hinweise</label>' +
+        '<div class="mb-3"><label class="form-label fw-semibold">Allgemeine Hinweise</label>' +
         '<textarea name="general_notes" class="form-control" rows="2" placeholder="Wichtige Hinweise f&uuml;r den Besitzer&hellip;"></textarea></div>' +
-        '<hr><div class="d-flex align-items-center justify-content-between mb-3">' +
-        '<h6 class="mb-0 fw-600">&#x1F3C3; Aufgaben</h6>' +
-        '<div class="d-flex gap-2">' +
-        '<select id="cp-template-select" class="form-select form-select-sm" style="max-width:260px;"><option value="">&#8212; Vorlage einf&uuml;gen &#8212;</option></select>' +
-        '<button type="button" class="btn btn-secondary btn-sm" onclick="_cpAddTaskFromTemplate()">Hinzuf&uuml;gen</button>' +
+        '</form>' +
+        '<hr>' +
+        '<div class="d-flex align-items-center justify-content-between mb-2">' +
+        '<h6 class="mb-0 fw-600">&#x1F4CB; Vorlagen ausw&auml;hlen</h6>' +
+        '<div class="d-flex gap-2 align-items-center">' +
+        '<button type="button" class="btn btn-primary btn-sm" onclick="_cpAddSelectedTemplates()">' +
+        '<svg width="12" height="12" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>' +
+        ' Ausgew&auml;hlte hinzuf&uuml;gen</button>' +
         '<button type="button" class="btn btn-outline-secondary btn-sm" onclick="_cpAddTask(\'\',\'\',\'\',\'\',\'\')">' +
-        '<svg width="12" height="12" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Leer</button>' +
+        '<svg width="12" height="12" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Leere Zeile</button>' +
         '</div></div>' +
+        '<div id="cp-template-checklist" style="max-height:200px;overflow-y:auto;border:1px solid var(--bs-border-color);border-radius:6px;padding:0.5rem;margin-bottom:1rem;background:var(--bs-body-bg);">' +
+        '<div class="text-muted" style="font-size:0.82rem;padding:0.5rem;">Lade Vorlagen&hellip;</div></div>' +
+        '<div class="d-flex align-items-center justify-content-between mb-2">' +
+        '<h6 class="mb-0 fw-600">&#x1F3C3; Aufgaben</h6></div>' +
         '<div id="cp-tasks-container"></div>' +
         '</div>' +
         '<div class="modal-footer">' +
         '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>' +
         '<button type="button" class="btn btn-primary" id="cp-save-btn">' +
         '<svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline stroke="currentColor" stroke-width="2" points="17 21 17 13 7 13 7 21"/></svg>' +
-        ' Plan speichern</button></div>' +
-        '</form></div></div>';
+        ' Plan speichern</button>' +
+        '</div>' +
+        '</div></div>';
     document.body.appendChild(modalEl);
     var modal = new bootstrap.Modal(modalEl);
     modal.show();
@@ -1665,6 +1673,15 @@ window.openCreatePlanModal = function() {
         btn.disabled = true;
         btn.textContent = 'Speichert\u2026';
         var fd = new FormData(document.getElementById('create-plan-form'));
+        /* Collect task rows which live outside the <form> element */
+        var container = document.getElementById('cp-tasks-container');
+        if (container) {
+            container.querySelectorAll('[name="task_title[]"]').forEach(function(el,i) { fd.append('task_title[]', el.value); });
+            container.querySelectorAll('[name="task_description[]"]').forEach(function(el) { fd.append('task_description[]', el.value); });
+            container.querySelectorAll('[name="task_frequency[]"]').forEach(function(el) { fd.append('task_frequency[]', el.value); });
+            container.querySelectorAll('[name="task_duration[]"]').forEach(function(el) { fd.append('task_duration[]', el.value); });
+            container.querySelectorAll('[name="task_notes[]"]').forEach(function(el) { fd.append('task_notes[]', el.value); });
+        }
         fetch('/api/patients/' + p.id + '/plans', { method: 'POST', body: fd, headers: { 'Accept': 'application/json' } })
             .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, d: d }; }); })
             .then(function(res) {
@@ -1690,30 +1707,42 @@ window.openCreatePlanModal = function() {
 };
 
 function _loadCpTemplates() {
-    if (_hwTemplates.length) { _fillCpTemplateSelect(); return; }
+    if (_hwTemplates.length) { _fillCpTemplateChecklist(); return; }
     fetch('/api/homework/templates', { headers: { 'Accept': 'application/json' } })
         .then(function(r) { return r.json(); })
         .then(function(tpls) {
             _hwTemplates = Array.isArray(tpls) ? tpls : [];
-            _fillCpTemplateSelect();
+            _fillCpTemplateChecklist();
         })
-        .catch(function(){});
+        .catch(function(){
+            var cl = document.getElementById('cp-template-checklist');
+            if (cl) cl.innerHTML = '<div class="text-muted" style="font-size:0.82rem;padding:0.5rem;">Keine Vorlagen verf\u00fcgbar</div>';
+        });
 }
 
-function _fillCpTemplateSelect() {
-    var sel = document.getElementById('cp-template-select');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">&#8212; Vorlage einf\u00fcgen &#8212;</option>';
-    _hwTemplates.forEach(function(t) {
-        var o = document.createElement('option');
-        o.value = t.id;
-        o.textContent = (t.category_emoji || '\uD83D\uDCCC') + ' ' + t.title;
-        o.dataset.description = t.description || '';
-        o.dataset.frequency   = t.frequency   || '';
-        o.dataset.duration    = t.duration_value ? (t.duration_value + ' ' + (t.duration_unit||'')) : '';
-        o.dataset.notes       = t.therapist_notes || '';
-        sel.appendChild(o);
-    });
+function _fillCpTemplateChecklist() {
+    var cl = document.getElementById('cp-template-checklist');
+    if (!cl) return;
+    if (!_hwTemplates.length) {
+        cl.innerHTML = '<div class="text-muted" style="font-size:0.82rem;padding:0.5rem;">Keine Vorlagen verf\u00fcgbar</div>';
+        return;
+    }
+    cl.innerHTML = _hwTemplates.map(function(t) {
+        var emoji = t.category_emoji || '\uD83D\uDCCC';
+        var dur = t.duration_value ? (t.duration_value + ' ' + (t.duration_unit||'')) : '';
+        return '<label style="display:flex;align-items:center;gap:0.6rem;padding:0.35rem 0.5rem;border-radius:4px;cursor:pointer;font-size:0.83rem;" ' +
+            'onmouseover="this.style.background=\'var(--bs-secondary-bg)\'" onmouseout="this.style.background=\'\'">'+
+            '<input type="checkbox" class="cp-tpl-cb form-check-input flex-shrink-0" style="margin:0;" ' +
+            'data-title="' + _hwEsc(t.title) + '" ' +
+            'data-description="' + _hwEsc(t.description||'') + '" ' +
+            'data-frequency="' + _hwEsc(t.frequency||'') + '" ' +
+            'data-duration="' + _hwEsc(dur) + '" ' +
+            'data-notes="' + _hwEsc(t.therapist_notes||'') + '">' +
+            '<span>' + emoji + ' <strong>' + _hwEsc(t.title) + '</strong>' +
+            (t.frequency ? ' <span style="color:var(--bs-secondary-color);">&middot; ' + _hwEsc(t.frequency) + '</span>' : '') +
+            (dur ? ' <span style="color:var(--bs-secondary-color);">&middot; ' + _hwEsc(dur) + '</span>' : '') +
+            '</span></label>';
+    }).join('');
 }
 
 var _cpTaskIdx = 0;
@@ -1740,13 +1769,13 @@ window._cpAddTask = function(title, description, frequency, duration, notes) {
     container.appendChild(row);
 };
 
-window._cpAddTaskFromTemplate = function() {
-    var sel = document.getElementById('cp-template-select');
-    if (!sel || !sel.value) return;
-    var opt = sel.options[sel.selectedIndex];
-    var title = opt.textContent.replace(/^.\s/,'').trim();
-    _cpAddTask(title, opt.dataset.description, opt.dataset.frequency, opt.dataset.duration, opt.dataset.notes);
-    sel.value = '';
+window._cpAddSelectedTemplates = function() {
+    var checkboxes = document.querySelectorAll('#cp-template-checklist .cp-tpl-cb:checked');
+    if (!checkboxes.length) { return; }
+    checkboxes.forEach(function(cb) {
+        _cpAddTask(cb.dataset.title, cb.dataset.description, cb.dataset.frequency, cb.dataset.duration, cb.dataset.notes);
+        cb.checked = false;
+    });
 };
 
 /* Export globally */
