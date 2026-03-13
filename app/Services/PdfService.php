@@ -1263,10 +1263,10 @@ class PdfService
         $settings = $this->settingsRepository->all();
 
         $sidebarColor      = $this->hexToRgb($settings['pdf_primary_color'] ?? '#8B9E8B');
-        /* Homework PDF always uses neutral/dark colors regardless of PDF design settings */
+        /* Homework PDF uses brand colors only for company header; rest is neutral */
         $accentColor       = [30, 30, 30];
-        $colorCompanyName  = [30, 30, 30];
-        $colorCompanyInfo  = [100, 100, 100];
+        $colorCompanyName  = $this->hexToRgb($settings['pdf_color_company_name'] ?? '#1E1E1E');
+        $colorCompanyInfo  = $this->hexToRgb($settings['pdf_color_company_info'] ?? '#6E6E6E');
         $colorTableHdrBg   = [60, 60, 60];
         $colorTableHdrText = [255, 255, 255];
         $colorTableText    = [30, 30, 30];
