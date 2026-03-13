@@ -17,32 +17,32 @@ class Router
         $this->container = $container;
     }
 
-    public function get(string $path, string|array $handler, array $middleware = []): void
+    public function get(string $path, string|array|callable $handler, array $middleware = []): void
     {
         $this->addRoute('GET', $path, $handler, $middleware);
     }
 
-    public function post(string $path, string|array $handler, array $middleware = []): void
+    public function post(string $path, string|array|callable $handler, array $middleware = []): void
     {
         $this->addRoute('POST', $path, $handler, $middleware);
     }
 
-    public function put(string $path, string|array $handler, array $middleware = []): void
+    public function put(string $path, string|array|callable $handler, array $middleware = []): void
     {
         $this->addRoute('PUT', $path, $handler, $middleware);
     }
 
-    public function delete(string $path, string|array $handler, array $middleware = []): void
+    public function delete(string $path, string|array|callable $handler, array $middleware = []): void
     {
         $this->addRoute('DELETE', $path, $handler, $middleware);
     }
 
-    public function patch(string $path, string|array $handler, array $middleware = []): void
+    public function patch(string $path, string|array|callable $handler, array $middleware = []): void
     {
         $this->addRoute('PATCH', $path, $handler, $middleware);
     }
 
-    private function addRoute(string $method, string $path, string|array $handler, array $middleware = []): void
+    private function addRoute(string $method, string $path, string|array|callable $handler, array $middleware = []): void
     {
         $pattern = $this->pathToPattern($path);
         $this->routes[] = [
@@ -125,7 +125,7 @@ class Router
         return $map[$name] ?? $name;
     }
 
-    private function callHandler(string|array $handler, array $params): void
+    private function callHandler(string|array|callable $handler, array $params): void
     {
         if (is_string($handler) && str_contains($handler, '@')) {
             [$class, $method] = explode('@', $handler);

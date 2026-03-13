@@ -125,3 +125,30 @@ $router->get('/api/notifications', [NotificationController::class, 'index'], ['a
 $router->get('/api/invoice-form-data', [InvoiceController::class, 'formData'], ['auth']);
 
 $router->get('/cron/geburtstag', [CronController::class, 'birthday']);
+
+// Serve storage files (uploads/patients) — outside DocumentRoot when public/ is the root
+$router->get('/storage/{dir}/{file}', function(array $params) {
+    $allowed = ['uploads', 'patients'];
+    $dir  = $params['dir']  ?? '';
+    $file = $params['file'] ?? '';
+    if (!in_array($dir, $allowed, true) || $file === '' || str_contains($file, '..') || str_contains($file, '/')) {
+        http_response_code(403); exit;
+    }
+    $path = STORAGE_PATH . '/' . $dir . '/' . $file;
+    if (!is_file($path)) { http_response_code(404); exit; }
+    $ext  = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+    $mime = match($ext) {
+        'jpg', 'jpeg' => 'image/jpeg',
+        'png'         => 'image/png',
+        'gif'         => 'image/gif',
+        'webp'        => 'image/webp',
+        'svg'         => 'image/svg+xml',
+        'pdf'         => 'application/pdf',
+        default       => 'application/octet-stream',
+    };
+    header('Content-Type: ' . $mime);
+    header('Content-Length: ' . filesize($path));
+    header('Cache-Control: public, max-age=86400');
+    readfile($path);
+    exit;
+});
