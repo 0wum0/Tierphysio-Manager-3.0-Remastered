@@ -185,6 +185,46 @@ class OwnerPortalController extends Controller
         ]);
     }
 
+    /* ── GET /portal/tiere/{id}/foto/{file} ── */
+    public function petPhoto(array $params = []): void
+    {
+        $user    = $this->requireOwnerAuth();
+        $ownerId = (int)$user['owner_id'];
+        $petId   = (int)($params['id'] ?? 0);
+
+        /* Security: verify this pet belongs to this owner */
+        $pet = $this->repo->getPetByIdAndOwner($petId, $ownerId);
+        if (!$pet) { $this->abort(403); return; }
+
+        $file = basename($params['file'] ?? '');
+        if (!$file) { $this->abort(404); return; }
+
+        $candidates = [
+            STORAGE_PATH . '/patients/' . $petId . '/' . $file,
+            STORAGE_PATH . '/patients/' . $file,
+        ];
+
+        $path = null;
+        foreach ($candidates as $candidate) {
+            if (file_exists($candidate) && is_file($candidate)) {
+                $path = $candidate;
+                break;
+            }
+        }
+
+        if ($path === null) { $this->abort(404); return; }
+
+        $finfo    = new \finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($path);
+        if (!str_starts_with($mimeType, 'image/')) { $this->abort(403); return; }
+
+        header('Content-Type: ' . $mimeType);
+        header('Content-Length: ' . filesize($path));
+        header('Cache-Control: public, max-age=86400');
+        readfile($path);
+        exit;
+    }
+
     /* ── GET /portal/tiere/{id}/bearbeiten ── */
     public function petEdit(array $params = []): void
     {

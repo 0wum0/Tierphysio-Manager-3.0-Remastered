@@ -11,7 +11,7 @@
   <div class="card-body d-flex gap-3 align-items-start flex-wrap">
     <div style="flex-shrink:0;">
         {% if pet.photo %}
-            <img src="/patienten/{{ pet.id }}/foto/{{ pet.photo }}" alt="{{ pet.name }}"
+            <img src="/portal/tiere/{{ pet.id }}/foto/{{ pet.photo }}" alt="{{ pet.name }}"
                  style="width:90px;height:90px;object-fit:cover;border-radius:12px;">
         {% else %}
             <div style="width:90px;height:90px;border-radius:12px;background:var(--bs-tertiary-bg);display:flex;align-items:center;justify-content:center;">
