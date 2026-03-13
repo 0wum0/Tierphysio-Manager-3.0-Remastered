@@ -87,17 +87,31 @@ class PatientController extends Controller
 
         $invoiceStats = $this->invoiceService->getInvoiceStatsByPatientId((int)$params['id']);
 
+        /* Fire patientHeaderActions hook — collect HTML buttons from plugins */
+        $headerActions = '';
+        try {
+            $pm = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\PluginManager::class);
+            $context = ['patient' => $patient, 'owner' => $owner];
+            foreach ($pm->getHookCallbacks('patientHeaderActions') as $cb) {
+                $html = $cb($context);
+                if (is_string($html) && $html !== '') {
+                    $headerActions .= $html;
+                }
+            }
+        } catch (\Throwable) {}
+
         $this->render('patients/show.twig', [
-            'page_title'       => $patient['name'],
-            'patient'          => $patient,
-            'owner'            => $owner,
-            'timeline'         => $timeline,
-            'owners'           => $owners,
-            'treatment_types'  => $treatmentTypes,
-            'next_number'      => $this->invoiceService->generateInvoiceNumber(),
-            'kleinunternehmer' => ($settings['kleinunternehmer'] ?? '0') === '1',
-            'default_tax_rate' => $settings['default_tax_rate'] ?? '19',
-            'invoice_stats'    => $invoiceStats,
+            'page_title'          => $patient['name'],
+            'patient'             => $patient,
+            'owner'               => $owner,
+            'timeline'            => $timeline,
+            'owners'              => $owners,
+            'treatment_types'     => $treatmentTypes,
+            'next_number'         => $this->invoiceService->generateInvoiceNumber(),
+            'kleinunternehmer'    => ($settings['kleinunternehmer'] ?? '0') === '1',
+            'default_tax_rate'    => $settings['default_tax_rate'] ?? '19',
+            'invoice_stats'       => $invoiceStats,
+            'plugin_header_actions' => $headerActions,
         ]);
     }
 

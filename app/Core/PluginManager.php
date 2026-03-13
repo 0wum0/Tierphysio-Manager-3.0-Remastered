@@ -120,6 +120,14 @@ class PluginManager
         }
     }
 
+    public function getHookCallbacks(string $hook): array
+    {
+        if (empty($this->hooks[$hook])) {
+            return [];
+        }
+        return array_column($this->hooks[$hook], 'callback');
+    }
+
     public function getDashboardWidgets(array $context = []): array
     {
         $widgets = [];

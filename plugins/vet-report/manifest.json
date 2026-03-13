@@ -1,0 +1,10 @@
+{
+    "name": "Tierarztbericht",
+    "slug": "vet-report",
+    "version": "1.0.0",
+    "description": "Erstellt automatisch einen strukturierten Tierarztbericht als PDF für die Weiterleitung an Tierärzte.",
+    "author": "Tierphysio Manager",
+    "min_app_version": "3.0.0",
+    "service_provider": "Plugins\\VetReport\\ServiceProvider",
+    "hooks": ["registerRoutes", "patientHeaderActions"]
+}
