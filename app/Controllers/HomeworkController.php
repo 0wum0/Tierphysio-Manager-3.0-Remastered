@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Core\Auth;
+use App\Core\Database;
 use App\Repositories\HomeworkRepository;
 use App\Repositories\PatientRepository;
 
@@ -10,11 +11,13 @@ class HomeworkController
 {
     private HomeworkRepository $homeworkRepository;
     private PatientRepository $patientRepository;
+    private Database $db;
 
-    public function __construct(HomeworkRepository $homeworkRepository, PatientRepository $patientRepository)
+    public function __construct(HomeworkRepository $homeworkRepository, PatientRepository $patientRepository, Database $db)
     {
         $this->homeworkRepository = $homeworkRepository;
         $this->patientRepository = $patientRepository;
+        $this->db = $db;
     }
 
     public function getTemplates(): void
@@ -227,6 +230,137 @@ class HomeworkController
         ]);
 
         header('Content-Type: application/json');
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
+    /* ── Homework Plans (portal_homework_plans) ── */
+
+    public function getPatientPlans(array $params = []): void
+    {
+        header('Content-Type: application/json');
+        $patientId = (int)($params['patient_id'] ?? 0);
+        if ($patientId === 0) { echo json_encode([]); exit; }
+
+        $stmt = $this->db->query(
+            'SELECT hp.*, u.name AS created_by_name
+             FROM portal_homework_plans hp
+             LEFT JOIN users u ON u.id = hp.created_by
+             WHERE hp.patient_id = ?
+             ORDER BY hp.plan_date DESC, hp.id DESC',
+            [$patientId]
+        );
+        $plans = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        foreach ($plans as &$plan) {
+            $tasks = $this->db->query(
+                'SELECT * FROM portal_homework_plan_tasks WHERE plan_id = ? ORDER BY sort_order ASC, id ASC',
+                [(int)$plan['id']]
+            )->fetchAll(\PDO::FETCH_ASSOC);
+            $plan['tasks'] = $tasks;
+        }
+        echo json_encode($plans);
+        exit;
+    }
+
+    public function createPatientPlan(array $params = []): void
+    {
+        header('Content-Type: application/json');
+        $patientId = (int)($params['patient_id'] ?? 0);
+        if ($patientId === 0) {
+            http_response_code(400);
+            echo json_encode(['error' => 'Patient-ID fehlt']);
+            exit;
+        }
+
+        if (!Auth::validateCsrfToken($_POST['_csrf_token'] ?? '')) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Ungültiger CSRF-Token']);
+            exit;
+        }
+
+        $patient = $this->patientRepository->findById($patientId);
+        if (!$patient) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Patient nicht gefunden']);
+            exit;
+        }
+
+        $ownerId = (int)($patient['owner_id'] ?? 0);
+        $userId  = Auth::getCurrentUserId();
+
+        $this->db->query(
+            'INSERT INTO portal_homework_plans
+             (patient_id, owner_id, plan_date, physio_principles, short_term_goals,
+              long_term_goals, therapy_means, general_notes, next_appointment, therapist_name,
+              status, created_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [
+                $patientId,
+                $ownerId,
+                $_POST['plan_date'] ?? date('Y-m-d'),
+                $_POST['physio_principles'] ?? null,
+                $_POST['short_term_goals']  ?? null,
+                $_POST['long_term_goals']   ?? null,
+                $_POST['therapy_means']     ?? null,
+                $_POST['general_notes']     ?? null,
+                $_POST['next_appointment']  ?? null,
+                $_POST['therapist_name']    ?? null,
+                'active',
+                $userId,
+            ]
+        );
+        $planId = (int)$this->db->lastInsertId();
+
+        $titles       = $_POST['task_title']       ?? [];
+        $descriptions = $_POST['task_description'] ?? [];
+        $frequencies  = $_POST['task_frequency']   ?? [];
+        $durations    = $_POST['task_duration']    ?? [];
+        $notes        = $_POST['task_notes']       ?? [];
+
+        foreach ($titles as $i => $title) {
+            if (empty(trim($title))) continue;
+            $this->db->query(
+                'INSERT INTO portal_homework_plan_tasks
+                 (plan_id, title, description, frequency, duration, therapist_notes, sort_order)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [
+                    $planId,
+                    trim($title),
+                    $descriptions[$i] ?? null,
+                    $frequencies[$i]  ?? null,
+                    $durations[$i]    ?? null,
+                    $notes[$i]        ?? null,
+                    $i,
+                ]
+            );
+        }
+
+        echo json_encode(['success' => true, 'plan_id' => $planId]);
+        exit;
+    }
+
+    public function deletePatientPlan(array $params = []): void
+    {
+        header('Content-Type: application/json');
+        $patientId = (int)($params['patient_id'] ?? 0);
+        $planId    = (int)($params['plan_id']    ?? 0);
+
+        $csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($_POST['_csrf_token'] ?? '');
+        if (!Auth::validateCsrfToken($csrfToken)) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Ungültiger CSRF-Token']);
+            exit;
+        }
+
+        $stmt = $this->db->query('SELECT id FROM portal_homework_plans WHERE id = ? AND patient_id = ? LIMIT 1', [$planId, $patientId]);
+        if (!$stmt->fetch()) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Plan nicht gefunden']);
+            exit;
+        }
+
+        $this->db->query('DELETE FROM portal_homework_plans WHERE id = ?', [$planId]);
         echo json_encode(['success' => true]);
         exit;
     }

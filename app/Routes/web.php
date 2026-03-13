@@ -116,6 +116,11 @@ $router->get('/api/patients/{patient_id}/homework', [HomeworkController::class, 
 $router->post('/api/patients/{patient_id}/homework', [HomeworkController::class, 'createPatientHomework'], ['auth']);
 $router->delete('/api/patients/{patient_id}/homework/{homework_id}', [HomeworkController::class, 'deletePatientHomework'], ['auth']);
 
+// Hausaufgaben-Pläne API (portal_homework_plans)
+$router->get('/api/patients/{patient_id}/plans', [HomeworkController::class, 'getPatientPlans'], ['auth']);
+$router->post('/api/patients/{patient_id}/plans', [HomeworkController::class, 'createPatientPlan'], ['auth']);
+$router->delete('/api/patients/{patient_id}/plans/{plan_id}', [HomeworkController::class, 'deletePatientPlan'], ['auth']);
+
 $router->get('/api/notifications', [NotificationController::class, 'index'], ['auth']);
 $router->get('/api/invoice-form-data', [InvoiceController::class, 'formData'], ['auth']);
 
