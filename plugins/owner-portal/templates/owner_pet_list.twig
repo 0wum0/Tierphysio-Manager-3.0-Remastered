@@ -10,7 +10,7 @@
         <a href="/portal/tiere/{{ pet.id }}" class="pet-card">
             <div class="pet-card-img">
                 {% if pet.photo %}
-                    <img src="/storage/uploads/{{ pet.photo }}" alt="{{ pet.name }}" style="width:100%;height:140px;object-fit:cover;">
+                    <img src="/patienten/{{ pet.id }}/foto/{{ pet.photo }}" alt="{{ pet.name }}" style="width:100%;height:140px;object-fit:cover;">
                 {% else %}
                     <div style="width:100%;height:140px;display:flex;align-items:center;justify-content:center;background:var(--bs-tertiary-bg);">
                         <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="opacity:.25;"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.5"/><path stroke="currentColor" stroke-width="1.5" d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>

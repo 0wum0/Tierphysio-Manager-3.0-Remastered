@@ -155,6 +155,32 @@ class OwnerPortalRepository
         return $row ?: null;
     }
 
+    public function updatePet(int $patientId, array $data): void
+    {
+        $allowed = ['name', 'species', 'breed', 'birth_date', 'gender', 'color', 'chip_number', 'photo'];
+        $sets    = [];
+        $values  = [];
+        foreach ($allowed as $col) {
+            if (array_key_exists($col, $data)) {
+                $sets[]  = "`$col` = ?";
+                $values[] = $data[$col];
+            }
+        }
+        if (empty($sets)) return;
+        $values[] = $patientId;
+        $this->db->execute('UPDATE patients SET ' . implode(', ', $sets) . ' WHERE id = ?', $values);
+    }
+
+    public function findOwnerPortalUserByOwnerId(int $ownerId): ?array
+    {
+        $stmt = $this->db->query(
+            'SELECT u.*, o.first_name, o.last_name FROM owner_portal_users u JOIN owners o ON o.id = u.owner_id WHERE u.owner_id = ? LIMIT 1',
+            [$ownerId]
+        );
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
     public function getPetTimeline(int $patientId): array
     {
         $stmt = $this->db->query(

@@ -185,6 +185,73 @@ class OwnerPortalController extends Controller
         ]);
     }
 
+    /* ── GET /portal/tiere/{id}/bearbeiten ── */
+    public function petEdit(array $params = []): void
+    {
+        $user    = $this->requireOwnerAuth();
+        $ownerId = (int)$user['owner_id'];
+        $petId   = (int)($params['id'] ?? 0);
+
+        $pet = $this->repo->getPetByIdAndOwner($petId, $ownerId);
+        if (!$pet) { $this->abort(404); return; }
+
+        $this->render('@owner-portal/owner_pet_edit.twig', [
+            'page_title'  => $pet['name'] . ' bearbeiten',
+            'portal_user' => $user,
+            'pet'         => $pet,
+            'csrf_token'  => $this->session->generateCsrfToken(),
+            'success'     => $this->session->getFlash('success'),
+            'error'       => $this->session->getFlash('error'),
+        ]);
+    }
+
+    /* ── POST /portal/tiere/{id}/bearbeiten ── */
+    public function petEditSave(array $params = []): void
+    {
+        $this->validateCsrf();
+        $user    = $this->requireOwnerAuth();
+        $ownerId = (int)$user['owner_id'];
+        $petId   = (int)($params['id'] ?? 0);
+
+        $pet = $this->repo->getPetByIdAndOwner($petId, $ownerId);
+        if (!$pet) { $this->abort(404); return; }
+
+        $data = [
+            'name'        => trim($this->post('name', '')),
+            'species'     => trim($this->post('species', '')),
+            'breed'       => trim($this->post('breed', '')),
+            'birth_date'  => $this->post('birth_date', '') ?: null,
+            'gender'      => $this->post('gender', ''),
+            'color'       => trim($this->post('color', '')),
+            'chip_number' => trim($this->post('chip_number', '')),
+        ];
+
+        if (empty($data['name'])) {
+            $this->session->flash('error', 'Name darf nicht leer sein.');
+            $this->redirect('/portal/tiere/' . $petId . '/bearbeiten');
+            return;
+        }
+
+        /* Photo upload */
+        if (!empty($_FILES['photo']['name']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
+            $destination = STORAGE_PATH . '/patients/' . $petId;
+            if (!is_dir($destination)) {
+                mkdir($destination, 0755, true);
+            }
+            $filename = $this->uploadFile('photo', $destination, [
+                'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+            ]);
+            if ($filename !== false) {
+                $data['photo'] = $filename;
+            }
+        }
+
+        $this->repo->updatePet($petId, $data);
+
+        $this->session->flash('success', 'Änderungen gespeichert.');
+        $this->redirect('/portal/tiere/' . $petId);
+    }
+
     /* ── GET /portal/tiere/{id}/uebungen ── */
     public function exercises(array $params = []): void
     {
