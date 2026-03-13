@@ -5,50 +5,54 @@
 <h1 class="portal-page-title">📅 Meine Termine</h1>
 
 {# ── Upcoming ── #}
-<div class="portal-card">
-    <h2>Kommende Termine</h2>
+<div class="card mb-3">
+  <div class="card-body">
+    <h2 class="h5 mb-3">Kommende Termine</h2>
     {% if upcoming %}
         {% for appt in upcoming %}
-        <div style="display:flex;gap:0.75rem;align-items:flex-start;padding:0.75rem 0;border-bottom:1px solid rgba(255,255,255,0.06);">
-            <div style="width:10px;height:10px;border-radius:50%;background:{{ appt.treatment_type_color ?? '#4f7cff' }};margin-top:5px;flex-shrink:0;"></div>
-            <div style="flex:1;min-width:0;">
-                <div style="font-weight:600;font-size:0.9rem;">{{ appt.title }}</div>
-                <div style="font-size:0.78rem;color:rgba(255,255,255,0.45);margin-top:0.15rem;">
+        <div class="d-flex gap-3 align-items-start py-2 border-bottom border-opacity-10">
+            <div style="width:10px;height:10px;border-radius:50%;background:{{ appt.treatment_type_color ?? 'var(--bs-primary)' }};margin-top:5px;flex-shrink:0;"></div>
+            <div class="flex-fill min-width-0">
+                <div class="fw-semibold">{{ appt.title }}</div>
+                <div class="small text-secondary mt-1">
                     {{ appt.start_at|date('d.m.Y') }} · {{ appt.start_at|date('H:i') }} Uhr
                     {% if appt.end_at %} – {{ appt.end_at|date('H:i') }}{% endif %}
                 </div>
                 {% if appt.patient_name %}
-                <div style="font-size:0.78rem;color:rgba(255,255,255,0.35);margin-top:0.1rem;">🐾 {{ appt.patient_name }}</div>
+                <div class="small text-secondary">🐾 {{ appt.patient_name }}</div>
                 {% endif %}
                 {% if appt.treatment_type_name %}
-                <div style="margin-top:0.3rem;">
-                    <span style="font-size:0.7rem;background:rgba(79,124,255,0.15);color:#4f7cff;padding:2px 7px;border-radius:10px;">{{ appt.treatment_type_name }}</span>
+                <div class="mt-1">
+                    <span class="badge bg-primary bg-opacity-25 text-primary" style="font-size:0.7rem;">{{ appt.treatment_type_name }}</span>
                 </div>
                 {% endif %}
             </div>
         </div>
         {% endfor %}
     {% else %}
-        <p style="color:rgba(255,255,255,0.35);font-size:0.875rem;">Keine kommenden Termine.</p>
+        <p class="text-secondary small">Keine kommenden Termine.</p>
     {% endif %}
+  </div>
 </div>
 
 {# ── Past ── #}
 {% if past %}
-<div class="portal-card">
-    <h2>Vergangene Termine</h2>
+<div class="card mb-3">
+  <div class="card-body">
+    <h2 class="h5 mb-3">Vergangene Termine</h2>
     {% for appt in past %}
-    <div style="display:flex;gap:0.75rem;align-items:flex-start;padding:0.65rem 0;border-bottom:1px solid rgba(255,255,255,0.05);">
-        <div style="width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.2);margin-top:5px;flex-shrink:0;"></div>
-        <div style="flex:1;min-width:0;">
-            <div style="font-weight:500;font-size:0.875rem;color:rgba(255,255,255,0.65);">{{ appt.title }}</div>
-            <div style="font-size:0.75rem;color:rgba(255,255,255,0.35);">
+    <div class="d-flex gap-3 align-items-start py-2 border-bottom border-opacity-10">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--bs-secondary-color);margin-top:5px;flex-shrink:0;opacity:.4;"></div>
+        <div class="flex-fill">
+            <div class="small text-secondary fw-500">{{ appt.title }}</div>
+            <div class="small text-secondary" style="opacity:.6;">
                 {{ appt.start_at|date('d.m.Y H:i') }}
                 {% if appt.patient_name %} · {{ appt.patient_name }}{% endif %}
             </div>
         </div>
     </div>
     {% endfor %}
+  </div>
 </div>
 {% endif %}
 

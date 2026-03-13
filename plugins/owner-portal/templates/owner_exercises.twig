@@ -2,15 +2,16 @@
 {% set active_nav = 'tiere' %}
 {% block content %}
 
-<div style="margin-bottom:1rem;">
-    <a href="/portal/tiere/{{ pet.id }}" style="color:rgba(255,255,255,0.45);font-size:0.82rem;text-decoration:none;">← {{ pet.name }}</a>
+<div class="mb-3">
+    <a href="/portal/tiere/{{ pet.id }}" class="small text-secondary text-decoration-none">← {{ pet.name }}</a>
 </div>
 
 <h1 class="portal-page-title">💪 Heimübungen — {{ pet.name }}</h1>
 
 {% if exercises %}
     {% for ex in exercises %}
-    <div class="portal-card exercise-card" style="margin-bottom:1rem;">
+    <div class="card mb-3">
+      <div class="card-body">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
             <div style="flex:1;min-width:0;">
                 <div class="exercise-title" style="font-size:1rem;">{{ ex.title }}</div>
@@ -21,19 +22,19 @@
             {% if ex.image %}
             <div style="flex-shrink:0;">
                 <img src="/storage/uploads/exercises/{{ ex.image }}" alt="{{ ex.title }}"
-                     style="width:100px;height:80px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,0.08);">
+                     style="width:100px;height:80px;object-fit:cover;border-radius:var(--bs-border-radius);border:1px solid var(--bs-border-color);">
             </div>
             {% endif %}
         </div>
 
         {% if ex.video_url %}
-        <div class="exercise-video" style="margin-top:0.75rem;">
+        <div class="mt-3">
             {% set vid = ex.video_url %}
             {% if 'youtube.com' in vid or 'youtu.be' in vid %}
                 {# Convert YouTube URL to embed #}
                 {% set ytid = vid|replace({'https://www.youtube.com/watch?v=': '', 'https://youtu.be/': '', 'https://youtube.com/watch?v=': ''}) %}
                 {% set ytid = ytid|split('&')|first %}
-                <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:8px;">
+                <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:var(--bs-border-radius);">
                     <iframe src="https://www.youtube.com/embed/{{ ytid }}"
                             style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;border-radius:8px;"
                             allowfullscreen loading="lazy"></iframe>
@@ -47,12 +48,15 @@
             {% endif %}
         </div>
         {% endif %}
+      </div>
     </div>
     {% endfor %}
 {% else %}
-    <div class="portal-card" style="text-align:center;padding:3rem;">
-        <div style="font-size:2.5rem;margin-bottom:0.75rem;opacity:.3;">💪</div>
-        <p style="color:rgba(255,255,255,0.4);">Noch keine Übungen hinterlegt.</p>
+    <div class="card">
+      <div class="card-body text-center py-5">
+        <div class="fs-1 mb-2" style="opacity:.3;">💪</div>
+        <p class="text-secondary">Noch keine Übungen hinterlegt.</p>
+      </div>
     </div>
 {% endif %}
 

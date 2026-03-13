@@ -12,7 +12,7 @@
                 {% if pet.photo %}
                     <img src="/storage/uploads/{{ pet.photo }}" alt="{{ pet.name }}" style="width:100%;height:140px;object-fit:cover;">
                 {% else %}
-                    <div style="width:100%;height:140px;display:flex;align-items:center;justify-content:center;background:rgba(79,124,255,0.07);">
+                    <div style="width:100%;height:140px;display:flex;align-items:center;justify-content:center;background:var(--bs-tertiary-bg);">
                         <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="opacity:.25;"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.5"/><path stroke="currentColor" stroke-width="1.5" d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
                     </div>
                 {% endif %}
@@ -29,7 +29,7 @@
                     </div>
                 {% endif %}
                 {% if pet.last_treatment %}
-                    <div class="pet-card-meta" style="margin-top:0.3rem;color:rgba(79,124,255,0.8);">
+                    <div class="pet-card-meta text-primary" style="margin-top:0.3rem;">
                         Letzte Behandlung: {{ pet.last_treatment|date('d.m.Y') }}
                     </div>
                 {% endif %}
@@ -43,10 +43,12 @@
     {% endfor %}
     </div>
 {% else %}
-    <div class="portal-card" style="text-align:center;padding:3rem;">
-        <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="opacity:.2;margin-bottom:1rem;"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.5"/><path stroke="currentColor" stroke-width="1.5" d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-        <p style="color:rgba(255,255,255,0.4);">Keine Tiere vorhanden.</p>
-    </div>
+    <div class="card">
+  <div class="card-body text-center py-5">
+    <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="opacity:.2;margin-bottom:1rem;"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.5"/><path stroke="currentColor" stroke-width="1.5" d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+    <p class="text-secondary">Keine Tiere vorhanden.</p>
+  </div>
+</div>
 {% endif %}
 
 {% endblock %}

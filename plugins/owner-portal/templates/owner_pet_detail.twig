@@ -2,25 +2,26 @@
 {% set active_nav = 'tiere' %}
 {% block content %}
 
-<div style="margin-bottom:1rem;">
-    <a href="/portal/tiere" style="color:rgba(255,255,255,0.45);font-size:0.82rem;text-decoration:none;">← Alle Tiere</a>
+<div class="mb-3">
+    <a href="/portal/tiere" class="small text-secondary text-decoration-none">← Alle Tiere</a>
 </div>
 
 {# ── Pet Header ── #}
-<div class="portal-card" style="display:flex;gap:1.25rem;align-items:flex-start;flex-wrap:wrap;">
+<div class="card mb-3">
+  <div class="card-body d-flex gap-3 align-items-start flex-wrap">
     <div style="flex-shrink:0;">
         {% if pet.photo %}
             <img src="/storage/uploads/{{ pet.photo }}" alt="{{ pet.name }}"
                  style="width:90px;height:90px;object-fit:cover;border-radius:12px;">
         {% else %}
-            <div style="width:90px;height:90px;border-radius:12px;background:rgba(79,124,255,0.1);display:flex;align-items:center;justify-content:center;">
+            <div style="width:90px;height:90px;border-radius:12px;background:var(--bs-tertiary-bg);display:flex;align-items:center;justify-content:center;">
                 <svg width="36" height="36" fill="none" viewBox="0 0 24 24" style="opacity:.3;"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.5"/><path stroke="currentColor" stroke-width="1.5" d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
             </div>
         {% endif %}
     </div>
-    <div style="flex:1;min-width:0;">
-        <h1 style="font-size:1.4rem;font-weight:700;margin:0 0 0.3rem;">{{ pet.name }}</h1>
-        <div style="font-size:0.875rem;color:rgba(255,255,255,0.55);display:flex;flex-wrap:wrap;gap:0.75rem;">
+    <div class="flex-fill min-width-0">
+        <h1 class="h4 mb-1">{{ pet.name }}</h1>
+        <div class="d-flex flex-wrap gap-2 small text-secondary">
             {% if pet.species %}<span>🐾 {{ pet.species }}</span>{% endif %}
             {% if pet.breed %}<span>{{ pet.breed }}</span>{% endif %}
             {% if pet.birth_date %}<span>📅 geb. {{ pet.birth_date|date('d.m.Y') }}</span>{% endif %}
@@ -28,13 +29,13 @@
             {% if pet.color %}<span>{{ pet.color }}</span>{% endif %}
             {% if pet.chip_number %}<span>Chip: {{ pet.chip_number }}</span>{% endif %}
         </div>
-        <div style="margin-top:0.5rem;">
+        <div class="mt-2">
             <span class="badge-status {% if pet.status == 'aktiv' %}badge-paid{% elseif pet.status == 'verstorben' %}badge-draft{% else %}badge-open{% endif %}">
                 {{ pet.status }}
             </span>
         </div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:0.4rem;">
+    <div class="d-flex flex-column gap-2">
         <a href="/portal/tiere/{{ pet.id }}/uebungen" class="portal-btn portal-btn-secondary portal-btn-sm">
             💪 Übungen
         </a>
@@ -44,10 +45,11 @@
         </a>
         {% endif %}
     </div>
+  </div>
 </div>
 
 {# ── Tab Navigation ── #}
-<div style="display:flex;gap:0.25rem;border-bottom:1px solid rgba(255,255,255,0.08);margin-bottom:1rem;overflow-x:auto;">
+<div class="d-flex gap-1 border-bottom mb-3" style="overflow-x:auto;">
     {% set tabs = [
         {id:'behandlungen', label:'Behandlungen', count: treatments|length},
         {id:'notizen',      label:'Notizen',      count: notes|length},
@@ -56,17 +58,18 @@
     ] %}
     {% for tab in tabs %}
     <button class="pet-tab-btn" data-tab="{{ tab.id }}"
-            style="background:none;border:none;color:rgba(255,255,255,0.45);padding:0.6rem 0.9rem;font-size:0.85rem;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .15s;">
+            style="background:none;border:none;color:var(--bs-secondary-color);padding:0.6rem 0.9rem;font-size:0.85rem;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .15s;">
         {{ tab.label }}
-        {% if tab.count > 0 %}<span style="background:rgba(79,124,255,0.3);color:#4f7cff;border-radius:20px;padding:0 6px;font-size:0.7rem;margin-left:4px;">{{ tab.count }}</span>{% endif %}
+        {% if tab.count > 0 %}<span class="badge bg-primary bg-opacity-25 text-primary ms-1" style="font-size:0.68rem;">{{ tab.count }}</span>{% endif %}
     </button>
     {% endfor %}
 </div>
 
 {# ── Behandlungen ── #}
 <div class="pet-tab-panel" id="panel-behandlungen">
-    <div class="portal-card">
-        <h2>Behandlungen</h2>
+    <div class="card mb-3">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Behandlungen</h2>
         {% if treatments %}
             {% for entry in treatments %}
             <div class="timeline-entry">
@@ -81,15 +84,17 @@
             </div>
             {% endfor %}
         {% else %}
-            <p style="color:rgba(255,255,255,0.35);font-size:0.875rem;">Keine Behandlungen vorhanden.</p>
+            <p class="text-secondary small">Keine Behandlungen vorhanden.</p>
         {% endif %}
+      </div>
     </div>
 </div>
 
 {# ── Notizen ── #}
 <div class="pet-tab-panel" id="panel-notizen" style="display:none;">
-    <div class="portal-card">
-        <h2>Notizen</h2>
+    <div class="card mb-3">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Notizen</h2>
         {% if notes %}
             {% for entry in notes %}
             <div class="timeline-entry">
@@ -99,15 +104,17 @@
             </div>
             {% endfor %}
         {% else %}
-            <p style="color:rgba(255,255,255,0.35);font-size:0.875rem;">Keine Notizen vorhanden.</p>
+            <p class="text-secondary small">Keine Notizen vorhanden.</p>
         {% endif %}
+      </div>
     </div>
 </div>
 
 {# ── Dokumente ── #}
 <div class="pet-tab-panel" id="panel-dokumente" style="display:none;">
-    <div class="portal-card">
-        <h2>Dokumente</h2>
+    <div class="card mb-3">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Dokumente</h2>
         {% if documents %}
             {% for entry in documents %}
             <div class="timeline-entry">
@@ -118,22 +125,24 @@
                         <div class="timeline-title">{{ entry.title }}</div>
                         {% if entry.attachment %}
                             <a href="/storage/uploads/{{ entry.attachment }}" target="_blank"
-                               style="font-size:0.78rem;color:#4f7cff;">Herunterladen →</a>
+                               class="small text-primary">Herunterladen →</a>
                         {% endif %}
                     </div>
                 </div>
             </div>
             {% endfor %}
         {% else %}
-            <p style="color:rgba(255,255,255,0.35);font-size:0.875rem;">Keine Dokumente vorhanden.</p>
+            <p class="text-secondary small">Keine Dokumente vorhanden.</p>
         {% endif %}
+      </div>
     </div>
 </div>
 
 {# ── Fotos ── #}
 <div class="pet-tab-panel" id="panel-fotos" style="display:none;">
-    <div class="portal-card">
-        <h2>Fotos</h2>
+    <div class="card mb-3">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Fotos</h2>
         {% if photos %}
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:0.5rem;">
             {% for entry in photos %}
@@ -143,14 +152,15 @@
                         <img src="/storage/uploads/{{ entry.attachment }}" alt="{{ entry.title }}"
                              style="width:100%;height:110px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,0.08);">
                     </a>
-                    <div style="font-size:0.72rem;color:rgba(255,255,255,0.4);margin-top:0.25rem;text-align:center;">{{ entry.entry_date|date('d.m.Y') }}</div>
+                    <div class="small text-secondary text-center mt-1">{{ entry.entry_date|date('d.m.Y') }}</div>
                 </div>
                 {% endif %}
             {% endfor %}
             </div>
         {% else %}
-            <p style="color:rgba(255,255,255,0.35);font-size:0.875rem;">Keine Fotos vorhanden.</p>
+            <p class="text-secondary small">Keine Fotos vorhanden.</p>
         {% endif %}
+      </div>
     </div>
 </div>
 
@@ -161,8 +171,8 @@
     function activate(id) {
         btns.forEach(function(b){
             var active = b.dataset.tab === id;
-            b.style.color        = active ? '#fff' : 'rgba(255,255,255,0.45)';
-            b.style.borderBottom = active ? '2px solid #4f7cff' : '2px solid transparent';
+            b.style.color        = active ? 'var(--bs-body-color)' : 'var(--bs-secondary-color)';
+            b.style.borderBottom = active ? '2px solid var(--bs-primary)' : '2px solid transparent';
         });
         panels.forEach(function(p){ p.style.display = p.id === 'panel-' + id ? '' : 'none'; });
     }

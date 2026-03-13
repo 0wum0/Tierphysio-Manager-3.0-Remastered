@@ -5,7 +5,8 @@
 <h1 class="portal-page-title">🧾 Meine Rechnungen</h1>
 
 {% if invoices %}
-<div class="portal-card" style="padding:0;overflow:hidden;">
+<div class="card mb-3">
+  <div class="card-body p-0">
     <div class="table-responsive">
     <table class="portal-table">
         <thead>
@@ -49,11 +50,14 @@
         </tbody>
     </table>
     </div>
+  </div>
 </div>
 {% else %}
-<div class="portal-card" style="text-align:center;padding:3rem;">
-    <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="opacity:.2;margin-bottom:1rem;"><path stroke="currentColor" stroke-width="1.5" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="1.5" points="14 2 14 8 20 8"/></svg>
-    <p style="color:rgba(255,255,255,0.4);">Keine Rechnungen vorhanden.</p>
+<div class="card mb-3">
+  <div class="card-body text-center py-5">
+    <svg width="48" height="48" fill="none" viewBox="0 0 24 24" class="text-secondary mb-3" style="opacity:.3;"><path stroke="currentColor" stroke-width="1.5" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="1.5" points="14 2 14 8 20 8"/></svg>
+    <p class="text-secondary">Keine Rechnungen vorhanden.</p>
+  </div>
 </div>
 {% endif %}
 

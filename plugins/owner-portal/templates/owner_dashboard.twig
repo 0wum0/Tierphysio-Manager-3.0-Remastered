@@ -7,29 +7,30 @@
 </h1>
 
 {# ── Stats row ── #}
-<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:0.75rem;margin-bottom:1.5rem;">
-    <div class="portal-card" style="margin:0;text-align:center;">
-        <div style="font-size:1.8rem;font-weight:800;color:#4f7cff;">{{ pets|length }}</div>
-        <div style="font-size:0.78rem;color:rgba(255,255,255,0.45);margin-top:0.2rem;">Tiere</div>
-    </div>
-    <div class="portal-card" style="margin:0;text-align:center;">
-        <div style="font-size:1.8rem;font-weight:800;color:#22c55e;">{{ upcoming_appointments|length }}</div>
-        <div style="font-size:0.78rem;color:rgba(255,255,255,0.45);margin-top:0.2rem;">Kommende Termine</div>
-    </div>
-    <div class="portal-card" style="margin:0;text-align:center;">
-        <div style="font-size:1.8rem;font-weight:800;color:{% if open_invoices|length > 0 %}#f59e0b{% else %}#22c55e{% endif %};">{{ open_invoices|length }}</div>
-        <div style="font-size:0.78rem;color:rgba(255,255,255,0.45);margin-top:0.2rem;">Offene Rechnungen</div>
-    </div>
-    <div class="portal-card" style="margin:0;text-align:center;">
-        <div style="font-size:1.8rem;font-weight:800;color:#a78bfa;">{{ exercises|length }}</div>
-        <div style="font-size:0.78rem;color:rgba(255,255,255,0.45);margin-top:0.2rem;">Übungen</div>
-    </div>
+<div class="row g-3 mb-4">
+    <div class="col"><div class="card text-center h-100"><div class="card-body py-3">
+        <div class="fs-2 fw-bold text-primary">{{ pets|length }}</div>
+        <div class="small text-secondary mt-1">Tiere</div>
+    </div></div></div>
+    <div class="col"><div class="card text-center h-100"><div class="card-body py-3">
+        <div class="fs-2 fw-bold text-success">{{ upcoming_appointments|length }}</div>
+        <div class="small text-secondary mt-1">Kommende Termine</div>
+    </div></div></div>
+    <div class="col"><div class="card text-center h-100"><div class="card-body py-3">
+        <div class="fs-2 fw-bold {% if open_invoices|length > 0 %}text-warning{% else %}text-success{% endif %}">{{ open_invoices|length }}</div>
+        <div class="small text-secondary mt-1">Offene Rechnungen</div>
+    </div></div></div>
+    <div class="col"><div class="card text-center h-100"><div class="card-body py-3">
+        <div class="fs-2 fw-bold" style="color:var(--bs-purple,#a78bfa);">{{ exercises|length }}</div>
+        <div class="small text-secondary mt-1">Übungen</div>
+    </div></div></div>
 </div>
 
 {# ── My Pets ── #}
-<div class="portal-card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
-        <h2 style="margin:0;">🐾 Meine Tiere</h2>
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 class="h5 mb-0">🐾 Meine Tiere</h2>
         <a href="/portal/tiere" class="portal-btn portal-btn-secondary portal-btn-sm">Alle anzeigen</a>
     </div>
     {% if pets %}
@@ -54,69 +55,74 @@
         {% endfor %}
         </div>
     {% else %}
-        <p style="color:rgba(255,255,255,0.4);font-size:0.875rem;">Keine Tiere vorhanden.</p>
+        <p class="text-secondary small">Keine Tiere vorhanden.</p>
     {% endif %}
+  </div>
 </div>
 
 {# ── Upcoming Appointments ── #}
 {% if upcoming_appointments %}
-<div class="portal-card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
-        <h2 style="margin:0;">📅 Nächste Termine</h2>
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 class="h5 mb-0">📅 Nächste Termine</h2>
         <a href="/portal/termine" class="portal-btn portal-btn-secondary portal-btn-sm">Alle Termine</a>
     </div>
     {% for appt in upcoming_appointments|slice(0, 3) %}
-    <div style="display:flex;gap:0.75rem;align-items:flex-start;padding:0.6rem 0;border-bottom:1px solid rgba(255,255,255,0.06);">
-        <div style="width:8px;height:8px;border-radius:50%;background:{{ appt.treatment_type_color ?? '#4f7cff' }};margin-top:5px;flex-shrink:0;"></div>
+    <div class="d-flex gap-3 align-items-start py-2 border-bottom border-opacity-10">
+        <div style="width:8px;height:8px;border-radius:50%;background:{{ appt.treatment_type_color ?? 'var(--bs-primary)' }};margin-top:5px;flex-shrink:0;"></div>
         <div>
-            <div style="font-weight:500;font-size:0.875rem;">{{ appt.title }}</div>
-            <div style="font-size:0.78rem;color:rgba(255,255,255,0.45);">{{ appt.start_at|date('d.m.Y H:i') }}{% if appt.patient_name %} · {{ appt.patient_name }}{% endif %}</div>
+            <div class="fw-500 small">{{ appt.title }}</div>
+            <div class="small text-secondary">{{ appt.start_at|date('d.m.Y H:i') }}{% if appt.patient_name %} · {{ appt.patient_name }}{% endif %}</div>
         </div>
     </div>
     {% endfor %}
+  </div>
 </div>
 {% endif %}
 
 {# ── Open Invoices ── #}
 {% if open_invoices %}
-<div class="portal-card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
-        <h2 style="margin:0;">🧾 Offene Rechnungen</h2>
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 class="h5 mb-0">🧾 Offene Rechnungen</h2>
         <a href="/portal/rechnungen" class="portal-btn portal-btn-secondary portal-btn-sm">Alle Rechnungen</a>
     </div>
     {% for inv in open_invoices|slice(0, 3) %}
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:0.6rem 0;border-bottom:1px solid rgba(255,255,255,0.06);">
+    <div class="d-flex justify-content-between align-items-center py-2 border-bottom border-opacity-10">
         <div>
-            <div style="font-weight:500;font-size:0.875rem;">{{ inv.invoice_number }}</div>
-            <div style="font-size:0.78rem;color:rgba(255,255,255,0.45);">{{ inv.issue_date|date('d.m.Y') }}{% if inv.patient_name %} · {{ inv.patient_name }}{% endif %}</div>
+            <div class="fw-500 small">{{ inv.invoice_number }}</div>
+            <div class="small text-secondary">{{ inv.issue_date|date('d.m.Y') }}{% if inv.patient_name %} · {{ inv.patient_name }}{% endif %}</div>
         </div>
-        <div style="text-align:right;">
-            <div style="font-weight:700;">{{ inv.total_gross|number_format(2,',','.') }} €</div>
+        <div class="text-end">
+            <div class="fw-bold">{{ inv.total_gross|number_format(2,',','.') }} €</div>
             <span class="badge-status {% if inv.status == 'overdue' %}badge-overdue{% else %}badge-open{% endif %}">
                 {% if inv.status == 'overdue' %}Überfällig{% else %}Offen{% endif %}
             </span>
         </div>
     </div>
     {% endfor %}
+  </div>
 </div>
 {% endif %}
 
 {# ── Exercises teaser ── #}
 {% if exercises %}
-<div class="portal-card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
-        <h2 style="margin:0;">💪 Heimübungen</h2>
-    </div>
+<div class="card mb-3">
+  <div class="card-body">
+    <h2 class="h5 mb-3">💪 Heimübungen</h2>
     {% for ex in exercises|slice(0, 2) %}
     <div class="exercise-card">
         <div class="exercise-title">{{ ex.title }}</div>
-        {% if ex.patient_name %}<div style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-bottom:0.3rem;">für {{ ex.patient_name }}</div>{% endif %}
+        {% if ex.patient_name %}<div class="small text-secondary mb-1">für {{ ex.patient_name }}</div>{% endif %}
         {% if ex.description %}<div class="exercise-desc">{{ ex.description|slice(0,120) }}{% if ex.description|length > 120 %}…{% endif %}</div>{% endif %}
     </div>
     {% endfor %}
     {% if exercises|length > 2 %}
-        <div style="font-size:0.8rem;color:rgba(255,255,255,0.4);margin-top:0.5rem;">+ {{ exercises|length - 2 }} weitere Übungen</div>
+        <div class="small text-secondary mt-2">+ {{ exercises|length - 2 }} weitere Übungen</div>
     {% endif %}
+  </div>
 </div>
 {% endif %}
 
