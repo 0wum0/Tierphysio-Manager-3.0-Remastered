@@ -40,9 +40,18 @@ class VetReportService
         $companyPhone   = $settings['company_phone']   ?? '';
         $companyEmail   = $settings['company_email']   ?? '';
         $companyWebsite = $settings['company_website'] ?? '';
-        $logoFile       = !empty($settings['company_logo'])
-            ? STORAGE_PATH . '/uploads/' . $settings['company_logo']
-            : null;
+        // Path containment: only allow logo files within uploads dir
+        $logoFile = null;
+        if (!empty($settings['company_logo'])) {
+            $uploadsDir    = realpath(STORAGE_PATH . '/uploads');
+            $logoCandidate = $uploadsDir . '/' . basename($settings['company_logo']);
+            $logoReal      = realpath($logoCandidate);
+            if ($uploadsDir && $logoReal && strpos($logoReal, $uploadsDir) === 0) {
+                $logoFile = $logoReal;
+            }
+        }
+        // Clamp font size to safe range
+        $fontSize = max(6.0, min(16.0, $fontSize));
 
         // ── Layout constants (identical to invoice) ──────────────────────
         $sidebarW  = 42;
@@ -147,7 +156,7 @@ class VetReportService
         $patColW    = $contentW - $ownerW - 4; // right column width
         $photoW     = 24;   // photo size
         $lblW       = 24;   // label column inside right block
-        $valW       = $patColW - $photoW - $lblW - 2; // value column
+        // $valW calculated after photo check below
         $rowH       = 5.0;
 
         // Owner block (left)
@@ -175,13 +184,29 @@ class VetReportService
             }
         }
 
-        // Photo (far right of patient column)
-        $patPhoto = STORAGE_PATH . '/patients/' . (int)$patient['id'] . '/' . ($patient['photo'] ?? '');
-        $hasPhoto = !empty($patient['photo']) && file_exists($patPhoto);
+        // Photo path containment: only allow files within patients storage dir
+        $hasPhoto = false;
+        $patPhoto = null;
+        if (!empty($patient['photo'])) {
+            $patientsDir    = realpath(STORAGE_PATH . '/patients/' . (int)$patient['id']);
+            if ($patientsDir) {
+                $photoCandidate = $patientsDir . '/' . basename($patient['photo']);
+                $photoReal      = realpath($photoCandidate);
+                if ($photoReal && strpos($photoReal, $patientsDir) === 0) {
+                    $hasPhoto = true;
+                    $patPhoto = $photoReal;
+                }
+            }
+        }
         $photoX   = $patColX + $patColW - $photoW;
         if ($hasPhoto) {
             $pdf->Image($patPhoto, $photoX, $blockTopY, $photoW, $photoW, '', '', '', true, 150, '', false, false, 1);
         }
+
+        // Value column width: reserve space for photo only when it exists
+        $valW = $hasPhoto
+            ? ($patColW - $photoW - $lblW - 2)
+            : ($patColW - $lblW - 2);
 
         // Patient fields (label + value, left of photo)
         $patFields = array_filter([
@@ -404,13 +429,18 @@ class VetReportService
     private function hexToRgb(string $hex): array
     {
         $hex = ltrim($hex, '#');
+        // Expand shorthand #RGB → #RRGGBB
         if (strlen($hex) === 3) {
             $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
         }
+        // Validate: must be exactly 6 hex chars — fallback to neutral gray on invalid
+        if (!preg_match('/^[0-9A-Fa-f]{6}$/', $hex)) {
+            return [139, 158, 139]; // safe fallback
+        }
         return [
-            (int)hexdec(substr($hex, 0, 2)),
-            (int)hexdec(substr($hex, 2, 2)),
-            (int)hexdec(substr($hex, 4, 2)),
+            min(255, max(0, (int)hexdec(substr($hex, 0, 2)))),
+            min(255, max(0, (int)hexdec(substr($hex, 2, 2)))),
+            min(255, max(0, (int)hexdec(substr($hex, 4, 2)))),
         ];
     }
 

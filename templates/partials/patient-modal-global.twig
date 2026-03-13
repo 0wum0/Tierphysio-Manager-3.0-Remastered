@@ -1509,8 +1509,21 @@ function loadVetReportHistory(patientId) {
 
 function deleteVetReport(patientId, reportId, btn) {
     if (!confirm('Diesen Bericht wirklich löschen?')) return;
+    if (btn) btn.disabled = true;
     fetch('/patienten/' + patientId + '/tierarztbericht/' + reportId, { method: 'DELETE' })
-        .then(function() { loadVetReportHistory(patientId); });
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.ok) {
+                loadVetReportHistory(patientId);
+            } else {
+                alert('Löschen fehlgeschlagen: ' + (data.error || 'Unbekannter Fehler'));
+                if (btn) btn.disabled = false;
+            }
+        })
+        .catch(function() {
+            alert('Netzwerkfehler beim Löschen.');
+            if (btn) btn.disabled = false;
+        });
 }
 
 /* ── "Neuer Termin" button in patient modal header ─────────── */

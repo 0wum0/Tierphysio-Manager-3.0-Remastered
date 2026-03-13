@@ -47,8 +47,11 @@ class VetReportController extends Controller
         /* Save to storage and record in DB */
         $this->saveReport($patientId, $filename, $pdfContent);
 
+        // CRLF injection prevention
+        $headerFilename = preg_replace('/[\r\n"]/', '', $filename);
+
         header('Content-Type: application/pdf');
-        header('Content-Disposition: inline; filename="' . $filename . '"');
+        header('Content-Disposition: inline; filename="' . $headerFilename . '"');
         header('Content-Length: ' . strlen($pdfContent));
         header('Cache-Control: private, max-age=0, must-revalidate');
         echo $pdfContent;
@@ -59,10 +62,11 @@ class VetReportController extends Controller
     public function history(array $params = []): void
     {
         $patientId = (int)($params['id'] ?? 0);
+        if ($patientId <= 0) { $this->json(['reports' => []]); return; }
 
         try {
             $rows = $this->db->query(
-                "SELECT vr.id, vr.filename, vr.created_at, u.name AS created_by_name
+                "SELECT vr.id, vr.created_at, u.name AS created_by_name
                  FROM vet_reports vr
                  LEFT JOIN users u ON u.id = vr.created_by
                  WHERE vr.patient_id = ?
@@ -94,14 +98,25 @@ class VetReportController extends Controller
 
         if (!$row) { $this->abort(404); return; }
 
-        $path = STORAGE_PATH . '/vet-reports/' . $row['filename'];
-        if (!file_exists($path)) { $this->abort(404); return; }
+        // Path traversal prevention: basename() + containment check
+        $safeFilename = basename($row['filename']);
+        $storageDir   = realpath(STORAGE_PATH . '/vet-reports');
+        $path         = $storageDir . '/' . $safeFilename;
+        $realPath     = realpath($path);
+
+        if (!$storageDir || !$realPath || strpos($realPath, $storageDir) !== 0) {
+            $this->abort(404);
+            return;
+        }
+
+        // CRLF injection prevention in header
+        $headerFilename = preg_replace('/[\r\n"]/', '', $safeFilename);
 
         header('Content-Type: application/pdf');
-        header('Content-Disposition: inline; filename="' . $row['filename'] . '"');
-        header('Content-Length: ' . filesize($path));
+        header('Content-Disposition: inline; filename="' . $headerFilename . '"');
+        header('Content-Length: ' . filesize($realPath));
         header('Cache-Control: private, max-age=0, must-revalidate');
-        readfile($path);
+        readfile($realPath);
         exit;
     }
 
@@ -111,20 +126,37 @@ class VetReportController extends Controller
         $patientId = (int)($params['id']       ?? 0);
         $reportId  = (int)($params['reportId'] ?? 0);
 
+        if (!$patientId || !$reportId) {
+            $this->json(['ok' => false, 'error' => 'invalid_params'], 400);
+            return;
+        }
+
         try {
             $row = $this->db->query(
                 "SELECT filename FROM vet_reports WHERE id = ? AND patient_id = ? LIMIT 1",
                 [$reportId, $patientId]
             )->fetch(\PDO::FETCH_ASSOC);
 
-            if ($row) {
-                $path = STORAGE_PATH . '/vet-reports/' . $row['filename'];
-                if (file_exists($path)) {
-                    unlink($path);
-                }
-                $this->db->query("DELETE FROM vet_reports WHERE id = ?", [$reportId]);
+            if (!$row) {
+                $this->json(['ok' => false, 'error' => 'not_found'], 404);
+                return;
             }
-        } catch (\Throwable) {}
+
+            // Path traversal prevention: basename() + containment check
+            $safeFilename = basename($row['filename']);
+            $storageDir   = realpath(STORAGE_PATH . '/vet-reports');
+            if ($storageDir) {
+                $path     = $storageDir . '/' . $safeFilename;
+                $realPath = realpath($path);
+                if ($realPath && strpos($realPath, $storageDir) === 0) {
+                    unlink($realPath);
+                }
+            }
+            $this->db->query("DELETE FROM vet_reports WHERE id = ? AND patient_id = ?", [$reportId, $patientId]);
+        } catch (\Throwable) {
+            $this->json(['ok' => false, 'error' => 'db_error'], 500);
+            return;
+        }
 
         $this->json(['ok' => true]);
     }
