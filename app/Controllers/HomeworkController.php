@@ -238,7 +238,8 @@ class HomeworkController
 
     private function ensurePlansTablesExist(): void
     {
-        $this->db->execute("CREATE TABLE IF NOT EXISTS `portal_homework_plans` (
+        try {
+        $this->db->getPdo()->exec("CREATE TABLE IF NOT EXISTS `portal_homework_plans` (
             `id`                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
             `patient_id`          INT UNSIGNED NOT NULL,
             `owner_id`            INT UNSIGNED NOT NULL DEFAULT 0,
@@ -260,7 +261,7 @@ class HomeworkController
             INDEX `idx_php_patient_id` (`patient_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-        $this->db->execute("CREATE TABLE IF NOT EXISTS `portal_homework_plan_tasks` (
+        $this->db->getPdo()->exec("CREATE TABLE IF NOT EXISTS `portal_homework_plan_tasks` (
             `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
             `plan_id`           INT UNSIGNED NOT NULL,
             `template_id`       INT UNSIGNED NULL,
@@ -275,6 +276,9 @@ class HomeworkController
             INDEX `idx_phpt_plan_id` (`plan_id`),
             CONSTRAINT `fk_phpt_plan` FOREIGN KEY (`plan_id`) REFERENCES `portal_homework_plans` (`id`) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        } catch (\Throwable $e) {
+            /* Tables already exist or cannot be created — continue anyway */
+        }
     }
 
     public function getPatientPlans(array $params = []): void
@@ -282,33 +286,36 @@ class HomeworkController
         header('Content-Type: application/json');
         $patientId = (int)($params['patient_id'] ?? 0);
         if ($patientId === 0) { echo json_encode([]); exit; }
-        $this->ensurePlansTablesExist();
 
-        $stmt = $this->db->query(
-            'SELECT hp.*, u.name AS created_by_name
-             FROM portal_homework_plans hp
-             LEFT JOIN users u ON u.id = hp.created_by
-             WHERE hp.patient_id = ?
-             ORDER BY hp.plan_date DESC, hp.id DESC',
-            [$patientId]
-        );
-        $plans = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        try {
+            $this->ensurePlansTablesExist();
 
-        foreach ($plans as &$plan) {
-            $tasks = $this->db->query(
-                'SELECT * FROM portal_homework_plan_tasks WHERE plan_id = ? ORDER BY sort_order ASC, id ASC',
-                [(int)$plan['id']]
+            $plans = $this->db->query(
+                'SELECT hp.*, u.name AS created_by_name
+                 FROM portal_homework_plans hp
+                 LEFT JOIN users u ON u.id = hp.created_by
+                 WHERE hp.patient_id = ?
+                 ORDER BY hp.plan_date DESC, hp.id DESC',
+                [$patientId]
             )->fetchAll(\PDO::FETCH_ASSOC);
-            $plan['tasks'] = $tasks;
+
+            foreach ($plans as &$plan) {
+                $plan['tasks'] = $this->db->query(
+                    'SELECT * FROM portal_homework_plan_tasks WHERE plan_id = ? ORDER BY sort_order ASC, id ASC',
+                    [(int)$plan['id']]
+                )->fetchAll(\PDO::FETCH_ASSOC);
+            }
+            echo json_encode($plans);
+        } catch (\Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
         }
-        echo json_encode($plans);
         exit;
     }
 
     public function createPatientPlan(array $params = []): void
     {
         header('Content-Type: application/json');
-        $this->ensurePlansTablesExist();
         $patientId = (int)($params['patient_id'] ?? 0);
         if ($patientId === 0) {
             http_response_code(400);
@@ -329,6 +336,8 @@ class HomeworkController
             exit;
         }
 
+        try {
+        $this->ensurePlansTablesExist();
         $ownerId = (int)($patient['owner_id'] ?? 0);
         $userId  = Auth::getCurrentUserId();
 
@@ -425,13 +434,16 @@ class HomeworkController
             'portal_invite_sent' => $portalInviteSent,
             'portal_invite_error'=> $portalInviteError,
         ]);
+        } catch (\Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
+        }
         exit;
     }
 
     public function deletePatientPlan(array $params = []): void
     {
         header('Content-Type: application/json');
-        $this->ensurePlansTablesExist();
         $patientId = (int)($params['patient_id'] ?? 0);
         $planId    = (int)($params['plan_id']    ?? 0);
 
@@ -442,15 +454,23 @@ class HomeworkController
             exit;
         }
 
-        $stmt = $this->db->query('SELECT id FROM portal_homework_plans WHERE id = ? AND patient_id = ? LIMIT 1', [$planId, $patientId]);
-        if (!$stmt->fetch()) {
-            http_response_code(404);
-            echo json_encode(['error' => 'Plan nicht gefunden']);
-            exit;
+        try {
+            $this->ensurePlansTablesExist();
+            $row = $this->db->query(
+                'SELECT id FROM portal_homework_plans WHERE id = ? AND patient_id = ? LIMIT 1',
+                [$planId, $patientId]
+            )->fetch();
+            if (!$row) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Plan nicht gefunden']);
+                exit;
+            }
+            $this->db->query('DELETE FROM portal_homework_plans WHERE id = ?', [$planId]);
+            echo json_encode(['success' => true]);
+        } catch (\Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
         }
-
-        $this->db->query('DELETE FROM portal_homework_plans WHERE id = ?', [$planId]);
-        echo json_encode(['success' => true]);
         exit;
     }
 

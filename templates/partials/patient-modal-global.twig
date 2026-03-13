@@ -1520,10 +1520,16 @@ function _loadPlans(patientId) {
     var container = document.getElementById('hw-plans-list');
     if (!container) return;
     fetch('/api/patients/' + patientId + '/plans', { headers: { 'Accept': 'application/json' } })
-        .then(function(r) { return r.json(); })
-        .then(function(plans) {
+        .then(function(r) { return r.json().then(function(d){ return {ok:r.ok,d:d}; }); })
+        .then(function(res) {
             container = document.getElementById('hw-plans-list');
             if (!container) return;
+            if (!res.ok || !Array.isArray(res.d)) {
+                var msg = (res.d && res.d.error) ? res.d.error : JSON.stringify(res.d);
+                if (container) container.innerHTML = '<div class="alert alert-danger">API-Fehler: ' + _hwEsc(msg) + '</div>';
+                return;
+            }
+            var plans = res.d;
             if (!plans.length) {
                 container.innerHTML =
                     '<div class="text-center py-5" style="color:var(--bs-secondary-color);">' +
@@ -1687,7 +1693,10 @@ function _loadCpTemplates() {
     if (_hwTemplates.length) { _fillCpTemplateSelect(); return; }
     fetch('/api/homework/templates', { headers: { 'Accept': 'application/json' } })
         .then(function(r) { return r.json(); })
-        .then(function(tpls) { _hwTemplates = tpls; _fillCpTemplateSelect(); })
+        .then(function(tpls) {
+            _hwTemplates = Array.isArray(tpls) ? tpls : [];
+            _fillCpTemplateSelect();
+        })
         .catch(function(){});
 }
 
