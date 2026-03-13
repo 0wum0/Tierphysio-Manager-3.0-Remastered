@@ -21,13 +21,13 @@ class VetReportService
     ): string {
         $settings = $this->settingsRepository->all();
 
-        /* ── Colors from PDF settings ── */
-        $primary   = $this->hexToRgb($settings['pdf_primary_color']           ?? '#4A6741');
-        $dark      = $this->hexToRgb($settings['pdf_color_company_name']      ?? '#1E1E1E');
-        $gray      = $this->hexToRgb($settings['pdf_color_company_info']      ?? '#6E6E6E');
-        $hdrBg     = $this->hexToRgb($settings['pdf_color_table_header_bg']   ?? '#4A6741');
-        $hdrText   = $this->hexToRgb($settings['pdf_color_table_header_text'] ?? '#FFFFFF');
-        $line      = $this->hexToRgb($settings['pdf_color_line']              ?? '#CCCCCC');
+        /* ── Colors — sidebar/header always use a neutral green, not the invoice accent ── */
+        $primary   = [74,  103, 65];   /* #4A6741 — fixed dark green sidebar */
+        $hdrBg     = [74,  103, 65];   /* same for section headers */
+        $hdrText   = [255, 255, 255];
+        $dark      = $this->hexToRgb($settings['pdf_color_company_name'] ?? '#1E1E1E');
+        $gray      = $this->hexToRgb($settings['pdf_color_company_info'] ?? '#6E6E6E');
+        $line      = $this->hexToRgb($settings['pdf_color_line']         ?? '#CCCCCC');
         $font      = $this->resolvePdfFont($settings['pdf_font'] ?? 'helvetica');
 
         $companyName   = $settings['company_name']    ?? '';
@@ -211,8 +211,8 @@ class VetReportService
 
                 $dateStr  = $entry['entry_date'] ? date('d.m.Y', strtotime($entry['entry_date'])) : '—';
                 $titleStr = $entry['title'] ?? '—';
-                $content  = $entry['content'] ?? '';
-                $content  = mb_strlen($content) > 200 ? mb_substr($content, 0, 197) . '…' : $content;
+                $content  = $this->htmlToPlainText($entry['content'] ?? '');
+                $content  = mb_strlen($content) > 300 ? mb_substr($content, 0, 297) . '…' : $content;
 
                 /* Calculate row height for multi-line content */
                 $lines    = $pdf->getNumLines($content ?: '—', $col[2]);
@@ -292,6 +292,19 @@ class VetReportService
             $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
         }
         return [hexdec(substr($hex, 0, 2)), hexdec(substr($hex, 2, 2)), hexdec(substr($hex, 4, 2))];
+    }
+
+    /* ── Strip HTML → plain text for PDF cells ── */
+    private function htmlToPlainText(string $html): string
+    {
+        if ($html === '') return '';
+        /* Convert block-level tags to newlines before stripping */
+        $html = preg_replace('/<\/?(?:p|div|br|li|h[1-6])[^>]*>/i', "\n", $html);
+        $html = strip_tags($html);
+        $html = html_entity_decode($html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $html = preg_replace('/[ \t]+/', ' ', $html);
+        $html = preg_replace('/\n{3,}/', "\n\n", $html);
+        return trim($html);
     }
 
     private function resolvePdfFont(string $font): string
