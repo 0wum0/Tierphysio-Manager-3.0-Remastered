@@ -81,6 +81,7 @@ class SettingsController extends Controller
                 'reminder_body'    => "Hallo {{owner_name}},\n\nwir möchten Sie an Ihren bevorstehenden Termin erinnern:\n\n\u{1F4C5} {{appointment_title}}\nDatum: {{appointment_date}}\nUhrzeit: {{appointment_time}}\n{{appointment_patient}}\n\nFalls Sie den Termin absagen oder verschieben möchten, kontaktieren Sie uns bitte rechtzeitig.\n\nMit freundlichen Grüßen\n{{company_name}}",
                 'invite_subject'   => 'Ihre Einladung zur Anmeldung \u2014 {{company_name}}',
                 'invite_body'      => "Sie wurden eingeladen!\n\n{{from_name}} lädt Sie ein, Ihr Tier und sich als Besitzer direkt in unserem System zu registrieren.\n\n{{note}}\n\nJetzt registrieren:\n{{invite_url}}\n\nDieser Link ist 7 Tage gültig.\n\nMit freundlichen Grüßen\n{{company_name}}",
+                'birthday_body'    => "Liebe/r {{owner_name}},\n\nheute hat {{patient_name}} Geburtstag! 🎉\n\nWir wünschen {{patient_name}} alles Gute und noch viele gesunde, glückliche Jahre.\n\nHerzliche Grüße,\n{{company_name}}",
             ],
         ]);
     }
@@ -115,7 +116,7 @@ class SettingsController extends Controller
             'email_receipt_subject',  'email_receipt_body',
             'email_reminder_subject', 'email_reminder_body',
             'email_invite_subject',   'email_invite_body',
-            'birthday_mail_subject',  'birthday_cron_token',
+            'birthday_mail_subject',  'birthday_mail_body', 'birthday_cron_token',
             'birthday_mail_enabled',
             'google_client_id', 'google_client_secret', 'google_redirect_uri',
         ];
