@@ -379,19 +379,6 @@ if (ownerSelect) {
     }
 })();
 
-/* ── Card click listeners → global patient modal ─────────── */
-document.querySelectorAll('[data-patient-id]').forEach(function (card) {
-    card.addEventListener('click', function () {
-        if (window._gsOpenPatient) window._gsOpenPatient(card.dataset.patientId);
-    });
-    card.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            if (window._gsOpenPatient) window._gsOpenPatient(card.dataset.patientId);
-        }
-    });
-});
-
 /* ── Escape closes file viewer ────────────────────────────── */
 document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {

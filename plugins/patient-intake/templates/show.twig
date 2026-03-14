@@ -24,10 +24,10 @@
         </select>
 
         {% if submission.status == 'uebernommen' and submission.accepted_patient_id %}
-        <a href="/patienten/{{ submission.accepted_patient_id }}" class="btn btn-primary">
+        <button type="button" class="btn btn-primary" onclick="window._gsOpenPatient({{ submission.accepted_patient_id }})">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
             Zur Patientenakte
-        </a>
+        </button>
         {% elseif submission.status not in ['uebernommen','abgelehnt'] %}
         <button class="btn btn-primary" id="btn-accept">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></svg>
@@ -228,7 +228,11 @@ function doAccept() {
     .then(function (r) { return r.json(); })
     .then(function (data) {
         if (data.ok) {
-            window.location.href = '/patienten/' + data.patient_id;
+            if (typeof window._gsOpenPatient === 'function') {
+                window._gsOpenPatient(data.patient_id);
+            } else {
+                window.location.href = '/patienten/' + data.patient_id;
+            }
         } else {
             alert('Fehler: ' + (data.error || 'Unbekannt'));
             btns.forEach(function (b) { b.disabled = false; });

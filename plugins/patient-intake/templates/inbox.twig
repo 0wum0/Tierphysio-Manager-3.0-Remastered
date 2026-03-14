@@ -218,7 +218,11 @@ document.querySelectorAll('.intake-accept-btn').forEach(function (btn) {
         .then(function (r) { return r.json(); })
         .then(function (data) {
             if (data.ok) {
-                window.location.href = '/patienten/' + data.patient_id;
+                if (typeof window._gsOpenPatient === 'function') {
+                    window._gsOpenPatient(data.patient_id);
+                } else {
+                    window.location.href = '/patienten/' + data.patient_id;
+                }
             } else {
                 alert('Fehler: ' + (data.error || 'Unbekannt'));
                 btn.disabled = false;

@@ -35,6 +35,27 @@ class SettingsController extends Controller
 
     public function index(array $params = []): void
     {
+        /* ── Email template defaults ─────────────────────────────────── */
+        $emailDefaults = [
+            'email_invoice_subject'  => 'Deine Rechnung {{invoice_number}}',
+            'email_invoice_body'     => "Hallo {{owner_name}},\n\nanbei erhältst du deine Rechnung {{invoice_number}} vom {{issue_date}}.\n\nGesamtbetrag: {{total_gross}}\nBitte überweise den Betrag bis zum {{due_date}}.\n\nLiebe Grüße\n{{company_name}}",
+            'email_receipt_subject'  => 'Deine Quittung {{invoice_number}}',
+            'email_receipt_body'     => "Hallo {{owner_name}},\n\nvielen Dank für deine Zahlung. Anbei erhältst du deine Quittung für Rechnung {{invoice_number}} vom {{issue_date}}.\n\nBezahlter Betrag: {{total_gross}}\n\nLiebe Grüße\n{{company_name}}",
+            'email_reminder_subject' => 'Terminerinnerung: {{appointment_title}} am {{appointment_date}}',
+            'email_reminder_body'    => "Hallo {{owner_name}},\n\nhiermit möchte ich dich an deinen bevorstehenden Termin erinnern:\n\n📅 {{appointment_title}}\nDatum: {{appointment_date}}\nUhrzeit: {{appointment_time}}\n{{appointment_patient}}\n\nFalls du den Termin absagen oder verschieben möchtest, melde dich gerne bei mir.\n\nLiebe Grüße\n{{company_name}}",
+            'email_invite_subject'   => 'Deine Einladung zur Anmeldung — {{company_name}}',
+            'email_invite_body'      => "Du wurdest eingeladen!\n\n{{from_name}} lädt dich ein, dein Tier und dich als Besitzer direkt in meinem System zu registrieren.\n\n{{note}}\n\nJetzt registrieren:\n{{invite_url}}\n\nDieser Link ist 7 Tage gültig.\n\nLiebe Grüße\n{{company_name}}",
+            'birthday_mail_subject'  => '🎂 Alles Gute zum Geburtstag, {{patient_name}}!',
+            'birthday_mail_body'     => "Liebe/r {{owner_name}},\n\nheute hat {{patient_name}} Geburtstag! 🎉\n\nIch wünsche {{patient_name}} alles Gute und noch viele gesunde, glückliche Jahre.\n\nHerzliche Grüße,\n{{company_name}}",
+        ];
+
+        /* Write defaults to DB on first visit (only if key is not yet set) */
+        foreach ($emailDefaults as $key => $defaultValue) {
+            if (empty($this->settingsService->get($key))) {
+                $this->settingsService->set($key, $defaultValue);
+            }
+        }
+
         $settings        = $this->settingsService->all();
         $users           = $this->userRepository->findAll();
         $plugins         = $this->pluginManager->getAllAvailablePlugins();
@@ -73,15 +94,16 @@ class SettingsController extends Controller
             'app_host'         => $httpHost,
             'app_url'          => $appUrl,
             'email_tpl_defaults' => [
-                'invoice_subject'  => 'Deine Rechnung {{invoice_number}}',
-                'invoice_body'     => "Hallo {{owner_name}},\n\nanbei erhältst du deine Rechnung {{invoice_number}} vom {{issue_date}}.\n\nGesamtbetrag: {{total_gross}}\nBitte überweise den Betrag bis zum {{due_date}}.\n\nLiebe Grüße\n{{company_name}}",
-                'receipt_subject'  => 'Deine Quittung {{invoice_number}}',
-                'receipt_body'     => "Hallo {{owner_name}},\n\nvielen Dank für deine Zahlung. Anbei erhältst du deine Quittung für Rechnung {{invoice_number}} vom {{issue_date}}.\n\nBezahlter Betrag: {{total_gross}}\n\nLiebe Grüße\n{{company_name}}",
-                'reminder_subject' => 'Terminerinnerung: {{appointment_title}} am {{appointment_date}}',
-                'reminder_body'    => "Hallo {{owner_name}},\n\nhiermit möchte ich dich an deinen bevorstehenden Termin erinnern:\n\n\u{1F4C5} {{appointment_title}}\nDatum: {{appointment_date}}\nUhrzeit: {{appointment_time}}\n{{appointment_patient}}\n\nFalls du den Termin absagen oder verschieben möchtest, melde dich gerne bei mir.\n\nLiebe Grüße\n{{company_name}}",
-                'invite_subject'   => 'Deine Einladung zur Anmeldung — {{company_name}}',
-                'invite_body'      => "Du wurdest eingeladen!\n\n{{from_name}} lädt dich ein, dein Tier und dich als Besitzer direkt in meinem System zu registrieren.\n\n{{note}}\n\nJetzt registrieren:\n{{invite_url}}\n\nDieser Link ist 7 Tage gültig.\n\nLiebe Grüße\n{{company_name}}",
-                'birthday_body'    => "Liebe/r {{owner_name}},\n\nheute hat {{patient_name}} Geburtstag! 🎉\n\nIch wünsche {{patient_name}} alles Gute und noch viele gesunde, glückliche Jahre.\n\nHerzliche Grüße,\n{{company_name}}",
+                'invoice_subject'  => $emailDefaults['email_invoice_subject'],
+                'invoice_body'     => $emailDefaults['email_invoice_body'],
+                'receipt_subject'  => $emailDefaults['email_receipt_subject'],
+                'receipt_body'     => $emailDefaults['email_receipt_body'],
+                'reminder_subject' => $emailDefaults['email_reminder_subject'],
+                'reminder_body'    => $emailDefaults['email_reminder_body'],
+                'invite_subject'   => $emailDefaults['email_invite_subject'],
+                'invite_body'      => $emailDefaults['email_invite_body'],
+                'birthday_subject' => $emailDefaults['birthday_mail_subject'],
+                'birthday_body'    => $emailDefaults['birthday_mail_body'],
             ],
         ]);
     }

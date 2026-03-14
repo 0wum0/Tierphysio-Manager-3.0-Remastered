@@ -1875,15 +1875,18 @@ function openEditHT(ht) {
 
         {# ── Rechnung ── #}
         <div class="email-tpl-panel glass-card mb-4" id="etpl-invoice">
-            <h3 class="section-title mb-3">📄 Rechnung per E-Mail</h3>
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h3 class="section-title mb-0">📄 Rechnung per E-Mail</h3>
+                <button type="button" class="btn btn-outline-secondary btn-xs" onclick="resetEmailTpl('invoice')" title="Standard wiederherstellen">↺ Standard</button>
+            </div>
             <div class="form-group mb-3">
                 <label class="form-label fw-semibold">Betreff</label>
                 <input type="text" name="email_invoice_subject" id="etpl-invoice-subject" class="form-control"
-                       value="{{ settings.email_invoice_subject ?? email_tpl_defaults.invoice_subject }}">
+                       value="{{ settings.email_invoice_subject|default(email_tpl_defaults.invoice_subject) }}">
             </div>
             <div class="form-group">
                 <label class="form-label fw-semibold">Text</label>
-                <textarea name="email_invoice_body" id="etpl-invoice-body" class="form-control" rows="10" style="font-family:monospace;font-size:0.85rem;resize:vertical;">{{ settings.email_invoice_body ?? email_tpl_defaults.invoice_body }}</textarea>
+                <textarea name="email_invoice_body" id="etpl-invoice-body" class="form-control" rows="10" style="font-family:monospace;font-size:0.85rem;resize:vertical;">{{ settings.email_invoice_body|default(email_tpl_defaults.invoice_body) }}</textarea>
             </div>
             <div class="mt-3" style="font-size:0.78rem;color:var(--bs-secondary-color);">
                 <strong>Platzhalter:</strong>
@@ -1895,15 +1898,18 @@ function openEditHT(ht) {
 
         {# ── Quittung ── #}
         <div class="email-tpl-panel glass-card mb-4" id="etpl-receipt" style="display:none;">
-            <h3 class="section-title mb-3">✅ Quittung per E-Mail (Barzahlung)</h3>
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h3 class="section-title mb-0">✅ Quittung per E-Mail (Barzahlung)</h3>
+                <button type="button" class="btn btn-outline-secondary btn-xs" onclick="resetEmailTpl('receipt')" title="Standard wiederherstellen">↺ Standard</button>
+            </div>
             <div class="form-group mb-3">
                 <label class="form-label fw-semibold">Betreff</label>
                 <input type="text" name="email_receipt_subject" id="etpl-receipt-subject" class="form-control"
-                       value="{{ settings.email_receipt_subject ?? email_tpl_defaults.receipt_subject }}">
+                       value="{{ settings.email_receipt_subject|default(email_tpl_defaults.receipt_subject) }}">
             </div>
             <div class="form-group">
                 <label class="form-label fw-semibold">Text</label>
-                <textarea name="email_receipt_body" id="etpl-receipt-body" class="form-control" rows="10" style="font-family:monospace;font-size:0.85rem;resize:vertical;">{{ settings.email_receipt_body ?? email_tpl_defaults.receipt_body }}</textarea>
+                <textarea name="email_receipt_body" id="etpl-receipt-body" class="form-control" rows="10" style="font-family:monospace;font-size:0.85rem;resize:vertical;">{{ settings.email_receipt_body|default(email_tpl_defaults.receipt_body) }}</textarea>
             </div>
             <div class="mt-3" style="font-size:0.78rem;color:var(--bs-secondary-color);">
                 <strong>Platzhalter:</strong>
@@ -1915,15 +1921,18 @@ function openEditHT(ht) {
 
         {# ── Terminerinnerung ── #}
         <div class="email-tpl-panel glass-card mb-4" id="etpl-reminder" style="display:none;">
-            <h3 class="section-title mb-3">📅 Terminerinnerung</h3>
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h3 class="section-title mb-0">📅 Terminerinnerung</h3>
+                <button type="button" class="btn btn-outline-secondary btn-xs" onclick="resetEmailTpl('reminder')" title="Standard wiederherstellen">↺ Standard</button>
+            </div>
             <div class="form-group mb-3">
                 <label class="form-label fw-semibold">Betreff</label>
                 <input type="text" name="email_reminder_subject" id="etpl-reminder-subject" class="form-control"
-                       value="{{ settings.email_reminder_subject ?? email_tpl_defaults.reminder_subject }}">
+                       value="{{ settings.email_reminder_subject|default(email_tpl_defaults.reminder_subject) }}">
             </div>
             <div class="form-group">
                 <label class="form-label fw-semibold">Text</label>
-                <textarea name="email_reminder_body" id="etpl-reminder-body" class="form-control" rows="10" style="font-family:monospace;font-size:0.85rem;resize:vertical;">{{ settings.email_reminder_body ?? email_tpl_defaults.reminder_body }}</textarea>
+                <textarea name="email_reminder_body" id="etpl-reminder-body" class="form-control" rows="10" style="font-family:monospace;font-size:0.85rem;resize:vertical;">{{ settings.email_reminder_body|default(email_tpl_defaults.reminder_body) }}</textarea>
             </div>
             <div class="mt-3" style="font-size:0.78rem;color:var(--bs-secondary-color);">
                 <strong>Platzhalter:</strong>
@@ -1935,15 +1944,18 @@ function openEditHT(ht) {
 
         {# ── Einladung ── #}
         <div class="email-tpl-panel glass-card mb-4" id="etpl-invite" style="display:none;">
-            <h3 class="section-title mb-3">🐾 Einladung zur Anmeldung</h3>
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h3 class="section-title mb-0">🐾 Einladung zur Anmeldung</h3>
+                <button type="button" class="btn btn-outline-secondary btn-xs" onclick="resetEmailTpl('invite')" title="Standard wiederherstellen">↺ Standard</button>
+            </div>
             <div class="form-group mb-3">
                 <label class="form-label fw-semibold">Betreff</label>
                 <input type="text" name="email_invite_subject" id="etpl-invite-subject" class="form-control"
-                       value="{{ settings.email_invite_subject ?? email_tpl_defaults.invite_subject }}">
+                       value="{{ settings.email_invite_subject|default(email_tpl_defaults.invite_subject) }}">
             </div>
             <div class="form-group">
                 <label class="form-label fw-semibold">Text</label>
-                <textarea name="email_invite_body" id="etpl-invite-body" class="form-control" rows="10" style="font-family:monospace;font-size:0.85rem;resize:vertical;">{{ settings.email_invite_body ?? email_tpl_defaults.invite_body }}</textarea>
+                <textarea name="email_invite_body" id="etpl-invite-body" class="form-control" rows="10" style="font-family:monospace;font-size:0.85rem;resize:vertical;">{{ settings.email_invite_body|default(email_tpl_defaults.invite_body) }}</textarea>
             </div>
             <div class="mt-3" style="font-size:0.78rem;color:var(--bs-secondary-color);">
                 <strong>Platzhalter:</strong>
@@ -1955,7 +1967,10 @@ function openEditHT(ht) {
 
         {# ── Geburtstag ── #}
         <div class="email-tpl-panel glass-card mb-4" id="etpl-birthday" style="display:none;">
-            <h3 class="section-title mb-3">🎂 Geburtstagsmail</h3>
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h3 class="section-title mb-0">🎂 Geburtstagsmail</h3>
+                <button type="button" class="btn btn-outline-secondary btn-xs" onclick="resetEmailTpl('birthday')" title="Standard wiederherstellen">↺ Standard</button>
+            </div>
 
             <div class="alert mb-4" style="background:rgba(124,46,248,0.12);border:1px solid rgba(180,100,255,0.3);border-radius:10px;padding:1rem 1.25rem;">
                 <div class="fw-600 mb-1" style="color:#c8a0ff;">Automatische Geburtstagsmail</div>
@@ -1985,13 +2000,13 @@ function openEditHT(ht) {
             <div class="form-group mb-3">
                 <label class="form-label fw-semibold">Betreff</label>
                 <input type="text" name="birthday_mail_subject" id="etpl-birthday-subject" class="form-control"
-                       value="{{ settings.birthday_mail_subject ?? '🎂 Alles Gute zum Geburtstag, {{patient_name}}!' }}">
+                       value="{{ settings.birthday_mail_subject|default(email_tpl_defaults.birthday_subject) }}">
             </div>
 
             <div class="form-group mb-3">
                 <label class="form-label fw-semibold">Text</label>
                 <textarea name="birthday_mail_body" id="etpl-birthday-body" class="form-control" rows="8"
-                          style="font-family:monospace;font-size:0.85rem;resize:vertical;">{{ settings.birthday_mail_body ?? email_tpl_defaults.birthday_body }}</textarea>
+                          style="font-family:monospace;font-size:0.85rem;resize:vertical;">{{ settings.birthday_mail_body|default(email_tpl_defaults.birthday_body) }}</textarea>
             </div>
 
             <div class="mb-3" style="font-size:0.78rem;color:var(--bs-secondary-color);">
@@ -2066,6 +2081,23 @@ function openEditHT(ht) {
 'use strict';
 
 var _companyName = {{ (settings.company_name ?? 'Tierphysio Praxis')|json_encode|replace({'</': '<\/'})|raw }};
+var _emailDefaults = {
+    invoice:  { subject: {{ email_tpl_defaults.invoice_subject|json_encode|replace({'</': '<\/'})|raw }},  body: {{ email_tpl_defaults.invoice_body|json_encode|replace({'</': '<\/'})|raw }} },
+    receipt:  { subject: {{ email_tpl_defaults.receipt_subject|json_encode|replace({'</': '<\/'})|raw }},  body: {{ email_tpl_defaults.receipt_body|json_encode|replace({'</': '<\/'})|raw }} },
+    reminder: { subject: {{ email_tpl_defaults.reminder_subject|json_encode|replace({'</': '<\/'})|raw }}, body: {{ email_tpl_defaults.reminder_body|json_encode|replace({'</': '<\/'})|raw }} },
+    invite:   { subject: {{ email_tpl_defaults.invite_subject|json_encode|replace({'</': '<\/'})|raw }},   body: {{ email_tpl_defaults.invite_body|json_encode|replace({'</': '<\/'})|raw }} },
+    birthday: { subject: {{ email_tpl_defaults.birthday_subject|json_encode|replace({'</': '<\/'})|raw }}, body: {{ email_tpl_defaults.birthday_body|json_encode|replace({'</': '<\/'})|raw }} }
+};
+
+function resetEmailTpl(tpl) {
+    var d = _emailDefaults[tpl];
+    if (!d) return;
+    if (!confirm('Standard-Text für dieses Template wiederherstellen?')) return;
+    var s = document.getElementById('etpl-' + tpl + '-subject');
+    var b = document.getElementById('etpl-' + tpl + '-body');
+    if (s) { s.value = d.subject; s.dispatchEvent(new Event('input')); }
+    if (b) { b.value = d.body;    b.dispatchEvent(new Event('input')); }
+}
 
 /* ── Tab Switcher ── */
 function initEmailTplTabs() {

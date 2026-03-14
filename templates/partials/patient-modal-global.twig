@@ -1859,6 +1859,21 @@ window._cpAddSelectedTemplates = function() {
     });
 };
 
+/* ── Global click delegator for [data-patient-id] cards ──────
+   Covers patients/index, owners/show and any future page.      */
+document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-patient-id]');
+    if (el && !e.defaultPrevented) {
+        e.preventDefault();
+        openPatientModal(el.dataset.patientId);
+    }
+});
+document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    var el = e.target.closest('[data-patient-id]');
+    if (el) { e.preventDefault(); openPatientModal(el.dataset.patientId); }
+});
+
 /* Export globally */
 window._gsOpenPatient   = openPatientModal;
 window.showPatientModal = openPatientModal;
