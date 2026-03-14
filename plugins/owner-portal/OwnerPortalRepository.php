@@ -183,15 +183,33 @@ class OwnerPortalRepository
 
     public function getPetTimeline(int $patientId): array
     {
-        $stmt = $this->db->query(
-            'SELECT t.*, u.name AS user_name
-             FROM patient_timeline t
-             LEFT JOIN users u ON u.id = t.user_id
-             WHERE t.patient_id = ?
-             ORDER BY t.entry_date DESC',
-            [$patientId]
-        );
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $stmt = $this->db->query(
+                'SELECT t.*, u.name AS user_name,
+                        tt.name AS treatment_type_name, tt.color AS treatment_type_color
+                 FROM patient_timeline t
+                 LEFT JOIN users u ON u.id = t.user_id
+                 LEFT JOIN treatment_types tt ON tt.id = t.treatment_type_id
+                 WHERE t.patient_id = ?
+                 ORDER BY t.entry_date DESC',
+                [$patientId]
+            );
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable) {
+            try {
+                $stmt = $this->db->query(
+                    'SELECT t.*, u.name AS user_name
+                     FROM patient_timeline t
+                     LEFT JOIN users u ON u.id = t.user_id
+                     WHERE t.patient_id = ?
+                     ORDER BY t.entry_date DESC',
+                    [$patientId]
+                );
+                return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (\Throwable) {
+                return [];
+            }
+        }
     }
 
     /* ─── Invoices ─── */
@@ -247,11 +265,15 @@ class OwnerPortalRepository
 
     public function getExercisesByPatient(int $patientId): array
     {
-        $stmt = $this->db->query(
-            'SELECT * FROM pet_exercises WHERE patient_id = ? AND is_active = 1 ORDER BY sort_order ASC, id ASC',
-            [$patientId]
-        );
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $stmt = $this->db->query(
+                'SELECT * FROM pet_exercises WHERE patient_id = ? AND is_active = 1 ORDER BY sort_order ASC, id ASC',
+                [$patientId]
+            );
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     public function getExerciseById(int $id): ?array
@@ -298,31 +320,39 @@ class OwnerPortalRepository
     public function getAllExercisesForPatients(array $patientIds): array
     {
         if (empty($patientIds)) return [];
-        $placeholders = implode(',', array_fill(0, count($patientIds), '?'));
-        $stmt = $this->db->query(
-            "SELECT e.*, p.name AS patient_name
-             FROM pet_exercises e
-             JOIN patients p ON p.id = e.patient_id
-             WHERE e.patient_id IN ({$placeholders}) AND e.is_active = 1
-             ORDER BY p.name ASC, e.sort_order ASC",
-            $patientIds
-        );
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $placeholders = implode(',', array_fill(0, count($patientIds), '?'));
+            $stmt = $this->db->query(
+                "SELECT e.*, p.name AS patient_name
+                 FROM pet_exercises e
+                 JOIN patients p ON p.id = e.patient_id
+                 WHERE e.patient_id IN ({$placeholders}) AND e.is_active = 1
+                 ORDER BY p.name ASC, e.sort_order ASC",
+                $patientIds
+            );
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     /* ─── Homework Plans ─── */
 
     public function getHomeworkPlansByPatient(int $patientId): array
     {
-        $stmt = $this->db->query(
-            'SELECT hp.*, u.name AS created_by_name
-             FROM portal_homework_plans hp
-             LEFT JOIN users u ON u.id = hp.created_by
-             WHERE hp.patient_id = ?
-             ORDER BY hp.plan_date DESC, hp.id DESC',
-            [$patientId]
-        );
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $stmt = $this->db->query(
+                'SELECT hp.*, u.name AS created_by_name
+                 FROM portal_homework_plans hp
+                 LEFT JOIN users u ON u.id = hp.created_by
+                 WHERE hp.patient_id = ?
+                 ORDER BY hp.plan_date DESC, hp.id DESC',
+                [$patientId]
+            );
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     public function getHomeworkPlanById(int $id): ?array
@@ -340,15 +370,19 @@ class OwnerPortalRepository
 
     public function getHomeworkPlansByOwner(int $ownerId): array
     {
-        $stmt = $this->db->query(
-            'SELECT hp.*, p.name AS patient_name
-             FROM portal_homework_plans hp
-             JOIN patients p ON p.id = hp.patient_id
-             WHERE hp.owner_id = ? AND hp.status = \'active\'
-             ORDER BY hp.plan_date DESC',
-            [$ownerId]
-        );
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $stmt = $this->db->query(
+                'SELECT hp.*, p.name AS patient_name
+                 FROM portal_homework_plans hp
+                 JOIN patients p ON p.id = hp.patient_id
+                 WHERE hp.owner_id = ? AND hp.status = \'active\'
+                 ORDER BY hp.plan_date DESC',
+                [$ownerId]
+            );
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     public function createHomeworkPlan(array $data): int
@@ -394,11 +428,15 @@ class OwnerPortalRepository
 
     public function getTasksByPlan(int $planId): array
     {
-        $stmt = $this->db->query(
-            'SELECT * FROM portal_homework_plan_tasks WHERE plan_id = ? ORDER BY sort_order ASC, id ASC',
-            [$planId]
-        );
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $stmt = $this->db->query(
+                'SELECT * FROM portal_homework_plan_tasks WHERE plan_id = ? ORDER BY sort_order ASC, id ASC',
+                [$planId]
+            );
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     public function saveTasksForPlan(int $planId, array $tasks): void
