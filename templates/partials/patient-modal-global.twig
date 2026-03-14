@@ -1862,6 +1862,9 @@ window._cpAddSelectedTemplates = function() {
 /* ── Global click delegator for [data-patient-id] cards ──────
    Covers patients/index, owners/show and any future page.      */
 document.addEventListener('click', function(e) {
+    /* Skip if the click came from inside a modal or from an interactive element */
+    if (e.target.closest('.modal')) return;
+    if (e.target.closest('select, input, button, textarea, a, label')) return;
     var el = e.target.closest('[data-patient-id]');
     if (el && !e.defaultPrevented) {
         e.preventDefault();
@@ -1870,6 +1873,7 @@ document.addEventListener('click', function(e) {
 });
 document.addEventListener('keydown', function(e) {
     if (e.key !== 'Enter' && e.key !== ' ') return;
+    if (e.target.closest('.modal')) return;
     var el = e.target.closest('[data-patient-id]');
     if (el) { e.preventDefault(); openPatientModal(el.dataset.patientId); }
 });
