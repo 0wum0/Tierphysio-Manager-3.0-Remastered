@@ -36,7 +36,7 @@ class MailService
             );
             $bodyText = $this->applyPlaceholders(
                 $this->settingsRepository->get('email_invoice_body',
-                    "Hallo {{owner_name}},\n\nanbei erhältst du deine Rechnung {{invoice_number}} vom {{issue_date}}.\n\nGesamtbetrag: {{total_gross}}\nBitte überweise den Betrag bis zum {{due_date}}.\n\nViele Grüße\n{{company_name}}"
+                    "Hallo {{owner_name}},\n\nanbei erhältst du deine Rechnung {{invoice_number}} vom {{issue_date}}.\n\nGesamtbetrag: {{total_gross}}\nBitte überweise den Betrag bis zum {{due_date}}.\n\nLiebe Grüße\n{{company_name}}"
                 ),
                 $placeholders
             );
@@ -67,7 +67,7 @@ class MailService
             );
             $bodyText = $this->applyPlaceholders(
                 $this->settingsRepository->get('email_receipt_body',
-                    "Hallo {{owner_name}},\n\nvielen Dank für deine Zahlung. Anbei erhältst du deine Quittung für Rechnung {{invoice_number}} vom {{issue_date}}.\n\nBezahlter Betrag: {{total_gross}}\n\nViele Grüße\n{{company_name}}"
+                    "Hallo {{owner_name}},\n\nvielen Dank für deine Zahlung. Anbei erhältst du deine Quittung für Rechnung {{invoice_number}} vom {{issue_date}}.\n\nBezahlter Betrag: {{total_gross}}\n\nLiebe Grüße\n{{company_name}}"
                 ),
                 $placeholders
             );
@@ -98,7 +98,7 @@ class MailService
             );
             $bodyText = $this->applyPlaceholders(
                 $this->settingsRepository->get('email_reminder_body',
-                    "Hallo {{owner_name}},\n\nwir möchten dich an deinen bevorstehenden Termin erinnern:\n\n📅 {{appointment_title}}\nDatum: {{appointment_date}}\nUhrzeit: {{appointment_time}}\n{{appointment_patient}}\n\nFalls du den Termin absagen oder verschieben möchtest, melde dich gerne bei uns.\n\nViele Grüße\n{{company_name}}"
+                    "Hallo {{owner_name}},\n\nhiermit möchte ich dich an deinen bevorstehenden Termin erinnern:\n\n📅 {{appointment_title}}\nDatum: {{appointment_date}}\nUhrzeit: {{appointment_time}}\n{{appointment_patient}}\n\nFalls du den Termin absagen oder verschieben möchtest, melde dich gerne bei mir.\n\nLiebe Grüße\n{{company_name}}"
                 ),
                 $placeholders
             );
@@ -137,7 +137,7 @@ class MailService
             );
             $bodyText = $this->applyPlaceholders(
                 $this->settingsRepository->get('email_invite_body',
-                    "Du wurdest eingeladen!\n\n{{from_name}} lädt dich ein, dein Tier und dich als Besitzer direkt in unserem System zu registrieren.\n\n{{note}}\n\nJetzt registrieren:\n{{invite_url}}\n\nDieser Link ist 7 Tage gültig.\n\nViele Grüße\n{{company_name}}"
+                    "Du wurdest eingeladen!\n\n{{from_name}} lädt dich ein, dein Tier und dich als Besitzer direkt in meinem System zu registrieren.\n\n{{note}}\n\nJetzt registrieren:\n{{invite_url}}\n\nDieser Link ist 7 Tage gültig.\n\nLiebe Grüße\n{{company_name}}"
                 ),
                 $placeholders
             );

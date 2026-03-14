@@ -204,7 +204,7 @@ class BirthdayMailService
           </p>
           <p style="margin:0;color:rgba(255,255,255,0.72);font-size:0.95rem;line-height:1.8;text-align:center;">
             Heute ist ein ganz besonderer Tag — denn heute dreht sich alles um <strong style="color:#f0c0ff;">{$patientName}</strong>!
-            Wir von <strong style="color:#c8a0ff;">{$companyH}</strong> drücken ganz fest die Pfoten und wünschen
+            Ich von <strong style="color:#c8a0ff;">{$companyH}</strong> drücke ganz fest die Pfoten und wünsche
             dem kleinen Geburtstagskind alles Liebe, viel Gesundheit und jede Menge Freude! 🥳
           </p>
         </td></tr>
@@ -241,17 +241,17 @@ class BirthdayMailService
 
       <!-- Personal message from practice -->
       <div style="background:linear-gradient(135deg,rgba(124,46,248,0.2),rgba(224,64,251,0.15));border:1px solid rgba(200,150,255,0.25);border-radius:14px;padding:24px 28px;margin-bottom:28px;">
-        <p style="margin:0 0 10px;color:#e8b4ff;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">Von Ihrem Physio-Team 🐾</p>
+        <p style="margin:0 0 10px;color:#e8b4ff;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">Von deiner Tierphysio 🐾</p>
         <p style="margin:0;color:rgba(255,255,255,0.80);font-size:0.92rem;line-height:1.75;font-style:italic;">
-          „Wir freuen uns, {$patientName} auf dem Weg zu Gesundheit und Wohlbefinden zu begleiten.
-          Heute feiern wir gemeinsam diesen besonderen Tag! Herzlichen Glückwunsch an
-          das Geburtstagskind und an Sie als stolze/n Besitzer/in." 🎉
+          „Ich freue mich, {$patientName} auf dem Weg zu Gesundheit und Wohlbefinden zu begleiten.
+          Heute feiere ich mit dir diesen besonderen Tag! Herzlichen Glückwunsch an
+          das Geburtstagskind und an dich als stolze/n Besitzer/in.“ 🎉
         </p>
       </div>
 
       <!-- Closing -->
       <p style="margin:0 0 8px;color:rgba(255,255,255,0.80);font-size:0.95rem;line-height:1.7;">
-        Mit herzlichen Geburtstagsgrüßen aus der Praxis,
+        Mit herzlichen Geburtstagsgrüßen,
       </p>
       <p style="margin:0;color:#c8a0ff;font-size:1rem;font-weight:700;">{$companyH} 🐾</p>
 
@@ -263,7 +263,7 @@ class BirthdayMailService
         {$companyH} &middot; Automatisch generierte Geburtstagsmail
       </p>
       <p style="margin:0;color:rgba(255,255,255,0.12);font-size:0.68rem;">
-        Sie erhalten diese E-Mail, weil {$patientName} heute Geburtstag hat. 🎂
+        Du erhältst diese E-Mail, weil {$patientName} heute Geburtstag hat. 🎂
       </p>
     </td></tr>
 
@@ -282,7 +282,7 @@ HTML;
         $ageText = $age > 0 ? " ({$age} Jahre alt)" : '';
         return "Hallo {$ownerFirst},\n\n"
             . "🎂 Herzlichen Glückwunsch zum Geburtstag, {$name}!{$ageText}\n\n"
-            . "Wir von {$company} wünschen {$name} alles Gute, beste Gesundheit und viel Freude!\n\n"
+            . "Ich wünsche {$name} alles Gute, beste Gesundheit und viel Freude!\n\n"
             . "Mit herzlichen Geburtstagsgrüßen,\n{$company} 🐾";
     }
 

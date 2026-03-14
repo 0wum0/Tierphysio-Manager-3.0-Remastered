@@ -73,15 +73,15 @@ class SettingsController extends Controller
             'app_host'         => $httpHost,
             'app_url'          => $appUrl,
             'email_tpl_defaults' => [
-                'invoice_subject'  => 'Ihre Rechnung {{invoice_number}}',
-                'invoice_body'     => "Sehr geehrte/r {{owner_name}},\n\nanbei erhalten Sie Ihre Rechnung {{invoice_number}} vom {{issue_date}}.\n\nGesamtbetrag: {{total_gross}}\nBitte überweisen Sie den Betrag bis zum {{due_date}}.\n\nMit freundlichen Grüßen\n{{company_name}}",
-                'receipt_subject'  => 'Ihre Quittung {{invoice_number}}',
-                'receipt_body'     => "Sehr geehrte/r {{owner_name}},\n\nvielen Dank für Ihre Zahlung. Anbei erhalten Sie Ihre Quittung für Rechnung {{invoice_number}} vom {{issue_date}}.\n\nBezahlter Betrag: {{total_gross}}\n\nMit freundlichen Grüßen\n{{company_name}}",
+                'invoice_subject'  => 'Deine Rechnung {{invoice_number}}',
+                'invoice_body'     => "Hallo {{owner_name}},\n\nanbei erhältst du deine Rechnung {{invoice_number}} vom {{issue_date}}.\n\nGesamtbetrag: {{total_gross}}\nBitte überweise den Betrag bis zum {{due_date}}.\n\nLiebe Grüße\n{{company_name}}",
+                'receipt_subject'  => 'Deine Quittung {{invoice_number}}',
+                'receipt_body'     => "Hallo {{owner_name}},\n\nvielen Dank für deine Zahlung. Anbei erhältst du deine Quittung für Rechnung {{invoice_number}} vom {{issue_date}}.\n\nBezahlter Betrag: {{total_gross}}\n\nLiebe Grüße\n{{company_name}}",
                 'reminder_subject' => 'Terminerinnerung: {{appointment_title}} am {{appointment_date}}',
-                'reminder_body'    => "Hallo {{owner_name}},\n\nwir möchten Sie an Ihren bevorstehenden Termin erinnern:\n\n\u{1F4C5} {{appointment_title}}\nDatum: {{appointment_date}}\nUhrzeit: {{appointment_time}}\n{{appointment_patient}}\n\nFalls Sie den Termin absagen oder verschieben möchten, kontaktieren Sie uns bitte rechtzeitig.\n\nMit freundlichen Grüßen\n{{company_name}}",
-                'invite_subject'   => 'Ihre Einladung zur Anmeldung \u2014 {{company_name}}',
-                'invite_body'      => "Sie wurden eingeladen!\n\n{{from_name}} lädt Sie ein, Ihr Tier und sich als Besitzer direkt in unserem System zu registrieren.\n\n{{note}}\n\nJetzt registrieren:\n{{invite_url}}\n\nDieser Link ist 7 Tage gültig.\n\nMit freundlichen Grüßen\n{{company_name}}",
-                'birthday_body'    => "Liebe/r {{owner_name}},\n\nheute hat {{patient_name}} Geburtstag! 🎉\n\nWir wünschen {{patient_name}} alles Gute und noch viele gesunde, glückliche Jahre.\n\nHerzliche Grüße,\n{{company_name}}",
+                'reminder_body'    => "Hallo {{owner_name}},\n\nhiermit möchte ich dich an deinen bevorstehenden Termin erinnern:\n\n\u{1F4C5} {{appointment_title}}\nDatum: {{appointment_date}}\nUhrzeit: {{appointment_time}}\n{{appointment_patient}}\n\nFalls du den Termin absagen oder verschieben möchtest, melde dich gerne bei mir.\n\nLiebe Grüße\n{{company_name}}",
+                'invite_subject'   => 'Deine Einladung zur Anmeldung — {{company_name}}',
+                'invite_body'      => "Du wurdest eingeladen!\n\n{{from_name}} lädt dich ein, dein Tier und dich als Besitzer direkt in meinem System zu registrieren.\n\n{{note}}\n\nJetzt registrieren:\n{{invite_url}}\n\nDieser Link ist 7 Tage gültig.\n\nLiebe Grüße\n{{company_name}}",
+                'birthday_body'    => "Liebe/r {{owner_name}},\n\nheute hat {{patient_name}} Geburtstag! 🎉\n\nIch wünsche {{patient_name}} alles Gute und noch viele gesunde, glückliche Jahre.\n\nHerzliche Grüße,\n{{company_name}}",
             ],
         ]);
     }
