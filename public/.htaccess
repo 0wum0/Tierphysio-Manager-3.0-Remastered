@@ -1,6 +1,22 @@
 Options -Indexes
 RewriteEngine On
 
+# ── Subdomain: portal.* → /portal/* ──────────────────────────────────────────
+# Static assets pass through unchanged on all domains
+RewriteCond %{HTTP_HOST} ^portal\. [NC]
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Root of portal subdomain → /portal/login
+RewriteCond %{HTTP_HOST} ^portal\. [NC]
+RewriteRule ^$ /portal/login [R=302,L]
+
+# Any path on portal subdomain that does NOT already start with /portal → prefix it
+RewriteCond %{HTTP_HOST} ^portal\. [NC]
+RewriteCond %{REQUEST_URI} !^/portal [NC]
+RewriteRule ^(.*)$ /portal/$1 [L,QSA]
+# ─────────────────────────────────────────────────────────────────────────────
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
