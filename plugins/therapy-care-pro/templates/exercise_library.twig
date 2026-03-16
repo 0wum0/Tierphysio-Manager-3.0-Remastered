@@ -68,6 +68,12 @@
                 </div>
                 <div class="d-flex gap-2 mt-auto">
                     <a href="/tcp/bibliothek/{{ exercise.id }}/bearbeiten" class="btn btn-sm btn-outline-secondary flex-fill">Bearbeiten</a>
+                    <form method="POST" action="/tcp/bibliothek/{{ exercise.id }}/duplizieren">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <button class="btn btn-sm btn-outline-info" title="Duplizieren">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><rect stroke="currentColor" stroke-width="2" x="9" y="9" width="13" height="13" rx="2"/><path stroke="currentColor" stroke-width="2" d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                    </form>
                     <form method="POST" action="/tcp/bibliothek/{{ exercise.id }}/loeschen" onsubmit="return confirm('Uebung loeschen?')">
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                         <button class="btn btn-sm btn-outline-danger">

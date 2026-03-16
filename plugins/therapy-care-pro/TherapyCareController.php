@@ -563,6 +563,54 @@ class TherapyCareController extends Controller
         $this->redirect('/tcp/bibliothek');
     }
 
+    public function exerciseLibraryDuplicate(array $params = []): void
+    {
+        $this->validateCsrf();
+        $exercise = $this->repo->findExerciseById((int)$params['id']);
+        if (!$exercise) { $this->abort(404); }
+
+        $userId = (int)($this->session->get('user_id') ?? 0);
+
+        $newData = $exercise;
+        unset($newData['id'], $newData['created_at'], $newData['updated_at'], $newData['created_by_name']);
+        $newData['title']      = $exercise['title'] . ' (Kopie)';
+        $newData['created_by'] = $userId ?: null;
+
+        $newId = $this->repo->createExercise($newData);
+        $this->session->flash('success', 'Übung dupliziert.');
+        $this->redirect('/tcp/bibliothek/' . $newId . '/bearbeiten');
+    }
+
+    /* ── API: return exercise library as JSON for homework picker ── */
+    public function apiExerciseLibrary(array $params = []): void
+    {
+        $category = $this->get('category', '');
+        $search   = $this->get('search', '');
+
+        $exercises = $this->repo->getExerciseLibrary(
+            $category ?: null,
+            $search   ?: null
+        );
+
+        /* Strip heavy fields not needed in the picker */
+        $light = array_map(static function (array $e): array {
+            return [
+                'id'           => $e['id'],
+                'title'        => $e['title'],
+                'category'     => $e['category'],
+                'description'  => $e['description'],
+                'instructions' => $e['instructions'] ?? '',
+                'frequency'    => $e['frequency'] ?? '',
+                'duration'     => $e['duration'] ?? '',
+                'species_tags' => $e['species_tags'] ?? '',
+                'therapy_tags' => $e['therapy_tags'] ?? '',
+                'contraindications' => $e['contraindications'] ?? '',
+            ];
+        }, $exercises);
+
+        $this->json(['ok' => true, 'exercises' => $light]);
+    }
+
     /* ══════════════════════════════════════════════════════════
        MODULE 6 — NATURAL THERAPY
     ══════════════════════════════════════════════════════════ */

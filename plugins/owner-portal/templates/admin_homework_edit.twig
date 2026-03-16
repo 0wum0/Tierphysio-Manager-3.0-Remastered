@@ -123,6 +123,10 @@
                         <i class="fal fa-copy mr-1"></i> Aus Vorlage
                     </button>
                     {% endif %}
+                    <button type="button" class="btn btn-xs btn-outline-info" onclick="openLibraryPicker()">
+                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" class="me-1"><path stroke="currentColor" stroke-width="2" d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path stroke="currentColor" stroke-width="2" d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                        Aus Bibliothek
+                    </button>
                     <button type="button" class="btn btn-xs btn-primary" onclick="addTask()">
                         <i class="fal fa-plus mr-1"></i> Aufgabe hinzufügen
                     </button>
@@ -191,6 +195,44 @@
         </button>
     </div>
 </form>
+
+{# ── Library Picker Modal ── #}
+<div class="modal fade" id="modal-library-picker" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" class="me-2"><path stroke="currentColor" stroke-width="2" d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path stroke="currentColor" stroke-width="2" d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                    Übungsbibliothek
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2 mb-3">
+                    <div class="col-12 col-sm-auto flex-fill">
+                        <input type="text" id="lib-search" class="form-control form-control-sm"
+                               placeholder="Suche nach Titel oder Beschreibung...">
+                    </div>
+                    <div class="col-12 col-sm-auto">
+                        <select id="lib-category" class="form-select form-select-sm">
+                            <option value="">Alle Kategorien</option>
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="filterLibrary()">Filtern</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="resetLibraryFilter()">Zurücksetzen</button>
+                    </div>
+                </div>
+                <div id="lib-results" class="row g-2">
+                    <div class="col-12 text-center text-muted py-4">
+                        <div class="spinner-border spinner-border-sm" role="status"></div>
+                        <span class="ms-2">Lade Übungen…</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 {# ── Template Selector Modal ── #}
 {% if templates %}
@@ -311,6 +353,127 @@ function selectTemplate(tpl) {
 function escHtml(str) {
     return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+/* ── Übungsbibliothek Picker ── */
+var _libAllExercises = null;
+var _libModal        = null;
+
+function openLibraryPicker() {
+    _libModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-library-picker'));
+    _libModal.show();
+    if (_libAllExercises === null) {
+        loadLibrary();
+    } else {
+        renderLibraryResults(_libAllExercises);
+    }
+}
+
+function loadLibrary() {
+    fetch('/api/tcp/bibliothek', {headers:{'X-Requested-With':'XMLHttpRequest'}})
+        .then(function(r){ return r.json(); })
+        .then(function(data) {
+            if (!data.ok) { showLibraryError(); return; }
+            _libAllExercises = data.exercises || [];
+            populateLibraryCategories(_libAllExercises);
+            renderLibraryResults(_libAllExercises);
+        })
+        .catch(showLibraryError);
+}
+
+function populateLibraryCategories(exercises) {
+    var sel = document.getElementById('lib-category');
+    var cats = {};
+    exercises.forEach(function(e){ if(e.category) cats[e.category] = true; });
+    var frag = '';
+    Object.keys(cats).sort().forEach(function(c){
+        frag += '<option value="' + escHtml(c) + '">' + escHtml(c) + '</option>';
+    });
+    sel.innerHTML = '<option value="">Alle Kategorien</option>' + frag;
+}
+
+function filterLibrary() {
+    if (!_libAllExercises) return;
+    var search = (document.getElementById('lib-search').value || '').toLowerCase();
+    var cat    = document.getElementById('lib-category').value || '';
+    var filtered = _libAllExercises.filter(function(e) {
+        var matchCat    = !cat    || e.category === cat;
+        var matchSearch = !search || e.title.toLowerCase().indexOf(search) >= 0
+                                  || (e.description || '').toLowerCase().indexOf(search) >= 0;
+        return matchCat && matchSearch;
+    });
+    renderLibraryResults(filtered);
+}
+
+function resetLibraryFilter() {
+    document.getElementById('lib-search').value = '';
+    document.getElementById('lib-category').value = '';
+    if (_libAllExercises) renderLibraryResults(_libAllExercises);
+}
+
+function renderLibraryResults(exercises) {
+    var container = document.getElementById('lib-results');
+    if (!exercises || exercises.length === 0) {
+        container.innerHTML = '<div class="col-12 text-center text-muted py-4">Keine Übungen gefunden.</div>';
+        return;
+    }
+    var html = '';
+    exercises.forEach(function(e) {
+        var desc   = e.description ? escHtml(e.description.substring(0, 100)) + (e.description.length > 100 ? '…' : '') : '';
+        var badges = '';
+        if (e.frequency) badges += '<span class="badge bg-light text-dark fs-nano me-1">' + escHtml(e.frequency) + '</span>';
+        if (e.duration)  badges += '<span class="badge bg-light text-dark fs-nano me-1">' + escHtml(e.duration)  + '</span>';
+        if (e.species_tags) {
+            e.species_tags.split(',').forEach(function(t){
+                if(t.trim()) badges += '<span class="badge bg-info text-dark fs-nano me-1">' + escHtml(t.trim()) + '</span>';
+            });
+        }
+        html += '<div class="col-12 col-md-6 col-xl-4">';
+        html +=   '<div class="card h-100 lib-exercise-card" style="cursor:pointer;" data-lib-ex="' + escHtml(JSON.stringify(e)) + '">';
+        html +=     '<div class="card-body p-3">';
+        html +=       '<div class="d-flex align-items-start gap-2 mb-1">';
+        html +=         '<div class="flex-fill">';
+        html +=           '<div class="fw-600 mb-1">' + escHtml(e.title) + '</div>';
+        html +=           '<span class="badge bg-secondary fs-nano">' + escHtml(e.category || 'sonstiges') + '</span>';
+        html +=         '</div>';
+        html +=         '<button type="button" class="btn btn-xs btn-primary lib-add-btn flex-shrink-0">+ Hinzufügen</button>';
+        html +=       '</div>';
+        if (desc) html += '<div class="text-muted fs-sm mt-1 mb-2">' + desc + '</div>';
+        if (badges) html += '<div class="mt-1">' + badges + '</div>';
+        html +=     '</div>';
+        html +=   '</div>';
+        html += '</div>';
+    });
+    container.innerHTML = html;
+}
+
+function showLibraryError() {
+    document.getElementById('lib-results').innerHTML =
+        '<div class="col-12"><div class="alert alert-warning">Bibliothek konnte nicht geladen werden. Bitte prüfen Sie ob TherapyCare Pro aktiv ist.</div></div>';
+}
+
+document.addEventListener('click', function(e) {
+    var btn  = e.target.closest('.lib-add-btn');
+    var card = e.target.closest('.lib-exercise-card');
+    if (!btn && !card) return;
+    var target = btn ? btn.closest('.lib-exercise-card') : card;
+    if (!target) return;
+    try {
+        var ex = JSON.parse(target.getAttribute('data-lib-ex') || '{}');
+        addTask({
+            title:           ex.title        || '',
+            description:     ex.description  || '',
+            instructions:    ex.instructions || '',
+            frequency:       ex.frequency    || '',
+            duration:        ex.duration     || '',
+            therapist_notes: ex.contraindications ? 'Kontraindikationen: ' + ex.contraindications : '',
+        });
+        if (_libModal) _libModal.hide();
+    } catch(err) {}
+});
+
+document.getElementById('lib-search').addEventListener('keydown', function(e){
+    if (e.key === 'Enter') { e.preventDefault(); filterLibrary(); }
+});
 </script>
 
 </div>

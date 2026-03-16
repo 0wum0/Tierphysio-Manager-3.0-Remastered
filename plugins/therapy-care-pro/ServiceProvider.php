@@ -71,12 +71,14 @@ class ServiceProvider
         $router->post('/patienten/{id}/berichte/{report_id}/loeschen',        [TherapyCareController::class, 'reportDelete'],        ['auth']);
 
         /* ── MODULE 5: Exercise Library ── */
-        $router->get( '/tcp/bibliothek',                                      [TherapyCareController::class, 'exerciseLibraryIndex'],  ['auth']);
-        $router->get( '/tcp/bibliothek/neu',                                  [TherapyCareController::class, 'exerciseLibraryCreate'], ['auth']);
-        $router->post('/tcp/bibliothek/neu',                                  [TherapyCareController::class, 'exerciseLibraryStore'],  ['auth']);
-        $router->get( '/tcp/bibliothek/{id}/bearbeiten',                      [TherapyCareController::class, 'exerciseLibraryEdit'],   ['auth']);
-        $router->post('/tcp/bibliothek/{id}/bearbeiten',                      [TherapyCareController::class, 'exerciseLibraryUpdate'], ['auth']);
-        $router->post('/tcp/bibliothek/{id}/loeschen',                        [TherapyCareController::class, 'exerciseLibraryDelete'], ['auth']);
+        $router->get( '/tcp/bibliothek',                                      [TherapyCareController::class, 'exerciseLibraryIndex'],     ['auth']);
+        $router->get( '/tcp/bibliothek/neu',                                  [TherapyCareController::class, 'exerciseLibraryCreate'],    ['auth']);
+        $router->post('/tcp/bibliothek/neu',                                  [TherapyCareController::class, 'exerciseLibraryStore'],     ['auth']);
+        $router->get( '/tcp/bibliothek/{id}/bearbeiten',                      [TherapyCareController::class, 'exerciseLibraryEdit'],      ['auth']);
+        $router->post('/tcp/bibliothek/{id}/bearbeiten',                      [TherapyCareController::class, 'exerciseLibraryUpdate'],    ['auth']);
+        $router->post('/tcp/bibliothek/{id}/loeschen',                        [TherapyCareController::class, 'exerciseLibraryDelete'],    ['auth']);
+        $router->post('/tcp/bibliothek/{id}/duplizieren',                     [TherapyCareController::class, 'exerciseLibraryDuplicate'], ['auth']);
+        $router->get( '/api/tcp/bibliothek',                                  [TherapyCareController::class, 'apiExerciseLibrary'],       ['auth']);
 
         /* ── MODULE 6: Natural Therapy ── */
         $router->get( '/patienten/{id}/naturheilkunde',                       [TherapyCareController::class, 'naturalIndex'],        ['auth']);
