@@ -72,7 +72,7 @@ class Router
     public function dispatch(): void
     {
         $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
-        $uri    = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+        $uri    = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
         $uri    = rtrim($uri, '/') ?: '/';
 
         if ($method === 'POST' && isset($_POST['_method'])) {

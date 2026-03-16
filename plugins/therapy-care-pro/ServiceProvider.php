@@ -264,7 +264,13 @@ class ServiceProvider
     private function runMigrations(): void
     {
         try {
-            $db           = Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $db = Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+
+            /* Fast-path: if sentinel table already exists, migration has run */
+            if ($db->tableExists('tcp_progress_categories')) {
+                return;
+            }
+
             $migrationDir = __DIR__ . '/migrations';
             if (!is_dir($migrationDir)) return;
 
@@ -274,19 +280,100 @@ class ServiceProvider
 
             foreach ($files as $file) {
                 $sql        = file_get_contents($file);
-                $statements = array_filter(array_map('trim', explode(';', $sql)));
+                $statements = $this->splitSql($sql);
                 foreach ($statements as $stmt) {
-                    if (!empty($stmt)) {
-                        try {
-                            $db->execute($stmt);
-                        } catch (\Throwable) {
-                            /* Table/index already exists — skip */
+                    try {
+                        $db->getPdo()->exec($stmt);
+                    } catch (\Throwable $e) {
+                        /* Skip "already exists" errors; log anything else */
+                        $msg = $e->getMessage();
+                        if (stripos($msg, 'already exists') === false
+                            && stripos($msg, 'Duplicate') === false) {
+                            error_log('[TherapyCare Pro migration] ' . $msg . ' — SQL: ' . substr($stmt, 0, 120));
                         }
                     }
                 }
             }
-        } catch (\Throwable) {
-            /* DB not available yet (installer phase) */
+        } catch (\Throwable $e) {
+            error_log('[TherapyCare Pro runMigrations] ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Split a SQL file into individual statements, correctly handling:
+     * - Single-line comments (--)
+     * - Multi-line comments (/* ... *\/)
+     * - Single-quoted string literals (with escaped quotes)
+     */
+    private function splitSql(string $sql): array
+    {
+        $statements = [];
+        $current    = '';
+        $len        = strlen($sql);
+        $i          = 0;
+
+        while ($i < $len) {
+            $ch = $sql[$i];
+
+            /* Single-line comment: skip to end of line */
+            if ($ch === '-' && isset($sql[$i + 1]) && $sql[$i + 1] === '-') {
+                $end = strpos($sql, "\n", $i);
+                $i   = $end === false ? $len : $end + 1;
+                continue;
+            }
+
+            /* Multi-line comment: skip to closing */
+            if ($ch === '/' && isset($sql[$i + 1]) && $sql[$i + 1] === '*') {
+                $end = strpos($sql, '*/', $i + 2);
+                $i   = $end === false ? $len : $end + 2;
+                continue;
+            }
+
+            /* Quoted string: copy verbatim including the closing quote */
+            if ($ch === "'") {
+                $current .= $ch;
+                $i++;
+                while ($i < $len) {
+                    $qch = $sql[$i];
+                    $current .= $qch;
+                    $i++;
+                    if ($qch === '\\') {
+                        /* escaped character — copy next char too */
+                        if ($i < $len) { $current .= $sql[$i]; $i++; }
+                        continue;
+                    }
+                    if ($qch === "'") {
+                        /* check for doubled quote (SQL escape) */
+                        if (isset($sql[$i]) && $sql[$i] === "'") {
+                            $current .= $sql[$i]; $i++;
+                            continue;
+                        }
+                        break;
+                    }
+                }
+                continue;
+            }
+
+            /* Statement terminator */
+            if ($ch === ';') {
+                $stmt = trim($current);
+                if ($stmt !== '') {
+                    $statements[] = $stmt;
+                }
+                $current = '';
+                $i++;
+                continue;
+            }
+
+            $current .= $ch;
+            $i++;
+        }
+
+        $stmt = trim($current);
+        if ($stmt !== '') {
+            $statements[] = $stmt;
+        }
+
+        return $statements;
     }
 }
