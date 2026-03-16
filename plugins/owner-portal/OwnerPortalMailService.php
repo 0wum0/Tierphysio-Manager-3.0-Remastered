@@ -16,8 +16,11 @@ class OwnerPortalMailService
 
     public function sendInvite(string $email, string $token): void
     {
-        $baseUrl     = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
-                     . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+        $configured  = $this->settings->get('portal_base_url', '');
+        $baseUrl     = $configured !== ''
+            ? rtrim($configured, '/')
+            : ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
+               . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost'));
         $inviteUrl   = $baseUrl . '/portal/einladung/' . $token;
         $companyName = $this->settings->get('company_name', 'Tierphysio Praxis');
 

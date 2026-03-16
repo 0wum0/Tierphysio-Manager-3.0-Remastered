@@ -25,6 +25,40 @@
 </div>
 {% endif %}
 
+{# ── Portal-URL Einstellungen ── #}
+<div class="glass-card mb-3">
+    <div class="d-flex align-items-center gap-2 mb-3">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="2"/><path stroke="currentColor" stroke-width="2" d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <h2 class="h6 mb-0">Portal-URL Einstellungen</h2>
+    </div>
+    <form method="POST" action="/portal-admin/einstellungen" class="row g-2 align-items-end">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+        <div class="col-12 col-md-8">
+            <label class="form-label mb-1" style="font-size:0.8rem;">
+                Portal-Basis-URL
+                <span class="text-muted" style="font-weight:400;">(wird in allen Einladungs-E-Mails verwendet)</span>
+            </label>
+            <input type="url" name="portal_base_url" class="form-control form-control-sm"
+                   value="{{ portal_base_url }}"
+                   placeholder="https://portal.example.com"
+                   pattern="https?://.*">
+            <div class="form-text" style="font-size:0.72rem;">
+                {% if portal_base_url %}
+                    Aktuell: <a href="{{ portal_base_url }}/portal/login" target="_blank" class="text-primary">{{ portal_base_url }}/portal/login</a>
+                {% else %}
+                    Leer = automatisch vom Server-Host abgeleitet (Standardverhalten)
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-12 col-md-auto">
+            <button type="submit" class="btn btn-primary btn-sm">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="17 21 17 13 7 13 7 21"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 3 7 8 15 8"/></svg>
+                Speichern
+            </button>
+        </div>
+    </form>
+</div>
+
 <div class="glass-card p-0">
                     {% if portal_users %}
                     <div class="table-responsive">

@@ -46,12 +46,33 @@ class OwnerPortalAdminController extends Controller
         $users = $this->repo->getAllPortalUsers();
 
         $this->render('@owner-portal/admin_index.twig', [
-            'page_title'   => 'Besitzerportal — Verwaltung',
-            'portal_users' => $users,
-            'csrf_token'   => $this->session->generateCsrfToken(),
-            'success'      => $this->session->getFlash('success'),
-            'error'        => $this->session->getFlash('error'),
+            'page_title'       => 'Besitzerportal — Verwaltung',
+            'portal_users'     => $users,
+            'portal_base_url'  => $this->settingsRepository->get('portal_base_url', ''),
+            'csrf_token'       => $this->session->generateCsrfToken(),
+            'success'          => $this->session->getFlash('success'),
+            'error'            => $this->session->getFlash('error'),
         ]);
+    }
+
+    /* ── POST /portal-admin/einstellungen ── */
+    public function saveSettings(array $params = []): void
+    {
+        $this->validateCsrf();
+
+        $url = trim($this->post('portal_base_url', ''));
+
+        /* Basic validation — must be empty or start with http(s):// */
+        if ($url !== '' && !preg_match('#^https?://#i', $url)) {
+            $this->session->flash('error', 'Portal-URL muss mit https:// oder http:// beginnen.');
+            $this->redirect('/portal-admin');
+            return;
+        }
+
+        /* Strip trailing slash for clean storage */
+        $this->settingsRepository->set('portal_base_url', rtrim($url, '/'));
+        $this->session->flash('success', 'Portal-URL gespeichert. Alle zukünftigen Einladungen verwenden diese Adresse.');
+        $this->redirect('/portal-admin');
     }
 
     /* ── GET /portal-admin/einladen ── */

@@ -61,6 +61,7 @@ class ServiceProvider
         $router->get('/portal/termine',                  [OwnerPortalController::class,      'appointments'],   []);
 
         /* ── Admin portal management (requires staff auth) ── */
+        $router->post('/portal-admin/einstellungen',             [OwnerPortalAdminController::class, 'saveSettings'],   ['auth']);
         $router->get('/portal-admin',                            [OwnerPortalAdminController::class, 'index'],          ['auth']);
         $router->get('/portal-admin/einladen',                   [OwnerPortalAdminController::class, 'showInvite'],     ['auth']);
         $router->post('/portal-admin/einladen',                  [OwnerPortalAdminController::class, 'sendInvite'],     ['auth']);
