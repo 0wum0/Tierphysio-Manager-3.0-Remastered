@@ -933,6 +933,32 @@ class TherapyCareController extends Controller
         $this->json(['entries' => $entries, 'latest' => $latest, 'chart' => $chart]);
     }
 
+    public function apiModalData(array $params = []): void
+    {
+        $patientId = (int)$params['id'];
+        try {
+            $cats    = $this->repo->getActiveProgressCategories();
+            $entries = $this->repo->getProgressEntriesForPatient($patientId);
+            $latest  = $this->repo->getLatestProgressForPatient($patientId);
+            $chart   = $this->buildChartData($cats, $entries);
+            $natural = $this->repo->getNaturalEntriesForPatient($patientId);
+            $reports = $this->repo->getTherapyReportsForPatient($patientId);
+            $vis     = $this->repo->getPortalVisibility($patientId);
+
+            $this->json([
+                'ok'         => true,
+                'categories' => $cats,
+                'latest'     => $latest,
+                'chart'      => $chart,
+                'natural'    => $natural,
+                'reports'    => $reports,
+                'visibility' => $vis,
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['ok' => false, 'error' => $e->getMessage()], 500);
+        }
+    }
+
     public function apiPortalVisibility(array $params = []): void
     {
         $patientId  = (int)$params['id'];

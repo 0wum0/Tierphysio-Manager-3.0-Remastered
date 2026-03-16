@@ -28,12 +28,6 @@ class ServiceProvider
         // Register routes
         $pluginManager->hook('registerRoutes', [$this, 'registerRoutes']);
 
-        // Add patient detail tabs (Fortschritt, Naturheilkunde)
-        $pluginManager->hook('patientDetailTabs', [$this, 'addPatientDetailTabs']);
-
-        // Add action buttons to patient header
-        $pluginManager->hook('patientHeaderActions', [$this, 'patientHeaderActions']);
-
         // Dashboard widget
         $pluginManager->hook('dashboardWidgets', [$this, 'dashboardWidget']);
 
@@ -108,6 +102,7 @@ class ServiceProvider
         /* ── API ── */
         $router->get( '/api/tcp/patienten/{id}/fortschritt',                  [TherapyCareController::class, 'apiProgressData'],     ['auth']);
         $router->get( '/api/tcp/patienten/{id}/portal-visibility',            [TherapyCareController::class, 'apiPortalVisibility'], ['auth']);
+        $router->get( '/api/tcp/patienten/{id}/modal-data',                   [TherapyCareController::class, 'apiModalData'],        ['auth']);
 
         /* ── OWNER PORTAL EXTENSIONS ── */
         $router->get( '/portal/tcp/tiere/{id}/fortschritt',                   [TherapyCarePortalController::class, 'progress'],        []);

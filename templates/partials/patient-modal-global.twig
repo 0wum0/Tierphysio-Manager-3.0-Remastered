@@ -145,6 +145,36 @@
                 <div id="pd-appointments-list" style="display:flex;flex-direction:column;gap:0.4rem;"></div>
             </div>
 
+            {# ── TherapyCare Pro: Fortschritt ── #}
+            <div id="pd-tcp-progress-section" style="display:none;">
+                <div style="border-top:1px solid var(--glass-border);padding-top:1rem;"></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;">
+                    <div style="font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">Therapiefortschritt</div>
+                    <a id="pd-tcp-progress-link" href="#" style="font-size:0.72rem;color:var(--accent,#4f7cff);text-decoration:none;">Vollansicht →</a>
+                </div>
+                <div id="pd-tcp-progress-list" style="display:flex;flex-direction:column;gap:0.35rem;"></div>
+            </div>
+
+            {# ── TherapyCare Pro: Naturheilkunde ── #}
+            <div id="pd-tcp-natural-section" style="display:none;">
+                <div style="border-top:1px solid var(--glass-border);padding-top:1rem;margin-top:0.25rem;"></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;">
+                    <div style="font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">Naturheilkunde</div>
+                    <a id="pd-tcp-natural-link" href="#" style="font-size:0.72rem;color:var(--accent,#4f7cff);text-decoration:none;">Vollansicht →</a>
+                </div>
+                <div id="pd-tcp-natural-list" style="display:flex;flex-direction:column;gap:0.35rem;"></div>
+            </div>
+
+            {# ── TherapyCare Pro: Therapieberichte ── #}
+            <div id="pd-tcp-reports-section" style="display:none;">
+                <div style="border-top:1px solid var(--glass-border);padding-top:1rem;margin-top:0.25rem;"></div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.6rem;">
+                    <div style="font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;">Therapieberichte</div>
+                    <a id="pd-tcp-reports-link" href="#" style="font-size:0.72rem;color:var(--accent,#4f7cff);text-decoration:none;">Alle Berichte →</a>
+                </div>
+                <div id="pd-tcp-reports-list" style="display:flex;flex-direction:column;gap:0.35rem;"></div>
+            </div>
+
             <div style="border-top:1px solid var(--glass-border);margin-top:0.5rem;"></div>
 
             {# ── Tierarztbericht-Verlauf ── #}
@@ -710,6 +740,9 @@ function resetModal() {
     pdOwner.innerHTML       = '';
     pdTimeline.innerHTML    = '';
     if (pdSearchInput) pdSearchInput.value = '';
+    /* TCP sections */
+    var tcpSecs = ['pd-tcp-progress-section','pd-tcp-natural-section','pd-tcp-reports-section'];
+    tcpSecs.forEach(function(id){ var el=document.getElementById(id); if(el) el.style.display='none'; });
 }
 
 /* ── Timeline render ──────────────────────────────────────── */
@@ -1422,6 +1455,7 @@ function openPatientModal(patientId) {
             renderTimeline(data.timeline, patientId);
             renderAppointments(data.appointments || [], data.patient);
             loadVetReportHistory(patientId);
+            loadTcpData(patientId);
             pdLoading.style.display = 'none';
             pdBody.style.display    = 'flex';
         })
@@ -1877,6 +1911,106 @@ document.addEventListener('keydown', function(e) {
     var el = e.target.closest('[data-patient-id]');
     if (el) { e.preventDefault(); openPatientModal(el.dataset.patientId); }
 });
+
+/* ── TherapyCare Pro: Modal-Daten laden ──────────────────── */
+function loadTcpData(patientId) {
+    var secProgress = document.getElementById('pd-tcp-progress-section');
+    var secNatural  = document.getElementById('pd-tcp-natural-section');
+    var secReports  = document.getElementById('pd-tcp-reports-section');
+    var listProgress = document.getElementById('pd-tcp-progress-list');
+    var listNatural  = document.getElementById('pd-tcp-natural-list');
+    var listReports  = document.getElementById('pd-tcp-reports-list');
+    var linkProgress = document.getElementById('pd-tcp-progress-link');
+    var linkNatural  = document.getElementById('pd-tcp-natural-link');
+    var linkReports  = document.getElementById('pd-tcp-reports-link');
+
+    if (!secProgress) return; /* plugin not active */
+
+    /* reset */
+    secProgress.style.display = 'none';
+    secNatural.style.display  = 'none';
+    secReports.style.display  = 'none';
+    if (linkProgress) linkProgress.href = '/patienten/' + patientId + '/fortschritt';
+    if (linkNatural)  linkNatural.href  = '/patienten/' + patientId + '/naturheilkunde';
+    if (linkReports)  linkReports.href  = '/patienten/' + patientId + '/berichte';
+
+    fetch('/api/tcp/patienten/' + patientId + '/modal-data', {headers:{'X-Requested-With':'XMLHttpRequest'}})
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data.ok) return;
+
+            /* ── Fortschritt ── */
+            var latest = data.latest || [];
+            if (latest.length > 0) {
+                var html = '';
+                latest.forEach(function(e) {
+                    var color = esc(e.category_color || e.color || '#4f7cff');
+                    var pct   = Math.round(((e.score - (e.scale_min || 1)) / ((e.scale_max || 10) - (e.scale_min || 1))) * 100);
+                    var date  = e.entry_date ? e.entry_date.substring(0,10).split('-').reverse().join('.') : '';
+                    html += '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;border-radius:7px;background:var(--bg-elevated,rgba(255,255,255,0.04));border:1px solid var(--glass-border);">';
+                    html += '<div style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:' + color + ';"></div>';
+                    html += '<div style="flex:1;min-width:0;">';
+                    html += '<div style="font-size:0.78rem;font-weight:600;color:var(--text-primary);">' + esc(e.category_name || '') + '</div>';
+                    html += '<div style="height:4px;background:var(--glass-border);border-radius:999px;margin-top:3px;"><div style="height:100%;width:' + pct + '%;background:' + color + ';border-radius:999px;"></div></div>';
+                    html += '</div>';
+                    html += '<div style="display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0;">';
+                    html += '<span style="font-size:0.82rem;font-weight:700;color:' + color + ';">' + esc(String(e.score)) + '</span>';
+                    html += '<span style="font-size:0.65rem;color:var(--text-muted);">' + esc(date) + '</span>';
+                    html += '</div>';
+                    html += '</div>';
+                });
+                listProgress.innerHTML = html;
+                secProgress.style.display = '';
+            }
+
+            /* ── Naturheilkunde ── */
+            var natural = data.natural || [];
+            if (natural.length > 0) {
+                var html2 = '';
+                var shown = natural.slice(0, 3);
+                shown.forEach(function(e) {
+                    var date2 = e.entry_date ? e.entry_date.substring(0,10).split('-').reverse().join('.') : '';
+                    html2 += '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;border-radius:7px;background:var(--bg-elevated,rgba(255,255,255,0.04));border:1px solid var(--glass-border);">';
+                    html2 += '<svg width="12" height="12" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;opacity:0.5;"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 2a10 10 0 010 20M12 2C6.5 2 2 6.5 2 12m10-10c2 4 3 8 0 10"/></svg>';
+                    html2 += '<div style="flex:1;min-width:0;">';
+                    html2 += '<div style="font-size:0.78rem;font-weight:600;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(e.type_name || e.custom_type || '') + '</div>';
+                    if (e.notes) html2 += '<div style="font-size:0.68rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(e.notes) + '</div>';
+                    html2 += '</div>';
+                    html2 += '<span style="font-size:0.65rem;color:var(--text-muted);flex-shrink:0;">' + esc(date2) + '</span>';
+                    html2 += '</div>';
+                });
+                if (natural.length > 3) {
+                    html2 += '<div style="font-size:0.7rem;color:var(--text-muted);text-align:center;padding:0.2rem;">+' + (natural.length - 3) + ' weitere</div>';
+                }
+                listNatural.innerHTML = html2;
+                secNatural.style.display = '';
+            }
+
+            /* ── Therapieberichte ── */
+            var reports = data.reports || [];
+            if (reports.length > 0) {
+                var html3 = '';
+                var shownR = reports.slice(0, 3);
+                shownR.forEach(function(r) {
+                    var date3 = r.created_at ? r.created_at.substring(0,10).split('-').reverse().join('.') : '';
+                    html3 += '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;border-radius:7px;background:var(--bg-elevated,rgba(255,255,255,0.04));border:1px solid var(--glass-border);">';
+                    html3 += '<svg width="12" height="12" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;opacity:0.5;"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>';
+                    html3 += '<div style="flex:1;min-width:0;">';
+                    html3 += '<div style="font-size:0.78rem;font-weight:600;color:var(--text-primary);">' + esc(r.title || 'Therapiebericht') + '</div>';
+                    html3 += '<div style="font-size:0.68rem;color:var(--text-muted);">' + esc(date3) + '</div>';
+                    html3 += '</div>';
+                    html3 += '<a href="/patienten/' + patientId + '/berichte/' + r.id + '/download" target="_blank" style="flex-shrink:0;color:var(--accent,#4f7cff);font-size:0.72rem;text-decoration:none;padding:0.2rem 0.45rem;border:1px solid var(--glass-border);border-radius:5px;">Öffnen</a>';
+                    html3 += '</div>';
+                });
+                if (reports.length > 3) {
+                    html3 += '<div style="font-size:0.7rem;color:var(--text-muted);text-align:center;padding:0.2rem;">+' + (reports.length - 3) + ' weitere</div>';
+                }
+                listReports.innerHTML = html3;
+                secReports.style.display = '';
+            }
+        })
+        .catch(function() { /* TCP-Plugin nicht aktiv oder Tabellen noch nicht migriert – ignorieren */ });
+}
 
 /* Export globally */
 window._gsOpenPatient   = openPatientModal;
