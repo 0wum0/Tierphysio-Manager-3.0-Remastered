@@ -123,6 +123,31 @@ class OwnerPortalController extends Controller
         $photos     = array_filter($timeline, fn($e) => $e['type'] === 'photo');
         $documents  = array_filter($timeline, fn($e) => $e['type'] === 'document');
 
+        /* ── TherapyCare Pro data (loaded only if plugin is active) ── */
+        $tcpProgress = null;
+        $tcpNatural  = null;
+        $tcpReports  = null;
+        $tcpFeedback = null;
+        try {
+            if (class_exists('\Plugins\TherapyCarePro\TherapyCareRepository')) {
+                $db         = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+                $tcpRepo    = new \Plugins\TherapyCarePro\TherapyCareRepository($db);
+                $visibility = $tcpRepo->getPortalVisibility($petId);
+
+                if (!empty($visibility['show_progress'])) {
+                    $tcpProgress = $tcpRepo->getLatestProgressForPatient($petId);
+                }
+                if (!empty($visibility['show_natural'])) {
+                    $tcpNatural = $tcpRepo->getPublicNaturalEntriesForPatient($petId);
+                }
+                if (!empty($visibility['show_reports'])) {
+                    $reports    = $tcpRepo->getTherapyReportsForPatient($petId);
+                    $tcpReports = array_values(array_filter($reports, fn($r) => !empty($r['filename'])));
+                }
+                $tcpFeedback = $tcpRepo->getFeedbackForPatient($petId, 30);
+            }
+        } catch (\Throwable) {}
+
         $this->render('@owner-portal/owner_pet_detail.twig', [
             'page_title'          => $pet['name'],
             'portal_user'         => $user,
@@ -133,6 +158,10 @@ class OwnerPortalController extends Controller
             'documents'           => array_values($documents),
             'exercises'           => $exercises,
             'show_homework'       => $this->isHomeworkEnabled(),
+            'tcp_progress'        => $tcpProgress,
+            'tcp_natural'         => $tcpNatural,
+            'tcp_reports'         => $tcpReports,
+            'tcp_feedback'        => $tcpFeedback,
         ]);
     }
 

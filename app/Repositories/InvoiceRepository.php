@@ -33,6 +33,13 @@ class InvoiceRepository extends Repository
             /* Column already exists or unsupported — safe to ignore */
         }
 
+        /* Add diagnosis column if missing (migration 016) */
+        try {
+            $this->db->execute(
+                "ALTER TABLE `invoices` ADD COLUMN IF NOT EXISTS `diagnosis` TEXT NULL"
+            );
+        } catch (\Throwable) {}
+
         /* Add index only if it doesn't exist yet (MySQL-compatible check) */
         try {
             $exists = $this->db->fetchColumn(

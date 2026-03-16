@@ -465,10 +465,23 @@
         {% if owner.zip or owner.city %}{{ owner.zip }} {{ owner.city }}{% endif %}
       </div>
       <div class="inv-recipient-meta">
-        {% if patient %}Patient: {{ patient.name }}{% if patient.species %} ({{ patient.species }}){% endif %}{% endif %}
+        {% if patient %}
+          <strong>Patientendaten</strong><br>
+          Patient: {{ patient.name }}{% if patient.species %} ({{ patient.species }}){% endif %}<br>
+          {% if patient.breed %}Rasse: {{ patient.breed }}<br>{% endif %}
+          {% if patient.birth_date %}Geb.: {{ patient.birth_date|date('d.m.Y') }}<br>{% endif %}
+          {% if patient.chip_number %}Chip-Nr.: {{ patient.chip_number }}{% endif %}
+        {% endif %}
       </div>
       {% endif %}
     </div>
+
+    {% if invoice.diagnosis %}
+    <div style="margin-bottom:14px;padding:6px 10px;background:#f8f8fc;border:1px solid var(--c-line);border-radius:3px;font-size:8.5pt;">
+      <strong style="color:var(--c-company-info);">Diagnose:</strong>
+      <span style="color:var(--c-company-info);">{{ invoice.diagnosis }}</span>
+    </div>
+    {% endif %}
 
     {# Intro text #}
     {% if settings.pdf_intro_text %}

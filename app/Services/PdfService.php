@@ -239,22 +239,62 @@ class PdfService
         }
 
         // Patient info (if enabled) — shown below recipient
+        $patientBlockH = 0;
         if ($showPatient && $patient) {
             $patY = $addrTopY + 30;
-            $pdf->SetFont($font, '', $fontSize - 1.5);
+            $pdf->SetFont($font, 'B', $fontSize - 1);
             $pdf->SetTextColor(...$colorCompanyInfo);
             $pdf->SetXY($contentX, $patY);
-            $label = 'Patient: ' . $patient['name'];
-            if (!empty($patient['species'])) $label .= ' (' . $patient['species'] . ')';
-            $pdf->Cell($colW, 4, $label, 0, 1);
+            $pdf->Cell($colW, 4, 'Patientendaten', 0, 1);
+            $patY += 5;
+
+            $pdf->SetFont($font, '', $fontSize - 1.5);
+            $patLines = [];
+            $patLines[] = 'Patient: ' . $patient['name']
+                . (!empty($patient['species']) ? ' (' . $patient['species'] . ')' : '');
+            if (!empty($patient['breed'])) {
+                $patLines[] = 'Rasse: ' . $patient['breed'];
+            }
+            if (!empty($patient['birth_date'])) {
+                $patLines[] = 'Geb.: ' . date('d.m.Y', strtotime($patient['birth_date']));
+            }
             if ($showChip && !empty($patient['chip_number'])) {
-                $pdf->SetXY($contentX, $patY + 4);
-                $pdf->Cell($colW, 4, 'Chip-Nr.: ' . $patient['chip_number'], 0, 1);
+                $patLines[] = 'Chip-Nr.: ' . $patient['chip_number'];
+            }
+
+            foreach ($patLines as $line) {
+                $pdf->SetXY($contentX, $patY);
+                $pdf->Cell($colW, 4, $line, 0, 1);
+                $patY += 4;
+            }
+            $patientBlockH = $patY - ($addrTopY + 30);
+
+            // Diagnose (if set) — shown in a framed box right after patient info
+            if (!empty($invoice['diagnosis'])) {
+                $diagLines = substr_count($invoice['diagnosis'], "\n") + 1;
+                $diagBoxH  = 2 + $diagLines * 4 + 2;
+                $diagY     = $addrTopY + 30 + $patientBlockH + 3;
+
+                $pdf->SetFillColor(245, 245, 245);
+                $pdf->SetDrawColor(...$colorLine);
+                $pdf->SetLineWidth(0.2);
+                $pdf->Rect($contentX, $diagY, $contentW, $diagBoxH, 'DF');
+
+                $pdf->SetFont($font, 'B', $fontSize - 1.5);
+                $pdf->SetTextColor(...$colorCompanyInfo);
+                $pdf->SetXY($contentX + 2, $diagY + 2);
+                $pdf->Cell(30, 4, 'Diagnose:', 0, 0);
+
+                $pdf->SetFont($font, '', $fontSize - 1.5);
+                $pdf->SetXY($contentX + 32, $diagY + 2);
+                $pdf->MultiCell($contentW - 34, 4, $invoice['diagnosis'], 0, 'L');
+
+                $patientBlockH += $diagBoxH + 3;
             }
         }
 
         // ── POSITIONS TABLE ───────────────────────────────────────────────
-        $tableTopY = max($addrTopY + 38, 100);
+        $tableTopY = max($addrTopY + 30 + $patientBlockH + 8, 100);
 
         // Table header — thin line above/below, colored labels
         $pdf->SetDrawColor(...$colorLine);
@@ -673,22 +713,62 @@ class PdfService
             $pdf->Cell($colW, 4, 'Kunden-Nr. ' . str_pad((string)($owner['id'] ?? 1), 4, '0', STR_PAD_LEFT), 0, 1);
         }
 
+        $patientBlockH = 0;
         if ($showPatient && $patient) {
             $patY = $addrTopY + 30;
-            $pdf->SetFont($font, '', $fontSize - 1.5);
+            $pdf->SetFont($font, 'B', $fontSize - 1);
             $pdf->SetTextColor(...$colorCompanyInfo);
             $pdf->SetXY($contentX, $patY);
-            $label = 'Patient: ' . $patient['name'];
-            if (!empty($patient['species'])) $label .= ' (' . $patient['species'] . ')';
-            $pdf->Cell($colW, 4, $label, 0, 1);
+            $pdf->Cell($colW, 4, 'Patientendaten', 0, 1);
+            $patY += 5;
+
+            $pdf->SetFont($font, '', $fontSize - 1.5);
+            $patLines = [];
+            $patLines[] = 'Patient: ' . $patient['name']
+                . (!empty($patient['species']) ? ' (' . $patient['species'] . ')' : '');
+            if (!empty($patient['breed'])) {
+                $patLines[] = 'Rasse: ' . $patient['breed'];
+            }
+            if (!empty($patient['birth_date'])) {
+                $patLines[] = 'Geb.: ' . date('d.m.Y', strtotime($patient['birth_date']));
+            }
             if ($showChip && !empty($patient['chip_number'])) {
-                $pdf->SetXY($contentX, $patY + 4);
-                $pdf->Cell($colW, 4, 'Chip-Nr.: ' . $patient['chip_number'], 0, 1);
+                $patLines[] = 'Chip-Nr.: ' . $patient['chip_number'];
+            }
+
+            foreach ($patLines as $line) {
+                $pdf->SetXY($contentX, $patY);
+                $pdf->Cell($colW, 4, $line, 0, 1);
+                $patY += 4;
+            }
+            $patientBlockH = $patY - ($addrTopY + 30);
+
+            // Diagnose box
+            if (!empty($invoice['diagnosis'])) {
+                $diagLines = substr_count($invoice['diagnosis'], "\n") + 1;
+                $diagBoxH  = 2 + $diagLines * 4 + 2;
+                $diagY     = $addrTopY + 30 + $patientBlockH + 3;
+
+                $pdf->SetFillColor(245, 245, 245);
+                $pdf->SetDrawColor(...$colorLine);
+                $pdf->SetLineWidth(0.2);
+                $pdf->Rect($contentX, $diagY, $contentW, $diagBoxH, 'DF');
+
+                $pdf->SetFont($font, 'B', $fontSize - 1.5);
+                $pdf->SetTextColor(...$colorCompanyInfo);
+                $pdf->SetXY($contentX + 2, $diagY + 2);
+                $pdf->Cell(30, 4, 'Diagnose:', 0, 0);
+
+                $pdf->SetFont($font, '', $fontSize - 1.5);
+                $pdf->SetXY($contentX + 32, $diagY + 2);
+                $pdf->MultiCell($contentW - 34, 4, $invoice['diagnosis'], 0, 'L');
+
+                $patientBlockH += $diagBoxH + 3;
             }
         }
 
         // ── POSITIONS TABLE ───────────────────────────────────────────────
-        $tableTopY = max($addrTopY + 38, 100);
+        $tableTopY = max($addrTopY + 30 + $patientBlockH + 8, 100);
 
         $pdf->SetDrawColor(...$colorLine);
         $pdf->SetLineWidth(0.3);

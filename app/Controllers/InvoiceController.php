@@ -99,6 +99,7 @@ class InvoiceController extends Controller
             'issue_date'     => $this->post('issue_date') ?: date('Y-m-d'),
             'due_date'       => $isCash ? null : ($this->post('due_date', null) ?: null),
             'notes'          => $this->post('notes', ''),
+            'diagnosis'      => $this->post('diagnosis', '') ?: null,
             'payment_terms'  => $this->post('payment_terms', ''),
             'payment_method' => $paymentMethod,
             'paid_at'        => $isCash ? date('Y-m-d H:i:s') : null,
@@ -242,6 +243,7 @@ class InvoiceController extends Controller
             'issue_date'     => $this->post('issue_date') ?: date('Y-m-d'),
             'due_date'       => $this->post('due_date', null),
             'notes'          => $this->post('notes', ''),
+            'diagnosis'      => $this->post('diagnosis', '') ?: null,
             'payment_terms'  => $this->post('payment_terms', ''),
         ];
 

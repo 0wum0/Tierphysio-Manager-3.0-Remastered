@@ -54,11 +54,23 @@
 {# ── Tab Navigation ── #}
 <div class="d-flex gap-1 border-bottom mb-3" style="overflow-x:auto;">
     {% set tabs = [
-        {id:'behandlungen', label:'Behandlungen', count: treatments|length},
-        {id:'notizen',      label:'Notizen',      count: notes|length},
-        {id:'dokumente',    label:'Dokumente',    count: documents|length},
-        {id:'fotos',        label:'Fotos',        count: photos|length},
+        {id:'behandlungen',   label:'Behandlungen',   count: treatments|length},
+        {id:'notizen',        label:'Notizen',        count: notes|length},
+        {id:'dokumente',      label:'Dokumente',      count: documents|length},
+        {id:'fotos',          label:'Fotos',          count: photos|length},
     ] %}
+    {% if tcp_progress is defined and tcp_progress|length > 0 %}
+        {% set tabs = tabs|merge([{id:'fortschritt', label:'Fortschritt', count: tcp_progress|length}]) %}
+    {% endif %}
+    {% if tcp_natural is defined and tcp_natural|length > 0 %}
+        {% set tabs = tabs|merge([{id:'naturheilkunde', label:'Naturheilkunde', count: tcp_natural|length}]) %}
+    {% endif %}
+    {% if tcp_reports is defined and tcp_reports|length > 0 %}
+        {% set tabs = tabs|merge([{id:'berichte', label:'Therapieberichte', count: tcp_reports|length}]) %}
+    {% endif %}
+    {% if tcp_feedback is defined %}
+        {% set tabs = tabs|merge([{id:'feedback', label:'Feedback', count: tcp_feedback|length}]) %}
+    {% endif %}
     {% for tab in tabs %}
     <button class="pet-tab-btn" data-tab="{{ tab.id }}"
             style="background:none;border:none;color:var(--bs-secondary-color);padding:0.6rem 0.9rem;font-size:0.85rem;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color .15s;">
@@ -166,6 +178,131 @@
       </div>
     </div>
 </div>
+
+{# ── TherapyCare Pro: Fortschritt ── #}
+{% if tcp_progress is defined and tcp_progress|length > 0 %}
+<div class="pet-tab-panel" id="panel-fortschritt" style="display:none;">
+    <div class="card mb-3">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Therapiefortschritt</h2>
+        {% for entry in tcp_progress %}
+        <div class="mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="small fw-semibold">{{ entry.category_name }}</span>
+                <span class="small" style="color:{{ entry.category_color }};">
+                    {{ entry.score }} / {{ entry.scale_max ?? 10 }}
+                </span>
+            </div>
+            {% set pct = (((entry.score - (entry.scale_min ?? 1)) / ((entry.scale_max ?? 10) - (entry.scale_min ?? 1))) * 100)|round %}
+            <div style="height:6px;background:rgba(128,128,128,0.2);border-radius:999px;overflow:hidden;">
+                <div style="height:100%;width:{{ pct }}%;background:{{ entry.category_color }};border-radius:999px;"></div>
+            </div>
+            <div class="text-secondary" style="font-size:0.7rem;margin-top:0.2rem;">
+                {{ entry.entry_date|date('d.m.Y') }}{% if entry.notes %} · {{ entry.notes }}{% endif %}
+            </div>
+        </div>
+        {% endfor %}
+        <div class="mt-3">
+            <a href="/portal/tcp/tiere/{{ pet.id }}/fortschritt" class="portal-btn portal-btn-secondary portal-btn-sm">
+                Vollständiger Verlauf →
+            </a>
+        </div>
+      </div>
+    </div>
+</div>
+{% endif %}
+
+{# ── TherapyCare Pro: Naturheilkunde ── #}
+{% if tcp_natural is defined and tcp_natural|length > 0 %}
+<div class="pet-tab-panel" id="panel-naturheilkunde" style="display:none;">
+    <div class="card mb-3">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Naturheilkunde</h2>
+        {% for entry in tcp_natural %}
+        <div class="timeline-entry">
+            <div class="timeline-date">{{ entry.entry_date|date('d.m.Y') }}</div>
+            <div class="timeline-title">{{ entry.type_name ?? entry.custom_type ?? 'Behandlung' }}</div>
+            {% if entry.notes %}<div class="timeline-content">{{ entry.notes }}</div>{% endif %}
+            {% if entry.dosage %}<div class="small text-secondary mt-1">Dosierung: {{ entry.dosage }}</div>{% endif %}
+        </div>
+        {% endfor %}
+        <div class="mt-3">
+            <a href="/portal/tcp/tiere/{{ pet.id }}/naturheilkunde" class="portal-btn portal-btn-secondary portal-btn-sm">
+                Alle Einträge →
+            </a>
+        </div>
+      </div>
+    </div>
+</div>
+{% endif %}
+
+{# ── TherapyCare Pro: Therapieberichte ── #}
+{% if tcp_reports is defined and tcp_reports|length > 0 %}
+<div class="pet-tab-panel" id="panel-berichte" style="display:none;">
+    <div class="card mb-3">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Therapieberichte</h2>
+        {% for report in tcp_reports %}
+        <div class="d-flex align-items-center gap-3 py-2" style="border-bottom:1px solid rgba(128,128,128,0.15);">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;opacity:.5;">
+                <path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/>
+            </svg>
+            <div class="flex-fill">
+                <div class="small fw-semibold">{{ report.title ?? 'Therapiebericht' }}</div>
+                <div class="text-secondary" style="font-size:0.72rem;">{{ report.created_at|date('d.m.Y') }}</div>
+            </div>
+            <a href="/portal/tcp/tiere/{{ pet.id }}/berichte/{{ report.id }}/download"
+               class="portal-btn portal-btn-secondary portal-btn-sm">
+                PDF →
+            </a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+</div>
+{% endif %}
+
+{# ── TherapyCare Pro: Feedback ── #}
+{% if tcp_feedback is defined %}
+<div class="pet-tab-panel" id="panel-feedback" style="display:none;">
+    <div class="card mb-3">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Übungs-Feedback</h2>
+        {% if tcp_feedback|length > 0 %}
+            {% for fb in tcp_feedback %}
+            <div class="timeline-entry">
+                <div class="timeline-date">{{ fb.feedback_date|date('d.m.Y') }}</div>
+                <div class="timeline-title">
+                    {{ fb.homework_title ?? 'Übung' }}
+                    <span class="badge ms-2
+                        {% if fb.status == 'done' %}bg-success
+                        {% elseif fb.status == 'pain' %}bg-danger
+                        {% elseif fb.status == 'difficult' %}bg-warning text-dark
+                        {% else %}bg-secondary{% endif %}"
+                        style="font-size:0.65rem;">
+                        {% if fb.status == 'done' %}Durchgeführt
+                        {% elseif fb.status == 'not_done' %}Nicht durchgeführt
+                        {% elseif fb.status == 'pain' %}Schmerzen
+                        {% elseif fb.status == 'difficult' %}Schwierig
+                        {% else %}{{ fb.status }}{% endif %}
+                    </span>
+                </div>
+                {% if fb.comment %}<div class="timeline-content">{{ fb.comment }}</div>{% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-secondary small">Noch kein Feedback eingereicht.</p>
+        {% endif %}
+        <div class="mt-3">
+            <a href="/portal/tcp/tiere/{{ pet.id }}/feedback" class="portal-btn portal-btn-secondary portal-btn-sm">
+                Feedback einreichen →
+            </a>
+        </div>
+      </div>
+    </div>
+</div>
+{% endif %}
 
 <script>
 (function(){
