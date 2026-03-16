@@ -1,0 +1,92 @@
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/plugin-assets/therapy-care-pro/therapy-care-pro.css">{% endblock %}
+{% block content %}
+<div class="container-fluid px-3 px-lg-4 py-4">
+    {% if success %}<div class="alert alert-success py-2 mb-3">{{ success }}</div>{% endif %}
+    {% if error   %}<div class="alert alert-danger  py-2 mb-3">{{ error }}</div>{% endif %}
+    <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+        <div>
+            <h1 class="h4 fw-700 mb-0">Uebungsbibliothek</h1>
+            <div class="text-muted fs-sm">TherapyCare Pro</div>
+        </div>
+        <div class="ms-auto d-flex gap-2">
+            <a href="/tcp/bibliothek/neu" class="btn btn-primary btn-sm">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line stroke="currentColor" stroke-width="2" x1="12" y1="5" x2="12" y2="19"/><line stroke="currentColor" stroke-width="2" x1="5" y1="12" x2="19" y2="12"/></svg>
+                Neue Uebung
+            </a>
+            <a href="/tcp/admin/einstellungen" class="btn btn-outline-secondary btn-sm">Einstellungen</a>
+        </div>
+    </div>
+
+    {# Filter bar #}
+    <form method="GET" class="card shadow-sm mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-center">
+                <div class="col-12 col-sm-auto flex-fill">
+                    <input type="text" name="search" class="form-control form-control-sm" placeholder="Suche nach Titel oder Beschreibung..." value="{{ search }}">
+                </div>
+                <div class="col-12 col-sm-auto">
+                    <select name="category" class="form-select form-select-sm">
+                        <option value="">Alle Kategorien</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.category }}" {% if cat.category == category %}selected{% endif %}>{{ cat.category }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Filtern</button>
+                    {% if search or category %}<a href="/tcp/bibliothek" class="btn btn-sm btn-outline-secondary ms-1">Zuruecksetzen</a>{% endif %}
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% if exercises is not empty %}
+    <div class="row g-3">
+        {% for exercise in exercises %}
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="tcp-exercise-card h-100 d-flex flex-column">
+                <div class="d-flex align-items-start gap-2 mb-2">
+                    <div class="flex-fill">
+                        <div class="fw-700 mb-1">{{ exercise.title }}</div>
+                        <div class="d-flex align-items-center gap-1 flex-wrap">
+                            <span class="badge bg-secondary fs-nano">{{ exercise.category }}</span>
+                            {% if exercise.species_tags %}
+                                {% for tag in exercise.species_tags|split(',') %}
+                                <span class="badge bg-info text-dark fs-nano">{{ tag|trim }}</span>
+                                {% endfor %}
+                            {% endif %}
+                            {% if not exercise.is_active %}<span class="badge bg-danger fs-nano">Inaktiv</span>{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="fs-sm text-muted mb-2 flex-fill">{{ exercise.description|truncate(120) }}</div>
+                <div class="d-flex gap-1 fs-nano text-muted mb-3 flex-wrap">
+                    {% if exercise.frequency %}<span>Haeufigkeit: {{ exercise.frequency }}</span>{% endif %}
+                    {% if exercise.duration %}<span>Dauer: {{ exercise.duration }}</span>{% endif %}
+                </div>
+                <div class="d-flex gap-2 mt-auto">
+                    <a href="/tcp/bibliothek/{{ exercise.id }}/bearbeiten" class="btn btn-sm btn-outline-secondary flex-fill">Bearbeiten</a>
+                    <form method="POST" action="/tcp/bibliothek/{{ exercise.id }}/loeschen" onsubmit="return confirm('Uebung loeschen?')">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <button class="btn btn-sm btn-outline-danger">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" points="3 6 5 6 21 6"/><path stroke="currentColor" stroke-width="2" d="M19 6l-1 14H6L5 6"/></svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card shadow-sm">
+        <div class="card-body text-center py-5 text-muted">
+            <svg width="48" height="48" fill="none" viewBox="0 0 24 24" class="mb-3"><path stroke="currentColor" stroke-width="1.5" d="M9 11l3 3L22 4"/><path stroke="currentColor" stroke-width="1.5" d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <div class="fw-600">Keine Uebungen gefunden</div>
+            <a href="/tcp/bibliothek/neu" class="btn btn-primary btn-sm mt-3">Erste Uebung erstellen</a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

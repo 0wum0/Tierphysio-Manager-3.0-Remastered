@@ -1,0 +1,272 @@
+/* ═══════════════════════════════════════════════════════════
+   TherapyCare Pro — Plugin CSS
+   No inline styles: all overrides / new classes live here.
+   Compatible with SmartAdmin v5 (Bootstrap 5) + dark/light mode.
+═══════════════════════════════════════════════════════════ */
+
+/* ── Progress Chart Container ── */
+.tcp-chart-wrapper {
+    position: relative;
+    width: 100%;
+    height: 280px;
+}
+
+.tcp-chart-wrapper canvas {
+    max-height: 280px;
+}
+
+/* ── Score Badge ── */
+.tcp-score-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+.tcp-score-badge.score-high   { background: rgba(34,197,94,.15);  color: #22c55e; }
+.tcp-score-badge.score-mid    { background: rgba(245,158,11,.15); color: #f59e0b; }
+.tcp-score-badge.score-low    { background: rgba(239,68,68,.15);  color: #ef4444; }
+
+/* ── Progress Bar ── */
+.tcp-progress-bar-track {
+    background: var(--bs-tertiary-bg, rgba(128,128,128,.15));
+    border-radius: 99px;
+    height: 7px;
+    overflow: hidden;
+    flex: 1;
+}
+
+.tcp-progress-bar-fill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.5s ease;
+}
+
+/* ── Category color dots ── */
+.tcp-cat-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-block;
+}
+
+/* ── Feedback status badges ── */
+.tcp-feedback-done      { background: rgba(34,197,94,.15);  color: #22c55e; }
+.tcp-feedback-not-done  { background: rgba(148,163,184,.15);color: #94a3b8; }
+.tcp-feedback-pain      { background: rgba(239,68,68,.15);  color: #ef4444; }
+.tcp-feedback-difficult { background: rgba(245,158,11,.15); color: #f59e0b; }
+
+/* ── Timeline event type badges ── */
+.tcp-event-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    white-space: nowrap;
+}
+
+.tcp-event-progress       { background: rgba(79,124,255,.12); color: #4f7cff; }
+.tcp-event-feedback       { background: rgba(34,197,94,.12);  color: #22c55e; }
+.tcp-event-therapy-report { background: rgba(139,92,246,.12); color: #8b5cf6; }
+.tcp-event-natural-therapy{ background: rgba(16,185,129,.12); color: #10b981; }
+.tcp-event-reminder-sent  { background: rgba(245,158,11,.12); color: #f59e0b; }
+.tcp-event-exercise-created{background: rgba(6,182,212,.12);  color: #06b6d4; }
+.tcp-event-note           { background: rgba(148,163,184,.12);color: #94a3b8; }
+.tcp-event-treatment      { background: rgba(79,124,255,.12); color: #4f7cff; }
+.tcp-event-document       { background: rgba(139,92,246,.12); color: #8b5cf6; }
+
+/* ── Natural therapy category pill ── */
+.tcp-nat-cat {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    background: rgba(16,185,129,.12);
+    color: #10b981;
+}
+
+/* ── Exercise library card ── */
+.tcp-exercise-card {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 10px;
+    padding: 1rem 1.125rem;
+    background: var(--bs-body-bg);
+    transition: border-color .15s, box-shadow .15s;
+}
+
+.tcp-exercise-card:hover {
+    border-color: var(--bs-primary);
+    box-shadow: 0 2px 12px rgba(0,0,0,.08);
+}
+
+/* ── Reminder queue item ── */
+.tcp-reminder-item {
+    border-left: 3px solid var(--bs-border-color);
+    padding-left: .75rem;
+    margin-bottom: .5rem;
+}
+
+.tcp-reminder-item.status-pending  { border-color: #f59e0b; }
+.tcp-reminder-item.status-sent     { border-color: #22c55e; }
+.tcp-reminder-item.status-failed   { border-color: #ef4444; }
+.tcp-reminder-item.status-cancelled{ border-color: #94a3b8; }
+
+/* ── Portal-specific ── */
+.tcp-portal-section-title {
+    font-weight: 700;
+    font-size: 1.05rem;
+    margin-bottom: .75rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+}
+
+.tcp-portal-feedback-btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-top: .5rem;
+}
+
+.tcp-portal-feedback-btn {
+    flex: 1 1 calc(50% - .25rem);
+    min-width: 120px;
+    border: 2px solid var(--bs-border-color);
+    border-radius: 10px;
+    padding: .6rem .75rem;
+    background: transparent;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    text-align: left;
+    font-size: .85rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    color: var(--bs-body-color);
+}
+
+.tcp-portal-feedback-btn:hover              { border-color: var(--bs-primary); background: var(--bs-tertiary-bg); }
+.tcp-portal-feedback-btn.selected           { background: var(--bs-primary); border-color: var(--bs-primary); color: #fff; }
+.tcp-portal-feedback-btn.selected-pain      { background: #ef4444; border-color: #ef4444; color: #fff; }
+.tcp-portal-feedback-btn.selected-difficult { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+.tcp-portal-feedback-btn.selected-not-done  { background: #94a3b8; border-color: #94a3b8; color: #fff; }
+
+/* ── Admin settings tabs ── */
+.tcp-admin-nav .nav-link {
+    border-radius: 6px;
+    font-size: .85rem;
+    font-weight: 500;
+    color: var(--bs-secondary-color);
+    padding: .4rem .75rem;
+}
+
+.tcp-admin-nav .nav-link.active {
+    background: var(--bs-primary);
+    color: #fff;
+}
+
+/* ── Stats cards in admin ── */
+.tcp-stat-card {
+    border: 1px solid var(--bs-border-color);
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+    background: var(--bs-body-bg);
+}
+
+.tcp-stat-value {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.tcp-stat-label {
+    font-size: .75rem;
+    color: var(--bs-secondary-color);
+    margin-top: .25rem;
+}
+
+/* ── Visibility toggle row ── */
+.tcp-visibility-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: .5rem .75rem;
+    border-radius: 8px;
+    background: var(--bs-tertiary-bg);
+    margin-bottom: .5rem;
+    gap: .5rem;
+}
+
+.tcp-visibility-label {
+    font-size: .88rem;
+    font-weight: 500;
+}
+
+.tcp-visibility-desc {
+    font-size: .75rem;
+    color: var(--bs-secondary-color);
+}
+
+/* ── Color swatch input ── */
+.tcp-color-input {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    border: 2px solid var(--bs-border-color);
+    padding: 2px;
+    cursor: pointer;
+    background: transparent;
+}
+
+/* ── Category sort order handle ── */
+.tcp-drag-handle {
+    cursor: grab;
+    color: var(--bs-secondary-color);
+    padding: 0 .25rem;
+}
+
+/* ── Cron token display ── */
+.tcp-cron-token {
+    font-family: monospace;
+    font-size: .8rem;
+    word-break: break-all;
+    background: var(--bs-tertiary-bg);
+    border-radius: 6px;
+    padding: .5rem .75rem;
+}
+
+/* ── Tab panel smooth scroll anchor ── */
+.tcp-anchor-target {
+    scroll-margin-top: 80px;
+}
+
+/* ── Mobile adjustments ── */
+@media (max-width: 575.98px) {
+    .tcp-chart-wrapper {
+        height: 220px;
+    }
+
+    .tcp-portal-feedback-btn {
+        flex: 1 1 100%;
+    }
+
+    .tcp-score-badge {
+        width: 30px;
+        height: 30px;
+        font-size: .75rem;
+    }
+}

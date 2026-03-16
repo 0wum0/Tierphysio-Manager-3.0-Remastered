@@ -1,0 +1,90 @@
+{% extends '@owner-portal/portal_layout.twig' %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/plugin-assets/therapy-care-pro/therapy-care-pro.css">{% endblock %}
+{% block content %}
+<div class="portal-body">
+
+    <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+        <div>
+            <h1 class="h5 fw-700 mb-0">Therapiefortschritt</h1>
+            <div class="text-muted fs-sm">{{ patient.name }}</div>
+        </div>
+        <a href="/portal/tiere/{{ patient.id }}" class="btn btn-outline-secondary btn-sm ms-auto">Zurueck</a>
+    </div>
+
+    {% if latest is not empty %}
+    <div class="card portal-card shadow-sm mb-4">
+        <div class="card-header fw-700">Aktuelle Werte</div>
+        <div class="card-body p-3">
+            {% for entry in latest %}
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <div style="min-width:90px;font-weight:600;font-size:.85rem;">{{ entry.category_name }}</div>
+                <div class="flex-fill">
+                    {% set pct = ((entry.score - entry.scale_min) / max(1, entry.scale_max - entry.scale_min)) * 100 %}
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="tcp-progress-bar-track">
+                            <div class="tcp-progress-bar-fill" style="width:{{ pct }}%;background:{{ entry.category_color }};"></div>
+                        </div>
+                        <span class="fw-700 fs-sm text-nowrap" style="min-width:36px;color:{{ entry.category_color }}">{{ entry.score }}/{{ entry.scale_max }}</span>
+                    </div>
+                    {% if entry.scale_label_min or entry.scale_label_max %}
+                    <div class="d-flex justify-content-between fs-nano text-muted mt-1">
+                        <span>{{ entry.scale_label_min }}</span>
+                        <span>{{ entry.scale_label_max }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if chart_data.datasets is not empty %}
+    <div class="card portal-card shadow-sm mb-4">
+        <div class="card-header fw-700">Verlaufsgrafik</div>
+        <div class="card-body">
+            <div class="tcp-chart-wrapper">
+                <canvas id="tcpPortalChart"></canvas>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="card portal-card shadow-sm mb-4">
+        <div class="card-body text-muted text-center py-4 fs-sm">Noch keine Verlaufsdaten vorhanden.</div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    var data = {{ chart_data|json_encode|raw }};
+    if (!data.datasets || data.datasets.length === 0) return;
+    var isDark = document.documentElement.getAttribute('data-bs-theme') !== 'light';
+    var gridColor = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+    var textColor = isDark ? 'rgba(255,255,255,0.6)'  : 'rgba(0,0,0,0.55)';
+    var ctx = document.getElementById('tcpPortalChart');
+    if (!ctx) return;
+    new Chart(ctx, {
+        type: 'line',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { labels: { color: textColor, usePointStyle: true, font: { size: 11 } } }
+            },
+            scales: {
+                x: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 11 } } },
+                y: { min: 1, max: 10, grid: { color: gridColor }, ticks: { color: textColor, stepSize: 1 } }
+            }
+        }
+    });
+})();
+</script>
+{% endblock %}

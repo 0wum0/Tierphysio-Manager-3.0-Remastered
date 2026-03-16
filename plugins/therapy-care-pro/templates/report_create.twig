@@ -1,0 +1,109 @@
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/plugin-assets/therapy-care-pro/therapy-care-pro.css">{% endblock %}
+{% block content %}
+<div class="container-fluid px-3 px-lg-4 py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb fs-sm">
+            <li class="breadcrumb-item"><a href="/patienten">Patienten</a></li>
+            <li class="breadcrumb-item"><a href="/patienten/{{ patient.id }}">{{ patient.name }}</a></li>
+            <li class="breadcrumb-item"><a href="/patienten/{{ patient.id }}/berichte">Berichte</a></li>
+            <li class="breadcrumb-item active">Neuer Bericht</li>
+        </ol>
+    </nav>
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <div>
+            <h1 class="h4 fw-700 mb-0">Therapiebericht erstellen</h1>
+            <div class="text-muted fs-sm">{{ patient.name }}</div>
+        </div>
+        <a href="/patienten/{{ patient.id }}/berichte" class="btn btn-outline-secondary btn-sm ms-auto">Zuruck</a>
+    </div>
+
+    <form method="POST" action="/patienten/{{ patient.id }}/berichte/neu">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+        <div class="row g-3">
+            <div class="col-12 col-lg-8">
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header fw-700">Berichtsinhalt</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Berichtstitel *</label>
+                            <input type="text" name="title" class="form-control" required
+                                value="Therapiebericht {{ patient.name }} {{ 'now'|date('d.m.Y') }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Anlass / Diagnose</label>
+                            <textarea name="diagnosis" class="form-control" rows="4"
+                                placeholder="Diagnose, Befund, Grund der Behandlung..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Verwendete Therapieformen</label>
+                            <textarea name="therapies_used" class="form-control" rows="3"
+                                placeholder="z.B. Physiotherapie, Massage, Lasertherapie...">{% for entry in natural %}{{ entry.therapy_type }}{% if not loop.last %}, {% endif %}{% endfor %}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Empfehlungen</label>
+                            <textarea name="recommendations" class="form-control" rows="3"
+                                placeholder="Empfehlungen fur den Tierhalter..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Wiedervorstellung / Nachste Schritte</label>
+                            <textarea name="followup_recommendation" class="form-control" rows="2"
+                                placeholder="z.B. Wiedervorstellung in 4 Wochen empfohlen..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-4">
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header fw-700">Inhalt einschliessen</div>
+                    <div class="card-body">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="include_progress" value="1" id="inc-prog" checked>
+                            <label class="form-check-label" for="inc-prog">
+                                <span class="fw-600">Therapiefortschritt</span>
+                                <div class="fs-sm text-muted">Aktuelle Messwerte aller Kategorien ({{ categories|length }} Kategorien)</div>
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="include_homework" value="1" id="inc-hw" checked>
+                            <label class="form-check-label" for="inc-hw">
+                                <span class="fw-600">Heimubungen</span>
+                                <div class="fs-sm text-muted">{{ homework|length }} Ubung(en) vorhanden</div>
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="include_natural" value="1" id="inc-nat" {% if natural is not empty %}checked{% endif %}>
+                            <label class="form-check-label" for="inc-nat">
+                                <span class="fw-600">Naturheilkunde</span>
+                                <div class="fs-sm text-muted">{{ natural|length }} Eintrag/Eintraege vorhanden</div>
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="include_timeline" value="1" id="inc-tl" checked>
+                            <label class="form-check-label" for="inc-tl">
+                                <span class="fw-600">Behandlungsverlauf</span>
+                                <div class="fs-sm text-muted">Letzte 10 Timeline-Eintraege</div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header fw-700">Patient</div>
+                    <div class="card-body fs-sm">
+                        <div class="fw-700">{{ patient.name }}</div>
+                        {% if patient.species %}<div class="text-muted">{{ patient.species }}{% if patient.breed %}, {{ patient.breed }}{% endif %}</div>{% endif %}
+                        {% if patient.birth_date %}<div class="text-muted">Geb.: {{ patient.birth_date|date_de }}</div>{% endif %}
+                        {% if patient.owner_first_name %}<div class="mt-2 text-muted">Besitzer: {{ patient.owner_first_name }} {{ patient.owner_last_name }}</div>{% endif %}
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>
+                    PDF generieren und speichern
+                </button>
+                <div class="text-muted fs-nano text-center mt-2">Bericht wird direkt als PDF geoffnet und gespeichert.</div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

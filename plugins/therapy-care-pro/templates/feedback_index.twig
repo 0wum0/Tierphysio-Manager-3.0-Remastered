@@ -1,0 +1,139 @@
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/plugin-assets/therapy-care-pro/therapy-care-pro.css">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-3 px-lg-4 py-4">
+
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb fs-sm">
+            <li class="breadcrumb-item"><a href="/patienten">Patienten</a></li>
+            <li class="breadcrumb-item"><a href="/patienten/{{ patient.id }}">{{ patient.name }}</a></li>
+            <li class="breadcrumb-item active">Übungs-Feedback</li>
+        </ol>
+    </nav>
+
+    {% if success %}<div class="alert alert-success alert-sm py-2 mb-3">{{ success }}</div>{% endif %}
+
+    <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+        <div>
+            <h1 class="h4 fw-700 mb-0">Übungs-Feedback</h1>
+            <div class="text-muted fs-sm">{{ patient.name }}</div>
+        </div>
+        <div class="ms-auto d-flex gap-2">
+            <form method="GET" class="d-flex gap-2 align-items-center">
+                <select name="days" class="form-select form-select-sm" onchange="this.form.submit()" style="width:auto;">
+                    <option value="7"  {% if days == 7  %}selected{% endif %}>Letzte 7 Tage</option>
+                    <option value="30" {% if days == 30 %}selected{% endif %}>Letzte 30 Tage</option>
+                    <option value="90" {% if days == 90 %}selected{% endif %}>Letzte 90 Tage</option>
+                    <option value="0"  {% if days == 0  %}selected{% endif %}>Alle</option>
+                </select>
+            </form>
+            <a href="/patienten/{{ patient.id }}" class="btn btn-outline-secondary btn-sm">← Zurück</a>
+        </div>
+    </div>
+
+    {# Summary cards #}
+    {% if summary.total > 0 %}
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="tcp-stat-card">
+                <div class="tcp-stat-value" style="color:var(--bs-primary)">{{ summary.total }}</div>
+                <div class="tcp-stat-label">Feedbacks gesamt</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="tcp-stat-card">
+                <div class="tcp-stat-value" style="color:#22c55e">{{ summary.done_count }}</div>
+                <div class="tcp-stat-label">Durchgeführt</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="tcp-stat-card">
+                <div class="tcp-stat-value" style="color:#ef4444">{{ summary.pain_count }}</div>
+                <div class="tcp-stat-label">Schmerzmeldungen</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="tcp-stat-card">
+                <div class="tcp-stat-value" style="color:#f59e0b">{{ summary.difficult_count }}</div>
+                <div class="tcp-stat-label">Schwierig</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row g-3">
+        <div class="col-12 col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header fw-700">Feedback-Verlauf</div>
+                {% if feedback is not empty %}
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th>Datum</th>
+                                <th>Übung</th>
+                                <th>Status</th>
+                                <th>Kommentar</th>
+                                <th>Besitzer</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for fb in feedback %}
+                            <tr>
+                                <td class="fs-sm text-nowrap">{{ fb.feedback_date|date_de }}</td>
+                                <td class="fs-sm">{{ fb.homework_title }}</td>
+                                <td>
+                                    {% set statusMap = {
+                                        'done': ['Durchgeführt', 'tcp-feedback-done'],
+                                        'not_done': ['Nicht durchgeführt', 'tcp-feedback-not-done'],
+                                        'pain': ['Schmerzen', 'tcp-feedback-pain'],
+                                        'difficult': ['Schwierig', 'tcp-feedback-difficult']
+                                    } %}
+                                    {% set sInfo = statusMap[fb.status] ?? [fb.status, ''] %}
+                                    <span class="badge {{ sInfo[1] }}">{{ sInfo[0] }}</span>
+                                </td>
+                                <td class="fs-sm text-muted">{{ fb.comment|truncate(50) }}</td>
+                                <td class="fs-sm text-muted">{{ fb.first_name }} {{ fb.last_name }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="card-body text-muted text-center py-5">
+                    <svg width="36" height="36" fill="none" viewBox="0 0 24 24" class="mb-2"><path stroke="currentColor" stroke-width="1.5" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    <div>Kein Feedback für diesen Zeitraum.</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header fw-700">Aktive Übungen</div>
+                <div class="card-body p-2">
+                    {% if homework is not empty %}
+                    {% for hw in homework %}
+                    <div class="d-flex align-items-center gap-2 p-2 rounded mb-1" style="background:var(--bs-tertiary-bg)">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M9 11l3 3L22 4"/><path stroke="currentColor" stroke-width="2" d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                        <div>
+                            <div class="fw-600 fs-sm">{{ hw.title }}</div>
+                            {% if hw.frequency %}<div class="fs-nano text-muted">{{ hw.frequency }}</div>{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <div class="text-muted text-center py-3 fs-sm">Keine aktiven Übungen.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

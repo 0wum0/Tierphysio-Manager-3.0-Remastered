@@ -1,0 +1,364 @@
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/plugin-assets/therapy-care-pro/therapy-care-pro.css">{% endblock %}
+{% block content %}
+<div class="container-fluid px-3 px-lg-4 py-4">
+
+    {% if success %}<div class="alert alert-success py-2 mb-3">{{ success }}</div>{% endif %}
+    {% if error   %}<div class="alert alert-danger  py-2 mb-3">{{ error }}</div>{% endif %}
+
+    <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+        <div>
+            <h1 class="h4 fw-700 mb-0">TherapyCare Pro</h1>
+            <div class="text-muted fs-sm">Plugin-Einstellungen &amp; Verwaltung</div>
+        </div>
+        <div class="ms-auto d-flex gap-2">
+            <a href="/tcp/bibliothek" class="btn btn-outline-secondary btn-sm">Uebungsbibliothek</a>
+            <a href="/tcp/admin/erinnerungen" class="btn btn-outline-secondary btn-sm">Erinnerungsvorlagen</a>
+        </div>
+    </div>
+
+    {# Stats row #}
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="tcp-stat-card">
+                <div class="tcp-stat-value" style="color:var(--bs-primary)">{{ stats.totalEntries }}</div>
+                <div class="tcp-stat-label">Fortschrittswerte</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="tcp-stat-card">
+                <div class="tcp-stat-value" style="color:var(--bs-success)">{{ stats.totalFeedback }}</div>
+                <div class="tcp-stat-label">Besitzer-Feedbacks</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="tcp-stat-card">
+                <div class="tcp-stat-value" style="color:{{ stats.painFeedback > 0 ? 'var(--bs-danger)' : 'var(--bs-success)' }}">{{ stats.painFeedback }}</div>
+                <div class="tcp-stat-label">Schmerz-Meldungen (7T)</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="tcp-stat-card">
+                <div class="tcp-stat-value" style="color:var(--bs-warning)">{{ stats.pendingReminders }}</div>
+                <div class="tcp-stat-label">Erinnerungen ausstehend</div>
+            </div>
+        </div>
+    </div>
+
+    {# Tab navigation #}
+    <ul class="nav tcp-admin-nav mb-4 gap-1 flex-wrap" id="tcpAdminTabs">
+        <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-progress">Fortschritt-Kategorien</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-natural">Naturheilkunde-Typen</a></li>
+        <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-cron">Cron / Erinnerungen</a></li>
+    </ul>
+
+    <div class="tab-content">
+
+        {# ─── TAB 1: Progress Categories ─── #}
+        <div class="tab-pane fade show active" id="tab-progress">
+            <div class="row g-3">
+                <div class="col-12 col-lg-7">
+                    <div class="card shadow-sm">
+                        <div class="card-header fw-700">Fortschritt-Kategorien</div>
+                        {% if progress_categories is not empty %}
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm mb-0">
+                                <thead>
+                                    <tr><th>Name</th><th>Skala</th><th>Farbe</th><th>Reihenf.</th><th>Aktiv</th><th></th></tr>
+                                </thead>
+                                <tbody>
+                                {% for cat in progress_categories %}
+                                <tr>
+                                    <td class="fw-600 fs-sm">{{ cat.name }}</td>
+                                    <td class="fs-sm text-muted">{{ cat.scale_min }}–{{ cat.scale_max }}</td>
+                                    <td>
+                                        <span style="display:inline-block;width:18px;height:18px;border-radius:50%;background:{{ cat.color }};vertical-align:middle;"></span>
+                                    </td>
+                                    <td class="fs-sm text-muted">{{ cat.sort_order }}</td>
+                                    <td>
+                                        {% if cat.is_active %}
+                                        <span class="badge bg-success fs-nano">Ja</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary fs-nano">Nein</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-1">
+                                            <button class="btn btn-xs btn-outline-secondary"
+                                                onclick="tcpEditCat({{ cat|json_encode }})">Bearb.</button>
+                                            <form method="POST" action="/tcp/admin/fortschritt/kategorien/{{ cat.id }}/loeschen"
+                                                  onsubmit="return confirm('Kategorie loeschen? Alle Eintraege werden geloescht!')">
+                                                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                                <button class="btn btn-xs btn-outline-danger">X</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="card-body text-muted text-center py-4">Keine Kategorien vorhanden.</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-12 col-lg-5">
+                    <div class="card shadow-sm">
+                        <div class="card-header fw-700">Neue Kategorie</div>
+                        <div class="card-body">
+                            <form method="POST" action="/tcp/admin/fortschritt/kategorien">
+                                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                <div class="mb-2">
+                                    <label class="form-label fs-sm">Name *</label>
+                                    <input type="text" name="name" class="form-control form-control-sm" required placeholder="z.B. Gangbild">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label fs-sm">Beschreibung</label>
+                                    <input type="text" name="description" class="form-control form-control-sm">
+                                </div>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-6">
+                                        <label class="form-label fs-sm">Skala Min</label>
+                                        <input type="number" name="scale_min" class="form-control form-control-sm" value="1" min="0" max="100">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label fs-sm">Skala Max</label>
+                                        <input type="number" name="scale_max" class="form-control form-control-sm" value="10" min="1" max="100">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label fs-sm">Label Min</label>
+                                        <input type="text" name="scale_label_min" class="form-control form-control-sm" placeholder="z.B. Sehr schlecht">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label fs-sm">Label Max</label>
+                                        <input type="text" name="scale_label_max" class="form-control form-control-sm" placeholder="z.B. Sehr gut">
+                                    </div>
+                                </div>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-6">
+                                        <label class="form-label fs-sm">Farbe</label>
+                                        <input type="color" name="color" class="tcp-color-input form-control-sm" value="#4f7cff">
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label fs-sm">Reihenfolge</label>
+                                        <input type="number" name="sort_order" class="form-control form-control-sm" value="0" min="0">
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-sm w-100 mt-1">Kategorie erstellen</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ─── TAB 2: Natural Therapy Types ─── #}
+        <div class="tab-pane fade" id="tab-natural">
+            <div class="row g-3">
+                <div class="col-12 col-lg-7">
+                    <div class="card shadow-sm">
+                        <div class="card-header fw-700">Naturheilkunde-Therapietypen</div>
+                        {% if natural_therapy_types is not empty %}
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm mb-0">
+                                <thead>
+                                    <tr><th>Name</th><th>Kategorie</th><th>Aktiv</th><th></th></tr>
+                                </thead>
+                                <tbody>
+                                {% for t in natural_therapy_types %}
+                                <tr>
+                                    <td class="fw-600 fs-sm">{{ t.name }}</td>
+                                    <td><span class="tcp-nat-cat">{{ t.category }}</span></td>
+                                    <td>{% if t.is_active %}<span class="badge bg-success fs-nano">Ja</span>{% else %}<span class="badge bg-secondary fs-nano">Nein</span>{% endif %}</td>
+                                    <td>
+                                        <div class="d-flex gap-1">
+                                            <button class="btn btn-xs btn-outline-secondary" onclick="tcpEditNatType({{ t|json_encode }})">Bearb.</button>
+                                            <form method="POST" action="/tcp/admin/naturheilkunde/typen/{{ t.id }}/loeschen"
+                                                  onsubmit="return confirm('Typ loeschen?')">
+                                                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                                <button class="btn btn-xs btn-outline-danger">X</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="card-body text-muted text-center py-4">Keine Typen vorhanden.</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-12 col-lg-5">
+                    <div class="card shadow-sm">
+                        <div class="card-header fw-700">Neuer Therapietyp</div>
+                        <div class="card-body">
+                            <form method="POST" action="/tcp/admin/naturheilkunde/typen">
+                                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                <div class="mb-2">
+                                    <label class="form-label fs-sm">Name *</label>
+                                    <input type="text" name="name" class="form-control form-control-sm" required>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label fs-sm">Kategorie</label>
+                                    <input type="text" name="category" class="form-control form-control-sm" list="nat-cat-list" placeholder="z.B. Homoeopathie">
+                                    <datalist id="nat-cat-list">
+                                        <option value="Bachblueten">
+                                        <option value="Homoeopathie">
+                                        <option value="Kraeuter">
+                                        <option value="Akupunktur">
+                                        <option value="Bioresonanz">
+                                        <option value="Ernaehrung">
+                                        <option value="Manuelle Therapie">
+                                        <option value="Physikalisch">
+                                        <option value="Sonstiges">
+                                    </datalist>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label fs-sm">Beschreibung</label>
+                                    <textarea name="description" class="form-control form-control-sm" rows="2"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fs-sm">Reihenfolge</label>
+                                    <input type="number" name="sort_order" class="form-control form-control-sm" value="0" min="0">
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-sm w-100">Typ erstellen</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ─── TAB 3: Cron / Reminders ─── #}
+        <div class="tab-pane fade" id="tab-cron">
+            <div class="row g-3 justify-content-center">
+                <div class="col-12 col-lg-8">
+                    <div class="card shadow-sm mb-3">
+                        <div class="card-header fw-700">Cron-Endpunkt fuer Erinnerungen</div>
+                        <div class="card-body">
+                            <p class="fs-sm text-muted mb-3">
+                                Richten Sie einen Cron-Job ein, der den folgenden Endpunkt regelmaessig aufruft
+                                (empfohlen: alle 15 Minuten). Alle faelligen Erinnerungen werden dann automatisch versendet.
+                            </p>
+                            <div class="tcp-cron-token mb-3">
+                                GET {{ settings.app_url ?? '' }}/tcp/cron/erinnerungen?token=<strong>{{ settings.tcp_cron_token ?? '[Kein Token gesetzt]' }}</strong>
+                            </div>
+                            <div class="alert alert-info py-2 fs-sm">
+                                <strong>Hinweis:</strong> Setzen Sie den Wert <code>tcp_cron_token</code> in den Systemeinstellungen, um den Endpunkt zu schuetzen.
+                                Der Cron-Job kann auch ohne Token genutzt werden, wenn das Feld leer bleibt (nicht empfohlen).
+                            </div>
+                            <a href="/tcp/admin/erinnerungen" class="btn btn-primary btn-sm">
+                                Erinnerungsvorlagen verwalten
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="card shadow-sm">
+                        <div class="card-header fw-700">Schnelllinks</div>
+                        <div class="card-body">
+                            <div class="row g-2">
+                                <div class="col-12 col-sm-6">
+                                    <a href="/tcp/bibliothek" class="btn btn-outline-secondary btn-sm w-100">
+                                        Uebungsbibliothek verwalten
+                                    </a>
+                                </div>
+                                <div class="col-12 col-sm-6">
+                                    <a href="/tcp/admin/erinnerungen" class="btn btn-outline-secondary btn-sm w-100">
+                                        Erinnerungsvorlagen
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>{# /tab-content #}
+</div>
+
+{# Edit category modal #}
+<div class="modal fade" id="tcpCatEditModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Kategorie bearbeiten</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <form method="POST" id="tcp-cat-edit-form">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <div class="modal-body">
+                    <div class="mb-2"><label class="form-label fs-sm">Name *</label><input type="text" name="name" id="ec-name" class="form-control form-control-sm" required></div>
+                    <div class="mb-2"><label class="form-label fs-sm">Beschreibung</label><input type="text" name="description" id="ec-desc" class="form-control form-control-sm"></div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><label class="form-label fs-sm">Skala Min</label><input type="number" name="scale_min" id="ec-min" class="form-control form-control-sm" min="0"></div>
+                        <div class="col-6"><label class="form-label fs-sm">Skala Max</label><input type="number" name="scale_max" id="ec-max" class="form-control form-control-sm" min="1"></div>
+                        <div class="col-6"><label class="form-label fs-sm">Label Min</label><input type="text" name="scale_label_min" id="ec-lmin" class="form-control form-control-sm"></div>
+                        <div class="col-6"><label class="form-label fs-sm">Label Max</label><input type="text" name="scale_label_max" id="ec-lmax" class="form-control form-control-sm"></div>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><label class="form-label fs-sm">Farbe</label><input type="color" name="color" id="ec-color" class="tcp-color-input"></div>
+                        <div class="col-6"><label class="form-label fs-sm">Reihenfolge</label><input type="number" name="sort_order" id="ec-sort" class="form-control form-control-sm" min="0"></div>
+                    </div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="is_active" value="1" id="ec-active"><label class="form-check-label fs-sm" for="ec-active">Aktiv</label></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# Edit natural type modal #}
+<div class="modal fade" id="tcpNatTypeEditModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Therapietyp bearbeiten</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <form method="POST" id="tcp-nat-type-form">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <div class="modal-body">
+                    <div class="mb-2"><label class="form-label fs-sm">Name *</label><input type="text" name="name" id="ent-name" class="form-control form-control-sm" required></div>
+                    <div class="mb-2"><label class="form-label fs-sm">Kategorie</label><input type="text" name="category" id="ent-cat" class="form-control form-control-sm"></div>
+                    <div class="mb-2"><label class="form-label fs-sm">Beschreibung</label><textarea name="description" id="ent-desc" class="form-control form-control-sm" rows="2"></textarea></div>
+                    <div class="mb-2"><label class="form-label fs-sm">Reihenfolge</label><input type="number" name="sort_order" id="ent-sort" class="form-control form-control-sm" min="0"></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="is_active" value="1" id="ent-active"><label class="form-check-label fs-sm" for="ent-active">Aktiv</label></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function tcpEditCat(c) {
+    var f = document.getElementById('tcp-cat-edit-form');
+    f.action = '/tcp/admin/fortschritt/kategorien/' + c.id + '/bearbeiten';
+    document.getElementById('ec-name').value  = c.name  || '';
+    document.getElementById('ec-desc').value  = c.description || '';
+    document.getElementById('ec-min').value   = c.scale_min  || 1;
+    document.getElementById('ec-max').value   = c.scale_max  || 10;
+    document.getElementById('ec-lmin').value  = c.scale_label_min || '';
+    document.getElementById('ec-lmax').value  = c.scale_label_max || '';
+    document.getElementById('ec-color').value = c.color || '#4f7cff';
+    document.getElementById('ec-sort').value  = c.sort_order || 0;
+    document.getElementById('ec-active').checked = !!parseInt(c.is_active);
+    new bootstrap.Modal(document.getElementById('tcpCatEditModal')).show();
+}
+function tcpEditNatType(t) {
+    var f = document.getElementById('tcp-nat-type-form');
+    f.action = '/tcp/admin/naturheilkunde/typen/' + t.id + '/bearbeiten';
+    document.getElementById('ent-name').value = t.name     || '';
+    document.getElementById('ent-cat').value  = t.category || '';
+    document.getElementById('ent-desc').value = t.description || '';
+    document.getElementById('ent-sort').value = t.sort_order  || 0;
+    document.getElementById('ent-active').checked = !!parseInt(t.is_active);
+    new bootstrap.Modal(document.getElementById('tcpNatTypeEditModal')).show();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,129 @@
+{% extends '@owner-portal/portal_layout.twig' %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/plugin-assets/therapy-care-pro/therapy-care-pro.css">{% endblock %}
+{% block content %}
+<div class="portal-body">
+
+    {% if success %}<div class="alert alert-success py-2 mb-3">{{ success }}</div>{% endif %}
+    {% if error   %}<div class="alert alert-danger  py-2 mb-3">{{ error }}</div>{% endif %}
+
+    <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+        <div>
+            <h1 class="h5 fw-700 mb-0">Uebungs-Feedback</h1>
+            <div class="text-muted fs-sm">{{ patient.name }}</div>
+        </div>
+        <a href="/portal/tiere/{{ patient.id }}" class="btn btn-outline-secondary btn-sm ms-auto">Zurueck</a>
+    </div>
+
+    {# New feedback form #}
+    {% if homework is not empty %}
+    <div class="card portal-card shadow-sm mb-4">
+        <div class="card-header fw-700">Feedback geben</div>
+        <div class="card-body">
+            <form method="POST" action="/portal/tcp/tiere/{{ patient.id }}/feedback" id="tcp-feedback-form">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="status" id="tcp-fb-status" value="done">
+
+                <div class="mb-3">
+                    <label class="form-label fw-600">Welche Uebung?</label>
+                    <select name="homework_id" class="form-select" required>
+                        <option value="">Uebung waehlen...</option>
+                        {% for hw in homework %}
+                        <option value="{{ hw.id }}">{{ hw.title }}{% if hw.frequency %} ({{ hw.frequency }}){% endif %}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-600">Wie lief die Uebung?</label>
+                    <div class="tcp-portal-feedback-btn-group">
+                        <button type="button" class="tcp-portal-feedback-btn selected"
+                            data-status="done" onclick="tcpSelectStatus(this,'done')">
+                            <span style="font-size:1.2rem;">✅</span>
+                            <span>Gut gemacht</span>
+                        </button>
+                        <button type="button" class="tcp-portal-feedback-btn"
+                            data-status="difficult" onclick="tcpSelectStatus(this,'difficult')">
+                            <span style="font-size:1.2rem;">😬</span>
+                            <span>War schwierig</span>
+                        </button>
+                        <button type="button" class="tcp-portal-feedback-btn"
+                            data-status="pain" onclick="tcpSelectStatus(this,'pain')">
+                            <span style="font-size:1.2rem;">🚨</span>
+                            <span>Schmerzen bemerkt</span>
+                        </button>
+                        <button type="button" class="tcp-portal-feedback-btn"
+                            data-status="not_done" onclick="tcpSelectStatus(this,'not_done')">
+                            <span style="font-size:1.2rem;">⏭️</span>
+                            <span>Nicht durchgefuehrt</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-600">Kommentar (optional)</label>
+                    <textarea name="comment" class="form-control" rows="3"
+                        placeholder="Beschreiben Sie, was aufgefallen ist..."></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-600">Datum</label>
+                    <input type="date" name="feedback_date" class="form-control" value="{{ 'now'|date('Y-m-d') }}">
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">Feedback senden</button>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="card portal-card shadow-sm mb-4">
+        <div class="card-body text-muted text-center py-4 fs-sm">
+            Aktuell sind keine Heimuebungen fuer {{ patient.name }} hinterlegt.
+        </div>
+    </div>
+    {% endif %}
+
+    {# Feedback history #}
+    {% if feedback is not empty %}
+    <div class="card portal-card shadow-sm">
+        <div class="card-header fw-700">Meine frueheren Feedbacks</div>
+        <div class="list-group list-group-flush">
+            {% for fb in feedback %}
+            <div class="list-group-item py-2">
+                <div class="d-flex align-items-start gap-2">
+                    <div>
+                        {% if fb.status == 'done' %}<span style="font-size:1.1rem;">✅</span>
+                        {% elseif fb.status == 'difficult' %}<span style="font-size:1.1rem;">😬</span>
+                        {% elseif fb.status == 'pain' %}<span style="font-size:1.1rem;">🚨</span>
+                        {% else %}<span style="font-size:1.1rem;">⏭️</span>{% endif %}
+                    </div>
+                    <div class="flex-fill">
+                        <div class="fw-600 fs-sm">{{ fb.homework_title }}</div>
+                        {% if fb.comment %}<div class="fs-sm text-muted">{{ fb.comment }}</div>{% endif %}
+                    </div>
+                    <div class="text-muted fs-nano text-nowrap">{{ fb.feedback_date|date_de }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function tcpSelectStatus(btn, status) {
+    document.querySelectorAll('.tcp-portal-feedback-btn').forEach(function(b) {
+        b.classList.remove('selected','selected-pain','selected-difficult','selected-not-done');
+    });
+    var cls = 'selected';
+    if (status === 'pain')     cls = 'selected-pain';
+    if (status === 'difficult')cls = 'selected-difficult';
+    if (status === 'not_done') cls = 'selected-not-done';
+    btn.classList.add(cls);
+    document.getElementById('tcp-fb-status').value = status;
+}
+</script>
+{% endblock %}

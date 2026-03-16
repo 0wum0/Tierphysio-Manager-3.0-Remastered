@@ -1,0 +1,95 @@
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/plugin-assets/therapy-care-pro/therapy-care-pro.css">{% endblock %}
+{% block content %}
+<div class="container-fluid px-3 px-lg-4 py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb fs-sm">
+            <li class="breadcrumb-item"><a href="/tcp/bibliothek">Uebungsbibliothek</a></li>
+            <li class="breadcrumb-item active">{{ exercise ? 'Bearbeiten' : 'Neu' }}</li>
+        </ol>
+    </nav>
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <h1 class="h4 fw-700 mb-0">{{ page_title }}</h1>
+        <a href="/tcp/bibliothek" class="btn btn-outline-secondary btn-sm ms-auto">Zurueck</a>
+    </div>
+    <div class="row g-3 justify-content-center">
+        <div class="col-12 col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="POST" action="{{ exercise ? '/tcp/bibliothek/' ~ exercise.id ~ '/bearbeiten' : '/tcp/bibliothek/neu' }}">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">Titel *</label>
+                                <input type="text" name="title" class="form-control" required value="{{ exercise.title ?? '' }}">
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label">Kategorie</label>
+                                <input type="text" name="category" class="form-control" list="tcp-cat-list"
+                                    value="{{ exercise.category ?? 'sonstiges' }}" placeholder="z.B. Mobilisation, Kraeftigung">
+                                <datalist id="tcp-cat-list">
+                                    <option value="Mobilisation">
+                                    <option value="Kraeftigung">
+                                    <option value="Koordination">
+                                    <option value="Entspannung">
+                                    <option value="Dehnuebungen">
+                                    <option value="Gleichgewicht">
+                                    <option value="Wassergymnastik">
+                                    <option value="sonstiges">
+                                </datalist>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label">Tierarten (kommagetrennt)</label>
+                                <input type="text" name="species_tags" class="form-control"
+                                    value="{{ exercise.species_tags ?? '' }}" placeholder="z.B. Hund, Katze, Pferd">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Beschreibung *</label>
+                                <textarea name="description" class="form-control" rows="4" required>{{ exercise.description ?? '' }}</textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Durchfuehrungsanleitung</label>
+                                <textarea name="instructions" class="form-control" rows="5" placeholder="Schritt-fuer-Schritt Anleitung...">{{ exercise.instructions ?? '' }}</textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Kontraindikationen</label>
+                                <textarea name="contraindications" class="form-control" rows="2" placeholder="Wann sollte diese Uebung NICHT durchgefuehrt werden?">{{ exercise.contraindications ?? '' }}</textarea>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label">Empfohlene Haeufigkeit</label>
+                                <input type="text" name="frequency" class="form-control"
+                                    value="{{ exercise.frequency ?? '' }}" placeholder="z.B. 2x taeglich">
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label">Dauer pro Einheit</label>
+                                <input type="text" name="duration" class="form-control"
+                                    value="{{ exercise.duration ?? '' }}" placeholder="z.B. 5-10 Minuten">
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label">Therapie-Tags (kommagetrennt)</label>
+                                <input type="text" name="therapy_tags" class="form-control"
+                                    value="{{ exercise.therapy_tags ?? '' }}" placeholder="z.B. Physiotherapie, Osteopathie">
+                            </div>
+                            {% if exercise %}
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label">Status</label>
+                                <div class="form-check mt-2">
+                                    <input class="form-check-input" type="checkbox" name="is_active" value="1" id="ex-active"
+                                        {% if exercise.is_active %}checked{% endif %}>
+                                    <label class="form-check-label" for="ex-active">Aktiv (in Bibliothek sichtbar)</label>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary">{{ exercise ? 'Aenderungen speichern' : 'Uebung erstellen' }}</button>
+                            <a href="/tcp/bibliothek" class="btn btn-outline-secondary">Abbrechen</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

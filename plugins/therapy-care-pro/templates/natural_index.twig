@@ -1,0 +1,167 @@
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/plugin-assets/therapy-care-pro/therapy-care-pro.css">{% endblock %}
+{% block content %}
+<div class="container-fluid px-3 px-lg-4 py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb fs-sm">
+            <li class="breadcrumb-item"><a href="/patienten">Patienten</a></li>
+            <li class="breadcrumb-item"><a href="/patienten/{{ patient.id }}">{{ patient.name }}</a></li>
+            <li class="breadcrumb-item active">Naturheilkunde</li>
+        </ol>
+    </nav>
+    {% if success %}<div class="alert alert-success py-2 mb-3">{{ success }}</div>{% endif %}
+    {% if error   %}<div class="alert alert-danger  py-2 mb-3">{{ error }}</div>{% endif %}
+    <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+        <div>
+            <h1 class="h4 fw-700 mb-0">Naturheilkundliche Massnahmen</h1>
+            <div class="text-muted fs-sm">{{ patient.name }}</div>
+        </div>
+        <div class="ms-auto"><a href="/patienten/{{ patient.id }}" class="btn btn-outline-secondary btn-sm">Zuruck</a></div>
+    </div>
+    <div class="row g-3">
+        <div class="col-12 col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header fw-700">Eintraege</div>
+                {% if entries is not empty %}
+                <div class="list-group list-group-flush">
+                    {% for entry in entries %}
+                    <div class="list-group-item py-3">
+                        <div class="d-flex align-items-start gap-3">
+                            <div class="flex-fill">
+                                <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                                    <span class="fw-700">{{ entry.therapy_type }}</span>
+                                    {% if entry.type_category %}<span class="tcp-nat-cat">{{ entry.type_category }}</span>{% endif %}
+                                    {% if entry.show_in_portal %}<span class="badge bg-success" style="font-size:.65rem;">Portal</span>{% endif %}
+                                    <span class="text-muted fs-sm ms-auto">{{ entry.entry_date|date_de }}</span>
+                                </div>
+                                <div class="row g-1 fs-sm">
+                                    {% if entry.agent %}<div class="col-12 col-sm-6"><span class="text-muted">Mittel:</span> {{ entry.agent }}</div>{% endif %}
+                                    {% if entry.dosage %}<div class="col-12 col-sm-6"><span class="text-muted">Dosierung:</span> {{ entry.dosage }}</div>{% endif %}
+                                    {% if entry.frequency %}<div class="col-12 col-sm-6"><span class="text-muted">Haeufigkeit:</span> {{ entry.frequency }}</div>{% endif %}
+                                    {% if entry.duration %}<div class="col-12 col-sm-6"><span class="text-muted">Dauer:</span> {{ entry.duration }}</div>{% endif %}
+                                    {% if entry.notes %}<div class="col-12 mt-1"><span class="text-muted">Notizen:</span> {{ entry.notes }}</div>{% endif %}
+                                </div>
+                            </div>
+                            <div class="d-flex flex-column gap-1">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="tcpEditNat({{ entry|json_encode }})">Bearbeiten</button>
+                                <form method="POST" action="/patienten/{{ patient.id }}/naturheilkunde/{{ entry.id }}/loeschen" onsubmit="return confirm('Loeschen?')">
+                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                    <button class="btn btn-sm btn-outline-danger w-100">Loeschen</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="card-body text-muted text-center py-5">Noch keine Eintraege vorhanden.</div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-12 col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header fw-700">Neue Massnahme</div>
+                <div class="card-body">
+                    <form method="POST" action="/patienten/{{ patient.id }}/naturheilkunde">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <div class="mb-2">
+                            <label class="form-label fs-sm">Typ waehlen</label>
+                            <select name="type_id" class="form-select form-select-sm" onchange="tcpFillType(this)">
+                                <option value="">Aus Liste waehlen</option>
+                                {% for category, typeList in types %}
+                                <optgroup label="{{ category }}">
+                                    {% for t in typeList %}<option value="{{ t.id }}" data-name="{{ t.name }}">{{ t.name }}</option>{% endfor %}
+                                </optgroup>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label fs-sm">Therapieform *</label>
+                            <input type="text" name="therapy_type" id="nat-type-input" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label fs-sm">Mittel / Praeparat</label>
+                            <input type="text" name="agent" class="form-control form-control-sm">
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-6">
+                                <label class="form-label fs-sm">Dosierung</label>
+                                <input type="text" name="dosage" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fs-sm">Datum</label>
+                                <input type="date" name="entry_date" class="form-control form-control-sm" value="{{ 'now'|date('Y-m-d') }}">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fs-sm">Haeufigkeit</label>
+                                <input type="text" name="frequency" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fs-sm">Dauer</label>
+                                <input type="text" name="duration" class="form-control form-control-sm">
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label fs-sm">Notizen</label>
+                            <textarea name="notes" class="form-control form-control-sm" rows="2"></textarea>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="show_in_portal" value="1" id="nat-portal">
+                            <label class="form-check-label fs-sm" for="nat-portal">Im Besitzerportal anzeigen</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm w-100">Massnahme speichern</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="tcpNatEditModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Massnahme bearbeiten</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <form method="POST" id="tcp-nat-edit-form">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <div class="modal-body">
+                    <div class="mb-2"><label class="form-label fs-sm">Therapieform *</label><input type="text" name="therapy_type" id="en-type" class="form-control form-control-sm" required></div>
+                    <div class="mb-2"><label class="form-label fs-sm">Mittel</label><input type="text" name="agent" id="en-agent" class="form-control form-control-sm"></div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><label class="form-label fs-sm">Dosierung</label><input type="text" name="dosage" id="en-dosage" class="form-control form-control-sm"></div>
+                        <div class="col-6"><label class="form-label fs-sm">Datum</label><input type="date" name="entry_date" id="en-date" class="form-control form-control-sm"></div>
+                        <div class="col-6"><label class="form-label fs-sm">Haeufigkeit</label><input type="text" name="frequency" id="en-freq" class="form-control form-control-sm"></div>
+                        <div class="col-6"><label class="form-label fs-sm">Dauer</label><input type="text" name="duration" id="en-dur" class="form-control form-control-sm"></div>
+                    </div>
+                    <div class="mb-2"><label class="form-label fs-sm">Notizen</label><textarea name="notes" id="en-notes" class="form-control form-control-sm" rows="2"></textarea></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="show_in_portal" value="1" id="en-portal"><label class="form-check-label fs-sm" for="en-portal">Im Portal anzeigen</label></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function tcpFillType(sel) {
+    var opt = sel.options[sel.selectedIndex];
+    if (opt && opt.dataset.name) { document.getElementById('nat-type-input').value = opt.dataset.name; }
+}
+function tcpEditNat(e) {
+    var f = document.getElementById('tcp-nat-edit-form');
+    f.action = '/patienten/{{ patient.id }}/naturheilkunde/' + e.id + '/bearbeiten';
+    document.getElementById('en-type').value  = e.therapy_type || '';
+    document.getElementById('en-agent').value = e.agent        || '';
+    document.getElementById('en-dosage').value= e.dosage       || '';
+    document.getElementById('en-date').value  = e.entry_date   || '';
+    document.getElementById('en-freq').value  = e.frequency    || '';
+    document.getElementById('en-dur').value   = e.duration     || '';
+    document.getElementById('en-notes').value = e.notes        || '';
+    document.getElementById('en-portal').checked = !!e.show_in_portal;
+    new bootstrap.Modal(document.getElementById('tcpNatEditModal')).show();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,115 @@
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/plugin-assets/therapy-care-pro/therapy-care-pro.css">{% endblock %}
+{% block content %}
+<div class="container-fluid px-3 px-lg-4 py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb fs-sm">
+            <li class="breadcrumb-item"><a href="/patienten">Patienten</a></li>
+            <li class="breadcrumb-item"><a href="/patienten/{{ patient.id }}">{{ patient.name }}</a></li>
+            <li class="breadcrumb-item active">Erinnerungen</li>
+        </ol>
+    </nav>
+    {% if success %}<div class="alert alert-success py-2 mb-3">{{ success }}</div>{% endif %}
+    <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+        <div>
+            <h1 class="h4 fw-700 mb-0">Erinnerungen</h1>
+            <div class="text-muted fs-sm">{{ patient.name }}</div>
+        </div>
+        <div class="ms-auto d-flex gap-2">
+            <a href="/tcp/admin/erinnerungen" class="btn btn-outline-secondary btn-sm">Vorlagen verwalten</a>
+            <a href="/patienten/{{ patient.id }}" class="btn btn-outline-secondary btn-sm">Zuruck</a>
+        </div>
+    </div>
+    <div class="row g-3">
+        <div class="col-12 col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-header fw-700">Geplante Erinnerungen</div>
+                {% if queued is not empty %}
+                <div class="list-group list-group-flush">
+                    {% for item in queued %}
+                    <div class="list-group-item py-3">
+                        <div class="tcp-reminder-item status-{{ item.status }}">
+                            <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
+                                <div>
+                                    <div class="fw-600 fs-sm">{{ item.subject }}</div>
+                                    <div class="fs-nano text-muted mt-1">
+                                        Senden am: {{ item.send_at|datetime_de }}
+                                        &nbsp;·&nbsp;
+                                        {% if item.status == 'pending' %}<span class="badge bg-warning text-dark">Ausstehend</span>
+                                        {% elseif item.status == 'sent' %}<span class="badge bg-success">Gesendet</span>
+                                        {% elseif item.status == 'failed' %}<span class="badge bg-danger">Fehlgeschlagen</span>
+                                        {% else %}<span class="badge bg-secondary">{{ item.status }}</span>{% endif %}
+                                    </div>
+                                    {% if item.error_message %}<div class="fs-nano text-danger mt-1">{{ item.error_message }}</div>{% endif %}
+                                </div>
+                                <div class="fs-nano text-muted text-uppercase fw-600">{{ item.type }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="card-body text-muted text-center py-5">Keine Erinnerungen geplant.</div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-12 col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-header fw-700">Neue Erinnerung planen</div>
+                <div class="card-body">
+                    <form method="POST" action="/patienten/{{ patient.id }}/erinnerungen">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <div class="mb-3">
+                            <label class="form-label fs-sm">Vorlage verwenden</label>
+                            <select name="template_id" class="form-select form-select-sm" onchange="tcpFillTemplate(this)">
+                                <option value="">Keine / manuell eingeben</option>
+                                {% for tpl in templates %}
+                                <option value="{{ tpl.id }}"
+                                    data-subject="{{ tpl.subject }}"
+                                    data-body="{{ tpl.body }}"
+                                    data-type="{{ tpl.type }}">
+                                    {{ tpl.name }} ({{ tpl.type }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fs-sm">Typ</label>
+                            <select name="type" id="rq-type" class="form-select form-select-sm">
+                                <option value="custom">Manuell</option>
+                                <option value="appointment">Terminerinnerung</option>
+                                <option value="homework">Ubungserinnerung</option>
+                                <option value="followup">Wiedervorstellung</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fs-sm">Betreff</label>
+                            <input type="text" name="subject" id="rq-subject" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fs-sm">Nachricht</label>
+                            <textarea name="body" id="rq-body" class="form-control form-control-sm" rows="4"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fs-sm">Senden am</label>
+                            <input type="datetime-local" name="send_at" class="form-control form-control-sm"
+                                value="{{ 'now'|date('Y-m-d') }}T{{ 'now'|date('H:i') }}">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm w-100">Erinnerung einplanen</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+function tcpFillTemplate(sel) {
+    var opt = sel.options[sel.selectedIndex];
+    if (!opt.value) return;
+    document.getElementById('rq-subject').value = opt.dataset.subject || '';
+    document.getElementById('rq-body').value    = opt.dataset.body    || '';
+    document.getElementById('rq-type').value    = opt.dataset.type    || 'custom';
+}
+</script>
+{% endblock %}

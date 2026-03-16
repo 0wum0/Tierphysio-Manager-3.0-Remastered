@@ -1,0 +1,116 @@
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/plugin-assets/therapy-care-pro/therapy-care-pro.css">{% endblock %}
+{% block content %}
+<div class="container-fluid px-3 px-lg-4 py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb fs-sm">
+            <li class="breadcrumb-item"><a href="/patienten">Patienten</a></li>
+            <li class="breadcrumb-item"><a href="/patienten/{{ patient.id }}">{{ patient.name }}</a></li>
+            <li class="breadcrumb-item active">Therapieberichte</li>
+        </ol>
+    </nav>
+    {% if success %}<div class="alert alert-success py-2 mb-3">{{ success }}</div>{% endif %}
+    {% if error   %}<div class="alert alert-danger  py-2 mb-3">{{ error }}</div>{% endif %}
+    <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+        <div>
+            <h1 class="h4 fw-700 mb-0">Therapieberichte</h1>
+            <div class="text-muted fs-sm">{{ patient.name }}</div>
+        </div>
+        <div class="ms-auto d-flex gap-2">
+            <a href="/patienten/{{ patient.id }}/berichte/neu" class="btn btn-primary btn-sm">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line stroke="currentColor" stroke-width="2" x1="12" y1="5" x2="12" y2="19"/><line stroke="currentColor" stroke-width="2" x1="5" y1="12" x2="19" y2="12"/></svg>
+                Neuer Bericht
+            </a>
+            <a href="/patienten/{{ patient.id }}" class="btn btn-outline-secondary btn-sm">Zuruck</a>
+        </div>
+    </div>
+    {% if reports is not empty %}
+    <div class="row g-3">
+        {% for report in reports %}
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start gap-2 mb-2">
+                        <div class="flex-fill">
+                            <div class="fw-700">{{ report.title }}</div>
+                            <div class="fs-sm text-muted">{{ report.created_at|datetime_de }}</div>
+                        </div>
+                        {% if report.filename %}
+                        <span class="badge bg-success" style="font-size:.65rem;">PDF</span>
+                        {% else %}
+                        <span class="badge bg-secondary" style="font-size:.65rem;">Kein PDF</span>
+                        {% endif %}
+                    </div>
+                    {% if report.diagnosis %}
+                    <div class="fs-sm text-muted mb-2">{{ report.diagnosis|truncate(80) }}</div>
+                    {% endif %}
+                    <div class="d-flex gap-1 flex-wrap fs-nano text-muted mb-3">
+                        {% if report.include_progress %}<span class="badge bg-secondary">Fortschritt</span>{% endif %}
+                        {% if report.include_homework %}<span class="badge bg-secondary">Hausaufgaben</span>{% endif %}
+                        {% if report.include_natural  %}<span class="badge bg-secondary">Naturheilkunde</span>{% endif %}
+                        {% if report.include_timeline %}<span class="badge bg-secondary">Timeline</span>{% endif %}
+                    </div>
+                    {% if report.sent_at %}
+                    <div class="fs-nano text-muted mb-2">
+                        Gesendet an {{ report.sent_to }} am {{ report.sent_at|datetime_de }}
+                    </div>
+                    {% endif %}
+                    <div class="d-flex gap-2 flex-wrap">
+                        {% if report.filename %}
+                        <a href="/patienten/{{ patient.id }}/berichte/{{ report.id }}/download" class="btn btn-sm btn-outline-primary">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" points="7 10 12 15 17 10"/><line stroke="currentColor" stroke-width="2" x1="12" y1="15" x2="12" y2="3"/></svg>
+                            Download
+                        </a>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="tcpShowSendModal({{ report.id }}, '{{ patient.owner_email ?? '' }}')">Senden</button>
+                        {% endif %}
+                        <form method="POST" action="/patienten/{{ patient.id }}/berichte/{{ report.id }}/loeschen" onsubmit="return confirm('Bericht loeschen?')" class="ms-auto">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                            <button class="btn btn-sm btn-outline-danger">
+                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" points="3 6 5 6 21 6"/><path stroke="currentColor" stroke-width="2" d="M19 6l-1 14H6L5 6"/></svg>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card shadow-sm">
+        <div class="card-body text-center py-5 text-muted">
+            <svg width="48" height="48" fill="none" viewBox="0 0 24 24" class="mb-3"><path stroke="currentColor" stroke-width="1.5" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="1.5" points="14 2 14 8 20 8"/></svg>
+            <div class="fw-600">Noch keine Therapieberichte erstellt</div>
+            <div class="fs-sm mt-1">Erstellen Sie den ersten Bericht fur {{ patient.name }}.</div>
+            <a href="/patienten/{{ patient.id }}/berichte/neu" class="btn btn-primary btn-sm mt-3">Ersten Bericht erstellen</a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="modal fade" id="tcpSendModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Bericht per E-Mail senden</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <form method="POST" id="tcp-send-form">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <div class="modal-body">
+                    <label class="form-label">E-Mail-Adresse</label>
+                    <input type="email" name="email_to" id="tcp-send-email" class="form-control" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Senden</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+function tcpShowSendModal(reportId, defaultEmail) {
+    document.getElementById('tcp-send-form').action = '/patienten/{{ patient.id }}/berichte/' + reportId + '/senden';
+    document.getElementById('tcp-send-email').value = defaultEmail || '';
+    new bootstrap.Modal(document.getElementById('tcpSendModal')).show();
+}
+</script>
+{% endblock %}

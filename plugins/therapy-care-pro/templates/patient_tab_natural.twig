@@ -1,0 +1,178 @@
+{# TherapyCare Pro — Patient Tab: Naturheilkunde (embedded in patient detail) #}
+<div class="p-3">
+
+    {% if entries is not empty %}
+    <div class="list-group list-group-flush mb-3">
+        {% for entry in entries %}
+        <div class="list-group-item px-0 py-2">
+            <div class="d-flex align-items-start gap-2">
+                <span class="tcp-nat-cat mt-1">{{ entry.type_category ?? entry.therapy_type }}</span>
+                <div class="flex-fill">
+                    <div class="fw-600 fs-sm">{{ entry.therapy_type }}{% if entry.agent %} — {{ entry.agent }}{% endif %}</div>
+                    {% if entry.dosage %}<div class="fs-nano text-muted">Dosierung: {{ entry.dosage }}</div>{% endif %}
+                    {% if entry.frequency %}<div class="fs-nano text-muted">Häufigkeit: {{ entry.frequency }}</div>{% endif %}
+                    {% if entry.notes %}<div class="fs-nano text-muted mt-1">{{ entry.notes|truncate(80) }}</div>{% endif %}
+                    <div class="fs-nano text-muted mt-1">{{ entry.entry_date|date_de }}
+                        {% if entry.show_in_portal %}<span class="badge bg-success ms-1" style="font-size:.65rem;">Portal</span>{% endif %}
+                    </div>
+                </div>
+                <div class="d-flex gap-1">
+                    <button type="button" class="btn btn-xs btn-outline-secondary"
+                        onclick="tcpEditNatural({{ entry|json_encode }})">
+                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <form method="POST" action="/patienten/{{ patient.id }}/naturheilkunde/{{ entry.id }}/loeschen" onsubmit="return confirm('Eintrag löschen?')">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <button class="btn btn-xs btn-outline-danger">
+                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" points="3 6 5 6 21 6"/><path stroke="currentColor" stroke-width="2" d="M19 6l-1 14H6L5 6"/></svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-muted fs-sm mb-3">Noch keine naturheilkundlichen Maßnahmen dokumentiert.</div>
+    {% endif %}
+
+    {# Add new entry form #}
+    <div class="border rounded p-3">
+        <div class="fw-700 fs-sm mb-2">Neue Maßnahme erfassen</div>
+        <form method="POST" action="/patienten/{{ patient.id }}/naturheilkunde" id="tcp-natural-form">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <div class="row g-2">
+                <div class="col-12 col-md-6">
+                    <label class="form-label fs-nano">Therapieform *</label>
+                    <select name="type_id" class="form-select form-select-sm" onchange="tcpFillTherapyType(this)">
+                        <option value="">— Typ wählen oder manuell eingeben —</option>
+                        {% for category, typeList in types %}
+                        <optgroup label="{{ category }}">
+                            {% for t in typeList %}
+                            <option value="{{ t.id }}" data-name="{{ t.name }}">{{ t.name }}</option>
+                            {% endfor %}
+                        </optgroup>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label fs-nano">Therapieform (Bezeichnung) *</label>
+                    <input type="text" name="therapy_type" class="form-control form-control-sm" id="tcp-therapy-type-input" placeholder="z.B. Bachblüten, Akupunktur…" required>
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label fs-nano">Mittel / Präparat</label>
+                    <input type="text" name="agent" class="form-control form-control-sm" placeholder="z.B. Rescue Remedy, Arnica C30">
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label fs-nano">Dosierung</label>
+                    <input type="text" name="dosage" class="form-control form-control-sm" placeholder="z.B. 3× täglich 2 Tropfen">
+                </div>
+                <div class="col-6 col-md-4">
+                    <label class="form-label fs-nano">Häufigkeit</label>
+                    <input type="text" name="frequency" class="form-control form-control-sm" placeholder="z.B. täglich">
+                </div>
+                <div class="col-6 col-md-4">
+                    <label class="form-label fs-nano">Dauer</label>
+                    <input type="text" name="duration" class="form-control form-control-sm" placeholder="z.B. 4 Wochen">
+                </div>
+                <div class="col-12 col-md-4">
+                    <label class="form-label fs-nano">Datum</label>
+                    <input type="date" name="entry_date" class="form-control form-control-sm" value="{{ 'now'|date('Y-m-d') }}">
+                </div>
+                <div class="col-12">
+                    <label class="form-label fs-nano">Notizen</label>
+                    <textarea name="notes" class="form-control form-control-sm" rows="2" placeholder="Beobachtungen, Reaktionen, Hinweise…"></textarea>
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="show_in_portal" value="1" id="tcp-show-portal">
+                        <label class="form-check-label fs-nano" for="tcp-show-portal">Im Besitzerportal anzeigen</label>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary btn-sm">Maßnahme speichern</button>
+                <a href="/patienten/{{ patient.id }}/naturheilkunde" class="btn btn-outline-secondary btn-sm ms-2">Vollansicht</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# Edit modal for natural entries #}
+<div class="modal fade" id="tcpNaturalEditModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Maßnahme bearbeiten</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" id="tcp-natural-edit-form">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <div class="modal-body">
+                    <div class="row g-2">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fs-nano">Therapieform *</label>
+                            <input type="text" name="therapy_type" id="edit-therapy-type" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fs-nano">Mittel / Präparat</label>
+                            <input type="text" name="agent" id="edit-agent" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label fs-nano">Dosierung</label>
+                            <input type="text" name="dosage" id="edit-dosage" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label fs-nano">Häufigkeit</label>
+                            <input type="text" name="frequency" id="edit-frequency" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <label class="form-label fs-nano">Dauer</label>
+                            <input type="text" name="duration" id="edit-duration" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label fs-nano">Datum</label>
+                            <input type="date" name="entry_date" id="edit-entry-date" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fs-nano">Notizen</label>
+                            <textarea name="notes" id="edit-notes" class="form-control form-control-sm" rows="2"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="show_in_portal" value="1" id="edit-show-portal">
+                                <label class="form-check-label fs-nano" for="edit-show-portal">Im Besitzerportal anzeigen</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function tcpFillTherapyType(sel) {
+    const opt = sel.options[sel.selectedIndex];
+    const input = document.getElementById('tcp-therapy-type-input');
+    if (opt && opt.dataset.name) { input.value = opt.dataset.name; }
+}
+function tcpEditNatural(entry) {
+    const f = document.getElementById('tcp-natural-edit-form');
+    f.action = '/patienten/{{ patient.id }}/naturheilkunde/' + entry.id + '/bearbeiten';
+    document.getElementById('edit-therapy-type').value = entry.therapy_type || '';
+    document.getElementById('edit-agent').value       = entry.agent       || '';
+    document.getElementById('edit-dosage').value      = entry.dosage      || '';
+    document.getElementById('edit-frequency').value   = entry.frequency   || '';
+    document.getElementById('edit-duration').value    = entry.duration    || '';
+    document.getElementById('edit-entry-date').value  = entry.entry_date  || '';
+    document.getElementById('edit-notes').value       = entry.notes       || '';
+    document.getElementById('edit-show-portal').checked = !!entry.show_in_portal;
+    var modal = new bootstrap.Modal(document.getElementById('tcpNaturalEditModal'));
+    modal.show();
+}
+</script>

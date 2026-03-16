@@ -1,0 +1,49 @@
+{% extends '@owner-portal/portal_layout.twig' %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/plugin-assets/therapy-care-pro/therapy-care-pro.css">{% endblock %}
+{% block content %}
+<div class="portal-body">
+
+    <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+        <div>
+            <h1 class="h5 fw-700 mb-0">Naturheilkundliche Massnahmen</h1>
+            <div class="text-muted fs-sm">{{ patient.name }}</div>
+        </div>
+        <a href="/portal/tiere/{{ patient.id }}" class="btn btn-outline-secondary btn-sm ms-auto">Zurueck</a>
+    </div>
+
+    {% if entries is not empty %}
+    <div class="card portal-card shadow-sm">
+        <div class="list-group list-group-flush">
+            {% for entry in entries %}
+            <div class="list-group-item py-3">
+                <div class="d-flex align-items-start gap-2 flex-wrap">
+                    <div class="flex-fill">
+                        <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                            <span class="fw-700">{{ entry.therapy_type }}</span>
+                            {% if entry.type_name %}
+                            <span class="tcp-nat-cat">{{ entry.type_name }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="fs-sm text-muted">
+                            {% if entry.agent %}Mittel: <strong>{{ entry.agent }}</strong>{% if entry.dosage %} &mdash; {{ entry.dosage }}{% endif %}<br>{% endif %}
+                            {% if entry.frequency %}Haeufigkeit: {{ entry.frequency }}{% if entry.duration %} &middot; Dauer: {{ entry.duration }}{% endif %}<br>{% endif %}
+                            {% if entry.notes %}<span class="mt-1 d-block">{{ entry.notes }}</span>{% endif %}
+                        </div>
+                    </div>
+                    <div class="text-muted fs-nano text-nowrap">{{ entry.entry_date|date_de }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="card portal-card shadow-sm">
+        <div class="card-body text-muted text-center py-5 fs-sm">
+            Aktuell keine naturheilkundlichen Massnahmen fuer {{ patient.name }} freigegeben.
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

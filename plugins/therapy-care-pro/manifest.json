@@ -1,0 +1,10 @@
+{
+    "name": "TherapyCare Pro",
+    "slug": "therapy-care-pro",
+    "version": "1.0.0",
+    "description": "Premium-Plugin für Therapie-Fortschritts-Tracking, Besitzer-Feedback, automatische Erinnerungen, Therapieberichte, Übungsbibliothek, Naturheilkunde und erweitertes Besitzerportal.",
+    "author": "Tierphysio Manager",
+    "min_app_version": "3.0.0",
+    "service_provider": "Plugins\\TherapyCarePro\\ServiceProvider",
+    "hooks": ["registerRoutes", "patientDetailTabs", "patientHeaderActions", "dashboardWidgets", "navItems"]
+}

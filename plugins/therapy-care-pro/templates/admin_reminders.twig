@@ -1,0 +1,164 @@
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="/plugin-assets/therapy-care-pro/therapy-care-pro.css">{% endblock %}
+{% block content %}
+<div class="container-fluid px-3 px-lg-4 py-4">
+    {% if success %}<div class="alert alert-success py-2 mb-3">{{ success }}</div>{% endif %}
+    {% if error   %}<div class="alert alert-danger  py-2 mb-3">{{ error }}</div>{% endif %}
+    <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+        <div>
+            <h1 class="h4 fw-700 mb-0">Erinnerungsvorlagen</h1>
+            <div class="text-muted fs-sm">TherapyCare Pro</div>
+        </div>
+        <div class="ms-auto d-flex gap-2">
+            <a href="/tcp/admin/einstellungen" class="btn btn-outline-secondary btn-sm">Einstellungen</a>
+        </div>
+    </div>
+    <div class="row g-3">
+        <div class="col-12 col-lg-7">
+            <div class="card shadow-sm mb-3">
+                <div class="card-header fw-700">Vorhandene Vorlagen</div>
+                {% if templates is not empty %}
+                <div class="list-group list-group-flush">
+                    {% for tpl in templates %}
+                    <div class="list-group-item py-3">
+                        <div class="d-flex align-items-start gap-3">
+                            <div class="flex-fill">
+                                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                                    <span class="fw-700">{{ tpl.name }}</span>
+                                    <span class="badge bg-secondary fs-nano">{{ tpl.type }}</span>
+                                    {% if not tpl.is_active %}<span class="badge bg-danger fs-nano">Inaktiv</span>{% endif %}
+                                    <span class="text-muted fs-nano ms-auto">{{ tpl.trigger_hours }}h vorher</span>
+                                </div>
+                                <div class="fs-sm text-muted">{{ tpl.subject }}</div>
+                            </div>
+                            <div class="d-flex gap-1">
+                                <button class="btn btn-xs btn-outline-secondary"
+                                    onclick="tcpEditTpl({{ tpl|json_encode }})">Bearbeiten</button>
+                                <form method="POST" action="/tcp/admin/erinnerungen/{{ tpl.id }}/loeschen"
+                                      onsubmit="return confirm('Vorlage loeschen?')">
+                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                    <button class="btn btn-xs btn-outline-danger">X</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="card-body text-muted text-center py-4">Keine Vorlagen vorhanden.</div>
+                {% endif %}
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header fw-700">Versandprotokoll (letzte 50)</div>
+                {% if logs is not empty %}
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Datum</th><th>Typ</th><th>Empfanger</th><th>Status</th></tr></thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr>
+                                <td class="fs-nano text-nowrap">{{ log.sent_at|datetime_de }}</td>
+                                <td class="fs-nano">{{ log.type }}</td>
+                                <td class="fs-nano">{{ log.recipient }}</td>
+                                <td>
+                                    {% if log.status == 'sent' %}<span class="badge bg-success fs-nano">Gesendet</span>
+                                    {% else %}<span class="badge bg-danger fs-nano">Fehler</span>{% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="card-body text-muted text-center py-4 fs-sm">Noch keine Versandprotokolle.</div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-12 col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-header fw-700">Neue Vorlage erstellen</div>
+                <div class="card-body">
+                    <form method="POST" action="/tcp/admin/erinnerungen">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <div class="mb-2">
+                            <label class="form-label fs-sm">Name *</label>
+                            <input type="text" name="name" class="form-control form-control-sm" required placeholder="z.B. Terminerinnerung 24h">
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label fs-sm">Typ</label>
+                            <select name="type" class="form-select form-select-sm">
+                                <option value="appointment">Termin</option>
+                                <option value="homework">Ubungen</option>
+                                <option value="followup">Wiedervorstellung</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label fs-sm">Betreff *</label>
+                            <input type="text" name="subject" class="form-control form-control-sm" required>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label fs-sm">Nachricht</label>
+                            <textarea name="body" class="form-control form-control-sm" rows="5"></textarea>
+                            <div class="form-text fs-nano">Platzhalter: &#123;&#123;patient_name&#125;&#125; &#123;&#123;owner_name&#125;&#125; &#123;&#123;company_name&#125;&#125; &#123;&#123;appointment_date&#125;&#125; &#123;&#123;appointment_time&#125;&#125;</div>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label fs-sm">Auslosen (Stunden vor Ereignis)</label>
+                            <input type="number" name="trigger_hours" class="form-control form-control-sm" value="24" min="0">
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="is_active" value="1" id="tpl-active" checked>
+                            <label class="form-check-label fs-sm" for="tpl-active">Aktiv</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm w-100">Vorlage erstellen</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="tcpTplEditModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">Vorlage bearbeiten</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <form method="POST" id="tcp-tpl-edit-form">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <div class="modal-body">
+                    <div class="mb-2"><label class="form-label fs-sm">Name *</label><input type="text" name="name" id="et-name" class="form-control form-control-sm" required></div>
+                    <div class="mb-2">
+                        <label class="form-label fs-sm">Typ</label>
+                        <select name="type" id="et-type" class="form-select form-select-sm">
+                            <option value="appointment">Termin</option>
+                            <option value="homework">Ubungen</option>
+                            <option value="followup">Wiedervorstellung</option>
+                        </select>
+                    </div>
+                    <div class="mb-2"><label class="form-label fs-sm">Betreff *</label><input type="text" name="subject" id="et-subject" class="form-control form-control-sm" required></div>
+                    <div class="mb-2"><label class="form-label fs-sm">Nachricht</label><textarea name="body" id="et-body" class="form-control form-control-sm" rows="6"></textarea></div>
+                    <div class="mb-2"><label class="form-label fs-sm">Stunden vorher</label><input type="number" name="trigger_hours" id="et-hours" class="form-control form-control-sm" min="0"></div>
+                    <div class="form-check"><input class="form-check-input" type="checkbox" name="is_active" value="1" id="et-active"><label class="form-check-label fs-sm" for="et-active">Aktiv</label></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary btn-sm">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+function tcpEditTpl(t) {
+    var f = document.getElementById('tcp-tpl-edit-form');
+    f.action = '/tcp/admin/erinnerungen/' + t.id + '/bearbeiten';
+    document.getElementById('et-name').value    = t.name    || '';
+    document.getElementById('et-type').value    = t.type    || 'appointment';
+    document.getElementById('et-subject').value = t.subject || '';
+    document.getElementById('et-body').value    = t.body    || '';
+    document.getElementById('et-hours').value   = t.trigger_hours || 24;
+    document.getElementById('et-active').checked = !!parseInt(t.is_active);
+    new bootstrap.Modal(document.getElementById('tcpTplEditModal')).show();
+}
+</script>
+{% endblock %}
