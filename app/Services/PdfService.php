@@ -2031,11 +2031,13 @@ class PdfService
             $infoY += 4;
         }
 
-        /* ── Document title — script image (same style as invoice) ── */
+        /* ── Document title — script image only if explicitly uploaded ── */
         $titleImgKey  = $isDunning ? 'pdf_mahnung_bild' : 'pdf_erinnerung_bild';
-        $titleImgFile = $this->resolveAssetImg($settings[$titleImgKey] ?? 'rechnung-script.png');
+        $titleImgFile = !empty($settings[$titleImgKey])
+            ? $this->resolveAssetImg($settings[$titleImgKey])
+            : '';
         $titleImgY    = $infoY + 4;
-        if (file_exists($titleImgFile)) {
+        if ($titleImgFile !== '' && file_exists($titleImgFile)) {
             $imgW = 72;
             $pdf->Image($titleImgFile, $rightEdge - $imgW, $titleImgY, $imgW, 0, '');
             [$pw, $ph]    = @getimagesize($titleImgFile) ?: [300, 120];
