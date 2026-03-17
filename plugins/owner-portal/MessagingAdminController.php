@@ -184,14 +184,16 @@ class MessagingAdminController extends Controller
     /* ── GET /api/portal-admin/portal-users ── */
     public function portalUsers(array $params = []): void
     {
-        $users = $this->portalRepo->getAllPortalUsers();
-        $out   = [];
-        foreach ($users as $u) {
+        /* Return ALL owners so the admin can start a conversation with any owner,
+           not only those who have already accepted a portal invitation. */
+        $owners = $this->portalRepo->getAllOwners();
+        $out    = [];
+        foreach ($owners as $o) {
             $out[] = [
-                'owner_id'   => (int)$u['owner_id'],
-                'first_name' => $u['first_name'] ?? '',
-                'last_name'  => $u['last_name']  ?? '',
-                'email'      => $u['email']       ?? '',
+                'owner_id'   => (int)$o['id'],
+                'first_name' => $o['first_name'] ?? '',
+                'last_name'  => $o['last_name']  ?? '',
+                'email'      => $o['email']       ?? '',
             ];
         }
         $this->json($out);

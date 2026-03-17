@@ -103,6 +103,16 @@ class OwnerPortalRepository
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function getAllOwners(): array
+    {
+        $stmt = $this->db->query(
+            'SELECT id, first_name, last_name, email
+             FROM owners
+             ORDER BY last_name ASC, first_name ASC'
+        );
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     /* ─── Rate Limiting ─── */
 
     public function countRecentAttempts(string $email, string $ip, int $minutes = 15): int
