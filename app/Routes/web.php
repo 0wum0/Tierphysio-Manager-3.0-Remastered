@@ -79,6 +79,7 @@ $router->get('/rechnungen/{id}/positionen-json', [InvoiceController::class, 'pos
 $router->post('/rechnungen/{id}/senden', [InvoiceController::class, 'sendEmail'], ['auth']);
 $router->get('/rechnungen/{id}/quittung', [InvoiceController::class, 'downloadReceipt'], ['auth']);
 $router->post('/rechnungen/{id}/quittung-senden', [InvoiceController::class, 'sendReceiptEmail'], ['auth']);
+$router->post('/rechnungen/{id}/status-inline', [InvoiceController::class, 'updateStatusInline'], ['auth']);
 
 // ── Mahnwesen: Erinnerungen ──────────────────────────────────────────
 $router->get('/mahnwesen/erinnerungen', [ReminderDunningController::class, 'reminderIndex'], ['auth']);

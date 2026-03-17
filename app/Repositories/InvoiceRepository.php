@@ -399,4 +399,30 @@ class InvoiceRepository extends Repository
             [$id]
         );
     }
+
+    public function markOverdueAutomatic(): void
+    {
+        $this->db->execute(
+            "UPDATE invoices
+             SET status = 'overdue'
+             WHERE status = 'open'
+               AND due_date IS NOT NULL
+               AND due_date < CURDATE()"
+        );
+    }
+
+    public function updateStatus(int $id, string $status, ?string $paidAt = null): void
+    {
+        if ($paidAt !== null) {
+            $this->db->execute(
+                "UPDATE invoices SET status = ?, paid_at = ?, updated_at = NOW() WHERE id = ?",
+                [$status, $paidAt, $id]
+            );
+        } else {
+            $this->db->execute(
+                "UPDATE invoices SET status = ?, paid_at = NULL, updated_at = NOW() WHERE id = ?",
+                [$status, $id]
+            );
+        }
+    }
 }

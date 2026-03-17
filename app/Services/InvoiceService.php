@@ -153,6 +153,11 @@ class InvoiceService
         $this->invoiceRepository->markEmailSent($id);
     }
 
+    public function markOverdueAutomatic(): void
+    {
+        $this->invoiceRepository->markOverdueAutomatic();
+    }
+
     private function calculateTotals(array $positions): array
     {
         $net = 0.0;

@@ -37,6 +37,8 @@ class InvoiceController extends Controller
 
     public function index(array $params = []): void
     {
+        $this->invoiceService->markOverdueAutomatic();
+
         $status = $this->get('status', '');
         $search = $this->get('search', '');
         $page   = (int)$this->get('page', 1);
@@ -313,7 +315,7 @@ class InvoiceController extends Controller
         }
 
         $status = $this->sanitize($this->post('status', ''));
-        $allowed = ['draft', 'open', 'paid', 'overdue'];
+        $allowed = ['draft', 'open', 'paid', 'overdue', 'mahnung'];
 
         if (!in_array($status, $allowed, true)) {
             $this->session->flash('error', $this->translator->trans('invoices.invalid_status'));
@@ -345,10 +347,47 @@ class InvoiceController extends Controller
             'open'    => 'Rechnung auf "Offen" gesetzt.',
             'draft'   => 'Rechnung als Entwurf gespeichert.',
             'overdue' => '⚠️ Rechnung als überfällig markiert.',
+            'mahnung' => '📬 Rechnung als Mahnung markiert.',
             default   => $this->translator->trans('invoices.status_updated'),
         };
         $this->session->flash($status === 'paid' ? 'paid' : 'success', $msg);
         $this->redirect("/rechnungen/{$params['id']}");
+    }
+
+    public function updateStatusInline(array $params = []): void
+    {
+        $this->validateCsrf();
+
+        $invoice = $this->invoiceService->findById((int)$params['id']);
+        if (!$invoice) {
+            $this->json(['ok' => false, 'error' => 'Rechnung nicht gefunden'], 404);
+        }
+
+        $status  = $this->sanitize($this->post('status', ''));
+        $allowed = ['draft', 'open', 'paid', 'overdue', 'mahnung'];
+
+        if (!in_array($status, $allowed, true)) {
+            $this->json(['ok' => false, 'error' => 'Ungültiger Status'], 422);
+        }
+
+        $paidAt = ($status === 'paid') ? date('Y-m-d H:i:s') : null;
+        $this->invoiceService->updateStatus((int)$params['id'], $status, $paidAt);
+
+        if ($status === 'paid' && $invoice['patient_id']) {
+            try {
+                $this->patientService->addTimelineEntry([
+                    'patient_id'   => (int)$invoice['patient_id'],
+                    'type'         => 'payment',
+                    'title'        => 'Rechnung ' . ($invoice['invoice_number'] ?? '') . ' bezahlt',
+                    'content'      => 'Rechnung als bezahlt markiert.',
+                    'status_badge' => 'bezahlt',
+                    'entry_date'   => date('Y-m-d H:i:s'),
+                    'user_id'      => (int)$this->session->get('user_id'),
+                ]);
+            } catch (\Throwable) {}
+        }
+
+        $this->json(['ok' => true, 'status' => $status]);
     }
 
     public function positionsJson(array $params = []): void
