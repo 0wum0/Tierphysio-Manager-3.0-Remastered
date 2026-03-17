@@ -37,10 +37,17 @@ class MessagingOwnerController extends Controller
     }
 
     /* ── Auth guard ── */
+    private function isAjax(): bool
+    {
+        return (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest')
+            || str_contains($_SERVER['REQUEST_URI'] ?? '', '/api/');
+    }
+
     private function requireOwnerAuth(): array
     {
         $userId = $this->session->get('owner_portal_user_id');
         if (!$userId) {
+            if ($this->isAjax()) { $this->json(['error' => 'Nicht angemeldet.'], 401); exit; }
             $this->redirect('/portal/login');
             exit;
         }
@@ -48,6 +55,7 @@ class MessagingOwnerController extends Controller
         if (!$user || !$user['is_active']) {
             $this->session->remove('owner_portal_user_id');
             $this->session->remove('owner_portal_owner_id');
+            if ($this->isAjax()) { $this->json(['error' => 'Sitzung abgelaufen.'], 401); exit; }
             $this->redirect('/portal/login');
             exit;
         }

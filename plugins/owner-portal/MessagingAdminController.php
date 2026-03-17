@@ -15,9 +15,10 @@ use App\Services\MailService;
 
 class MessagingAdminController extends Controller
 {
-    private MessagingRepository $repo;
-    private MessagingMailService $mailer;
-    private SettingsRepository $settingsRepository;
+    private MessagingRepository    $repo;
+    private OwnerPortalRepository   $portalRepo;
+    private MessagingMailService    $mailer;
+    private SettingsRepository      $settingsRepository;
 
     public function __construct(
         View $view,
@@ -30,6 +31,7 @@ class MessagingAdminController extends Controller
     ) {
         parent::__construct($view, $session, $config, $translator);
         $this->repo               = new MessagingRepository($db);
+        $this->portalRepo         = new OwnerPortalRepository($db);
         $this->mailer             = new MessagingMailService($settingsRepository, $mailService);
         $this->settingsRepository = $settingsRepository;
     }
@@ -37,16 +39,18 @@ class MessagingAdminController extends Controller
     /* ── GET /portal-admin/nachrichten ── */
     public function index(array $params = []): void
     {
-        $threads = $this->repo->getAllThreads();
-        $unread  = $this->repo->countUnreadForAdmin();
+        $threads     = $this->repo->getAllThreads();
+        $unread      = $this->repo->countUnreadForAdmin();
+        $portalUsers = $this->portalRepo->getAllPortalUsers();
 
         $this->render('@owner-portal/admin_messages.twig', [
-            'page_title'  => 'Nachrichten — Besitzerportal',
-            'threads'     => $threads,
-            'unread'      => $unread,
-            'csrf_token'  => $this->session->generateCsrfToken(),
-            'success'     => $this->session->getFlash('success'),
-            'error'       => $this->session->getFlash('error'),
+            'page_title'   => 'Nachrichten — Besitzerportal',
+            'threads'      => $threads,
+            'unread'       => $unread,
+            'portal_users' => $portalUsers,
+            'csrf_token'   => $this->session->generateCsrfToken(),
+            'success'      => $this->session->getFlash('success'),
+            'error'        => $this->session->getFlash('error'),
         ]);
     }
 

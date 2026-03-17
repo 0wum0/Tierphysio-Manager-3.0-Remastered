@@ -90,8 +90,8 @@
                     <label class="form-label fw-600 fs-sm">Tierbesitzer</label>
                     <select class="form-select" id="ntOwnerId" required>
                         <option value="">— Besitzer wählen —</option>
-                        {% for t in threads %}
-                        <option value="{{ t.owner_id }}">{{ t.owner_name }} ({{ t.owner_email }})</option>
+                        {% for u in portal_users %}
+                        <option value="{{ u.owner_id }}">{{ u.first_name }} {{ u.last_name }} ({{ u.email }})</option>
                         {% endfor %}
                     </select>
                     <div class="form-text">Nur Besitzer mit Portal-Zugang werden angezeigt.</div>
