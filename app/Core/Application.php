@@ -61,8 +61,20 @@ class Application
         $this->container->singleton(Translator::class, fn() => $translator);
 
         if ($config->get('app.installed', false)) {
-            $db = new Database($config);
-            $this->container->singleton(Database::class, fn() => $db);
+            try {
+                $db = new Database($config);
+                $this->container->singleton(Database::class, fn() => $db);
+            } catch (\Throwable $dbEx) {
+                /* Log and rethrow so handleException can render a proper error page */
+                $logDir  = $this->rootPath . '/storage/logs';
+                if (!is_dir($logDir)) { @mkdir($logDir, 0755, true); }
+                @file_put_contents(
+                    $logDir . '/error.log',
+                    '[' . date('Y-m-d H:i:s') . '] DB bootstrap: ' . $dbEx->getMessage() . "\n\n",
+                    FILE_APPEND
+                );
+                throw $dbEx;
+            }
         }
 
         $view = new View($this->rootPath . '/templates', $config, $session, $translator);

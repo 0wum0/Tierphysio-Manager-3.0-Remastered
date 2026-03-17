@@ -43,5 +43,30 @@ require_once ROOT_PATH . '/vendor/autoload.php';
 
 use App\Core\Application;
 
-$app = new Application(ROOT_PATH);
-$app->run();
+try {
+    $app = new Application(ROOT_PATH);
+    $app->run();
+} catch (\Throwable $e) {
+    $debug = filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOLEAN);
+    $logDir  = ROOT_PATH . '/storage/logs';
+    if (!is_dir($logDir)) { @mkdir($logDir, 0755, true); }
+    @file_put_contents(
+        $logDir . '/error.log',
+        '[' . date('Y-m-d H:i:s') . '] ' . get_class($e) . ': ' . $e->getMessage()
+        . ' in ' . $e->getFile() . ':' . $e->getLine() . "\n"
+        . $e->getTraceAsString() . "\n\n",
+        FILE_APPEND
+    );
+    http_response_code(500);
+    if ($debug) {
+        echo '<pre style="background:#1a1a2e;color:#e94560;padding:20px;font-family:monospace;">';
+        echo '<strong>Bootstrap Error:</strong> ' . htmlspecialchars($e->getMessage()) . "\n\n";
+        echo '<strong>File:</strong> ' . htmlspecialchars($e->getFile()) . ':' . $e->getLine() . "\n\n";
+        echo '<strong>Trace:</strong>' . "\n" . htmlspecialchars($e->getTraceAsString());
+        echo '</pre>';
+    } else {
+        echo '<!DOCTYPE html><html><body style="background:#0f0f1a;color:#fff;font-family:sans-serif;text-align:center;padding:100px;">';
+        echo '<h1>500 - Interner Serverfehler</h1><p>Bitte versuchen Sie es später erneut.</p>';
+        echo '</body></html>';
+    }
+}
