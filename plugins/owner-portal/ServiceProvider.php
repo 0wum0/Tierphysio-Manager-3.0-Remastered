@@ -107,7 +107,9 @@ class ServiceProvider
         $router->get('/portal-admin/nachrichten/{id}',                               [MessagingAdminController::class, 'thread'],    ['auth']);
         $router->post('/api/portal-admin/nachrichten/{id}/antworten',                [MessagingAdminController::class, 'reply'],     ['auth']);
         $router->post('/api/portal-admin/nachrichten/{id}/status',                   [MessagingAdminController::class, 'setStatus'], ['auth']);
-        $router->post('/api/portal-admin/nachrichten/neu',                           [MessagingAdminController::class, 'newThread'], ['auth']);
+        $router->post('/api/portal-admin/nachrichten/neu',                           [MessagingAdminController::class, 'newThread'],   ['auth']);
+        $router->get('/api/portal-admin/nachrichten-drawer',                         [MessagingAdminController::class, 'drawerData'],  ['auth']);
+        $router->get('/api/portal-admin/portal-users',                               [MessagingAdminController::class, 'portalUsers'], ['auth']);
         $router->post('/api/portal-admin/nachrichten/{id}/loeschen',                 [MessagingAdminController::class, 'delete'],    ['auth']);
 
         /* ── Messaging: Owner (portal) routes ── */

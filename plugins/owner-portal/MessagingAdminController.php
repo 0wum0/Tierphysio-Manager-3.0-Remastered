@@ -181,6 +181,43 @@ class MessagingAdminController extends Controller
         $this->json(['ok' => true, 'thread_id' => $threadId]);
     }
 
+    /* ── GET /api/portal-admin/portal-users ── */
+    public function portalUsers(array $params = []): void
+    {
+        $users = $this->portalRepo->getAllPortalUsers();
+        $out   = [];
+        foreach ($users as $u) {
+            $out[] = [
+                'owner_id'   => (int)$u['owner_id'],
+                'first_name' => $u['first_name'] ?? '',
+                'last_name'  => $u['last_name']  ?? '',
+                'email'      => $u['email']       ?? '',
+            ];
+        }
+        $this->json($out);
+    }
+
+    /* ── GET /api/portal-admin/nachrichten-drawer ── */
+    public function drawerData(array $params = []): void
+    {
+        $threads = $this->repo->getAllThreads();
+        $unread  = $this->repo->countUnreadForAdmin();
+
+        $out = [];
+        foreach (array_slice($threads, 0, 20) as $t) {
+            $out[] = [
+                'id'           => (int)$t['id'],
+                'subject'      => $t['subject'],
+                'owner_name'   => $t['owner_name'],
+                'status'       => $t['status'],
+                'unread'       => (int)($t['admin_unread'] ?? 0),
+                'last_message' => $t['last_message_at'] ?? $t['created_at'],
+            ];
+        }
+
+        $this->json(['threads' => $out, 'total_unread' => $unread]);
+    }
+
     /* ── POST /api/portal-admin/nachrichten/{id}/loeschen ── */
     public function delete(array $params = []): void
     {
