@@ -1430,7 +1430,10 @@
     var _csrfMeta       = document.querySelector('meta[name="csrf-token"]');
     var _csrf           = _csrfMeta ? _csrfMeta.getAttribute('content') : '';
 
-    function esc(s){ return String(s||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];}); }
+    function esc(s){
+        var r = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'};
+        return String(s||'').replace(/[&<>"]/g,function(c){ return r[c]; });
+    }
 
     function relTime(dateStr){
         if(!dateStr) return '';
