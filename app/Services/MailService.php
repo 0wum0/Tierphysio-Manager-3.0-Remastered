@@ -129,11 +129,11 @@ class MailService
             $placeholders['{{reminder_due_date}}'] = $dueDate;
 
             $subject = $this->applyPlaceholders(
-                $this->settingsRepository->get('email_reminder_subject', 'Zahlungserinnerung: Rechnung {{invoice_number}}'),
+                $this->settingsRepository->get('email_payment_reminder_subject', 'Zahlungserinnerung: Rechnung {{invoice_number}}'),
                 $placeholders
             );
             $bodyText = $this->applyPlaceholders(
-                $this->settingsRepository->get('email_reminder_body',
+                $this->settingsRepository->get('email_payment_reminder_body',
                     "Hallo {{owner_name}},\n\nwir möchten Sie freundlich daran erinnern, dass die Rechnung {{invoice_number}} vom {{issue_date}} über {{total_gross}} noch aussteht.\n\nBitte überweisen Sie den Betrag bis zum {{reminder_due_date}} auf unser Konto.\n\nFalls Sie die Zahlung bereits veranlasst haben, bitten wir Sie, dieses Schreiben als gegenstandslos zu betrachten.\n\nMit freundlichen Grüßen\n{{company_name}}"
                 ),
                 $placeholders

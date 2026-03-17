@@ -38,8 +38,8 @@ CREATE TABLE IF NOT EXISTS `invoice_dunnings` (
 
 -- Default email settings for reminders/dunnings
 INSERT IGNORE INTO `settings` (`key`, `value`) VALUES
-('email_reminder_subject', 'Zahlungserinnerung: Rechnung {{invoice_number}}'),
-('email_reminder_body',    "Hallo {{owner_name}},\n\nwir möchten Sie freundlich daran erinnern, dass die Rechnung {{invoice_number}} vom {{issue_date}} über {{total_gross}} noch aussteht.\n\nBitte überweisen Sie den Betrag bis zum {{due_date}} auf unser Konto.\n\nFalls Sie die Zahlung bereits veranlasst haben, bitten wir Sie, dieses Schreiben als gegenstandslos zu betrachten.\n\nMit freundlichen Grüßen\n{{company_name}}"),
+('email_payment_reminder_subject', 'Zahlungserinnerung: Rechnung {{invoice_number}}'),
+('email_payment_reminder_body',    "Hallo {{owner_name}},\n\nwir möchten Sie freundlich daran erinnern, dass die Rechnung {{invoice_number}} vom {{issue_date}} über {{total_gross}} noch aussteht.\n\nBitte überweisen Sie den Betrag bis zum {{reminder_due_date}} auf unser Konto.\n\nFalls Sie die Zahlung bereits veranlasst haben, bitten wir Sie, dieses Schreiben als gegenstandslos zu betrachten.\n\nMit freundlichen Grüßen\n{{company_name}}"),
 ('email_dunning_subject',  '{{dunning_level}}. Mahnung: Rechnung {{invoice_number}}'),
 ('email_dunning_body',     "Hallo {{owner_name}},\n\ntrotz unserer Zahlungserinnerung ist die Rechnung {{invoice_number}} vom {{issue_date}} über {{total_gross}} noch nicht beglichen worden.\n\nWir fordern Sie hiermit auf, den ausstehenden Betrag zuzüglich einer Mahngebühr von {{fee}} bis zum {{due_date}} zu begleichen.\n\nGesamtbetrag: {{total_with_fee}}\n\nBei weiterer Nichtzahlung sind wir gezwungen, rechtliche Schritte einzuleiten.\n\nMit freundlichen Grüßen\n{{company_name}}"),
 ('dunning_default_fee',    '5.00'),
