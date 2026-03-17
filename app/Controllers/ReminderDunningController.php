@@ -85,6 +85,9 @@ class ReminderDunningController extends Controller
         $owner   = $invoice['owner_id'] ? $this->ownerService->findById((int)$invoice['owner_id']) : null;
         $patient = $invoice['patient_id'] ? $this->patientService->findById((int)$invoice['patient_id']) : null;
 
+        $sent    = false;
+        $sentMsg = '';
+
         if ($owner && !empty($owner['email'])) {
             $reminder = $this->repo->findReminderById($reminderId);
             $pdf      = $this->pdfService->generateReminderPdf($invoice, $reminder, $owner, $patient);
@@ -92,13 +95,20 @@ class ReminderDunningController extends Controller
 
             if ($sent) {
                 $this->repo->markReminderSent($reminderId, $owner['email']);
-                $this->session->flash('success', 'Zahlungserinnerung erstellt und per E-Mail gesendet an ' . $owner['email'] . '.');
+                $sentMsg = 'Zahlungserinnerung erstellt und per E-Mail gesendet an ' . $owner['email'] . '.';
+                $this->session->flash('success', $sentMsg);
             } else {
-                $err = $this->mailService->getLastError();
-                $this->session->flash('error', 'Erinnerung erstellt, aber E-Mail-Versand fehlgeschlagen' . ($err ? ': ' . $err : '') . '.');
+                $err     = $this->mailService->getLastError();
+                $sentMsg = 'Erinnerung erstellt, aber E-Mail-Versand fehlgeschlagen' . ($err ? ': ' . $err : '') . '.';
+                $this->session->flash('error', $sentMsg);
             }
         } else {
-            $this->session->flash('success', 'Zahlungserinnerung erstellt (kein E-Mail-Versand — keine Adresse hinterlegt).');
+            $sentMsg = 'Zahlungserinnerung erstellt (kein E-Mail-Versand — keine Adresse hinterlegt).';
+            $this->session->flash('success', $sentMsg);
+        }
+
+        if ($this->isAjax()) {
+            $this->json(['ok' => true, 'message' => $sentMsg, 'reminder_id' => $reminderId]);
         }
 
         $this->redirect('/rechnungen#reminder-' . $reminderId);
@@ -336,6 +346,12 @@ class ReminderDunningController extends Controller
             'reminders' => $this->repo->getRemindersForInvoice($invoiceId),
             'dunnings'  => $this->repo->getDunningsForInvoice($invoiceId),
         ]);
+    }
+
+    public function alertJson(array $params = []): void
+    {
+        $invoices = $this->repo->getOverdueAlertInvoices();
+        $this->json(['ok' => true, 'invoices' => $invoices]);
     }
 
     /* ── Helpers ── */

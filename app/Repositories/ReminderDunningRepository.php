@@ -208,6 +208,43 @@ class ReminderDunningRepository
         return $this->db->fetchAll($sql, $params);
     }
 
+    public function countRemindersForInvoice(int $invoiceId): int
+    {
+        return (int)$this->db->fetchColumn(
+            'SELECT COUNT(*) FROM invoice_reminders WHERE invoice_id = ?',
+            [$invoiceId]
+        );
+    }
+
+    public function countDunningsForInvoice(int $invoiceId): int
+    {
+        return (int)$this->db->fetchColumn(
+            'SELECT COUNT(*) FROM invoice_dunnings WHERE invoice_id = ?',
+            [$invoiceId]
+        );
+    }
+
+    public function getOverdueAlertInvoices(): array
+    {
+        $rows = $this->db->fetchAll(
+            "SELECT i.id, i.invoice_number, i.total_gross, i.issue_date, i.due_date, i.status,
+                    CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
+                    o.email AS owner_email,
+                    p.name AS patient_name,
+                    DATEDIFF(CURDATE(), i.issue_date) AS days_open,
+                    (SELECT COUNT(*) FROM invoice_reminders r WHERE r.invoice_id = i.id) AS reminder_count,
+                    (SELECT COUNT(*) FROM invoice_dunnings d WHERE d.invoice_id = i.id) AS dunning_count
+             FROM invoices i
+             LEFT JOIN owners o ON o.id = i.owner_id
+             LEFT JOIN patients p ON p.id = i.patient_id
+             WHERE i.status IN ('open', 'overdue')
+               AND i.issue_date <= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+             ORDER BY i.issue_date ASC
+             LIMIT 50"
+        );
+        return $rows ?: [];
+    }
+
     /* ══════════════════════════════════════════════════════════
        HELPERS
     ══════════════════════════════════════════════════════════ */

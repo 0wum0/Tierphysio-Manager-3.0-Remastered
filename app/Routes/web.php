@@ -97,6 +97,7 @@ $router->post('/mahnwesen/mahnungen/{id}/loeschen', [ReminderDunningController::
 
 // ── Mahnwesen: API ───────────────────────────────────────────────────
 $router->get('/api/rechnungen/{id}/mahnwesen', [ReminderDunningController::class, 'apiInvoiceHistory'], ['auth']);
+$router->get('/api/mahnwesen/alert', [ReminderDunningController::class, 'alertJson'], ['auth']);
 
 $router->get('/einstellungen', [SettingsController::class, 'index'], ['admin']);
 $router->post('/einstellungen', [SettingsController::class, 'update'], ['admin']);

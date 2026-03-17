@@ -328,7 +328,7 @@
             </thead>
             <tbody>
                 {% for invoice in invoices %}
-                <tr class="invoice-row" data-bs-toggle="modal" data-bs-target="#modal-invoice-{{ invoice.id }}" data-invoice-id="{{ invoice.id }}" style="cursor:pointer;">
+                <tr class="invoice-row{% if invoice.status == 'open' %} row-pulse-open{% elseif invoice.status == 'overdue' %} row-pulse-overdue{% endif %}" data-bs-toggle="modal" data-bs-target="#modal-invoice-{{ invoice.id }}" data-invoice-id="{{ invoice.id }}" data-status="{{ invoice.status }}" style="cursor:pointer;">
                     <td><span class="font-semibold" style="color:var(--accent);">{{ invoice.invoice_number }}</span></td>
                     <td>{{ invoice.owner_name ?? '—' }}</td>
                     <td>{{ invoice.patient_name ?? '—' }}</td>
@@ -685,6 +685,32 @@
 
 })();
 </script>
+
+{# ── Überfällig-Alert Modal ─────────────────────────────────────── #}
+<div class="modal fade" id="modal-overdue-alert" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header" style="background:linear-gradient(135deg,#ef4444,#f59e0b);color:#fff;">
+                <div class="d-flex align-items-center gap-2">
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="#fff" stroke-width="2" d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13" stroke="#fff" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+                    <strong>Offene Rechnungen – Handlungsbedarf</strong>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div id="overdue-alert-loading" class="text-center p-4 text-muted">Lade offene Rechnungen…</div>
+                <div id="overdue-alert-empty" class="text-center p-4 text-success d-none">
+                    <svg width="32" height="32" fill="none" viewBox="0 0 24 24" class="mb-2"><circle cx="12" cy="12" r="10" stroke="#22c55e" stroke-width="2"/><path stroke="#22c55e" stroke-width="2" d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    <div>Alle Rechnungen sind auf dem aktuellen Stand. 🎉</div>
+                </div>
+                <div id="overdue-alert-list"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Schließen</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -907,6 +933,143 @@
         });
     }
 
+    /* ── Overdue Alert Modal ────────────────────────────────── */
+    var _alertSessionKey = 'overdue_alert_shown_' + new Date().toDateString();
+    if (!sessionStorage.getItem(_alertSessionKey)) {
+        sessionStorage.setItem(_alertSessionKey, '1');
+        setTimeout(function () {
+            fetch('/api/mahnwesen/alert', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data.ok || !data.invoices || data.invoices.length === 0) return;
+                    renderAlertModal(data.invoices);
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-overdue-alert')).show();
+                })
+                .catch(function () {});
+        }, 1200);
+    }
+
+    function renderAlertModal(invoices) {
+        var loading = document.getElementById('overdue-alert-loading');
+        var empty   = document.getElementById('overdue-alert-empty');
+        var list    = document.getElementById('overdue-alert-list');
+        if (loading) loading.classList.add('d-none');
+
+        if (!invoices || invoices.length === 0) {
+            if (empty) empty.classList.remove('d-none');
+            return;
+        }
+
+        var html = '<div class="list-group list-group-flush">';
+        invoices.forEach(function (inv) {
+            var reminderCount = parseInt(inv.reminder_count || 0);
+            var dunningCount  = parseInt(inv.dunning_count  || 0);
+            var daysOpen      = parseInt(inv.days_open      || 0);
+            var isOverdue     = inv.status === 'overdue';
+
+            var statusBadge = isOverdue
+                ? '<span class="badge" style="background:#ef4444;color:#fff;">Überfällig</span>'
+                : '<span class="badge" style="background:#f59e0b;color:#fff;">Offen</span>';
+
+            var daysLabel = daysOpen === 1
+                ? '1 Tag'
+                : daysOpen + ' Tage';
+
+            var reminderBadge = reminderCount > 0
+                ? '<span class="badge bg-info-subtle text-info ms-1">' + reminderCount + 'x Erinnerung</span>'
+                : '';
+            var dunningBadge = dunningCount > 0
+                ? '<span class="badge bg-warning-subtle text-warning ms-1">' + dunningCount + 'x Mahnung</span>'
+                : '';
+
+            /* Action: ≥3 reminders and no dunnings yet → suggest dunning, else → reminder */
+            var needsDunning = reminderCount >= 3 && dunningCount < 3;
+            var actionBtn = '';
+            if (needsDunning) {
+                actionBtn = '<button class="btn btn-sm btn-warning alert-send-dunning ms-auto flex-shrink-0" '
+                    + 'data-invoice-id="' + inv.id + '" data-invoice-number="' + inv.invoice_number + '" '
+                    + 'style="font-size:.75rem;">'
+                    + '<svg width="11" height="11" fill="none" viewBox="0 0 24 24" style="margin-right:3px;vertical-align:-1px;"><path stroke="currentColor" stroke-width="2" d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>'
+                    + 'Mahnung senden</button>';
+            } else if (dunningCount >= 3) {
+                actionBtn = '<span class="badge bg-danger ms-auto flex-shrink-0" style="font-size:.72rem;">Letzte Mahnung bereits versendet</span>';
+            } else {
+                actionBtn = '<button class="btn btn-sm btn-primary alert-send-reminder ms-auto flex-shrink-0" '
+                    + 'data-invoice-id="' + inv.id + '" data-invoice-number="' + inv.invoice_number + '" '
+                    + 'style="font-size:.75rem;">'
+                    + '<svg width="11" height="11" fill="none" viewBox="0 0 24 24" style="margin-right:3px;vertical-align:-1px;"><path stroke="currentColor" stroke-width="2" d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path stroke="currentColor" stroke-width="2" d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>'
+                    + 'Erinnerung senden</button>';
+            }
+
+            html += '<div class="list-group-item px-3 py-2" id="alert-row-' + inv.id + '">'
+                + '<div class="d-flex align-items-center gap-2 flex-wrap">'
+                + '<div class="fw-semibold" style="min-width:90px;color:var(--bs-primary);">' + inv.invoice_number + '</div>'
+                + statusBadge
+                + '<div class="text-muted small flex-fill" style="min-width:120px;">'
+                + (inv.owner_name || '—')
+                + (inv.patient_name ? ' &bull; ' + inv.patient_name : '')
+                + '</div>'
+                + '<div class="text-muted small">' + parseFloat(inv.total_gross).toFixed(2).replace('.', ',') + ' €</div>'
+                + '<div class="small" style="color:' + (isOverdue ? '#ef4444' : '#f59e0b') + ';">seit ' + daysLabel + '</div>'
+                + reminderBadge + dunningBadge
+                + actionBtn
+                + '</div>'
+                + '</div>';
+        });
+        html += '</div>';
+        list.innerHTML = html;
+
+        /* Bind send-reminder buttons */
+        list.querySelectorAll('.alert-send-reminder').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var invoiceId     = btn.dataset.invoiceId;
+                var invoiceNumber = btn.dataset.invoiceNumber;
+                btn.disabled = true;
+                btn.textContent = 'Sende…';
+
+                var dueDate = new Date();
+                dueDate.setDate(dueDate.getDate() + 7);
+                var dueDateStr = dueDate.toISOString().split('T')[0];
+
+                var fd = new FormData();
+                fd.append('_csrf_token', _csrfToken);
+                fd.append('due_date', dueDateStr);
+                fd.append('notes', '');
+
+                fetch('/rechnungen/' + invoiceId + '/erinnerung', {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: fd
+                })
+                .then(function (r) {
+                    var row = document.getElementById('alert-row-' + invoiceId);
+                    if (row) {
+                        row.innerHTML = '<div class="px-3 py-2 text-success small">✅ Zahlungserinnerung für <strong>' + invoiceNumber + '</strong> gesendet.</div>';
+                    }
+                })
+                .catch(function () {
+                    btn.disabled = false;
+                    btn.textContent = 'Erinnerung senden';
+                });
+            });
+        });
+
+        /* Bind send-dunning buttons */
+        list.querySelectorAll('.alert-send-dunning').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                /* Close alert modal and open the proper dunning modal */
+                bootstrap.Modal.getInstance(document.getElementById('modal-overdue-alert')).hide();
+                var invoiceId     = btn.dataset.invoiceId;
+                var invoiceNumber = btn.dataset.invoiceNumber;
+                setTimeout(function () {
+                    if (typeof openDunningModal === 'function') {
+                        openDunningModal(invoiceId, invoiceNumber);
+                    }
+                }, 350);
+            });
+        });
+    }
+
     /* Theme-Wechsel: Charts neu rendern wenn Nutzer Theme wechselt */
     var observer = new MutationObserver(function () {
         location.reload();
@@ -915,4 +1078,17 @@
 
 })();
 </script>
+
+<style>
+@keyframes pulse-open {
+    0%, 100% { background-color: transparent; }
+    50%       { background-color: rgba(245, 158, 11, 0.10); }
+}
+@keyframes pulse-overdue {
+    0%, 100% { background-color: transparent; }
+    50%       { background-color: rgba(239, 68, 68, 0.11); }
+}
+.row-pulse-open    { animation: pulse-open    3s ease-in-out infinite; }
+.row-pulse-overdue { animation: pulse-overdue 2.4s ease-in-out infinite; }
+</style>
 {% endblock %}
