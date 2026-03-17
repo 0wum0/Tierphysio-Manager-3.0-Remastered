@@ -34,7 +34,7 @@
    ════════════════════════════════════════════════════════════════ #}
 
 {# Build ordered panel list: saved order first, then any new panels appended #}
-{% set all_panels = ['panel-appointments', 'panel-birthdays', 'panel-kpi-revenue', 'panel-revenue-chart', 'panel-activity-kpis', 'panel-mini-charts', 'panel-quick-actions'] %}
+{% set all_panels = ['panel-appointments', 'panel-birthdays', 'panel-kpi-revenue', 'panel-revenue-chart', 'panel-activity-kpis', 'panel-mini-charts', 'panel-quick-actions', 'panel-invoice-inflow', 'panel-forecast', 'panel-donuts', 'panel-weekday', 'panel-top-owners', 'panel-patient-species'] %}
 {% for w in plugin_widgets %}{% set all_panels = all_panels|merge([w.id]) %}{% endfor %}
 {% set ordered_panels = saved_layout ?? all_panels %}
 {% for id in all_panels %}{% if id not in ordered_panels %}{% set ordered_panels = ordered_panels|merge([id]) %}{% endif %}{% endfor %}
@@ -434,6 +434,147 @@
         </div>
         {% endif %}
 
+        {# ── Panel: Rechnungseingang 30 Tage ── #}
+        {% if panel_id == 'panel-invoice-inflow' %}
+        <div class="col-12" data-panel-id="panel-invoice-inflow">
+            <div class="panel" id="panel-invoice-inflow">
+                <div class="panel-hdr">
+                    <h2>
+                        <svg class="sa-icon sa-icon-primary me-2"><use href="/themes/smart-tierphysio/icons/sprite.svg#trending-up"></use></svg>
+                        Rechnungseingang <small class="text-muted fw-normal ms-2" style="font-size:.75rem;">letzte 30 Tage</small>
+                    </h2>
+                    <div class="panel-toolbar">
+                        <button class="btn btn-panel" data-action="panel-collapse" title="Einklappen"><svg class="sa-icon"><use href="/themes/smart-tierphysio/icons/sprite.svg#minus"></use></svg></button>
+                        <button class="btn btn-panel" data-action="panel-fullscreen" title="Vollbild"><svg class="sa-icon"><use href="/themes/smart-tierphysio/icons/sprite.svg#maximize-2"></use></svg></button>
+                    </div>
+                </div>
+                <div class="panel-container">
+                    <div class="panel-content p-2">
+                        <div id="dash-invoice-inflow" style="min-height:220px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Panel: Umsatz-Prognose ── #}
+        {% if panel_id == 'panel-forecast' %}
+        <div class="col-xl-8 col-lg-7 col-12" data-panel-id="panel-forecast">
+            <div class="panel h-100" id="panel-forecast">
+                <div class="panel-hdr">
+                    <h2>
+                        <svg class="sa-icon sa-icon-success me-2"><use href="/themes/smart-tierphysio/icons/sprite.svg#bar-chart-2"></use></svg>
+                        Umsatz-Prognose <small class="text-muted fw-normal ms-2" style="font-size:.75rem;">Ist + Prognose 3 Monate</small>
+                    </h2>
+                    <div class="panel-toolbar">
+                        <button class="btn btn-panel" data-action="panel-collapse" title="Einklappen"><svg class="sa-icon"><use href="/themes/smart-tierphysio/icons/sprite.svg#minus"></use></svg></button>
+                        <button class="btn btn-panel" data-action="panel-fullscreen" title="Vollbild"><svg class="sa-icon"><use href="/themes/smart-tierphysio/icons/sprite.svg#maximize-2"></use></svg></button>
+                    </div>
+                </div>
+                <div class="panel-container">
+                    <div class="panel-content p-2">
+                        <div id="dash-forecast" style="min-height:260px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Panel: 3 Donuts (Tierart, Zahlungsart, Termine) ── #}
+        {% if panel_id == 'panel-donuts' %}
+        <div class="col-xl-4 col-lg-5 col-12" data-panel-id="panel-donuts">
+            <div class="panel h-100" id="panel-donuts">
+                <div class="panel-hdr">
+                    <h2>
+                        <svg class="sa-icon sa-icon-info me-2"><use href="/themes/smart-tierphysio/icons/sprite.svg#pie-chart"></use></svg>
+                        Aufteilung
+                    </h2>
+                    <div class="panel-toolbar">
+                        <button class="btn btn-panel" data-action="panel-collapse" title="Einklappen"><svg class="sa-icon"><use href="/themes/smart-tierphysio/icons/sprite.svg#minus"></use></svg></button>
+                    </div>
+                </div>
+                <div class="panel-container">
+                    <div class="panel-content p-3">
+                        <div class="mb-3">
+                            <div class="text-muted fw-600 mb-1" style="font-size:.73rem;text-transform:uppercase;letter-spacing:.04em;">Einnahmen nach Zahlungsart</div>
+                            <div id="dash-donut-payment" style="min-height:160px;"></div>
+                        </div>
+                        <div>
+                            <div class="text-muted fw-600 mb-1" style="font-size:.73rem;text-transform:uppercase;letter-spacing:.04em;">Termine nach Behandlungsart <span class="text-muted fw-normal">(3 Monate)</span></div>
+                            <div id="dash-donut-appt-type" style="min-height:160px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Panel: Terminauslastung nach Wochentag ── #}
+        {% if panel_id == 'panel-weekday' %}
+        <div class="col-xl-4 col-lg-5 col-12" data-panel-id="panel-weekday">
+            <div class="panel h-100" id="panel-weekday">
+                <div class="panel-hdr">
+                    <h2>
+                        <svg class="sa-icon sa-icon-warning me-2"><use href="/themes/smart-tierphysio/icons/sprite.svg#calendar"></use></svg>
+                        Auslastung <small class="text-muted fw-normal ms-2" style="font-size:.75rem;">nach Wochentag (3 Monate)</small>
+                    </h2>
+                    <div class="panel-toolbar">
+                        <button class="btn btn-panel" data-action="panel-collapse" title="Einklappen"><svg class="sa-icon"><use href="/themes/smart-tierphysio/icons/sprite.svg#minus"></use></svg></button>
+                    </div>
+                </div>
+                <div class="panel-container">
+                    <div class="panel-content p-2">
+                        <div id="dash-weekday" style="min-height:220px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Panel: Top Tierhalter nach Umsatz ── #}
+        {% if panel_id == 'panel-top-owners' %}
+        <div class="col-xl-4 col-lg-5 col-12" data-panel-id="panel-top-owners">
+            <div class="panel h-100" id="panel-top-owners">
+                <div class="panel-hdr">
+                    <h2>
+                        <svg class="sa-icon sa-icon-warning me-2"><use href="/themes/smart-tierphysio/icons/sprite.svg#award"></use></svg>
+                        Top Tierhalter <small class="text-muted fw-normal ms-2" style="font-size:.75rem;">nach Umsatz</small>
+                    </h2>
+                    <div class="panel-toolbar">
+                        <button class="btn btn-panel" data-action="panel-collapse" title="Einklappen"><svg class="sa-icon"><use href="/themes/smart-tierphysio/icons/sprite.svg#minus"></use></svg></button>
+                    </div>
+                </div>
+                <div class="panel-container">
+                    <div class="panel-content p-2">
+                        <div id="dash-top-owners" style="min-height:220px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Panel: Patienten nach Tierart ── #}
+        {% if panel_id == 'panel-patient-species' %}
+        <div class="col-xl-4 col-lg-5 col-12" data-panel-id="panel-patient-species">
+            <div class="panel h-100" id="panel-patient-species">
+                <div class="panel-hdr">
+                    <h2>
+                        <svg class="sa-icon sa-icon-danger me-2"><use href="/themes/smart-tierphysio/icons/sprite.svg#pie-chart"></use></svg>
+                        Patienten nach Tierart
+                    </h2>
+                    <div class="panel-toolbar">
+                        <button class="btn btn-panel" data-action="panel-collapse" title="Einklappen"><svg class="sa-icon"><use href="/themes/smart-tierphysio/icons/sprite.svg#minus"></use></svg></button>
+                    </div>
+                </div>
+                <div class="panel-container">
+                    <div class="panel-content p-2">
+                        <div id="dash-patient-species" style="min-height:220px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         {# ── Plugin Widget Panels (one panel per plugin) ── #}
         {% if panel_id in widget_map|keys %}
         {% set w = widget_map[panel_id] %}
@@ -471,6 +612,13 @@
 /* ── Dashboard Chart Data (server-rendered) ── */
 var _dashChartWeekly  = {{ chart_weekly  is defined and chart_weekly  is not empty ? chart_weekly|json_encode|replace({'</': '<\/'})|raw : '{"labels":[],"paid":[],"open":[],"overdue":[],"draft":[]}' }};
 var _dashChartMonthly = {{ chart_monthly is defined and chart_monthly is not empty ? chart_monthly|json_encode|replace({'</': '<\/'})|raw : '{"labels":[],"paid":[],"open":[],"overdue":[],"draft":[]}' }};
+var _dPatientSpecies   = {{ patients_by_species|default({})|json_encode|replace({'</': '<\/'})|raw }};
+var _dApptType        = {{ appointments_by_type|default({})|json_encode|replace({'</': '<\/'})|raw }};
+var _dRevPayment      = {{ revenue_by_payment|default({})|json_encode|replace({'</': '<\/'})|raw }};
+var _dWeekday         = {{ appointments_weekday|default({})|json_encode|replace({'</': '<\/'})|raw }};
+var _dTopOwners       = {{ top_owners|default({})|json_encode|replace({'</': '<\/'})|raw }};
+var _dForecast        = {{ revenue_forecast|default({})|json_encode|replace({'</': '<\/'})|raw }};
+var _dInvoiceInflow   = {{ invoice_inflow|default({})|json_encode|replace({'</': '<\/'})|raw }};
 </script>
 <script>
 (function(){
@@ -660,7 +808,7 @@ var _dashChartMonthly = {{ chart_monthly is defined and chart_monthly is not emp
         }).render();
     }
 
-    /* ── Patienten + Tierhalter Bar ─────────────────────────── */
+    /* ── Patienten + Tierhalter Bar ──────────────────────────────────── */
     var ownersEl = document.getElementById('dash-owners-bar');
     if (ownersEl) {
         var pLabels2 = {{ patient_trend.labels|json_encode|replace({'</': '<\/'})|raw }};
@@ -682,6 +830,161 @@ var _dashChartMonthly = {{ chart_monthly is defined and chart_monthly is not emp
                 y: { formatter: function(v) { return v + ' neu'; } }
             }
         }).render();
+    }
+
+    /* ── Rechnungseingang 30 Tage (Area + Bar combo) ──────────── */
+    var inflowEl = document.getElementById('dash-invoice-inflow');
+    if (inflowEl && _dInvoiceInflow.labels) {
+        try {
+            new ApexCharts(inflowEl, {
+                chart: { type: 'area', height: 220, toolbar: { show: false }, background: 'transparent', fontFamily: 'inherit', animations: { enabled: true, speed: 400 }, zoom: { enabled: false } },
+                series: [
+                    { name: 'Betrag (€)', type: 'area', data: (_dInvoiceInflow.amounts || []).map(Number) },
+                    { name: 'Anzahl', type: 'line', data: (_dInvoiceInflow.counts || []).map(Number) }
+                ],
+                xaxis: { categories: _dInvoiceInflow.labels || [], labels: { style: { colors: textColor, fontSize: '10px' }, rotate: -45, rotateAlways: false, hideOverlappingLabels: true }, axisBorder: { show: false }, axisTicks: { show: false }, tickAmount: 10 },
+                yaxis: [
+                    { labels: { style: { colors: textColor, fontSize: '11px' }, formatter: function(v){ return v >= 1000 ? (v/1000).toFixed(1)+'k €' : v.toFixed(0)+' €'; } } },
+                    { opposite: true, labels: { style: { colors: textColor, fontSize: '11px' }, formatter: function(v){ return Math.round(v)+'x'; } } }
+                ],
+                colors: ['#4f7cff', '#f59e0b'],
+                fill: { type: ['gradient','solid'], gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.02, stops: [0,95] } },
+                stroke: { curve: 'smooth', width: [2, 2] },
+                grid: { borderColor: gridColor, strokeDashArray: 4 },
+                dataLabels: { enabled: false },
+                tooltip: { theme: isDark ? 'dark' : 'light', shared: true, intersect: false, y: [ { formatter: function(v){ return Number(v).toFixed(2).replace('.',',')+' €'; } }, { formatter: function(v){ return Math.round(v)+' Rechnungen'; } } ] },
+                legend: { show: true, position: 'top', horizontalAlign: 'right', fontSize: '11px', labels: { colors: textColor } },
+                noData: { text: 'Keine Daten', style: { color: textColor } }
+            }).render();
+        } catch(e) { console.error('inflow chart:', e); }
+    }
+
+    /* ── Umsatz-Prognose (Line: Ist + Forecast) ───────────────── */
+    var forecastEl = document.getElementById('dash-forecast');
+    if (forecastEl && _dForecast.labels) {
+        try {
+            new ApexCharts(forecastEl, {
+                chart: { type: 'line', height: 260, toolbar: { show: false }, background: 'transparent', fontFamily: 'inherit', animations: { enabled: true, speed: 500 }, zoom: { enabled: false } },
+                series: [
+                    { name: 'Ist-Umsatz', data: (_dForecast.actual || []).map(function(v){ return v === null ? null : Number(v); }) },
+                    { name: 'Prognose', data: (_dForecast.forecast || []).map(function(v){ return v === null ? null : Number(v); }) }
+                ],
+                xaxis: { categories: _dForecast.labels || [], labels: { style: { colors: textColor, fontSize: '11px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
+                yaxis: { labels: { style: { colors: textColor, fontSize: '11px' }, formatter: function(v){ return v >= 1000 ? (v/1000).toFixed(1)+'k €' : (v||0).toFixed(0)+' €'; } } },
+                colors: ['#22c55e', '#a855f7'],
+                stroke: { curve: 'smooth', width: [3, 2.5], dashArray: [0, 6] },
+                markers: { size: [4, 5], colors: ['#22c55e','#a855f7'], strokeColors: bgCard, strokeWidth: 2 },
+                fill: { type: ['gradient','solid'], gradient: { shadeIntensity:1, opacityFrom:0.25, opacityTo:0.02, stops:[0,95] }, opacity: [1, 0.7] },
+                grid: { borderColor: gridColor, strokeDashArray: 4 },
+                dataLabels: { enabled: false },
+                tooltip: { theme: isDark ? 'dark' : 'light', shared: true, intersect: false, y: { formatter: function(v){ return v === null ? '—' : Number(v).toFixed(2).replace('.',',')+' €'; } } },
+                legend: { show: true, position: 'top', horizontalAlign: 'right', fontSize: '11px', labels: { colors: textColor } },
+                annotations: { xaxis: [{ x: (_dForecast.labels || [])[(_dForecast.actual||[]).length - 1], borderColor: '#a855f7', strokeDashArray: 4, label: { text: 'Prognose', style: { color: '#fff', background: '#a855f7', fontSize: '10px' } } }] },
+                noData: { text: 'Keine Daten', style: { color: textColor } }
+            }).render();
+        } catch(e) { console.error('forecast chart:', e); }
+    }
+
+    /* ── Donut: Einnahmen nach Zahlungsart ────────────────────── */
+    var donutPayEl = document.getElementById('dash-donut-payment');
+    if (donutPayEl && _dRevPayment.data) {
+        try {
+            new ApexCharts(donutPayEl, {
+                chart: { type: 'donut', height: 160, background: 'transparent', fontFamily: 'inherit', animations: { enabled: true, speed: 400 } },
+                series: (_dRevPayment.data || []).map(Number),
+                labels: _dRevPayment.labels || [],
+                colors: _dRevPayment.colors || ['#4f7cff','#22c55e'],
+                plotOptions: { pie: { donut: { size: '60%', labels: { show: true, total: { show: true, label: 'Gesamt', fontSize: '11px', color: textColor, formatter: function(w){ var s = w.globals.seriesTotals.reduce(function(a,b){return a+b;},0); return s >= 1000 ? (s/1000).toFixed(1)+'k €' : s.toFixed(0)+' €'; } } } } } },
+                dataLabels: { enabled: false },
+                legend: { show: true, position: 'bottom', fontSize: '11px', labels: { colors: textColor } },
+                tooltip: { theme: isDark ? 'dark' : 'light', y: { formatter: function(v){ return Number(v).toFixed(2).replace('.',',')+' €'; } } },
+                noData: { text: 'Keine Daten', style: { color: textColor } }
+            }).render();
+        } catch(e) { console.error('donut payment:', e); }
+    }
+
+    /* ── Donut: Termine nach Behandlungsart ─────────────────── */
+    var donutApptEl = document.getElementById('dash-donut-appt-type');
+    if (donutApptEl && _dApptType.data) {
+        try {
+            var apptColors = (_dApptType.colors || []).length ? _dApptType.colors : ['#4f7cff','#22c55e','#f59e0b','#ef4444','#a855f7','#06b6d4','#ec4899','#84cc16'];
+            new ApexCharts(donutApptEl, {
+                chart: { type: 'donut', height: 160, background: 'transparent', fontFamily: 'inherit', animations: { enabled: true, speed: 400 } },
+                series: (_dApptType.data || []).map(Number),
+                labels: _dApptType.labels || [],
+                colors: apptColors,
+                plotOptions: { pie: { donut: { size: '60%', labels: { show: true, total: { show: true, label: 'Termine', fontSize: '11px', color: textColor, formatter: function(w){ return w.globals.seriesTotals.reduce(function(a,b){return a+b;},0)+''; } } } } } },
+                dataLabels: { enabled: false },
+                legend: { show: true, position: 'bottom', fontSize: '11px', labels: { colors: textColor } },
+                tooltip: { theme: isDark ? 'dark' : 'light', y: { formatter: function(v){ return v+' Termine'; } } },
+                noData: { text: 'Keine Daten', style: { color: textColor } }
+            }).render();
+        } catch(e) { console.error('donut appt:', e); }
+    }
+
+    /* ── Terminauslastung nach Wochentag (Bar) ───────────────── */
+    var weekdayEl = document.getElementById('dash-weekday');
+    if (weekdayEl && _dWeekday.data) {
+        try {
+            var wdMax = Math.max.apply(null, _dWeekday.data || [1]);
+            var wdColors = (_dWeekday.data || []).map(function(v){
+                var ratio = wdMax > 0 ? v / wdMax : 0;
+                if (ratio >= 0.8) return '#ef4444';
+                if (ratio >= 0.5) return '#f59e0b';
+                return '#22c55e';
+            });
+            new ApexCharts(weekdayEl, {
+                chart: { type: 'bar', height: 220, toolbar: { show: false }, background: 'transparent', fontFamily: 'inherit', animations: { enabled: true, speed: 400 } },
+                series: [{ name: 'Termine', data: (_dWeekday.data || []).map(Number) }],
+                xaxis: { categories: _dWeekday.labels || [], labels: { style: { colors: textColor, fontSize: '12px' } }, axisBorder: { show: false }, axisTicks: { show: false } },
+                yaxis: { labels: { style: { colors: textColor, fontSize: '11px' }, formatter: function(v){ return Math.round(v)+''; } } },
+                colors: wdColors,
+                plotOptions: { bar: { distributed: true, columnWidth: '55%', borderRadius: 4, borderRadiusApplication: 'end' } },
+                grid: { borderColor: gridColor, strokeDashArray: 4 },
+                dataLabels: { enabled: true, style: { fontSize: '11px', colors: [textColor] }, formatter: function(v){ return v > 0 ? v : ''; } },
+                legend: { show: false },
+                tooltip: { theme: isDark ? 'dark' : 'light', y: { formatter: function(v){ return v+' Termine'; } } },
+                noData: { text: 'Keine Daten', style: { color: textColor } }
+            }).render();
+        } catch(e) { console.error('weekday chart:', e); }
+    }
+
+    /* ── Top Tierhalter Horizontal Bar ─────────────────────────── */
+    var topOwnersEl = document.getElementById('dash-top-owners');
+    if (topOwnersEl && _dTopOwners.data) {
+        try {
+            new ApexCharts(topOwnersEl, {
+                chart: { type: 'bar', height: 220, toolbar: { show: false }, background: 'transparent', fontFamily: 'inherit', animations: { enabled: true, speed: 400 } },
+                series: [{ name: 'Umsatz', data: (_dTopOwners.data || []).map(Number) }],
+                xaxis: { categories: _dTopOwners.labels || [], labels: { style: { colors: textColor, fontSize: '11px' } } },
+                yaxis: { labels: { style: { colors: textColor, fontSize: '10px' }, formatter: function(v){ return v >= 1000 ? (v/1000).toFixed(1)+'k €' : v.toFixed(0)+' €'; } } },
+                colors: ['#4f7cff'],
+                plotOptions: { bar: { horizontal: true, borderRadius: 4, borderRadiusApplication: 'end', barHeight: '55%' } },
+                grid: { borderColor: gridColor, strokeDashArray: 4 },
+                dataLabels: { enabled: false },
+                tooltip: { theme: isDark ? 'dark' : 'light', y: { formatter: function(v){ return Number(v).toFixed(2).replace('.',',')+' €'; } } },
+                noData: { text: 'Keine Daten', style: { color: textColor } }
+            }).render();
+        } catch(e) { console.error('top owners chart:', e); }
+    }
+
+    /* ── Patienten nach Tierart Donut ────────────────────────────── */
+    var speciesEl = document.getElementById('dash-patient-species');
+    if (speciesEl && _dPatientSpecies.data) {
+        try {
+            var speciesColors = ['#4f7cff','#22c55e','#f59e0b','#ef4444','#a855f7','#06b6d4','#ec4899','#84cc16','#f97316','#64748b'];
+            new ApexCharts(speciesEl, {
+                chart: { type: 'donut', height: 220, background: 'transparent', fontFamily: 'inherit', animations: { enabled: true, speed: 400 } },
+                series: (_dPatientSpecies.data || []).map(Number),
+                labels: _dPatientSpecies.labels || [],
+                colors: speciesColors,
+                plotOptions: { pie: { donut: { size: '55%', labels: { show: true, total: { show: true, label: 'Patienten', fontSize: '11px', color: textColor, formatter: function(w){ return w.globals.seriesTotals.reduce(function(a,b){return a+b;},0)+''; } } } } } },
+                dataLabels: { enabled: false },
+                legend: { show: true, position: 'bottom', fontSize: '11px', labels: { colors: textColor }, formatter: function(label, opts){ return label + ' (' + opts.w.globals.series[opts.seriesIndex] + ')'; } },
+                tooltip: { theme: isDark ? 'dark' : 'light', y: { formatter: function(v){ return v+' Patienten'; } } },
+                noData: { text: 'Keine Daten', style: { color: textColor } }
+            }).render();
+        } catch(e) { console.error('species chart:', e); }
     }
 
 })();

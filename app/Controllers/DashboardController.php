@@ -45,6 +45,14 @@ class DashboardController extends Controller
             $chartMonthly = ['labels' => [], 'paid' => [], 'open' => [], 'overdue' => [], 'draft' => []];
         }
 
+        $patientsBySpecies      = $this->dashboardService->getPatientsBySpecies();
+        $appointmentsByType     = $this->dashboardService->getAppointmentsByType();
+        $revenueByPayment       = $this->dashboardService->getRevenueByPaymentMethod();
+        $appointmentsByWeekday  = $this->dashboardService->getAppointmentsByWeekday();
+        $topOwners              = $this->dashboardService->getTopOwnersByRevenue();
+        $revenueForecast        = $this->dashboardService->getRevenueForecast();
+        $invoiceInflow          = $this->dashboardService->getInvoiceInflow();
+
         $this->render('dashboard/index.twig', [
             'page_title'            => $this->translator->trans('nav.dashboard'),
             'stats'                 => $stats,
@@ -55,6 +63,13 @@ class DashboardController extends Controller
             'patient_trend'         => $patientTrend,
             'chart_weekly'          => $chartWeekly,
             'chart_monthly'         => $chartMonthly,
+            'patients_by_species'   => $patientsBySpecies,
+            'appointments_by_type'  => $appointmentsByType,
+            'revenue_by_payment'    => $revenueByPayment,
+            'appointments_weekday'  => $appointmentsByWeekday,
+            'top_owners'            => $topOwners,
+            'revenue_forecast'      => $revenueForecast,
+            'invoice_inflow'        => $invoiceInflow,
         ]);
     }
 

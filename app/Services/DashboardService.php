@@ -191,4 +191,218 @@ class DashboardService
             [$userId]
         );
     }
+
+    /* ── Patienten nach Tierart (Donut) ── */
+    public function getPatientsBySpecies(): array
+    {
+        try {
+            $rows = $this->db->fetchAll(
+                "SELECT COALESCE(NULLIF(TRIM(species),''), 'Unbekannt') AS label,
+                        COUNT(*) AS value
+                 FROM patients
+                 WHERE status != 'verstorben'
+                 GROUP BY label
+                 ORDER BY value DESC
+                 LIMIT 10"
+            );
+            return [
+                'labels' => array_column($rows, 'label'),
+                'data'   => array_map('intval', array_column($rows, 'value')),
+            ];
+        } catch (\Throwable) {
+            return ['labels' => [], 'data' => []];
+        }
+    }
+
+    /* ── Termine nach Behandlungsart (Donut) ── */
+    public function getAppointmentsByType(): array
+    {
+        try {
+            $rows = $this->db->fetchAll(
+                "SELECT COALESCE(tt.name, 'Sonstige') AS label,
+                        COALESCE(tt.color, '#94a3b8') AS color,
+                        COUNT(a.id) AS value
+                 FROM appointments a
+                 LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+                 WHERE a.start_at >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
+                   AND a.status NOT IN ('cancelled','noshow')
+                 GROUP BY tt.id, tt.name, tt.color
+                 ORDER BY value DESC
+                 LIMIT 8"
+            );
+            return [
+                'labels' => array_column($rows, 'label'),
+                'colors' => array_column($rows, 'color'),
+                'data'   => array_map('intval', array_column($rows, 'value')),
+            ];
+        } catch (\Throwable) {
+            return ['labels' => [], 'colors' => [], 'data' => []];
+        }
+    }
+
+    /* ── Einnahmen nach Zahlungsart (Donut) ── */
+    public function getRevenueByPaymentMethod(): array
+    {
+        try {
+            $rows = $this->db->fetchAll(
+                "SELECT COALESCE(NULLIF(payment_method,''), 'rechnung') AS method,
+                        COALESCE(SUM(total_gross), 0) AS amount
+                 FROM invoices
+                 WHERE status = 'paid'
+                 GROUP BY method"
+            );
+            $map = [];
+            foreach ($rows as $r) { $map[$r['method']] = round((float)$r['amount'], 2); }
+            return [
+                'labels' => ['Rechnung', 'Barzahlung'],
+                'data'   => [$map['rechnung'] ?? 0, $map['bar'] ?? 0],
+                'colors' => ['#4f7cff', '#22c55e'],
+            ];
+        } catch (\Throwable) {
+            return ['labels' => ['Rechnung', 'Barzahlung'], 'data' => [0, 0], 'colors' => ['#4f7cff', '#22c55e']];
+        }
+    }
+
+    /* ── Terminauslastung nach Wochentag (Bar) ── */
+    public function getAppointmentsByWeekday(): array
+    {
+        try {
+            $rows = $this->db->fetchAll(
+                "SELECT DAYOFWEEK(start_at) AS dow, COUNT(*) AS value
+                 FROM appointments
+                 WHERE start_at >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
+                   AND status NOT IN ('cancelled','noshow')
+                 GROUP BY dow
+                 ORDER BY dow ASC"
+            );
+            $days = [2 => 'Mo', 3 => 'Di', 4 => 'Mi', 5 => 'Do', 6 => 'Fr', 7 => 'Sa', 1 => 'So'];
+            $indexed = [];
+            foreach ($rows as $r) { $indexed[(int)$r['dow']] = (int)$r['value']; }
+            $labels = [];
+            $data   = [];
+            foreach ($days as $dow => $label) {
+                $labels[] = $label;
+                $data[]   = $indexed[$dow] ?? 0;
+            }
+            return ['labels' => $labels, 'data' => $data];
+        } catch (\Throwable) {
+            return ['labels' => ['Mo','Di','Mi','Do','Fr','Sa','So'], 'data' => [0,0,0,0,0,0,0]];
+        }
+    }
+
+    /* ── Top 5 Tierhalter nach Umsatz (Horizontal Bar) ── */
+    public function getTopOwnersByRevenue(int $limit = 6): array
+    {
+        try {
+            $rows = $this->db->fetchAll(
+                "SELECT CONCAT(o.first_name, ' ', o.last_name) AS label,
+                        COALESCE(SUM(i.total_gross), 0) AS amount
+                 FROM invoices i
+                 JOIN owners o ON o.id = i.owner_id
+                 WHERE i.status = 'paid'
+                 GROUP BY o.id, o.first_name, o.last_name
+                 ORDER BY amount DESC
+                 LIMIT ?",
+                [$limit]
+            );
+            return [
+                'labels' => array_column($rows, 'label'),
+                'data'   => array_map(fn($r) => round((float)$r['amount'], 2), $rows),
+            ];
+        } catch (\Throwable) {
+            return ['labels' => [], 'data' => []];
+        }
+    }
+
+    /* ── Umsatz-Prognose nächste 3 Monate (Line) ── */
+    public function getRevenueForecast(): array
+    {
+        try {
+            /* Past 6 months actual */
+            $past = [];
+            for ($i = 5; $i >= 0; $i--) {
+                $past[] = date('Y-m', strtotime("-{$i} months"));
+            }
+            $rows = $this->db->fetchAll(
+                "SELECT DATE_FORMAT(issue_date, '%Y-%m') AS period,
+                        COALESCE(SUM(total_gross), 0) AS amount
+                 FROM invoices
+                 WHERE status = 'paid'
+                   AND issue_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+                 GROUP BY period ORDER BY period ASC"
+            );
+            $indexed = [];
+            foreach ($rows as $r) { $indexed[$r['period']] = (float)$r['amount']; }
+
+            $actualLabels = [];
+            $actualData   = [];
+            foreach ($past as $m) {
+                $dt = \DateTime::createFromFormat('Y-m', $m);
+                $actualLabels[] = $dt ? $dt->format('M y') : $m;
+                $actualData[]   = $indexed[$m] ?? 0;
+            }
+
+            /* Forecast: simple linear regression on past 6 months */
+            $n    = count($actualData);
+            $sumX = 0; $sumY = 0; $sumXY = 0; $sumX2 = 0;
+            for ($i = 0; $i < $n; $i++) {
+                $sumX  += $i; $sumY  += $actualData[$i];
+                $sumXY += $i * $actualData[$i]; $sumX2 += $i * $i;
+            }
+            $denom = ($n * $sumX2 - $sumX * $sumX);
+            $slope = $denom != 0 ? ($n * $sumXY - $sumX * $sumY) / $denom : 0;
+            $intercept = ($sumY - $slope * $sumX) / $n;
+
+            $forecastLabels = $actualLabels;
+            $forecastData   = array_fill(0, $n, null);
+            /* Bridge last actual point */
+            $forecastData[$n - 1] = $actualData[$n - 1];
+            for ($j = 1; $j <= 3; $j++) {
+                $dt = new \DateTime('first day of +' . $j . ' month');
+                $forecastLabels[] = $dt->format('M y');
+                $forecastData[]   = max(0, round($intercept + $slope * ($n - 1 + $j), 2));
+            }
+
+            return [
+                'labels'   => $forecastLabels,
+                'actual'   => $actualData,
+                'forecast' => $forecastData,
+            ];
+        } catch (\Throwable) {
+            return ['labels' => [], 'actual' => [], 'forecast' => []];
+        }
+    }
+
+    /* ── Rechnungseingang der letzten 30 Tage (Area) ── */
+    public function getInvoiceInflow(): array
+    {
+        try {
+            $days = [];
+            for ($i = 29; $i >= 0; $i--) {
+                $days[] = date('Y-m-d', strtotime("-{$i} days"));
+            }
+            $rows = $this->db->fetchAll(
+                "SELECT DATE(issue_date) AS day, COUNT(*) AS count,
+                        COALESCE(SUM(total_gross), 0) AS amount
+                 FROM invoices
+                 WHERE issue_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                 GROUP BY day ORDER BY day ASC"
+            );
+            $indexed = [];
+            foreach ($rows as $r) { $indexed[$r['day']] = [(int)$r['count'], (float)$r['amount']]; }
+
+            $labels  = [];
+            $counts  = [];
+            $amounts = [];
+            foreach ($days as $d) {
+                $dt = new \DateTime($d);
+                $labels[]  = $dt->format('d.m');
+                $counts[]  = $indexed[$d][0] ?? 0;
+                $amounts[] = round($indexed[$d][1] ?? 0, 2);
+            }
+            return ['labels' => $labels, 'counts' => $counts, 'amounts' => $amounts];
+        } catch (\Throwable) {
+            return ['labels' => [], 'counts' => [], 'amounts' => []];
+        }
+    }
 }
