@@ -708,8 +708,40 @@
                 <use href="/themes/smart-tierphysio/icons/sprite.svg#x"></use>
             </svg>
         </button>
-        <div class="custom-scrollbar h-100 p-4">
-            {% block app_drawer %}{% endblock %}
+        <div class="custom-scrollbar h-100 p-0">
+            <div class="d-flex flex-column h-100">
+                <div class="d-flex align-items-center gap-2 px-3 pt-4 pb-2 flex-shrink-0">
+                    <svg class="sa-icon sa-icon-2x" fill="none" viewBox="0 0 24 24">
+                        <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                              d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    <span class="fw-700 fs-md">Nachrichten</span>
+                    <span id="drawer-unread-badge" class="badge ms-auto" style="background:#ef4444;display:none;"></span>
+                    <a href="/portal-admin/nachrichten" class="btn btn-xs btn-outline-secondary ms-1" style="font-size:.7rem;padding:2px 8px;">Alle</a>
+                </div>
+                <div id="drawer-thread-list" class="flex-grow-1 overflow-y-auto custom-scroll px-2 pb-2" style="min-height:0;">
+                    <div class="text-center text-muted py-5 fs-sm" id="drawer-loading">
+                        <div class="spinner-border spinner-border-sm me-1"></div> Laden…
+                    </div>
+                </div>
+                <div class="flex-shrink-0 border-top px-3 py-2">
+                    <button class="btn btn-sm btn-primary w-100" id="drawer-btn-new"
+                            data-bs-toggle="collapse" data-bs-target="#drawer-new-form">
+                        + Neue Nachricht
+                    </button>
+                    <div class="collapse mt-2" id="drawer-new-form">
+                        <select class="form-select form-select-sm mb-1" id="drawer-owner-select">
+                            <option value="">— Besitzer wählen —</option>
+                        </select>
+                        <input type="text" class="form-control form-control-sm mb-1" id="drawer-subject"
+                               placeholder="Betreff…" maxlength="255">
+                        <textarea class="form-control form-control-sm mb-1" id="drawer-body" rows="3"
+                                  placeholder="Nachricht…"></textarea>
+                        <button class="btn btn-sm btn-success w-100" id="drawer-send-btn">Senden</button>
+                        <div id="drawer-send-error" class="text-danger fs-xs mt-1 d-none"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </aside>
     <div class="backdrop" data-action="toggle-swap" data-toggleclass="open"
@@ -1362,67 +1394,6 @@
 })();
 </script>
 
-{# ═══════════════════════════════════════════════════════
-   APP DRAWER — Nachrichten (right sidebar, triggered by aperture icon)
-   ═══════════════════════════════════════════════════════ #}
-<aside class="app-drawer js-app-drawer">
-    <button type="button" class="btn btn-system position-absolute top-0 end-0 z-2 overflow-hidden p-3"
-            data-action="toggle-swap" data-toggleclass="open" data-target="aside.js-app-drawer"
-            aria-label="Schließen">
-        <svg class="sa-icon sa-icon-2x"><use href="/themes/smart-tierphysio/icons/sprite.svg#x"></use></svg>
-    </button>
-
-    <div class="custom-scrollbar h-100 p-0">
-        <div class="d-flex flex-column h-100">
-
-            {# ── Header ── #}
-            <div class="d-flex align-items-center gap-2 px-3 pt-4 pb-2 flex-shrink-0">
-                <svg class="sa-icon sa-icon-2x" fill="none" viewBox="0 0 24 24">
-                    <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                          d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                </svg>
-                <span class="fw-700 fs-md">Nachrichten</span>
-                <span id="drawer-unread-badge" class="badge ms-auto" style="background:#ef4444;display:none;"></span>
-                <a href="/portal-admin/nachrichten" class="btn btn-xs btn-outline-secondary ms-1" style="font-size:.7rem;padding:2px 8px;">Alle</a>
-            </div>
-
-            {# ── Thread list ── #}
-            <div id="drawer-thread-list" class="flex-grow-1 overflow-y-auto custom-scroll px-2 pb-2"
-                 style="min-height:0;">
-                <div class="text-center text-muted py-5 fs-sm" id="drawer-loading">
-                    <div class="spinner-border spinner-border-sm me-1"></div> Laden…
-                </div>
-            </div>
-
-            {# ── Quick reply / new thread ── #}
-            <div class="flex-shrink-0 border-top px-3 py-2" id="drawer-compose-area">
-                <button class="btn btn-sm btn-primary w-100" id="drawer-btn-new"
-                        data-bs-toggle="collapse" data-bs-target="#drawer-new-form">
-                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" class="me-1">
-                        <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                        <line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                    Neue Nachricht
-                </button>
-                <div class="collapse mt-2" id="drawer-new-form">
-                    <select class="form-select form-select-sm mb-1" id="drawer-owner-select">
-                        <option value="">— Besitzer wählen —</option>
-                    </select>
-                    <input type="text" class="form-control form-control-sm mb-1" id="drawer-subject"
-                           placeholder="Betreff…" maxlength="255">
-                    <textarea class="form-control form-control-sm mb-1" id="drawer-body" rows="3"
-                              placeholder="Nachricht…"></textarea>
-                    <button class="btn btn-sm btn-success w-100" id="drawer-send-btn">Senden</button>
-                    <div id="drawer-send-error" class="text-danger fs-xs mt-1 d-none"></div>
-                </div>
-            </div>
-
-        </div>
-    </div>
-</aside>
-
-<div class="backdrop" data-action="toggle-swap" data-toggleclass="open" data-target="aside.js-app-drawer"></div>
-
 <script>
 (function(){
     var _drawerLoaded   = false;
@@ -1475,11 +1446,8 @@
                         ? '<span class="badge bg-secondary ms-1" style="font-size:.6rem;">Geschl.</span>'
                         : '';
                     html += '<a href="/portal-admin/nachrichten/' + t.id + '" '
-                        + 'class="d-flex align-items-start gap-2 px-2 py-2 rounded text-decoration-none '
-                        + (t.unread > 0 ? 'fw-600' : '') + '" '
-                        + 'style="transition:background .12s;" '
-                        + 'onmouseenter="this.style.background=\'var(--bs-tertiary-bg)\'" '
-                        + 'onmouseleave="this.style.background=\'transparent\'">'
+                        + 'class="drawer-thread-item d-flex align-items-start gap-2 px-2 py-2 rounded text-decoration-none '
+                        + (t.unread > 0 ? 'fw-600' : '') + '">'
                         + '<span class="flex-shrink-0 mt-1">' + unreadDot + '</span>'
                         + '<span style="min-width:0;flex:1;">'
                         + '<span class="d-flex align-items-center gap-1">'
