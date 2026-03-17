@@ -1,0 +1,184 @@
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Mahnungen</h1>
+        <p class="page-subtitle">{{ records|length }} Mahnung{{ records|length != 1 ? 'en' : '' }}</p>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+        <a href="/mahnwesen/erinnerungen" class="btn btn-outline-info btn-sm">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><path stroke="currentColor" stroke-width="2" d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path stroke="currentColor" stroke-width="2" d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            Erinnerungen
+        </a>
+        <a href="/rechnungen" class="btn btn-secondary btn-sm">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>
+            Rechnungen
+        </a>
+    </div>
+</div>
+
+{% if success %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">{{ success }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endif %}
+{% if error %}
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">{{ error }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endif %}
+
+{# Filter #}
+<form method="GET" action="/mahnwesen/mahnungen" class="mb-3">
+    <div class="glass-card" style="padding:1rem;">
+        <div class="search-bar">
+            <div class="search-input-wrapper" style="flex:1;">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                <input type="text" name="search" class="form-control" placeholder="Suche nach Rechnungsnummer oder Tierhalter..." value="{{ search }}">
+            </div>
+            <select name="status" class="form-control" style="flex:none;min-width:140px;">
+                <option value="">Alle</option>
+                <option value="sent"   {{ status == 'sent'   ? 'selected' : '' }}>Gesendet</option>
+                <option value="unsent" {{ status == 'unsent' ? 'selected' : '' }}>Noch nicht gesendet</option>
+            </select>
+            <button type="submit" class="btn btn-secondary">Filtern</button>
+            {% if search or status %}<a href="/mahnwesen/mahnungen" class="btn btn-secondary">Zurücksetzen</a>{% endif %}
+        </div>
+    </div>
+</form>
+
+{% if records %}
+<div class="d-none d-md-block">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Rechnung</th>
+                <th>Tierhalter</th>
+                <th>Patient</th>
+                <th>Betrag</th>
+                <th>Mahngebühr</th>
+                <th>Stufe</th>
+                <th>Zahlbar bis</th>
+                <th>Erstellt</th>
+                <th>Status</th>
+                <th style="text-align:right;">Aktionen</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in records %}
+            <tr>
+                <td>
+                    <a href="/rechnungen/{{ r.invoice_id }}" class="fw-semibold" style="color:var(--accent);">{{ r.invoice_number }}</a>
+                </td>
+                <td>{{ r.first_name }} {{ r.last_name }}</td>
+                <td>{{ r.patient_name ?? '—' }}</td>
+                <td class="fw-semibold">{{ r.total_gross|money }}</td>
+                <td>
+                    {% if r.fee > 0 %}
+                        <span class="badge bg-danger-subtle text-danger">+ {{ r.fee|number_format(2, ',', '.') }} €</span>
+                    {% else %}—{% endif %}
+                </td>
+                <td>
+                    {% if r.level == 1 %}
+                        <span class="badge bg-warning text-dark">1. Mahnung</span>
+                    {% elseif r.level == 2 %}
+                        <span class="badge bg-orange text-white" style="background:#f97316!important;">2. Mahnung</span>
+                    {% else %}
+                        <span class="badge bg-danger">Letzte Mahnung</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if r.due_date %}
+                        <span class="{{ r.due_date < 'now'|date('Y-m-d') and r.sent_at is null ? 'text-danger fw-bold' : '' }}">
+                            {{ r.due_date|date_de }}
+                        </span>
+                    {% else %}—{% endif %}
+                </td>
+                <td class="text-muted small">{{ r.created_at|date_de }}</td>
+                <td>
+                    {% if r.sent_at %}
+                        <span class="badge bg-success">
+                            <svg width="10" height="10" fill="none" viewBox="0 0 24 24" class="me-1"><polyline stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="20 6 9 17 4 12"/></svg>
+                            Gesendet
+                        </span>
+                        <div class="text-muted" style="font-size:.7rem;">{{ r.sent_at|date_de }} an {{ r.sent_to }}</div>
+                    {% else %}
+                        <span class="badge bg-warning text-dark">Noch nicht gesendet</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <div class="flex gap-2" style="justify-content:flex-end;">
+                        <a href="/mahnwesen/mahnungen/{{ r.id }}/pdf" target="_blank" class="btn btn-secondary btn-sm" title="PDF herunterladen">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
+                            PDF
+                        </a>
+                        <form action="/mahnwesen/mahnungen/{{ r.id }}/senden" method="POST" style="margin:0;">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                            <button type="submit" class="btn btn-warning btn-sm"
+                                    data-confirm="Mahnung erneut an {{ r.owner_email ?? r.first_name ~ ' ' ~ r.last_name }} senden?">
+                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                                {{ r.sent_at ? 'Erneut senden' : 'Senden' }}
+                            </button>
+                        </form>
+                        <form action="/mahnwesen/mahnungen/{{ r.id }}/loeschen" method="POST" style="margin:0;">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                            <button type="submit" class="btn btn-danger btn-sm" data-confirm="Mahnung wirklich löschen?">
+                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="3 6 5 6 21 6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{# Mobile #}
+<div class="d-md-none mt-2">
+    {% for r in records %}
+    <div class="card mb-2">
+        <div class="card-body pb-2">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+                <a href="/rechnungen/{{ r.invoice_id }}" class="fw-bold" style="color:var(--bs-primary);">{{ r.invoice_number }}</a>
+                <div class="d-flex gap-1">
+                    {% if r.level == 1 %}<span class="badge bg-warning text-dark">1. Mahnung</span>
+                    {% elseif r.level == 2 %}<span class="badge" style="background:#f97316;">2. Mahnung</span>
+                    {% else %}<span class="badge bg-danger">Letzte</span>{% endif %}
+                    {% if r.sent_at %}<span class="badge bg-success">Gesendet</span>
+                    {% else %}<span class="badge bg-secondary">Offen</span>{% endif %}
+                </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2 text-muted small mb-2">
+                <span class="fw-semibold text-body">{{ r.total_gross|money }}</span>
+                {% if r.fee > 0 %}<span class="text-danger">+{{ r.fee|number_format(2, ',', '.') }} € Geb.</span>{% endif %}
+                <span>👤 {{ r.first_name }} {{ r.last_name }}</span>
+                {% if r.patient_name %}<span>🐾 {{ r.patient_name }}</span>{% endif %}
+                {% if r.due_date %}<span>Fällig: {{ r.due_date|date_de }}</span>{% endif %}
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="/mahnwesen/mahnungen/{{ r.id }}/pdf" target="_blank" class="btn btn-secondary btn-xs">PDF</a>
+                <form action="/mahnwesen/mahnungen/{{ r.id }}/senden" method="POST" style="margin:0;">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="btn btn-warning btn-xs">{{ r.sent_at ? 'Erneut senden' : 'Senden' }}</button>
+                </form>
+                <form action="/mahnwesen/mahnungen/{{ r.id }}/loeschen" method="POST" style="margin:0;">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="btn btn-danger btn-xs" data-confirm="Mahnung löschen?">Löschen</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state">
+    <div class="empty-state-icon">
+        <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="1.5" d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
+    <div class="empty-state-title">Keine Mahnungen</div>
+    <div class="empty-state-text mb-4">Mahnungen können direkt aus dem Rechnungs-Detailmodal erstellt und versendet werden.</div>
+    <a href="/rechnungen" class="btn btn-primary">Zu den Rechnungen</a>
+</div>
+{% endif %}
+
+{% endblock %}

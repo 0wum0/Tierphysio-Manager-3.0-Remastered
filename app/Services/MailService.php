@@ -118,6 +118,90 @@ class MailService
         }
     }
 
+    public function sendInvoiceReminder(array $invoice, array $reminder, array $owner, string $pdfContent): bool
+    {
+        try {
+            $placeholders = $this->buildInvoicePlaceholders($invoice, $owner);
+            $dueDate = '';
+            if (!empty($reminder['due_date'])) {
+                try { $dueDate = (new \DateTime($reminder['due_date']))->format('d.m.Y'); } catch (\Throwable) { $dueDate = $reminder['due_date']; }
+            }
+            $placeholders['{{reminder_due_date}}'] = $dueDate;
+
+            $subject = $this->applyPlaceholders(
+                $this->settingsRepository->get('email_reminder_subject', 'Zahlungserinnerung: Rechnung {{invoice_number}}'),
+                $placeholders
+            );
+            $bodyText = $this->applyPlaceholders(
+                $this->settingsRepository->get('email_reminder_body',
+                    "Hallo {{owner_name}},\n\nwir möchten Sie freundlich daran erinnern, dass die Rechnung {{invoice_number}} vom {{issue_date}} über {{total_gross}} noch aussteht.\n\nBitte überweisen Sie den Betrag bis zum {{reminder_due_date}} auf unser Konto.\n\nFalls Sie die Zahlung bereits veranlasst haben, bitten wir Sie, dieses Schreiben als gegenstandslos zu betrachten.\n\nMit freundlichen Grüßen\n{{company_name}}"
+                ),
+                $placeholders
+            );
+
+            $mailer = $this->createMailer();
+            $mailer->addAddress($owner['email'], trim(($owner['first_name'] ?? '') . ' ' . ($owner['last_name'] ?? '')));
+            $mailer->Subject = $subject;
+            $mailer->isHTML(true);
+            $mailer->Body    = $this->wrapInEmailLayout($subject, $bodyText, '⏰');
+            $mailer->AltBody = $bodyText;
+            $mailer->addStringAttachment($pdfContent, 'Zahlungserinnerung-' . $invoice['invoice_number'] . '.pdf', PHPMailer::ENCODING_BASE64, 'application/pdf');
+
+            return $mailer->send();
+        } catch (\Throwable $e) {
+            $this->lastError = $e->getMessage();
+            error_log('[MailService::sendInvoiceReminder] ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function sendInvoiceDunning(array $invoice, array $dunning, array $owner, string $pdfContent): bool
+    {
+        try {
+            $placeholders = $this->buildInvoicePlaceholders($invoice, $owner);
+            $level    = (int)($dunning['level'] ?? 1);
+            $fee      = number_format((float)($dunning['fee'] ?? 0), 2, ',', '.') . ' €';
+            $total    = number_format((float)($invoice['total_gross'] ?? 0) + (float)($dunning['fee'] ?? 0), 2, ',', '.') . ' €';
+            $dueDate  = '';
+            if (!empty($dunning['due_date'])) {
+                try { $dueDate = (new \DateTime($dunning['due_date']))->format('d.m.Y'); } catch (\Throwable) { $dueDate = $dunning['due_date']; }
+            }
+            $placeholders['{{dunning_level}}']    = (string)$level;
+            $placeholders['{{dunning_due_date}}'] = $dueDate;
+            $placeholders['{{fee}}']              = $fee;
+            $placeholders['{{total_with_fee}}']   = $total;
+
+            $subject = $this->applyPlaceholders(
+                $this->settingsRepository->get('email_dunning_subject', '{{dunning_level}}. Mahnung: Rechnung {{invoice_number}}'),
+                $placeholders
+            );
+            $bodyText = $this->applyPlaceholders(
+                $this->settingsRepository->get('email_dunning_body',
+                    "Hallo {{owner_name}},\n\ntrotz unserer Zahlungserinnerung ist die Rechnung {{invoice_number}} vom {{issue_date}} über {{total_gross}} noch nicht beglichen worden.\n\nWir fordern Sie hiermit auf, den ausstehenden Betrag zuzüglich einer Mahngebühr von {{fee}} bis zum {{dunning_due_date}} zu begleichen.\n\nGesamtbetrag: {{total_with_fee}}\n\nMit freundlichen Grüßen\n{{company_name}}"
+                ),
+                $placeholders
+            );
+
+            $levelMap  = [1 => '1. Mahnung', 2 => '2. Mahnung', 3 => 'Letzte Mahnung'];
+            $levelLabel = $levelMap[$level] ?? 'Mahnung';
+            $filename  = $levelLabel . '-' . $invoice['invoice_number'] . '.pdf';
+
+            $mailer = $this->createMailer();
+            $mailer->addAddress($owner['email'], trim(($owner['first_name'] ?? '') . ' ' . ($owner['last_name'] ?? '')));
+            $mailer->Subject = $subject;
+            $mailer->isHTML(true);
+            $mailer->Body    = $this->wrapInEmailLayout($subject, $bodyText, '⚠️');
+            $mailer->AltBody = $bodyText;
+            $mailer->addStringAttachment($pdfContent, $filename, PHPMailer::ENCODING_BASE64, 'application/pdf');
+
+            return $mailer->send();
+        } catch (\Throwable $e) {
+            $this->lastError = $e->getMessage();
+            error_log('[MailService::sendInvoiceDunning] ' . $e->getMessage());
+            return false;
+        }
+    }
+
     public function sendInvite(string $toEmail, string $inviteUrl, string $note = ''): bool
     {
         try {

@@ -13,6 +13,7 @@ use App\Controllers\UiSettingsController;
 use App\Controllers\NotificationController;
 use App\Controllers\CronController;
 use App\Controllers\HomeworkController;
+use App\Controllers\ReminderDunningController;
 
 /** @var \App\Core\Router $router */
 
@@ -78,6 +79,23 @@ $router->get('/rechnungen/{id}/positionen-json', [InvoiceController::class, 'pos
 $router->post('/rechnungen/{id}/senden', [InvoiceController::class, 'sendEmail'], ['auth']);
 $router->get('/rechnungen/{id}/quittung', [InvoiceController::class, 'downloadReceipt'], ['auth']);
 $router->post('/rechnungen/{id}/quittung-senden', [InvoiceController::class, 'sendReceiptEmail'], ['auth']);
+
+// ── Mahnwesen: Erinnerungen ──────────────────────────────────────────
+$router->get('/mahnwesen/erinnerungen', [ReminderDunningController::class, 'reminderIndex'], ['auth']);
+$router->post('/rechnungen/{id}/erinnerung', [ReminderDunningController::class, 'reminderStore'], ['auth']);
+$router->post('/mahnwesen/erinnerungen/{id}/senden', [ReminderDunningController::class, 'reminderSend'], ['auth']);
+$router->get('/mahnwesen/erinnerungen/{id}/pdf', [ReminderDunningController::class, 'reminderPdf'], ['auth']);
+$router->post('/mahnwesen/erinnerungen/{id}/loeschen', [ReminderDunningController::class, 'reminderDelete'], ['auth']);
+
+// ── Mahnwesen: Mahnungen ─────────────────────────────────────────────
+$router->get('/mahnwesen/mahnungen', [ReminderDunningController::class, 'dunningIndex'], ['auth']);
+$router->post('/rechnungen/{id}/mahnung', [ReminderDunningController::class, 'dunningStore'], ['auth']);
+$router->post('/mahnwesen/mahnungen/{id}/senden', [ReminderDunningController::class, 'dunningSend'], ['auth']);
+$router->get('/mahnwesen/mahnungen/{id}/pdf', [ReminderDunningController::class, 'dunningPdf'], ['auth']);
+$router->post('/mahnwesen/mahnungen/{id}/loeschen', [ReminderDunningController::class, 'dunningDelete'], ['auth']);
+
+// ── Mahnwesen: API ───────────────────────────────────────────────────
+$router->get('/api/rechnungen/{id}/mahnwesen', [ReminderDunningController::class, 'apiInvoiceHistory'], ['auth']);
 
 $router->get('/einstellungen', [SettingsController::class, 'index'], ['admin']);
 $router->post('/einstellungen', [SettingsController::class, 'update'], ['admin']);

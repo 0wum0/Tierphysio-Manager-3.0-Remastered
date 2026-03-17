@@ -1808,6 +1808,409 @@ class PdfService
         return $pdf->Output('', 'S');
     }
 
+    /* ══════════════════════════════════════════════════════════
+       ZAHLUNGSERINNERUNG PDF
+    ══════════════════════════════════════════════════════════ */
+
+    public function generateReminderPdf(
+        array $invoice,
+        array $reminder,
+        ?array $owner,
+        ?array $patient
+    ): string {
+        return $this->generateReminderDunningPdf($invoice, $owner, $patient, [
+            'type'       => 'reminder',
+            'title_word' => 'Zahlungserinnerung',
+            'sidebar_label' => 'Erinnerung',
+            'level'      => null,
+            'due_date'   => $reminder['due_date'] ?? null,
+            'fee'        => 0.0,
+            'notes'      => $reminder['notes'] ?? '',
+            'created_at' => $reminder['created_at'] ?? date('Y-m-d'),
+        ]);
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       MAHNUNG PDF
+    ══════════════════════════════════════════════════════════ */
+
+    public function generateDunningPdf(
+        array $invoice,
+        array $dunning,
+        ?array $owner,
+        ?array $patient
+    ): string {
+        $level = (int)($dunning['level'] ?? 1);
+        $titleMap = [1 => '1. Mahnung', 2 => '2. Mahnung', 3 => 'Letzte Mahnung'];
+        return $this->generateReminderDunningPdf($invoice, $owner, $patient, [
+            'type'       => 'dunning',
+            'title_word' => $titleMap[$level] ?? 'Mahnung',
+            'sidebar_label' => 'Mahnung ' . $level,
+            'level'      => $level,
+            'due_date'   => $dunning['due_date'] ?? null,
+            'fee'        => (float)($dunning['fee'] ?? 0),
+            'notes'      => $dunning['notes'] ?? '',
+            'created_at' => $dunning['created_at'] ?? date('Y-m-d'),
+        ]);
+    }
+
+    /* ── Shared renderer for reminder + dunning ── */
+    private function generateReminderDunningPdf(
+        array $invoice,
+        ?array $owner,
+        ?array $patient,
+        array $meta
+    ): string {
+        $settings = $this->settingsRepository->all();
+
+        $sidebarColor      = $this->hexToRgb($settings['pdf_primary_color']           ?? '#8B9E8B');
+        $accentColor       = $this->hexToRgb($settings['pdf_accent_color']            ?? '#6B7F6B');
+        $colorCompanyName  = $this->hexToRgb($settings['pdf_color_company_name']      ?? '#1E1E1E');
+        $colorCompanyInfo  = $this->hexToRgb($settings['pdf_color_company_info']      ?? '#6E6E6E');
+        $colorRecipient    = $this->hexToRgb($settings['pdf_color_recipient']         ?? '#1E1E1E');
+        $colorTableHdrBg   = $this->hexToRgb($settings['pdf_color_table_header_bg']   ?? '#8B9E8B');
+        $colorTableHdrText = $this->hexToRgb($settings['pdf_color_table_header_text'] ?? '#FFFFFF');
+        $colorTableText    = $this->hexToRgb($settings['pdf_color_table_text']        ?? '#1E1E1E');
+        $colorLine         = $this->hexToRgb($settings['pdf_color_line']              ?? '#B4B4B4');
+        $colorFooter       = $this->hexToRgb($settings['pdf_color_footer']            ?? '#6E6E6E');
+        $darkColor         = $colorCompanyName;
+        $grayColor         = $colorCompanyInfo;
+
+        $font     = $this->resolvePdfFont($settings['pdf_font'] ?? 'helvetica');
+        $fontSize = (float)($settings['pdf_font_size'] ?? 9);
+
+        $companyName    = $settings['company_name']    ?? '';
+        $companyStreet  = $settings['company_street']  ?? '';
+        $companyZip     = $settings['company_zip']     ?? '';
+        $companyCity    = $settings['company_city']    ?? '';
+        $companyPhone   = $settings['company_phone']   ?? '';
+        $companyEmail   = $settings['company_email']   ?? '';
+        $companyWebsite = $settings['company_website'] ?? '';
+        $bankName       = $settings['bank_name']       ?? '';
+        $bankIban       = $settings['bank_iban']       ?? '';
+        $bankBic        = $settings['bank_bic']        ?? '';
+        $taxNumber      = $settings['tax_number']      ?? '';
+        $logoFile       = !empty($settings['company_logo'])
+            ? STORAGE_PATH . '/uploads/' . $settings['company_logo']
+            : null;
+        $showIban    = ($settings['pdf_show_iban']       ?? '1') === '1';
+        $showWebsite = ($settings['pdf_show_website']    ?? '0') === '1';
+        $showPatient = ($settings['pdf_show_patient']    ?? '1') === '1';
+
+        $sidebarW  = 42;
+        $contentX  = 50;
+        $contentW  = 145;
+        $rightEdge = 195;
+        $pageH     = 297;
+
+        $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+        $pdf->SetMargins(0, 0, 0);
+        $pdf->SetAutoPageBreak(false);
+        $pdf->AddPage();
+
+        /* ── Sidebar ── */
+        $isDunning = ($meta['type'] === 'dunning');
+        $sidebarRgb = $isDunning
+            ? $this->hexToRgb($settings['pdf_primary_color'] ?? '#8B4E4E')
+            : $sidebarColor;
+
+        $pdf->SetFillColor(...$sidebarRgb);
+        $pdf->Rect(0, 0, $sidebarW, $pageH, 'F');
+
+        /* Logo */
+        $logoY = 14;
+        if ($logoFile && file_exists($logoFile)) {
+            $logoMaxW = $sidebarW - 10;
+            $pdf->Image($logoFile, 5, $logoY, $logoMaxW, 0, '', '', '', false, 300);
+            $logoY += 26;
+        } else {
+            $cx = $sidebarW / 2;
+            $cy = $logoY + 12;
+            $pdf->SetDrawColor(255, 255, 255);
+            $pdf->SetLineWidth(0.5);
+            $pdf->Circle($cx, $cy, 11, 0, 360, 'D');
+            $pdf->SetFont($font, 'B', 7);
+            $pdf->SetTextColor(255, 255, 255);
+            $pdf->SetXY(3, $cy - 4);
+            $pdf->Cell($sidebarW - 6, 8, 'LOGO', 0, 0, 'C');
+            $logoY += 28;
+        }
+
+        /* Sidebar: type label */
+        $sideY = $logoY + 10;
+        $pdf->SetFont($font, '', $fontSize - 2);
+        $pdf->SetTextColor(220, 235, 220);
+        $pdf->SetXY(3, $sideY);
+        $pdf->Cell($sidebarW - 6, 4, $meta['sidebar_label'], 0, 1, 'C');
+
+        /* Sidebar: Rechnungs-Nr */
+        $sideY += 10;
+        $pdf->SetFont($font, '', $fontSize - 2);
+        $pdf->SetTextColor(220, 235, 220);
+        $pdf->SetXY(3, $sideY);
+        $pdf->Cell($sidebarW - 6, 4, 'Rechnung', 0, 1, 'C');
+        $pdf->SetFont($font, 'B', $fontSize - 1);
+        $pdf->SetTextColor(255, 255, 255);
+        $pdf->SetXY(3, $sideY + 4);
+        $pdf->Cell($sidebarW - 6, 5, $invoice['invoice_number'], 0, 1, 'C');
+
+        /* Sidebar: Datum */
+        $sideY += 22;
+        $createdDate = !empty($meta['created_at']) ? date('d.m.Y', strtotime((string)$meta['created_at'])) : date('d.m.Y');
+        $pdf->SetFont($font, '', $fontSize - 2);
+        $pdf->SetTextColor(220, 235, 220);
+        $pdf->SetXY(3, $sideY);
+        $pdf->Cell($sidebarW - 6, 4, 'Datum', 0, 1, 'C');
+        $pdf->SetFont($font, 'B', $fontSize - 1);
+        $pdf->SetTextColor(255, 255, 255);
+        $pdf->SetXY(3, $sideY + 4);
+        $pdf->Cell($sidebarW - 6, 5, $createdDate, 0, 1, 'C');
+
+        /* Sidebar: Zahlbar bis */
+        if (!empty($meta['due_date'])) {
+            $sideY += 22;
+            $pdf->SetFont($font, '', $fontSize - 2);
+            $pdf->SetTextColor(220, 235, 220);
+            $pdf->SetXY(3, $sideY);
+            $pdf->Cell($sidebarW - 6, 4, 'Zahlbar bis', 0, 1, 'C');
+            $pdf->SetFont($font, 'B', $fontSize - 1);
+            $pdf->SetTextColor(255, 255, 255);
+            $pdf->SetXY(3, $sideY + 4);
+            $pdf->Cell($sidebarW - 6, 5, date('d.m.Y', strtotime((string)$meta['due_date'])), 0, 1, 'C');
+        }
+
+        /* Sidebar: Kunden-Nr */
+        if ($owner) {
+            $sideY += 22;
+            $pdf->SetFont($font, '', $fontSize - 2);
+            $pdf->SetTextColor(220, 235, 220);
+            $pdf->SetXY(3, $sideY);
+            $pdf->Cell($sidebarW - 6, 4, 'Kunden-Nr.', 0, 1, 'C');
+            $pdf->SetFont($font, 'B', $fontSize - 1);
+            $pdf->SetTextColor(255, 255, 255);
+            $pdf->SetXY(3, $sideY + 4);
+            $pdf->Cell($sidebarW - 6, 5, str_pad((string)($owner['id'] ?? 1), 4, '0', STR_PAD_LEFT), 0, 1, 'C');
+        }
+
+        /* ── Company info top-right ── */
+        $companyInfoTopY = 8;
+        $pdf->SetFont($font, 'B', $fontSize + 1);
+        $pdf->SetTextColor(...$darkColor);
+        $pdf->SetXY($contentX + ($contentW / 2), $companyInfoTopY);
+        $pdf->Cell($contentW / 2, 5, $companyName, 0, 1, 'R');
+
+        $pdf->SetFont($font, '', $fontSize - 1.5);
+        $pdf->SetTextColor(...$grayColor);
+        $infoLines = array_filter([
+            $companyStreet,
+            trim($companyZip . ' ' . $companyCity),
+            $companyPhone  ? 'Tel: ' . $companyPhone  : '',
+            $companyEmail,
+            ($showWebsite && $companyWebsite) ? $companyWebsite : '',
+        ]);
+        $infoY = $companyInfoTopY + 6;
+        foreach ($infoLines as $line) {
+            $pdf->SetXY($contentX + ($contentW / 2), $infoY);
+            $pdf->Cell($contentW / 2, 4, $line, 0, 1, 'R');
+            $infoY += 4;
+        }
+
+        /* ── Document title ── */
+        $titleY = $infoY + 6;
+        $pdf->SetFont($font, 'BI', 28);
+        $pdf->SetTextColor(...$darkColor);
+        $pdf->SetXY($contentX, $titleY);
+        $pdf->Cell($contentW, 14, $meta['title_word'], 0, 1, 'R');
+
+        /* ── Address block ── */
+        $addrTopY = max($titleY + 16, 62);
+        $colW     = $contentW / 2 - 4;
+
+        if ($owner) {
+            $pdf->SetFont($font, 'B', $fontSize);
+            $pdf->SetTextColor(...$colorRecipient);
+            $pdf->SetXY($contentX, $addrTopY);
+            $pdf->Cell($colW, 5.5, $owner['first_name'] . ' ' . $owner['last_name'], 0, 1);
+
+            $pdf->SetFont($font, '', $fontSize - 0.5);
+            $pdf->SetXY($contentX, $addrTopY + 6);
+            if (!empty($owner['street'])) {
+                $pdf->Cell($colW, 4.5, $owner['street'], 0, 1);
+                $pdf->SetX($contentX);
+            }
+            if (!empty($owner['zip'])) {
+                $pdf->Cell($colW, 4.5, $owner['zip'] . ' ' . ($owner['city'] ?? ''), 0, 1);
+            }
+            $pdf->SetFont($font, '', $fontSize - 1.5);
+            $pdf->SetTextColor(...$colorCompanyInfo);
+            $pdf->SetXY($contentX, $addrTopY + 21);
+            $pdf->Cell($colW, 4, 'Kunden-Nr. ' . str_pad((string)($owner['id'] ?? 1), 4, '0', STR_PAD_LEFT), 0, 1);
+        }
+
+        /* Patient info */
+        if ($showPatient && $patient) {
+            $patY = $addrTopY + 30;
+            $pdf->SetFont($font, 'B', $fontSize - 1);
+            $pdf->SetTextColor(...$colorCompanyInfo);
+            $pdf->SetXY($contentX, $patY);
+            $pdf->Cell($colW, 4, 'Patient', 0, 1);
+            $pdf->SetFont($font, '', $fontSize - 0.5);
+            $pdf->SetTextColor(...$colorRecipient);
+            $pdf->SetXY($contentX, $patY + 5);
+            $pdf->Cell($colW, 4.5, $patient['name'] . (isset($patient['species']) ? ' (' . $patient['species'] . ')' : ''), 0, 1);
+        }
+
+        /* ── Intro text block ── */
+        $textStartY = $addrTopY + 56;
+
+        $issueDate = !empty($invoice['issue_date']) ? date('d.m.Y', strtotime($invoice['issue_date'])) : '—';
+        $origDue   = !empty($invoice['due_date'])   ? date('d.m.Y', strtotime($invoice['due_date']))   : '—';
+        $newDue    = !empty($meta['due_date'])       ? date('d.m.Y', strtotime((string)$meta['due_date'])) : '—';
+        $gross     = number_format((float)($invoice['total_gross'] ?? 0), 2, ',', '.') . ' €';
+        $fee       = (float)$meta['fee'];
+        $total     = $fee > 0
+            ? number_format((float)($invoice['total_gross'] ?? 0) + $fee, 2, ',', '.') . ' €'
+            : $gross;
+
+        if ($meta['type'] === 'reminder') {
+            $introText = "wir erlauben uns, Sie freundlich daran zu erinnern, dass die folgende Rechnung noch nicht beglichen wurde. "
+                . "Falls Sie die Zahlung bereits veranlasst haben, bitten wir Sie, dieses Schreiben als gegenstandslos zu betrachten.";
+        } else {
+            $levelOrd  = match((int)$meta['level']) { 1 => 'erste', 2 => 'zweite', default => 'letzte' };
+            $introText = "trotz unserer Zahlungserinnerung ist der ausstehende Betrag bislang nicht bei uns eingegangen. "
+                . "Wir übersenden Ihnen daher unsere {$levelOrd} Mahnung und bitten Sie, den Betrag zuzüglich der Mahngebühr umgehend zu begleichen.";
+        }
+
+        $pdf->SetXY($contentX, $textStartY);
+        $pdf->SetFont($font, '', $fontSize);
+        $pdf->SetTextColor(...$darkColor);
+        $salutation = $owner ? 'Sehr geehrte/r Frau/Herr ' . $owner['last_name'] . ',' : 'Sehr geehrte Damen und Herren,';
+        $pdf->Cell($contentW, 5, $salutation, 0, 1);
+        $pdf->SetXY($contentX, $textStartY + 7);
+        $pdf->SetFont($font, '', $fontSize - 0.5);
+        $pdf->SetTextColor(...$grayColor);
+        $pdf->MultiCell($contentW, 5, $introText, 0, 'L');
+
+        /* ── Details table ── */
+        $tableY = $pdf->GetY() + 8;
+
+        /* Header */
+        $pdf->SetFillColor(...$colorTableHdrBg);
+        $pdf->SetTextColor(...$colorTableHdrText);
+        $pdf->SetFont($font, 'B', $fontSize - 0.5);
+        $pdf->SetXY($contentX, $tableY);
+        $pdf->Cell(40, 7, 'Rechnungsnummer', 1, 0, 'L', true);
+        $pdf->Cell(30, 7, 'Rechnungsdatum',  1, 0, 'L', true);
+        $pdf->Cell(30, 7, 'Urspr. Fällig',   1, 0, 'L', true);
+        $pdf->Cell(45, 7, 'Offener Betrag',   1, 1, 'R', true);
+
+        /* Row */
+        $pdf->SetFillColor(245, 245, 250);
+        $pdf->SetTextColor(...$colorTableText);
+        $pdf->SetFont($font, '', $fontSize - 0.5);
+        $pdf->SetXY($contentX, $tableY + 7);
+        $pdf->Cell(40, 7, $invoice['invoice_number'],  1, 0, 'L', true);
+        $pdf->Cell(30, 7, $issueDate,                  1, 0, 'L', true);
+        $pdf->Cell(30, 7, $origDue,                    1, 0, 'L', true);
+        $pdf->SetFont($font, 'B', $fontSize - 0.5);
+        $pdf->Cell(45, 7, $gross,                      1, 1, 'R', true);
+
+        /* Fee row (dunning only) */
+        $afterTableY = $tableY + 14;
+        if ($fee > 0) {
+            $feeStr = number_format($fee, 2, ',', '.') . ' €';
+            $pdf->SetFont($font, '', $fontSize - 0.5);
+            $pdf->SetTextColor(...$colorTableText);
+            $pdf->SetXY($contentX, $afterTableY);
+            $pdf->Cell(40, 7, 'Mahngebühr',  1, 0, 'L', false);
+            $pdf->Cell(30, 7, '',             1, 0, 'L', false);
+            $pdf->Cell(30, 7, '',             1, 0, 'L', false);
+            $pdf->Cell(45, 7, $feeStr,        1, 1, 'R', false);
+            $afterTableY += 7;
+
+            /* Total */
+            $pdf->SetFillColor(...$colorTableHdrBg);
+            $pdf->SetTextColor(...$colorTableHdrText);
+            $pdf->SetFont($font, 'B', $fontSize);
+            $pdf->SetXY($contentX, $afterTableY);
+            $pdf->Cell(100, 8, 'Gesamtbetrag (inkl. Mahngebühr)', 1, 0, 'L', true);
+            $pdf->Cell(45,  8, $total, 1, 1, 'R', true);
+            $afterTableY += 8;
+        } else {
+            /* Reminder total */
+            $pdf->SetFillColor(...$colorTableHdrBg);
+            $pdf->SetTextColor(...$colorTableHdrText);
+            $pdf->SetFont($font, 'B', $fontSize);
+            $pdf->SetXY($contentX, $afterTableY);
+            $pdf->Cell(100, 8, 'Zu zahlender Betrag', 1, 0, 'L', true);
+            $pdf->Cell(45,  8, $gross, 1, 1, 'R', true);
+            $afterTableY += 8;
+        }
+
+        /* ── New payment deadline ── */
+        $pdf->SetXY($contentX, $afterTableY + 6);
+        $pdf->SetFont($font, 'B', $fontSize);
+        $pdf->SetTextColor(...$darkColor);
+        $newDueLabel = $meta['type'] === 'reminder' ? 'Bitte überweisen Sie den Betrag bis spätestens: ' : 'Neue Zahlungsfrist: ';
+        $pdf->Cell($contentW, 5, $newDueLabel . $newDue, 0, 1);
+
+        /* ── Bank details ── */
+        if ($showIban && $bankIban) {
+            $bankY = $afterTableY + 18;
+            $pdf->SetDrawColor(...$colorLine);
+            $pdf->SetLineWidth(0.2);
+            $pdf->Line($contentX, $bankY, $rightEdge, $bankY);
+
+            $pdf->SetFont($font, 'B', $fontSize - 1);
+            $pdf->SetTextColor(...$grayColor);
+            $pdf->SetXY($contentX, $bankY + 3);
+            $pdf->Cell($contentW, 4, 'Bankverbindung', 0, 1);
+            $pdf->SetFont($font, '', $fontSize - 1.5);
+            $pdf->SetXY($contentX, $bankY + 8);
+            $parts = array_filter([$bankName, 'IBAN: ' . $bankIban, $bankBic ? 'BIC: ' . $bankBic : '']);
+            $pdf->Cell($contentW, 4, implode('   ·   ', $parts), 0, 1);
+        }
+
+        /* ── Custom notes ── */
+        if (!empty($meta['notes'])) {
+            $notesY = $pdf->GetY() + 8;
+            $pdf->SetXY($contentX, $notesY);
+            $pdf->SetFont($font, 'I', $fontSize - 1);
+            $pdf->SetTextColor(...$grayColor);
+            $pdf->MultiCell($contentW, 5, $meta['notes'], 0, 'L');
+        }
+
+        /* ── Closing ── */
+        $closingY = $pdf->GetY() + 10;
+        $pdf->SetXY($contentX, $closingY);
+        $pdf->SetFont($font, '', $fontSize);
+        $pdf->SetTextColor(...$darkColor);
+        $pdf->Cell($contentW, 5, 'Mit freundlichen Grüßen', 0, 1);
+        $pdf->SetXY($contentX, $closingY + 7);
+        $pdf->SetFont($font, 'B', $fontSize);
+        $pdf->Cell($contentW, 5, $companyName, 0, 1);
+
+        /* ── Footer ── */
+        $footerTopY = 275;
+        $pdf->SetDrawColor(...$colorLine);
+        $pdf->SetLineWidth(0.3);
+        $pdf->Line($contentX, $footerTopY, $rightEdge, $footerTopY);
+        $pdf->SetFont($font, '', $fontSize - 1.5);
+        $pdf->SetTextColor(...$colorFooter);
+        $footerParts = array_filter([
+            $companyName,
+            $companyEmail,
+            $companyPhone ? 'Tel: ' . $companyPhone : '',
+            ($showWebsite && $companyWebsite) ? $companyWebsite : '',
+        ]);
+        $pdf->SetXY($contentX, $footerTopY + 3);
+        $pdf->Cell($contentW, 4, implode('   ·   ', $footerParts), 0, 1, 'C');
+
+        return $pdf->Output('', 'S');
+    }
+
     public function getSettings(): array
     {
         return $this->settingsRepository->all();
