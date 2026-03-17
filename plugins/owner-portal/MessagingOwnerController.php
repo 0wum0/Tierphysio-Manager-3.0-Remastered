@@ -37,7 +37,7 @@ class MessagingOwnerController extends Controller
     }
 
     /* ── Auth guard ── */
-    private function isAjax(): bool
+    protected function isAjax(): bool
     {
         return (($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'XMLHttpRequest')
             || str_contains($_SERVER['REQUEST_URI'] ?? '', '/api/');
