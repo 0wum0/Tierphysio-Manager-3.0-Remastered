@@ -1,0 +1,198 @@
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" class="me-2"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            {{ thread.subject }}
+        </h1>
+        <p class="page-subtitle">
+            Konversation mit <strong>{{ thread.owner_name }}</strong>
+            &nbsp;·&nbsp;
+            <span class="badge" style="background:{% if thread.status == 'closed' %}rgba(148,163,184,.2);color:#94a3b8{% else %}rgba(34,197,94,.15);color:#22c55e{% endif %};font-size:.7rem;">
+                {{ thread.status == 'closed' ? 'Geschlossen' : 'Offen' }}
+            </span>
+        </p>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-sm btn-outline-secondary" id="btnToggleStatus"
+                data-status="{{ thread.status }}"
+                data-thread="{{ thread.id }}">
+            {% if thread.status == 'closed' %}
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="12 8 12 12 14 14"/></svg>
+            Wieder öffnen
+            {% else %}
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="20 6 9 17 4 12"/></svg>
+            Als erledigt markieren
+            {% endif %}
+        </button>
+        <a href="/portal-admin/nachrichten" class="btn btn-outline-secondary btn-sm">← Alle Nachrichten</a>
+    </div>
+</div>
+
+{% if success %}<div class="alert alert-success">{{ success }}</div>{% endif %}
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+{# ── Message thread ── #}
+<div class="panel mb-3">
+    <div class="panel-container">
+        <div class="panel-content p-3 p-md-4">
+            <div id="msg-list" style="display:flex;flex-direction:column;gap:1rem;max-height:520px;overflow-y:auto;padding-right:4px;">
+                {% for msg in messages %}
+                {% set isAdmin = msg.sender_type == 'admin' %}
+                <div class="d-flex gap-3{% if isAdmin %} flex-row-reverse{% endif %}" data-msg-id="{{ msg.id }}">
+                    <div class="flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle"
+                         style="width:36px;height:36px;background:{% if isAdmin %}rgba(79,124,255,0.12){% else %}rgba(34,197,94,0.12){% endif %};flex-shrink:0;align-self:flex-end;">
+                        {% if isAdmin %}
+                        <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="#4f7cff" stroke-width="2" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4" stroke="#4f7cff" stroke-width="2"/></svg>
+                        {% else %}
+                        <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="#22c55e" stroke-width="2" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                        {% endif %}
+                    </div>
+                    <div style="max-width:72%;{% if isAdmin %}margin-left:auto;{% endif %}">
+                        <div class="d-flex align-items-center gap-2 mb-1{% if isAdmin %} flex-row-reverse{% endif %}">
+                            <span class="fw-600 fs-sm" style="color:{% if isAdmin %}#4f7cff{% else %}#22c55e{% endif %};">{{ msg.sender_name }}</span>
+                            <span class="text-muted" style="font-size:.72rem;">{{ msg.created_at|date('d.m.Y H:i') }}</span>
+                        </div>
+                        <div class="rounded-3 p-3"
+                             style="background:{% if isAdmin %}rgba(79,124,255,0.08);border:1px solid rgba(79,124,255,0.15){% else %}var(--bs-secondary-bg);border:1px solid var(--bs-border-color){% endif %};font-size:.875rem;white-space:pre-line;line-height:1.6;">{{ msg.body }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Reply box ── #}
+{% if thread.status != 'closed' %}
+<div class="panel" id="reply-panel">
+    <div class="panel-hdr">
+        <h2>
+            <svg class="sa-icon sa-icon-primary me-2"><use href="/themes/smart-tierphysio/icons/sprite.svg#corner-down-left"></use></svg>
+            Antworten
+        </h2>
+    </div>
+    <div class="panel-container">
+        <div class="panel-content p-3">
+            <div id="replyError" class="alert alert-danger d-none mb-2"></div>
+            <textarea id="replyBody" class="form-control mb-3" rows="4"
+                      placeholder="Ihre Antwort an {{ thread.owner_name }}…"
+                      style="resize:vertical;"></textarea>
+            <div class="d-flex gap-2 justify-content-end">
+                <button class="btn btn-primary" id="btnReply">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    Antwort senden
+                </button>
+            </div>
+            <p class="text-muted mt-2 mb-0" style="font-size:.75rem;">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" class="me-1"><path stroke="currentColor" stroke-width="2" d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline stroke="currentColor" stroke-width="2" points="22,6 12,13 2,6"/></svg>
+                {{ thread.owner_name }} wird per E-Mail über Ihre Antwort benachrichtigt.
+            </p>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="alert d-flex align-items-center gap-2" style="background:rgba(148,163,184,.08);border:1px solid var(--bs-border-color);border-radius:10px;color:var(--bs-secondary-color);">
+    <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="12 8 12 12 14 14"/></svg>
+    Diese Konversation ist geschlossen. Klicken Sie auf "Wieder öffnen" um zu antworten.
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    var threadId = {{ thread.id }};
+
+    /* ── Scroll to bottom on load ── */
+    var list = document.getElementById('msg-list');
+    if (list) list.scrollTop = list.scrollHeight;
+
+    /* ── Reply ── */
+    var btnReply = document.getElementById('btnReply');
+    if (btnReply) {
+        btnReply.addEventListener('click', function() {
+            var body  = document.getElementById('replyBody').value.trim();
+            var errEl = document.getElementById('replyError');
+            if (!body) {
+                errEl.textContent = 'Bitte eine Nachricht eingeben.';
+                errEl.classList.remove('d-none');
+                return;
+            }
+            errEl.classList.add('d-none');
+            btnReply.disabled = true;
+            btnReply.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Wird gesendet…';
+
+            fetch('/api/portal-admin/nachrichten/' + threadId + '/antworten', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ body: body })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.ok) {
+                    appendMessage(d, true);
+                    document.getElementById('replyBody').value = '';
+                } else {
+                    errEl.textContent = d.error || 'Fehler beim Senden.';
+                    errEl.classList.remove('d-none');
+                }
+                btnReply.disabled = false;
+                btnReply.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="22 2 15 22 11 13 2 9 22 2"/></svg> Antwort senden';
+            })
+            .catch(function() {
+                errEl.textContent = 'Verbindungsfehler.';
+                errEl.classList.remove('d-none');
+                btnReply.disabled = false;
+                btnReply.innerHTML = 'Antwort senden';
+            });
+        });
+    }
+
+    /* ── Toggle status ── */
+    var btnStatus = document.getElementById('btnToggleStatus');
+    if (btnStatus) {
+        btnStatus.addEventListener('click', function() {
+            var current = btnStatus.dataset.status;
+            var next    = current === 'closed' ? 'open' : 'closed';
+            fetch('/api/portal-admin/nachrichten/' + threadId + '/status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ status: next })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(d) { if (d.ok) location.reload(); });
+        });
+    }
+
+    /* ── Append new message bubble ── */
+    function appendMessage(d, isAdmin) {
+        var colorA = isAdmin ? '#4f7cff' : '#22c55e';
+        var bgA    = isAdmin ? 'rgba(79,124,255,0.08)' : 'var(--bs-secondary-bg)';
+        var borderA= isAdmin ? '1px solid rgba(79,124,255,0.15)' : '1px solid var(--bs-border-color)';
+        var iconPath= isAdmin
+            ? '<path stroke="' + colorA + '" stroke-width="2" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4" stroke="' + colorA + '" stroke-width="2"/>'
+            : '<path stroke="' + colorA + '" stroke-width="2" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>';
+
+        var bodyEsc = d.body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+
+        var wrapper = document.createElement('div');
+        wrapper.className = 'd-flex gap-3' + (isAdmin ? ' flex-row-reverse' : '');
+        wrapper.dataset.msgId = d.id;
+        wrapper.innerHTML =
+            '<div class="flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle" style="width:36px;height:36px;background:rgba(' + (isAdmin?'79,124,255':'34,197,94') + ',0.12);align-self:flex-end;">'
+          + '<svg width="15" height="15" fill="none" viewBox="0 0 24 24">' + iconPath + '</svg></div>'
+          + '<div style="max-width:72%;' + (isAdmin?'margin-left:auto;':'') + '">'
+          + '<div class="d-flex align-items-center gap-2 mb-1' + (isAdmin?' flex-row-reverse':'') + '">'
+          + '<span class="fw-600 fs-sm" style="color:' + colorA + ';">' + d.sender_name + '</span>'
+          + '<span class="text-muted" style="font-size:.72rem;">' + d.created_at + '</span></div>'
+          + '<div class="rounded-3 p-3" style="background:' + bgA + ';border:' + borderA + ';font-size:.875rem;line-height:1.6;">' + bodyEsc + '</div>'
+          + '</div>';
+        list.appendChild(wrapper);
+        list.scrollTop = list.scrollHeight;
+    }
+})();
+</script>
+{% endblock %}

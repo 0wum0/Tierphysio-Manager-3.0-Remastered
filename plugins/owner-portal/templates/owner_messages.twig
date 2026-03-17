@@ -1,0 +1,135 @@
+{% extends '@owner-portal/portal_layout.twig' %}
+
+{% block content %}
+<h1 class="portal-page-title">
+    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" style="margin-right:.5rem;vertical-align:-3px;"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    Nachrichten
+    {% if unread > 0 %}
+    <span style="display:inline-block;background:#ef4444;color:#fff;border-radius:20px;font-size:.65rem;font-weight:700;padding:1px 7px;vertical-align:2px;margin-left:.35rem;">{{ unread }}</span>
+    {% endif %}
+</h1>
+
+{# New message button #}
+<div style="margin-bottom:1.25rem;">
+    <button class="portal-btn portal-btn-primary" id="btnShowNew">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Neue Nachricht
+    </button>
+</div>
+
+{# New thread form (hidden by default) #}
+<div id="newThreadForm" style="display:none;background:var(--bs-secondary-bg);border:1px solid var(--bs-border-color);border-radius:12px;padding:1.25rem;margin-bottom:1.25rem;">
+    <h3 style="font-size:.95rem;font-weight:700;margin:0 0 1rem;">Neue Nachricht an die Praxis</h3>
+    <div id="newThreadError" class="portal-alert portal-alert-error" style="display:none;"></div>
+    <div style="margin-bottom:.75rem;">
+        <label style="display:block;font-size:.78rem;font-weight:600;color:var(--bs-secondary-color);margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.04em;">Betreff</label>
+        <input type="text" id="ntSubject" class="form-control" placeholder="z.B. Frage zu meinem Tier" maxlength="255">
+    </div>
+    <div style="margin-bottom:1rem;">
+        <label style="display:block;font-size:.78rem;font-weight:600;color:var(--bs-secondary-color);margin-bottom:.3rem;text-transform:uppercase;letter-spacing:.04em;">Nachricht</label>
+        <textarea id="ntBody" class="form-control" rows="4" placeholder="Ihre Nachricht…" style="resize:vertical;"></textarea>
+    </div>
+    <div style="display:flex;gap:.5rem;">
+        <button class="portal-btn portal-btn-primary" id="btnSendNew">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Senden
+        </button>
+        <button class="portal-btn portal-btn-secondary" id="btnCancelNew">Abbrechen</button>
+    </div>
+</div>
+
+{# Thread list #}
+{% if threads is empty %}
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:3rem 1rem;color:var(--bs-secondary-color);gap:.75rem;text-align:center;">
+    <svg width="44" height="44" fill="none" viewBox="0 0 24 24" style="opacity:.35;"><path stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <span style="font-size:.9rem;">Noch keine Nachrichten vorhanden</span>
+    <button class="portal-btn portal-btn-primary portal-btn-sm" id="btnShowNew2">Erste Nachricht senden</button>
+</div>
+{% else %}
+<div style="display:flex;flex-direction:column;gap:.6rem;">
+    {% for t in threads %}
+    {% set has_unread = t.unread_count > 0 %}
+    <a href="/portal/nachrichten/{{ t.id }}"
+       style="display:flex;align-items:flex-start;gap:.85rem;padding:1rem 1.1rem;background:var(--bs-secondary-bg);border:1px solid {% if has_unread %}rgba(79,124,255,0.35){% else %}var(--bs-border-color){% endif %};border-radius:10px;text-decoration:none;color:var(--bs-body-color);border-left:3px solid {% if has_unread %}#4f7cff{% elseif t.status == 'closed' %}var(--bs-border-color){% else %}#22c55e{% endif %};">
+        <div style="width:36px;height:36px;border-radius:50%;background:{% if has_unread %}rgba(79,124,255,0.12){% else %}var(--bs-tertiary-bg){% endif %};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="{% if has_unread %}#4f7cff{% else %}var(--bs-secondary-color){% endif %}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.3rem;">
+                <span style="font-weight:{% if has_unread %}700{% else %}500{% endif %};font-size:.875rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ t.subject }}</span>
+                <span style="font-size:.7rem;color:var(--bs-secondary-color);flex-shrink:0;">{{ t.last_message_at|date('d.m.Y') }}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:.4rem;">
+                {% if has_unread %}
+                <span style="display:inline-block;background:#4f7cff;color:#fff;border-radius:20px;font-size:.63rem;font-weight:700;padding:1px 6px;">{{ t.unread_count }} neu</span>
+                {% endif %}
+                <span style="display:inline-block;background:{% if t.status == 'closed' %}rgba(148,163,184,.15);color:#94a3b8{% else %}rgba(34,197,94,.15);color:#22c55e{% endif %};border-radius:20px;font-size:.63rem;font-weight:600;padding:1px 6px;">
+                    {{ t.status == 'closed' ? 'Geschlossen' : 'Offen' }}
+                </span>
+                {% if t.last_body %}
+                <span style="font-size:.78rem;color:var(--bs-secondary-color);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ t.last_body|slice(0,80) }}{% if t.last_body|length > 80 %}…{% endif %}</span>
+                {% endif %}
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    function showForm() {
+        document.getElementById('newThreadForm').style.display = 'block';
+        document.getElementById('ntSubject').focus();
+    }
+    var b1 = document.getElementById('btnShowNew');
+    var b2 = document.getElementById('btnShowNew2');
+    var bc = document.getElementById('btnCancelNew');
+    if (b1) b1.addEventListener('click', showForm);
+    if (b2) b2.addEventListener('click', showForm);
+    if (bc) bc.addEventListener('click', function() { document.getElementById('newThreadForm').style.display = 'none'; });
+
+    var btnSend = document.getElementById('btnSendNew');
+    if (btnSend) {
+        btnSend.addEventListener('click', function() {
+            var subject = document.getElementById('ntSubject').value.trim();
+            var body    = document.getElementById('ntBody').value.trim();
+            var errEl   = document.getElementById('newThreadError');
+            if (!subject || !body) {
+                errEl.textContent = 'Bitte Betreff und Nachricht ausfüllen.';
+                errEl.style.display = 'block';
+                return;
+            }
+            errEl.style.display = 'none';
+            btnSend.disabled = true;
+            btnSend.textContent = 'Wird gesendet…';
+
+            fetch('/api/portal/nachrichten/neu', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ subject: subject, body: body })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.ok) {
+                    window.location.href = '/portal/nachrichten/' + d.thread_id;
+                } else {
+                    errEl.textContent = d.error || 'Fehler beim Senden.';
+                    errEl.style.display = 'block';
+                    btnSend.disabled = false;
+                    btnSend.textContent = 'Senden';
+                }
+            })
+            .catch(function() {
+                errEl.textContent = 'Verbindungsfehler.';
+                errEl.style.display = 'block';
+                btnSend.disabled = false;
+                btnSend.textContent = 'Senden';
+            });
+        });
+    }
+})();
+</script>
+{% endblock %}

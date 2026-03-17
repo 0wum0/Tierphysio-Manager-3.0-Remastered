@@ -153,6 +153,13 @@
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>
             <span>Rechnungen</span>
         </a>
+        <a href="/portal/nachrichten" class="nav-link {% if active_nav == 'nachrichten' %}active{% endif %}" style="position:relative;">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span>Nachrichten</span>
+            {% if portal_unread_count is defined and portal_unread_count > 0 %}
+            <span style="position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:#ef4444;border:2px solid var(--bs-body-bg);"></span>
+            {% endif %}
+        </a>
         <form method="POST" action="/portal/logout" style="margin:0;display:contents;">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
             <button type="submit" class="nav-link nav-link-logout" style="background:none;border:none;cursor:pointer;font-family:inherit;">

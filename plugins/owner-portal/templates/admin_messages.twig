@@ -1,0 +1,165 @@
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" class="me-2"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Nachrichten
+            {% if unread > 0 %}
+            <span class="badge ms-2" style="background:#ef4444;font-size:.7rem;">{{ unread }} neu</span>
+            {% endif %}
+        </h1>
+        <p class="page-subtitle">Posteingang — Nachrichten von Tierbesitzern</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNewThread">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Neue Nachricht
+        </button>
+        <a href="/portal-admin" class="btn btn-outline-secondary btn-sm">← Portal-Verwaltung</a>
+    </div>
+</div>
+
+{% if success %}<div class="alert alert-success">{{ success }}</div>{% endif %}
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+
+<div class="panel">
+    <div class="panel-hdr">
+        <h2>
+            <svg class="sa-icon sa-icon-primary me-2"><use href="/themes/smart-tierphysio/icons/sprite.svg#message-square"></use></svg>
+            Alle Konversationen
+        </h2>
+    </div>
+    <div class="panel-container">
+        <div class="panel-content p-0">
+            {% if threads is empty %}
+            <div class="d-flex flex-column align-items-center justify-content-center py-5 text-muted gap-2">
+                <svg width="40" height="40" fill="none" viewBox="0 0 24 24" class="opacity-40"><path stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span>Noch keine Nachrichten vorhanden</span>
+                <button class="btn btn-primary btn-sm mt-1" data-bs-toggle="modal" data-bs-target="#modalNewThread">Erste Nachricht senden</button>
+            </div>
+            {% else %}
+            <div class="list-group list-group-flush rounded-0" id="thread-list">
+                {% for t in threads %}
+                {% set has_unread = t.unread_count > 0 %}
+                <a href="/portal-admin/nachrichten/{{ t.id }}"
+                   class="list-group-item list-group-item-action d-flex align-items-start gap-3 px-4 py-3 text-decoration-none{% if has_unread %} fw-600{% endif %}"
+                   style="{% if has_unread %}background:rgba(79,124,255,0.04);{% endif %}border-left:3px solid {% if has_unread %}#4f7cff{% elseif t.status == 'closed' %}var(--bs-border-color){% else %}#22c55e{% endif %};">
+                    <div class="flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle mt-1"
+                         style="width:36px;height:36px;background:{% if has_unread %}rgba(79,124,255,0.12){% else %}var(--bs-tertiary-bg){% endif %};">
+                        <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="{% if has_unread %}#4f7cff{% else %}var(--bs-secondary-color){% endif %}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    </div>
+                    <div class="flex-grow-1 min-width-0">
+                        <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                            <span class="fs-sm fw-600 text-truncate">{{ t.owner_name }}</span>
+                            <span class="text-muted flex-shrink-0" style="font-size:.72rem;">{{ t.last_message_at|date('d.m.Y H:i') }}</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="fw-500 fs-sm text-truncate" style="{% if not has_unread %}color:var(--bs-secondary-color);{% endif %}">{{ t.subject }}</span>
+                            {% if has_unread %}
+                            <span class="badge flex-shrink-0" style="background:#4f7cff;font-size:.65rem;">{{ t.unread_count }} neu</span>
+                            {% endif %}
+                            <span class="badge flex-shrink-0 ms-auto" style="background:{% if t.status == 'closed' %}rgba(148,163,184,.15);color:#94a3b8{% else %}rgba(34,197,94,.15);color:#22c55e{% endif %};font-size:.65rem;">
+                                {{ t.status == 'closed' ? 'Geschlossen' : 'Offen' }}
+                            </span>
+                        </div>
+                        {% if t.last_body %}
+                        <div class="text-truncate" style="font-size:.78rem;color:var(--bs-secondary-color);">{{ t.last_body|slice(0, 100) }}{% if t.last_body|length > 100 %}…{% endif %}</div>
+                        {% endif %}
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{# ── Modal: New Thread ── #}
+<div class="modal fade" id="modalNewThread" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Neue Nachricht senden</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="newThreadError" class="alert alert-danger d-none"></div>
+                <div class="mb-3">
+                    <label class="form-label fw-600 fs-sm">Tierbesitzer</label>
+                    <select class="form-select" id="ntOwnerId" required>
+                        <option value="">— Besitzer wählen —</option>
+                        {% for t in threads %}
+                        <option value="{{ t.owner_id }}">{{ t.owner_name }} ({{ t.owner_email }})</option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text">Nur Besitzer mit Portal-Zugang werden angezeigt.</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-600 fs-sm">Betreff</label>
+                    <input type="text" class="form-control" id="ntSubject" placeholder="z.B. Hinweise zur Behandlung" maxlength="255">
+                </div>
+                <div class="mb-1">
+                    <label class="form-label fw-600 fs-sm">Nachricht</label>
+                    <textarea class="form-control" id="ntBody" rows="5" placeholder="Ihre Nachricht…"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" id="btnSendNewThread">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                    Senden
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    var btn = document.getElementById('btnSendNewThread');
+    if (!btn) return;
+    btn.addEventListener('click', function() {
+        var ownerId = document.getElementById('ntOwnerId').value;
+        var subject = document.getElementById('ntSubject').value.trim();
+        var body    = document.getElementById('ntBody').value.trim();
+        var errEl   = document.getElementById('newThreadError');
+
+        if (!ownerId || !subject || !body) {
+            errEl.textContent = 'Bitte alle Felder ausfüllen.';
+            errEl.classList.remove('d-none');
+            return;
+        }
+        errEl.classList.add('d-none');
+        btn.disabled = true;
+        btn.textContent = 'Wird gesendet…';
+
+        fetch('/api/portal-admin/nachrichten/neu', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ owner_id: ownerId, subject: subject, body: body })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.ok) {
+                window.location.href = '/portal-admin/nachrichten/' + d.thread_id;
+            } else {
+                errEl.textContent = d.error || 'Fehler beim Senden.';
+                errEl.classList.remove('d-none');
+                btn.disabled = false;
+                btn.textContent = 'Senden';
+            }
+        })
+        .catch(function() {
+            errEl.textContent = 'Verbindungsfehler. Bitte erneut versuchen.';
+            errEl.classList.remove('d-none');
+            btn.disabled = false;
+            btn.textContent = 'Senden';
+        });
+    });
+})();
+</script>
+{% endblock %}

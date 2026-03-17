@@ -16,6 +16,7 @@ use App\Repositories\SettingsRepository;
 class OwnerPortalController extends Controller
 {
     private OwnerPortalRepository $repo;
+    private MessagingRepository    $msgRepo;
     private PdfService $pdfService;
     private SettingsRepository $settingsRepository;
 
@@ -30,8 +31,14 @@ class OwnerPortalController extends Controller
     ) {
         parent::__construct($view, $session, $config, $translator);
         $this->repo               = new OwnerPortalRepository($db);
+        $this->msgRepo            = new MessagingRepository($db);
         $this->pdfService         = $pdfService;
         $this->settingsRepository = $settingsRepository;
+    }
+
+    private function portalUnread(int $ownerId): int
+    {
+        try { return $this->msgRepo->countUnreadForOwner($ownerId); } catch (\Throwable) { return 0; }
     }
 
     private function isHomeworkEnabled(): bool
@@ -78,13 +85,14 @@ class OwnerPortalController extends Controller
         }
 
         $this->render('@owner-portal/owner_dashboard.twig', [
-            'page_title'           => 'Mein Tierportal',
-            'portal_user'          => $user,
-            'pets'                 => $pets,
-            'upcoming_appointments'=> array_values($upcomingAppointments),
-            'open_invoices'        => array_values($openInvoices),
-            'exercises'            => $allExercises,
-            'csrf_token'           => $this->session->generateCsrfToken(),
+            'page_title'            => 'Mein Tierportal',
+            'portal_user'           => $user,
+            'pets'                  => $pets,
+            'upcoming_appointments' => array_values($upcomingAppointments),
+            'open_invoices'         => array_values($openInvoices),
+            'exercises'             => $allExercises,
+            'csrf_token'            => $this->session->generateCsrfToken(),
+            'portal_unread_count'   => $this->portalUnread($ownerId),
         ]);
     }
 
@@ -96,9 +104,10 @@ class OwnerPortalController extends Controller
         $pets    = $this->repo->getPetsByOwnerId($ownerId);
 
         $this->render('@owner-portal/owner_pet_list.twig', [
-            'page_title'  => 'Meine Tiere',
-            'portal_user' => $user,
-            'pets'        => $pets,
+            'page_title'          => 'Meine Tiere',
+            'portal_user'         => $user,
+            'pets'                => $pets,
+            'portal_unread_count' => $this->portalUnread($ownerId),
         ]);
     }
 
@@ -162,6 +171,7 @@ class OwnerPortalController extends Controller
             'tcp_natural'         => $tcpNatural,
             'tcp_reports'         => $tcpReports,
             'tcp_feedback'        => $tcpFeedback,
+            'portal_unread_count' => $this->portalUnread($ownerId),
         ]);
     }
 
@@ -173,9 +183,10 @@ class OwnerPortalController extends Controller
         $invoices = $this->repo->getInvoicesByOwnerId($ownerId);
 
         $this->render('@owner-portal/owner_invoices.twig', [
-            'page_title'  => 'Meine Rechnungen',
-            'portal_user' => $user,
-            'invoices'    => $invoices,
+            'page_title'          => 'Meine Rechnungen',
+            'portal_user'         => $user,
+            'invoices'            => $invoices,
+            'portal_unread_count' => $this->portalUnread($ownerId),
         ]);
     }
 
@@ -226,10 +237,11 @@ class OwnerPortalController extends Controller
         $past     = array_values(array_filter($appointments, fn($a) => strtotime($a['start_at']) < time()));
 
         $this->render('@owner-portal/owner_appointments.twig', [
-            'page_title'  => 'Meine Termine',
-            'portal_user' => $user,
-            'upcoming'    => $upcoming,
-            'past'        => $past,
+            'page_title'          => 'Meine Termine',
+            'portal_user'         => $user,
+            'upcoming'            => $upcoming,
+            'past'                => $past,
+            'portal_unread_count' => $this->portalUnread($ownerId),
         ]);
     }
 
@@ -284,12 +296,13 @@ class OwnerPortalController extends Controller
         if (!$pet) { $this->abort(404); return; }
 
         $this->render('@owner-portal/owner_pet_edit.twig', [
-            'page_title'  => $pet['name'] . ' bearbeiten',
-            'portal_user' => $user,
-            'pet'         => $pet,
-            'csrf_token'  => $this->session->generateCsrfToken(),
-            'success'     => $this->session->getFlash('success'),
-            'error'       => $this->session->getFlash('error'),
+            'page_title'          => $pet['name'] . ' bearbeiten',
+            'portal_user'         => $user,
+            'pet'                 => $pet,
+            'csrf_token'          => $this->session->generateCsrfToken(),
+            'success'             => $this->session->getFlash('success'),
+            'error'               => $this->session->getFlash('error'),
+            'portal_unread_count' => $this->portalUnread($ownerId),
         ]);
     }
 
@@ -356,10 +369,11 @@ class OwnerPortalController extends Controller
         $exercises = $this->repo->getExercisesByPatient($petId);
 
         $this->render('@owner-portal/owner_exercises.twig', [
-            'page_title'  => 'Übungen – ' . $pet['name'],
-            'portal_user' => $user,
-            'pet'         => $pet,
-            'exercises'   => $exercises,
+            'page_title'          => 'Übungen – ' . $pet['name'],
+            'portal_user'         => $user,
+            'pet'                 => $pet,
+            'exercises'           => $exercises,
+            'portal_unread_count' => $this->portalUnread($ownerId),
         ]);
     }
 
@@ -419,11 +433,12 @@ class OwnerPortalController extends Controller
         }
 
         $this->render('@owner-portal/owner_homework.twig', [
-            'page_title'   => 'Hausaufgaben – ' . $pet['name'],
-            'portal_user'  => $user,
-            'pet'          => $pet,
-            'plans'        => $plans,
-            'tasks_by_plan'=> $tasksByPlan,
+            'page_title'          => 'Hausaufgaben – ' . $pet['name'],
+            'portal_user'         => $user,
+            'pet'                 => $pet,
+            'plans'               => $plans,
+            'tasks_by_plan'       => $tasksByPlan,
+            'portal_unread_count' => $this->portalUnread($ownerId),
         ]);
     }
 }

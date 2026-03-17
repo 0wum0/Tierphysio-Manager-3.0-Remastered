@@ -1,0 +1,134 @@
+{% extends '@owner-portal/portal_layout.twig' %}
+
+{% block content %}
+<div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+    <a href="/portal/nachrichten" class="portal-btn portal-btn-secondary portal-btn-sm">← Zurück</a>
+    <div style="flex:1;min-width:0;">
+        <h1 class="portal-page-title" style="margin:0;font-size:1.15rem;">{{ thread.subject }}</h1>
+        <div style="font-size:.78rem;color:var(--bs-secondary-color);margin-top:.2rem;">
+            <span style="display:inline-block;background:{% if thread.status == 'closed' %}rgba(148,163,184,.15);color:#94a3b8{% else %}rgba(34,197,94,.15);color:#22c55e{% endif %};border-radius:20px;font-size:.63rem;font-weight:600;padding:1px 7px;">
+                {{ thread.status == 'closed' ? 'Geschlossen' : 'Offen' }}
+            </span>
+        </div>
+    </div>
+</div>
+
+{# Message thread #}
+<div style="background:var(--bs-secondary-bg);border:1px solid var(--bs-border-color);border-radius:12px;margin-bottom:1rem;overflow:hidden;">
+    <div id="msg-list" style="display:flex;flex-direction:column;gap:.85rem;padding:1.25rem;max-height:480px;overflow-y:auto;">
+        {% for msg in messages %}
+        {% set isAdmin = msg.sender_type == 'admin' %}
+        <div style="display:flex;gap:.75rem;{% if not isAdmin %}flex-direction:row-reverse;{% endif %}" data-msg-id="{{ msg.id }}">
+            <div style="width:32px;height:32px;border-radius:50%;background:{% if isAdmin %}rgba(79,124,255,0.12){% else %}rgba(34,197,94,0.12){% endif %};display:flex;align-items:center;justify-content:center;flex-shrink:0;align-self:flex-end;">
+                {% if isAdmin %}
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="#4f7cff" stroke-width="2" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4" stroke="#4f7cff" stroke-width="2"/></svg>
+                {% else %}
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="#22c55e" stroke-width="2" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                {% endif %}
+            </div>
+            <div style="max-width:78%;{% if not isAdmin %}margin-right:auto;{% else %}margin-left:auto;{% endif %}">
+                <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;{% if not isAdmin %}flex-direction:row-reverse;{% endif %}">
+                    <span style="font-weight:600;font-size:.8rem;color:{% if isAdmin %}#4f7cff{% else %}#22c55e{% endif %};">
+                        {% if isAdmin %}{{ msg.sender_name }}{% else %}Sie{% endif %}
+                    </span>
+                    <span style="font-size:.68rem;color:var(--bs-secondary-color);">{{ msg.created_at|date('d.m.Y H:i') }}</span>
+                </div>
+                <div style="padding:.75rem 1rem;border-radius:{% if isAdmin %}4px 12px 12px 12px{% else %}12px 4px 12px 12px{% endif %};background:{% if isAdmin %}rgba(79,124,255,0.08);border:1px solid rgba(79,124,255,0.15){% else %}var(--bs-tertiary-bg);border:1px solid var(--bs-border-color){% endif %};font-size:.875rem;white-space:pre-line;line-height:1.6;">{{ msg.body }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{# Reply box #}
+{% if thread.status != 'closed' %}
+<div style="background:var(--bs-secondary-bg);border:1px solid var(--bs-border-color);border-radius:12px;padding:1.1rem;">
+    <div id="replyError" class="portal-alert portal-alert-error" style="display:none;margin-bottom:.75rem;"></div>
+    <textarea id="replyBody" style="width:100%;padding:.65rem .85rem;border-radius:8px;border:1px solid var(--bs-border-color);background:var(--bs-body-bg);color:var(--bs-body-color);font-size:.875rem;font-family:inherit;resize:vertical;min-height:90px;display:block;box-sizing:border-box;" placeholder="Ihre Antwort…"></textarea>
+    <div style="display:flex;justify-content:flex-end;margin-top:.75rem;">
+        <button class="portal-btn portal-btn-primary" id="btnReply">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            Antwort senden
+        </button>
+    </div>
+</div>
+{% else %}
+<div class="portal-alert" style="background:rgba(148,163,184,.08);border:1px solid var(--bs-border-color);color:var(--bs-secondary-color);display:flex;align-items:center;gap:.5rem;">
+    <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="12 8 12 12 14 14"/></svg>
+    Diese Konversation wurde geschlossen. Starten Sie bei Fragen eine neue Nachricht.
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function() {
+    var threadId = {{ thread.id }};
+
+    /* Scroll to bottom */
+    var list = document.getElementById('msg-list');
+    if (list) list.scrollTop = list.scrollHeight;
+
+    /* Reply */
+    var btnReply = document.getElementById('btnReply');
+    if (!btnReply) return;
+
+    btnReply.addEventListener('click', function() {
+        var body  = document.getElementById('replyBody').value.trim();
+        var errEl = document.getElementById('replyError');
+        if (!body) {
+            errEl.textContent = 'Bitte eine Nachricht eingeben.';
+            errEl.style.display = 'block';
+            return;
+        }
+        errEl.style.display = 'none';
+        btnReply.disabled = true;
+        btnReply.textContent = 'Wird gesendet…';
+
+        fetch('/api/portal/nachrichten/' + threadId + '/antworten', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ body: body })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+            if (d.ok) {
+                appendMessage(d);
+                document.getElementById('replyBody').value = '';
+            } else {
+                errEl.textContent = d.error || 'Fehler beim Senden.';
+                errEl.style.display = 'block';
+            }
+            btnReply.disabled = false;
+            btnReply.innerHTML = '<svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="22 2 15 22 11 13 2 9 22 2"/></svg> Antwort senden';
+        })
+        .catch(function() {
+            errEl.textContent = 'Verbindungsfehler.';
+            errEl.style.display = 'block';
+            btnReply.disabled = false;
+            btnReply.textContent = 'Antwort senden';
+        });
+    });
+
+    function appendMessage(d) {
+        var bodyEsc = d.body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+        var wrap = document.createElement('div');
+        wrap.style.cssText = 'display:flex;gap:.75px;flex-direction:row-reverse;';
+        wrap.dataset.msgId = d.id;
+        wrap.innerHTML =
+            '<div style="width:32px;height:32px;border-radius:50%;background:rgba(34,197,94,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;align-self:flex-end;">'
+          + '<svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="#22c55e" stroke-width="2" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'
+          + '</div>'
+          + '<div style="max-width:78%;margin-right:auto;">'
+          + '<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;flex-direction:row-reverse;">'
+          + '<span style="font-weight:600;font-size:.8rem;color:#22c55e;">Sie</span>'
+          + '<span style="font-size:.68rem;color:var(--bs-secondary-color);">' + d.created_at + '</span>'
+          + '</div>'
+          + '<div style="padding:.75rem 1rem;border-radius:12px 4px 12px 12px;background:var(--bs-tertiary-bg);border:1px solid var(--bs-border-color);font-size:.875rem;line-height:1.6;">' + bodyEsc + '</div>'
+          + '</div>';
+        list.appendChild(wrap);
+        list.scrollTop = list.scrollHeight;
+    }
+})();
+</script>
+{% endblock %}

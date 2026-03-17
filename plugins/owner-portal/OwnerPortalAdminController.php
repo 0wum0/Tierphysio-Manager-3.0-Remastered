@@ -21,6 +21,7 @@ class OwnerPortalAdminController extends Controller
     private PdfService $pdfService;
     private MailService $mailService;
     private SettingsRepository $settingsRepository;
+    private Database $db;
 
     public function __construct(
         View $view,
@@ -33,6 +34,7 @@ class OwnerPortalAdminController extends Controller
         PdfService $pdfService
     ) {
         parent::__construct($view, $session, $config, $translator);
+        $this->db                 = $db;
         $this->repo               = new OwnerPortalRepository($db);
         $this->mailer             = new OwnerPortalMailService($settingsRepository, $mailService);
         $this->pdfService         = $pdfService;
@@ -43,7 +45,9 @@ class OwnerPortalAdminController extends Controller
     /* ── GET /portal-admin ── */
     public function index(array $params = []): void
     {
-        $users = $this->repo->getAllPortalUsers();
+        $users       = $this->repo->getAllPortalUsers();
+        $msgRepo     = new MessagingRepository($this->db);
+        $adminUnread = $msgRepo->countUnreadForAdmin();
 
         $this->render('@owner-portal/admin_index.twig', [
             'page_title'       => 'Besitzerportal — Verwaltung',
@@ -52,6 +56,7 @@ class OwnerPortalAdminController extends Controller
             'csrf_token'       => $this->session->generateCsrfToken(),
             'success'          => $this->session->getFlash('success'),
             'error'            => $this->session->getFlash('error'),
+            'admin_unread'     => $adminUnread,
         ]);
     }
 

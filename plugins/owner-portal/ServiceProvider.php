@@ -18,6 +18,10 @@ class ServiceProvider
         require_once __DIR__ . '/OwnerAuthController.php';
         require_once __DIR__ . '/OwnerPortalController.php';
         require_once __DIR__ . '/OwnerPortalAdminController.php';
+        require_once __DIR__ . '/MessagingRepository.php';
+        require_once __DIR__ . '/MessagingMailService.php';
+        require_once __DIR__ . '/MessagingAdminController.php';
+        require_once __DIR__ . '/MessagingOwnerController.php';
 
         $this->runMigrations();
 
@@ -27,12 +31,24 @@ class ServiceProvider
         $pluginManager->hook('registerRoutes', [$this, 'registerRoutes']);
         $pluginManager->hook('dashboardWidgets', [$this, 'dashboardWidget']);
 
-        /* Admin nav item */
+        /* Admin nav item with unread badge */
+        try {
+            $db      = Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $msgRepo = new MessagingRepository($db);
+            $unreadCount = $msgRepo->countUnreadForAdmin();
+        } catch (\Throwable) {
+            $unreadCount = 0;
+        }
+        $badgeHtml = $unreadCount > 0
+            ? ' <span style="display:inline-block;background:#ef4444;color:#fff;border-radius:20px;font-size:.6rem;font-weight:700;padding:0 5px;line-height:1.5;vertical-align:1px;">' . $unreadCount . '</span>'
+            : '';
+
         $navItems   = $view->getTwig()->getGlobals()['plugin_nav_items'] ?? [];
         $navItems[] = [
             'label' => 'Besitzerportal',
             'href'  => '/portal-admin',
             'icon'  => '<svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="9 22 9 12 15 12 15 22"/></svg>',
+            'badge' => $badgeHtml,
         ];
         $view->addGlobal('plugin_nav_items', $navItems);
 
@@ -85,6 +101,20 @@ class ServiceProvider
         /* ── Owner portal homework view ── */
         $router->get('/portal/tiere/{id}/hausaufgaben',                    [OwnerPortalController::class, 'homework'],    []);
         $router->get('/portal/tiere/{id}/hausaufgaben/{plan_id}/pdf',      [OwnerPortalController::class, 'homeworkPdf'], []);
+
+        /* ── Messaging: Admin routes ── */
+        $router->get('/portal-admin/nachrichten',                                    [MessagingAdminController::class, 'index'],     ['auth']);
+        $router->get('/portal-admin/nachrichten/{id}',                               [MessagingAdminController::class, 'thread'],    ['auth']);
+        $router->post('/api/portal-admin/nachrichten/{id}/antworten',                [MessagingAdminController::class, 'reply'],     ['auth']);
+        $router->post('/api/portal-admin/nachrichten/{id}/status',                   [MessagingAdminController::class, 'setStatus'], ['auth']);
+        $router->post('/api/portal-admin/nachrichten/neu',                           [MessagingAdminController::class, 'newThread'], ['auth']);
+        $router->post('/api/portal-admin/nachrichten/{id}/loeschen',                 [MessagingAdminController::class, 'delete'],    ['auth']);
+
+        /* ── Messaging: Owner (portal) routes ── */
+        $router->get('/portal/nachrichten',                                          [MessagingOwnerController::class, 'index'],     []);
+        $router->get('/portal/nachrichten/{id}',                                     [MessagingOwnerController::class, 'thread'],    []);
+        $router->post('/api/portal/nachrichten/{id}/antworten',                      [MessagingOwnerController::class, 'reply'],     []);
+        $router->post('/api/portal/nachrichten/neu',                                 [MessagingOwnerController::class, 'newThread'], []);
     }
 
     public function dashboardWidget(array $context): array

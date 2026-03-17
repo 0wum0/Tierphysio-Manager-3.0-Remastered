@@ -1820,7 +1820,7 @@ class PdfService
     ): string {
         return $this->generateReminderDunningPdf($invoice, $owner, $patient, [
             'type'       => 'reminder',
-            'title_word' => 'Zahlungserinnerung',
+            'title_word' => 'Erinnerung',
             'sidebar_label' => 'Erinnerung',
             'level'      => null,
             'due_date'   => $reminder['due_date'] ?? null,
@@ -1844,7 +1844,7 @@ class PdfService
         $titleMap = [1 => '1. Mahnung', 2 => '2. Mahnung', 3 => 'Letzte Mahnung'];
         return $this->generateReminderDunningPdf($invoice, $owner, $patient, [
             'type'       => 'dunning',
-            'title_word' => $titleMap[$level] ?? 'Mahnung',
+            'title_word' => 'Mahnung',
             'sidebar_label' => 'Mahnung ' . $level,
             'level'      => $level,
             'due_date'   => $dunning['due_date'] ?? null,
@@ -2101,12 +2101,12 @@ class PdfService
             : $gross;
 
         if ($meta['type'] === 'reminder') {
-            $introText = "wir erlauben uns, Sie freundlich daran zu erinnern, dass die folgende Rechnung noch nicht beglichen wurde. "
-                . "Falls Sie die Zahlung bereits veranlasst haben, bitten wir Sie, dieses Schreiben als gegenstandslos zu betrachten.";
+            $introText = "ich erlaube mir, Sie freundlich daran zu erinnern, dass die folgende Rechnung noch offen ist. "
+                . "Falls Sie die Zahlung bereits veranlasst haben, bitte ich Sie, dieses Schreiben als gegenstandslos zu betrachten.";
         } else {
             $levelOrd  = match((int)$meta['level']) { 1 => 'erste', 2 => 'zweite', default => 'letzte' };
-            $introText = "trotz unserer Zahlungserinnerung ist der ausstehende Betrag bislang nicht bei uns eingegangen. "
-                . "Wir übersenden Ihnen daher unsere {$levelOrd} Mahnung und bitten Sie, den Betrag zuzüglich der Mahngebühr umgehend zu begleichen.";
+            $introText = "trotz meiner Zahlungserinnerung ist der ausstehende Betrag bislang nicht bei mir eingegangen. "
+                . "Ich übersende Ihnen daher meine {$levelOrd} Mahnung und bitte Sie, den Betrag zuzüglich der Mahngebühr umgehend zu begleichen.";
         }
 
         $pdf->SetXY($contentX, $textStartY);
