@@ -359,10 +359,11 @@ class InvoiceRepository extends Repository
         } else {
             $periods = [];
             for ($i = 11; $i >= 0; $i--) {
-                $periods[] = date('Y-W', strtotime("-{$i} weeks"));
+                /* Use ISO year+week (Y-W) — must match DATE_FORMAT('%x-%v') in MySQL */
+                $periods[] = date('o-W', strtotime("-{$i} weeks"));
             }
             $rows = $this->db->fetchAll(
-                "SELECT DATE_FORMAT(issue_date, '%Y-%u') AS period,
+                "SELECT DATE_FORMAT(issue_date, '%x-%v') AS period,
                         status,
                         COALESCE(SUM(total_gross), 0) AS amount
                  FROM invoices
@@ -373,7 +374,7 @@ class InvoiceRepository extends Repository
             );
             $labels = array_map(function ($w) {
                 [$year, $week] = explode('-', $w);
-                return 'KW ' . ltrim($week, '0') . ' ' . substr($year, 2);
+                return 'KW ' . ltrim($week, '0') . ' \'' . substr($year, 2);
             }, $periods);
         }
 

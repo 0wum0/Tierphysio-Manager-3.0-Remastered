@@ -468,6 +468,11 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/apexcharts@3/dist/apexcharts.min.js"></script>
 <script>
+/* ── Dashboard Chart Data (server-rendered) ── */
+var _dashChartWeekly  = {{ chart_weekly  is defined and chart_weekly  is not empty ? chart_weekly|json_encode|replace({'</': '<\/'})|raw : '{"labels":[],"paid":[],"open":[],"overdue":[],"draft":[]}' }};
+var _dashChartMonthly = {{ chart_monthly is defined and chart_monthly is not empty ? chart_monthly|json_encode|replace({'</': '<\/'})|raw : '{"labels":[],"paid":[],"open":[],"overdue":[],"draft":[]}' }};
+</script>
+<script>
 (function(){
     'use strict';
 
@@ -477,10 +482,8 @@
     var bgCard     = isDark ? '#1e2a3a' : '#ffffff';
 
     /* ── Revenue Stacked Bar Chart (by status) ───────────────── */
-    var revenueEl = document.getElementById('dash-revenue-chart');
-
-    var cWeekly  = {{ chart_weekly|default({})|json_encode|replace({'</': '<\/'})|raw }};
-    var cMonthly = {{ chart_monthly|default({})|json_encode|replace({'</': '<\/'})|raw }};
+    var cWeekly  = _dashChartWeekly;
+    var cMonthly = _dashChartMonthly;
 
     /* Status colors: bezahlt=grün, offen=gelb, überfällig=rot, entwurf=grau */
     var statusColors  = ['#22c55e', '#f59e0b', '#ef4444', '#94a3b8'];
@@ -489,80 +492,103 @@
 
     function buildSeries(d) {
         return statusKeys.map(function(k, i) {
-            return { name: statusLabels[i], data: d[k] || [] };
+            return { name: statusLabels[i], data: (d[k] || []).map(Number) };
         });
     }
 
-    var revenueChart = null;
-    if (revenueEl) {
-        revenueChart = new ApexCharts(revenueEl, {
-            chart: {
-                type: 'bar',
-                height: 280,
-                stacked: true,
-                toolbar: { show: false },
-                background: 'transparent',
-                fontFamily: 'inherit',
-                animations: { enabled: true, easing: 'easeinout', speed: 500 },
-                zoom: { enabled: false }
-            },
-            series: buildSeries(cWeekly),
-            xaxis: {
-                categories: cWeekly.labels || [],
-                labels: { style: { colors: textColor, fontSize: '11px' } },
-                axisBorder: { show: false },
-                axisTicks: { show: false }
-            },
-            yaxis: {
-                labels: {
-                    style: { colors: textColor, fontSize: '11px' },
-                    formatter: function(v) {
-                        return v >= 1000 ? (v/1000).toFixed(1)+'k €' : v.toFixed(0)+' €';
+    var _revenueChart = null;
+
+    function initRevenueChart() {
+        var revenueEl = document.getElementById('dash-revenue-chart');
+        if (!revenueEl) return;
+        /* destroy previous instance if re-initialising */
+        if (_revenueChart) { try { _revenueChart.destroy(); } catch(e){} _revenueChart = null; }
+        /* clear any previous ApexCharts inner HTML */
+        revenueEl.innerHTML = '';
+        try {
+            _revenueChart = new ApexCharts(revenueEl, {
+                chart: {
+                    type: 'bar',
+                    height: 280,
+                    stacked: true,
+                    toolbar: { show: false },
+                    background: 'transparent',
+                    fontFamily: 'inherit',
+                    animations: { enabled: true, easing: 'easeinout', speed: 500 },
+                    zoom: { enabled: false }
+                },
+                series: buildSeries(cWeekly),
+                xaxis: {
+                    categories: cWeekly.labels || [],
+                    labels: { style: { colors: textColor, fontSize: '11px' }, rotate: -30 },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false }
+                },
+                yaxis: {
+                    labels: {
+                        style: { colors: textColor, fontSize: '11px' },
+                        formatter: function(v) {
+                            return v >= 1000 ? (v/1000).toFixed(1)+'k €' : v.toFixed(0)+' €';
+                        }
                     }
-                }
-            },
-            colors: statusColors,
-            plotOptions: {
-                bar: {
-                    columnWidth: '55%',
-                    borderRadius: 3,
-                    borderRadiusApplication: 'end'
-                }
-            },
-            grid: { borderColor: gridColor, strokeDashArray: 4, padding: { left: 4, right: 4 } },
-            dataLabels: { enabled: false },
-            tooltip: {
-                theme: isDark ? 'dark' : 'light',
-                x: { show: true },
-                y: { formatter: function(v) { return v.toFixed(2).replace('.',',') + ' €'; } },
-                shared: true
-            },
-            legend: {
-                show: true,
-                position: 'top',
-                horizontalAlign: 'right',
-                fontSize: '11px',
-                labels: { colors: textColor },
-                markers: { size: 7, shape: 'circle' }
-            }
-        });
-        revenueChart.render();
+                },
+                colors: statusColors,
+                plotOptions: {
+                    bar: {
+                        columnWidth: '60%',
+                        borderRadius: 2,
+                        borderRadiusApplication: 'end'
+                    }
+                },
+                grid: { borderColor: gridColor, strokeDashArray: 4, padding: { left: 4, right: 4 } },
+                dataLabels: { enabled: false },
+                tooltip: {
+                    theme: isDark ? 'dark' : 'light',
+                    x: { show: true },
+                    y: { formatter: function(v) { return Number(v).toFixed(2).replace('.',',') + ' €'; } },
+                    shared: true,
+                    intersect: false
+                },
+                legend: {
+                    show: true,
+                    position: 'top',
+                    horizontalAlign: 'right',
+                    fontSize: '11px',
+                    labels: { colors: textColor },
+                    markers: { size: 7, shape: 'circle' }
+                },
+                noData: { text: 'Keine Daten vorhanden', style: { color: textColor } }
+            });
+            _revenueChart.render();
+        } catch(e) {
+            console.error('Revenue chart init failed:', e);
+        }
     }
 
-    document.getElementById('btn-weekly')?.addEventListener('click', function(){
-        if (!revenueChart) return;
-        revenueChart.updateOptions({ xaxis: { categories: cWeekly.labels || [] } }, false, false);
-        revenueChart.updateSeries(buildSeries(cWeekly));
-        this.classList.add('active');
-        document.getElementById('btn-monthly').classList.remove('active');
+    /* Weekly / monthly toggle — use event delegation so it survives re-inits */
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('#btn-weekly, #btn-monthly');
+        if (!btn || !_revenueChart) return;
+        var isWeekly = btn.id === 'btn-weekly';
+        var d = isWeekly ? cWeekly : cMonthly;
+        _revenueChart.updateOptions({ xaxis: { categories: d.labels || [] } }, false, false);
+        _revenueChart.updateSeries(buildSeries(d));
+        document.getElementById('btn-weekly')?.classList.toggle('active', isWeekly);
+        document.getElementById('btn-monthly')?.classList.toggle('active', !isWeekly);
     });
-    document.getElementById('btn-monthly')?.addEventListener('click', function(){
-        if (!revenueChart) return;
-        revenueChart.updateOptions({ xaxis: { categories: cMonthly.labels || [] } }, false, false);
-        revenueChart.updateSeries(buildSeries(cMonthly));
-        this.classList.add('active');
-        document.getElementById('btn-weekly').classList.remove('active');
+
+    /* Re-init when SmartAdmin panel-collapse is toggled open */
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-action="panel-collapse"]');
+        if (!btn) return;
+        if (btn.closest('#panel-revenue-chart')) setTimeout(initRevenueChart, 350);
     });
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initRevenueChart);
+    } else {
+        initRevenueChart();
+    }
 
     /* ── Patient Sparkline ──────────────────────────────────── */
     var sparkEl = document.getElementById('dash-patient-sparkline');

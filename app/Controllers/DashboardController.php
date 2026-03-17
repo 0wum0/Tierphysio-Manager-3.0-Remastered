@@ -37,8 +37,13 @@ class DashboardController extends Controller
         $birthdays      = $this->dashboardService->getUpcomingBirthdays(14);
         $appointments   = $this->dashboardService->getUpcomingAppointments(8);
         $patientTrend   = $this->dashboardService->getPatientTrendData();
-        $chartWeekly    = $this->dashboardService->getChartDataByStatus('weekly');
-        $chartMonthly   = $this->dashboardService->getChartDataByStatus('monthly');
+        try {
+            $chartWeekly  = $this->dashboardService->getChartDataByStatus('weekly');
+            $chartMonthly = $this->dashboardService->getChartDataByStatus('monthly');
+        } catch (\Throwable) {
+            $chartWeekly  = ['labels' => [], 'paid' => [], 'open' => [], 'overdue' => [], 'draft' => []];
+            $chartMonthly = ['labels' => [], 'paid' => [], 'open' => [], 'overdue' => [], 'draft' => []];
+        }
 
         $this->render('dashboard/index.twig', [
             'page_title'            => $this->translator->trans('nav.dashboard'),
