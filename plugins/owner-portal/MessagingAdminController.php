@@ -210,7 +210,7 @@ class MessagingAdminController extends Controller
                 'subject'      => $t['subject'],
                 'owner_name'   => $t['owner_name'],
                 'status'       => $t['status'],
-                'unread'       => (int)($t['admin_unread'] ?? 0),
+                'unread'       => (int)($t['unread_count'] ?? 0),
                 'last_message' => $t['last_message_at'] ?? $t['created_at'],
             ];
         }
