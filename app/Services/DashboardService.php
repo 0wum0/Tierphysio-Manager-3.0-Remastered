@@ -37,6 +37,11 @@ class DashboardService
         return $this->invoiceRepository->getChartData($type);
     }
 
+    public function getChartDataByStatus(string $type): array
+    {
+        return $this->invoiceRepository->getChartDataByStatus($type);
+    }
+
     public function getUpcomingAppointments(int $limit = 8): array
     {
         return $this->db->fetchAll(

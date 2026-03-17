@@ -258,6 +258,40 @@ class SettingsController extends Controller
         $this->redirect('/einstellungen?tab=pdf');
     }
 
+    public function uploadPdfErinnerungBild(array $params = []): void
+    {
+        $this->validateCsrf();
+        $dest     = ROOT_PATH . '/public/assets/img';
+        $filename = $this->uploadFile('pdf_erinnerung_bild', $dest, ['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+        if ($filename === false) {
+            $this->session->flash('error', 'Bild-Upload fehlgeschlagen.');
+            $this->redirect('/einstellungen?tab=pdf');
+            return;
+        }
+        $ext = pathinfo($dest . '/' . $filename, PATHINFO_EXTENSION);
+        rename($dest . '/' . $filename, $dest . '/erinnerung-script.' . $ext);
+        $this->settingsService->set('pdf_erinnerung_bild', 'erinnerung-script.' . $ext);
+        $this->session->flash('success', '"Erinnerung"-Bild aktualisiert.');
+        $this->redirect('/einstellungen?tab=pdf');
+    }
+
+    public function uploadPdfMahnungBild(array $params = []): void
+    {
+        $this->validateCsrf();
+        $dest     = ROOT_PATH . '/public/assets/img';
+        $filename = $this->uploadFile('pdf_mahnung_bild', $dest, ['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+        if ($filename === false) {
+            $this->session->flash('error', 'Bild-Upload fehlgeschlagen.');
+            $this->redirect('/einstellungen?tab=pdf');
+            return;
+        }
+        $ext = pathinfo($dest . '/' . $filename, PATHINFO_EXTENSION);
+        rename($dest . '/' . $filename, $dest . '/mahnung-script.' . $ext);
+        $this->settingsService->set('pdf_mahnung_bild', 'mahnung-script.' . $ext);
+        $this->session->flash('success', '"Mahnung"-Bild aktualisiert.');
+        $this->redirect('/einstellungen?tab=pdf');
+    }
+
     public function plugins(array $params = []): void
     {
         $this->redirect('/einstellungen#plugins');

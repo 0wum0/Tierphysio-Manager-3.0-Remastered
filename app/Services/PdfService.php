@@ -1903,6 +1903,8 @@ class PdfService
         $rightEdge = 195;
         $pageH     = 297;
 
+        $watermark   = trim($settings['pdf_watermark'] ?? '');
+
         $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
         $pdf->setPrintHeader(false);
         $pdf->setPrintFooter(false);
@@ -1910,11 +1912,20 @@ class PdfService
         $pdf->SetAutoPageBreak(false);
         $pdf->AddPage();
 
+        /* ── Watermark (same as invoice) ── */
+        if ($watermark !== '') {
+            $pdf->SetFont($font, 'B', 55);
+            $pdf->SetTextColor(220, 220, 220);
+            $pdf->StartTransform();
+            $pdf->Rotate(35, 105, 148);
+            $pdf->SetXY(35, 133);
+            $pdf->Cell(140, 30, mb_strtoupper($watermark), 0, 0, 'C');
+            $pdf->StopTransform();
+        }
+
         /* ── Sidebar ── */
-        $isDunning = ($meta['type'] === 'dunning');
-        $sidebarRgb = $isDunning
-            ? $this->hexToRgb($settings['pdf_primary_color'] ?? '#8B4E4E')
-            : $sidebarColor;
+        $isDunning  = ($meta['type'] === 'dunning');
+        $sidebarRgb = $sidebarColor;
 
         $pdf->SetFillColor(...$sidebarRgb);
         $pdf->Rect(0, 0, $sidebarW, $pageH, 'F');
@@ -1938,19 +1949,22 @@ class PdfService
             $logoY += 28;
         }
 
-        /* Sidebar: type label */
+        /* Sidebar helper — mirrors exact style of invoice PDF sidebar */
+        $sideSubColor = [220, 235, 220];
+
+        /* Sidebar: document-type label (e.g. "Erinnerung" / "Mahnung 1") */
         $sideY = $logoY + 10;
         $pdf->SetFont($font, '', $fontSize - 2);
-        $pdf->SetTextColor(220, 235, 220);
+        $pdf->SetTextColor(...$sideSubColor);
         $pdf->SetXY(3, $sideY);
         $pdf->Cell($sidebarW - 6, 4, $meta['sidebar_label'], 0, 1, 'C');
 
-        /* Sidebar: Rechnungs-Nr */
+        /* Sidebar: Rechnungs-Nr — matches invoice sidebar exactly */
         $sideY += 10;
         $pdf->SetFont($font, '', $fontSize - 2);
-        $pdf->SetTextColor(220, 235, 220);
+        $pdf->SetTextColor(...$sideSubColor);
         $pdf->SetXY(3, $sideY);
-        $pdf->Cell($sidebarW - 6, 4, 'Rechnung', 0, 1, 'C');
+        $pdf->Cell($sidebarW - 6, 4, 'Rechnungsnummer', 0, 1, 'C');
         $pdf->SetFont($font, 'B', $fontSize - 1);
         $pdf->SetTextColor(255, 255, 255);
         $pdf->SetXY(3, $sideY + 4);
@@ -1960,7 +1974,7 @@ class PdfService
         $sideY += 22;
         $createdDate = !empty($meta['created_at']) ? date('d.m.Y', strtotime((string)$meta['created_at'])) : date('d.m.Y');
         $pdf->SetFont($font, '', $fontSize - 2);
-        $pdf->SetTextColor(220, 235, 220);
+        $pdf->SetTextColor(...$sideSubColor);
         $pdf->SetXY(3, $sideY);
         $pdf->Cell($sidebarW - 6, 4, 'Datum', 0, 1, 'C');
         $pdf->SetFont($font, 'B', $fontSize - 1);
@@ -1972,7 +1986,7 @@ class PdfService
         if (!empty($meta['due_date'])) {
             $sideY += 22;
             $pdf->SetFont($font, '', $fontSize - 2);
-            $pdf->SetTextColor(220, 235, 220);
+            $pdf->SetTextColor(...$sideSubColor);
             $pdf->SetXY(3, $sideY);
             $pdf->Cell($sidebarW - 6, 4, 'Zahlbar bis', 0, 1, 'C');
             $pdf->SetFont($font, 'B', $fontSize - 1);
@@ -1985,7 +1999,7 @@ class PdfService
         if ($owner) {
             $sideY += 22;
             $pdf->SetFont($font, '', $fontSize - 2);
-            $pdf->SetTextColor(220, 235, 220);
+            $pdf->SetTextColor(...$sideSubColor);
             $pdf->SetXY(3, $sideY);
             $pdf->Cell($sidebarW - 6, 4, 'Kunden-Nr.', 0, 1, 'C');
             $pdf->SetFont($font, 'B', $fontSize - 1);
@@ -2017,15 +2031,25 @@ class PdfService
             $infoY += 4;
         }
 
-        /* ── Document title ── */
-        $titleY = $infoY + 6;
-        $pdf->SetFont($font, 'BI', 28);
-        $pdf->SetTextColor(...$darkColor);
-        $pdf->SetXY($contentX, $titleY);
-        $pdf->Cell($contentW, 14, $meta['title_word'], 0, 1, 'R');
+        /* ── Document title — script image (same style as invoice) ── */
+        $titleImgKey  = $isDunning ? 'pdf_mahnung_bild' : 'pdf_erinnerung_bild';
+        $titleImgFile = $this->resolveAssetImg($settings[$titleImgKey] ?? 'rechnung-script.png');
+        $titleImgY    = $infoY + 4;
+        if (file_exists($titleImgFile)) {
+            $imgW = 72;
+            $pdf->Image($titleImgFile, $rightEdge - $imgW, $titleImgY, $imgW, 0, '');
+            [$pw, $ph]    = @getimagesize($titleImgFile) ?: [300, 120];
+            $titleImgH    = ($ph > 0 && $pw > 0) ? ($ph / $pw) * $imgW : 28;
+        } else {
+            $titleImgH = 18;
+            $pdf->SetFont($font, 'BI', 34);
+            $pdf->SetTextColor(...$darkColor);
+            $pdf->SetXY($contentX, $titleImgY);
+            $pdf->Cell($contentW, $titleImgH, $meta['title_word'], 0, 1, 'R');
+        }
 
         /* ── Address block ── */
-        $addrTopY = max($titleY + 16, 62);
+        $addrTopY = max($titleImgY + $titleImgH + 4, 62);
         $colW     = $contentW / 2 - 4;
 
         if ($owner) {

@@ -333,6 +333,74 @@ class InvoiceRepository extends Repository
         ];
     }
 
+    public function getChartDataByStatus(string $type): array
+    {
+        $statuses = ['paid', 'open', 'overdue', 'draft'];
+
+        if ($type === 'monthly') {
+            $periods = [];
+            for ($i = 11; $i >= 0; $i--) {
+                $periods[] = date('Y-m', strtotime("-{$i} months"));
+            }
+            $rows = $this->db->fetchAll(
+                "SELECT DATE_FORMAT(issue_date, '%Y-%m') AS period,
+                        status,
+                        COALESCE(SUM(total_gross), 0) AS amount
+                 FROM invoices
+                 WHERE status IN ('paid','open','overdue','draft')
+                   AND issue_date >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+                 GROUP BY period, status
+                 ORDER BY period ASC"
+            );
+            $labels = array_map(function ($m) {
+                $dt = \DateTime::createFromFormat('Y-m', $m);
+                return $dt ? $dt->format('M y') : $m;
+            }, $periods);
+        } else {
+            $periods = [];
+            for ($i = 11; $i >= 0; $i--) {
+                $periods[] = date('Y-W', strtotime("-{$i} weeks"));
+            }
+            $rows = $this->db->fetchAll(
+                "SELECT DATE_FORMAT(issue_date, '%Y-%u') AS period,
+                        status,
+                        COALESCE(SUM(total_gross), 0) AS amount
+                 FROM invoices
+                 WHERE status IN ('paid','open','overdue','draft')
+                   AND issue_date >= DATE_SUB(NOW(), INTERVAL 12 WEEK)
+                 GROUP BY period, status
+                 ORDER BY period ASC"
+            );
+            $labels = array_map(function ($w) {
+                [$year, $week] = explode('-', $w);
+                return 'KW ' . ltrim($week, '0') . ' ' . substr($year, 2);
+            }, $periods);
+        }
+
+        /* Index by period+status */
+        $indexed = [];
+        foreach ($rows as $r) {
+            $indexed[$r['period']][$r['status']] = (float)$r['amount'];
+        }
+
+        $series = [];
+        foreach ($statuses as $st) {
+            $data = [];
+            foreach ($periods as $p) {
+                $data[] = round($indexed[$p][$st] ?? 0, 2);
+            }
+            $series[$st] = $data;
+        }
+
+        return [
+            'labels'  => $labels,
+            'paid'    => $series['paid'],
+            'open'    => $series['open'],
+            'overdue' => $series['overdue'],
+            'draft'   => $series['draft'],
+        ];
+    }
+
     public function getMonthlyChartData(): array
     {
         $months = [];

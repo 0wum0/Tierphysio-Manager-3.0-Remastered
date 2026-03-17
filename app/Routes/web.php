@@ -106,6 +106,8 @@ $router->post('/einstellungen/pdf-rechnung-bild', [SettingsController::class, 'u
 $router->post('/einstellungen/pdf-vielen-dank-bild', [SettingsController::class, 'uploadPdfVielenDankBild'], ['admin']);
 $router->post('/einstellungen/pdf-quittung-bild', [SettingsController::class, 'uploadPdfQuittungBild'], ['admin']);
 $router->post('/einstellungen/pdf-barzahlung-bild', [SettingsController::class, 'uploadPdfBarzahlungBild'], ['admin']);
+$router->post('/einstellungen/pdf-erinnerung-bild', [SettingsController::class, 'uploadPdfErinnerungBild'], ['admin']);
+$router->post('/einstellungen/pdf-mahnung-bild',    [SettingsController::class, 'uploadPdfMahnungBild'],    ['admin']);
 $router->get('/einstellungen/plugins', [SettingsController::class, 'plugins'], ['admin']);
 $router->post('/einstellungen/plugins/{name}/aktivieren', [SettingsController::class, 'enablePlugin'], ['admin']);
 $router->post('/einstellungen/plugins/{name}/deaktivieren', [SettingsController::class, 'disablePlugin'], ['admin']);

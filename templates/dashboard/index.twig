@@ -476,31 +476,39 @@
     var gridColor  = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)';
     var bgCard     = isDark ? '#1e2a3a' : '#ffffff';
 
-    /* ── Revenue Area Chart ─────────────────────────────────── */
+    /* ── Revenue Stacked Bar Chart (by status) ───────────────── */
     var revenueEl = document.getElementById('dash-revenue-chart');
 
-    var weeklyData    = {{ stats.chart_weekly|default([])|json_encode|replace({'</': '<\/'})|raw }};
-    var monthlyData   = {{ stats.chart_monthly|default([])|json_encode|replace({'</': '<\/'})|raw }};
-    var weeklyLabels  = weeklyData.map(function(d){ return d.label; });
-    var weeklyValues  = weeklyData.map(function(d){ return parseFloat(d.value) || 0; });
-    var monthlyLabels = monthlyData.map(function(d){ return d.label; });
-    var monthlyValues = monthlyData.map(function(d){ return parseFloat(d.value) || 0; });
+    var cWeekly  = {{ chart_weekly|default({})|json_encode|replace({'</': '<\/'})|raw }};
+    var cMonthly = {{ chart_monthly|default({})|json_encode|replace({'</': '<\/'})|raw }};
+
+    /* Status colors: bezahlt=grün, offen=gelb, überfällig=rot, entwurf=grau */
+    var statusColors  = ['#22c55e', '#f59e0b', '#ef4444', '#94a3b8'];
+    var statusLabels  = ['Bezahlt', 'Offen', 'Überfällig', 'Entwurf'];
+    var statusKeys    = ['paid', 'open', 'overdue', 'draft'];
+
+    function buildSeries(d) {
+        return statusKeys.map(function(k, i) {
+            return { name: statusLabels[i], data: d[k] || [] };
+        });
+    }
 
     var revenueChart = null;
     if (revenueEl) {
         revenueChart = new ApexCharts(revenueEl, {
             chart: {
-                type: 'area',
+                type: 'bar',
                 height: 280,
+                stacked: true,
                 toolbar: { show: false },
                 background: 'transparent',
                 fontFamily: 'inherit',
                 animations: { enabled: true, easing: 'easeinout', speed: 500 },
                 zoom: { enabled: false }
             },
-            series: [{ name: 'Umsatz', data: weeklyValues }],
+            series: buildSeries(cWeekly),
             xaxis: {
-                categories: weeklyLabels,
+                categories: cWeekly.labels || [],
                 labels: { style: { colors: textColor, fontSize: '11px' } },
                 axisBorder: { show: false },
                 axisTicks: { show: false }
@@ -513,41 +521,45 @@
                     }
                 }
             },
-            colors: ['#4f7cff'],
-            fill: {
-                type: 'gradient',
-                gradient: {
-                    shadeIntensity: 1,
-                    opacityFrom: 0.45,
-                    opacityTo: 0.02,
-                    stops: [0, 95]
+            colors: statusColors,
+            plotOptions: {
+                bar: {
+                    columnWidth: '55%',
+                    borderRadius: 3,
+                    borderRadiusApplication: 'end'
                 }
             },
-            stroke: { curve: 'smooth', width: 2.5 },
-            markers: { size: 3, colors: ['#4f7cff'], strokeColors: bgCard, strokeWidth: 2 },
             grid: { borderColor: gridColor, strokeDashArray: 4, padding: { left: 4, right: 4 } },
             dataLabels: { enabled: false },
             tooltip: {
                 theme: isDark ? 'dark' : 'light',
                 x: { show: true },
-                y: { formatter: function(v) { return v.toFixed(2).replace('.',',') + ' €'; } }
+                y: { formatter: function(v) { return v.toFixed(2).replace('.',',') + ' €'; } },
+                shared: true
             },
-            legend: { show: false }
+            legend: {
+                show: true,
+                position: 'top',
+                horizontalAlign: 'right',
+                fontSize: '11px',
+                labels: { colors: textColor },
+                markers: { size: 7, shape: 'circle' }
+            }
         });
         revenueChart.render();
     }
 
     document.getElementById('btn-weekly')?.addEventListener('click', function(){
         if (!revenueChart) return;
-        revenueChart.updateOptions({ xaxis: { categories: weeklyLabels } });
-        revenueChart.updateSeries([{ name: 'Umsatz', data: weeklyValues }]);
+        revenueChart.updateOptions({ xaxis: { categories: cWeekly.labels || [] } }, false, false);
+        revenueChart.updateSeries(buildSeries(cWeekly));
         this.classList.add('active');
         document.getElementById('btn-monthly').classList.remove('active');
     });
     document.getElementById('btn-monthly')?.addEventListener('click', function(){
         if (!revenueChart) return;
-        revenueChart.updateOptions({ xaxis: { categories: monthlyLabels } });
-        revenueChart.updateSeries([{ name: 'Umsatz', data: monthlyValues }]);
+        revenueChart.updateOptions({ xaxis: { categories: cMonthly.labels || [] } }, false, false);
+        revenueChart.updateSeries(buildSeries(cMonthly));
         this.classList.add('active');
         document.getElementById('btn-weekly').classList.remove('active');
     });

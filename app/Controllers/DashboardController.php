@@ -34,9 +34,11 @@ class DashboardController extends Controller
         $user           = $this->session->getUser();
         $savedLayout    = $user ? $this->dashboardService->loadLayout((int)$user['id']) : null;
 
-        $birthdays    = $this->dashboardService->getUpcomingBirthdays(14);
-        $appointments = $this->dashboardService->getUpcomingAppointments(8);
-        $patientTrend = $this->dashboardService->getPatientTrendData();
+        $birthdays      = $this->dashboardService->getUpcomingBirthdays(14);
+        $appointments   = $this->dashboardService->getUpcomingAppointments(8);
+        $patientTrend   = $this->dashboardService->getPatientTrendData();
+        $chartWeekly    = $this->dashboardService->getChartDataByStatus('weekly');
+        $chartMonthly   = $this->dashboardService->getChartDataByStatus('monthly');
 
         $this->render('dashboard/index.twig', [
             'page_title'            => $this->translator->trans('nav.dashboard'),
@@ -46,6 +48,8 @@ class DashboardController extends Controller
             'upcoming_birthdays'    => $birthdays,
             'upcoming_appointments' => $appointments,
             'patient_trend'         => $patientTrend,
+            'chart_weekly'          => $chartWeekly,
+            'chart_monthly'         => $chartMonthly,
         ]);
     }
 
