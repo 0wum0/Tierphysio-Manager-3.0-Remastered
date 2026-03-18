@@ -26,7 +26,7 @@ define('MIGRATIONS_PATH', ROOT_PATH . '/migrations');
 
         // Already prefixed or is a real file/dir → do nothing
         $isRealFile = is_file(__DIR__ . $path) || is_dir(__DIR__ . $path);
-        if (!$isRealFile && !str_starts_with($path, '/portal')) {
+        if (!$isRealFile && !str_starts_with($path, '/portal') && !str_starts_with($path, '/api/')) {
             // Empty path → send to portal login
             if ($path === '/' || $path === '') {
                 $_SERVER['REQUEST_URI'] = '/portal/login';
