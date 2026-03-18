@@ -1,10 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_html/flutter_html.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../services/api_service.dart';
 import '../../core/theme.dart';
+import '../../widgets/html_editor.dart';
 import '../../widgets/paw_avatar.dart';
 import '../../widgets/shimmer_list.dart';
 import '../../widgets/media_viewer.dart';
@@ -457,12 +459,15 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
       context: context,
       isScrollControlled: true,
       builder: (ctx) => _AddEntrySheet(
-        onTextEntry: (type, title, content) async {
+        onTextEntry: (type, title, content, treatmentTypeId) async {
           Navigator.pop(ctx);
           try {
             await _api.patientTimelineCreate(widget.id, {
-              'type': type, 'title': title, 'content': content,
+              'type':    type,
+              'title':   title,
+              'content': content,
               'entry_date': DateTime.now().toIso8601String().substring(0, 10),
+              if (treatmentTypeId != null) 'treatment_type_id': treatmentTypeId,
             });
             _load();
           } catch (e) {
@@ -515,7 +520,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
 // ── Add Entry Bottom Sheet ────────────────────────────────────────────────────
 
 class _AddEntrySheet extends StatefulWidget {
-  final Future<void> Function(String type, String title, String content) onTextEntry;
+  final Future<void> Function(String type, String title, String content, int? treatmentTypeId) onTextEntry;
   final Future<void> Function(String type) onFileEntry;
   const _AddEntrySheet({required this.onTextEntry, required this.onFileEntry});
 
@@ -524,10 +529,49 @@ class _AddEntrySheet extends StatefulWidget {
 }
 
 class _AddEntrySheetState extends State<_AddEntrySheet> {
+  final _api         = ApiService();
   final _titleCtrl   = TextEditingController();
-  final _contentCtrl = TextEditingController();
-  String _type = 'note';
-  bool _showForm = false;
+  String _type       = 'note';
+  String _htmlContent = '';
+  bool   _showForm   = false;
+  bool   _loadingTx  = false;
+
+  List<Map<String, dynamic>> _treatmentTypes = [];
+  int? _selectedTreatmentTypeId;
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadTreatmentTypes() async {
+    if (_treatmentTypes.isNotEmpty) return;
+    setState(() => _loadingTx = true);
+    try {
+      final list = await _api.treatmentTypes();
+      setState(() {
+        _treatmentTypes = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _loadingTx = false;
+      });
+    } catch (_) {
+      setState(() => _loadingTx = false);
+    }
+  }
+
+  void _openEditor(BuildContext ctx) async {
+    final result = await Navigator.push<String>(
+      ctx,
+      MaterialPageRoute(
+        builder: (_) => HtmlEditorScreen(
+          title: _typeLabel(_type),
+          initialHtml: _htmlContent,
+        ),
+        fullscreenDialog: true,
+      ),
+    );
+    if (result != null) setState(() => _htmlContent = result);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -536,7 +580,7 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
       child: AnimatedSize(
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOutCubic,
-        child: _showForm ? _buildForm() : _buildOptions(),
+        child: _showForm ? _buildForm(context) : _buildOptions(),
       ),
     );
   }
@@ -552,10 +596,10 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
         const SizedBox(height: 20),
         Row(children: [
           _OptionTile(icon: Icons.note_rounded, label: 'Notiz', color: AppTheme.success,
-              onTap: () => setState(() { _type = 'note'; _showForm = true; })),
+              onTap: () { setState(() { _type = 'note'; _showForm = true; }); }),
           const SizedBox(width: 10),
           _OptionTile(icon: Icons.medical_services_rounded, label: 'Behandlung', color: AppTheme.primary,
-              onTap: () => setState(() { _type = 'treatment'; _showForm = true; })),
+              onTap: () { setState(() { _type = 'treatment'; _showForm = true; }); _loadTreatmentTypes(); }),
         ]),
         const SizedBox(height: 10),
         Row(children: [
@@ -571,13 +615,14 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
               onTap: () => widget.onFileEntry('document')),
           const SizedBox(width: 10),
           _OptionTile(icon: Icons.text_snippet_rounded, label: 'Sonstiges', color: Colors.grey,
-              onTap: () => setState(() { _type = 'other'; _showForm = true; })),
+              onTap: () { setState(() { _type = 'other'; _showForm = true; }); }),
         ]),
       ]),
     );
   }
 
-  Widget _buildForm() {
+  Widget _buildForm(BuildContext context) {
+    final hasContent = _htmlContent.trim().isNotEmpty;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -585,21 +630,109 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
           color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
         const SizedBox(height: 12),
         Row(children: [
-          IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: () => setState(() => _showForm = false)),
-          Text(_typeLabel(_type), style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: () => setState(() { _showForm = false; _htmlContent = ''; _selectedTreatmentTypeId = null; }),
+          ),
+          Expanded(child: Text(_typeLabel(_type),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))),
         ]),
         const SizedBox(height: 12),
-        TextField(controller: _titleCtrl, decoration: const InputDecoration(labelText: 'Titel *', prefixIcon: Icon(Icons.title_rounded))),
+        // Treatment type dropdown
+        if (_type == 'treatment') ...[
+          if (_loadingTx)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12),
+              child: LinearProgressIndicator(),
+            )
+          else
+            DropdownButtonFormField<int>(
+              initialValue: _selectedTreatmentTypeId,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Behandlungsart',
+                prefixIcon: Icon(Icons.category_rounded),
+              ),
+              hint: const Text('Behandlungsart wählen…'),
+              items: _treatmentTypes.map((t) => DropdownMenuItem<int>(
+                value: t['id'] as int,
+                child: Row(children: [
+                  Container(
+                    width: 12, height: 12,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(
+                      color: _parseColor(t['color'] as String? ?? '#4f7cff'),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  Expanded(child: Text(t['name'] as String? ?? '', overflow: TextOverflow.ellipsis)),
+                ]),
+              )).toList(),
+              onChanged: (v) => setState(() => _selectedTreatmentTypeId = v),
+            ),
+          const SizedBox(height: 12),
+        ],
+        // Title
+        TextField(
+          controller: _titleCtrl,
+          decoration: const InputDecoration(
+            labelText: 'Titel *',
+            prefixIcon: Icon(Icons.title_rounded),
+          ),
+        ),
         const SizedBox(height: 12),
-        TextField(controller: _contentCtrl, decoration: const InputDecoration(labelText: 'Inhalt', prefixIcon: Icon(Icons.notes_rounded)), maxLines: 3),
+        // HTML content preview / open editor button
+        GestureDetector(
+          onTap: () => _openEditor(context),
+          child: Container(
+            width: double.infinity,
+            constraints: const BoxConstraints(minHeight: 80, maxHeight: 160),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(color: Theme.of(context).colorScheme.outline),
+              borderRadius: BorderRadius.circular(12),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            ),
+            child: hasContent
+                ? Html(
+                    data: _htmlContent,
+                    style: {
+                      'body': Style(margin: Margins.zero, padding: HtmlPaddings.zero, fontSize: FontSize(13)),
+                    },
+                  )
+                : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.edit_note_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 8),
+                    Text('Inhalt bearbeiten (Rich Text)…',
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                  ]),
+          ),
+        ),
+        if (hasContent)
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              icon: const Icon(Icons.edit_rounded, size: 14),
+              label: const Text('Bearbeiten'),
+              onPressed: () => _openEditor(context),
+            ),
+          ),
         const SizedBox(height: 20),
-        FilledButton.icon(
-          icon: const Icon(Icons.save_rounded),
-          label: const Text('Speichern'),
-          onPressed: () {
-            if (_titleCtrl.text.trim().isEmpty) return;
-            widget.onTextEntry(_type, _titleCtrl.text.trim(), _contentCtrl.text.trim());
-          },
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            icon: const Icon(Icons.save_rounded),
+            label: const Text('Speichern'),
+            onPressed: () {
+              if (_titleCtrl.text.trim().isEmpty) return;
+              widget.onTextEntry(
+                _type,
+                _titleCtrl.text.trim(),
+                _htmlContent.trim(),
+                _selectedTreatmentTypeId,
+              );
+            },
+          ),
         ),
       ]),
     );
@@ -610,6 +743,15 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
     'other'     => 'Sonstiges',
     _           => 'Notiz',
   };
+
+  Color _parseColor(String hex) {
+    try {
+      final h = hex.replaceAll('#', '');
+      return Color(int.parse('FF$h', radix: 16));
+    } catch (_) {
+      return AppTheme.primary;
+    }
+  }
 }
 
 class _OptionTile extends StatelessWidget {
@@ -723,10 +865,20 @@ class _TimelineCard extends StatelessWidget {
               ),
               if ((entry['content'] as String? ?? '').isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-                  child: Text(entry['content'] as String,
-                    style: Theme.of(context).textTheme.bodySmall,
-                    maxLines: 3, overflow: TextOverflow.ellipsis),
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
+                  child: Html(
+                    data: entry['content'] as String,
+                    style: {
+                      'body': Style(
+                        margin: Margins.zero,
+                        padding: HtmlPaddings.zero,
+                        fontSize: FontSize(12),
+                        color: Theme.of(context).textTheme.bodySmall?.color,
+                        maxLines: 5,
+                        textOverflow: TextOverflow.ellipsis,
+                      ),
+                    },
+                  ),
                 ),
               // Media preview
               if (isMedia && fullUrl != null)
