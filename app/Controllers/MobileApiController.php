@@ -285,8 +285,21 @@ class MobileApiController
         $patient = $this->patients->findWithOwner($id);
         if (!$patient) $this->error('Patient nicht gefunden.', 404);
 
-        $timeline = $this->patients->getTimeline($id);
+        $rawTimeline  = $this->patients->getTimeline($id);
         $invoiceStats = $this->invoices->getInvoiceStatsByPatientId($id);
+
+        // Expose attachment as file_url so Flutter can render media
+        $timeline = array_map(static function (array $e): array {
+            if (!empty($e['attachment'])) {
+                $att = $e['attachment'];
+                // attachment may be just a filename (legacy) or a full relative path
+                if (!str_starts_with($att, '/')) {
+                    $att = '/storage/patients/' . $e['patient_id'] . '/timeline/' . $att;
+                }
+                $e['file_url'] = $att;
+            }
+            return $e;
+        }, $rawTimeline);
 
         $patient['timeline']      = $timeline;
         $patient['invoice_stats'] = $invoiceStats;
@@ -384,6 +397,90 @@ class MobileApiController
         ]);
 
         $this->json(['id' => $entryId, 'success' => true], 201);
+    }
+
+    public function patientTimelineUpload(array $params = []): void
+    {
+        $this->cors();
+        $user      = $this->requireAuth();
+        $patientId = (int)($params['id'] ?? 0);
+        $patient   = $this->patients->findById($patientId);
+        if (!$patient) $this->error('Patient nicht gefunden.', 404);
+
+        if (empty($_FILES['file'])) $this->error('Keine Datei empfangen.');
+        $file    = $_FILES['file'];
+        if ($file['error'] !== UPLOAD_ERR_OK) $this->error('Upload-Fehler: ' . $file['error']);
+
+        $type    = trim($_POST['type'] ?? 'document');
+        $title   = trim($_POST['title'] ?? $file['name']);
+        $content = trim($_POST['content'] ?? '');
+        $date    = $_POST['entry_date'] ?? date('Y-m-d');
+
+        // Determine upload directory (same path as web PatientController)
+        $storageBase = defined('STORAGE_PATH') ? rtrim(STORAGE_PATH, '/') : rtrim(dirname(__DIR__, 2) . '/storage', '/');
+        $uploadDir   = $storageBase . '/patients/' . $patientId . '/timeline/';
+        if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+
+        // Validate by real MIME type
+        $finfo       = new \finfo(FILEINFO_MIME_TYPE);
+        $uploadMime  = $finfo->file($file['tmp_name']);
+        $allowedMimes = [
+            'image/jpeg','image/png','image/gif','image/webp',
+            'video/mp4','video/webm','video/ogg','video/quicktime',
+            'video/x-msvideo','video/x-matroska','video/x-m4v','video/mpeg',
+            'application/pdf','application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'text/plain',
+        ];
+        if (!in_array($uploadMime, $allowedMimes, true)) $this->error('Dateityp nicht erlaubt: ' . $uploadMime);
+
+        $extMap = [
+            'image/jpeg'=>'jpg','image/png'=>'png','image/gif'=>'gif','image/webp'=>'webp',
+            'video/mp4'=>'mp4','video/webm'=>'webm','video/ogg'=>'ogv','video/quicktime'=>'mov',
+            'video/x-msvideo'=>'avi','video/x-matroska'=>'mkv','video/x-m4v'=>'m4v','video/mpeg'=>'mpeg',
+            'application/pdf'=>'pdf','application/msword'=>'doc',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'=>'docx',
+            'text/plain'=>'txt',
+        ];
+        $ext      = $extMap[$uploadMime] ?? 'bin';
+        $filename = bin2hex(random_bytes(16)) . '.' . $ext;
+        $dest     = $uploadDir . $filename;
+        if (!move_uploaded_file($file['tmp_name'], $dest)) $this->error('Datei konnte nicht gespeichert werden.');
+
+        $fileUrl  = '/storage/patients/' . $patientId . '/timeline/' . $filename;
+
+        $entryId = $this->patients->addTimelineEntry([
+            'patient_id'        => $patientId,
+            'type'              => $type,
+            'treatment_type_id' => null,
+            'title'             => $title ?: $file['name'],
+            'content'           => $content,
+            'status_badge'      => null,
+            'attachment'        => $fileUrl,
+            'entry_date'        => $date,
+            'user_id'           => $user['user_id'],
+        ]);
+
+        $this->json(['id' => $entryId, 'file_url' => $fileUrl, 'success' => true], 201);
+    }
+
+    public function patientTimelineDelete(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+        $patientId = (int)($params['id']  ?? 0);
+        $entryId   = (int)($params['eid'] ?? 0);
+
+        try {
+            $this->db->execute(
+                "DELETE FROM patient_timeline WHERE id = ? AND patient_id = ?",
+                [$entryId, $patientId]
+            );
+        } catch (\Throwable $e) {
+            $this->error('Eintrag konnte nicht gelöscht werden.');
+        }
+
+        $this->json(['success' => true]);
     }
 
     /* ══════════════════════════════════════════════════════

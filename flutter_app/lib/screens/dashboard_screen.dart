@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import '../core/theme.dart';
 import '../widgets/shimmer_list.dart';
+import '../widgets/animated_stat_card.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -155,15 +156,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildStatsRow(bool isTablet, Map<String, dynamic> d) {
     final cards = [
-      _StatCard(label: 'Patienten', value: '${d['patients_total'] ?? 0}',
+      AnimatedStatCard(label: 'Patienten', value: '${d['patients_total'] ?? 0}',
           icon: Icons.pets_rounded, color: AppTheme.primary,
           sub: '+${d['patients_new'] ?? 0} neu'),
-      _StatCard(label: 'Tierhalter', value: '${d['owners_total'] ?? 0}',
+      AnimatedStatCard(label: 'Tierhalter', value: '${d['owners_total'] ?? 0}',
           icon: Icons.person_rounded, color: AppTheme.secondary),
-      _StatCard(label: 'Heute', value: '${d['today_apts'] ?? 0}',
+      AnimatedStatCard(label: 'Heute', value: '${d['today_apts'] ?? 0}',
           icon: Icons.today_rounded, color: AppTheme.tertiary,
           sub: 'Termine'),
-      _StatCard(label: 'Ausstehend', value: '${d['upcoming_apts'] ?? 0}',
+      AnimatedStatCard(label: 'Ausstehend', value: '${d['upcoming_apts'] ?? 0}',
           icon: Icons.event_rounded, color: AppTheme.warning,
           sub: 'geplant'),
     ];
@@ -322,43 +323,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 // ── Sub-widgets ─────────────────────────────────────────────────────────────
-
-class _StatCard extends StatelessWidget {
-  final String label, value;
-  final IconData icon;
-  final Color color;
-  final String? sub;
-  const _StatCard({required this.label, required this.value, required this.icon, required this.color, this.sub});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.15)),
-      ),
-      padding: const EdgeInsets.all(14),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(icon, color: color, size: 20),
-        ),
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: color, letterSpacing: -0.5)),
-          Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500)),
-          if (sub != null) Text(sub!, style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 10,
-          )),
-        ]),
-      ]),
-    );
-  }
-}
 
 class _ChartCard extends StatelessWidget {
   final String title, subtitle;

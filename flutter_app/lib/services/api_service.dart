@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -120,6 +121,28 @@ class ApiService {
 
   Future<Map<String, dynamic>> patientTimelineCreate(int id, Map<String, dynamic> data) async =>
       Map<String, dynamic>.from(await post('/patients/$id/timeline', data));
+
+  Future<Map<String, dynamic>> patientTimelineUpload(int patientId, File file, {
+    required String title,
+    required String type,
+    String content = '',
+  }) async {
+    final token = await getToken();
+    final uri = _uri('/patients/$patientId/timeline/upload');
+    final req = http.MultipartRequest('POST', uri)
+      ..headers.addAll({'Authorization': 'Bearer $token', 'Accept': 'application/json'})
+      ..fields['title'] = title
+      ..fields['type'] = type
+      ..fields['content'] = content
+      ..fields['entry_date'] = DateTime.now().toIso8601String().substring(0, 10)
+      ..files.add(await http.MultipartFile.fromPath('file', file.path));
+    final streamed = await req.send();
+    final res = await http.Response.fromStream(streamed);
+    return Map<String, dynamic>.from(_parse(res) as Map);
+  }
+
+  Future<void> patientTimelineDelete(int patientId, int entryId) async =>
+      await post('/patients/$patientId/timeline/$entryId/delete', {});
 
   /* ── Owners ── */
 

@@ -28,8 +28,10 @@ $router->get('/api/mobile/patients',          [MobileApiController::class, 'pati
 $router->post('/api/mobile/patients',         [MobileApiController::class, 'patientCreate']);
 $router->get('/api/mobile/patients/{id}',     [MobileApiController::class, 'patientShow']);
 $router->post('/api/mobile/patients/{id}',    [MobileApiController::class, 'patientUpdate']);
-$router->get('/api/mobile/patients/{id}/timeline',  [MobileApiController::class, 'patientTimeline']);
-$router->post('/api/mobile/patients/{id}/timeline', [MobileApiController::class, 'patientTimelineCreate']);
+$router->get('/api/mobile/patients/{id}/timeline',          [MobileApiController::class, 'patientTimeline']);
+$router->post('/api/mobile/patients/{id}/timeline',         [MobileApiController::class, 'patientTimelineCreate']);
+$router->post('/api/mobile/patients/{id}/timeline/upload',  [MobileApiController::class, 'patientTimelineUpload']);
+$router->post('/api/mobile/patients/{id}/timeline/{eid}/delete', [MobileApiController::class, 'patientTimelineDelete']);
 
 $router->get('/api/mobile/owners',        [MobileApiController::class, 'ownersList']);
 $router->post('/api/mobile/owners',       [MobileApiController::class, 'ownerCreate']);
