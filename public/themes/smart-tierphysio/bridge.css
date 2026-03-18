@@ -936,3 +936,26 @@ img.custom-logo {
 .invoice-badge-pulse {
     animation: invoiceBadgePulse 1.2s ease-out infinite !important;
 }
+
+/* ── CSS-Vollbildmodus (seitenübergreifend persistent via set-fullscreen Klasse) ── */
+html.set-fullscreen,
+html.set-fullscreen body {
+    overflow: hidden !important;
+}
+html.set-fullscreen .app-wrap {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 1 !important;
+    overflow: hidden !important;
+}
+html.set-fullscreen .app-content {
+    height: calc(100vh - 64px) !important;
+    overflow-y: auto !important;
+}
+/* Flip button icons when fullscreen is active */
+html.set-fullscreen [data-class="set-fullscreen"] .sa-fullscreen-on  { display: none !important; }
+html.set-fullscreen [data-class="set-fullscreen"] .sa-fullscreen-off { display: inline-block !important; }
+html:not(.set-fullscreen) [data-class="set-fullscreen"] .sa-fullscreen-on  { display: inline-block !important; }
+html:not(.set-fullscreen) [data-class="set-fullscreen"] .sa-fullscreen-off { display: none !important; }

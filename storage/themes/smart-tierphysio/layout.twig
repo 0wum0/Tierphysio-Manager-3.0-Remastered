@@ -287,9 +287,9 @@
             </svg>
         </button>
 
-        {# Fullscreen #}
+        {# Fullscreen — CSS-based, persists across page navigation via saveloadscript.js #}
         <button type="button" class="btn btn-system d-none d-sm-block d-sm-none d-md-none d-lg-block"
-                data-action="app-fullscreen" aria-label="Vollbild" aria-pressed="false">
+                data-action="toggle" data-class="set-fullscreen" aria-label="Vollbild">
             <svg class="sa-icon sa-icon-2x sa-fullscreen-on">
                 <use href="/themes/smart-tierphysio/icons/sprite.svg#minimize"></use>
             </svg>
@@ -1750,48 +1750,6 @@
     /* Initial badge on page load */
     refreshBadgeOnly();
     setInterval(refreshBadgeOnly, 60000);
-})();
-</script>
-
-<script>
-/* ── Vollbild-Persistenz: wiederherstellen nach Seitenwechsel ── */
-(function(){
-    /* Sync localStorage when user presses Escape to exit fullscreen */
-    document.addEventListener('fullscreenchange', function(){
-        var isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
-        if(!isFs){
-            localStorage.removeItem('appFullscreen');
-            /* Update button aria-pressed */
-            document.querySelectorAll('[data-action="app-fullscreen"]').forEach(function(btn){
-                btn.setAttribute('aria-pressed','false');
-            });
-        }
-    });
-
-    if(localStorage.getItem('appFullscreen') !== 'true') return;
-
-    /* Re-enter fullscreen on first user interaction (browser requires a gesture) */
-    function tryRestore(e){
-        document.removeEventListener('click',    tryRestore, true);
-        document.removeEventListener('keydown',  tryRestore, true);
-        document.removeEventListener('touchend', tryRestore, true);
-
-        var el = document.documentElement;
-        var req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
-        if(req){
-            req.call(el).then(function(){
-                document.querySelectorAll('[data-action="app-fullscreen"]').forEach(function(btn){
-                    btn.setAttribute('aria-pressed','true');
-                });
-            }).catch(function(){
-                localStorage.removeItem('appFullscreen');
-            });
-        }
-    }
-
-    document.addEventListener('click',    tryRestore, true);
-    document.addEventListener('keydown',  tryRestore, true);
-    document.addEventListener('touchend', tryRestore, true);
 })();
 </script>
 
