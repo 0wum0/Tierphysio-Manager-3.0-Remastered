@@ -227,3 +227,6 @@ $router->get('/patients/{file}', function(array $p) {
 $router->get('/patient-photos/{id}/{file}', function(array $p) {
     serveStorageFile('patients/' . (int)($p['id'] ?? 0), $p['file'] ?? '');
 });
+$router->get('/patient-timeline/{id}/{file}', function(array $p) {
+    serveStorageFile('patients/' . (int)($p['id'] ?? 0) . '/timeline', $p['file'] ?? '');
+});

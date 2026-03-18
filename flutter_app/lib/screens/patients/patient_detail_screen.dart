@@ -671,9 +671,11 @@ class _TimelineCard extends StatelessWidget {
       dateStr = DateFormat('dd.MM.yy', 'de_DE').format(d);
     } catch (_) {}
 
-    final fileUrl = entry['file_url'] as String?;
-    final isMedia = (type == 'photo' || type == 'video') && fileUrl != null;
-    final fullUrl = fileUrl != null ? (fileUrl.startsWith('http') ? fileUrl : '$baseUrl$fileUrl') : null;
+    final fileUrl  = entry['file_url'] as String?;
+    final hasFile  = fileUrl != null && fileUrl.isNotEmpty;
+    final isMedia  = hasFile && (type == 'photo' || type == 'video' || type == 'document');
+    final isPdf    = type == 'document';
+    final fullUrl  = hasFile ? (fileUrl.startsWith('http') ? fileUrl : '$baseUrl$fileUrl') : null;
 
     return IntrinsicHeight(
       child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -730,7 +732,7 @@ class _TimelineCard extends StatelessWidget {
               if (isMedia && fullUrl != null)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-                  child: MediaThumbnail(url: fullUrl, isVideo: type == 'video'),
+                  child: MediaThumbnail(url: fullUrl, isVideo: type == 'video', isPdf: isPdf),
                 ),
               if (entry['user_name'] != null)
                 Padding(

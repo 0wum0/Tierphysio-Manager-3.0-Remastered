@@ -297,12 +297,9 @@ class MobileApiController
         // Expose attachment as file_url so Flutter can render media
         $timeline = array_map(static function (array $e): array {
             if (!empty($e['attachment'])) {
-                $att = $e['attachment'];
-                // attachment may be just a filename (legacy) or a full relative path
-                if (!str_starts_with($att, '/')) {
-                    $att = '/storage/patients/' . $e['patient_id'] . '/timeline/' . $att;
-                }
-                $e['file_url'] = $att;
+                $att      = $e['attachment'];
+                $filename = basename($att);
+                $e['file_url'] = '/patient-timeline/' . $e['patient_id'] . '/' . $filename;
             }
             return $e;
         }, $rawTimeline);

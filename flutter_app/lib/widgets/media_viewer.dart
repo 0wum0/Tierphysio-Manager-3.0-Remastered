@@ -1,16 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
 
 /// Thumbnail shown in the timeline card — tappable to full-screen
 class MediaThumbnail extends StatelessWidget {
   final String url;
   final bool isVideo;
+  final bool isPdf;
 
-  const MediaThumbnail({super.key, required this.url, required this.isVideo});
+  const MediaThumbnail({
+    super.key,
+    required this.url,
+    required this.isVideo,
+    this.isPdf = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    if (isPdf) {
+      return GestureDetector(
+        onTap: () async {
+          final uri = Uri.parse(url);
+          if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+        },
+        child: Container(
+          height: 64,
+          decoration: BoxDecoration(
+            color: Colors.red.shade50,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.red.shade200),
+          ),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(Icons.picture_as_pdf_rounded, color: Colors.red.shade700, size: 28),
+            const SizedBox(width: 10),
+            Text('PDF öffnen', style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.w600)),
+          ]),
+        ),
+      );
+    }
+
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
@@ -68,17 +97,15 @@ class MediaViewerScreen extends StatefulWidget {
 
 class _MediaViewerScreenState extends State<MediaViewerScreen> {
   VideoPlayerController? _vpc;
-  bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
     if (widget.isVideo) {
-      _vpc = VideoPlayerController.networkUrl(Uri.parse(widget.url))
-        ..initialize().then((_) {
-          if (mounted) setState(() => _initialized = true);
-          _vpc!.play();
-        });
+      _vpc = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+      _vpc!.initialize().then((_) {
+        if (mounted) _vpc!.play();
+      });
     }
   }
 
@@ -121,38 +148,38 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
   }
 
   Widget _buildVideo() {
-    if (!_initialized || _vpc == null) {
-      return const CircularProgressIndicator(color: Colors.white);
-    }
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _vpc!.value.isPlaying ? _vpc!.pause() : _vpc!.play();
-        });
-      },
-      child: Stack(alignment: Alignment.center, children: [
-        AspectRatio(
-          aspectRatio: _vpc!.value.aspectRatio,
-          child: VideoPlayer(_vpc!),
-        ),
-        AnimatedOpacity(
-          opacity: _vpc!.value.isPlaying ? 0.0 : 1.0,
-          duration: const Duration(milliseconds: 300),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.4),
-              shape: BoxShape.circle,
+    final vpc = _vpc;
+    if (vpc == null) return const CircularProgressIndicator(color: Colors.white);
+    return ValueListenableBuilder<VideoPlayerValue>(
+      valueListenable: vpc,
+      builder: (_, value, __) {
+        if (!value.isInitialized) {
+          return const CircularProgressIndicator(color: Colors.white);
+        }
+        return GestureDetector(
+          onTap: () => value.isPlaying ? vpc.pause() : vpc.play(),
+          child: Stack(alignment: Alignment.center, children: [
+            AspectRatio(
+              aspectRatio: value.aspectRatio,
+              child: VideoPlayer(vpc),
             ),
-            padding: const EdgeInsets.all(16),
-            child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 48),
-          ),
-        ),
-        Positioned(
-          bottom: 0, left: 0, right: 0,
-          child: VideoProgressIndicator(_vpc!, allowScrubbing: true,
-            colors: const VideoProgressColors(playedColor: Colors.white)),
-        ),
-      ]),
+            if (!value.isPlaying)
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  shape: BoxShape.circle,
+                ),
+                padding: const EdgeInsets.all(16),
+                child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 48),
+              ),
+            Positioned(
+              bottom: 0, left: 0, right: 0,
+              child: VideoProgressIndicator(vpc, allowScrubbing: true,
+                colors: const VideoProgressColors(playedColor: Colors.white)),
+            ),
+          ]),
+        );
+      },
     );
   }
 }
