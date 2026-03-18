@@ -45,6 +45,18 @@ dependencies:
   # Pull-to-refresh
   easy_refresh: ^3.3.3
 
+  # Charts
+  fl_chart: ^0.70.0
+
+  # SVG
+  flutter_svg: ^2.0.9
+
+  # Shimmer loading
+  shimmer: ^3.0.0
+
+  # Animations
+  animations: ^2.0.11
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -54,3 +66,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/icons/

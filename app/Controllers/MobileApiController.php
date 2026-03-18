@@ -213,8 +213,36 @@ class MobileApiController
             );
         } catch (\Throwable) {}
 
+        // Monthly revenue for last 6 months
+        $monthlyRevenue = [];
+        try {
+            $rows = $this->db->fetchAll(
+                "SELECT DATE_FORMAT(issue_date, '%Y-%m') AS ym,
+                        DATE_FORMAT(issue_date, '%b')     AS month,
+                        SUM(total_gross)                  AS revenue
+                 FROM invoices
+                 WHERE status = 'paid'
+                   AND issue_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+                 GROUP BY ym, month
+                 ORDER BY ym ASC"
+            );
+            foreach ($rows as $r) {
+                $monthlyRevenue[] = [
+                    'month'   => $r['month'],
+                    'revenue' => round((float)$r['revenue'], 2),
+                ];
+            }
+        } catch (\Throwable) {}
+
+        $userName = '';
+        if (!empty($this->authUser)) {
+            $userName = trim(($this->authUser['first_name'] ?? '') . ' ' . ($this->authUser['last_name'] ?? ''));
+            if ($userName === '') $userName = $this->authUser['email'] ?? '';
+        }
+
         $this->json([
             'company_name'    => $settings['company_name'] ?? '',
+            'user_name'       => $userName,
             'patients_total'  => $patientsTotal,
             'patients_new'    => $patientsNew,
             'owners_total'    => $ownersTotal,
@@ -226,6 +254,7 @@ class MobileApiController
             'overdue_invoices'=> $stats['overdue_count'],
             'open_amount'     => round($stats['open_amount'], 2),
             'overdue_amount'  => round($stats['overdue_amount'], 2),
+            'monthly_revenue' => $monthlyRevenue,
         ]);
     }
 

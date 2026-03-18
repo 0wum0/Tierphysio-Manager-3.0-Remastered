@@ -1,1 +1,0 @@
- C:\\Users\\flori\\OneDrive\\Dokumente\\GitHub\\Tierphysio-Manager-3.0-Remastered\\flutter_app\\.dart_tool\\flutter_build\\710cd7503b6bdc3639812d7a767e5adf\\native_assets.json: 
