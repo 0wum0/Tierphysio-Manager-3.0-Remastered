@@ -1144,9 +1144,28 @@
 (function(){
     var _formDataLoaded = false;
     var _gapt_csrf     = document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token }}';
+    var ssGaptOwner   = null;
+    var ssGaptPatient = null;
 
     function pad(n){ return String(n).padStart(2,'0'); }
     function fmtLocal(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+pad(d.getHours())+':'+pad(d.getMinutes()); }
+
+    function initGaptSS() {
+        if (typeof window.SearchableSelect === 'undefined') return;
+        var oSel = document.getElementById('gapt-owner');
+        var pSel = document.getElementById('gapt-patient');
+        if (!oSel || !pSel) return;
+        /* Only init once */
+        if (ssGaptOwner) { ssGaptOwner.syncFromSelect(); ssGaptPatient.syncFromSelect(); return; }
+        ssGaptPatient = new SearchableSelect({ target: pSel, placeholder: '— kein Patient —' });
+        ssGaptOwner   = new SearchableSelect({
+            target: oSel,
+            placeholder: '— kein Tierhalter —',
+            onSelect: function(ownerId) {
+                oSel.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
+    }
 
     function loadFormData() {
         if (_formDataLoaded) return;
@@ -1162,7 +1181,7 @@
                     pSel.appendChild(o);
                 });
                 (data.owners||[]).forEach(function(o){
-                    var opt = new Option(o.first_name + ' ' + o.last_name, o.id);
+                    var opt = new Option(o.last_name + ', ' + o.first_name, o.id);
                     oSel.appendChild(opt);
                 });
                 (data.treatment_types||[]).forEach(function(tt){
@@ -1170,6 +1189,7 @@
                     if (tt.color) opt.dataset.color = tt.color;
                     tSel.appendChild(opt);
                 });
+                initGaptSS();
             })
             .catch(function(){});
     }
@@ -1222,6 +1242,7 @@
             });
             // Restore selection if possible
             if (currentPatientId) patientSelect.value = currentPatientId;
+            if (ssGaptPatient) ssGaptPatient.syncFromSelect();
             updateGlobalAutoTitle();
             return;
         }
@@ -1252,6 +1273,7 @@
                     patientSelect.value = currentPatientId;
                 }
             }
+            if (ssGaptPatient) ssGaptPatient.syncFromSelect();
             updateGlobalAutoTitle();
         } catch (error) {
             console.error('Failed to load patients:', error);
@@ -1281,6 +1303,7 @@
                 if (ownerSelect.value != patient.owner_id) {
                     // Auto-select the owner
                     ownerSelect.value = patient.owner_id;
+                    if (ssGaptOwner) ssGaptOwner.syncFromSelect();
                     
                     // Store current patient selection
                     const currentPatientId = patientSelect.value;
@@ -1297,6 +1320,7 @@
                         if (exists) {
                             patientSelect.value = currentPatientId;
                         }
+                        if (ssGaptPatient) ssGaptPatient.syncFromSelect();
                         updateGlobalAutoTitle();
                     }, 200);
                 } else {
