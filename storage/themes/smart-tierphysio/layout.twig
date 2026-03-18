@@ -1889,7 +1889,13 @@ window.SearchableSelect = (function(){
         build();
         syncFromSelect();
 
-        display.addEventListener('click', function(){ wrap.classList.contains('open') ? close() : open(); });
+        /* Use mousedown to open so focus-blur ordering doesn't race */
+        display.addEventListener('mousedown', function(e){
+            e.preventDefault(); /* prevent blur on search input */
+            wrap.classList.contains('open') ? close() : open();
+        });
+        /* Stop all clicks inside the whole widget from bubbling to document */
+        wrap.addEventListener('click', function(e){ e.stopPropagation(); });
         display.addEventListener('keydown', function(e){
             if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); }
             if(e.key==='Escape') close();

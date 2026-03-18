@@ -256,7 +256,7 @@
             const ttPrice = opt.dataset.price;
             const ttName  = opt.textContent.trim();
             if (desc && !desc.value) desc.value = ttName;
-            if (price && ttPrice && parseFloat(ttPrice) > 0) {
+            if (price && ttPrice !== undefined && ttPrice !== '') {
                 price.value = parseFloat(ttPrice).toFixed(2);
                 recalc();
             }
@@ -294,10 +294,11 @@
 
     /* ── Add position ── */
     document.getElementById('add-position').addEventListener('click', function () {
-        const tpl  = document.getElementById('position-row-template');
-        const node = tpl.content.cloneNode(true);
-        const row  = node.querySelector('.position-row');
-        document.getElementById('positions-container').appendChild(node);
+        const tpl       = document.getElementById('position-row-template');
+        const node      = tpl.content.cloneNode(true);
+        const container = document.getElementById('positions-container');
+        container.appendChild(node);
+        const row = container.querySelectorAll('.position-row')[container.querySelectorAll('.position-row').length - 1];
         bindTreatmentSelect(row);
         row.querySelector('.pos-qty')?.addEventListener('input', recalc);
         row.querySelector('.pos-price')?.addEventListener('input', recalc);
