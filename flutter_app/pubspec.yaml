@@ -1,0 +1,56 @@
+name: tierphysio_manager
+description: Tierphysiotherapie Manager Mobile App
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # HTTP
+  http: ^1.2.0
+
+  # Secure storage for token
+  flutter_secure_storage: ^9.0.0
+
+  # Shared preferences
+  shared_preferences: ^2.2.2
+
+  # Navigation
+  go_router: ^13.0.0
+
+  # State management
+  provider: ^6.1.1
+
+  # Date/Time formatting
+  intl: ^0.19.0
+
+  # Icons
+  cupertino_icons: ^1.0.6
+
+  # URL launcher (for phone/email)
+  url_launcher: ^6.2.4
+
+  # Calendar
+  table_calendar: ^3.1.0
+
+  # Image/cache
+  cached_network_image: ^3.3.1
+
+  # Pull-to-refresh
+  easy_refresh: ^3.3.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/

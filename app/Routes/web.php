@@ -14,8 +14,40 @@ use App\Controllers\NotificationController;
 use App\Controllers\CronController;
 use App\Controllers\HomeworkController;
 use App\Controllers\ReminderDunningController;
+use App\Controllers\MobileApiController;
 
 /** @var \App\Core\Router $router */
+
+// ── Mobile REST API (Bearer Token) ───────────────────────────────────
+$router->post('/api/mobile/login',  [MobileApiController::class, 'login']);
+$router->post('/api/mobile/logout', [MobileApiController::class, 'logout']);
+$router->get('/api/mobile/me',      [MobileApiController::class, 'me']);
+$router->get('/api/mobile/dashboard', [MobileApiController::class, 'dashboard']);
+
+$router->get('/api/mobile/patients',          [MobileApiController::class, 'patientsList']);
+$router->post('/api/mobile/patients',         [MobileApiController::class, 'patientCreate']);
+$router->get('/api/mobile/patients/{id}',     [MobileApiController::class, 'patientShow']);
+$router->post('/api/mobile/patients/{id}',    [MobileApiController::class, 'patientUpdate']);
+$router->get('/api/mobile/patients/{id}/timeline',  [MobileApiController::class, 'patientTimeline']);
+$router->post('/api/mobile/patients/{id}/timeline', [MobileApiController::class, 'patientTimelineCreate']);
+
+$router->get('/api/mobile/owners',        [MobileApiController::class, 'ownersList']);
+$router->post('/api/mobile/owners',       [MobileApiController::class, 'ownerCreate']);
+$router->get('/api/mobile/owners/{id}',   [MobileApiController::class, 'ownerShow']);
+$router->post('/api/mobile/owners/{id}',  [MobileApiController::class, 'ownerUpdate']);
+
+$router->get('/api/mobile/invoices',             [MobileApiController::class, 'invoicesList']);
+$router->post('/api/mobile/invoices',            [MobileApiController::class, 'invoiceCreate']);
+$router->get('/api/mobile/invoices/{id}',        [MobileApiController::class, 'invoiceShow']);
+$router->post('/api/mobile/invoices/{id}/status',[MobileApiController::class, 'invoiceUpdateStatus']);
+
+$router->get('/api/mobile/appointments',      [MobileApiController::class, 'appointmentsList']);
+$router->post('/api/mobile/appointments',     [MobileApiController::class, 'appointmentCreate']);
+$router->post('/api/mobile/appointments/{id}',[MobileApiController::class, 'appointmentUpdate']);
+$router->post('/api/mobile/appointments/{id}/loeschen', [MobileApiController::class, 'appointmentDelete']);
+
+$router->get('/api/mobile/treatment-types', [MobileApiController::class, 'treatmentTypes']);
+$router->get('/api/mobile/settings',        [MobileApiController::class, 'settingsGet']);
 
 // Hausaufgaben Plan-Meta API
 $router->get('/api/patients/{patient_id}/homework/plan-meta', [HomeworkController::class, 'getPlanMeta'], ['auth']);
