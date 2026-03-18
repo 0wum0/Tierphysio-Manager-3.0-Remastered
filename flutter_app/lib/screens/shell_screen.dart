@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../services/auth_service.dart';
+import '../services/api_service.dart';
 import '../core/theme.dart';
 
 class ShellScreen extends StatefulWidget {
@@ -14,7 +15,9 @@ class ShellScreen extends StatefulWidget {
 }
 
 class _ShellScreenState extends State<ShellScreen> {
+  final _api = ApiService();
   int _selectedIndex = 0;
+  int _unreadMessages = 0;
 
   static const _routes = [
     '/dashboard',
@@ -22,11 +25,49 @@ class _ShellScreenState extends State<ShellScreen> {
     '/tierhalter',
     '/rechnungen',
     '/kalender',
+    '/nachrichten',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _pollUnread();
+  }
+
+  Future<void> _pollUnread() async {
+    try {
+      final count = await _api.messageUnread();
+      if (mounted) setState(() => _unreadMessages = count);
+    } catch (_) {}
+    // Re-poll every 60 seconds
+    Future.delayed(const Duration(seconds: 60), () {
+      if (mounted) _pollUnread();
+    });
+  }
 
   void _onDestinationSelected(int idx) {
     setState(() => _selectedIndex = idx);
     context.go(_routes[idx]);
+    // Refresh unread count when navigating to messages
+    if (idx == 5) {
+      Future.delayed(const Duration(milliseconds: 800), () {
+        if (mounted) _pollUnread();
+      });
+    }
+  }
+
+  Widget _msgIcon({bool selected = false, bool rail = false}) {
+    final icon = Icon(
+      selected ? Icons.chat_rounded : Icons.chat_outlined,
+      size: rail ? 24 : 22,
+    );
+    if (_unreadMessages == 0) return icon;
+    return Badge(
+      label: Text('$_unreadMessages',
+          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700)),
+      backgroundColor: AppTheme.danger,
+      child: icon,
+    );
   }
 
   @override
@@ -77,12 +118,17 @@ class _ShellScreenState extends State<ShellScreen> {
                 ),
               ),
             ),
-            destinations: const [
-              NavigationRailDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard_rounded), label: Text('Dashboard')),
-              NavigationRailDestination(icon: Icon(Icons.pets_outlined), selectedIcon: Icon(Icons.pets_rounded), label: Text('Patienten')),
-              NavigationRailDestination(icon: Icon(Icons.person_outline_rounded), selectedIcon: Icon(Icons.person_rounded), label: Text('Tierhalter')),
-              NavigationRailDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: Text('Rechnungen')),
-              NavigationRailDestination(icon: Icon(Icons.calendar_month_outlined), selectedIcon: Icon(Icons.calendar_month_rounded), label: Text('Kalender')),
+            destinations: [
+              const NavigationRailDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard_rounded), label: Text('Dashboard')),
+              const NavigationRailDestination(icon: Icon(Icons.pets_outlined), selectedIcon: Icon(Icons.pets_rounded), label: Text('Patienten')),
+              const NavigationRailDestination(icon: Icon(Icons.person_outline_rounded), selectedIcon: Icon(Icons.person_rounded), label: Text('Tierhalter')),
+              const NavigationRailDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: Text('Rechnungen')),
+              const NavigationRailDestination(icon: Icon(Icons.calendar_month_outlined), selectedIcon: Icon(Icons.calendar_month_rounded), label: Text('Kalender')),
+              NavigationRailDestination(
+                icon: _msgIcon(rail: true),
+                selectedIcon: _msgIcon(selected: true, rail: true),
+                label: const Text('Nachrichten'),
+              ),
             ],
           ),
           VerticalDivider(width: 1, color: Theme.of(context).dividerColor),
@@ -108,6 +154,11 @@ class _ShellScreenState extends State<ShellScreen> {
           const NavigationDestination(icon: Icon(Icons.person_outline_rounded), selectedIcon: Icon(Icons.person_rounded), label: 'Tierhalter'),
           const NavigationDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: 'Rechnungen'),
           const NavigationDestination(icon: Icon(Icons.calendar_month_outlined), selectedIcon: Icon(Icons.calendar_month_rounded), label: 'Kalender'),
+          NavigationDestination(
+            icon: _msgIcon(),
+            selectedIcon: _msgIcon(selected: true),
+            label: 'Nachrichten',
+          ),
         ],
       ),
     );

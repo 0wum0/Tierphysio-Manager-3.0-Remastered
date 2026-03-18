@@ -195,6 +195,40 @@ class ApiService {
   Future<void> appointmentDelete(int id) async =>
       await post('/appointments/$id/loeschen', {});
 
+  /* ── Messaging ── */
+
+  Future<List<dynamic>> messageThreads() async =>
+      List<dynamic>.from(await get('/nachrichten'));
+
+  Future<int> messageUnread() async {
+    final data = await get('/nachrichten/ungelesen');
+    return (data as Map)['unread'] as int? ?? 0;
+  }
+
+  Future<Map<String, dynamic>> messageThread(int id) async =>
+      Map<String, dynamic>.from(await get('/nachrichten/$id'));
+
+  Future<Map<String, dynamic>> messageReply(int threadId, String body) async =>
+      Map<String, dynamic>.from(
+          await post('/nachrichten/$threadId/antworten', {'body': body}));
+
+  Future<Map<String, dynamic>> messageCreate({
+    required int ownerId,
+    required String subject,
+    required String body,
+  }) async =>
+      Map<String, dynamic>.from(await post('/nachrichten', {
+        'owner_id': ownerId,
+        'subject': subject,
+        'body': body,
+      }));
+
+  Future<void> messageSetStatus(int threadId, String status) async =>
+      await post('/nachrichten/$threadId/status', {'status': status});
+
+  Future<void> messageDelete(int threadId) async =>
+      await post('/nachrichten/$threadId/loeschen', {});
+
   /* ── Misc ── */
 
   Future<List<dynamic>> treatmentTypes() async =>

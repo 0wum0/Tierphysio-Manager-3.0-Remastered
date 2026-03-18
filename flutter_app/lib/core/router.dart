@@ -13,6 +13,8 @@ import '../screens/invoices/invoices_screen.dart';
 import '../screens/invoices/invoice_detail_screen.dart';
 import '../screens/invoices/invoice_form_screen.dart';
 import '../screens/calendar/calendar_screen.dart';
+import '../screens/messages/messages_screen.dart';
+import '../screens/messages/message_thread_screen.dart';
 
 class AppRouter {
   final AuthService authService;
@@ -69,6 +71,20 @@ class AppRouter {
           ),
 
           GoRoute(path: '/kalender', builder: (_, __) => const CalendarScreen()),
+
+          GoRoute(
+            path: '/nachrichten',
+            builder: (_, __) => const MessagesScreen(),
+            routes: [
+              GoRoute(
+                path: ':id',
+                builder: (_, s) => MessageThreadScreen(
+                  threadId: int.parse(s.pathParameters['id']!),
+                  prefill: s.extra is Map<String, dynamic> ? s.extra as Map<String, dynamic> : null,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     ],

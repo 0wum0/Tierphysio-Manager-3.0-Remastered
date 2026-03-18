@@ -820,4 +820,249 @@ class MobileApiController
         ];
         $this->json($safe);
     }
+
+    /* ══════════════════════════════════════════════════════
+       MESSAGING (portal_message_threads / portal_messages)
+    ══════════════════════════════════════════════════════ */
+
+    /** GET /api/mobile/nachrichten — list all threads for the logged-in admin */
+    public function messageThreads(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+
+        try {
+            $rows = $this->db->fetchAll(
+                "SELECT t.id, t.subject, t.status, t.last_message_at, t.created_at,
+                        CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
+                        o.id   AS owner_id,
+                        o.email AS owner_email,
+                        (SELECT COUNT(*) FROM portal_messages m
+                         WHERE m.thread_id = t.id AND m.is_read = 0
+                           AND m.sender_type = 'owner') AS unread_count,
+                        (SELECT m2.body FROM portal_messages m2
+                         WHERE m2.thread_id = t.id
+                         ORDER BY m2.created_at DESC LIMIT 1) AS last_body
+                 FROM portal_message_threads t
+                 JOIN owners o ON o.id = t.owner_id
+                 ORDER BY t.last_message_at DESC"
+            );
+        } catch (\Throwable) {
+            $this->json([]);
+            return;
+        }
+
+        $out = [];
+        foreach ($rows as $r) {
+            $out[] = [
+                'id'             => (int)$r['id'],
+                'subject'        => $r['subject'],
+                'status'         => $r['status'],
+                'last_message_at'=> $r['last_message_at'] ?? $r['created_at'],
+                'owner_id'       => (int)$r['owner_id'],
+                'owner_name'     => $r['owner_name'],
+                'owner_email'    => $r['owner_email'] ?? '',
+                'unread_count'   => (int)($r['unread_count'] ?? 0),
+                'last_body'      => $r['last_body'] ?? '',
+            ];
+        }
+        $this->json($out);
+    }
+
+    /** GET /api/mobile/nachrichten/ungelesen — total unread badge count */
+    public function messageUnread(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+
+        try {
+            $count = (int)$this->db->fetchColumn(
+                "SELECT COUNT(*) FROM portal_messages WHERE sender_type = 'owner' AND is_read = 0"
+            );
+        } catch (\Throwable) {
+            $count = 0;
+        }
+        $this->json(['unread' => $count]);
+    }
+
+    /** GET /api/mobile/nachrichten/{id} — thread + all messages, marks admin-read */
+    public function messageThread(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+
+        $id = (int)($params['id'] ?? 0);
+
+        try {
+            $thread = $this->db->fetch(
+                "SELECT t.*, CONCAT(o.first_name,' ',o.last_name) AS owner_name, o.email AS owner_email
+                 FROM portal_message_threads t
+                 JOIN owners o ON o.id = t.owner_id
+                 WHERE t.id = ? LIMIT 1",
+                [$id]
+            );
+            if (!$thread) $this->error('Thread nicht gefunden.', 404);
+
+            /* Mark owner messages as read */
+            $this->db->execute(
+                "UPDATE portal_messages SET is_read = 1
+                 WHERE thread_id = ? AND sender_type = 'owner' AND is_read = 0",
+                [$id]
+            );
+
+            $msgs = $this->db->fetchAll(
+                "SELECT m.*,
+                        CASE WHEN m.sender_type = 'admin'
+                             THEN COALESCE(u.name,'Team')
+                             ELSE CONCAT(o.first_name,' ',o.last_name)
+                        END AS sender_name
+                 FROM portal_messages m
+                 LEFT JOIN users u ON u.id = m.sender_id AND m.sender_type = 'admin'
+                 LEFT JOIN portal_message_threads t2 ON t2.id = m.thread_id
+                 LEFT JOIN owners o ON o.id = t2.owner_id AND m.sender_type = 'owner'
+                 WHERE m.thread_id = ?
+                 ORDER BY m.created_at ASC",
+                [$id]
+            );
+        } catch (\Throwable $e) {
+            $this->error('Fehler: ' . $e->getMessage(), 500);
+        }
+
+        $messages = [];
+        foreach ($msgs as $m) {
+            $messages[] = [
+                'id'          => (int)$m['id'],
+                'sender_type' => $m['sender_type'],
+                'sender_name' => $m['sender_name'] ?? '',
+                'body'        => $m['body'],
+                'is_read'     => (bool)$m['is_read'],
+                'created_at'  => $m['created_at'],
+            ];
+        }
+
+        $this->json([
+            'id'             => (int)$thread['id'],
+            'subject'        => $thread['subject'],
+            'status'         => $thread['status'],
+            'owner_id'       => (int)$thread['owner_id'],
+            'owner_name'     => $thread['owner_name'],
+            'last_message_at'=> $thread['last_message_at'],
+            'messages'       => $messages,
+        ]);
+    }
+
+    /** POST /api/mobile/nachrichten/{id}/antworten — admin replies to a thread */
+    public function messageReply(array $params = []): void
+    {
+        $this->cors();
+        $user = $this->requireAuth();
+
+        $id   = (int)($params['id'] ?? 0);
+        $body = trim((string)($this->body()['body'] ?? ''));
+        if ($body === '') $this->error('Nachricht darf nicht leer sein.', 422);
+
+        try {
+            $thread = $this->db->fetch(
+                "SELECT * FROM portal_message_threads WHERE id = ? LIMIT 1", [$id]
+            );
+            if (!$thread) $this->error('Thread nicht gefunden.', 404);
+
+            $this->db->execute(
+                "INSERT INTO portal_messages (thread_id, sender_type, sender_id, body, is_read, created_at)
+                 VALUES (?, 'admin', ?, ?, 0, NOW())",
+                [$id, (int)$user['user_id'], $body]
+            );
+            $msgId = (int)$this->db->lastInsertId();
+
+            $this->db->execute(
+                "UPDATE portal_message_threads SET last_message_at = NOW(), status = 'open' WHERE id = ?",
+                [$id]
+            );
+        } catch (\Throwable $e) {
+            $this->error('Fehler: ' . $e->getMessage(), 500);
+        }
+
+        $this->json([
+            'ok'          => true,
+            'id'          => $msgId,
+            'sender_type' => 'admin',
+            'sender_name' => $user['name'] ?? 'Team',
+            'body'        => $body,
+            'created_at'  => date('Y-m-d H:i:s'),
+        ]);
+    }
+
+    /** POST /api/mobile/nachrichten — start a new thread from admin */
+    public function messageCreate(array $params = []): void
+    {
+        $this->cors();
+        $user = $this->requireAuth();
+
+        $data    = $this->body();
+        $ownerId = (int)($data['owner_id'] ?? 0);
+        $subject = trim((string)($data['subject'] ?? ''));
+        $body    = trim((string)($data['body']    ?? ''));
+
+        if (!$ownerId || $subject === '' || $body === '') {
+            $this->error('owner_id, subject und body sind erforderlich.', 422);
+        }
+
+        $owner = $this->owners->findById($ownerId);
+        if (!$owner) $this->error('Tierhalter nicht gefunden.', 404);
+
+        try {
+            $this->db->execute(
+                "INSERT INTO portal_message_threads (owner_id, subject, status, created_by, last_message_at, created_at)
+                 VALUES (?, ?, 'open', 'admin', NOW(), NOW())",
+                [$ownerId, $subject]
+            );
+            $threadId = (int)$this->db->lastInsertId();
+
+            $this->db->execute(
+                "INSERT INTO portal_messages (thread_id, sender_type, sender_id, body, is_read, created_at)
+                 VALUES (?, 'admin', ?, ?, 0, NOW())",
+                [$threadId, (int)$user['user_id'], $body]
+            );
+        } catch (\Throwable $e) {
+            $this->error('Fehler: ' . $e->getMessage(), 500);
+        }
+
+        $this->json(['ok' => true, 'thread_id' => $threadId], 201);
+    }
+
+    /** POST /api/mobile/nachrichten/{id}/status — open or close a thread */
+    public function messageSetStatus(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+
+        $id     = (int)($params['id'] ?? 0);
+        $status = trim((string)($this->body()['status'] ?? 'closed'));
+        if (!in_array($status, ['open', 'closed'], true)) $this->error('Ungültiger Status.');
+
+        try {
+            $this->db->execute(
+                "UPDATE portal_message_threads SET status = ? WHERE id = ?", [$status, $id]
+            );
+        } catch (\Throwable $e) {
+            $this->error('Fehler: ' . $e->getMessage(), 500);
+        }
+        $this->json(['ok' => true, 'status' => $status]);
+    }
+
+    /** POST /api/mobile/nachrichten/{id}/loeschen — delete a thread */
+    public function messageDelete(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+
+        $id = (int)($params['id'] ?? 0);
+        try {
+            $this->db->execute("DELETE FROM portal_messages WHERE thread_id = ?", [$id]);
+            $this->db->execute("DELETE FROM portal_message_threads WHERE id = ?", [$id]);
+        } catch (\Throwable $e) {
+            $this->error('Fehler: ' . $e->getMessage(), 500);
+        }
+        $this->json(['ok' => true]);
+    }
 }
