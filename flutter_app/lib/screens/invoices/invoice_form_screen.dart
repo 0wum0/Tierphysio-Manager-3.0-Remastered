@@ -39,30 +39,15 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
   final _ownerSearchCtrl   = TextEditingController();
   final _patientSearchCtrl = TextEditingController();
 
-  List<dynamic> get _filteredOwners {
-    final q = _ownerSearchCtrl.text.toLowerCase();
-    if (q.isEmpty) return _allOwners;
-    return _allOwners.where((o) =>
-      '${o['last_name']} ${o['first_name']}'.toLowerCase().contains(q) ||
-      (o['email'] as String? ?? '').toLowerCase().contains(q)).toList();
-  }
+  List<dynamic> get _filteredOwners => _allOwners;
 
-  List<dynamic> get _filteredPatients {
-    final q = _patientSearchCtrl.text.toLowerCase();
-    final ownerFiltered = _ownerId == null
-        ? _allPatients
-        : _allPatients.where((p) => p['owner_id']?.toString() == _ownerId.toString()).toList();
-    if (q.isEmpty) return ownerFiltered;
-    return ownerFiltered.where((p) =>
-      (p['name'] as String? ?? '').toLowerCase().contains(q) ||
-      (p['species'] as String? ?? '').toLowerCase().contains(q)).toList();
-  }
+  List<dynamic> get _filteredPatients => _ownerId == null
+      ? _allPatients
+      : _allPatients.where((p) => p['owner_id']?.toString() == _ownerId.toString()).toList();
 
   @override
   void initState() {
     super.initState();
-    _ownerSearchCtrl.addListener(() => setState(() {}));
-    _patientSearchCtrl.addListener(() => setState(() {}));
     _loadData();
   }
 
@@ -139,7 +124,12 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
   }
 
   @override
-  void dispose() { _notesCtrl.dispose(); _ownerSearchCtrl.dispose(); _patientSearchCtrl.dispose(); super.dispose(); }
+  void dispose() {
+    _notesCtrl.dispose();
+    _ownerSearchCtrl.dispose();
+    _patientSearchCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

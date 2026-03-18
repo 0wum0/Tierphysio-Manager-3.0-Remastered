@@ -52,8 +52,8 @@ $router->get('/api/mobile/treatment-types', [MobileApiController::class, 'treatm
 $router->get('/api/mobile/settings',        [MobileApiController::class, 'settingsGet']);
 
 $router->get('/api/mobile/nachrichten',                          [MobileApiController::class, 'messageThreads']);
-$router->get('/api/mobile/nachrichten/ungelesen',                [MobileApiController::class, 'messageUnread']);
 $router->post('/api/mobile/nachrichten',                         [MobileApiController::class, 'messageCreate']);
+$router->get('/api/mobile/nachrichten/ungelesen',                [MobileApiController::class, 'messageUnread']);
 $router->get('/api/mobile/nachrichten/{id}',                     [MobileApiController::class, 'messageThread']);
 $router->post('/api/mobile/nachrichten/{id}/antworten',          [MobileApiController::class, 'messageReply']);
 $router->post('/api/mobile/nachrichten/{id}/status',             [MobileApiController::class, 'messageSetStatus']);

@@ -18,12 +18,12 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
   final _replyCtrl  = TextEditingController();
   final _scrollCtrl = ScrollController();
   final _focusNode  = FocusNode();
-  final _hasText    = ValueNotifier<bool>(false);
+  final _hasText  = ValueNotifier<bool>(false);
+  final _sending  = ValueNotifier<bool>(false);
 
   Map<String, dynamic>? _thread;
   List<dynamic> _messages = [];
   bool _loading  = true;
-  bool _sending  = false;
   String? _error;
 
   @override
@@ -48,6 +48,7 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
     _scrollCtrl.dispose();
     _focusNode.dispose();
     _hasText.dispose();
+    _sending.dispose();
     super.dispose();
   }
 
@@ -81,18 +82,16 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
 
   Future<void> _send() async {
     final body = _replyCtrl.text.trim();
-    if (body.isEmpty) return;
-    setState(() => _sending = true);
+    if (body.isEmpty || _sending.value) return;
+    _sending.value = true;
     try {
       final msg = await _api.messageReply(widget.threadId, body);
       _replyCtrl.clear();
-      setState(() {
-        _messages.add(msg);
-        _sending = false;
-      });
+      if (mounted) setState(() => _messages.add(msg));
+      _sending.value = false;
       _scrollToBottom();
     } catch (e) {
-      setState(() => _sending = false);
+      _sending.value = false;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(e.toString())));
@@ -254,7 +253,14 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
                   ),
 
                   // Reply input
-                  _buildReplyBar(isClosed),
+                  _ReplyBar(
+                    controller: _replyCtrl,
+                    focusNode: _focusNode,
+                    hasText: _hasText,
+                    sending: _sending,
+                    isClosed: isClosed,
+                    onSend: _send,
+                  ),
                 ]),
     );
   }
@@ -345,63 +351,86 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
     );
   }
 
-  Widget _buildReplyBar(bool isClosed) {
-    return Container(
-      padding: EdgeInsets.only(
-        left: 12, right: 8, top: 8,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 8,
-      ),
-      decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF1A1D27)
-            : Colors.white,
-        border: Border(
-            top: BorderSide(color: Theme.of(context).dividerColor)),
-      ),
-      child: Row(children: [
-        Expanded(
-          child: TextField(
-            controller: _replyCtrl,
-            focusNode: _focusNode,
-            enabled: !isClosed,
-            maxLines: null,
-            textInputAction: TextInputAction.newline,
-            decoration: InputDecoration(
-              hintText: isClosed
-                  ? 'Konversation ist geschlossen'
-                  : 'Antwort schreiben…',
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none),
-              filled: true,
-              fillColor: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white.withValues(alpha: 0.06)
-                  : Colors.grey.shade100,
-              contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 10),
+}
+
+// ── Standalone reply bar — own BuildContext isolates semantics dirty state ──
+class _ReplyBar extends StatelessWidget {
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final ValueNotifier<bool> hasText;
+  final ValueNotifier<bool> sending;
+  final bool isClosed;
+  final VoidCallback onSend;
+
+  const _ReplyBar({
+    required this.controller,
+    required this.focusNode,
+    required this.hasText,
+    required this.sending,
+    required this.isClosed,
+    required this.onSend,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: dark ? const Color(0xFF1A1D27) : Colors.white,
+          border: Border(top: BorderSide(color: Theme.of(context).dividerColor)),
+        ),
+        child: Row(children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              focusNode: focusNode,
+              enabled: !isClosed,
+              maxLines: null,
+              textInputAction: TextInputAction.newline,
+              decoration: InputDecoration(
+                hintText: isClosed
+                    ? 'Konversation ist geschlossen'
+                    : 'Antwort schreiben…',
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    borderSide: BorderSide.none),
+                filled: true,
+                fillColor: dark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.grey.shade100,
+                contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 10),
+              ),
             ),
           ),
-        ),
-        const SizedBox(width: 8),
-        ValueListenableBuilder<bool>(
-          valueListenable: _hasText,
-          builder: (_, hasText, __) => IconButton.filled(
-            onPressed: (hasText && !_sending && !isClosed) ? _send : null,
-            icon: _sending
-                ? const SizedBox(
-                    width: 18, height: 18,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.send_rounded, size: 20),
-            style: IconButton.styleFrom(
-              backgroundColor: (hasText && !isClosed)
-                  ? AppTheme.primary
-                  : Colors.grey.shade300,
-              foregroundColor: Colors.white,
-            ),
+          const SizedBox(width: 8),
+          ListenableBuilder(
+            listenable: Listenable.merge([hasText, sending]),
+            builder: (_, __) {
+              final ht = hasText.value;
+              final snd = sending.value;
+              return IconButton.filled(
+                onPressed: (ht && !snd && !isClosed) ? onSend : null,
+                icon: snd
+                    ? const SizedBox(
+                        width: 18, height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.send_rounded, size: 20),
+                style: IconButton.styleFrom(
+                  backgroundColor: (ht && !isClosed)
+                      ? AppTheme.primary
+                      : Colors.grey.shade300,
+                  foregroundColor: Colors.white,
+                ),
+              );
+            },
           ),
-        ),
-      ]),
+        ]),
+      ),
     );
   }
 }
