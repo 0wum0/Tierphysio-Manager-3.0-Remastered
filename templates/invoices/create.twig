@@ -206,15 +206,20 @@
     {% endfor %}
 
     /* ── SearchableSelect for Owner + Patient ── */
-    /* Wrapped in DOMContentLoaded so layout.twig's scripts (window.SearchableSelect) are loaded first */
-    document.addEventListener('DOMContentLoaded', function () {
-        if (typeof SearchableSelect === 'undefined') return;
+    /* Poll until window.SearchableSelect is defined (layout.twig scripts load after block content) */
+    (function waitForSS(attempts) {
+        if (typeof window.SearchableSelect !== 'undefined') {
+            initOwnerPatientSS();
+        } else if (attempts < 50) {
+            setTimeout(function() { waitForSS(attempts + 1); }, 50);
+        }
+    })(0);
 
+    function initOwnerPatientSS() {
         const ownerSel   = document.getElementById('owner-select');
         const patientSel = document.getElementById('patient-select');
         if (!ownerSel || !patientSel) return;
 
-        /* Collect all patients with owner association */
         const allPatients = Array.from(patientSel.options)
             .filter(o => o.value)
             .map(o => ({ value: o.value, label: o.textContent.trim(), ownerId: o.dataset.owner || '' }));
@@ -241,13 +246,12 @@
             }
         });
 
-        /* pre-filter on page load if owner already preselected */
         if (ownerSel.value) {
             const items = getPatientItems(ownerSel.value);
             const prePatient = patientSel.value;
             ssPatient.setItems(items, prePatient || (items.length === 1 ? items[0].value : ''));
         }
-    });
+    }
 
     /* ── Treatment type → description + price ── */
     function bindTreatmentSelect(row) {

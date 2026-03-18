@@ -426,7 +426,13 @@
             }
         });
     }
-    document.addEventListener('DOMContentLoaded', initAptSearchableSelects);
+    (function waitForSS(attempts) {
+        if (typeof window.SearchableSelect !== 'undefined') {
+            initAptSearchableSelects();
+        } else if (attempts < 50) {
+            setTimeout(function() { waitForSS(attempts + 1); }, 50);
+        }
+    })(0);
 
     /* Owner change → filter patients */
     document.getElementById('apt-owner').addEventListener('change', async function() {
