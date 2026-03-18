@@ -701,11 +701,10 @@
        APP DRAWER (rechte Seitenleiste)
        ═══════════════════════════════════════════════════════ #}
     <aside class="app-drawer js-app-drawer">
-        <div class="custom-scrollbar h-100 p-0">
-            <div class="d-flex flex-column h-100">
+        <div style="position:relative;height:100%;overflow:hidden;">
 
                 {# ── PANEL A: Thread list ── #}
-                <div id="drawer-panel-list" class="d-flex flex-column h-100">
+                <div id="drawer-panel-list" style="position:absolute;inset:0;display:flex;flex-direction:column;">
                     <div class="d-flex align-items-center gap-2 px-3 pt-3 pb-2 flex-shrink-0">
                         <svg class="sa-icon sa-icon-2x" fill="none" viewBox="0 0 24 24">
                             <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -745,7 +744,7 @@
                 </div>
 
                 {# ── PANEL B: Thread detail (inline, hidden initially) ── #}
-                <div id="drawer-panel-thread" class="d-flex flex-column h-100" style="display:none!important;">
+                <div id="drawer-panel-thread" style="position:absolute;inset:0;display:none;flex-direction:column;background:var(--bs-body-bg);">
                     <div class="d-flex align-items-center gap-2 px-3 pt-3 pb-2 flex-shrink-0 border-bottom">
                         <button type="button" class="btn btn-system p-1" id="drawer-back-btn" aria-label="Zurück">
                             <svg class="sa-icon" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="15 18 9 12 15 6"/></svg>
@@ -770,7 +769,6 @@
                     </div>
                 </div>
 
-            </div>
         </div>
     </aside>
     <div class="backdrop" data-action="toggle-swap" data-toggleclass="open"
@@ -1453,7 +1451,7 @@
 
     /* ── Show / hide panels ── */
     function showListPanel(){
-        panelList.style.display   = '';
+        panelList.style.display   = 'flex';
         panelThread.style.display = 'none';
         _activeThreadId = null;
     }
@@ -1481,7 +1479,7 @@
         }
 
         panelList.style.display   = 'none';
-        panelThread.style.display = '';
+        panelThread.style.display = 'flex';
 
         /* Load messages */
         fetch('/api/portal-admin/nachrichten/' + threadId + '/messages')
