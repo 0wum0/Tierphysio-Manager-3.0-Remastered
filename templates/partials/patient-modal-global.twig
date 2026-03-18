@@ -1084,15 +1084,8 @@ function buildInvoiceForm(d, prePatientId, preOwnerId) {
     form.dataset.defaultTax = ku ? '0' : (d.default_tax_rate || '19');
     form.dataset.kleinunternehmer = ku ? '1' : '0';
 
-    /* Owner + Patient SearchableSelect — destroy previous wrappers first */
-    var ownerSel   = form.querySelector('[name="owner_id"]');
-    var patientSel = form.querySelector('[name="patient_id"]');
-    ['im-owner-ss-wrap','im-patient-ss-wrap'].forEach(function(id){
-        var old = document.getElementById(id);
-        if(old){ old.parentNode.insertBefore(old.querySelector('select'), old); old.remove(); }
-    });
-
-    /* Rebuild owner <select> options */
+    /* Owner select — plain, always pre-selected from patient file */
+    var ownerSel = form.querySelector('[name="owner_id"]');
     ownerSel.innerHTML = '<option value="">— Tierhalter wählen —</option>';
     d.owners.forEach(function(o) {
         var opt = new Option(o.last_name + ', ' + o.first_name, o.id);
@@ -1100,41 +1093,14 @@ function buildInvoiceForm(d, prePatientId, preOwnerId) {
     });
     if (preOwnerId) ownerSel.value = preOwnerId;
 
-    /* Helper: build patient items for a given ownerId */
-    function getImPatientItems(ownerId) {
-        var filtered = ownerId
-            ? d.patients.filter(function(p){ return String(p.owner_id) === String(ownerId); })
-            : d.patients;
-        if (!filtered.length && ownerId) filtered = d.patients;
-        return filtered.map(function(p){ return { value: String(p.id), label: p.name + ' (' + (p.species||'') + ')' }; });
-    }
-
-    /* Rebuild patient <select> options */
+    /* Patient select — plain, filtered by owner */
+    var patientSel = form.querySelector('[name="patient_id"]');
     rebuildPatientSelect(patientSel, d.patients, preOwnerId, prePatientId);
 
-    /* Init patient SS */
-    var ssImPatient = new SearchableSelect({ target: patientSel, placeholder: '— Kein Patient —' });
-    patientSel.closest('.ss-wrap').id = 'im-patient-ss-wrap';
-    ssImPatient.syncFromSelect();
-
-    /* Init owner SS — on select, update patient list */
-    var ssImOwner = new SearchableSelect({
-        target: ownerSel,
-        placeholder: '— Tierhalter wählen —',
-        onSelect: function(ownerId) {
-            var items   = getImPatientItems(ownerId);
-            var autoVal = items.length === 1 ? items[0].value : '';
-            ssImPatient.setItems(items, autoVal);
-        }
-    });
-    ownerSel.closest('.ss-wrap').id = 'im-owner-ss-wrap';
-    ssImOwner.syncFromSelect();
-
-    /* If owner preselected, sync patient list */
-    if (preOwnerId) {
-        var items = getImPatientItems(preOwnerId);
-        ssImPatient.setItems(items, prePatientId ? String(prePatientId) : (items.length === 1 ? items[0].value : ''));
-    }
+    /* Filter patients when owner changes */
+    ownerSel.onchange = function() {
+        rebuildPatientSelect(patientSel, d.patients, this.value, null);
+    };
 
     /* Positions: reset to 1 row */
     var container = document.getElementById('im-positions-container');

@@ -368,6 +368,9 @@
         const sel = document.getElementById(id);
         if (!sel || val === null || val === undefined) return;
         sel.value = val;
+        /* Sync SearchableSelect display if one wraps this select */
+        if (id === 'apt-owner'   && ssAptOwner)   ssAptOwner.syncFromSelect();
+        if (id === 'apt-patient' && ssAptPatient) ssAptPatient.syncFromSelect();
     }
 
     function closeModal() { bsAptModal().hide(); currentAptId = null; }
@@ -403,6 +406,28 @@
         }
     });
 
+    /* ── SearchableSelect for owner + patient in appointment modal ── */
+    let ssAptOwner   = null;
+    let ssAptPatient = null;
+
+    function initAptSearchableSelects() {
+        const ownerEl   = document.getElementById('apt-owner');
+        const patientEl = document.getElementById('apt-patient');
+        if (!ownerEl || !patientEl || typeof SearchableSelect === 'undefined') return;
+
+        ssAptPatient = new SearchableSelect({ target: patientEl, placeholder: '— kein Patient —' });
+
+        ssAptOwner = new SearchableSelect({
+            target: ownerEl,
+            placeholder: '— kein Tierhalter —',
+            onSelect: function(ownerId) {
+                /* Trigger the existing owner-change handler on the raw select */
+                ownerEl.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
+    }
+    initAptSearchableSelects();
+
     /* Owner change → filter patients */
     document.getElementById('apt-owner').addEventListener('change', async function() {
         const ownerSelect = this;
@@ -425,6 +450,7 @@
             });
             // Restore selection if possible
             if (currentPatientId) patientSelect.value = currentPatientId;
+            if (ssAptPatient) ssAptPatient.syncFromSelect();
             updateAutoTitle();
             return;
         }
@@ -455,6 +481,7 @@
                     patientSelect.value = currentPatientId;
                 }
             }
+            if (ssAptPatient) ssAptPatient.syncFromSelect();
             updateAutoTitle();
         } catch (error) {
             console.error('Failed to load patients:', error);
