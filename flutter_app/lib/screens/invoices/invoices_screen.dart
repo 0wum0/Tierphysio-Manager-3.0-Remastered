@@ -48,7 +48,10 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     }
   }
 
-  String _eur(dynamic v) => NumberFormat.currency(locale: 'de_DE', symbol: '€').format((v as num?)?.toDouble() ?? 0.0);
+  String _eur(dynamic v) {
+    final d = v is num ? v.toDouble() : double.tryParse(v?.toString() ?? '') ?? 0.0;
+    return NumberFormat.currency(locale: 'de_DE', symbol: '€').format(d);
+  }
 
   @override
   Widget build(BuildContext context) {

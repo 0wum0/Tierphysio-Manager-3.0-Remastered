@@ -31,9 +31,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  static double _toDouble(dynamic v) =>
+      v is num ? v.toDouble() : double.tryParse(v?.toString() ?? '') ?? 0.0;
+
   String _eur(dynamic v) =>
-      NumberFormat.currency(locale: 'de_DE', symbol: '€')
-          .format((v as num?)?.toDouble() ?? 0.0);
+      NumberFormat.currency(locale: 'de_DE', symbol: '€').format(_toDouble(v));
 
   @override
   Widget build(BuildContext context) {
@@ -184,7 +186,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             BarChartRodData(toY: 0, width: 14, borderRadius: BorderRadius.circular(6)),
           ]))
         : months.asMap().entries.map((e) {
-            final rev = (e.value['revenue'] as num?)?.toDouble() ?? 0;
+            final rev = _toDouble(e.value['revenue']);
             return BarChartGroupData(x: e.key, barRods: [
               BarChartRodData(
                 toY: rev,
@@ -200,7 +202,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           }).toList();
 
     final maxY = months.isEmpty ? 1000.0
-        : (months.map((m) => (m['revenue'] as num?)?.toDouble() ?? 0).reduce((a, b) => a > b ? a : b) * 1.2).clamp(100.0, double.infinity);
+        : (months.map((m) => _toDouble(m['revenue'])).reduce((a, b) => a > b ? a : b) * 1.2).clamp(100.0, double.infinity);
 
     return _ChartCard(
       title: 'Umsatz (6 Monate)',
@@ -258,8 +260,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _appointmentDonut(Map<String, dynamic> d) {
-    final today  = (d['today_apts']    as num?)?.toDouble() ?? 0;
-    final upcoming = (d['upcoming_apts'] as num?)?.toDouble() ?? 0;
+    final today    = _toDouble(d['today_apts']);
+    final upcoming = _toDouble(d['upcoming_apts']);
     final total  = today + upcoming;
 
     final sections = total == 0
