@@ -22,7 +22,7 @@
     <link rel="stylesheet" media="screen, print" href="/themes/smart-tierphysio/webfonts/fontawesome/fontawesome.css">
 
     {# App custom overrides #}
-    <link rel="stylesheet" media="screen, print" href="/themes/smart-tierphysio/bridge.css?v=20260308f">
+    <link rel="stylesheet" media="screen, print" href="/themes/smart-tierphysio/bridge.css?v=20260318a">
 
     {# Per-user UI settings from DB — must be before saveloadscript.js #}
     <script>window.__serverUiSettings = {{ (server_ui_settings ?? 'null')|json_encode|raw }};</script>
@@ -1794,6 +1794,7 @@ window.SearchableSelect = (function(){
 
             dropdown = document.createElement('div');
             dropdown.className = 'ss-dropdown';
+            dropdown.style.display = 'none';
 
             var searchWrap = document.createElement('div');
             searchWrap.className = 'ss-search-wrap';
@@ -1861,12 +1862,14 @@ window.SearchableSelect = (function(){
             readItems();
             renderList('');
             searchInput.value = '';
+            dropdown.style.display = 'block';
             wrap.classList.add('open');
             display.setAttribute('aria-expanded','true');
             setTimeout(function(){ searchInput.focus(); }, 10);
         }
 
         function close(){
+            dropdown.style.display = 'none';
             wrap.classList.remove('open');
             display.setAttribute('aria-expanded','false');
         }
