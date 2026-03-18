@@ -71,12 +71,13 @@ class MessagingOwnerController extends Controller
         $unread     = $this->repo->countUnreadForOwner($ownerId);
 
         $this->render('@owner-portal/owner_messages.twig', [
-            'page_title'  => 'Nachrichten',
-            'portal_user' => $portalUser,
-            'active_nav'  => 'nachrichten',
-            'threads'     => $threads,
-            'unread'      => $unread,
-            'csrf_token'  => $this->session->generateCsrfToken(),
+            'page_title'          => 'Nachrichten',
+            'portal_user'         => $portalUser,
+            'active_nav'          => 'nachrichten',
+            'threads'             => $threads,
+            'unread'              => $unread,
+            'portal_unread_count' => $unread,
+            'csrf_token'          => $this->session->generateCsrfToken(),
         ]);
     }
 
@@ -96,14 +97,25 @@ class MessagingOwnerController extends Controller
         $this->repo->markThreadReadByOwner($id);
         $messages = $this->repo->getMessages($id);
 
+        $unread = $this->repo->countUnreadForOwner($ownerId);
         $this->render('@owner-portal/owner_message_thread.twig', [
-            'page_title'  => 'Nachricht: ' . $thread['subject'],
-            'portal_user' => $portalUser,
-            'active_nav'  => 'nachrichten',
-            'thread'      => $thread,
-            'messages'    => $messages,
-            'csrf_token'  => $this->session->generateCsrfToken(),
+            'page_title'          => 'Nachricht: ' . $thread['subject'],
+            'portal_user'         => $portalUser,
+            'active_nav'          => 'nachrichten',
+            'thread'              => $thread,
+            'messages'            => $messages,
+            'portal_unread_count' => $unread,
+            'csrf_token'          => $this->session->generateCsrfToken(),
         ]);
+    }
+
+    /* ── GET /api/portal/nachrichten/ungelesen ── */
+    public function unreadCount(array $params = []): void
+    {
+        $portalUser = $this->requireOwnerAuth();
+        $ownerId    = (int)$portalUser['owner_id'];
+        $count      = $this->repo->countUnreadForOwner($ownerId);
+        $this->json(['unread' => $count]);
     }
 
     /* ── POST /api/portal/nachrichten/{id}/antworten (AJAX) ── */

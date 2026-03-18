@@ -114,10 +114,11 @@ class ServiceProvider
         $router->post('/api/portal-admin/nachrichten/{id}/loeschen',                 [MessagingAdminController::class, 'delete'],    ['auth']);
 
         /* ── Messaging: Owner (portal) routes ── */
-        $router->get('/portal/nachrichten',                                          [MessagingOwnerController::class, 'index'],     []);
-        $router->get('/portal/nachrichten/{id}',                                     [MessagingOwnerController::class, 'thread'],    []);
-        $router->post('/api/portal/nachrichten/{id}/antworten',                      [MessagingOwnerController::class, 'reply'],     []);
-        $router->post('/api/portal/nachrichten/neu',                                 [MessagingOwnerController::class, 'newThread'], []);
+        $router->get('/portal/nachrichten',                                          [MessagingOwnerController::class, 'index'],       []);
+        $router->get('/portal/nachrichten/{id}',                                     [MessagingOwnerController::class, 'thread'],      []);
+        $router->get('/api/portal/nachrichten/ungelesen',                            [MessagingOwnerController::class, 'unreadCount'], []);
+        $router->post('/api/portal/nachrichten/{id}/antworten',                      [MessagingOwnerController::class, 'reply'],       []);
+        $router->post('/api/portal/nachrichten/neu',                                 [MessagingOwnerController::class, 'newThread'],   []);
     }
 
     public function dashboardWidget(array $context): array
