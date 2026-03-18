@@ -58,8 +58,13 @@ class AppRouter {
             path: '/rechnungen',
             builder: (_, __) => const InvoicesScreen(),
             routes: [
-              GoRoute(path: 'neu',      builder: (_, __) => const InvoiceFormScreen()),
-              GoRoute(path: ':id',      builder: (_, s)  => InvoiceDetailScreen(id: int.parse(s.pathParameters['id']!))),
+              GoRoute(
+                path: 'neu',
+                builder: (_, s) => InvoiceFormScreen(
+                  prefill: s.extra is Map<String, dynamic> ? s.extra as Map<String, dynamic> : null,
+                ),
+              ),
+              GoRoute(path: ':id', builder: (_, s) => InvoiceDetailScreen(id: int.parse(s.pathParameters['id']!))),
             ],
           ),
 

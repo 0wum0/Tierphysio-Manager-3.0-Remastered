@@ -1,8 +1,11 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
+import '../../core/theme.dart';
 import '../../widgets/search_bar_widget.dart';
+import '../../widgets/animated_stat_card.dart';
 
 class InvoicesScreen extends StatefulWidget {
   const InvoicesScreen({super.key});
@@ -11,7 +14,8 @@ class InvoicesScreen extends StatefulWidget {
   State<InvoicesScreen> createState() => _InvoicesScreenState();
 }
 
-class _InvoicesScreenState extends State<InvoicesScreen> {
+class _InvoicesScreenState extends State<InvoicesScreen>
+    with SingleTickerProviderStateMixin {
   final _api    = ApiService();
   List<dynamic> _items = [];
   bool  _loading = true;
@@ -20,6 +24,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   String _status = '';
   int _page = 1;
   bool _hasNext = false;
+  late TabController _tabCtrl;
 
   static const _statusFilters = [
     ('', 'Alle'),
@@ -30,13 +35,20 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   ];
 
   @override
-  void initState() { super.initState(); _load(); }
+  void initState() {
+    super.initState();
+    _tabCtrl = TabController(length: 2, vsync: this);
+    _load();
+  }
+
+  @override
+  void dispose() { _tabCtrl.dispose(); super.dispose(); }
 
   Future<void> _load({bool reset = true}) async {
     if (reset) { _page = 1; _items = []; }
     setState(() { _loading = true; _error = null; });
     try {
-      final data = await _api.invoices(page: _page, status: _status, search: _search);
+      final data = await _api.invoices(page: _page, status: _status, search: _search, perPage: 200);
       final items = List<dynamic>.from(data['items'] as List? ?? []);
       setState(() {
         _items   = reset ? items : [..._items, ...items];
@@ -48,39 +60,72 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     }
   }
 
-  String _eur(dynamic v) {
-    final d = v is num ? v.toDouble() : double.tryParse(v?.toString() ?? '') ?? 0.0;
-    return NumberFormat.currency(locale: 'de_DE', symbol: '€').format(d);
-  }
+  static double _toDouble(dynamic v) =>
+      v is num ? v.toDouble() : double.tryParse(v?.toString() ?? '') ?? 0.0;
+
+  String _eur(dynamic v) =>
+      NumberFormat.currency(locale: 'de_DE', symbol: '€').format(_toDouble(v));
+
+  // ── Stats from loaded items ──
+
+  double get _totalRevenue =>
+      _items.where((i) => i['status'] == 'paid').fold(0.0, (s, i) => s + _toDouble(i['total_gross']));
+  double get _totalOpen =>
+      _items.where((i) => i['status'] == 'open').fold(0.0, (s, i) => s + _toDouble(i['total_gross']));
+  double get _totalOverdue =>
+      _items.where((i) => i['status'] == 'overdue').fold(0.0, (s, i) => s + _toDouble(i['total_gross']));
+  int get _countPaid    => _items.where((i) => i['status'] == 'paid').length;
+  int get _countOpen    => _items.where((i) => i['status'] == 'open').length;
+  int get _countOverdue => _items.where((i) => i['status'] == 'overdue').length;
+  int get _countDraft   => _items.where((i) => i['status'] == 'draft').length;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Rechnungen'),
-        actions: [IconButton(icon: const Icon(Icons.add), onPressed: () => context.push('/rechnungen/neu').then((_) => _load()))],
+        actions: [
+          IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _load),
+          IconButton(icon: const Icon(Icons.add_rounded),
+              onPressed: () => context.push('/rechnungen/neu').then((_) => _load())),
+        ],
+        bottom: TabBar(
+          controller: _tabCtrl,
+          tabs: const [
+            Tab(icon: Icon(Icons.list_alt_rounded, size: 18), text: 'Liste'),
+            Tab(icon: Icon(Icons.bar_chart_rounded, size: 18), text: 'Analyse'),
+          ],
+        ),
       ),
-      body: Column(
+      body: TabBarView(
+        controller: _tabCtrl,
         children: [
-          AppSearchBar(onSearch: (q) { _search = q; _load(); }, hint: 'Rechnung suchen…'),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Row(
-              children: _statusFilters.map((f) => Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: FilterChip(
-                  label: Text(f.$2),
-                  selected: _status == f.$1,
-                  onSelected: (_) { _status = f.$1; _load(); },
-                ),
-              )).toList(),
-            ),
-          ),
-          Expanded(child: _buildList()),
+          _buildListTab(),
+          _buildAnalyticsTab(),
         ],
       ),
     );
+  }
+
+  // ═══════════════════════════════════════ LIST TAB ═══════════════════════
+
+  Widget _buildListTab() {
+    return Column(children: [
+      AppSearchBar(onSearch: (q) { _search = q; _load(); }, hint: 'Rechnung suchen…'),
+      SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: Row(children: _statusFilters.map((f) => Padding(
+          padding: const EdgeInsets.only(right: 6),
+          child: FilterChip(
+            label: Text(f.$2),
+            selected: _status == f.$1,
+            onSelected: (_) { _status = f.$1; _load(); },
+          ),
+        )).toList()),
+      ),
+      Expanded(child: _buildList()),
+    ]);
   }
 
   Widget _buildList() {
@@ -95,29 +140,273 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
       onRefresh: () => _load(),
       child: ListView.builder(
         itemCount: _items.length + (_hasNext ? 1 : 0),
+        padding: const EdgeInsets.only(bottom: 16),
         itemBuilder: (ctx, i) {
           if (i == _items.length) return Padding(
             padding: const EdgeInsets.all(16),
-            child: FilledButton.tonal(onPressed: () { _page++; _load(reset: false); }, child: const Text('Mehr laden')),
+            child: FilledButton.tonal(
+                onPressed: () { _page++; _load(reset: false); },
+                child: const Text('Mehr laden')),
           );
           final inv = _items[i] as Map<String, dynamic>;
-          return ListTile(
-            leading: _StatusIcon(status: inv['status'] as String? ?? ''),
-            title: Text(inv['invoice_number'] as String? ?? ''),
-            subtitle: Text('${inv['owner_name'] ?? ''}${inv['patient_name'] != null ? " · ${inv['patient_name']}" : ""}'),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(_eur(inv['total_gross']), style: const TextStyle(fontWeight: FontWeight.bold)),
-                _StatusBadge(status: inv['status'] as String? ?? ''),
-              ],
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: ListTile(
+              leading: _StatusIcon(status: inv['status'] as String? ?? ''),
+              title: Text(inv['invoice_number'] as String? ?? '',
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: Text(
+                '${inv['owner_name'] ?? ''}${inv['patient_name'] != null ? " · ${inv['patient_name']}" : ""}',
+                style: const TextStyle(fontSize: 12)),
+              trailing: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(_eur(inv['total_gross']),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  _StatusBadge(status: inv['status'] as String? ?? ''),
+                ],
+              ),
+              onTap: () => context.push('/rechnungen/${inv['id']}').then((_) => _load()),
             ),
-            onTap: () => context.push('/rechnungen/${inv['id']}').then((_) => _load()),
           );
         },
       ),
     );
+  }
+
+  // ═══════════════════════════════════════ ANALYTICS TAB ═══════════════════
+
+  Widget _buildAnalyticsTab() {
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_items.isEmpty) return const Center(child: Text('Keine Daten vorhanden.'));
+
+    return RefreshIndicator(
+      onRefresh: () => _load(),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // ── Stat cards ──
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 10, mainAxisSpacing: 10,
+            childAspectRatio: 1.6,
+            children: [
+              AnimatedStatCard(label: 'Bezahlt', value: _eur(_totalRevenue),
+                  icon: Icons.check_circle_rounded, color: AppTheme.success,
+                  sub: '$_countPaid Rechnungen'),
+              AnimatedStatCard(label: 'Offen', value: _eur(_totalOpen),
+                  icon: Icons.pending_rounded, color: AppTheme.primary,
+                  sub: '$_countOpen Rechnungen'),
+              AnimatedStatCard(label: 'Überfällig', value: _eur(_totalOverdue),
+                  icon: Icons.warning_rounded, color: AppTheme.danger,
+                  sub: '$_countOverdue Rechnungen'),
+              AnimatedStatCard(label: 'Entwürfe', value: '$_countDraft',
+                  icon: Icons.edit_note_rounded, color: Colors.grey,
+                  sub: 'unveröffentlicht'),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // ── Donut chart: status distribution ──
+          _ChartCard(
+            title: 'Status-Verteilung',
+            subtitle: 'Anteil nach Betrag',
+            child: _buildDonutChart(),
+          ),
+          const SizedBox(height: 16),
+
+          // ── Bar chart: monthly revenue ──
+          _ChartCard(
+            title: 'Monatsumsatz',
+            subtitle: 'Bezahlte Rechnungen nach Monat',
+            child: _buildMonthlyBarChart(),
+          ),
+          const SizedBox(height: 16),
+
+          // ── Top owners by revenue ──
+          _ChartCard(
+            title: 'Top Tierhalter',
+            subtitle: 'Nach Gesamtumsatz',
+            child: _buildTopOwnersChart(),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildDonutChart() {
+    final data = [
+      if (_totalRevenue > 0)  PieChartSectionData(value: _totalRevenue,  color: AppTheme.success, title: '', radius: 48),
+      if (_totalOpen > 0)     PieChartSectionData(value: _totalOpen,     color: AppTheme.primary, title: '', radius: 48),
+      if (_totalOverdue > 0)  PieChartSectionData(value: _totalOverdue,  color: AppTheme.danger,  title: '', radius: 48),
+      if (_countDraft > 0)    PieChartSectionData(value: _countDraft * 1.0, color: Colors.grey,   title: '', radius: 48),
+    ];
+    if (data.isEmpty) return const Center(child: Text('Keine Daten'));
+
+    return Row(children: [
+      Expanded(
+        child: PieChart(PieChartData(
+          sections: data,
+          centerSpaceRadius: 44,
+          sectionsSpace: 2,
+        )),
+      ),
+      const SizedBox(width: 16),
+      Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, children: [
+        _Legend(color: AppTheme.success, label: 'Bezahlt',    value: _eur(_totalRevenue)),
+        const SizedBox(height: 8),
+        _Legend(color: AppTheme.primary, label: 'Offen',      value: _eur(_totalOpen)),
+        const SizedBox(height: 8),
+        _Legend(color: AppTheme.danger,  label: 'Überfällig', value: _eur(_totalOverdue)),
+        if (_countDraft > 0) ...[
+          const SizedBox(height: 8),
+          _Legend(color: Colors.grey,    label: 'Entwurf',    value: '$_countDraft Stk.'),
+        ],
+      ]),
+    ]);
+  }
+
+  Widget _buildMonthlyBarChart() {
+    // Group paid invoices by month
+    final Map<String, double> monthly = {};
+    for (final inv in _items) {
+      if (inv['status'] != 'paid') continue;
+      final date = inv['issue_date'] as String? ?? '';
+      if (date.length < 7) continue;
+      final key = date.substring(0, 7); // YYYY-MM
+      monthly[key] = (monthly[key] ?? 0) + _toDouble(inv['total_gross']);
+    }
+    if (monthly.isEmpty) return const Center(child: Text('Keine bezahlten Rechnungen'));
+
+    final sorted = monthly.entries.toList()..sort((a, b) => a.key.compareTo(b.key));
+    final last8 = sorted.length > 8 ? sorted.sublist(sorted.length - 8) : sorted;
+    final maxY = last8.map((e) => e.value).reduce((a, b) => a > b ? a : b);
+
+    return BarChart(BarChartData(
+      maxY: maxY * 1.25,
+      gridData: const FlGridData(show: true, drawVerticalLine: false),
+      borderData: FlBorderData(show: false),
+      titlesData: FlTitlesData(
+        bottomTitles: AxisTitles(sideTitles: SideTitles(
+          showTitles: true, reservedSize: 26,
+          getTitlesWidget: (v, _) {
+            final idx = v.toInt();
+            if (idx < 0 || idx >= last8.length) return const SizedBox();
+            final parts = last8[idx].key.split('-');
+            return Text(parts.length >= 2 ? '${parts[1]}/${parts[0].substring(2)}' : '',
+                style: const TextStyle(fontSize: 10));
+          },
+        )),
+        leftTitles: AxisTitles(sideTitles: SideTitles(
+          showTitles: true, reservedSize: 50,
+          getTitlesWidget: (v, _) => Text(
+            NumberFormat.compactCurrency(locale: 'de_DE', symbol: '€').format(v),
+            style: const TextStyle(fontSize: 9)),
+        )),
+        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+      ),
+      barGroups: last8.asMap().entries.map((e) => BarChartGroupData(
+        x: e.key,
+        barRods: [BarChartRodData(
+          toY: e.value.value,
+          gradient: LinearGradient(
+            begin: Alignment.bottomCenter, end: Alignment.topCenter,
+            colors: [AppTheme.primary.withValues(alpha: 0.7), AppTheme.primary],
+          ),
+          width: 18, borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+        )],
+      )).toList(),
+    ));
+  }
+
+  Widget _buildTopOwnersChart() {
+    final Map<String, double> byOwner = {};
+    for (final inv in _items) {
+      if (inv['status'] != 'paid') continue;
+      final owner = inv['owner_name'] as String? ?? 'Unbekannt';
+      byOwner[owner] = (byOwner[owner] ?? 0) + _toDouble(inv['total_gross']);
+    }
+    if (byOwner.isEmpty) return const Center(child: Text('Keine Daten'));
+
+    final sorted = byOwner.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final top5 = sorted.length > 5 ? sorted.sublist(0, 5) : sorted;
+    final maxVal = top5.first.value;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: top5.asMap().entries.map((entry) {
+        final frac = maxVal > 0 ? entry.value.value / maxVal : 0.0;
+        final colors = [AppTheme.primary, AppTheme.secondary, AppTheme.tertiary, AppTheme.success, AppTheme.warning];
+        final c = colors[entry.key % colors.length];
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(children: [
+            SizedBox(width: 110,
+              child: Text(entry.value.key, overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12))),
+            const SizedBox(width: 8),
+            Expanded(child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: frac, minHeight: 16,
+                backgroundColor: c.withValues(alpha: 0.1),
+                valueColor: AlwaysStoppedAnimation(c),
+              ),
+            )),
+            const SizedBox(width: 8),
+            Text(_eur(entry.value.value), style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: c)),
+          ]),
+        );
+      }).toList(),
+    );
+  }
+}
+
+class _ChartCard extends StatelessWidget {
+  final String title, subtitle;
+  final Widget child;
+  const _ChartCard({required this.title, required this.subtitle, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+        Text(subtitle, style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        const SizedBox(height: 16),
+        SizedBox(height: 180, child: child),
+      ]),
+    );
+  }
+}
+
+class _Legend extends StatelessWidget {
+  final Color color;
+  final String label, value;
+  const _Legend({required this.color, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+      const SizedBox(width: 6),
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11)),
+        Text(value, style: TextStyle(fontWeight: FontWeight.w700, color: color, fontSize: 12)),
+      ]),
+    ]);
   }
 }
 

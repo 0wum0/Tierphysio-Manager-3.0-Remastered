@@ -118,11 +118,24 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
         slivers: [
           // ── Gradient SliverAppBar ──
           SliverAppBar(
-            expandedHeight: 200,
+            expandedHeight: 190,
             pinned: true,
             backgroundColor: statusColor,
             foregroundColor: Colors.white,
             actions: [
+              IconButton(
+                icon: const Icon(Icons.receipt_long_rounded),
+                tooltip: 'Neue Rechnung',
+                onPressed: () => context.push(
+                  '/rechnungen/neu',
+                  extra: {'patientId': widget.id, 'patientName': p['name'], 'ownerId': p['owner_id'], 'ownerName': '${p['owner_first_name'] ?? ''} ${p['owner_last_name'] ?? ''}'.trim()},
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.event_rounded),
+                tooltip: 'Neuer Termin',
+                onPressed: () => _showNewAppointmentSheet(p),
+              ),
               IconButton(
                 icon: const Icon(Icons.edit_rounded),
                 tooltip: 'Bearbeiten',
@@ -140,69 +153,76 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                     ),
                   ),
                 ),
-                // Decorative circles
                 Positioned(right: -20, top: -20, child: Container(
                   width: 140, height: 140,
                   decoration: BoxDecoration(shape: BoxShape.circle,
                     color: Colors.white.withValues(alpha: 0.07)),
                 )),
-                Positioned(right: 60, bottom: 0, child: Container(
+                Positioned(right: 60, bottom: 48, child: Container(
                   width: 80, height: 80,
                   decoration: BoxDecoration(shape: BoxShape.circle,
                     color: Colors.white.withValues(alpha: 0.05)),
                 )),
-                SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 56, 16, 16),
-                    child: Row(children: [
-                      Hero(
-                        tag: 'patient_${widget.id}',
-                        child: PawAvatar(
-                          photoPath: p['photo'] as String?,
-                          species: species,
-                          name: p['name'] as String?,
-                          radius: 36,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(p['name'] as String? ?? '',
-                            style: const TextStyle(color: Colors.white, fontSize: 22,
-                                fontWeight: FontWeight.w800, letterSpacing: -0.5)),
-                          const SizedBox(height: 2),
-                          Text(
-                            [species, p['breed'] as String? ?? ''].where((s) => s.isNotEmpty).join(' · '),
-                            style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13),
+                // Content sits between status bar + back button (top ~56) and TabBar (bottom 48)
+                Positioned.fill(
+                  bottom: 48,
+                  child: SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 52, 100, 0),
+                      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                        Hero(
+                          tag: 'patient_${widget.id}',
+                          child: PawAvatar(
+                            photoPath: p['photo'] as String?,
+                            species: species,
+                            name: p['name'] as String?,
+                            radius: 30,
                           ),
-                          const SizedBox(height: 6),
-                          Row(children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                _statusLabel(p['status'] as String? ?? ''),
-                                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
-                              ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(p['name'] as String? ?? '',
+                              style: const TextStyle(color: Colors.white, fontSize: 20,
+                                  fontWeight: FontWeight.w800, letterSpacing: -0.5),
+                              overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 2),
+                            Text(
+                              [species, p['breed'] as String? ?? ''].where((s) => s.isNotEmpty).join(' · '),
+                              style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 12),
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            if (p['owner_first_name'] != null) ...[
-                              const SizedBox(width: 8),
-                              Icon(Icons.person_rounded, size: 13, color: Colors.white.withValues(alpha: 0.8)),
-                              const SizedBox(width: 3),
-                              Text(
-                                '${p['owner_first_name']} ${p['owner_last_name'] ?? ''}'.trim(),
-                                style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12),
+                            const SizedBox(height: 4),
+                            Row(children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  _statusLabel(p['status'] as String? ?? ''),
+                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+                                ),
                               ),
-                            ],
-                          ]),
-                        ],
-                      )),
-                    ]),
+                              if (p['owner_first_name'] != null) ...[
+                                const SizedBox(width: 6),
+                                Icon(Icons.person_rounded, size: 11, color: Colors.white.withValues(alpha: 0.8)),
+                                const SizedBox(width: 2),
+                                Flexible(child: Text(
+                                  '${p['owner_first_name']} ${p['owner_last_name'] ?? ''}'.trim(),
+                                  style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 11),
+                                  overflow: TextOverflow.ellipsis,
+                                )),
+                              ],
+                            ]),
+                          ],
+                        )),
+                      ]),
+                    ),
                   ),
                 ),
               ]),
@@ -213,9 +233,10 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
               unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
               indicatorColor: Colors.white,
               indicatorWeight: 3,
+              dividerColor: Colors.transparent,
               tabs: const [
-                Tab(text: 'Patientenakte', icon: Icon(Icons.folder_open_rounded, size: 18)),
-                Tab(text: 'Daten', icon: Icon(Icons.info_outline_rounded, size: 18)),
+                Tab(text: 'Akte', icon: Icon(Icons.folder_open_rounded, size: 16)),
+                Tab(text: 'Daten', icon: Icon(Icons.info_outline_rounded, size: 16)),
               ],
             ),
           ),
@@ -338,6 +359,96 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     'deceased' => 'Verstorben',
     _          => s,
   };
+
+  // ── New Appointment from patient ─────────────────────────
+
+  void _showNewAppointmentSheet(Map<String, dynamic> p) {
+    final titleCtrl = TextEditingController(text: p['name'] as String? ?? '');
+    final notesCtrl = TextEditingController();
+    DateTime selDate = DateTime.now().add(const Duration(days: 1));
+    TimeOfDay selTime = const TimeOfDay(hour: 10, minute: 0);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSS) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+              Text('Neuer Termin', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              TextField(controller: titleCtrl, decoration: InputDecoration(
+                labelText: 'Titel *',
+                prefixIcon: const Icon(Icons.pets_rounded),
+                hintText: p['name'] as String? ?? '',
+              )),
+              const SizedBox(height: 12),
+              Row(children: [
+                Expanded(child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () async {
+                    final d = await showDatePicker(context: ctx,
+                      initialDate: selDate, firstDate: DateTime.now(),
+                      lastDate: DateTime.now().add(const Duration(days: 365)));
+                    if (d != null) setSS(() => selDate = d);
+                  },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(labelText: 'Datum', prefixIcon: Icon(Icons.calendar_today_rounded)),
+                    child: Text('${selDate.day.toString().padLeft(2,'0')}.${selDate.month.toString().padLeft(2,'0')}.${selDate.year}'),
+                  ),
+                )),
+                const SizedBox(width: 12),
+                Expanded(child: InkWell(
+                  borderRadius: BorderRadius.circular(8),
+                  onTap: () async {
+                    final t = await showTimePicker(context: ctx, initialTime: selTime);
+                    if (t != null) setSS(() => selTime = t);
+                  },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(labelText: 'Uhrzeit', prefixIcon: Icon(Icons.access_time_rounded)),
+                    child: Text('${selTime.hour.toString().padLeft(2,'0')}:${selTime.minute.toString().padLeft(2,'0')}'),
+                  ),
+                )),
+              ]),
+              const SizedBox(height: 12),
+              TextField(controller: notesCtrl, decoration: const InputDecoration(
+                labelText: 'Notizen', prefixIcon: Icon(Icons.notes_rounded))),
+              const SizedBox(height: 20),
+              SizedBox(width: double.infinity, child: FilledButton.icon(
+                icon: const Icon(Icons.save_rounded),
+                label: const Text('Termin erstellen'),
+                onPressed: () async {
+                  if (titleCtrl.text.trim().isEmpty) return;
+                  Navigator.pop(ctx);
+                  final start = DateTime(selDate.year, selDate.month, selDate.day, selTime.hour, selTime.minute);
+                  final end   = start.add(const Duration(hours: 1));
+                  try {
+                    await _api.appointmentCreate({
+                      'title':      titleCtrl.text.trim(),
+                      'patient_id': widget.id,
+                      'owner_id':   p['owner_id'],
+                      'start':      start.toIso8601String(),
+                      'end':        end.toIso8601String(),
+                      'notes':      notesCtrl.text.trim(),
+                    });
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Termin erstellt ✓'), backgroundColor: Colors.green));
+                  } catch (e) {
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(e.toString()), backgroundColor: AppTheme.danger));
+                  }
+                },
+              )),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
 
   // ── Bottom Sheet: Add entry ───────────────────────────────
 
