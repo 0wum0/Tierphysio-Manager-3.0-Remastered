@@ -63,7 +63,7 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">{{ t('invoices.owner') }} *</label>
-                        <select name="owner_id" class="form-control" required>
+                        <select name="owner_id" id="owner-select" class="form-control" required>
                             <option value="">— Tierhalter wählen —</option>
                             {% for owner in owners %}
                                 <option value="{{ owner.id }}" {{ preselected_owner == owner.id ? 'selected' : '' }}>
@@ -74,10 +74,10 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">{{ t('invoices.patient') }}</label>
-                        <select name="patient_id" class="form-control">
+                        <select name="patient_id" id="patient-select" class="form-control">
                             <option value="">— Kein Patient —</option>
                             {% for patient in patients %}
-                                <option value="{{ patient.id }}" {{ preselected_patient == patient.id ? 'selected' : '' }}>
+                                <option value="{{ patient.id }}" data-owner="{{ patient.owner_id }}" {{ preselected_patient == patient.id ? 'selected' : '' }}>
                                     {{ patient.name }} ({{ patient.species }})
                                 </option>
                             {% endfor %}
@@ -205,36 +205,44 @@
     {% endif %}
     {% endfor %}
 
-    /* ── Owner → Patient filter ── */
-    const ownerSel   = document.querySelector('[name="owner_id"]');
-    const patientSel = document.querySelector('[name="patient_id"]');
-    const allPatientOptions = Array.from(patientSel.options).map(o => ({
-        value: o.value, text: o.textContent, ownerId: o.dataset.owner || ''
-    }));
+    /* ── SearchableSelect for Owner + Patient ── */
+    const ownerSel   = document.getElementById('owner-select');
+    const patientSel = document.getElementById('patient-select');
 
-    function filterPatients(ownerId) {
-        const animals = patientsByOwner[ownerId] || [];
-        patientSel.innerHTML = '<option value="">— Kein Patient —</option>';
-        if (animals.length) {
-            animals.forEach(a => {
-                const opt = new Option(a.label, a.id);
-                patientSel.appendChild(opt);
-            });
-            if (animals.length === 1) patientSel.value = animals[0].id;
-        } else {
-            /* no animals for this owner — show all */
-            allPatientOptions.forEach(p => {
-                if (p.value) patientSel.appendChild(new Option(p.text, p.value));
-            });
-        }
+    /* Collect all patients with owner association */
+    const allPatients = Array.from(patientSel.options)
+        .filter(o => o.value)
+        .map(o => ({ value: o.value, label: o.textContent.trim(), ownerId: o.dataset.owner || '' }));
+
+    function getPatientItems(ownerId) {
+        const filtered = ownerId
+            ? allPatients.filter(p => String(p.ownerId) === String(ownerId))
+            : allPatients;
+        return (filtered.length ? filtered : allPatients).map(p => ({ value: p.value, label: p.label }));
     }
 
-    ownerSel.addEventListener('change', function () {
-        filterPatients(this.value);
+    /* Init patient SearchableSelect first so ssPatient is available in onSelect */
+    const ssPatient = new SearchableSelect({
+        target: patientSel,
+        placeholder: '— Kein Patient —'
     });
 
-    /* pre-select on page load if owner already selected */
-    if (ownerSel.value) filterPatients(ownerSel.value);
+    const ssOwner = new SearchableSelect({
+        target: ownerSel,
+        placeholder: '— Tierhalter wählen —',
+        onSelect: function(ownerId) {
+            const items = getPatientItems(ownerId);
+            const autoVal = items.length === 1 ? items[0].value : '';
+            ssPatient.setItems(items, autoVal);
+        }
+    });
+
+    /* pre-filter on page load if owner already preselected */
+    if (ownerSel.value) {
+        const items = getPatientItems(ownerSel.value);
+        const prePatient = patientSel.value;
+        ssPatient.setItems(items, prePatient || (items.length === 1 ? items[0].value : ''));
+    }
 
     /* ── Treatment type → description + price ── */
     function bindTreatmentSelect(row) {

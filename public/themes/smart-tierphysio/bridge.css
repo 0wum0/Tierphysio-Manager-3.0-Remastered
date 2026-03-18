@@ -955,3 +955,44 @@ html.set-fullscreen .app-content {
     overflow-y: auto !important;
 }
 /* Icon state is handled by SmartAdmin via body.fullscreen-active (synced in layout.twig) */
+
+/* ── SearchableSelect Komponente ── */
+.ss-wrap { position: relative; }
+.ss-display {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 0.4rem; cursor: pointer; user-select: none;
+    min-height: 38px; padding: 0.375rem 0.65rem;
+    background: var(--bs-body-bg); border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius, 0.375rem); color: var(--bs-body-color);
+    font-size: 0.875rem; transition: border-color .15s;
+}
+.ss-display:focus-within, .ss-wrap.open .ss-display { border-color: var(--accent, #4f7cff); box-shadow: 0 0 0 2px rgba(79,124,255,.18); }
+.ss-display-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ss-display-text.placeholder { opacity: .55; }
+.ss-chevron { flex-shrink: 0; opacity: .5; transition: transform .18s; }
+.ss-wrap.open .ss-chevron { transform: rotate(180deg); }
+.ss-dropdown {
+    display: none; position: absolute; left: 0; right: 0; top: calc(100% + 3px);
+    z-index: 1060; background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color); border-radius: var(--bs-border-radius, .375rem);
+    box-shadow: 0 8px 24px rgba(0,0,0,.18); overflow: hidden;
+}
+.ss-wrap.open .ss-dropdown { display: block; }
+.ss-search-wrap { padding: 8px; border-bottom: 1px solid var(--bs-border-color); }
+.ss-search {
+    width: 100%; padding: 0.3rem 0.55rem; font-size: 0.82rem;
+    background: var(--bs-tertiary-bg, rgba(255,255,255,.06));
+    border: 1px solid var(--bs-border-color); border-radius: var(--bs-border-radius-sm, .25rem);
+    color: var(--bs-body-color); outline: none;
+}
+.ss-search:focus { border-color: var(--accent, #4f7cff); }
+.ss-list { max-height: 220px; overflow-y: auto; }
+.ss-option {
+    padding: 0.42rem 0.75rem; cursor: pointer; font-size: 0.855rem;
+    color: var(--bs-body-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    transition: background .1s;
+}
+.ss-option:hover, .ss-option.focused { background: rgba(79,124,255,.13); }
+.ss-option.selected { background: rgba(79,124,255,.2); font-weight: 600; }
+.ss-option.ss-empty { opacity: .5; cursor: default; font-style: italic; padding: .55rem .75rem; }
+.ss-option mark { background: transparent; color: var(--accent, #4f7cff); font-weight: 700; }

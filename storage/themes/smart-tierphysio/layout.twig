@@ -1754,6 +1754,183 @@
 </script>
 
 <script>
+/* ── SearchableSelect: wiederverwendbare Such-Dropdown-Komponente ── */
+window.SearchableSelect = (function(){
+    'use strict';
+    var CHEVRON = '<svg class="ss-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none"><polyline stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points="6 9 12 15 18 9"/></svg>';
+
+    function esc(s){ return String(s).replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);}); }
+
+    function highlight(text, q){
+        if(!q) return esc(text);
+        var re = new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+        return esc(text).replace(re,'<mark>$1</mark>');
+    }
+
+    function SearchableSelect(opts){
+        /* opts: { target: <select>, placeholder, onSelect } */
+        var sel      = opts.target;
+        var ph       = opts.placeholder || '— wählen —';
+        var onSelect = opts.onSelect || null;
+        var wrap, display, displayText, dropdown, searchInput, list;
+        var items    = [];   /* [{value, label}] */
+        var current  = {value: sel.value, label: ''};
+
+        function build(){
+            wrap = document.createElement('div');
+            wrap.className = 'ss-wrap';
+
+            display = document.createElement('div');
+            display.className = 'ss-display';
+            display.setAttribute('tabindex','0');
+            display.setAttribute('role','combobox');
+            display.setAttribute('aria-expanded','false');
+
+            displayText = document.createElement('span');
+            displayText.className = 'ss-display-text placeholder';
+            displayText.textContent = ph;
+            display.appendChild(displayText);
+            display.insertAdjacentHTML('beforeend', CHEVRON);
+
+            dropdown = document.createElement('div');
+            dropdown.className = 'ss-dropdown';
+
+            var searchWrap = document.createElement('div');
+            searchWrap.className = 'ss-search-wrap';
+            searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.className = 'ss-search';
+            searchInput.placeholder = 'Suchen…';
+            searchInput.setAttribute('autocomplete','off');
+            searchWrap.appendChild(searchInput);
+            dropdown.appendChild(searchWrap);
+
+            list = document.createElement('div');
+            list.className = 'ss-list';
+            dropdown.appendChild(list);
+
+            wrap.appendChild(display);
+            wrap.appendChild(dropdown);
+
+            sel.parentNode.insertBefore(wrap, sel);
+            sel.style.display = 'none';
+            wrap.appendChild(sel);
+        }
+
+        function readItems(){
+            items = [];
+            Array.from(sel.options).forEach(function(o){
+                items.push({value: String(o.value), label: o.textContent.trim()});
+            });
+        }
+
+        function renderList(q){
+            q = (q||'').trim().toLowerCase();
+            list.innerHTML = '';
+            var shown = 0;
+            items.forEach(function(item){
+                if(!item.value) return;
+                if(q && item.label.toLowerCase().indexOf(q) === -1) return;
+                var div = document.createElement('div');
+                div.className = 'ss-option' + (item.value === current.value ? ' selected' : '');
+                div.dataset.value = item.value;
+                div.innerHTML = highlight(item.label, q);
+                div.addEventListener('mousedown', function(e){ e.preventDefault(); selectItem(item); });
+                list.appendChild(div);
+                shown++;
+            });
+            if(!shown){
+                var empty = document.createElement('div');
+                empty.className = 'ss-option ss-empty';
+                empty.textContent = 'Keine Einträge gefunden';
+                list.appendChild(empty);
+            }
+        }
+
+        function selectItem(item){
+            current = item;
+            sel.value = item.value;
+            displayText.textContent = item.label;
+            displayText.classList.remove('placeholder');
+            sel.dispatchEvent(new Event('change', {bubbles:true}));
+            if(onSelect) onSelect(item.value, item.label);
+            close();
+        }
+
+        function open(){
+            readItems();
+            renderList('');
+            searchInput.value = '';
+            wrap.classList.add('open');
+            display.setAttribute('aria-expanded','true');
+            setTimeout(function(){ searchInput.focus(); }, 10);
+        }
+
+        function close(){
+            wrap.classList.remove('open');
+            display.setAttribute('aria-expanded','false');
+        }
+
+        function syncFromSelect(){
+            readItems();
+            var val = String(sel.value);
+            var found = items.find(function(i){ return i.value === val; });
+            if(found && found.value){
+                current = found;
+                displayText.textContent = found.label;
+                displayText.classList.remove('placeholder');
+            } else {
+                current = {value:'', label:''};
+                displayText.textContent = ph;
+                displayText.classList.add('placeholder');
+            }
+        }
+
+        build();
+        syncFromSelect();
+
+        display.addEventListener('click', function(){ wrap.classList.contains('open') ? close() : open(); });
+        display.addEventListener('keydown', function(e){
+            if(e.key==='Enter'||e.key===' '){ e.preventDefault(); open(); }
+            if(e.key==='Escape') close();
+        });
+        searchInput.addEventListener('input', function(){ renderList(this.value); });
+        searchInput.addEventListener('keydown', function(e){
+            if(e.key==='Escape'){ close(); display.focus(); }
+        });
+
+        document.addEventListener('click', function(e){
+            if(!wrap.contains(e.target)) close();
+        });
+
+        /* public API */
+        return {
+            setItems: function(newItems, selectedVal){
+                /* newItems: [{value, label}] */
+                sel.innerHTML = '';
+                var emptyOpt = document.createElement('option');
+                emptyOpt.value = '';
+                emptyOpt.textContent = ph;
+                sel.appendChild(emptyOpt);
+                newItems.forEach(function(i){
+                    var o = document.createElement('option');
+                    o.value = i.value;
+                    o.textContent = i.label;
+                    sel.appendChild(o);
+                });
+                sel.value = selectedVal || '';
+                syncFromSelect();
+            },
+            getValue: function(){ return sel.value; },
+            syncFromSelect: syncFromSelect
+        };
+    }
+
+    return SearchableSelect;
+})();
+</script>
+
+<script>
 /* ── Vollbild: body.fullscreen-active mit html.set-fullscreen synchronisieren ── */
 (function(){
     /* On page load: if set-fullscreen is already on <html> (restored by saveloadscript),
