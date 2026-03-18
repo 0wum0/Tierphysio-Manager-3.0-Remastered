@@ -137,7 +137,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
             children: [
               _SectionTitle('Grunddaten'),
               DropdownButtonFormField<int>(
-                value: _ownerId,
+                initialValue: _ownerId,
                 decoration: const InputDecoration(labelText: 'Tierhalter *', prefixIcon: Icon(Icons.person_outlined)),
                 items: [
                   const DropdownMenuItem(value: null, child: Text('— Tierhalter wählen —')),
@@ -151,7 +151,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
               ),
               const SizedBox(height: 14),
               DropdownButtonFormField<int>(
-                value: _patientId,
+                initialValue: _patientId,
                 decoration: const InputDecoration(labelText: 'Patient', prefixIcon: Icon(Icons.pets)),
                 items: [
                   const DropdownMenuItem(value: null, child: Text('— kein Patient —')),
@@ -183,7 +183,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
               const SizedBox(height: 14),
               Row(children: [
                 Expanded(child: DropdownButtonFormField<String>(
-                  value: _status,
+                  initialValue: _status,
                   decoration: const InputDecoration(labelText: 'Status'),
                   items: const [
                     DropdownMenuItem(value: 'draft', child: Text('Entwurf')),
@@ -193,7 +193,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
                 )),
                 const SizedBox(width: 12),
                 Expanded(child: DropdownButtonFormField<String>(
-                  value: _payMethod,
+                  initialValue: _payMethod,
                   decoration: const InputDecoration(labelText: 'Zahlungsart'),
                   items: const [
                     DropdownMenuItem(value: 'rechnung', child: Text('Rechnung')),

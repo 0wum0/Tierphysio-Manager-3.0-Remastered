@@ -212,7 +212,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ]),
                 const SizedBox(height: 10),
                 if (owners.isNotEmpty) DropdownButtonFormField<int>(
-                  value: ownerId,
+                  initialValue: ownerId,
                   isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Tierhalter', isDense: true),
                   items: [
@@ -229,7 +229,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ),
                 const SizedBox(height: 10),
                 if (patients.isNotEmpty) DropdownButtonFormField<int>(
-                  value: patientId,
+                  initialValue: patientId,
                   isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Patient', isDense: true),
                   items: [
@@ -334,7 +334,7 @@ class _AppointmentTile extends StatelessWidget {
         ),
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(color: _statusColor(status).withOpacity(0.15), borderRadius: BorderRadius.circular(4)),
+          decoration: BoxDecoration(color: _statusColor(status).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(4)),
           child: Text(_statusLabel(status), style: TextStyle(fontSize: 10, color: _statusColor(status), fontWeight: FontWeight.w600)),
         ),
         onLongPress: () => _showOptions(context),

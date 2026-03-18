@@ -196,7 +196,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<String>(
-                value: type,
+                initialValue: type,
                 decoration: const InputDecoration(labelText: 'Typ'),
                 items: const [
                   DropdownMenuItem(value: 'note', child: Text('Notiz')),
@@ -300,7 +300,7 @@ class _TimelineEntry extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: color.withOpacity(0.15),
+          backgroundColor: color.withAlpha(38),
           child: Icon(icon, color: color, size: 20),
         ),
         title: Text(entry['title'] as String? ?? '', style: const TextStyle(fontWeight: FontWeight.w600)),

@@ -36,7 +36,7 @@ class _AppSearchBarState extends State<AppSearchBar> {
               : null,
           isDense: true,
           filled: true,
-          fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+          fillColor: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide.none,

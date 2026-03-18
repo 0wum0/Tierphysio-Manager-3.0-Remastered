@@ -28,7 +28,6 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
   String _status    = 'active';
   String? _birthDate;
   int? _ownerId;
-  String _ownerName = '';
 
   List<dynamic> _owners = [];
 
@@ -138,7 +137,7 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
                     ),
                     const SizedBox(height: 14),
                     DropdownButtonFormField<String>(
-                      value: _gender,
+                      initialValue: _gender,
                       decoration: const InputDecoration(labelText: 'Geschlecht'),
                       items: const [
                         DropdownMenuItem(value: 'männlich',    child: Text('Männlich')),
@@ -184,7 +183,7 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
                     const SizedBox(height: 14),
                     if (_owners.isNotEmpty)
                       DropdownButtonFormField<int>(
-                        value: _ownerId,
+                        initialValue: _ownerId,
                         decoration: const InputDecoration(labelText: 'Tierhalter', prefixIcon: Icon(Icons.person_outlined)),
                         items: [
                           const DropdownMenuItem(value: null, child: Text('— kein Tierhalter —')),
@@ -197,7 +196,7 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
                       ),
                     const SizedBox(height: 14),
                     DropdownButtonFormField<String>(
-                      value: _status,
+                      initialValue: _status,
                       decoration: const InputDecoration(labelText: 'Status'),
                       items: const [
                         DropdownMenuItem(value: 'active',   child: Text('Aktiv')),
