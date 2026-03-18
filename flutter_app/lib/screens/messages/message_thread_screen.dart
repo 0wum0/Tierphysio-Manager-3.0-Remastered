@@ -14,10 +14,11 @@ class MessageThreadScreen extends StatefulWidget {
 }
 
 class _MessageThreadScreenState extends State<MessageThreadScreen> {
-  final _api       = ApiService();
-  final _replyCtrl = TextEditingController();
-  final _scrollCtrl= ScrollController();
-  final _focusNode = FocusNode();
+  final _api        = ApiService();
+  final _replyCtrl  = TextEditingController();
+  final _scrollCtrl = ScrollController();
+  final _focusNode  = FocusNode();
+  final _hasText    = ValueNotifier<bool>(false);
 
   Map<String, dynamic>? _thread;
   List<dynamic> _messages = [];
@@ -28,18 +29,25 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
   @override
   void initState() {
     super.initState();
-    // Use prefill data immediately so header shows while loading
     if (widget.prefill != null) {
       _thread = widget.prefill;
     }
+    _replyCtrl.addListener(_onTextChanged);
     _load();
+  }
+
+  void _onTextChanged() {
+    final has = _replyCtrl.text.trim().isNotEmpty;
+    if (_hasText.value != has) _hasText.value = has;
   }
 
   @override
   void dispose() {
+    _replyCtrl.removeListener(_onTextChanged);
     _replyCtrl.dispose();
     _scrollCtrl.dispose();
     _focusNode.dispose();
+    _hasText.dispose();
     super.dispose();
   }
 
@@ -375,26 +383,23 @@ class _MessageThreadScreenState extends State<MessageThreadScreen> {
           ),
         ),
         const SizedBox(width: 8),
-        AnimatedBuilder(
-          animation: _replyCtrl,
-          builder: (_, __) {
-            final hasText = _replyCtrl.text.trim().isNotEmpty;
-            return IconButton.filled(
-              onPressed: (hasText && !_sending && !isClosed) ? _send : null,
-              icon: _sending
-                  ? const SizedBox(
-                      width: 18, height: 18,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.send_rounded, size: 20),
-              style: IconButton.styleFrom(
-                backgroundColor: (hasText && !isClosed)
-                    ? AppTheme.primary
-                    : Colors.grey.shade300,
-                foregroundColor: Colors.white,
-              ),
-            );
-          },
+        ValueListenableBuilder<bool>(
+          valueListenable: _hasText,
+          builder: (_, hasText, __) => IconButton.filled(
+            onPressed: (hasText && !_sending && !isClosed) ? _send : null,
+            icon: _sending
+                ? const SizedBox(
+                    width: 18, height: 18,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.send_rounded, size: 20),
+            style: IconButton.styleFrom(
+              backgroundColor: (hasText && !isClosed)
+                  ? AppTheme.primary
+                  : Colors.grey.shade300,
+              foregroundColor: Colors.white,
+            ),
+          ),
         ),
       ]),
     );
