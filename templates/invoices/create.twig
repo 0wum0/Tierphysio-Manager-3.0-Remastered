@@ -206,43 +206,48 @@
     {% endfor %}
 
     /* ── SearchableSelect for Owner + Patient ── */
-    const ownerSel   = document.getElementById('owner-select');
-    const patientSel = document.getElementById('patient-select');
+    /* Wrapped in DOMContentLoaded so layout.twig's scripts (window.SearchableSelect) are loaded first */
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof SearchableSelect === 'undefined') return;
 
-    /* Collect all patients with owner association */
-    const allPatients = Array.from(patientSel.options)
-        .filter(o => o.value)
-        .map(o => ({ value: o.value, label: o.textContent.trim(), ownerId: o.dataset.owner || '' }));
+        const ownerSel   = document.getElementById('owner-select');
+        const patientSel = document.getElementById('patient-select');
+        if (!ownerSel || !patientSel) return;
 
-    function getPatientItems(ownerId) {
-        const filtered = ownerId
-            ? allPatients.filter(p => String(p.ownerId) === String(ownerId))
-            : allPatients;
-        return (filtered.length ? filtered : allPatients).map(p => ({ value: p.value, label: p.label }));
-    }
+        /* Collect all patients with owner association */
+        const allPatients = Array.from(patientSel.options)
+            .filter(o => o.value)
+            .map(o => ({ value: o.value, label: o.textContent.trim(), ownerId: o.dataset.owner || '' }));
 
-    /* Init patient SearchableSelect first so ssPatient is available in onSelect */
-    const ssPatient = new SearchableSelect({
-        target: patientSel,
-        placeholder: '— Kein Patient —'
-    });
+        function getPatientItems(ownerId) {
+            const filtered = ownerId
+                ? allPatients.filter(p => String(p.ownerId) === String(ownerId))
+                : allPatients;
+            return (filtered.length ? filtered : allPatients).map(p => ({ value: p.value, label: p.label }));
+        }
 
-    const ssOwner = new SearchableSelect({
-        target: ownerSel,
-        placeholder: '— Tierhalter wählen —',
-        onSelect: function(ownerId) {
-            const items = getPatientItems(ownerId);
-            const autoVal = items.length === 1 ? items[0].value : '';
-            ssPatient.setItems(items, autoVal);
+        const ssPatient = new SearchableSelect({
+            target: patientSel,
+            placeholder: '— Kein Patient —'
+        });
+
+        const ssOwner = new SearchableSelect({
+            target: ownerSel,
+            placeholder: '— Tierhalter wählen —',
+            onSelect: function(ownerId) {
+                const items = getPatientItems(ownerId);
+                const autoVal = items.length === 1 ? items[0].value : '';
+                ssPatient.setItems(items, autoVal);
+            }
+        });
+
+        /* pre-filter on page load if owner already preselected */
+        if (ownerSel.value) {
+            const items = getPatientItems(ownerSel.value);
+            const prePatient = patientSel.value;
+            ssPatient.setItems(items, prePatient || (items.length === 1 ? items[0].value : ''));
         }
     });
-
-    /* pre-filter on page load if owner already preselected */
-    if (ownerSel.value) {
-        const items = getPatientItems(ownerSel.value);
-        const prePatient = patientSel.value;
-        ssPatient.setItems(items, prePatient || (items.length === 1 ? items[0].value : ''));
-    }
 
     /* ── Treatment type → description + price ── */
     function bindTreatmentSelect(row) {

@@ -426,7 +426,7 @@
             }
         });
     }
-    initAptSearchableSelects();
+    document.addEventListener('DOMContentLoaded', initAptSearchableSelects);
 
     /* Owner change → filter patients */
     document.getElementById('apt-owner').addEventListener('change', async function() {
