@@ -155,7 +155,7 @@ class _PatientTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           child: Row(children: [
             PawAvatar(
-              photoPath: p['photo'] as String?,
+              photoPath: p['photo_url'] as String?,
               species: species,
               name: p['name'] as String?,
               radius: 24,

@@ -273,6 +273,12 @@ class MobileApiController
         $filter = trim($_GET['filter'] ?? '');
 
         $result = $this->patients->getPaginated($page, $per, $search, $filter);
+        $result['items'] = array_map(static function (array $p): array {
+            if (!empty($p['photo'])) {
+                $p['photo_url'] = '/patient-photos/' . $p['id'] . '/' . $p['photo'];
+            }
+            return $p;
+        }, $result['items'] ?? []);
         $this->json($result);
     }
 
@@ -301,6 +307,9 @@ class MobileApiController
             return $e;
         }, $rawTimeline);
 
+        if (!empty($patient['photo'])) {
+            $patient['photo_url'] = '/patient-photos/' . $id . '/' . $patient['photo'];
+        }
         $patient['timeline']      = $timeline;
         $patient['invoice_stats'] = $invoiceStats;
         $this->json($patient);
@@ -509,7 +518,13 @@ class MobileApiController
         $owner = $this->owners->findById($id);
         if (!$owner) $this->error('Tierhalter nicht gefunden.', 404);
 
-        $owner['patients'] = $this->patients->findByOwner($id);
+        $rawPatients = $this->patients->findByOwner($id);
+        $owner['patients'] = array_values(array_map(static function (array $p): array {
+            if (!empty($p['photo'])) {
+                $p['photo_url'] = '/patient-photos/' . $p['id'] . '/' . $p['photo'];
+            }
+            return $p;
+        }, $rawPatients));
         $this->json($owner);
     }
 

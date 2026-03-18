@@ -66,7 +66,15 @@ class ApiService {
 
   dynamic _parse(http.Response res) {
     final body = utf8.decode(res.bodyBytes);
-    final data = jsonDecode(body);
+    dynamic data;
+    try {
+      data = jsonDecode(body);
+    } catch (_) {
+      throw ApiException(
+        'Server-Fehler ${res.statusCode}: Ungültige Antwort vom Server.',
+        res.statusCode,
+      );
+    }
     if (res.statusCode >= 400) {
       throw ApiException(
         data is Map ? (data['error'] ?? 'Fehler ${res.statusCode}') : 'Fehler ${res.statusCode}',

@@ -86,7 +86,8 @@ class _OwnerDetailScreenState extends State<OwnerDetailScreen>
 
   Widget _buildContent() {
     final o = _owner!;
-    final patients = List<dynamic>.from(o['patients'] as List? ?? []);
+    final raw = o['patients'];
+    final patients = raw is List ? List<dynamic>.from(raw) : <dynamic>[];
     final lastName = o['last_name'] as String? ?? '';
     final initial  = lastName.isNotEmpty ? lastName[0].toUpperCase() : '?';
     final color    = _avatarColor(lastName);
@@ -299,7 +300,7 @@ class _OwnerDetailScreenState extends State<OwnerDetailScreen>
                           ),
                         ),
                         child: Center(child: PawAvatar(
-                          photoPath: p['photo'] as String?,
+                          photoPath: p['photo_url'] as String?,
                           species: p['species'] as String?,
                           name: p['name'] as String?,
                           radius: 28,

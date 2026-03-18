@@ -174,7 +174,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                         Hero(
                           tag: 'patient_${widget.id}',
                           child: PawAvatar(
-                            photoPath: p['photo'] as String?,
+                            photoPath: p['photo_url'] as String?,
                             species: species,
                             name: p['name'] as String?,
                             radius: 30,
