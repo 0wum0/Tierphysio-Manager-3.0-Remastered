@@ -701,46 +701,75 @@
        APP DRAWER (rechte Seitenleiste)
        ═══════════════════════════════════════════════════════ #}
     <aside class="app-drawer js-app-drawer">
-        <button type="button" class="btn btn-system position-absolute top-0 end-0 z-2 overflow-hidden p-3"
-                data-action="toggle-swap" data-toggleclass="open" data-target="aside.js-app-drawer"
-                aria-label="Schließen">
-            <svg class="sa-icon sa-icon-2x">
-                <use href="/themes/smart-tierphysio/icons/sprite.svg#x"></use>
-            </svg>
-        </button>
         <div class="custom-scrollbar h-100 p-0">
             <div class="d-flex flex-column h-100">
-                <div class="d-flex align-items-center gap-2 px-3 pt-4 pb-2 flex-shrink-0">
-                    <svg class="sa-icon sa-icon-2x" fill="none" viewBox="0 0 24 24">
-                        <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                              d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                    </svg>
-                    <span class="fw-700 fs-md">Nachrichten</span>
-                    <span id="drawer-unread-badge" class="badge ms-auto" style="background:#ef4444;display:none;"></span>
-                    <a href="/portal-admin/nachrichten" class="btn btn-xs btn-outline-secondary ms-1" style="font-size:.7rem;padding:2px 8px;">Alle</a>
-                </div>
-                <div id="drawer-thread-list" class="flex-grow-1 overflow-y-auto custom-scroll px-2 pb-2" style="min-height:0;">
-                    <div class="text-center text-muted py-5 fs-sm" id="drawer-loading">
-                        <div class="spinner-border spinner-border-sm me-1"></div> Laden…
+
+                {# ── PANEL A: Thread list ── #}
+                <div id="drawer-panel-list" class="d-flex flex-column h-100">
+                    <div class="d-flex align-items-center gap-2 px-3 pt-3 pb-2 flex-shrink-0">
+                        <svg class="sa-icon sa-icon-2x" fill="none" viewBox="0 0 24 24">
+                            <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                  d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        <span class="fw-700 fs-md">Nachrichten</span>
+                        <span id="drawer-unread-badge" class="badge ms-auto" style="background:#ef4444;display:none;"></span>
+                        <a href="/portal-admin/nachrichten" class="btn btn-xs btn-outline-secondary ms-1" style="font-size:.7rem;padding:2px 8px;">Alle</a>
+                        <button type="button" class="btn btn-system p-1 ms-1"
+                                data-action="toggle-swap" data-toggleclass="open" data-target="aside.js-app-drawer"
+                                aria-label="Schließen">
+                            <svg class="sa-icon"><use href="/themes/smart-tierphysio/icons/sprite.svg#x"></use></svg>
+                        </button>
+                    </div>
+                    <div id="drawer-thread-list" class="flex-grow-1 overflow-y-auto custom-scroll px-2 pb-2" style="min-height:0;">
+                        <div class="text-center text-muted py-5 fs-sm" id="drawer-loading">
+                            <div class="spinner-border spinner-border-sm me-1"></div> Laden…
+                        </div>
+                    </div>
+                    <div class="flex-shrink-0 border-top px-3 py-2">
+                        <button class="btn btn-sm btn-primary w-100" id="drawer-btn-new"
+                                data-bs-toggle="collapse" data-bs-target="#drawer-new-form">
+                            + Neue Nachricht
+                        </button>
+                        <div class="collapse mt-2" id="drawer-new-form">
+                            <select class="form-select form-select-sm mb-1" id="drawer-owner-select">
+                                <option value="">— Tierhalter wählen —</option>
+                            </select>
+                            <input type="text" class="form-control form-control-sm mb-1" id="drawer-subject"
+                                   placeholder="Betreff…" maxlength="255">
+                            <textarea class="form-control form-control-sm mb-1" id="drawer-body" rows="3"
+                                      placeholder="Nachricht…"></textarea>
+                            <button class="btn btn-sm btn-success w-100" id="drawer-send-btn">Senden</button>
+                            <div id="drawer-send-error" class="text-danger fs-xs mt-1 d-none"></div>
+                        </div>
                     </div>
                 </div>
-                <div class="flex-shrink-0 border-top px-3 py-2">
-                    <button class="btn btn-sm btn-primary w-100" id="drawer-btn-new"
-                            data-bs-toggle="collapse" data-bs-target="#drawer-new-form">
-                        + Neue Nachricht
-                    </button>
-                    <div class="collapse mt-2" id="drawer-new-form">
-                        <select class="form-select form-select-sm mb-1" id="drawer-owner-select">
-                            <option value="">— Tierhalter wählen —</option>
-                        </select>
-                        <input type="text" class="form-control form-control-sm mb-1" id="drawer-subject"
-                               placeholder="Betreff…" maxlength="255">
-                        <textarea class="form-control form-control-sm mb-1" id="drawer-body" rows="3"
-                                  placeholder="Nachricht…"></textarea>
-                        <button class="btn btn-sm btn-success w-100" id="drawer-send-btn">Senden</button>
-                        <div id="drawer-send-error" class="text-danger fs-xs mt-1 d-none"></div>
+
+                {# ── PANEL B: Thread detail (inline, hidden initially) ── #}
+                <div id="drawer-panel-thread" class="d-flex flex-column h-100" style="display:none!important;">
+                    <div class="d-flex align-items-center gap-2 px-3 pt-3 pb-2 flex-shrink-0 border-bottom">
+                        <button type="button" class="btn btn-system p-1" id="drawer-back-btn" aria-label="Zurück">
+                            <svg class="sa-icon" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="15 18 9 12 15 6"/></svg>
+                        </button>
+                        <span class="fw-600 fs-sm text-truncate flex-grow-1" id="drawer-thread-subject"></span>
+                        <a id="drawer-thread-fullpage" href="#" class="btn btn-xs btn-outline-secondary" style="font-size:.65rem;padding:2px 6px;white-space:nowrap;">Vollbild</a>
+                        <button type="button" class="btn btn-system p-1"
+                                data-action="toggle-swap" data-toggleclass="open" data-target="aside.js-app-drawer"
+                                aria-label="Schließen">
+                            <svg class="sa-icon"><use href="/themes/smart-tierphysio/icons/sprite.svg#x"></use></svg>
+                        </button>
+                    </div>
+                    <div id="drawer-msg-list" class="flex-grow-1 overflow-y-auto custom-scroll px-3 py-2" style="min-height:0;display:flex;flex-direction:column;gap:.6rem;"></div>
+                    <div class="flex-shrink-0 border-top px-3 py-2" id="drawer-reply-area">
+                        <textarea class="form-control form-control-sm mb-1" id="drawer-reply-body" rows="2"
+                                  placeholder="Antwort…" style="resize:none;"></textarea>
+                        <button class="btn btn-sm btn-primary w-100" id="drawer-reply-btn">Antwort senden</button>
+                        <div id="drawer-reply-error" class="text-danger fs-xs mt-1 d-none"></div>
+                    </div>
+                    <div class="flex-shrink-0 px-3 pb-2 d-none" id="drawer-thread-closed-note">
+                        <div class="text-muted fs-xs text-center py-2" style="border-top:1px solid var(--bs-border-color);">Diese Konversation ist geschlossen.</div>
                     </div>
                 </div>
+
             </div>
         </div>
     </aside>
@@ -1396,10 +1425,15 @@
 
 <script>
 (function(){
-    var _drawerLoaded   = false;
-    var _drawerUsers    = [];
-    var _csrfMeta       = document.querySelector('meta[name="csrf-token"]');
-    var _csrf           = _csrfMeta ? _csrfMeta.getAttribute('content') : '';
+    var _drawerLoaded    = false;
+    var _drawerUsers     = [];
+    var _activeThreadId  = null;
+    var _activeThreadStatus = 'open';
+    var _csrfMeta        = document.querySelector('meta[name="csrf-token"]');
+    var _csrf            = _csrfMeta ? _csrfMeta.getAttribute('content') : '';
+
+    var panelList   = document.getElementById('drawer-panel-list');
+    var panelThread = document.getElementById('drawer-panel-thread');
 
     function esc(s){
         var r = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'};
@@ -1417,11 +1451,101 @@
         return d.toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit'});
     }
 
+    /* ── Show / hide panels ── */
+    function showListPanel(){
+        panelList.style.display   = '';
+        panelThread.style.display = 'none';
+        _activeThreadId = null;
+    }
+
+    function showThreadPanel(threadId, subject, status){
+        _activeThreadId     = threadId;
+        _activeThreadStatus = status || 'open';
+        document.getElementById('drawer-thread-subject').textContent = subject || '';
+        document.getElementById('drawer-thread-fullpage').href = '/portal-admin/nachrichten/' + threadId;
+
+        var msgList   = document.getElementById('drawer-msg-list');
+        var replyArea = document.getElementById('drawer-reply-area');
+        var closedNote = document.getElementById('drawer-thread-closed-note');
+
+        msgList.innerHTML = '<div class="text-center text-muted py-4 fs-xs"><div class="spinner-border spinner-border-sm"></div></div>';
+
+        if(_activeThreadStatus === 'closed'){
+            replyArea.classList.add('d-none');
+            closedNote.classList.remove('d-none');
+        } else {
+            replyArea.classList.remove('d-none');
+            closedNote.classList.add('d-none');
+            document.getElementById('drawer-reply-body').value = '';
+            document.getElementById('drawer-reply-error').classList.add('d-none');
+        }
+
+        panelList.style.display   = 'none';
+        panelThread.style.display = '';
+
+        /* Load messages */
+        fetch('/api/portal-admin/nachrichten/' + threadId + '/messages')
+            .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
+            .then(function(data){
+                renderMessages(data.messages || []);
+            })
+            .catch(function(){
+                msgList.innerHTML = '<div class="text-center text-muted py-3 fs-xs">Fehler beim Laden</div>';
+            });
+    }
+
+    function renderMessages(msgs){
+        var msgList = document.getElementById('drawer-msg-list');
+        if(!msgs.length){
+            msgList.innerHTML = '<div class="text-center text-muted py-4 fs-xs">Keine Nachrichten</div>';
+            return;
+        }
+        var html = '';
+        msgs.forEach(function(m){
+            var isAdmin = m.sender_type === 'admin';
+            var name    = isAdmin ? esc(m.sender_name || 'Team') : 'Besitzer';
+            var color   = isAdmin ? '#4f7cff' : '#22c55e';
+            var align   = isAdmin ? 'flex-start' : 'flex-end';
+            var bg      = isAdmin ? 'rgba(79,124,255,0.10)' : 'var(--bs-tertiary-bg)';
+            var border  = isAdmin ? '1px solid rgba(79,124,255,0.2)' : '1px solid var(--bs-border-color)';
+            var radius  = isAdmin ? '4px 10px 10px 10px' : '10px 4px 10px 10px';
+            var bodyTxt = esc(m.body||'').replace(/\n/g,'<br>');
+            html +=
+                '<div style="display:flex;flex-direction:column;align-items:' + align + ';">'
+                + '<span style="font-size:.65rem;color:' + color + ';font-weight:600;margin-bottom:2px;">' + name + '</span>'
+                + '<div style="max-width:90%;padding:.5rem .75rem;border-radius:' + radius + ';background:' + bg + ';border:' + border + ';font-size:.8rem;line-height:1.5;">' + bodyTxt + '</div>'
+                + '<span style="font-size:.6rem;color:var(--bs-secondary-color);margin-top:2px;">' + esc(m.created_at||'') + '</span>'
+                + '</div>';
+        });
+        msgList.innerHTML = html;
+        msgList.scrollTop = msgList.scrollHeight;
+    }
+
+    function appendDrawerMessage(m){
+        var msgList = document.getElementById('drawer-msg-list');
+        var isAdmin = m.sender_type === 'admin';
+        var name    = isAdmin ? esc(m.sender_name || 'Team') : 'Besitzer';
+        var color   = isAdmin ? '#4f7cff' : '#22c55e';
+        var align   = isAdmin ? 'flex-start' : 'flex-end';
+        var bg      = isAdmin ? 'rgba(79,124,255,0.10)' : 'var(--bs-tertiary-bg)';
+        var border  = isAdmin ? '1px solid rgba(79,124,255,0.2)' : '1px solid var(--bs-border-color)';
+        var radius  = isAdmin ? '4px 10px 10px 10px' : '10px 4px 10px 10px';
+        var bodyTxt = esc(m.body||'').replace(/\n/g,'<br>');
+        var wrap = document.createElement('div');
+        wrap.style.cssText = 'display:flex;flex-direction:column;align-items:' + align + ';';
+        wrap.innerHTML =
+            '<span style="font-size:.65rem;color:' + color + ';font-weight:600;margin-bottom:2px;">' + name + '</span>'
+            + '<div style="max-width:90%;padding:.5rem .75rem;border-radius:' + radius + ';background:' + bg + ';border:' + border + ';font-size:.8rem;line-height:1.5;">' + bodyTxt + '</div>'
+            + '<span style="font-size:.6rem;color:var(--bs-secondary-color);margin-top:2px;">' + esc(m.created_at||'') + '</span>';
+        msgList.appendChild(wrap);
+        msgList.scrollTop = msgList.scrollHeight;
+    }
+
+    /* ── Load thread list ── */
     function loadDrawer(){
         fetch('/api/portal-admin/nachrichten-drawer')
             .then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
             .then(function(data){
-                /* update badges */
                 var badge = document.getElementById('drawer-unread-badge');
                 if(data.total_unread > 0){
                     badge.textContent = data.total_unread;
@@ -1431,7 +1555,6 @@
                 }
                 updateHeaderBadge(data.total_unread);
 
-                /* render thread list */
                 var list = document.getElementById('drawer-thread-list');
                 if(!data.threads || data.threads.length === 0){
                     list.innerHTML = '<div class="text-center text-muted py-5 fs-sm">Keine Nachrichten</div>';
@@ -1445,9 +1568,12 @@
                     var statusBadge = t.status === 'closed'
                         ? '<span class="badge bg-secondary ms-1" style="font-size:.6rem;">Geschl.</span>'
                         : '';
-                    html += '<a href="/portal-admin/nachrichten/' + t.id + '" '
-                        + 'class="drawer-thread-item d-flex align-items-start gap-2 px-2 py-2 rounded text-decoration-none '
-                        + (t.unread > 0 ? 'fw-600' : '') + '">'
+                    html += '<button type="button"'
+                        + ' data-tid="' + t.id + '"'
+                        + ' data-subject="' + esc(t.subject) + '"'
+                        + ' data-status="' + esc(t.status) + '"'
+                        + ' class="drawer-thread-item d-flex align-items-start gap-2 px-2 py-2 rounded w-100 text-start border-0 bg-transparent'
+                        + (t.unread > 0 ? ' fw-600' : '') + '">'
                         + '<span class="flex-shrink-0 mt-1">' + unreadDot + '</span>'
                         + '<span style="min-width:0;flex:1;">'
                         + '<span class="d-flex align-items-center gap-1">'
@@ -1457,9 +1583,20 @@
                         + '</span>'
                         + '<span class="text-truncate fs-xs text-muted d-block">' + esc(t.subject) + '</span>'
                         + '</span>'
-                        + '</a>';
+                        + '</button>';
                 });
                 list.innerHTML = html;
+
+                /* Delegate clicks on thread buttons */
+                list.querySelectorAll('.drawer-thread-item').forEach(function(btn){
+                    btn.addEventListener('click', function(){
+                        showThreadPanel(
+                            parseInt(this.dataset.tid),
+                            this.dataset.subject,
+                            this.dataset.status
+                        );
+                    });
+                });
             })
             .catch(function(){
                 document.getElementById('drawer-thread-list').innerHTML =
@@ -1478,23 +1615,69 @@
         }
     }
 
-    /* Open drawer → load threads */
+    /* ── Back button ── */
+    document.getElementById('drawer-back-btn').addEventListener('click', function(){
+        showListPanel();
+        loadDrawer();
+    });
+
+    /* ── Reply in drawer ── */
+    document.getElementById('drawer-reply-btn').addEventListener('click', function(){
+        if(!_activeThreadId) return;
+        var body  = document.getElementById('drawer-reply-body').value.trim();
+        var errEl = document.getElementById('drawer-reply-error');
+        errEl.classList.add('d-none');
+        if(!body){
+            errEl.textContent = 'Bitte eine Nachricht eingeben.';
+            errEl.classList.remove('d-none');
+            return;
+        }
+        var btn = this;
+        btn.disabled = true;
+        var fd = new FormData();
+        fd.append('_csrf_token', _csrf);
+        fd.append('body', body);
+        fetch('/api/portal-admin/nachrichten/' + _activeThreadId + '/antworten', { method:'POST', body:fd })
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+                if(data.ok){
+                    document.getElementById('drawer-reply-body').value = '';
+                    appendDrawerMessage({
+                        sender_type: 'admin',
+                        sender_name: data.sender_name || 'Team',
+                        body: data.body,
+                        created_at: data.created_at || ''
+                    });
+                    loadDrawer();
+                } else {
+                    errEl.textContent = data.error || 'Fehler.';
+                    errEl.classList.remove('d-none');
+                }
+            })
+            .catch(function(){
+                errEl.textContent = 'Netzwerkfehler.';
+                errEl.classList.remove('d-none');
+            })
+            .finally(function(){ btn.disabled = false; });
+    });
+
+    /* ── Open drawer → load threads ── */
     document.querySelectorAll('[data-target="aside.js-app-drawer"]').forEach(function(btn){
         btn.addEventListener('click', function(){
+            showListPanel();
             if(!_drawerLoaded){
                 _drawerLoaded = true;
                 loadDrawer();
-                /* also load portal users for new-message form */
                 fetch('/api/portal-admin/portal-users')
                     .then(function(r){ return r.ok ? r.json() : []; })
                     .then(function(users){
                         _drawerUsers = users;
                         var sel = document.getElementById('drawer-owner-select');
-                        sel.innerHTML = '<option value="">— Besitzer wählen —</option>';
+                        sel.innerHTML = '<option value="">— Tierhalter wählen —</option>';
                         users.forEach(function(u){
                             var opt = document.createElement('option');
                             opt.value = u.owner_id;
-                            opt.textContent = u.first_name + ' ' + u.last_name + ' (' + u.email + ')';
+                            opt.textContent = u.first_name + ' ' + u.last_name + (u.email ? ' (' + u.email + ')' : '');
                             sel.appendChild(opt);
                         });
                     })
@@ -1505,29 +1688,25 @@
         });
     });
 
-    /* Send new thread from drawer */
+    /* ── Send new thread from drawer ── */
     document.getElementById('drawer-send-btn').addEventListener('click', function(){
         var ownerId = document.getElementById('drawer-owner-select').value;
         var subject = document.getElementById('drawer-subject').value.trim();
         var body    = document.getElementById('drawer-body').value.trim();
         var errEl   = document.getElementById('drawer-send-error');
         errEl.classList.add('d-none');
-
         if(!ownerId || !subject || !body){
             errEl.textContent = 'Bitte alle Felder ausfüllen.';
             errEl.classList.remove('d-none');
             return;
         }
-
         var fd = new FormData();
         fd.append('_csrf_token', _csrf);
         fd.append('owner_id', ownerId);
         fd.append('subject', subject);
         fd.append('body', body);
-
         var btn = this;
         btn.disabled = true;
-
         fetch('/api/portal-admin/nachrichten/neu', { method:'POST', body:fd })
             .then(function(r){ return r.json(); })
             .then(function(data){
@@ -1572,8 +1751,6 @@
 
     /* Initial badge on page load */
     refreshBadgeOnly();
-
-    /* Auto-refresh every 60s */
     setInterval(refreshBadgeOnly, 60000);
 })();
 </script>

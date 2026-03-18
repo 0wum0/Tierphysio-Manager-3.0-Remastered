@@ -61,9 +61,11 @@
 {% endblock %}
 
 {% block scripts %}
+<input type="hidden" id="portal-csrf" value="{{ csrf_token }}">
 <script>
 (function() {
     var threadId = {{ thread.id }};
+    var _csrf    = document.getElementById('portal-csrf').value;
 
     /* Scroll to bottom */
     var list = document.getElementById('msg-list');
@@ -85,10 +87,13 @@
         btnReply.disabled = true;
         btnReply.textContent = 'Wird gesendet…';
 
+        var fd = new FormData();
+        fd.append('_csrf_token', _csrf);
+        fd.append('body', body);
+
         fetch('/api/portal/nachrichten/' + threadId + '/antworten', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ body: body })
+            body: fd
         })
         .then(function(r) { return r.json(); })
         .then(function(d) {

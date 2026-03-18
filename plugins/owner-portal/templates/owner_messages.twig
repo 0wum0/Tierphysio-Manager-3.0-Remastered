@@ -78,8 +78,11 @@
 {% endblock %}
 
 {% block scripts %}
+<input type="hidden" id="portal-csrf" value="{{ csrf_token }}">
 <script>
 (function() {
+    var _csrf = document.getElementById('portal-csrf').value;
+
     function showForm() {
         document.getElementById('newThreadForm').style.display = 'block';
         document.getElementById('ntSubject').focus();
@@ -106,11 +109,11 @@
             btnSend.disabled = true;
             btnSend.textContent = 'Wird gesendet…';
 
-            fetch('/api/portal/nachrichten/neu', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ subject: subject, body: body })
-            })
+            var fd2 = new FormData();
+            fd2.append('_csrf_token', _csrf);
+            fd2.append('subject', subject);
+            fd2.append('body', body);
+            fetch('/api/portal/nachrichten/neu', { method: 'POST', body: fd2 })
             .then(function(r) { return r.json(); })
             .then(function(d) {
                 if (d.ok) {

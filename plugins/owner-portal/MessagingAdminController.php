@@ -199,6 +199,42 @@ class MessagingAdminController extends Controller
         $this->json($out);
     }
 
+    /* ── GET /api/portal-admin/nachrichten/{id}/messages (drawer inline) ── */
+    public function messages(array $params = []): void
+    {
+        $id     = (int)($params['id'] ?? 0);
+        $thread = $this->repo->getThreadById($id);
+        if (!$thread) {
+            $this->json(['error' => 'Nicht gefunden.'], 404);
+            return;
+        }
+
+        $this->repo->markThreadReadByAdmin($id);
+        $msgs = $this->repo->getMessages($id);
+
+        $out = [];
+        foreach ($msgs as $m) {
+            $out[] = [
+                'id'          => (int)$m['id'],
+                'sender_type' => $m['sender_type'],
+                'sender_name' => $m['sender_name'] ?? '',
+                'body'        => $m['body'],
+                'created_at'  => isset($m['created_at'])
+                    ? (new \DateTime($m['created_at']))->format('d.m.Y H:i')
+                    : '',
+            ];
+        }
+
+        $this->json([
+            'thread'   => [
+                'id'      => (int)$thread['id'],
+                'subject' => $thread['subject'],
+                'status'  => $thread['status'],
+            ],
+            'messages' => $out,
+        ]);
+    }
+
     /* ── GET /api/portal-admin/nachrichten-drawer ── */
     public function drawerData(array $params = []): void
     {
