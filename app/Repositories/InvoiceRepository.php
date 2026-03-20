@@ -494,4 +494,216 @@ class InvoiceRepository extends Repository
             );
         }
     }
+
+    /* ══════════════════════════════════════════════════════════
+       ANALYTICS — Finance Charts
+    ══════════════════════════════════════════════════════════ */
+
+    /** Monthly revenue for the last N months (paid invoices only) */
+    public function getRevenueByMonth(int $months = 24): array
+    {
+        $rows = $this->db->fetchAll(
+            "SELECT DATE_FORMAT(issue_date,'%Y-%m') AS month,
+                    SUM(total_gross) AS revenue,
+                    COUNT(*) AS count
+             FROM invoices
+             WHERE status = 'paid'
+               AND issue_date >= DATE_SUB(CURDATE(), INTERVAL ? MONTH)
+             GROUP BY month
+             ORDER BY month ASC",
+            [$months]
+        );
+        $map = [];
+        foreach ($rows as $r) { $map[$r['month']] = ['revenue' => (float)$r['revenue'], 'count' => (int)$r['count']]; }
+        $labels = $revenue = $counts = [];
+        for ($i = $months - 1; $i >= 0; $i--) {
+            $key = date('Y-m', strtotime("-{$i} months"));
+            $labels[]  = date('M Y', strtotime($key . '-01'));
+            $revenue[] = $map[$key]['revenue'] ?? 0;
+            $counts[]  = $map[$key]['count']   ?? 0;
+        }
+        return ['labels' => $labels, 'revenue' => $revenue, 'counts' => $counts];
+    }
+
+    /** Revenue by quarter for the last N years */
+    public function getRevenueByQuarter(int $years = 3): array
+    {
+        $rows = $this->db->fetchAll(
+            "SELECT YEAR(issue_date) AS yr, QUARTER(issue_date) AS qtr,
+                    SUM(total_gross) AS revenue, COUNT(*) AS count
+             FROM invoices
+             WHERE status = 'paid'
+               AND issue_date >= DATE_SUB(CURDATE(), INTERVAL ? YEAR)
+             GROUP BY yr, qtr
+             ORDER BY yr ASC, qtr ASC",
+            [$years]
+        );
+        $labels = $revenue = [];
+        foreach ($rows as $r) {
+            $labels[]  = 'Q' . $r['qtr'] . ' ' . $r['yr'];
+            $revenue[] = (float)$r['revenue'];
+        }
+        return ['labels' => $labels, 'revenue' => $revenue];
+    }
+
+    /** Revenue by year */
+    public function getRevenueByYear(): array
+    {
+        $rows = $this->db->fetchAll(
+            "SELECT YEAR(issue_date) AS yr, SUM(total_gross) AS revenue, COUNT(*) AS count
+             FROM invoices WHERE status = 'paid'
+             GROUP BY yr ORDER BY yr ASC"
+        );
+        $labels = $revenue = $counts = [];
+        foreach ($rows as $r) {
+            $labels[]  = (string)$r['yr'];
+            $revenue[] = (float)$r['revenue'];
+            $counts[]  = (int)$r['count'];
+        }
+        return ['labels' => $labels, 'revenue' => $revenue, 'counts' => $counts];
+    }
+
+    /** Outstanding vs paid vs overdue totals for waterfall */
+    public function getFinancialSummary(): array
+    {
+        $row = $this->db->fetch(
+            "SELECT
+                SUM(CASE WHEN status='paid'    THEN total_gross ELSE 0 END) AS paid,
+                SUM(CASE WHEN status='open'    THEN total_gross ELSE 0 END) AS open,
+                SUM(CASE WHEN status='overdue' THEN total_gross ELSE 0 END) AS overdue,
+                SUM(CASE WHEN status='draft'   THEN total_gross ELSE 0 END) AS draft,
+                COUNT(CASE WHEN status='paid'    THEN 1 END) AS paid_count,
+                COUNT(CASE WHEN status='open'    THEN 1 END) AS open_count,
+                COUNT(CASE WHEN status='overdue' THEN 1 END) AS overdue_count,
+                AVG(CASE WHEN status='paid' THEN total_gross END) AS avg_invoice,
+                MAX(CASE WHEN status='paid' THEN total_gross END) AS max_invoice,
+                MIN(CASE WHEN status='paid' AND total_gross > 0 THEN total_gross END) AS min_invoice
+             FROM invoices"
+        );
+        return $row ?: [];
+    }
+
+    /** Average days to payment per owner (only paid invoices with paid_at) */
+    public function getOwnerPaymentSpeed(): array
+    {
+        $rows = $this->db->fetchAll(
+            "SELECT
+                CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
+                o.id AS owner_id,
+                COUNT(i.id) AS invoice_count,
+                ROUND(AVG(DATEDIFF(i.paid_at, i.issue_date)), 1) AS avg_days,
+                MIN(DATEDIFF(i.paid_at, i.issue_date)) AS min_days,
+                MAX(DATEDIFF(i.paid_at, i.issue_date)) AS max_days,
+                SUM(i.total_gross) AS total_paid,
+                AVG(i.total_gross) AS avg_amount
+             FROM invoices i
+             JOIN owners o ON o.id = i.owner_id
+             WHERE i.status = 'paid'
+               AND i.paid_at IS NOT NULL
+               AND i.issue_date IS NOT NULL
+               AND DATEDIFF(i.paid_at, i.issue_date) >= 0
+             GROUP BY o.id, o.first_name, o.last_name
+             HAVING invoice_count >= 1
+             ORDER BY avg_days ASC"
+        );
+        return $rows ?: [];
+    }
+
+    /** Owner payment totals — revenue per owner */
+    public function getOwnerRevenue(int $limit = 15): array
+    {
+        $rows = $this->db->fetchAll(
+            "SELECT
+                CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
+                o.id AS owner_id,
+                SUM(i.total_gross) AS total,
+                COUNT(i.id) AS count,
+                SUM(CASE WHEN i.status='paid' THEN i.total_gross ELSE 0 END) AS paid,
+                SUM(CASE WHEN i.status IN ('open','overdue') THEN i.total_gross ELSE 0 END) AS outstanding
+             FROM invoices i
+             JOIN owners o ON o.id = i.owner_id
+             GROUP BY o.id, o.first_name, o.last_name
+             ORDER BY total DESC
+             LIMIT ?",
+            [$limit]
+        );
+        return $rows ?: [];
+    }
+
+    /** Overdue aging buckets: 0-30, 31-60, 61-90, 90+ days */
+    public function getOverdueAging(): array
+    {
+        $row = $this->db->fetch(
+            "SELECT
+                SUM(CASE WHEN DATEDIFF(CURDATE(),due_date) BETWEEN 1  AND 30  THEN total_gross ELSE 0 END) AS d30,
+                SUM(CASE WHEN DATEDIFF(CURDATE(),due_date) BETWEEN 31 AND 60  THEN total_gross ELSE 0 END) AS d60,
+                SUM(CASE WHEN DATEDIFF(CURDATE(),due_date) BETWEEN 61 AND 90  THEN total_gross ELSE 0 END) AS d90,
+                SUM(CASE WHEN DATEDIFF(CURDATE(),due_date) > 90               THEN total_gross ELSE 0 END) AS d90p,
+                COUNT(CASE WHEN DATEDIFF(CURDATE(),due_date) BETWEEN 1  AND 30  THEN 1 END) AS c30,
+                COUNT(CASE WHEN DATEDIFF(CURDATE(),due_date) BETWEEN 31 AND 60  THEN 1 END) AS c60,
+                COUNT(CASE WHEN DATEDIFF(CURDATE(),due_date) BETWEEN 61 AND 90  THEN 1 END) AS c90,
+                COUNT(CASE WHEN DATEDIFF(CURDATE(),due_date) > 90               THEN 1 END) AS c90p
+             FROM invoices
+             WHERE status IN ('open','overdue') AND due_date IS NOT NULL AND due_date < CURDATE()"
+        );
+        return $row ?: ['d30'=>0,'d60'=>0,'d90'=>0,'d90p'=>0,'c30'=>0,'c60'=>0,'c90'=>0,'c90p'=>0];
+    }
+
+    /** Payment method distribution */
+    public function getPaymentMethodStats(): array
+    {
+        $rows = $this->db->fetchAll(
+            "SELECT
+                COALESCE(NULLIF(payment_method,''), 'unbekannt') AS method,
+                COUNT(*) AS count,
+                SUM(total_gross) AS total
+             FROM invoices
+             WHERE status = 'paid'
+             GROUP BY method
+             ORDER BY total DESC"
+        );
+        return $rows ?: [];
+    }
+
+    /** Last 6 months paid revenue for linear regression forecast */
+    public function getRevenueForForecast(int $months = 18): array
+    {
+        $rows = $this->db->fetchAll(
+            "SELECT DATE_FORMAT(issue_date,'%Y-%m') AS month, SUM(total_gross) AS revenue
+             FROM invoices
+             WHERE status = 'paid'
+               AND issue_date >= DATE_SUB(CURDATE(), INTERVAL ? MONTH)
+             GROUP BY month
+             ORDER BY month ASC",
+            [$months]
+        );
+        $map = [];
+        foreach ($rows as $r) { $map[$r['month']] = (float)$r['revenue']; }
+        $result = [];
+        for ($i = $months - 1; $i >= 0; $i--) {
+            $key = date('Y-m', strtotime("-{$i} months"));
+            $result[] = ['month' => $key, 'revenue' => $map[$key] ?? 0];
+        }
+        return $result;
+    }
+
+    /** Top treatment positions by revenue */
+    public function getTopPositions(int $limit = 10): array
+    {
+        $rows = $this->db->fetchAll(
+            "SELECT
+                ip.description,
+                COUNT(*) AS count,
+                SUM(ip.total) AS total,
+                AVG(ip.unit_price) AS avg_price
+             FROM invoice_positions ip
+             JOIN invoices i ON i.id = ip.invoice_id
+             WHERE i.status = 'paid'
+             GROUP BY ip.description
+             ORDER BY total DESC
+             LIMIT ?",
+            [$limit]
+        );
+        return $rows ?: [];
+    }
 }

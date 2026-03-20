@@ -1,0 +1,982 @@
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+    <div>
+        <h1 class="page-title mb-0">Finanz-Analyse</h1>
+        <p class="text-muted mb-0" style="font-size:.8rem;">Umsatzauswertung, Zahlungsverhalten & Prognose</p>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+        <a href="/rechnungen" class="btn btn-secondary btn-sm">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="15 18 9 12 15 6"/></svg>
+            Rechnungen
+        </a>
+        <button class="btn btn-secondary btn-sm" id="btn-refresh">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="23 4 23 10 17 10"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Aktualisieren
+        </button>
+    </div>
+</div>
+
+{# ── KPI Cards ── #}
+<div class="row g-3 mb-4" id="kpi-row">
+    <div class="col-6 col-md-4 col-xl-2"><div class="card h-100"><div class="card-body p-3">
+        <div class="text-muted small text-uppercase fw-semibold mb-1" style="font-size:.68rem;letter-spacing:.06em;">Gesamtumsatz</div>
+        <div class="fw-bold kpi-val" id="kpi-total" style="font-size:1.3rem;color:#4f7cff;">—</div>
+        <div class="text-muted" id="kpi-total-sub" style="font-size:.72rem;margin-top:.2rem;">—</div>
+    </div></div></div>
+    <div class="col-6 col-md-4 col-xl-2"><div class="card h-100"><div class="card-body p-3">
+        <div class="text-muted small text-uppercase fw-semibold mb-1" style="font-size:.68rem;letter-spacing:.06em;">Ø Rechnung</div>
+        <div class="fw-bold kpi-val" id="kpi-avg" style="font-size:1.3rem;color:#8b5cf6;">—</div>
+        <div class="text-muted" id="kpi-avg-sub" style="font-size:.72rem;margin-top:.2rem;">Max: —</div>
+    </div></div></div>
+    <div class="col-6 col-md-4 col-xl-2"><div class="card h-100"><div class="card-body p-3">
+        <div class="text-muted small text-uppercase fw-semibold mb-1" style="font-size:.68rem;letter-spacing:.06em;">Offen</div>
+        <div class="fw-bold kpi-val" id="kpi-open" style="font-size:1.3rem;color:#f59e0b;">—</div>
+        <div class="text-muted" id="kpi-open-sub" style="font-size:.72rem;margin-top:.2rem;">—</div>
+    </div></div></div>
+    <div class="col-6 col-md-4 col-xl-2"><div class="card h-100"><div class="card-body p-3">
+        <div class="text-muted small text-uppercase fw-semibold mb-1" style="font-size:.68rem;letter-spacing:.06em;">Überfällig</div>
+        <div class="fw-bold kpi-val" id="kpi-overdue" style="font-size:1.3rem;color:#ef4444;">—</div>
+        <div class="text-muted" id="kpi-overdue-sub" style="font-size:.72rem;margin-top:.2rem;">—</div>
+    </div></div></div>
+    <div class="col-6 col-md-4 col-xl-2"><div class="card h-100"><div class="card-body p-3">
+        <div class="text-muted small text-uppercase fw-semibold mb-1" style="font-size:.68rem;letter-spacing:.06em;">Prognose nächsten Monat</div>
+        <div class="fw-bold kpi-val" id="kpi-forecast" style="font-size:1.3rem;color:#10b981;">—</div>
+        <div class="text-muted" style="font-size:.72rem;margin-top:.2rem;">Linear. Regression</div>
+    </div></div></div>
+    <div class="col-6 col-md-4 col-xl-2"><div class="card h-100"><div class="card-body p-3">
+        <div class="text-muted small text-uppercase fw-semibold mb-1" style="font-size:.68rem;letter-spacing:.06em;">Wachstum YoY</div>
+        <div class="fw-bold kpi-val" id="kpi-yoy" style="font-size:1.3rem;color:#06b6d4;">—</div>
+        <div class="text-muted" style="font-size:.72rem;margin-top:.2rem;">Vorjahresvergleich</div>
+    </div></div></div>
+</div>
+
+{# ── Tab Navigation ── #}
+<ul class="nav nav-tabs mb-3" id="analytics-tabs">
+    <li class="nav-item"><a class="nav-link active" data-atab="umsatz" href="#">📈 Umsatz</a></li>
+    <li class="nav-item"><a class="nav-link" data-atab="besitzer" href="#">👥 Besitzer</a></li>
+    <li class="nav-item"><a class="nav-link" data-atab="prognose" href="#">🔮 Prognose</a></li>
+    <li class="nav-item"><a class="nav-link" data-atab="details" href="#">📊 Details</a></li>
+</ul>
+
+{# ══════════════════════════════════════════════════════ TAB: UMSATZ #}
+<div id="atab-umsatz" class="atab-pane">
+
+    <div class="row g-3 mb-3">
+        {# Monthly Revenue Bar #}
+        <div class="col-12 col-xl-8">
+            <div class="card h-100">
+                <div class="card-body p-3">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div>
+                            <div class="fw-semibold" style="font-size:.9rem;">Monatsumsatz (24 Monate)</div>
+                            <div class="text-muted" style="font-size:.75rem;">Bezahlte Rechnungen</div>
+                        </div>
+                        <select class="form-select form-select-sm" id="month-range-select" style="width:auto;">
+                            <option value="12">12 Monate</option>
+                            <option value="24" selected>24 Monate</option>
+                        </select>
+                    </div>
+                    <canvas id="chart-monthly" height="110"></canvas>
+                </div>
+            </div>
+        </div>
+        {# Quarterly #}
+        <div class="col-12 col-xl-4">
+            <div class="card h-100">
+                <div class="card-body p-3">
+                    <div class="fw-semibold mb-1" style="font-size:.9rem;">Quartalsumsatz</div>
+                    <div class="text-muted mb-2" style="font-size:.75rem;">Letzte 3 Jahre</div>
+                    <canvas id="chart-quarterly" height="160"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        {# Yearly #}
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card h-100">
+                <div class="card-body p-3">
+                    <div class="fw-semibold mb-1" style="font-size:.9rem;">Jahresumsatz</div>
+                    <div class="text-muted mb-2" style="font-size:.75rem;">Alle Jahre</div>
+                    <canvas id="chart-yearly" height="180"></canvas>
+                </div>
+            </div>
+        </div>
+        {# Status donut #}
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card h-100">
+                <div class="card-body p-3">
+                    <div class="fw-semibold mb-1" style="font-size:.9rem;">Status-Verteilung</div>
+                    <div class="text-muted mb-2" style="font-size:.75rem;">Alle Rechnungen</div>
+                    <canvas id="chart-status-donut" height="180"></canvas>
+                </div>
+            </div>
+        </div>
+        {# Payment method #}
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card h-100">
+                <div class="card-body p-3">
+                    <div class="fw-semibold mb-1" style="font-size:.9rem;">Zahlungsarten</div>
+                    <div class="text-muted mb-2" style="font-size:.75rem;">Bezahlte Rechnungen</div>
+                    <canvas id="chart-pay-method" height="180"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        {# Overdue aging #}
+        <div class="col-12 col-md-6">
+            <div class="card">
+                <div class="card-body p-3">
+                    <div class="fw-semibold mb-1" style="font-size:.9rem;">Überfälligkeits-Analyse</div>
+                    <div class="text-muted mb-2" style="font-size:.75rem;">Offene Beträge nach Alter</div>
+                    <canvas id="chart-aging" height="140"></canvas>
+                </div>
+            </div>
+        </div>
+        {# Top positions #}
+        <div class="col-12 col-md-6">
+            <div class="card">
+                <div class="card-body p-3">
+                    <div class="fw-semibold mb-2" style="font-size:.9rem;">Top-Leistungen nach Umsatz</div>
+                    <div id="top-positions-list" style="font-size:.83rem;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ══════════════════════════════════════════════════════ TAB: BESITZER #}
+<div id="atab-besitzer" class="atab-pane d-none">
+
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body p-3">
+                    <div class="fw-semibold mb-1" style="font-size:.9rem;">Umsatz pro Tierhalter (Top 15)</div>
+                    <div class="text-muted mb-2" style="font-size:.75rem;">Bezahlt vs. ausstehend</div>
+                    <canvas id="chart-owner-revenue" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        {# Fastest payers chart #}
+        <div class="col-12 col-xl-6">
+            <div class="card">
+                <div class="card-body p-3">
+                    <div class="fw-semibold mb-1" style="font-size:.9rem;">Zahlungsgeschwindigkeit</div>
+                    <div class="text-muted mb-2" style="font-size:.75rem;">Ø Tage von Rechnungsdatum bis Zahlung</div>
+                    <canvas id="chart-pay-speed" height="160"></canvas>
+                </div>
+            </div>
+        </div>
+        {# Payment speed table #}
+        <div class="col-12 col-xl-6">
+            <div class="card">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="fw-semibold" style="font-size:.9rem;">Tierhalter-Ranking: Zahlungsverhalten</div>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table class="table table-sm mb-0" style="font-size:.8rem;" id="owner-speed-table">
+                            <thead><tr>
+                                <th>#</th>
+                                <th>Tierhalter</th>
+                                <th class="text-end">Ø Tage</th>
+                                <th class="text-end">Rechnungen</th>
+                                <th class="text-end">Gesamt</th>
+                                <th class="text-center">Bewertung</th>
+                            </tr></thead>
+                            <tbody id="owner-speed-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ══════════════════════════════════════════════════════ TAB: PROGNOSE #}
+<div id="atab-prognose" class="atab-pane d-none">
+
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body p-3">
+                    <div class="d-flex align-items-start justify-content-between mb-2">
+                        <div>
+                            <div class="fw-semibold" style="font-size:.9rem;">Umsatzprognose — nächste 6 Monate</div>
+                            <div class="text-muted" style="font-size:.75rem;">Basis: Lineare Regression der letzten 18 Monate. Gestrichelte Linie = Prognose.</div>
+                        </div>
+                        <span class="badge bg-primary" id="forecast-trend-badge">—</span>
+                    </div>
+                    <canvas id="chart-forecast" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        {# Forecast table #}
+        <div class="col-12 col-md-6">
+            <div class="card h-100">
+                <div class="card-body p-3">
+                    <div class="fw-semibold mb-2" style="font-size:.9rem;">Prognose-Tabelle</div>
+                    <table class="table table-sm" style="font-size:.82rem;">
+                        <thead><tr><th>Monat</th><th class="text-end">Erwarteter Umsatz</th><th class="text-end">Trend</th></tr></thead>
+                        <tbody id="forecast-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {# Forecast insights #}
+        <div class="col-12 col-md-6">
+            <div class="card h-100">
+                <div class="card-body p-3">
+                    <div class="fw-semibold mb-3" style="font-size:.9rem;">Einschätzung & Empfehlungen</div>
+                    <div id="forecast-insights" style="font-size:.85rem;line-height:1.7;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12 col-md-4">
+            <div class="card">
+                <div class="card-body p-3 text-center">
+                    <div class="text-muted small mb-1" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;">Progn. Jahresumsatz</div>
+                    <div class="fw-bold" id="forecast-annual" style="font-size:1.6rem;color:#10b981;">—</div>
+                    <div class="text-muted" style="font-size:.72rem;">nächste 12 Monate (linear)</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card">
+                <div class="card-body p-3 text-center">
+                    <div class="text-muted small mb-1" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;">Bestes Prognose-Monat</div>
+                    <div class="fw-bold" id="forecast-best-month" style="font-size:1.4rem;color:#4f7cff;">—</div>
+                    <div class="text-muted" id="forecast-best-val" style="font-size:.72rem;">—</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card">
+                <div class="card-body p-3 text-center">
+                    <div class="text-muted small mb-1" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;">Wachstumsrate (6M)</div>
+                    <div class="fw-bold" id="forecast-growth-rate" style="font-size:1.4rem;color:#8b5cf6;">—</div>
+                    <div class="text-muted" style="font-size:.72rem;">Ø Monatswachstum</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ══════════════════════════════════════════════════════ TAB: DETAILS #}
+<div id="atab-details" class="atab-pane d-none">
+
+    <div class="row g-3 mb-3">
+        {# Revenue heatmap by month/year #}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body p-3">
+                    <div class="fw-semibold mb-1" style="font-size:.9rem;">Umsatz-Heatmap (Monat × Jahr)</div>
+                    <div class="text-muted mb-3" style="font-size:.75rem;">Hellere Felder = höherer Umsatz</div>
+                    <div id="revenue-heatmap" style="overflow-x:auto;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12 col-md-6">
+            <div class="card">
+                <div class="card-body p-3">
+                    <div class="fw-semibold mb-2" style="font-size:.9rem;">Ausstehende Forderungen (Aging)</div>
+                    <div id="aging-detail-list" style="font-size:.83rem;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6">
+            <div class="card">
+                <div class="card-body p-3">
+                    <div class="fw-semibold mb-2" style="font-size:.9rem;">Schnellste & Langsamste Zahler</div>
+                    <div id="payer-extremes" style="font-size:.83rem;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Loading overlay #}
+<div id="analytics-loading" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;">
+    <div style="background:var(--bs-body-bg,#1a1a2e);border-radius:12px;padding:2rem 3rem;text-align:center;">
+        <div class="spinner-border text-primary mb-2" role="status"></div>
+        <div style="font-size:.85rem;color:rgba(255,255,255,.7);">Lade Analyse-Daten…</div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ── Helpers ───────────────────────────────────────────────────── */
+function fmt(val){
+    if(val===null||val===undefined) return '—';
+    return new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR',minimumFractionDigits:2}).format(parseFloat(val)||0);
+}
+function fmtShort(val){
+    var n=parseFloat(val)||0;
+    if(n>=1000) return (n/1000).toFixed(1).replace('.',',')+'k €';
+    return fmt(n);
+}
+function el(id){ return document.getElementById(id); }
+
+var _charts={};
+function destroyChart(id){
+    if(_charts[id]){ _charts[id].destroy(); delete _charts[id]; }
+}
+
+var COLORS={
+    blue:'#4f7cff', purple:'#8b5cf6', green:'#22c55e', amber:'#f59e0b',
+    red:'#ef4444', cyan:'#06b6d4', emerald:'#10b981', pink:'#ec4899',
+    orange:'#f97316', lime:'#84cc16'
+};
+var PALETTE=Object.values(COLORS);
+var GRID_COLOR='rgba(255,255,255,0.07)';
+var TEXT_COLOR='rgba(255,255,255,0.55)';
+
+var chartDefaults={
+    responsive:true, maintainAspectRatio:true,
+    plugins:{ legend:{ labels:{ color:TEXT_COLOR, boxWidth:10, font:{size:11} } }, tooltip:{ callbacks:{} } },
+    scales:{
+        x:{ grid:{color:GRID_COLOR}, ticks:{color:TEXT_COLOR,font:{size:10},maxRotation:45} },
+        y:{ grid:{color:GRID_COLOR}, ticks:{ color:TEXT_COLOR, font:{size:10},
+            callback:function(v){ return fmtShort(v); }
+        }}
+    }
+};
+
+/* ── Tab switching ─────────────────────────────────────────────── */
+document.querySelectorAll('[data-atab]').forEach(function(link){
+    link.addEventListener('click',function(e){
+        e.preventDefault();
+        document.querySelectorAll('[data-atab]').forEach(function(l){ l.classList.remove('active'); });
+        document.querySelectorAll('.atab-pane').forEach(function(p){ p.classList.add('d-none'); });
+        link.classList.add('active');
+        var pane=el('atab-'+link.dataset.atab);
+        if(pane) pane.classList.remove('d-none');
+    });
+});
+
+/* ── Load data ─────────────────────────────────────────────────── */
+var _data=null;
+
+function load(){
+    el('analytics-loading').style.display='flex';
+    fetch('/api/rechnungen/analytics')
+        .then(function(r){ return r.ok?r.json():Promise.reject(r.status); })
+        .then(function(d){
+            _data=d;
+            el('analytics-loading').style.display='none';
+            renderAll(d);
+        })
+        .catch(function(err){
+            el('analytics-loading').style.display='none';
+            console.error('Analytics load error:',err);
+        });
+}
+
+el('btn-refresh').addEventListener('click', load);
+
+/* ── Month range selector ───────────────────────────────────────── */
+el('month-range-select').addEventListener('change',function(){
+    if(!_data) return;
+    var months=parseInt(this.value)||24;
+    var slice=months;
+    var labels=_data.by_month.labels.slice(-slice);
+    var revenue=_data.by_month.revenue.slice(-slice);
+    _charts['monthly'].data.labels=labels;
+    _charts['monthly'].data.datasets[0].data=revenue;
+    _charts['monthly'].update();
+});
+
+/* ══ RENDER ALL ════════════════════════════════════════════════ */
+function renderAll(d){
+    renderKpis(d);
+    renderMonthly(d);
+    renderQuarterly(d);
+    renderYearly(d);
+    renderStatusDonut(d);
+    renderPayMethod(d);
+    renderAging(d);
+    renderTopPositions(d);
+    renderOwnerRevenue(d);
+    renderOwnerSpeed(d);
+    renderOwnerTable(d);
+    renderForecast(d);
+    renderForecastTable(d);
+    renderForecastInsights(d);
+    renderHeatmap(d);
+    renderAgingDetail(d);
+    renderPayerExtremes(d);
+}
+
+/* ── KPIs ────────────────────────────────────────────────────── */
+function renderKpis(d){
+    var s=d.summary||{};
+    el('kpi-total').textContent=fmt(s.paid);
+    el('kpi-total-sub').textContent=(s.paid_count||0)+' bezahlte Rechnungen';
+    el('kpi-avg').textContent=fmt(s.avg_invoice);
+    el('kpi-avg-sub').textContent='Max: '+fmt(s.max_invoice);
+    el('kpi-open').textContent=fmt(s.open);
+    el('kpi-open-sub').textContent=(s.open_count||0)+' Rechnungen offen';
+    el('kpi-overdue').textContent=fmt(s.overdue);
+    el('kpi-overdue-sub').textContent=(s.overdue_count||0)+' überfällig';
+    var next=d.forecast_next&&d.forecast_next[0];
+    el('kpi-forecast').textContent=next?fmt(next.value):'—';
+    if(d.yoy_growth!==null&&d.yoy_growth!==undefined){
+        var g=parseFloat(d.yoy_growth);
+        el('kpi-yoy').textContent=(g>0?'+':'')+g.toFixed(1)+'%';
+        el('kpi-yoy').style.color=g>=0?'#10b981':'#ef4444';
+    }
+}
+
+/* ── Monthly bar ─────────────────────────────────────────────── */
+function renderMonthly(d){
+    destroyChart('monthly');
+    var ctx=el('chart-monthly').getContext('2d');
+    var labels=d.by_month.labels;
+    var revenue=d.by_month.revenue;
+    _charts['monthly']=new Chart(ctx,{
+        type:'bar',
+        data:{
+            labels:labels,
+            datasets:[{
+                label:'Umsatz (€)',
+                data:revenue,
+                backgroundColor:'rgba(79,124,255,0.7)',
+                borderColor:'#4f7cff',
+                borderWidth:1,
+                borderRadius:4
+            }]
+        },
+        options:Object.assign({},chartDefaults,{
+            plugins:Object.assign({},chartDefaults.plugins,{
+                tooltip:{ callbacks:{ label:function(ctx){ return ' '+fmt(ctx.parsed.y); } } }
+            })
+        })
+    });
+}
+
+/* ── Quarterly bar ───────────────────────────────────────────── */
+function renderQuarterly(d){
+    destroyChart('quarterly');
+    var ctx=el('chart-quarterly').getContext('2d');
+    _charts['quarterly']=new Chart(ctx,{
+        type:'bar',
+        data:{
+            labels:d.by_quarter.labels,
+            datasets:[{
+                label:'Umsatz (€)',
+                data:d.by_quarter.revenue,
+                backgroundColor:d.by_quarter.labels.map(function(l,i){ return PALETTE[i%PALETTE.length]+'bb'; }),
+                borderColor:d.by_quarter.labels.map(function(l,i){ return PALETTE[i%PALETTE.length]; }),
+                borderWidth:1, borderRadius:4
+            }]
+        },
+        options:Object.assign({},chartDefaults,{
+            plugins:Object.assign({},chartDefaults.plugins,{
+                legend:{display:false},
+                tooltip:{ callbacks:{ label:function(ctx){ return ' '+fmt(ctx.parsed.y); } } }
+            })
+        })
+    });
+}
+
+/* ── Yearly bar ──────────────────────────────────────────────── */
+function renderYearly(d){
+    destroyChart('yearly');
+    var ctx=el('chart-yearly').getContext('2d');
+    _charts['yearly']=new Chart(ctx,{
+        type:'bar',
+        data:{
+            labels:d.by_year.labels,
+            datasets:[{
+                label:'Jahresumsatz (€)',
+                data:d.by_year.revenue,
+                backgroundColor:'rgba(139,92,246,0.7)',
+                borderColor:'#8b5cf6',
+                borderWidth:1, borderRadius:4
+            }]
+        },
+        options:Object.assign({},chartDefaults,{
+            plugins:Object.assign({},chartDefaults.plugins,{
+                legend:{display:false},
+                tooltip:{ callbacks:{ label:function(ctx){ return ' '+fmt(ctx.parsed.y); } } }
+            })
+        })
+    });
+}
+
+/* ── Status donut ────────────────────────────────────────────── */
+function renderStatusDonut(d){
+    destroyChart('status-donut');
+    var s=d.summary||{};
+    var ctx=el('chart-status-donut').getContext('2d');
+    _charts['status-donut']=new Chart(ctx,{
+        type:'doughnut',
+        data:{
+            labels:['Bezahlt','Offen','Überfällig','Entwurf'],
+            datasets:[{
+                data:[s.paid_count||0,s.open_count||0,s.overdue_count||0,parseInt(s.draft_count||0)],
+                backgroundColor:['rgba(34,197,94,.75)','rgba(245,158,11,.75)','rgba(239,68,68,.75)','rgba(148,163,184,.75)'],
+                borderColor:['#22c55e','#f59e0b','#ef4444','#94a3b8'],
+                borderWidth:1
+            }]
+        },
+        options:{
+            responsive:true, maintainAspectRatio:true,
+            cutout:'62%',
+            plugins:{ legend:{ position:'bottom', labels:{ color:TEXT_COLOR, font:{size:11}, boxWidth:10 } } }
+        }
+    });
+}
+
+/* ── Payment method polar ────────────────────────────────────── */
+function renderPayMethod(d){
+    destroyChart('pay-method');
+    var ctx=el('chart-pay-method').getContext('2d');
+    var methods=d.pay_methods||[];
+    _charts['pay-method']=new Chart(ctx,{
+        type:'polarArea',
+        data:{
+            labels:methods.map(function(m){ return m.method; }),
+            datasets:[{
+                data:methods.map(function(m){ return parseFloat(m.total)||0; }),
+                backgroundColor:methods.map(function(m,i){ return PALETTE[i%PALETTE.length]+'aa'; }),
+                borderColor:methods.map(function(m,i){ return PALETTE[i%PALETTE.length]; }),
+                borderWidth:1
+            }]
+        },
+        options:{
+            responsive:true, maintainAspectRatio:true,
+            plugins:{ legend:{ position:'bottom', labels:{ color:TEXT_COLOR, font:{size:11}, boxWidth:10 } },
+                tooltip:{ callbacks:{ label:function(ctx){ return ' '+fmt(ctx.parsed.r); } } }
+            },
+            scales:{ r:{ ticks:{ display:false }, grid:{ color:GRID_COLOR } } }
+        }
+    });
+}
+
+/* ── Aging bar ───────────────────────────────────────────────── */
+function renderAging(d){
+    destroyChart('aging');
+    var ctx=el('chart-aging').getContext('2d');
+    var ag=d.aging||{};
+    _charts['aging']=new Chart(ctx,{
+        type:'bar',
+        data:{
+            labels:['1–30 Tage','31–60 Tage','61–90 Tage','> 90 Tage'],
+            datasets:[{
+                label:'Ausstehend (€)',
+                data:[ag.d30||0, ag.d60||0, ag.d90||0, ag.d90p||0],
+                backgroundColor:['rgba(245,158,11,.7)','rgba(249,115,22,.7)','rgba(239,68,68,.7)','rgba(185,28,28,.8)'],
+                borderColor:['#f59e0b','#f97316','#ef4444','#b91c1c'],
+                borderWidth:1, borderRadius:4
+            }]
+        },
+        options:Object.assign({},chartDefaults,{
+            indexAxis:'y',
+            plugins:Object.assign({},chartDefaults.plugins,{
+                legend:{display:false},
+                tooltip:{ callbacks:{ label:function(ctx){ return ' '+fmt(ctx.parsed.x); } } }
+            }),
+            scales:{
+                x:{ grid:{color:GRID_COLOR}, ticks:{ color:TEXT_COLOR, callback:function(v){ return fmtShort(v); } } },
+                y:{ grid:{color:GRID_COLOR}, ticks:{ color:TEXT_COLOR } }
+            }
+        })
+    });
+}
+
+/* ── Top positions ───────────────────────────────────────────── */
+function renderTopPositions(d){
+    var list=el('top-positions-list');
+    var positions=d.top_positions||[];
+    if(!positions.length){ list.innerHTML='<div class="text-muted">Keine Daten</div>'; return; }
+    var maxTotal=Math.max.apply(null,positions.map(function(p){ return parseFloat(p.total)||0; }));
+    var html='';
+    positions.forEach(function(p,i){
+        var pct=maxTotal>0?Math.round((parseFloat(p.total)||0)/maxTotal*100):0;
+        html+='<div class="mb-2">'
+            +'<div class="d-flex justify-content-between mb-1">'
+            +'<span style="font-size:.8rem;max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+(i+1)+'. '+p.description+'</span>'
+            +'<span style="font-size:.8rem;color:'+PALETTE[i%PALETTE.length]+';">'+fmt(p.total)+'</span>'
+            +'</div>'
+            +'<div style="height:5px;background:rgba(255,255,255,.08);border-radius:3px;">'
+            +'<div style="height:5px;width:'+pct+'%;background:'+PALETTE[i%PALETTE.length]+';border-radius:3px;transition:width .4s;"></div>'
+            +'</div>'
+            +'<div class="text-muted" style="font-size:.7rem;">'+p.count+'× | Ø '+fmt(p.avg_price)+'</div>'
+            +'</div>';
+    });
+    list.innerHTML=html;
+}
+
+/* ── Owner Revenue stacked bar ───────────────────────────────── */
+function renderOwnerRevenue(d){
+    destroyChart('owner-revenue');
+    var ctx=el('chart-owner-revenue').getContext('2d');
+    var owners=d.owner_revenue||[];
+    _charts['owner-revenue']=new Chart(ctx,{
+        type:'bar',
+        data:{
+            labels:owners.map(function(o){ return o.owner_name; }),
+            datasets:[
+                { label:'Bezahlt',label:'Bezahlt', data:owners.map(function(o){ return parseFloat(o.paid)||0; }), backgroundColor:'rgba(34,197,94,.7)', borderColor:'#22c55e', borderWidth:1, borderRadius:3, stack:'s' },
+                { label:'Ausstehend', data:owners.map(function(o){ return parseFloat(o.outstanding)||0; }), backgroundColor:'rgba(245,158,11,.7)', borderColor:'#f59e0b', borderWidth:1, borderRadius:3, stack:'s' }
+            ]
+        },
+        options:Object.assign({},chartDefaults,{
+            plugins:Object.assign({},chartDefaults.plugins,{
+                tooltip:{ callbacks:{ label:function(ctx){ return ' '+ctx.dataset.label+': '+fmt(ctx.parsed.y); } } }
+            })
+        })
+    });
+}
+
+/* ── Owner speed bar ─────────────────────────────────────────── */
+function renderOwnerSpeed(d){
+    destroyChart('pay-speed');
+    var ctx=el('chart-pay-speed').getContext('2d');
+    var owners=(d.owner_speed||[]).slice(0,15);
+    var colors=owners.map(function(o){
+        var days=parseFloat(o.avg_days)||0;
+        if(days<=7)  return 'rgba(34,197,94,.8)';
+        if(days<=14) return 'rgba(132,204,22,.8)';
+        if(days<=30) return 'rgba(245,158,11,.8)';
+        if(days<=60) return 'rgba(249,115,22,.8)';
+        return 'rgba(239,68,68,.8)';
+    });
+    _charts['pay-speed']=new Chart(ctx,{
+        type:'bar',
+        data:{
+            labels:owners.map(function(o){ return o.owner_name; }),
+            datasets:[{
+                label:'Ø Tage bis Zahlung',
+                data:owners.map(function(o){ return parseFloat(o.avg_days)||0; }),
+                backgroundColor:colors,
+                borderColor:colors.map(function(c){ return c.replace('.8)',',1)'); }),
+                borderWidth:1, borderRadius:4
+            }]
+        },
+        options:Object.assign({},chartDefaults,{
+            indexAxis:'y',
+            plugins:Object.assign({},chartDefaults.plugins,{
+                legend:{display:false},
+                tooltip:{ callbacks:{ label:function(ctx){ return ' '+ctx.parsed.x.toFixed(1)+' Tage'; } } }
+            }),
+            scales:{
+                x:{ grid:{color:GRID_COLOR}, ticks:{ color:TEXT_COLOR, callback:function(v){ return v+' T'; } } },
+                y:{ grid:{color:GRID_COLOR}, ticks:{ color:TEXT_COLOR, font:{size:10} } }
+            }
+        })
+    });
+}
+
+/* ── Owner speed table ───────────────────────────────────────── */
+function renderOwnerTable(d){
+    var tbody=el('owner-speed-tbody');
+    var owners=d.owner_speed||[];
+    if(!owners.length){ tbody.innerHTML='<tr><td colspan="6" class="text-center text-muted">Keine Daten</td></tr>'; return; }
+    var sorted=[].concat(owners).sort(function(a,b){ return (parseFloat(a.avg_days)||0)-(parseFloat(b.avg_days)||0); });
+    var html='';
+    sorted.forEach(function(o,i){
+        var days=parseFloat(o.avg_days)||0;
+        var badge,color;
+        if(days<=7){  badge='Sehr schnell'; color='#22c55e'; }
+        else if(days<=14){ badge='Schnell';  color='#84cc16'; }
+        else if(days<=30){ badge='Normal';   color='#f59e0b'; }
+        else if(days<=60){ badge='Langsam';  color='#f97316'; }
+        else{             badge='Sehr langsam'; color='#ef4444'; }
+        html+='<tr>'
+            +'<td class="text-muted">'+(i+1)+'</td>'
+            +'<td><a href="/tierhalter/'+o.owner_id+'" style="color:inherit;text-decoration:none;">'+o.owner_name+'</a></td>'
+            +'<td class="text-end fw-semibold">'+days.toFixed(1)+' T</td>'
+            +'<td class="text-end">'+o.invoice_count+'</td>'
+            +'<td class="text-end">'+fmt(o.total_paid)+'</td>'
+            +'<td class="text-center"><span style="font-size:.7rem;padding:2px 8px;border-radius:20px;background:'+color+'22;color:'+color+';font-weight:600;">'+badge+'</span></td>'
+            +'</tr>';
+    });
+    tbody.innerHTML=html;
+}
+
+/* ── Forecast line chart ─────────────────────────────────────── */
+function renderForecast(d){
+    destroyChart('forecast');
+    var ctx=el('chart-forecast').getContext('2d');
+    var hist=d.forecast_history||[];
+    var next=d.forecast_next||[];
+    var histLabels=hist.map(function(h){ return h.month; });
+    var histVals=hist.map(function(h){ return h.revenue; });
+    var nextLabels=next.map(function(n){ return n.month; });
+    var nextVals=next.map(function(n){ return n.value; });
+
+    /* Overlap last historical point with first forecast */
+    var lastHistVal=histVals[histVals.length-1]||0;
+    var lastHistLabel=histLabels[histLabels.length-1]||'';
+    var allLabels=histLabels.concat(nextLabels);
+
+    var histDataPad=histVals.concat(Array(nextLabels.length).fill(null));
+    var forecastDataPad=Array(histLabels.length-1).fill(null).concat([lastHistVal]).concat(nextVals);
+
+    _charts['forecast']=new Chart(ctx,{
+        type:'line',
+        data:{
+            labels:allLabels,
+            datasets:[
+                {
+                    label:'Tatsächlicher Umsatz',
+                    data:histDataPad,
+                    borderColor:'#4f7cff',
+                    backgroundColor:'rgba(79,124,255,.12)',
+                    borderWidth:2,
+                    pointRadius:3,
+                    fill:true,
+                    tension:0.3
+                },
+                {
+                    label:'Prognose',
+                    data:forecastDataPad,
+                    borderColor:'#10b981',
+                    backgroundColor:'rgba(16,185,129,.08)',
+                    borderWidth:2,
+                    borderDash:[6,4],
+                    pointRadius:4,
+                    pointBackgroundColor:'#10b981',
+                    fill:true,
+                    tension:0.3
+                }
+            ]
+        },
+        options:Object.assign({},chartDefaults,{
+            plugins:Object.assign({},chartDefaults.plugins,{
+                tooltip:{ callbacks:{ label:function(ctx){ return ' '+ctx.dataset.label+': '+fmt(ctx.parsed.y); } } }
+            })
+        })
+    });
+
+    /* Trend badge */
+    if(next.length>=2){
+        var first=parseFloat(next[0].value)||0;
+        var last=parseFloat(next[next.length-1].value)||0;
+        var trend=first>0?(last-first)/first*100:0;
+        var badge=el('forecast-trend-badge');
+        badge.textContent=(trend>=0?'▲ Steigend +':'▼ Fallend ')+Math.abs(trend).toFixed(1)+'% über 6M';
+        badge.className='badge '+(trend>=0?'bg-success':'bg-danger');
+    }
+
+    /* Annual forecast */
+    var annualSum=0;
+    var recent=histVals.slice(-6);
+    var slope=0;
+    if(recent.length>=2){ slope=(recent[recent.length-1]-recent[0])/(recent.length-1); }
+    for(var f=1;f<=12;f++){
+        annualSum+=Math.max(0,(histVals[histVals.length-1]||0)+(slope*f));
+    }
+    el('forecast-annual').textContent=fmt(annualSum);
+
+    /* Best forecast month */
+    if(next.length){
+        var best=next.reduce(function(a,b){ return parseFloat(a.value)>=parseFloat(b.value)?a:b; });
+        el('forecast-best-month').textContent=best.month;
+        el('forecast-best-val').textContent=fmt(best.value);
+    }
+
+    /* Growth rate */
+    if(next.length>=2){
+        var rates=[];
+        for(var i=1;i<next.length;i++){
+            var prev=parseFloat(next[i-1].value)||1;
+            rates.push((parseFloat(next[i].value)-prev)/prev*100);
+        }
+        var avgRate=rates.reduce(function(a,b){return a+b;},0)/rates.length;
+        el('forecast-growth-rate').textContent=(avgRate>=0?'+':'')+avgRate.toFixed(2)+'% / Monat';
+        el('forecast-growth-rate').style.color=avgRate>=0?'#10b981':'#ef4444';
+    }
+}
+
+/* ── Forecast table ──────────────────────────────────────────── */
+function renderForecastTable(d){
+    var tbody=el('forecast-table-body');
+    var next=d.forecast_next||[];
+    if(!next.length){ tbody.innerHTML='<tr><td colspan="3" class="text-muted text-center">Zu wenig Verlaufsdaten für eine Prognose</td></tr>'; return; }
+    var baseVal=parseFloat((d.forecast_history||[]).slice(-1)[0]?.revenue)||0;
+    var html='';
+    next.forEach(function(n,i){
+        var val=parseFloat(n.value)||0;
+        var diff=val-baseVal;
+        var pct=baseVal>0?diff/baseVal*100:0;
+        html+='<tr>'
+            +'<td>'+n.month+'</td>'
+            +'<td class="text-end fw-semibold">'+fmt(val)+'</td>'
+            +'<td class="text-end" style="color:'+(diff>=0?'#22c55e':'#ef4444')+';">'+(diff>=0?'+':'')+pct.toFixed(1)+'%</td>'
+            +'</tr>';
+        baseVal=val;
+    });
+    tbody.innerHTML=html;
+}
+
+/* ── Forecast insights ───────────────────────────────────────── */
+function renderForecastInsights(d){
+    var div=el('forecast-insights');
+    var next=d.forecast_next||[];
+    var hist=d.forecast_history||[];
+    var s=d.summary||{};
+    var insights=[];
+
+    var totalForecast6=(next||[]).reduce(function(a,n){ return a+(parseFloat(n.value)||0); },0);
+    var lastHist6=hist.slice(-6).reduce(function(a,h){ return a+(h.revenue||0); },0);
+    var growth6=lastHist6>0?(totalForecast6-lastHist6)/lastHist6*100:0;
+
+    if(growth6>10) insights.push({icon:'📈',color:'#22c55e',text:'Starkes Wachstum: Die Prognose zeigt +'+growth6.toFixed(1)+'% Umsatzwachstum in den nächsten 6 Monaten.'});
+    else if(growth6<-5) insights.push({icon:'📉',color:'#ef4444',text:'Rückgang erwartet: Prognostizierter Umsatzrückgang von '+Math.abs(growth6).toFixed(1)+'% — mehr Neukunden oder Bestandspflege empfohlen.'});
+    else insights.push({icon:'➡️',color:'#f59e0b',text:'Stabiler Umsatz: Die Prognose zeigt eine stabile Entwicklung mit '+growth6.toFixed(1)+'% Veränderung.'});
+
+    var overdue=parseFloat(s.overdue)||0;
+    var paid=parseFloat(s.paid)||1;
+    if(overdue/paid>0.1) insights.push({icon:'⚠️',color:'#f59e0b',text:'Hoher Überfälligkeitsanteil: '+fmt(overdue)+' ('+((overdue/paid)*100).toFixed(1)+'% des Gesamtumsatzes) sind überfällig — Mahnwesen prüfen.'});
+
+    var speeds=d.owner_speed||[];
+    var slowPayers=speeds.filter(function(o){ return parseFloat(o.avg_days)>45; });
+    if(slowPayers.length) insights.push({icon:'🐢',color:'#f97316',text:slowPayers.length+' Tierhalter zahlen im Schnitt über 45 Tage nach Rechnungsdatum. Frühzeitige Erinnerungen empfohlen.'});
+
+    var fastPayers=speeds.filter(function(o){ return parseFloat(o.avg_days)<=7; });
+    if(fastPayers.length) insights.push({icon:'⚡',color:'#22c55e',text:fastPayers.length+' Tierhalter zahlen sehr schnell (≤7 Tage) — ideale Stammkunden.'});
+
+    if(!insights.length) insights.push({icon:'ℹ️',color:'#94a3b8',text:'Noch zu wenig Daten für detaillierte Einschätzungen. Mehr bezahlte Rechnungen mit Zahlungsdatum erfassen.'});
+
+    div.innerHTML=insights.map(function(ins){
+        return '<div class="d-flex gap-2 mb-3 p-2" style="background:rgba(255,255,255,.04);border-radius:8px;border-left:3px solid '+ins.color+';">'
+            +'<span style="font-size:1.1rem;flex-shrink:0;">'+ins.icon+'</span>'
+            +'<div style="color:rgba(255,255,255,.8);">'+ins.text+'</div>'
+            +'</div>';
+    }).join('');
+}
+
+/* ── Revenue heatmap ─────────────────────────────────────────── */
+function renderHeatmap(d){
+    var container=el('revenue-heatmap');
+    var byMonth=d.by_month||{labels:[],revenue:[]};
+    /* Build year×month matrix */
+    var data={};
+    var years=new Set();
+    var monthNames=['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+    byMonth.labels.forEach(function(label,i){
+        var parts=label.split(' ');
+        var mName=parts[0]; var yr=parts[1];
+        if(!data[yr]) data[yr]={};
+        var mIdx=monthNames.indexOf(mName);
+        if(mIdx>=0) data[yr][mIdx]=byMonth.revenue[i]||0;
+        years.add(yr);
+    });
+    var sortedYears=Array.from(years).sort();
+    var maxVal=Math.max.apply(null,byMonth.revenue.map(function(v){return v||0;}));
+    if(!sortedYears.length){ container.innerHTML='<div class="text-muted">Keine Daten</div>'; return; }
+
+    var html='<table style="border-collapse:separate;border-spacing:3px;width:100%;font-size:.75rem;">';
+    html+='<tr><th style="color:rgba(255,255,255,.4);font-weight:400;padding:2px 6px;">Jahr</th>';
+    monthNames.forEach(function(m){ html+='<th style="color:rgba(255,255,255,.4);font-weight:400;text-align:center;min-width:48px;">'+m+'</th>'; });
+    html+='</tr>';
+    sortedYears.forEach(function(yr){
+        html+='<tr><td style="color:rgba(255,255,255,.6);padding:2px 6px;font-weight:600;">'+yr+'</td>';
+        for(var m=0;m<12;m++){
+            var val=(data[yr]&&data[yr][m])||0;
+            var intensity=maxVal>0?val/maxVal:0;
+            var alpha=0.08+intensity*0.85;
+            var bg='rgba(79,124,255,'+alpha.toFixed(2)+')';
+            var textColor=intensity>0.5?'rgba(255,255,255,.95)':'rgba(255,255,255,.5)';
+            html+='<td style="background:'+bg+';border-radius:4px;text-align:center;padding:5px 2px;color:'+textColor+';cursor:default;" title="'+monthNames[m]+' '+yr+': '+fmt(val)+'">'
+                +(val>0?fmtShort(val):'—')
+                +'</td>';
+        }
+        html+='</tr>';
+    });
+    html+='</table>';
+    container.innerHTML=html;
+}
+
+/* ── Aging detail ────────────────────────────────────────────── */
+function renderAgingDetail(d){
+    var div=el('aging-detail-list');
+    var ag=d.aging||{};
+    var buckets=[
+        {label:'1–30 Tage',amount:ag.d30||0,count:ag.c30||0,color:'#f59e0b'},
+        {label:'31–60 Tage',amount:ag.d60||0,count:ag.c60||0,color:'#f97316'},
+        {label:'61–90 Tage',amount:ag.d90||0,count:ag.c90||0,color:'#ef4444'},
+        {label:'> 90 Tage', amount:ag.d90p||0,count:ag.c90p||0,color:'#b91c1c'},
+    ];
+    var total=(parseFloat(ag.d30)||0)+(parseFloat(ag.d60)||0)+(parseFloat(ag.d90)||0)+(parseFloat(ag.d90p)||0);
+    if(!total){ div.innerHTML='<div class="text-muted text-center py-3">Keine offenen/überfälligen Forderungen</div>'; return; }
+    var html='';
+    buckets.forEach(function(b){
+        var pct=total>0?Math.round((parseFloat(b.amount)||0)/total*100):0;
+        html+='<div class="mb-3">'
+            +'<div class="d-flex justify-content-between mb-1">'
+            +'<span style="font-weight:600;color:'+b.color+';">'+b.label+'</span>'
+            +'<span>'+fmt(b.amount)+' <span class="text-muted">('+b.count+' Rechnungen)</span></span>'
+            +'</div>'
+            +'<div style="height:6px;background:rgba(255,255,255,.08);border-radius:3px;">'
+            +'<div style="height:6px;width:'+pct+'%;background:'+b.color+';border-radius:3px;"></div>'
+            +'</div>'
+            +'</div>';
+    });
+    html+='<div class="d-flex justify-content-between pt-2" style="border-top:1px solid rgba(255,255,255,.1);font-weight:700;font-size:.85rem;">'
+        +'<span>Gesamt</span><span>'+fmt(total)+'</span></div>';
+    div.innerHTML=html;
+}
+
+/* ── Payer extremes ──────────────────────────────────────────── */
+function renderPayerExtremes(d){
+    var div=el('payer-extremes');
+    var speeds=d.owner_speed||[];
+    if(!speeds.length){ div.innerHTML='<div class="text-muted text-center py-3">Keine Daten (noch keine bezahlten Rechnungen mit Zahlungsdatum)</div>'; return; }
+    var sorted=[].concat(speeds).sort(function(a,b){ return (parseFloat(a.avg_days)||0)-(parseFloat(b.avg_days)||0); });
+    var fastest=sorted.slice(0,5);
+    var slowest=sorted.slice(-5).reverse();
+    var html='<div class="mb-3"><div class="fw-semibold mb-2" style="color:#22c55e;font-size:.82rem;">⚡ Schnellste Zahler</div>';
+    fastest.forEach(function(o,i){
+        html+='<div class="d-flex justify-content-between align-items-center mb-1" style="font-size:.8rem;">'
+            +'<span>'+(i+1)+'. <a href="/tierhalter/'+o.owner_id+'" style="color:inherit;">'+o.owner_name+'</a></span>'
+            +'<span style="color:#22c55e;font-weight:600;">'+parseFloat(o.avg_days).toFixed(1)+' Tage</span>'
+            +'</div>';
+    });
+    html+='</div><div><div class="fw-semibold mb-2" style="color:#ef4444;font-size:.82rem;">🐢 Langsamste Zahler</div>';
+    slowest.forEach(function(o,i){
+        html+='<div class="d-flex justify-content-between align-items-center mb-1" style="font-size:.8rem;">'
+            +'<span>'+(i+1)+'. <a href="/tierhalter/'+o.owner_id+'" style="color:inherit;">'+o.owner_name+'</a></span>'
+            +'<span style="color:#ef4444;font-weight:600;">'+parseFloat(o.avg_days).toFixed(1)+' Tage</span>'
+            +'</div>';
+    });
+    html+='</div>';
+    div.innerHTML=html;
+}
+
+/* ── Boot ────────────────────────────────────────────────────── */
+load();
+
+})();
+</script>
+
+<style>
+#analytics-loading { display:none; }
+.atab-pane { animation: fadeIn .2s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+</style>
+{% endblock %}

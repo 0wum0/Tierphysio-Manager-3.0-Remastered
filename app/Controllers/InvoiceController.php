@@ -558,6 +558,76 @@ class InvoiceController extends Controller
         $this->redirect("/rechnungen/{$params['id']}");
     }
 
+    public function analytics(array $params = []): void
+    {
+        $this->requireAdmin();
+        $this->render('invoices/analytics.twig', [
+            'page_title' => 'Finanz-Analyse',
+        ]);
+    }
+
+    public function analyticsJson(array $params = []): void
+    {
+        $this->requireAdmin();
+
+        $summary       = $this->invoiceService->getFinancialSummary();
+        $byMonth       = $this->invoiceService->getRevenueByMonth(24);
+        $byQuarter     = $this->invoiceService->getRevenueByQuarter(3);
+        $byYear        = $this->invoiceService->getRevenueByYear();
+        $ownerSpeed    = $this->invoiceService->getOwnerPaymentSpeed();
+        $ownerRevenue  = $this->invoiceService->getOwnerRevenue(15);
+        $aging         = $this->invoiceService->getOverdueAging();
+        $payMethods    = $this->invoiceService->getPaymentMethodStats();
+        $forecast      = $this->invoiceService->getRevenueForForecast(18);
+        $topPositions  = $this->invoiceService->getTopPositions(10);
+
+        /* ── Linear regression forecast (next 6 months) ── */
+        $values = array_column($forecast, 'revenue');
+        $n = count($values);
+        $forecastMonths = [];
+        if ($n >= 3) {
+            $sumX = $sumY = $sumXY = $sumX2 = 0;
+            for ($i = 0; $i < $n; $i++) {
+                $sumX  += $i;
+                $sumY  += $values[$i];
+                $sumXY += $i * $values[$i];
+                $sumX2 += $i * $i;
+            }
+            $denom = ($n * $sumX2 - $sumX * $sumX);
+            $slope = $denom != 0 ? ($n * $sumXY - $sumX * $sumY) / $denom : 0;
+            $intercept = ($sumY - $slope * $sumX) / $n;
+            for ($f = 1; $f <= 6; $f++) {
+                $predictedVal = max(0, $intercept + $slope * ($n - 1 + $f));
+                $forecastMonths[] = [
+                    'month'   => date('M Y', strtotime('+' . $f . ' months')),
+                    'value'   => round($predictedVal, 2),
+                    'is_forecast' => true,
+                ];
+            }
+        }
+
+        /* ── Growth rate YoY ── */
+        $thisYear  = (float)($summary['paid'] ?? 0);
+        $lastYearRow = $this->invoiceService->getRevenueByMonth(13);
+        $lastYearRev = array_sum(array_slice($lastYearRow['revenue'], 0, 12));
+        $yoyGrowth = $lastYearRev > 0 ? round((array_sum(array_slice($lastYearRow['revenue'], 12)) - $lastYearRev) / $lastYearRev * 100, 1) : null;
+
+        $this->json([
+            'summary'       => $summary,
+            'by_month'      => $byMonth,
+            'by_quarter'    => $byQuarter,
+            'by_year'       => $byYear,
+            'owner_speed'   => $ownerSpeed,
+            'owner_revenue' => $ownerRevenue,
+            'aging'         => $aging,
+            'pay_methods'   => $payMethods,
+            'forecast_history' => $forecast,
+            'forecast_next' => $forecastMonths,
+            'top_positions' => $topPositions,
+            'yoy_growth'    => $yoyGrowth,
+        ]);
+    }
+
     private function parsePositions(): array
     {
         $descriptions = $_POST['position_description'] ?? [];

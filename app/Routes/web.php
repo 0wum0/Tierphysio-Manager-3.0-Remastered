@@ -111,6 +111,7 @@ $router->post('/tierhalter/{id}/loeschen', [OwnerController::class, 'delete'], [
 
 $router->get('/rechnungen', [InvoiceController::class, 'index'], ['auth']);
 $router->get('/rechnungen/erstellen', [InvoiceController::class, 'create'], ['auth']);
+$router->get('/rechnungen/analyse',   [InvoiceController::class, 'analytics'], ['auth']);
 $router->post('/rechnungen', [InvoiceController::class, 'store'], ['auth']);
 $router->get('/rechnungen/{id}', [InvoiceController::class, 'show'], ['auth']);
 $router->get('/rechnungen/{id}/bearbeiten', [InvoiceController::class, 'edit'], ['auth']);
@@ -124,6 +125,7 @@ $router->post('/rechnungen/{id}/senden', [InvoiceController::class, 'sendEmail']
 $router->get('/rechnungen/{id}/quittung', [InvoiceController::class, 'downloadReceipt'], ['auth']);
 $router->post('/rechnungen/{id}/quittung-senden', [InvoiceController::class, 'sendReceiptEmail'], ['auth']);
 $router->post('/rechnungen/{id}/status-inline', [InvoiceController::class, 'updateStatusInline'], ['auth']);
+$router->get('/api/rechnungen/analytics',        [InvoiceController::class, 'analyticsJson'],      ['auth']);
 
 // ── Mahnwesen: Erinnerungen ──────────────────────────────────────────
 $router->get('/mahnwesen/erinnerungen', [ReminderDunningController::class, 'reminderIndex'], ['auth']);
