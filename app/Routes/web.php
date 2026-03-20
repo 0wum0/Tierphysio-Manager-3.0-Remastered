@@ -12,6 +12,7 @@ use App\Controllers\ProfileController;
 use App\Controllers\UiSettingsController;
 use App\Controllers\NotificationController;
 use App\Controllers\CronController;
+use App\Controllers\CronAdminController;
 use App\Controllers\HomeworkController;
 use App\Controllers\ReminderDunningController;
 use App\Controllers\MobileApiController;
@@ -189,6 +190,11 @@ $router->get('/api/notifications', [NotificationController::class, 'index'], ['a
 $router->get('/api/invoice-form-data', [InvoiceController::class, 'formData'], ['auth']);
 
 $router->get('/cron/geburtstag', [CronController::class, 'birthday']);
+
+// ── Cron Admin Panel ──────────────────────────────────────────────────
+$router->get('/admin/cronjobs',                          [CronAdminController::class, 'index'],   ['admin']);
+$router->post('/admin/cronjobs/{key}/trigger',           [CronAdminController::class, 'trigger'], ['admin']);
+$router->get('/admin/cronjobs/log',                      [CronAdminController::class, 'logJson'], ['admin']);
 
 // Serve storage files via index.php — storage/ is outside DocumentRoot when public/ is the root
 function serveStorageFile(string $dir, string $file): void {

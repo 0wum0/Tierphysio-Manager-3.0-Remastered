@@ -254,24 +254,46 @@ class GoogleCalendarController extends Controller
     /* ── GET /google-kalender/cron (secured by token) ── */
     public function cron(array $params = []): void
     {
+        $start  = hrtime(true);
         $token  = $_GET['token'] ?? ($_SERVER['HTTP_X_CRON_TOKEN'] ?? '');
         $secret = defined('GOOGLE_SYNC_CRON_SECRET') ? GOOGLE_SYNC_CRON_SECRET : '';
 
         if (empty($secret) || !hash_equals($secret, $token)) {
             http_response_code(403);
+            $this->googleDbLog('google_calendar', 'error', 'Unauthorized token.', $start);
             echo json_encode(['error' => 'Unauthorized']);
             exit;
         }
 
-        $pushResult = $this->sync->bulkSyncAll();
-        $pullResult = $this->sync->pullFromGoogle();
-        header('Content-Type: application/json');
-        echo json_encode([
-            'ok'   => true,
-            'time' => date('c'),
-            'push' => $pushResult,
-            'pull' => $pullResult,
-        ]);
+        try {
+            $pushResult = $this->sync->bulkSyncAll();
+            $pullResult = $this->sync->pullFromGoogle();
+            $msg = 'push=' . json_encode($pushResult) . ' pull=' . json_encode($pullResult);
+            $this->googleDbLog('google_calendar', 'success', $msg, $start);
+            header('Content-Type: application/json');
+            echo json_encode([
+                'ok'   => true,
+                'time' => date('c'),
+                'push' => $pushResult,
+                'pull' => $pullResult,
+            ]);
+        } catch (\Throwable $e) {
+            $this->googleDbLog('google_calendar', 'error', $e->getMessage(), $start);
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
+        }
         exit;
+    }
+
+    private function googleDbLog(string $jobKey, string $status, string $message, int $startHrtime): void
+    {
+        $ms = (int)((hrtime(true) - $startHrtime) / 1_000_000);
+        try {
+            $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $db->query(
+                'INSERT INTO cron_job_log (job_key, status, message, duration_ms, triggered_by, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
+                [$jobKey, $status, mb_substr($message, 0, 2000), $ms, 'cron']
+            );
+        } catch (\Throwable) {}
     }
 }

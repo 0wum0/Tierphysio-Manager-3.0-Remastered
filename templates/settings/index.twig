@@ -468,11 +468,11 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">"Erinnerung"-Schriftzug <span class="form-hint">(für Zahlungserinnerungs-PDF, Standard: Rechnung-Bild)</span></label>
+                            <label class="form-label">"Zahlungserinnerung"-Schriftzug <span class="form-hint">(für Zahlungserinnerungs-PDF)</span></label>
                             {% if settings.pdf_erinnerung_bild %}
-                                <img src="/assets/img/{{ settings.pdf_erinnerung_bild }}" alt="Erinnerung" style="max-height:50px;max-width:100%;margin-bottom:8px;border-radius:4px;background:#f5f5f5;padding:4px;">
+                                <img src="/assets/img/{{ settings.pdf_erinnerung_bild }}" alt="Zahlungserinnerung" style="max-height:50px;max-width:100%;margin-bottom:8px;border-radius:4px;background:#f5f5f5;padding:4px;">
                             {% else %}
-                                <img src="/assets/img/rechnung-script.png" alt="Erinnerung (Standard)" style="max-height:50px;max-width:100%;margin-bottom:8px;border-radius:4px;background:#f5f5f5;padding:4px;opacity:.5;" onerror="this.style.display='none'">
+                                <div style="margin-bottom:8px;padding:8px 12px;border-radius:4px;background:#f5f5f5;font-size:0.8rem;color:#888;border:1px dashed #ccc;">Kein Bild hochgeladen – PDF zeigt Text: <strong>Zahlungserinnerung</strong></div>
                             {% endif %}
                             <div class="flex gap-2 items-center">
                                 <input type="file" name="pdf_erinnerung_bild" accept="image/*" form="form-upload-erinnerung" class="form-control" style="flex:1;">
@@ -480,11 +480,11 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label class="form-label">"Mahnung"-Schriftzug <span class="form-hint">(für Mahnungs-PDF, Standard: Rechnung-Bild)</span></label>
+                            <label class="form-label">"Mahnung"-Schriftzug <span class="form-hint">(für Mahnungs-PDF)</span></label>
                             {% if settings.pdf_mahnung_bild %}
                                 <img src="/assets/img/{{ settings.pdf_mahnung_bild }}" alt="Mahnung" style="max-height:50px;max-width:100%;margin-bottom:8px;border-radius:4px;background:#f5f5f5;padding:4px;">
                             {% else %}
-                                <img src="/assets/img/rechnung-script.png" alt="Mahnung (Standard)" style="max-height:50px;max-width:100%;margin-bottom:8px;border-radius:4px;background:#f5f5f5;padding:4px;opacity:.5;" onerror="this.style.display='none'">
+                                <div style="margin-bottom:8px;padding:8px 12px;border-radius:4px;background:#f5f5f5;font-size:0.8rem;color:#888;border:1px dashed #ccc;">Kein Bild hochgeladen – PDF zeigt Text: <strong>Mahnung</strong></div>
                             {% endif %}
                             <div class="flex gap-2 items-center">
                                 <input type="file" name="pdf_mahnung_bild" accept="image/*" form="form-upload-mahnung" class="form-control" style="flex:1;">
@@ -1531,7 +1531,13 @@ function openEditHT(ht) {
 <div class="settings-tab-content" id="tab-cronjob">
 
     <div class="glass-card mb-4">
-        <h3 class="section-title mb-3">⏱ Cron-Jobs — Hostinger cURL</h3>
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h3 class="section-title mb-0">⏱ Cron-Jobs</h3>
+            <a href="/admin/cronjobs" class="btn btn-primary btn-sm">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" class="me-1"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="12 6 12 12 16 14"/></svg>
+                Cron-Job Admin Panel →
+            </a>
+        </div>
 
         <div class="alert mb-4" style="background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.3);border-radius:10px;padding:1rem 1.25rem;">
             <div class="fw-600 mb-1" style="color:#38bdf8;">Hostinger Cron-Job Service (cURL)</div>
@@ -1541,83 +1547,132 @@ function openEditHT(ht) {
             </p>
         </div>
 
-        {# ── Geburtstagsmail Cron ── #}
-        <div class="mb-4 p-3 rounded" style="background:rgba(124,46,248,0.08);border:1px solid rgba(180,100,255,0.2);">
-            <div class="d-flex align-items-center gap-2 mb-2">
-                <span style="font-size:1.3rem;">🎂</span>
-                <div class="fw-600">Geburtstagsmail — täglich 08:00 Uhr</div>
+        {# ── 1. Geburtstagsmail ── #}
+        <div class="mb-3 p-3 rounded" style="background:rgba(124,46,248,0.08);border:1px solid rgba(180,100,255,0.2);">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size:1.2rem;">🎂</span>
+                    <div>
+                        <div class="fw-600 fs-sm">Geburtstagsmail</div>
+                        <div class="fs-nano text-muted">Zeitplan: <code>0 8 * * *</code> — täglich 08:00 Uhr</div>
+                    </div>
+                </div>
+                {% if settings.birthday_cron_token ?? '' %}
+                    <span class="badge bg-success">🔑 Token gesetzt</span>
+                {% else %}
+                    <span class="badge bg-danger">⚠️ Kein Token</span>
+                {% endif %}
             </div>
             {% if settings.birthday_cron_token ?? '' %}
-            <div class="mb-2">
-                <label class="form-label fs-nano fw-600 text-muted mb-1">Hostinger URL (GET-Aufruf):</label>
-                <div class="d-flex gap-2 align-items-center">
-                    <input type="text" class="form-control font-monospace" readonly
-                           id="hst-bday-url"
-                           value="{{ app_url }}/cron/geburtstag?token={{ settings.birthday_cron_token }}"
-                           style="font-size:0.77rem;">
-                    <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;"
-                            onclick="var u=document.getElementById('hst-bday-url');navigator.clipboard&&navigator.clipboard.writeText(u.value);this.textContent='\u2713';setTimeout(function(){this.textContent='\uD83D\uDCCB';}.bind(this),1500);">📋</button>
-                </div>
+            <div class="d-flex gap-2 align-items-center">
+                <input type="text" class="form-control font-monospace" readonly id="cron-bday"
+                       value="{{ app_url }}/cron/geburtstag?token={{ settings.birthday_cron_token }}"
+                       style="font-size:0.72rem;">
+                <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;"
+                        onclick="(function(b){var el=document.getElementById('cron-bday');navigator.clipboard&&navigator.clipboard.writeText(el.value);b.textContent='✓';setTimeout(function(){b.textContent='📋'},1500)})(this)">📋</button>
             </div>
-            <div class="mb-2">
-                <label class="form-label fs-nano fw-600 text-muted mb-1">Oder als cURL-Befehl:</label>
-                <div class="d-flex gap-2 align-items-center">
-                    <input type="text" class="form-control font-monospace" readonly
-                           id="hst-bday-curl"
-                           value="curl -s &quot;{{ app_url }}/cron/geburtstag?token={{ settings.birthday_cron_token }}&quot;"
-                           style="font-size:0.77rem;">
-                    <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;"
-                            onclick="var u=document.getElementById('hst-bday-curl');navigator.clipboard&&navigator.clipboard.writeText(u.value);this.textContent='\u2713';setTimeout(function(){this.textContent='\uD83D\uDCCB';}.bind(this),1500);">📋</button>
-                </div>
-            </div>
-            <div class="fs-nano text-muted">Zeitplan in Hostinger: <code>0 8 * * *</code> (täglich 08:00 Uhr)</div>
             {% else %}
-            <div class="alert mb-0" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:0.75rem 1rem;">
-                <span class="fs-sm">⚠️ Kein Cron-Token gesetzt. Bitte zuerst im Tab <strong>Geburtstag</strong> einen Token generieren und speichern.</span>
-            </div>
+            <div class="fs-nano text-warning">Token im Tab <strong>Geburtstag</strong> generieren und speichern.</div>
             {% endif %}
         </div>
 
-        {# ── Kalender-Erinnerungen Cron ── #}
-        <div class="mb-4 p-3 rounded" style="background:rgba(14,165,233,0.08);border:1px solid rgba(14,165,233,0.2);">
-            <div class="d-flex align-items-center gap-2 mb-2">
-                <span style="font-size:1.3rem;">📅</span>
-                <div class="fw-600">Kalender-Erinnerungen — alle 15 Minuten</div>
+        {# ── 2. Kalender-Erinnerungen ── #}
+        <div class="mb-3 p-3 rounded" style="background:rgba(14,165,233,0.08);border:1px solid rgba(14,165,233,0.2);">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size:1.2rem;">📅</span>
+                    <div>
+                        <div class="fw-600 fs-sm">Kalender-Erinnerungen</div>
+                        <div class="fs-nano text-muted">Zeitplan: <code>*/15 * * * *</code> — alle 15 Minuten</div>
+                    </div>
+                </div>
+                {% if settings.calendar_cron_secret ?? '' %}
+                    <span class="badge bg-success">🔑 Token gesetzt</span>
+                {% else %}
+                    <span class="badge bg-danger">⚠️ Kein Token</span>
+                {% endif %}
             </div>
             {% if settings.calendar_cron_secret ?? '' %}
-            <div class="mb-2">
-                <label class="form-label fs-nano fw-600 text-muted mb-1">cURL-Befehl:</label>
-                <div class="d-flex gap-2 align-items-center">
-                    <input type="text" class="form-control font-monospace" readonly
-                           id="hst-cal-curl"
-                           value="curl -s &quot;{{ app_url }}/kalender/cron/erinnerungen?token={{ settings.calendar_cron_secret }}&quot;"
-                           style="font-size:0.77rem;">
-                    <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;"
-                            onclick="var u=document.getElementById('hst-cal-curl');navigator.clipboard&&navigator.clipboard.writeText(u.value);this.textContent='\u2713';setTimeout(function(){this.textContent='\uD83D\uDCCB';}.bind(this),1500);">📋</button>
-                </div>
+            <div class="d-flex gap-2 align-items-center">
+                <input type="text" class="form-control font-monospace" readonly id="cron-cal"
+                       value="{{ app_url }}/kalender/cron/erinnerungen?token={{ settings.calendar_cron_secret }}"
+                       style="font-size:0.72rem;">
+                <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;"
+                        onclick="(function(b){var el=document.getElementById('cron-cal');navigator.clipboard&&navigator.clipboard.writeText(el.value);b.textContent='✓';setTimeout(function(){b.textContent='📋'},1500)})(this)">📋</button>
             </div>
-            <div class="fs-nano text-muted">Zeitplan in Hostinger: <code>*/15 * * * *</code> (alle 15 Minuten)</div>
             {% else %}
-            <div class="alert mb-0" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:0.75rem 1rem;">
-                <span class="fs-sm">⚠️ Kein Kalender-Cron-Secret gesetzt. Bitte im Tab <strong>Plugins → Kalender</strong> ein Secret generieren.</span>
-            </div>
+            <div class="fs-nano text-warning">Secret im Tab <strong>Plugins → Kalender</strong> generieren und speichern.</div>
             {% endif %}
         </div>
 
+        {# ── 3. Google Kalender Sync ── #}
+        <div class="mb-3 p-3 rounded" style="background:rgba(234,179,8,0.08);border:1px solid rgba(234,179,8,0.2);">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size:1.2rem;">🔄</span>
+                    <div>
+                        <div class="fw-600 fs-sm">Google Kalender Sync</div>
+                        <div class="fs-nano text-muted">Zeitplan: <code>0 * * * *</code> — stündlich</div>
+                    </div>
+                </div>
+                {% if settings.google_sync_cron_secret ?? '' %}
+                    <span class="badge bg-success">🔑 Token gesetzt</span>
+                {% else %}
+                    <span class="badge bg-warning text-dark">⚠️ Via google.php</span>
+                {% endif %}
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <input type="text" class="form-control font-monospace" readonly id="cron-google"
+                       value="{{ app_url }}/google-kalender/cron?token={{ settings.google_sync_cron_secret ?? '[GOOGLE_SYNC_CRON_SECRET]' }}"
+                       style="font-size:0.72rem;">
+                <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;"
+                        onclick="(function(b){var el=document.getElementById('cron-google');navigator.clipboard&&navigator.clipboard.writeText(el.value);b.textContent='✓';setTimeout(function(){b.textContent='📋'},1500)})(this)">📋</button>
+            </div>
+            <div class="fs-nano text-muted mt-1">Token wird aus <code>storage/config/google.php</code> geladen (Feld <code>cron_secret</code>).</div>
+        </div>
+
+        {# ── 4. TherapyCare Erinnerungen ── #}
+        {% if plugins['therapy-care-pro'] is defined and plugins['therapy-care-pro'].enabled %}
+        <div class="mb-3 p-3 rounded" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size:1.2rem;">💉</span>
+                    <div>
+                        <div class="fw-600 fs-sm">TherapyCare Erinnerungen</div>
+                        <div class="fs-nano text-muted">Zeitplan: <code>*/15 * * * *</code> — alle 15 Minuten</div>
+                    </div>
+                </div>
+                {% if settings.tcp_cron_token ?? '' %}
+                    <span class="badge bg-success">🔑 Token gesetzt</span>
+                {% else %}
+                    <span class="badge bg-secondary">— Kein Token (öffentlich)</span>
+                {% endif %}
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <input type="text" class="form-control font-monospace" readonly id="cron-tcp"
+                       value="{{ app_url }}/tcp/cron/erinnerungen{% if settings.tcp_cron_token ?? '' %}?token={{ settings.tcp_cron_token }}{% endif %}"
+                       style="font-size:0.72rem;">
+                <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;"
+                        onclick="(function(b){var el=document.getElementById('cron-tcp');navigator.clipboard&&navigator.clipboard.writeText(el.value);b.textContent='✓';setTimeout(function(){b.textContent='📋'},1500)})(this)">📋</button>
+            </div>
+        </div>
+        {% endif %}
+
         {# ── Anleitung Hostinger ── #}
-        <div class="glass-card" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);">
+        <div class="glass-card mt-3" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);">
             <h4 class="fw-600 mb-3" style="font-size:0.9rem;">📖 Schritt-für-Schritt: Hostinger Cron-Job einrichten</h4>
             <ol class="mb-0 ps-3 fs-sm" style="line-height:2.2;color:rgba(255,255,255,0.8);">
                 <li>Im <strong>Hostinger hPanel</strong> anmelden</li>
                 <li>Zu <strong>Erweitert → Cron-Jobs</strong> navigieren</li>
                 <li>Auf <strong>„Neuer Cron-Job"</strong> klicken</li>
-                <li>Beim Feld <strong>Befehl</strong>: den cURL-Befehl von oben einfügen</li>
-                <li>Beim Feld <strong>Zeitplan</strong>: für Geburtstag <code>0 8 * * *</code>, für Kalender <code>*/15 * * * *</code></li>
+                <li>Beim Feld <strong>Befehl</strong>: die URL von oben einfügen</li>
+                <li>Zeitplan eintragen — siehe jeweiligen Job oben</li>
                 <li>Auf <strong>„Erstellen"</strong> klicken — fertig!</li>
             </ol>
-            <div class="mt-3 fs-nano text-muted">
-                💡 Alternativ kannst du unter <strong>Hostinger → Cron-Jobs</strong> auch nur die URL (ohne <code>curl -s</code>) eintragen,
-                falls Hostinger einen URL-basierten Cron anbietet.
+            <div class="mt-3">
+                <a href="/admin/cronjobs" class="btn btn-outline-primary btn-sm">
+                    Cron-Job Admin Panel öffnen — Status, Logs &amp; manuelle Ausführung →
+                </a>
             </div>
         </div>
 

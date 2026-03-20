@@ -1,0 +1,179 @@
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Cron-Jobs</h1>
+        <p class="page-subtitle">{{ jobs|length }} Jobs konfiguriert</p>
+    </div>
+    <a href="/einstellungen?tab=cronjob" class="btn btn-secondary btn-sm">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="15 18 9 12 15 6"/></svg>
+        Einstellungen
+    </a>
+</div>
+
+{% if success %}
+    <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">{{ success }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endif %}
+{% if error %}
+    <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">{{ error }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endif %}
+
+{# ── Job Cards ── #}
+<div class="row g-3 mb-4">
+{% for job in jobs %}
+    {% set last = job.last_run %}
+    <div class="col-12 col-lg-6">
+        <div class="card h-100" style="border:1px solid {{ job.border }};background:{{ job.color }};">
+            <div class="card-body">
+                {# Header row #}
+                <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span style="font-size:1.4rem;line-height:1;">{{ job.icon }}</span>
+                        <div>
+                            <div class="fw-700" style="font-size:0.95rem;">{{ job.label }}</div>
+                            <div class="text-muted" style="font-size:0.75rem;">{{ job.desc }}</div>
+                        </div>
+                    </div>
+                    {# Status badge #}
+                    {% if last %}
+                        {% if last.status == 'success' %}
+                            <span class="badge bg-success" style="white-space:nowrap;">✓ OK</span>
+                        {% elseif last.status == 'error' %}
+                            <span class="badge bg-danger" style="white-space:nowrap;">✗ Fehler</span>
+                        {% else %}
+                            <span class="badge bg-secondary" style="white-space:nowrap;">— Übersprungen</span>
+                        {% endif %}
+                    {% else %}
+                        <span class="badge bg-secondary" style="white-space:nowrap;">Noch nie</span>
+                    {% endif %}
+                </div>
+
+                {# Last run info #}
+                <div class="mb-3" style="font-size:0.78rem;color:rgba(255,255,255,0.65);">
+                    {% if last %}
+                        <span>
+                            Letzter Lauf:
+                            <strong style="color:rgba(255,255,255,0.9);">{{ last.created_at|date('d.m.Y H:i:s') }}</strong>
+                            {% if last.triggered_by == 'manual' %}
+                                <span class="badge bg-info ms-1" style="font-size:0.65rem;">manuell</span>
+                            {% endif %}
+                            {% if last.duration_ms %}· {{ last.duration_ms }} ms{% endif %}
+                        </span>
+                        {% if last.status == 'error' and last.message %}
+                            <div class="mt-1 text-danger" style="font-size:0.72rem;word-break:break-all;">{{ last.message|slice(0,200) }}</div>
+                        {% endif %}
+                    {% else %}
+                        <span>Noch nie ausgeführt</span>
+                    {% endif %}
+                </div>
+
+                {# Schedule + Token status #}
+                <div class="d-flex align-items-center gap-3 mb-3" style="font-size:0.75rem;">
+                    <span>
+                        <svg width="11" height="11" fill="none" viewBox="0 0 24 24" class="me-1"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="12 6 12 12 16 14"/></svg>
+                        <code style="font-size:0.72rem;">{{ job.schedule }}</code>
+                        <span class="text-muted">({{ job.schedule_label }})</span>
+                    </span>
+                    {% if job.token %}
+                        <span class="text-success">🔑 Token konfiguriert</span>
+                    {% else %}
+                        <span class="text-danger">⚠️ Kein Token</span>
+                    {% endif %}
+                </div>
+
+                {# URL copy row #}
+                {% if job.token %}
+                <div class="mb-3">
+                    <label class="form-label" style="font-size:0.7rem;font-weight:600;color:rgba(255,255,255,0.5);margin-bottom:4px;">Cron-URL:</label>
+                    <div class="d-flex gap-2 align-items-center">
+                        <input type="text" class="form-control font-monospace"
+                               id="url-{{ job.key }}"
+                               value="{{ job.url }}?token={{ job.token }}"
+                               readonly
+                               style="font-size:0.7rem;background:rgba(0,0,0,0.2);border-color:rgba(255,255,255,0.1);">
+                        <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;flex-shrink:0;"
+                                onclick="(function(btn){var el=document.getElementById('url-{{ job.key }}');navigator.clipboard&&navigator.clipboard.writeText(el.value);btn.textContent='✓';setTimeout(function(){btn.textContent='📋'},1500);})(this)">📋</button>
+                    </div>
+                </div>
+                {% endif %}
+
+                {# Manual trigger button #}
+                <form action="/admin/cronjobs/{{ job.key }}/trigger" method="POST" style="margin:0;">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="btn btn-sm {% if job.token %}btn-primary{% else %}btn-secondary disabled{% endif %}"
+                            {% if not job.token %}disabled{% endif %}
+                            {% if job.token %}data-confirm="„{{ job.label }}" jetzt manuell ausführen?"{% endif %}>
+                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" class="me-1"><polygon stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="5 3 19 12 5 21 5 3"/></svg>
+                        Jetzt ausführen
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endfor %}
+</div>
+
+{# ── Log Table ── #}
+<div class="card">
+    <div class="card-header d-flex align-items-center justify-content-between">
+        <span class="fw-700">Ausführungsprotokoll</span>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="location.reload()">
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="23 4 23 10 17 10"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="1 20 1 14 7 14"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            Aktualisieren
+        </button>
+    </div>
+    {% if log %}
+    <div class="table-responsive">
+        <table class="table table-sm mb-0" style="font-size:0.8rem;">
+            <thead>
+                <tr>
+                    <th>Zeit</th>
+                    <th>Job</th>
+                    <th>Status</th>
+                    <th>Auslöser</th>
+                    <th>Dauer</th>
+                    <th>Meldung</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% set job_labels = {
+                'birthday':           '🎂 Geburtstagsmail',
+                'calendar_reminders': '📅 Kalender-Erinnerungen',
+                'google_calendar':    '🔄 Google Sync',
+                'tcp_reminders':      '💉 TherapyCare Erinnerungen'
+            } %}
+            {% for entry in log %}
+            <tr>
+                <td class="text-nowrap text-muted">{{ entry.created_at|date('d.m.Y H:i:s') }}</td>
+                <td class="text-nowrap">{{ job_labels[entry.job_key] ?? entry.job_key }}</td>
+                <td>
+                    {% if entry.status == 'success' %}
+                        <span class="badge bg-success">✓ OK</span>
+                    {% elseif entry.status == 'error' %}
+                        <span class="badge bg-danger">✗ Fehler</span>
+                    {% else %}
+                        <span class="badge bg-secondary">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if entry.triggered_by == 'manual' %}
+                        <span class="badge bg-info">manuell</span>
+                    {% else %}
+                        <span class="badge bg-secondary">cron</span>
+                    {% endif %}
+                </td>
+                <td class="text-muted">{{ entry.duration_ms ? entry.duration_ms ~ ' ms' : '—' }}</td>
+                <td style="max-width:360px;word-break:break-all;color:{% if entry.status == 'error' %}#f87171{% else %}rgba(255,255,255,0.6){% endif %};">
+                    {{ entry.message|slice(0,180)|default('—') }}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body text-muted" style="font-size:0.85rem;">Noch keine Einträge vorhanden. Führe einen Cron-Job aus um das Protokoll zu befüllen.</div>
+    {% endif %}
+</div>
+{% endblock %}

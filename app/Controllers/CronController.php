@@ -11,6 +11,7 @@ use App\Core\Translator;
 use App\Core\View;
 use App\Services\BirthdayMailService;
 use App\Repositories\SettingsRepository;
+use App\Core\Database;
 
 class CronController extends Controller
 {
@@ -20,7 +21,8 @@ class CronController extends Controller
         Config $config,
         Translator $translator,
         private readonly BirthdayMailService $birthdayMailService,
-        private readonly SettingsRepository  $settings
+        private readonly SettingsRepository  $settings,
+        private readonly Database            $db
     ) {
         parent::__construct($view, $session, $config, $translator);
     }
@@ -31,16 +33,17 @@ class CronController extends Controller
     ───────────────────────────────────────────────────────── */
     public function birthday(): void
     {
+        $start = hrtime(true);
         $startTime = date('Y-m-d H:i:s');
         $this->cronLog("START birthday cron at {$startTime}");
 
         try {
             $expectedToken = $this->settings->get('birthday_cron_token', '');
 
-            /* Token validation */
             if (empty($expectedToken)) {
                 http_response_code(503);
                 $this->cronLog("ERROR birthday cron: Token nicht konfiguriert");
+                $this->dbLog('birthday', 'error', 'Token nicht konfiguriert.', $start);
                 $this->jsonCron(['error' => 'Cron-Token nicht konfiguriert. Bitte in den Einstellungen hinterlegen.']);
                 return;
             }
@@ -50,7 +53,6 @@ class CronController extends Controller
             if (str_starts_with($authHeader, 'Bearer ')) {
                 $providedToken = substr($authHeader, 7);
             }
-            /* Also allow ?token=... as fallback for simple cron setups */
             if ($providedToken === '') {
                 $providedToken = $_GET['token'] ?? '';
             }
@@ -58,15 +60,16 @@ class CronController extends Controller
             if (!hash_equals($expectedToken, $providedToken)) {
                 http_response_code(401);
                 $this->cronLog("ERROR birthday cron: Ungültiger Token");
+                $this->dbLog('birthday', 'error', 'Ungültiger Token.', $start);
                 $this->jsonCron(['error' => 'Ungültiger Token.']);
                 return;
             }
 
             $result = $this->birthdayMailService->runDailyCheck();
 
-            $this->cronLog(
-                "SUCCESS birthday cron: sent={$result['sent']}, skipped={$result['skipped']}, errors={$result['errors']}"
-            );
+            $msg = "sent={$result['sent']}, skipped={$result['skipped']}, errors={$result['errors']}";
+            $this->cronLog("SUCCESS birthday cron: {$msg}");
+            $this->dbLog('birthday', 'success', $msg, $start);
 
             $this->jsonCron([
                 'ok'      => true,
@@ -77,10 +80,17 @@ class CronController extends Controller
             ]);
 
         } catch (\Throwable $e) {
-            $this->cronLog("EXCEPTION birthday cron: " . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            $this->cronLog("EXCEPTION birthday cron: " . $e->getMessage());
+            $this->dbLog('birthday', 'error', $e->getMessage(), $start);
             http_response_code(200);
             $this->jsonCron(['ok' => false, 'error' => $e->getMessage()]);
         }
+    }
+
+    private function dbLog(string $jobKey, string $status, string $message, int $startHrtime): void
+    {
+        $ms = (int)((hrtime(true) - $startHrtime) / 1_000_000);
+        \App\Controllers\CronAdminController::logRun($this->db, $jobKey, $status, $message, $ms, 'cron');
     }
 
     /* ─────────────────────────────────────────────────────────

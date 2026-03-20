@@ -1820,8 +1820,8 @@ class PdfService
     ): string {
         return $this->generateReminderDunningPdf($invoice, $owner, $patient, [
             'type'       => 'reminder',
-            'title_word' => 'Erinnerung',
-            'sidebar_label' => 'Erinnerung',
+            'title_word' => 'Zahlungserinnerung',
+            'sidebar_label' => 'Zahlungserinnerung',
             'level'      => null,
             'due_date'   => $reminder['due_date'] ?? null,
             'fee'        => 0.0,
@@ -2032,9 +2032,14 @@ class PdfService
         }
 
         /* ── Document title — script image only if explicitly uploaded ── */
-        $titleImgKey  = $isDunning ? 'pdf_mahnung_bild' : 'pdf_erinnerung_bild';
-        $titleImgFile = !empty($settings[$titleImgKey])
-            ? $this->resolveAssetImg($settings[$titleImgKey])
+        $titleImgKey      = $isDunning ? 'pdf_mahnung_bild' : 'pdf_erinnerung_bild';
+        $titleImgSetting  = $settings[$titleImgKey] ?? '';
+        /* Guard: ignore if the stored value is the Rechnung image (wrong setting) */
+        if (str_contains($titleImgSetting, 'rechnung')) {
+            $titleImgSetting = '';
+        }
+        $titleImgFile = !empty($titleImgSetting)
+            ? $this->resolveAssetImg($titleImgSetting)
             : '';
         $titleImgY    = $infoY + 4;
         if ($titleImgFile !== '' && file_exists($titleImgFile)) {

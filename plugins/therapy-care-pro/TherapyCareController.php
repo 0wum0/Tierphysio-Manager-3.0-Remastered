@@ -903,6 +903,7 @@ class TherapyCareController extends Controller
 
     public function cronReminders(array $params = []): void
     {
+        $start         = hrtime(true);
         $settings      = $this->settingsRepo->all();
         $expectedToken = $settings['tcp_cron_token'] ?? '';
 
@@ -914,6 +915,7 @@ class TherapyCareController extends Controller
             }
             if (!hash_equals($expectedToken, $provided)) {
                 http_response_code(401);
+                $this->tcpDbLog('tcp_reminders', 'error', 'Ungültiger Token.', $start);
                 header('Content-Type: application/json');
                 echo json_encode(['error' => 'Ungültiger Token.']);
                 exit;
@@ -961,9 +963,24 @@ class TherapyCareController extends Controller
             }
         }
 
+        $msg = "sent={$sent}, failed={$failed}, total=" . count($queue);
+        $this->tcpDbLog('tcp_reminders', $failed > 0 && $sent === 0 ? 'error' : 'success', $msg, $start);
+
         header('Content-Type: application/json');
         echo json_encode(['ok' => true, 'sent' => $sent, 'failed' => $failed, 'total' => count($queue)]);
         exit;
+    }
+
+    private function tcpDbLog(string $jobKey, string $status, string $message, int $startHrtime): void
+    {
+        $ms = (int)((hrtime(true) - $startHrtime) / 1_000_000);
+        try {
+            $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $db->query(
+                'INSERT INTO cron_job_log (job_key, status, message, duration_ms, triggered_by, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
+                [$jobKey, $status, mb_substr($message, 0, 2000), $ms, 'cron']
+            );
+        } catch (\Throwable) {}
     }
 
     /* ══════════════════════════════════════════════════════════

@@ -399,6 +399,7 @@ class CalendarController extends Controller
     /* ── Cron: send pending reminders ── */
     public function cronReminders(array $params = []): void
     {
+        $start = hrtime(true);
         $this->calCronLog('START calendar reminder cron at ' . date('Y-m-d H:i:s'));
 
         try {
@@ -408,6 +409,7 @@ class CalendarController extends Controller
             if (empty($secret) || !hash_equals($secret, $token)) {
                 http_response_code(403);
                 $this->calCronLog('ERROR calendar cron: Unauthorized token');
+                $this->calDbLog('calendar_reminders', 'error', 'Unauthorized token.', $start);
                 header('Content-Type: application/json');
                 echo json_encode(['error' => 'Unauthorized']);
                 echo "\nCron completed\n";
@@ -422,7 +424,9 @@ class CalendarController extends Controller
 
             $result = $reminderService->processPending();
 
-            $this->calCronLog('SUCCESS calendar cron: sent=' . ($result['sent'] ?? 0) . ', skipped=' . ($result['skipped'] ?? 0));
+            $msg = 'sent=' . ($result['sent'] ?? 0) . ', skipped=' . ($result['skipped'] ?? 0);
+            $this->calCronLog('SUCCESS calendar cron: ' . $msg);
+            $this->calDbLog('calendar_reminders', 'success', $msg, $start);
 
             header('Content-Type: application/json');
             echo json_encode(array_merge($result, ['ok' => true, 'time' => date('c')]));
@@ -430,13 +434,25 @@ class CalendarController extends Controller
             exit;
 
         } catch (\Throwable $e) {
-            $this->calCronLog('EXCEPTION calendar cron: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            $this->calCronLog('EXCEPTION calendar cron: ' . $e->getMessage());
+            $this->calDbLog('calendar_reminders', 'error', $e->getMessage(), $start);
             http_response_code(200);
             header('Content-Type: application/json');
             echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
             echo "\nCron completed\n";
             exit;
         }
+    }
+
+    private function calDbLog(string $jobKey, string $status, string $message, int $startHrtime): void
+    {
+        $ms = (int)((hrtime(true) - $startHrtime) / 1_000_000);
+        try {
+            $this->db->query(
+                'INSERT INTO cron_job_log (job_key, status, message, duration_ms, triggered_by, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
+                [$jobKey, $status, mb_substr($message, 0, 2000), $ms, 'cron']
+            );
+        } catch (\Throwable) {}
     }
 
     private function calCronLog(string $message): void
