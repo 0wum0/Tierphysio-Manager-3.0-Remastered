@@ -36,7 +36,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   late final Animation<double> _sloganOpacity;
   late final Animation<double> _exitOpacity;
 
-  static const _word = 'OmniPet';
+  static const _word = 'TeraPano';
   static const _particleCount = 22;
   late final List<_Particle> _particles;
   bool _initDone = false;
@@ -312,7 +312,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
             final t     = (((_lettersCtrl.value - start) / (end - start)).clamp(0.0, 1.0));
             final curve = Curves.easeOutBack.transform(t);
 
-            final isOmni = i < 4;
+            final isTera = i < 4;
             return Transform.translate(
               offset: Offset(0, (1 - curve) * -30),
               child: Opacity(
@@ -326,7 +326,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
                     height: 1.0,
                     foreground: Paint()
                       ..shader = LinearGradient(
-                        colors: isOmni
+                        colors: isTera
                           ? [Colors.white, const Color(0xFFB8D0FF)]
                           : [AppTheme.secondary.withValues(alpha: 0.9), const Color(0xFFE0AAFF)],
                       ).createShader(const Rect.fromLTWH(0, 0, 60, 60)),

@@ -27,18 +27,27 @@ class PawAvatar extends StatelessWidget {
 
     if (photoPath != null && photoPath!.isNotEmpty) {
       final url = ApiService.mediaUrl(photoPath!);
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(radius),
-        child: SizedBox(
-          width: radius * 2,
-          height: radius * 2,
-          child: CachedNetworkImage(
-            imageUrl: url,
-            fit: BoxFit.cover,
-            placeholder: (_, __) => _shimmer(radius),
-            errorWidget: (_, __, ___) => _fallback(bg, radius),
-          ),
-        ),
+      return FutureBuilder<String?>(
+        future: ApiService.getToken(),
+        builder: (context, snap) {
+          final headers = snap.hasData && snap.data != null
+              ? {'Authorization': 'Bearer ${snap.data}'}
+              : const <String, String>{};
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(radius),
+            child: SizedBox(
+              width: radius * 2,
+              height: radius * 2,
+              child: CachedNetworkImage(
+                imageUrl: url,
+                httpHeaders: headers,
+                fit: BoxFit.cover,
+                placeholder: (_, __) => _shimmer(radius),
+                errorWidget: (_, __, ___) => _fallback(bg, radius),
+              ),
+            ),
+          );
+        },
       );
     }
     return _fallback(bg, radius);

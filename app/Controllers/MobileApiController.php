@@ -28,7 +28,8 @@ class MobileApiController
     private ReminderDunningRepository $reminderDunning;
     private TreatmentTypeRepository  $treatmentTypeRepo;
 
-    private ?array $authUser = null;
+    private ?array $authUser  = null;
+    private ?array $bodyCache = null;
 
     public function __construct(
         Database                  $db,
@@ -80,10 +81,11 @@ class MobileApiController
 
     private function body(): array
     {
-        $raw = file_get_contents('php://input');
-        if (!$raw) return $_POST;
-        $decoded = json_decode($raw, true);
-        return is_array($decoded) ? $decoded : $_POST;
+        if ($this->bodyCache !== null) return $this->bodyCache;
+        $raw     = file_get_contents('php://input');
+        $decoded = $raw ? json_decode($raw, true) : null;
+        $this->bodyCache = is_array($decoded) ? $decoded : $_POST;
+        return $this->bodyCache;
     }
 
     private function input(string $key, mixed $default = null): mixed
@@ -276,7 +278,7 @@ class MobileApiController
         $this->requireAuth();
 
         $page   = max(1, (int)($_GET['page'] ?? 1));
-        $per    = min(50, max(10, (int)($_GET['per_page'] ?? 20)));
+        $per    = min(500, max(10, (int)($_GET['per_page'] ?? 20)));
         $search = trim($_GET['search'] ?? '');
         $filter = trim($_GET['filter'] ?? '');
 
@@ -507,7 +509,7 @@ class MobileApiController
         $this->requireAuth();
 
         $page   = max(1, (int)($_GET['page'] ?? 1));
-        $per    = min(50, max(10, (int)($_GET['per_page'] ?? 20)));
+        $per    = min(500, max(10, (int)($_GET['per_page'] ?? 20)));
         $search = trim($_GET['search'] ?? '');
 
         $result = $this->owners->getPaginated($page, $per, $search);
@@ -745,6 +747,7 @@ class MobileApiController
                     (int)($data['reminder_minutes'] ?? 60),
                 ]
             );
+            $this->googleSyncAppointment((int)$id, 'create');
             $this->json(['id' => $id, 'success' => true], 201);
         } catch (\Throwable $e) {
             $this->error('Fehler: ' . $e->getMessage(), 500);
@@ -787,6 +790,7 @@ class MobileApiController
                     $id,
                 ]
             );
+            $this->googleSyncAppointment($id, 'update');
             $this->json(['success' => true]);
         } catch (\Throwable $e) {
             $this->error('Fehler: ' . $e->getMessage(), 500);
@@ -800,6 +804,7 @@ class MobileApiController
 
         $id = (int)($params['id'] ?? 0);
         try {
+            $this->googleSyncAppointment($id, 'delete');
             $this->db->execute("DELETE FROM appointments WHERE id = ?", [$id]);
             $this->json(['success' => true]);
         } catch (\Throwable $e) {
@@ -3595,6 +3600,32 @@ class MobileApiController
             'message' => 'Sync bitte über den Browser unter /google-kalender auslösen.',
             'web_url' => '/google-kalender',
         ], 501);
+    }
+
+    /**
+     * Fire-and-forget Google Calendar sync for a single appointment.
+     * Called after create / update / delete from the mobile API.
+     * Silently swallows all errors so it never breaks the main API response.
+     */
+    private function googleSyncAppointment(int $id, string $action): void
+    {
+        try {
+            $repo = new \Plugins\GoogleCalendarSync\GoogleCalendarRepository($this->db);
+            $conn = $repo->getConnection();
+            if (!$conn || empty($conn['sync_enabled']) || empty($conn['access_token'])) {
+                return; // Google not connected or sync disabled
+            }
+            $api  = new \Plugins\GoogleCalendarSync\GoogleApiService($repo);
+            $sync = new \Plugins\GoogleCalendarSync\GoogleSyncService($repo, $api, $this->db);
+            match ($action) {
+                'create' => $sync->syncCreated($id),
+                'update' => $sync->syncUpdated($id),
+                'delete' => $sync->syncDeleted($id),
+                default  => null,
+            };
+        } catch (\Throwable) {
+            // Never let sync errors propagate to the caller
+        }
     }
 
     /* ══════════════════════════════════════════════════════

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:video_player/video_player.dart';
+import '../services/api_service.dart';
 
 /// Thumbnail shown in the timeline card — tappable to full-screen
 class MediaThumbnail extends StatelessWidget {
@@ -40,46 +41,55 @@ class MediaThumbnail extends StatelessWidget {
       );
     }
 
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => MediaViewerScreen(url: url, isVideo: isVideo)),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: Stack(children: [
-          SizedBox(
-            height: 140,
-            width: double.infinity,
-            child: isVideo
-                ? Container(
-                    color: Colors.black,
-                    child: const Center(child: Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 48)),
-                  )
-                : CachedNetworkImage(
-                    imageUrl: url,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => Container(color: Colors.grey.shade200),
-                    errorWidget: (_, __, ___) => Container(
-                      color: Colors.grey.shade200,
-                      child: const Icon(Icons.broken_image_rounded, color: Colors.grey),
+    return FutureBuilder<String?>(
+      future: ApiService.getToken(),
+      builder: (context, snap) {
+        final headers = snap.hasData && snap.data != null
+            ? {'Authorization': 'Bearer ${snap.data}'}
+            : const <String, String>{};
+        return GestureDetector(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => MediaViewerScreen(url: url, isVideo: isVideo, httpHeaders: headers)),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Stack(children: [
+              SizedBox(
+                height: 140,
+                width: double.infinity,
+                child: isVideo
+                    ? Container(
+                        color: Colors.black,
+                        child: const Center(child: Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 48)),
+                      )
+                    : CachedNetworkImage(
+                        imageUrl: url,
+                        httpHeaders: headers,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => Container(color: Colors.grey.shade200),
+                        errorWidget: (_, __, ___) => Container(
+                          color: Colors.grey.shade200,
+                          child: const Icon(Icons.broken_image_rounded, color: Colors.grey),
+                        ),
+                      ),
+              ),
+              if (isVideo)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: Colors.black.withValues(alpha: 0.35),
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 52),
                     ),
                   ),
+                ),
+            ]),
           ),
-          if (isVideo)
-            Positioned.fill(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  color: Colors.black.withValues(alpha: 0.35),
-                ),
-                child: const Center(
-                  child: Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 52),
-                ),
-              ),
-            ),
-        ]),
-      ),
+        );
+      },
     );
   }
 }
@@ -88,8 +98,14 @@ class MediaThumbnail extends StatelessWidget {
 class MediaViewerScreen extends StatefulWidget {
   final String url;
   final bool isVideo;
+  final Map<String, String> httpHeaders;
 
-  const MediaViewerScreen({super.key, required this.url, required this.isVideo});
+  const MediaViewerScreen({
+    super.key,
+    required this.url,
+    required this.isVideo,
+    this.httpHeaders = const {},
+  });
 
   @override
   State<MediaViewerScreen> createState() => _MediaViewerScreenState();
@@ -102,7 +118,10 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
   void initState() {
     super.initState();
     if (widget.isVideo) {
-      _vpc = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+      _vpc = VideoPlayerController.networkUrl(
+        Uri.parse(widget.url),
+        httpHeaders: widget.httpHeaders,
+      );
       _vpc!.initialize().then((_) {
         if (mounted) _vpc!.play();
       });
@@ -140,6 +159,7 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
     return InteractiveViewer(
       child: CachedNetworkImage(
         imageUrl: widget.url,
+        httpHeaders: widget.httpHeaders,
         fit: BoxFit.contain,
         placeholder: (_, __) => const CircularProgressIndicator(color: Colors.white),
         errorWidget: (_, __, ___) => const Icon(Icons.broken_image_rounded, color: Colors.white, size: 64),

@@ -16,40 +16,21 @@ void main() async {
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
-  runApp(const OmniPetApp());
+  runApp(const TeraPanoApp());
 }
 
-class OmniPetApp extends StatefulWidget {
-  const OmniPetApp({super.key});
+class TeraPanoApp extends StatefulWidget {
+  const TeraPanoApp({super.key});
 
   @override
-  State<OmniPetApp> createState() => _OmniPetAppState();
+  State<TeraPanoApp> createState() => _TeraPanoAppState();
 }
 
-class _OmniPetAppState extends State<OmniPetApp> {
+class _TeraPanoAppState extends State<TeraPanoApp> {
   final _authService = AuthService();
-  bool _splashDone = false;
-
-  void _onSplashComplete() {
-    setState(() => _splashDone = true);
-  }
 
   @override
   Widget build(BuildContext context) {
-    if (!_splashDone) {
-      return MaterialApp(
-        title: 'OmniPet',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.dark(),
-        home: Scaffold(
-          body: SplashScreen(
-            authService: _authService,
-            onComplete: _onSplashComplete,
-          ),
-        ),
-      );
-    }
-
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: _authService),
@@ -58,12 +39,20 @@ class _OmniPetAppState extends State<OmniPetApp> {
       child: Builder(builder: (context) {
         final router = AppRouter(context.read<AuthService>()).router;
         return MaterialApp.router(
-          title: 'OmniPet',
+          title: 'TeraPano',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),
           themeMode: ThemeMode.system,
           routerConfig: router,
+          builder: (context, child) {
+            // Show splash on top until it signals completion.
+            // This avoids a black frame from widget tree swap.
+            return _SplashOverlay(
+              authService: _authService,
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,
@@ -74,5 +63,31 @@ class _OmniPetAppState extends State<OmniPetApp> {
         );
       }),
     );
+  }
+}
+
+// Renders the real app UNDER the splash overlay — no black frame ever.
+class _SplashOverlay extends StatefulWidget {
+  final AuthService authService;
+  final Widget child;
+  const _SplashOverlay({required this.authService, required this.child});
+
+  @override
+  State<_SplashOverlay> createState() => _SplashOverlayState();
+}
+
+class _SplashOverlayState extends State<_SplashOverlay> {
+  bool _splashDone = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(children: [
+      widget.child,
+      if (!_splashDone)
+        SplashScreen(
+          authService: widget.authService,
+          onComplete: () => setState(() => _splashDone = true),
+        ),
+    ]);
   }
 }

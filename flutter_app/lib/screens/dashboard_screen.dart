@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
+import '../services/update_service.dart';
 import '../core/theme.dart';
 import '../widgets/shimmer_list.dart';
 import '../widgets/animated_stat_card.dart';
@@ -23,7 +24,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String? _error;
 
   @override
-  void initState() { super.initState(); _load(); }
+  void initState() {
+    super.initState();
+    _load();
+    // Check for updates after a short delay so the UI settles first
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) UpdateService.checkForUpdate(context);
+    });
+  }
 
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
