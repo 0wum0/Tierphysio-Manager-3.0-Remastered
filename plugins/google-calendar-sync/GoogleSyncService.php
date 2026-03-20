@@ -207,6 +207,110 @@ class GoogleSyncService
         }
     }
 
+    /* ─── Pull Google → Tierphysio (2-way sync) ─── */
+
+    public function pullFromGoogle(?string $timeMin = null): array
+    {
+        $connection = $this->repo->getConnection();
+        if (!$connection || empty($connection['access_token'])) {
+            return ['success' => false, 'message' => 'Kein Google Konto verbunden.', 'imported' => 0, 'updated' => 0, 'deleted' => 0];
+        }
+
+        $calendarId = $connection['calendar_id'] ?: 'primary';
+        $syncToken  = !empty($connection['sync_token']) ? $connection['sync_token'] : null;
+
+        $imported = 0;
+        $updated  = 0;
+        $deleted  = 0;
+
+        try {
+            $result = $this->api->listEvents($connection, $calendarId, $syncToken, $timeMin);
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === 'SYNC_TOKEN_EXPIRED') {
+                /* syncToken expired — clear it and do a full re-sync */
+                $this->repo->clearSyncToken((int)$connection['id']);
+                $this->repo->log((int)$connection['id'], 'pull', true, 'SyncToken abgelaufen, führe vollständige Synchronisation durch.');
+                return $this->pullFromGoogle($timeMin);
+            }
+            $this->repo->log((int)$connection['id'], 'error', false, 'Pull fehlgeschlagen: ' . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage(), 'imported' => 0, 'updated' => 0, 'deleted' => 0];
+        } catch (\Throwable $e) {
+            $this->repo->log((int)$connection['id'], 'error', false, 'Pull fehlgeschlagen: ' . $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage(), 'imported' => 0, 'updated' => 0, 'deleted' => 0];
+        }
+
+        foreach ($result['items'] as $event) {
+            $googleEventId = $event['id'] ?? null;
+            if (!$googleEventId) continue;
+
+            /* Skip events originally pushed by Tierphysio to avoid duplicates */
+            $source = $event['extendedProperties']['private']['tierphysio_source'] ?? null;
+            if ($source === 'tierphysio-manager') continue;
+
+            /* Handle cancellations / deletions */
+            if (($event['status'] ?? '') === 'cancelled') {
+                $this->repo->deleteImportedEvent($googleEventId, (int)$connection['id']);
+                $deleted++;
+                continue;
+            }
+
+            /* Parse start/end — support both dateTime and all-day date */
+            $isAllDay  = isset($event['start']['date']) && !isset($event['start']['dateTime']);
+            $startRaw  = $event['start']['dateTime'] ?? ($event['start']['date'] ?? null);
+            $endRaw    = $event['end']['dateTime']   ?? ($event['end']['date']   ?? null);
+
+            if (!$startRaw) continue;
+
+            try {
+                $startDt = new \DateTime($startRaw);
+                $endDt   = $endRaw ? new \DateTime($endRaw) : (clone $startDt)->modify('+1 hour');
+            } catch (\Throwable) {
+                continue;
+            }
+
+            $existing = $this->repo->getImportedEventByGoogleId($googleEventId, (int)$connection['id']);
+
+            $this->repo->upsertImportedEvent([
+                'connection_id'      => (int)$connection['id'],
+                'google_event_id'    => $googleEventId,
+                'google_calendar_id' => $calendarId,
+                'appointment_id'     => $existing['appointment_id'] ?? null,
+                'event_title'        => mb_substr($event['summary'] ?? '(Kein Titel)', 0, 500),
+                'event_start'        => $startDt->format('Y-m-d H:i:s'),
+                'event_end'          => $endDt->format('Y-m-d H:i:s'),
+                'event_description'  => mb_substr($event['description'] ?? '', 0, 65535),
+                'is_all_day'         => $isAllDay ? 1 : 0,
+                'google_status'      => $event['status'] ?? 'confirmed',
+                'raw_json'           => json_encode($event),
+            ]);
+
+            if ($existing) {
+                $updated++;
+            } else {
+                $imported++;
+            }
+        }
+
+        /* Save the new syncToken for next incremental pull */
+        if (!empty($result['nextSyncToken'])) {
+            $this->repo->saveSyncToken((int)$connection['id'], $result['nextSyncToken']);
+        }
+
+        $total = $imported + $updated + $deleted;
+        $this->repo->log(
+            (int)$connection['id'], 'pull', true,
+            "Pull abgeschlossen: {$imported} neu, {$updated} aktualisiert, {$deleted} gelöscht. Gesamt: {$total} Events."
+        );
+
+        return [
+            'success'  => true,
+            'message'  => "Pull erfolgreich: {$imported} neue, {$updated} aktualisierte, {$deleted} gelöschte Events.",
+            'imported' => $imported,
+            'updated'  => $updated,
+            'deleted'  => $deleted,
+        ];
+    }
+
     /* ─── Helpers ─── */
 
     private function shouldSync(?array $connection): bool

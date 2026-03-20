@@ -61,6 +61,19 @@ class GoogleCalendarController extends Controller
         ]);
     }
 
+    /* ── POST /google-kalender/pull ── */
+    public function pullFromGoogle(array $params = []): void
+    {
+        $this->validateCsrf();
+        $result = $this->sync->pullFromGoogle();
+        if ($result['success']) {
+            $this->session->flash('success', $result['message']);
+        } else {
+            $this->session->flash('error', $result['message']);
+        }
+        $this->redirect('/google-kalender');
+    }
+
     /* ── GET /google-kalender/verbinden ── */
     public function connect(array $params = []): void
     {
@@ -250,9 +263,15 @@ class GoogleCalendarController extends Controller
             exit;
         }
 
-        $result = $this->sync->bulkSyncAll();
+        $pushResult = $this->sync->bulkSyncAll();
+        $pullResult = $this->sync->pullFromGoogle();
         header('Content-Type: application/json');
-        echo json_encode(array_merge($result, ['ok' => true, 'time' => date('c')]));
+        echo json_encode([
+            'ok'   => true,
+            'time' => date('c'),
+            'push' => $pushResult,
+            'pull' => $pullResult,
+        ]);
         exit;
     }
 }

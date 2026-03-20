@@ -185,6 +185,50 @@ class GoogleApiService
         }
     }
 
+    /**
+     * Pull events from Google Calendar.
+     * If $syncToken is set, performs an incremental sync (only changes since last sync).
+     * Otherwise falls back to a full sync starting from $timeMin.
+     * Returns ['items' => [...], 'nextSyncToken' => '...'].
+     */
+    public function listEvents(array $connection, string $calendarId, ?string $syncToken = null, ?string $timeMin = null): array
+    {
+        $token = $this->getValidAccessToken($connection);
+        $url   = self::CALENDAR_API . '/calendars/' . rawurlencode($calendarId) . '/events';
+
+        $params = [
+            'maxResults'   => 250,
+            'singleEvents' => 'true',
+            'orderBy'      => 'startTime',
+        ];
+
+        if ($syncToken) {
+            $params['syncToken'] = $syncToken;
+        } else {
+            $params['timeMin'] = $timeMin ?? date(\DateTime::RFC3339, strtotime('-30 days'));
+        }
+
+        $allItems   = [];
+        $nextToken  = null;
+        $pageToken  = null;
+
+        do {
+            if ($pageToken) $params['pageToken'] = $pageToken;
+            $response  = $this->httpGet($url, $params, $token);
+
+            /* 410 Gone = syncToken expired → caller must do full re-sync */
+            if (isset($response['error']['code']) && (int)$response['error']['code'] === 410) {
+                throw new \RuntimeException('SYNC_TOKEN_EXPIRED');
+            }
+
+            $allItems  = array_merge($allItems, $response['items'] ?? []);
+            $nextToken = $response['nextSyncToken'] ?? null;
+            $pageToken = $response['nextPageToken']  ?? null;
+        } while ($pageToken);
+
+        return ['items' => $allItems, 'nextSyncToken' => $nextToken];
+    }
+
     /* ─── Build Event Payload ─── */
 
     public function buildEventPayload(array $appointment): array

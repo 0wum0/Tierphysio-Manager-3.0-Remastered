@@ -216,4 +216,83 @@ class GoogleCalendarRepository
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
     }
+
+    /* ─── 2-Way Sync: sync token + pull timestamp ─── */
+
+    public function saveSyncToken(int $connectionId, ?string $syncToken): void
+    {
+        $this->db->query(
+            'UPDATE google_calendar_connections SET sync_token = ?, last_pull_at = NOW() WHERE id = ?',
+            [$syncToken, $connectionId]
+        );
+    }
+
+    public function clearSyncToken(int $connectionId): void
+    {
+        $this->db->query(
+            'UPDATE google_calendar_connections SET sync_token = NULL WHERE id = ?',
+            [$connectionId]
+        );
+    }
+
+    /* ─── 2-Way Sync: imported events ─── */
+
+    public function getImportedEventByGoogleId(string $googleEventId, int $connectionId): ?array
+    {
+        $stmt = $this->db->query(
+            'SELECT * FROM google_calendar_imported_events WHERE google_event_id = ? AND connection_id = ? LIMIT 1',
+            [$googleEventId, $connectionId]
+        );
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    public function upsertImportedEvent(array $data): void
+    {
+        $existing = $this->getImportedEventByGoogleId($data['google_event_id'], (int)$data['connection_id']);
+
+        if ($existing) {
+            $sets   = implode(', ', array_map(fn($k) => "`{$k}` = ?", array_keys($data)));
+            $values = array_values($data);
+            $values[] = $existing['id'];
+            $this->db->query("UPDATE google_calendar_imported_events SET {$sets} WHERE id = ?", $values);
+        } else {
+            $cols         = implode(', ', array_map(fn($k) => "`{$k}`", array_keys($data)));
+            $placeholders = implode(', ', array_fill(0, count($data), '?'));
+            $this->db->query(
+                "INSERT INTO google_calendar_imported_events ({$cols}) VALUES ({$placeholders})",
+                array_values($data)
+            );
+        }
+    }
+
+    public function deleteImportedEvent(string $googleEventId, int $connectionId): void
+    {
+        $this->db->query(
+            'DELETE FROM google_calendar_imported_events WHERE google_event_id = ? AND connection_id = ?',
+            [$googleEventId, $connectionId]
+        );
+    }
+
+    public function getImportedEventsInRange(string $start, string $end): array
+    {
+        $stmt = $this->db->query(
+            'SELECT * FROM google_calendar_imported_events
+             WHERE event_start < ? AND event_end > ?
+               AND google_status != \'cancelled\'
+               AND appointment_id IS NULL
+             ORDER BY event_start ASC',
+            [$end, $start]
+        );
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getImportedEventsByAppointment(int $appointmentId): array
+    {
+        $stmt = $this->db->query(
+            'SELECT * FROM google_calendar_imported_events WHERE appointment_id = ?',
+            [$appointmentId]
+        );
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

@@ -67,10 +67,10 @@
         </div>
         <h2 class="cal-title" id="cal-title"></h2>
         <div class="flex gap-1">
-            <button class="cal-view-btn cal-hide-mobile" data-view="dayGridMonth">Monat</button>
-            <button class="cal-view-btn cal-hide-mobile" data-view="timeGridWeek">Woche</button>
-            <button class="cal-view-btn cal-hide-mobile" data-view="timeGridDay">Tag</button>
-            <button class="cal-view-btn active" data-view="listWeek">Liste</button>
+            <button class="cal-view-btn active" data-view="dayGridMonth">Monat</button>
+            <button class="cal-view-btn" data-view="timeGridWeek">Woche</button>
+            <button class="cal-view-btn" data-view="timeGridDay">Tag</button>
+            <button class="cal-view-btn" data-view="listWeek">Liste</button>
         </div>
     </div>
     <div class="cal-body">
@@ -263,16 +263,20 @@
 
         calendar = new FullCalendar.Calendar(el, {
             locale: 'de',
-            initialView: 'listWeek',
+            initialView: 'dayGridMonth',
             headerToolbar: false,
             firstDay: 1,
             height: 'auto',
             editable: true,
             selectable: true,
             nowIndicator: true,
+            weekNumbers: true,
+            weekNumberFormat: { week: 'short' },
+            weekText: 'KW',
             eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
             slotMinTime: '07:00:00',
             slotMaxTime: '20:00:00',
+            dayMaxEvents: 4,
 
             events: function(info, successCallback, failureCallback) {
                 fetch('/api/kalender/events?start=' + info.startStr + '&end=' + info.endStr)

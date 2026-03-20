@@ -4,7 +4,7 @@
 <div class="page-header">
     <div>
         <h1 class="page-title">Google Kalender Sync</h1>
-        <p class="page-subtitle">Einweg-Synchronisation: Praxissoftware → Google Kalender</p>
+        <p class="page-subtitle">Zwei-Wege-Synchronisation: Praxissoftware ⇄ Google Kalender</p>
     </div>
 </div>
 
@@ -76,6 +76,10 @@
                         <span class="text-muted">Heute synced:</span>
                         <span class="fw-600" style="color:#a78bfa;">{{ synced_count }}</span>
                     </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Letzter Pull:</span>
+                        <span>{% if connection.last_pull_at %}{{ connection.last_pull_at|date('d.m.Y H:i') }}{% else %}<span class="text-muted">–</span>{% endif %}</span>
+                    </div>
                     {% if last_error %}
                     <div class="mt-2 p-2 rounded fs-nano text-warning" style="border:1px solid rgba(245,158,11,0.3);background:rgba(245,158,11,0.08);">
                         ⚠️ Letzter Fehler: {{ last_error.message|slice(0,100) }}
@@ -85,6 +89,13 @@
                 </div>
 
                 <div class="d-flex flex-wrap gap-2">
+                    <form method="POST" action="/google-kalender/pull">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <button type="submit" class="btn btn-primary btn-sm" title="Google Kalender → Tierphysio: neue/geänderte Events importieren">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>
+                            Google → Tierphysio
+                        </button>
+                    </form>
                     <form method="POST" action="/google-kalender/test-sync">
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                         <button type="submit" class="btn btn-secondary btn-sm">
@@ -97,7 +108,7 @@
                         <button type="submit" class="btn btn-secondary btn-sm"
                                 data-confirm="Alle unsynced Termine der letzten 30 Tage synchronisieren?">
                             <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="23 4 23 10 17 10"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="1 20 1 14 7 14"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-                            Bulk-Sync
+                            Bulk-Sync ↑
                         </button>
                     </form>
                     <form method="POST" action="/google-kalender/trennen">
@@ -247,9 +258,10 @@
                     <tr>
                         <td class="fs-nano text-muted" style="white-space:nowrap;">{{ log.created_at|date('d.m. H:i') }}</td>
                         <td>
-                            {% if log.action == 'create' %}<span class="badge bg-success">Erstellt</span>
-                            {% elseif log.action == 'update' %}<span class="badge bg-info text-dark">Aktualisiert</span>
+                            {% if log.action == 'create' %}<span class="badge bg-success">↑ Push</span>
+                            {% elseif log.action == 'update' %}<span class="badge bg-info text-dark">↑ Update</span>
                             {% elseif log.action == 'delete' %}<span class="badge bg-secondary">Gelöscht</span>
+                            {% elseif log.action == 'pull' %}<span class="badge" style="background:#7c3aed;color:#fff;">↓ Pull</span>
                             {% elseif log.action == 'test' %}<span class="badge-primary badge">Test</span>
                             {% elseif log.action == 'auth' %}<span class="badge-warning badge">Auth</span>
                             {% else %}<span class="badge bg-danger">Fehler</span>

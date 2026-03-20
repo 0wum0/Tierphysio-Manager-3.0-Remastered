@@ -49,6 +49,7 @@ class ServiceProvider
         $router->post('/google-kalender/einstellungen',           [GoogleCalendarController::class, 'saveSettings'],    ['auth']);
         $router->post('/google-kalender/test-sync',               [GoogleCalendarController::class, 'testSync'],        ['auth']);
         $router->post('/google-kalender/bulk-sync',               [GoogleCalendarController::class, 'bulkSync'],        ['auth']);
+        $router->post('/google-kalender/pull',                    [GoogleCalendarController::class, 'pullFromGoogle'],  ['auth']);
         $router->post('/google-kalender/kalender-auswaehlen',     [GoogleCalendarController::class, 'selectCalendar'],  ['auth']);
         $router->post('/google-kalender/sync/termin/{id}',        [GoogleCalendarController::class, 'syncAppointment'], ['auth']);
         $router->get('/google-kalender/cron',                     [GoogleCalendarController::class, 'cron'],            []);

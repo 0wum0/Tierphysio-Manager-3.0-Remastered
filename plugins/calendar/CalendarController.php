@@ -30,7 +30,8 @@ class CalendarController extends Controller
         private readonly UserRepository $userRepository,
         private readonly MailService $mailService,
         private readonly SettingsRepository $settingsRepository,
-        private readonly TreatmentTypeRepository $treatmentTypeRepository
+        private readonly TreatmentTypeRepository $treatmentTypeRepository,
+        private readonly Database $db
     ) {
         parent::__construct($view, $session, $config, $translator);
     }
@@ -94,9 +95,51 @@ class CalendarController extends Controller
 
         $events = array_map(fn($a) => $this->toCalendarEvent($a), $appointments);
 
+        /* Include Google-imported events (not yet linked to local appointments) */
+        try {
+            $importedRows = $this->getGoogleImportedEvents($start, $end);
+            foreach ($importedRows as $ge) {
+                $events[] = [
+                    'id'          => 'google_' . $ge['id'],
+                    'title'       => '🗓 ' . ($ge['event_title'] ?? '(Google Event)'),
+                    'start'       => $ge['event_start'],
+                    'end'         => $ge['event_end'],
+                    'allDay'      => (bool)$ge['is_all_day'],
+                    'color'       => '#1a73e8',
+                    'borderColor' => '#1557b0',
+                    'textColor'   => '#ffffff',
+                    'extendedProps' => [
+                        'source'           => 'google',
+                        'google_event_id'  => $ge['google_event_id'],
+                        'description'      => $ge['event_description'] ?? '',
+                        'status'           => $ge['google_status'] ?? 'confirmed',
+                    ],
+                ];
+            }
+        } catch (\Throwable) {
+            /* Google import table may not exist yet — fail silently */
+        }
+
         header('Content-Type: application/json');
         echo json_encode($events);
         exit;
+    }
+
+    private function getGoogleImportedEvents(string $start, string $end): array
+    {
+        try {
+            $stmt = $this->db->query(
+                'SELECT * FROM google_calendar_imported_events
+                 WHERE event_start < ? AND event_end > ?
+                   AND google_status != \'cancelled\'
+                   AND appointment_id IS NULL
+                 ORDER BY event_start ASC',
+                [$end, $start]
+            );
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     /* ── API: form data for global new-appointment modal ── */
