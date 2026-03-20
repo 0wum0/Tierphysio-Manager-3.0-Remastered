@@ -6,6 +6,7 @@ import 'core/router.dart';
 import 'core/theme.dart';
 import 'services/auth_service.dart';
 import 'services/api_service.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,23 +16,49 @@ void main() async {
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
-  runApp(const TierphysioApp());
+  runApp(const OmniPetApp());
 }
 
-class TierphysioApp extends StatelessWidget {
-  const TierphysioApp({super.key});
+class OmniPetApp extends StatefulWidget {
+  const OmniPetApp({super.key});
+
+  @override
+  State<OmniPetApp> createState() => _OmniPetAppState();
+}
+
+class _OmniPetAppState extends State<OmniPetApp> {
+  final _authService = AuthService();
+  bool _splashDone = false;
+
+  void _onSplashComplete() {
+    setState(() => _splashDone = true);
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (!_splashDone) {
+      return MaterialApp(
+        title: 'OmniPet',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.dark(),
+        home: Scaffold(
+          body: SplashScreen(
+            authService: _authService,
+            onComplete: _onSplashComplete,
+          ),
+        ),
+      );
+    }
+
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthService()),
+        ChangeNotifierProvider.value(value: _authService),
         Provider(create: (_) => ApiService()),
       ],
       child: Builder(builder: (context) {
         final router = AppRouter(context.read<AuthService>()).router;
         return MaterialApp.router(
-          title: 'Tierphysio Manager',
+          title: 'OmniPet',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),

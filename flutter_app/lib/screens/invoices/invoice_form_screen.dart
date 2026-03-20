@@ -31,8 +31,9 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
   String _payMethod = 'rechnung';
   final _notesCtrl  = TextEditingController();
 
-  List<dynamic> _allOwners   = [];
-  List<dynamic> _allPatients = [];
+  List<dynamic> _allOwners        = [];
+  List<dynamic> _allPatients      = [];
+  List<dynamic> _treatmentTypes   = [];
   List<_Position> _positions = [_Position()];
 
   // Live-search controllers
@@ -53,14 +54,19 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
 
   Future<void> _loadData() async {
     try {
-      final [o, p] = await Future.wait([
+      final results = await Future.wait([
         _api.owners(perPage: 200),
         _api.patients(perPage: 500),
+        _api.treatmentTypes().catchError((_) => <dynamic>[]),
       ]);
+      final o  = results[0] as Map<String, dynamic>;
+      final p  = results[1] as Map<String, dynamic>;
+      final tt = results[2] as List<dynamic>;
       setState(() {
-        _allOwners   = List<dynamic>.from((o as Map)['items'] as List? ?? []);
-        _allPatients = List<dynamic>.from((p as Map)['items'] as List? ?? []);
-        _dataReady   = true;
+        _allOwners      = List<dynamic>.from(o['items'] as List? ?? []);
+        _allPatients    = List<dynamic>.from(p['items'] as List? ?? []);
+        _treatmentTypes = tt;
+        _dataReady      = true;
       });
       // Apply pre-fill
       final pf = widget.prefill;
@@ -173,12 +179,26 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
                         setState(() {
                           _ownerId    = int.tryParse(o['id'].toString());
                           _ownerLabel = '${o['last_name']}, ${o['first_name']}';
-                          _patientId  = null;
+                          // Reset patient selection
+                          _patientId    = null;
                           _patientLabel = null;
                           _patientSearchCtrl.clear();
+                          // Auto-select if this owner has exactly one patient
+                          final ownerPatients = _allPatients
+                              .where((p) => p['owner_id']?.toString() == _ownerId.toString())
+                              .toList();
+                          if (ownerPatients.length == 1) {
+                            final only = ownerPatients.first;
+                            _patientId    = int.tryParse(only['id'].toString());
+                            _patientLabel = '${only['name']} (${only['species'] ?? ''})';
+                          }
                         });
                       },
-                      onClear: () => setState(() { _ownerId = null; _ownerLabel = null; _patientId = null; _patientLabel = null; _patientSearchCtrl.clear(); }),
+                      onClear: () => setState(() {
+                        _ownerId = null; _ownerLabel = null;
+                        _patientId = null; _patientLabel = null;
+                        _patientSearchCtrl.clear();
+                      }),
                       required: true,
                     ),
                     const SizedBox(height: 14),
@@ -195,12 +215,15 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
                         setState(() {
                           _patientId    = int.tryParse(p['id'].toString());
                           _patientLabel = '${p['name']} (${p['species'] ?? ''})';
-                          // Auto-set owner if not set
+                          // Auto-set owner from patient if not already set
                           if (_ownerId == null && p['owner_id'] != null) {
                             _ownerId = int.tryParse(p['owner_id'].toString());
                             final owner = _allOwners.firstWhere(
-                              (o) => o['id'].toString() == p['owner_id'].toString(), orElse: () => null);
-                            if (owner != null) _ownerLabel = '${owner['last_name']}, ${owner['first_name']}';
+                              (o) => o['id'].toString() == p['owner_id'].toString(),
+                              orElse: () => null);
+                            if (owner != null) {
+                              _ownerLabel = '${owner['last_name']}, ${owner['first_name']}';
+                            }
                           }
                         });
                       },
@@ -270,6 +293,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
                       position: e.value,
                       index: e.key,
                       canRemove: _positions.length > 1,
+                      treatmentTypes: _treatmentTypes,
                       onRemove: () => setState(() => _positions.removeAt(e.key)),
                       onChanged: () => setState(() {}),
                     )),
@@ -450,19 +474,21 @@ class _LiveSearchField extends StatelessWidget {
 }
 
 class _Position {
-  String description = '';
-  double quantity    = 1.0;
-  double unitPrice   = 0.0;
-  double taxRate     = 0.0;
+  String description       = '';
+  double quantity          = 1.0;
+  double unitPrice         = 0.0;
+  double taxRate           = 0.0;
+  int?   treatmentTypeId;
 
   double get total => quantity * unitPrice;
 
   Map<String, dynamic> toMap() => {
-    'description': description,
-    'quantity':    quantity,
-    'unit_price':  unitPrice,
-    'tax_rate':    taxRate,
-    'total':       total,
+    'description':        description,
+    'quantity':           quantity,
+    'unit_price':         unitPrice,
+    'tax_rate':           taxRate,
+    'total':              total,
+    if (treatmentTypeId != null) 'treatment_type_id': treatmentTypeId,
   };
 }
 
@@ -470,6 +496,7 @@ class _PositionRow extends StatefulWidget {
   final _Position position;
   final int index;
   final bool canRemove;
+  final List<dynamic> treatmentTypes;
   final VoidCallback onRemove;
   final VoidCallback onChanged;
 
@@ -478,6 +505,7 @@ class _PositionRow extends StatefulWidget {
     required this.position,
     required this.index,
     required this.canRemove,
+    required this.treatmentTypes,
     required this.onRemove,
     required this.onChanged,
   });
@@ -491,6 +519,7 @@ class _PositionRowState extends State<_PositionRow> {
   late final TextEditingController _qtyCtrl;
   late final TextEditingController _priceCtrl;
   late final TextEditingController _taxCtrl;
+  int? _selectedTreatmentTypeId;
 
   @override
   void initState() {
@@ -498,7 +527,8 @@ class _PositionRowState extends State<_PositionRow> {
     _descCtrl  = TextEditingController(text: widget.position.description);
     _qtyCtrl   = TextEditingController(text: widget.position.quantity.toString());
     _priceCtrl = TextEditingController(text: widget.position.unitPrice > 0 ? widget.position.unitPrice.toStringAsFixed(2) : '');
-    _taxCtrl   = TextEditingController(text: widget.position.taxRate.toString());
+    _taxCtrl   = TextEditingController(text: widget.position.taxRate > 0 ? widget.position.taxRate.toStringAsFixed(0) : '0');
+    _selectedTreatmentTypeId = widget.position.treatmentTypeId;
   }
 
   @override
@@ -506,26 +536,103 @@ class _PositionRowState extends State<_PositionRow> {
 
   String _eur(double v) => NumberFormat.currency(locale: 'de_DE', symbol: '€').format(v);
 
+  void _applyTreatmentType(int? id) {
+    if (id == null) {
+      setState(() => _selectedTreatmentTypeId = null);
+      widget.position.treatmentTypeId = null;
+      return;
+    }
+    final tt = widget.treatmentTypes.firstWhere(
+      (t) => t['id'].toString() == id.toString(), orElse: () => null);
+    if (tt == null) return;
+    final price = double.tryParse(tt['price']?.toString().replaceAll(',', '.') ?? '') ?? 0.0;
+    final name  = tt['name'] as String? ?? '';
+    setState(() {
+      _selectedTreatmentTypeId = id;
+      widget.position.treatmentTypeId = id;
+      widget.position.description = name;
+      widget.position.unitPrice   = price;
+      _descCtrl.text  = name;
+      _priceCtrl.text = price > 0 ? price.toStringAsFixed(2) : '';
+    });
+    widget.onChanged();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final hasTT = widget.treatmentTypes.isNotEmpty;
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           children: [
-            Row(
-              children: [
-                Text('Position ${widget.index + 1}', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold)),
-                const Spacer(),
-                if (widget.canRemove)
-                  IconButton(icon: const Icon(Icons.delete_outline, size: 18), color: Colors.red, onPressed: widget.onRemove, padding: EdgeInsets.zero),
-              ],
-            ),
+            // Row header: position number + delete
+            Row(children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.tertiary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text('Position ${widget.index + 1}',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: AppTheme.tertiary)),
+              ),
+              const Spacer(),
+              if (widget.canRemove)
+                IconButton(
+                  icon: Icon(Icons.delete_outline_rounded, size: 18, color: AppTheme.danger),
+                  onPressed: widget.onRemove, padding: EdgeInsets.zero),
+            ]),
+
+            // Behandlungsart dropdown (if treatment types are loaded)
+            if (hasTT) ...[  
+              const SizedBox(height: 10),
+              InputDecorator(
+                decoration: InputDecoration(
+                  labelText: 'Behandlungsart',
+                  prefixIcon: const Icon(Icons.category_rounded),
+                  isDense: true,
+                  suffixIcon: _selectedTreatmentTypeId != null
+                      ? IconButton(
+                          icon: const Icon(Icons.close_rounded, size: 16),
+                          onPressed: () => _applyTreatmentType(null),
+                          padding: EdgeInsets.zero,
+                        )
+                      : null,
+                ),
+                child: DropdownButton<int?>(
+                  value: _selectedTreatmentTypeId,
+                  isExpanded: true,
+                  isDense: true,
+                  underline: const SizedBox.shrink(),
+                  hint: const Text('— Manuell eingeben —', style: TextStyle(fontSize: 13)),
+                  items: [
+                    const DropdownMenuItem<int?>(value: null, child: Text('— Manuell eingeben —', style: TextStyle(fontSize: 13))),
+                    ...widget.treatmentTypes.map((t) {
+                      final price = double.tryParse(t['price']?.toString().replaceAll(',', '.') ?? '') ?? 0.0;
+                      final priceStr = price > 0 ? '  (${NumberFormat.currency(locale: 'de_DE', symbol: '€').format(price)})' : '';
+                      return DropdownMenuItem<int?>(
+                        value: int.tryParse(t['id'].toString()),
+                        child: Text('${t['name']}$priceStr',
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 13)),
+                      );
+                    }),
+                  ],
+                  onChanged: (v) => _applyTreatmentType(v),
+                ),
+              ),
+            ],
+
             const SizedBox(height: 8),
             TextFormField(
               controller: _descCtrl,
-              decoration: const InputDecoration(labelText: 'Beschreibung *', isDense: true),
+              decoration: const InputDecoration(
+                labelText: 'Beschreibung *',
+                isDense: true,
+                prefixIcon: Icon(Icons.edit_rounded),
+              ),
               onChanged: (v) { widget.position.description = v; widget.onChanged(); },
             ),
             const SizedBox(height: 8),
@@ -539,7 +646,7 @@ class _PositionRowState extends State<_PositionRow> {
               const SizedBox(width: 8),
               Expanded(child: TextFormField(
                 controller: _priceCtrl,
-                decoration: const InputDecoration(labelText: 'Einzelpreis (€)', isDense: true),
+                decoration: const InputDecoration(labelText: 'Preis (€)', isDense: true),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 onChanged: (v) { widget.position.unitPrice = double.tryParse(v.replaceAll(',', '.')) ?? 0; widget.onChanged(); },
               )),
@@ -551,11 +658,18 @@ class _PositionRowState extends State<_PositionRow> {
                 onChanged: (v) { widget.position.taxRate = double.tryParse(v) ?? 0; widget.onChanged(); },
               )),
             ]),
-            const SizedBox(height: 6),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Text('Gesamt: ${_eur(widget.position.total)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text('Gesamt', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+                Text(_eur(widget.position.total),
+                  style: TextStyle(fontWeight: FontWeight.w800, color: AppTheme.primary, fontSize: 14)),
+              ]),
             ),
           ],
         ),

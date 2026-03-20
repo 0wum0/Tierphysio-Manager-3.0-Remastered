@@ -233,8 +233,8 @@ class _PortalAdminScreenState extends State<PortalAdminScreen>
   }
 
   Future<void> _planActions(Map<String, dynamic> plan) async {
-    final id    = plan['id'] as int;
-    final title = plan['title'] as String? ?? '—';
+    final id    = int.parse(plan['id'].toString());
+    final title = 'Hausaufgaben — ${plan['patient_name'] as String? ?? '—'}';
     final choice = await showModalBottomSheet<String>(
       context: context,
       builder: (ctx) => SafeArea(child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -559,8 +559,13 @@ class _PortalAdminScreenState extends State<PortalAdminScreen>
   }
 
   Widget _planCard(Map<String, dynamic> plan) {
-    final sent = plan['sent_at'] != null;
-    final color = sent ? AppTheme.success : AppTheme.secondary;
+    final patientName = plan['patient_name'] as String? ?? '—';
+    final ownerName   = plan['owner_name']   as String? ?? '—';
+    final planDate    = plan['plan_date']     as String?;
+    final sent        = (plan['pdf_sent_at'] as String?) != null;
+    final archived    = plan['status'] == 'archived';
+    final notes       = plan['general_notes'] as String? ?? '';
+    final color       = sent ? AppTheme.success : archived ? Colors.grey : AppTheme.secondary;
 
     return Container(
       decoration: BoxDecoration(
@@ -575,27 +580,30 @@ class _PortalAdminScreenState extends State<PortalAdminScreen>
           decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
           child: Icon(Icons.assignment_rounded, color: color, size: 20),
         ),
-        title: Text(plan['title'] as String? ?? '—',
+        title: Text('$patientName — $ownerName',
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
         subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          if ((plan['description'] as String? ?? '').isNotEmpty)
-            Text(plan['description'] as String,
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          if (planDate != null)
+            Row(children: [
+              Icon(Icons.calendar_today_rounded, size: 11, color: Colors.grey.shade400),
+              const SizedBox(width: 3),
+              Text(_fmt(planDate), style: TextStyle(fontSize: 10, color: Colors.grey.shade400)),
+            ]),
+          if (notes.isNotEmpty)
+            Text(notes, style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
               maxLines: 1, overflow: TextOverflow.ellipsis),
           Row(children: [
-            if (sent) ...[
+            if (sent) ...[  
               Icon(Icons.check_circle_rounded, size: 11, color: AppTheme.success),
               const SizedBox(width: 3),
-              Text('Gesendet ${_fmt(plan['sent_at'] as String?)}',
+              Text('PDF gesendet ${_fmt(plan['pdf_sent_at'] as String?)}',
                 style: TextStyle(fontSize: 10, color: AppTheme.success)),
-            ] else ...[
+            ] else ...[  
               Icon(Icons.schedule_rounded, size: 11, color: Colors.grey.shade400),
               const SizedBox(width: 3),
               Text('Noch nicht gesendet', style: TextStyle(fontSize: 10, color: Colors.grey.shade400)),
             ],
           ]),
-          if (plan['task_count'] != null)
-            Text('${plan['task_count']} Aufgaben', style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
         ]),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           IconButton(
@@ -603,8 +611,8 @@ class _PortalAdminScreenState extends State<PortalAdminScreen>
             tooltip: 'PDF',
             onPressed: () async {
               try {
-                final data = await _api.homeworkPlanPdfUrl(plan['id'] as int);
-                final url  = data['url'] as String? ?? '';
+                final data = await _api.homeworkPlanPdfUrl(int.parse(plan['id'].toString()));
+                final url  = data['url'] as String? ?? data['pdf_url'] as String? ?? '';
                 if (url.isEmpty) { _showSnack('Keine PDF verfügbar.', error: true); return; }
                 final fullUrl = url.startsWith('http') ? url : '${ApiService.baseUrl}$url';
                 final uri = Uri.parse(fullUrl);

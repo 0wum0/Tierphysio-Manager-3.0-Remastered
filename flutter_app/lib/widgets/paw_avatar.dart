@@ -26,9 +26,7 @@ class PawAvatar extends StatelessWidget {
     final bg = color ?? _speciesColor(species);
 
     if (photoPath != null && photoPath!.isNotEmpty) {
-      final base = ApiService.baseUrl.replaceAll(RegExp(r'/$'), '');
-      final path = photoPath!.startsWith('/') ? photoPath! : '/$photoPath';
-      final url  = '$base$path';
+      final url = ApiService.mediaUrl(photoPath!);
       return ClipRRect(
         borderRadius: BorderRadius.circular(radius),
         child: SizedBox(

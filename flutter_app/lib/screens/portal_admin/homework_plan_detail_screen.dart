@@ -90,7 +90,7 @@ class _HomeworkPlanDetailScreenState extends State<HomeworkPlanDetailScreen> {
     final plan = _plan;
     return Scaffold(
       appBar: AppBar(
-        title: Text(plan?['title'] as String? ?? 'Hausaufgabenplan'),
+        title: Text(plan != null ? 'Hausaufgaben — ${plan['patient_name'] ?? '—'}' : 'Hausaufgabenplan'),
         actions: [
           IconButton(
             icon: Icon(Icons.picture_as_pdf_rounded, color: AppTheme.danger),
@@ -119,10 +119,20 @@ class _HomeworkPlanDetailScreenState extends State<HomeworkPlanDetailScreen> {
   }
 
   Widget _buildBody() {
-    final plan  = _plan!;
-    final tasks = List<dynamic>.from(plan['tasks'] as List? ?? []);
-    final sent  = plan['sent_at'] != null;
-    final color = sent ? AppTheme.success : AppTheme.secondary;
+    final plan        = _plan!;
+    final tasks       = List<dynamic>.from(plan['tasks'] as List? ?? []);
+    final sent        = (plan['pdf_sent_at'] as String?) != null;
+    final color       = sent ? AppTheme.success : AppTheme.secondary;
+    final patientName = plan['patient_name'] as String? ?? '—';
+    final ownerName   = plan['owner_name']   as String? ?? '—';
+    final planDate    = plan['plan_date']     as String?;
+    final notes       = plan['general_notes']     as String? ?? '';
+    final principles  = plan['physio_principles'] as String? ?? '';
+    final shortGoals  = plan['short_term_goals']  as String? ?? '';
+    final longGoals   = plan['long_term_goals']   as String? ?? '';
+    final therapy     = plan['therapy_means']     as String? ?? '';
+    final therapist   = plan['therapist_name']    as String? ?? '';
+    final nextAppt    = plan['next_appointment']  as String? ?? '';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
@@ -137,8 +147,16 @@ class _HomeworkPlanDetailScreenState extends State<HomeworkPlanDetailScreen> {
           ),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Expanded(child: Text(plan['title'] as String? ?? '—',
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18))),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Hausaufgaben — $patientName',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+                const SizedBox(height: 2),
+                Row(children: [
+                  Icon(Icons.person_rounded, size: 13, color: Colors.white.withValues(alpha: 0.8)),
+                  const SizedBox(width: 4),
+                  Text(ownerName, style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13)),
+                ]),
+              ])),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                 decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
@@ -146,17 +164,13 @@ class _HomeworkPlanDetailScreenState extends State<HomeworkPlanDetailScreen> {
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 11)),
               ),
             ]),
-            if ((plan['description'] as String? ?? '').isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(plan['description'] as String,
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 13, height: 1.4)),
-            ],
             const SizedBox(height: 16),
             Row(children: [
               _headerStat(Icons.assignment_rounded, '${tasks.length} Aufgaben'),
               const SizedBox(width: 16),
-              if (sent) _headerStat(Icons.send_rounded, 'Gesendet ${_fmt(plan['sent_at'] as String?)}')
-              else _headerStat(Icons.edit_rounded, 'Erstellt ${_fmt(plan['created_at'] as String?)}'),
+              if (planDate != null) _headerStat(Icons.calendar_today_rounded, _fmt(planDate)),
+              if (sent) ...[const SizedBox(width: 16), _headerStat(Icons.send_rounded, 'Gesendet ${_fmt(plan['pdf_sent_at'] as String?)}')]
+              else ...[const SizedBox(width: 16), _headerStat(Icons.edit_rounded, 'Erstellt ${_fmt(plan['created_at'] as String?)}')],
             ]),
           ]),
         ),
@@ -180,6 +194,36 @@ class _HomeworkPlanDetailScreenState extends State<HomeworkPlanDetailScreen> {
         ]),
 
         const SizedBox(height: 20),
+
+        // Plan details card
+        if (notes.isNotEmpty || principles.isNotEmpty || shortGoals.isNotEmpty ||
+            longGoals.isNotEmpty || therapy.isNotEmpty || therapist.isNotEmpty || nextAppt.isNotEmpty) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardTheme.color,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.secondary.withValues(alpha: 0.2)),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Icon(Icons.description_rounded, size: 16, color: AppTheme.secondary),
+                const SizedBox(width: 8),
+                Text('Plan-Details', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.secondary, fontSize: 14)),
+              ]),
+              const SizedBox(height: 12),
+              if (notes.isNotEmpty)        _detailRow('Allgemeine Notizen',    notes),
+              if (principles.isNotEmpty)   _detailRow('Physiotherapeutische Prinzipien', principles),
+              if (shortGoals.isNotEmpty)   _detailRow('Kurzfristige Ziele',    shortGoals),
+              if (longGoals.isNotEmpty)    _detailRow('Langfristige Ziele',    longGoals),
+              if (therapy.isNotEmpty)      _detailRow('Therapiemittel',        therapy),
+              if (therapist.isNotEmpty)    _detailRow('Therapeut',             therapist),
+              if (nextAppt.isNotEmpty)     _detailRow('Nächster Termin',       nextAppt),
+            ]),
+          ),
+          const SizedBox(height: 16),
+        ],
 
         // Tasks
         Container(
@@ -249,6 +293,16 @@ class _HomeworkPlanDetailScreenState extends State<HomeworkPlanDetailScreen> {
       ]),
     );
   }
+
+  Widget _detailRow(String label, String value) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
+        color: Theme.of(context).colorScheme.onSurfaceVariant)),
+      const SizedBox(height: 3),
+      Text(value, style: const TextStyle(fontSize: 13, height: 1.4)),
+    ]),
+  );
 
   Widget _headerStat(IconData icon, String label) => Row(mainAxisSize: MainAxisSize.min, children: [
     Icon(icon, size: 13, color: Colors.white.withValues(alpha: 0.8)),

@@ -22,6 +22,18 @@ class ApiService {
 
   static String get baseUrl => _baseUrl;
 
+  /// Build an absolute media URL from a relative path returned by the backend.
+  /// Handles paths like /patient-photos/5/abc.jpg, /patient-timeline/5/abc.mp4,
+  /// /patients/intake_abc.jpg, and already-absolute https:// URLs.
+  static String mediaUrl(String relativePath) {
+    if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
+      return relativePath;
+    }
+    final base = _baseUrl.replaceAll(RegExp(r'/$'), '');
+    final path = relativePath.startsWith('/') ? relativePath : '/$relativePath';
+    return '$base$path';
+  }
+
   static Future<void> saveToken(String token) =>
       _storage.write(key: _tokenKey, value: token);
 
@@ -426,6 +438,14 @@ class ApiService {
 
   Future<Map<String, dynamic>> portalOwnerOverview(int ownerId) async =>
       Map<String, dynamic>.from(await get('/portal-admin/besitzer/$ownerId/uebersicht'));
+
+  /* ── Patient Homework (Hausaufgaben per Patient) ── */
+
+  Future<List<dynamic>> patientHomeworkList(int patientId) async =>
+      List<dynamic>.from(await get('/patients/$patientId/hausaufgaben'));
+
+  Future<Map<String, dynamic>> patientHomeworkShow(int id) async =>
+      Map<String, dynamic>.from(await get('/hausaufgaben/$id'));
 
   /* ── Exercises (per patient) ── */
 

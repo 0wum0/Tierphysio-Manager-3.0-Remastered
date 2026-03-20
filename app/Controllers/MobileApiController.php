@@ -461,7 +461,7 @@ class MobileApiController
         $dest     = $uploadDir . $filename;
         if (!move_uploaded_file($file['tmp_name'], $dest)) $this->error('Datei konnte nicht gespeichert werden.');
 
-        $fileUrl  = '/storage/patients/' . $patientId . '/timeline/' . $filename;
+        $fileUrl  = '/patient-timeline/' . $patientId . '/' . $filename;
 
         $entryId = $this->patients->addTimelineEntry([
             'patient_id'        => $patientId,
@@ -1338,7 +1338,7 @@ class MobileApiController
         if (!isset($allowed[$mime])) $this->error('Nur Bilder erlaubt (jpg, png, webp, gif).');
 
         $storageBase = defined('STORAGE_PATH') ? rtrim(STORAGE_PATH, '/') : rtrim(dirname(__DIR__, 2) . '/storage', '/');
-        $dir = $storageBase . '/patients/' . $id . '/photos/';
+        $dir = $storageBase . '/patients/' . $id . '/';
         if (!is_dir($dir)) mkdir($dir, 0755, true);
 
         $filename = 'photo_' . bin2hex(random_bytes(8)) . '.' . $allowed[$mime];
@@ -4739,21 +4739,35 @@ class MobileApiController
     /* ── private helper: resolve photo URL for a patient row ── */
     private function resolvePatientPhotoUrl(array $patient): ?string
     {
+        $pid = (int)($patient['id'] ?? 0);
+
         if (empty($patient['photo'])) {
             /* Try latest_photo from timeline join */
             if (!empty($patient['latest_photo'])) {
-                return '/storage/patients/' . $patient['id'] . '/' . basename($patient['latest_photo']);
+                $base = basename($patient['latest_photo']);
+                /* Check per-patient folder first, then flat patients dir */
+                if (file_exists(STORAGE_PATH . '/patients/' . $pid . '/' . $base)) {
+                    return '/patient-photos/' . $pid . '/' . $base;
+                }
+                /* Flat layout (intake copy): serve via /patients/{file} route */
+                return '/patients/' . $base;
             }
             return null;
         }
-        $file = $patient['photo'];
-        $pid  = $patient['id'] ?? 0;
+
+        $file = basename($patient['photo']);
+
+        /* Check per-patient folder first (mobile upload, web upload) */
         if (file_exists(STORAGE_PATH . '/patients/' . $pid . '/' . $file)) {
-            return '/storage/patients/' . $pid . '/' . $file;
+            return '/patient-photos/' . $pid . '/' . $file;
         }
+
+        /* Flat layout: intake controller copies to storage/patients/{file} directly */
         if (file_exists(STORAGE_PATH . '/patients/' . $file)) {
-            return '/storage/patients/' . $file;
+            return '/patients/' . $file;
         }
-        return '/storage/patients/' . $file;
+
+        /* Fallback — assume per-patient folder */
+        return '/patient-photos/' . $pid . '/' . $file;
     }
 }

@@ -28,15 +28,56 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   String? _error;
   late TabController _tabCtrl;
 
+  // Exercises (Übungen)
+  List<Map<String, dynamic>> _exercises = [];
+  bool _loadingExercises = false;
+  bool _exercisesLoaded  = false;
+
+  // Homework (Hausaufgaben)
+  List<Map<String, dynamic>> _homework = [];
+  bool _loadingHomework = false;
+  bool _homeworkLoaded  = false;
+
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: 2, vsync: this);
+    _tabCtrl = TabController(length: 4, vsync: this);
+    _tabCtrl.addListener(_onTabChanged);
     _load();
   }
 
+  void _onTabChanged() {
+    if (!_tabCtrl.indexIsChanging) return;
+    if (_tabCtrl.index == 1 && !_exercisesLoaded) _loadExercises();
+    if (_tabCtrl.index == 2 && !_homeworkLoaded)  _loadHomework();
+  }
+
+  Future<void> _loadExercises() async {
+    setState(() => _loadingExercises = true);
+    try {
+      final list = await _api.exercisesList(widget.id);
+      setState(() {
+        _exercises = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _exercisesLoaded  = true;
+        _loadingExercises = false;
+      });
+    } catch (_) { setState(() => _loadingExercises = false); }
+  }
+
+  Future<void> _loadHomework() async {
+    setState(() => _loadingHomework = true);
+    try {
+      final list = await _api.patientHomeworkList(widget.id);
+      setState(() {
+        _homework = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _homeworkLoaded  = true;
+        _loadingHomework = false;
+      });
+    } catch (_) { setState(() => _loadingHomework = false); }
+  }
+
   @override
-  void dispose() { _tabCtrl.dispose(); super.dispose(); }
+  void dispose() { _tabCtrl.removeListener(_onTabChanged); _tabCtrl.dispose(); super.dispose(); }
 
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
@@ -237,8 +278,10 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
               indicatorWeight: 3,
               dividerColor: Colors.transparent,
               tabs: const [
-                Tab(text: 'Akte', icon: Icon(Icons.folder_open_rounded, size: 16)),
-                Tab(text: 'Daten', icon: Icon(Icons.info_outline_rounded, size: 16)),
+                Tab(text: 'Akte',         icon: Icon(Icons.folder_open_rounded,     size: 16)),
+                Tab(text: 'Übungen',      icon: Icon(Icons.fitness_center_rounded,   size: 16)),
+                Tab(text: 'Hausaufgaben', icon: Icon(Icons.assignment_rounded,       size: 16)),
+                Tab(text: 'Daten',        icon: Icon(Icons.info_outline_rounded,     size: 16)),
               ],
             ),
           ),
@@ -249,6 +292,8 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
               controller: _tabCtrl,
               children: [
                 _buildTimeline(timeline),
+                _buildExercisesTab(),
+                _buildHomeworkTab(),
                 _buildInfo(p),
               ],
             ),
@@ -277,8 +322,63 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
         entry: timeline[i],
         isFirst: i == 0,
         isLast: i == timeline.length - 1,
-        baseUrl: ApiService.baseUrl,
       ),
+    );
+  }
+
+  // ── Exercises Tab ─────────────────────────────────────────
+
+  Widget _buildExercisesTab() {
+    if (_loadingExercises) return const Center(child: CircularProgressIndicator());
+    return RefreshIndicator(
+      onRefresh: () async { _exercisesLoaded = false; await _loadExercises(); },
+      child: _exercises.isEmpty
+          ? ListView(padding: const EdgeInsets.all(32), children: [
+              Center(child: Column(children: [
+                const SizedBox(height: 40),
+                Icon(Icons.fitness_center_rounded, size: 72, color: Colors.grey.shade300),
+                const SizedBox(height: 16),
+                Text('Keine Übungen', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+                const SizedBox(height: 8),
+                Text('Übungen werden über das Portal Admin vergeben.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+              ])),
+            ])
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+              itemCount: _exercises.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (_, i) => _ExerciseCard(exercise: _exercises[i]),
+            ),
+    );
+  }
+
+  // ── Homework Tab ───────────────────────────────────────────
+
+  Widget _buildHomeworkTab() {
+    if (_loadingHomework) return const Center(child: CircularProgressIndicator());
+    return RefreshIndicator(
+      onRefresh: () async { _homeworkLoaded = false; await _loadHomework(); },
+      child: _homework.isEmpty
+          ? ListView(padding: const EdgeInsets.all(32), children: [
+              Center(child: Column(children: [
+                const SizedBox(height: 40),
+                Icon(Icons.assignment_outlined, size: 72, color: Colors.grey.shade300),
+                const SizedBox(height: 16),
+                Text('Keine Hausaufgaben', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+                const SizedBox(height: 8),
+                Text('Hausaufgaben werden über das Portal Admin zugewiesen.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+              ])),
+            ])
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+              itemCount: _homework.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (_, i) => _HomeworkCard(homework: _homework[i]),
+            ),
     );
   }
 
@@ -789,8 +889,7 @@ class _OptionTile extends StatelessWidget {
 class _TimelineCard extends StatelessWidget {
   final Map<String, dynamic> entry;
   final bool isFirst, isLast;
-  final String baseUrl;
-  const _TimelineCard({required this.entry, required this.isFirst, required this.isLast, required this.baseUrl});
+  const _TimelineCard({required this.entry, required this.isFirst, required this.isLast});
 
   static const _typeConfig = {
     'treatment': (Icons.medical_services_rounded, AppTheme.primary),
@@ -817,7 +916,7 @@ class _TimelineCard extends StatelessWidget {
     final hasFile  = fileUrl != null && fileUrl.isNotEmpty;
     final isMedia  = hasFile && (type == 'photo' || type == 'video' || type == 'document');
     final isPdf    = type == 'document';
-    final fullUrl  = hasFile ? (fileUrl.startsWith('http') ? fileUrl : '$baseUrl$fileUrl') : null;
+    final fullUrl  = hasFile ? ApiService.mediaUrl(fileUrl) : null;
 
     return IntrinsicHeight(
       child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -900,6 +999,168 @@ class _TimelineCard extends StatelessWidget {
             ]),
           ),
         ),
+      ]),
+    );
+  }
+}
+
+// ── Exercise Card ─────────────────────────────────────────────────────────────
+
+class _ExerciseCard extends StatelessWidget {
+  final Map<String, dynamic> exercise;
+  const _ExerciseCard({required this.exercise});
+
+  @override
+  Widget build(BuildContext context) {
+    final sets  = exercise['sets'] as int? ?? exercise['repetitions_sets'] as int?;
+    final reps  = exercise['repetitions'] as int? ?? exercise['reps'] as int?;
+    final dur   = exercise['duration'] as int? ?? exercise['duration_seconds'] as int?;
+    final notes = exercise['notes'] as String? ?? exercise['description'] as String? ?? '';
+    final videoUrl = exercise['video_url'] as String?;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.secondary.withValues(alpha: 0.25)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(
+                color: AppTheme.secondary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.fitness_center_rounded, color: AppTheme.secondary, size: 18),
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: Text(
+              exercise['name'] as String? ?? exercise['title'] as String? ?? '—',
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            )),
+          ]),
+          if (notes.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(notes, style: TextStyle(fontSize: 12, color: Colors.grey.shade600, height: 1.4),
+              maxLines: 3, overflow: TextOverflow.ellipsis),
+          ],
+          if (sets != null || reps != null || dur != null) ...[
+            const SizedBox(height: 10),
+            Wrap(spacing: 8, runSpacing: 4, children: [
+              if (sets != null) _chip('${sets}× Sätze', AppTheme.secondary),
+              if (reps != null) _chip('${reps}× Wdh.', AppTheme.primary),
+              if (dur  != null) _chip('${dur} Sek.', AppTheme.tertiary),
+            ]),
+          ],
+          if (videoUrl != null && videoUrl.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(children: [
+              Icon(Icons.play_circle_outline_rounded, size: 14, color: AppTheme.tertiary),
+              const SizedBox(width: 4),
+              Text('Video verfügbar', style: TextStyle(fontSize: 11, color: AppTheme.tertiary, fontWeight: FontWeight.w600)),
+            ]),
+          ],
+        ]),
+      ),
+    );
+  }
+
+  Widget _chip(String label, Color color) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+    decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+    child: Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
+  );
+}
+
+// ── Homework Card ─────────────────────────────────────────────────────────────
+
+class _HomeworkCard extends StatelessWidget {
+  final Map<String, dynamic> homework;
+  const _HomeworkCard({required this.homework});
+
+  String _fmt(String? d) {
+    if (d == null) return '—';
+    try { return DateFormat('dd.MM.yyyy', 'de_DE').format(DateTime.parse(d)); } catch (_) { return d; }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final title    = homework['title'] as String? ?? homework['name'] as String? ?? '—';
+    final desc     = homework['description'] as String? ?? homework['content'] as String? ?? '';
+    final dueDate  = homework['due_date'] as String? ?? homework['deadline'] as String?;
+    final done     = homework['completed'] == true || homework['done'] == true ||
+                     homework['status'] == 'completed' || homework['status'] == 'done';
+    final color    = done ? AppTheme.success : AppTheme.primary;
+
+    // tasks / exercises sub-list
+    final tasks = List<dynamic>.from(homework['tasks'] as List? ?? homework['exercises'] as List? ?? []);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
+          child: Row(children: [
+            Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
+              child: Icon(done ? Icons.check_circle_rounded : Icons.assignment_rounded, color: color, size: 18),
+            ),
+            const SizedBox(width: 10),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              if (dueDate != null)
+                Text('Fällig: ${_fmt(dueDate)}',
+                  style: TextStyle(fontSize: 11, color: done ? AppTheme.success : AppTheme.warning,
+                    fontWeight: FontWeight.w600)),
+            ])),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+              child: Text(done ? 'Erledigt' : 'Offen',
+                style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700)),
+            ),
+          ]),
+        ),
+        if (desc.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+            child: Text(desc, style: TextStyle(fontSize: 12, color: Colors.grey.shade600, height: 1.4),
+              maxLines: 3, overflow: TextOverflow.ellipsis),
+          ),
+        if (tasks.isNotEmpty) ...[
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('${tasks.length} Aufgaben',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
+              const SizedBox(height: 6),
+              ...tasks.take(3).map((t) {
+                final task = t as Map;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Row(children: [
+                    Icon(Icons.radio_button_unchecked_rounded, size: 12, color: Colors.grey.shade400),
+                    const SizedBox(width: 6),
+                    Expanded(child: Text(task['title'] as String? ?? task['name'] as String? ?? '—',
+                      style: const TextStyle(fontSize: 12))),
+                  ]),
+                );
+              }),
+              if (tasks.length > 3)
+                Text('+ ${tasks.length - 3} weitere',
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+            ]),
+          ),
+        ],
       ]),
     );
   }
