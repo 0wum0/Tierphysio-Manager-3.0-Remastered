@@ -13,6 +13,7 @@ use App\Controllers\UiSettingsController;
 use App\Controllers\NotificationController;
 use App\Controllers\CronController;
 use App\Controllers\CronAdminController;
+use App\Controllers\CronPixelController;
 use App\Controllers\HomeworkController;
 use App\Controllers\ReminderDunningController;
 use App\Controllers\MobileApiController;
@@ -190,6 +191,7 @@ $router->get('/api/notifications', [NotificationController::class, 'index'], ['a
 $router->get('/api/invoice-form-data', [InvoiceController::class, 'formData'], ['auth']);
 
 $router->get('/cron/geburtstag', [CronController::class, 'birthday']);
+$router->get('/cron/pixel.gif',  [CronPixelController::class, 'pixel']);
 
 // ── Cron Admin Panel ──────────────────────────────────────────────────
 $router->get('/admin/cronjobs',                          [CronAdminController::class, 'index'],   ['admin']);

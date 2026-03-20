@@ -159,6 +159,8 @@
                 <td>
                     {% if entry.triggered_by == 'manual' %}
                         <span class="badge bg-info">manuell</span>
+                    {% elseif entry.triggered_by == 'pixel' %}
+                        <span class="badge bg-primary">pixel</span>
                     {% else %}
                         <span class="badge bg-secondary">cron</span>
                     {% endif %}
