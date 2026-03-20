@@ -92,7 +92,7 @@ class CronAdminController extends Controller
         $status  = ($response['http_code'] >= 200 && $response['http_code'] < 300) ? 'success' : 'error';
         $message = mb_substr(trim($response['body'] ?? ''), 0, 2000);
 
-        $this->logRun($key, $status, $message, $ms, 'manual');
+        $this->logRunInstance($key, $status, $message, $ms, 'manual');
 
         if ($status === 'success') {
             $this->session->flash('success', "✓ „{$job['label']}" erfolgreich ausgeführt ({$ms} ms).");
@@ -204,7 +204,7 @@ class CronAdminController extends Controller
         }
     }
 
-    private function logRun(
+    private function logRunInstance(
         string $jobKey,
         string $status,
         string $message,
