@@ -134,7 +134,7 @@ class MailService
             );
             $bodyText = $this->applyPlaceholders(
                 $this->settingsRepository->get('email_payment_reminder_body',
-                    "Hallo {{owner_name}},\n\nwir möchten Sie freundlich daran erinnern, dass die Rechnung {{invoice_number}} vom {{issue_date}} über {{total_gross}} noch aussteht.\n\nBitte überweisen Sie den Betrag bis zum {{reminder_due_date}} auf unser Konto.\n\nFalls Sie die Zahlung bereits veranlasst haben, bitten wir Sie, dieses Schreiben als gegenstandslos zu betrachten.\n\nMit freundlichen Grüßen\n{{company_name}}"
+                    "Hallo {{owner_name}},\n\nich möchte dich freundlich daran erinnern, dass die Rechnung {{invoice_number}} vom {{issue_date}} über {{total_gross}} noch aussteht.\n\nBitte überweise den Betrag bis zum {{reminder_due_date}} auf mein Konto.\n\nFalls du die Zahlung bereits veranlasst hast, bitte ich dich, dieses Schreiben als gegenstandslos zu betrachten.\n\nLiebe Grüße\n{{company_name}}"
                 ),
                 $placeholders
             );
@@ -177,7 +177,7 @@ class MailService
             );
             $bodyText = $this->applyPlaceholders(
                 $this->settingsRepository->get('email_dunning_body',
-                    "Hallo {{owner_name}},\n\ntrotz unserer Zahlungserinnerung ist die Rechnung {{invoice_number}} vom {{issue_date}} über {{total_gross}} noch nicht beglichen worden.\n\nWir fordern Sie hiermit auf, den ausstehenden Betrag zuzüglich einer Mahngebühr von {{fee}} bis zum {{dunning_due_date}} zu begleichen.\n\nGesamtbetrag: {{total_with_fee}}\n\nMit freundlichen Grüßen\n{{company_name}}"
+                    "Hallo {{owner_name}},\n\ntrotz meiner Zahlungserinnerung ist die Rechnung {{invoice_number}} vom {{issue_date}} über {{total_gross}} noch nicht beglichen worden.\n\nIch fordere dich hiermit auf, den ausstehenden Betrag zuzüglich einer Mahngebühr von {{fee}} bis zum {{dunning_due_date}} zu begleichen.\n\nGesamtbetrag: {{total_with_fee}}\n\nLiebe Grüße\n{{company_name}}"
                 ),
                 $placeholders
             );
