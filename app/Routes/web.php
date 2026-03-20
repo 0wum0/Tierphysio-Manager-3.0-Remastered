@@ -61,6 +61,223 @@ $router->post('/api/mobile/nachrichten/{id}/antworten',          [MobileApiContr
 $router->post('/api/mobile/nachrichten/{id}/status',             [MobileApiController::class, 'messageSetStatus']);
 $router->post('/api/mobile/nachrichten/{id}/loeschen',           [MobileApiController::class, 'messageDelete']);
 
+// ── Mobile API v2 — Extended endpoints ──────────────────────────────
+
+// Util
+$router->get('/api/mobile/ping',                              [MobileApiController::class, 'ping']);
+$router->get('/api/mobile/notifications',                     [MobileApiController::class, 'notificationSummary']);
+$router->get('/api/mobile/search',                            [MobileApiController::class, 'globalSearch']);
+
+// Invoices — extended
+$router->post('/api/mobile/invoices/{id}/update',             [MobileApiController::class, 'invoiceUpdate']);
+$router->post('/api/mobile/invoices/{id}/loeschen',           [MobileApiController::class, 'invoiceDelete']);
+$router->get('/api/mobile/invoices/{id}/pdf',                 [MobileApiController::class, 'invoicePdfUrl']);
+$router->get('/api/mobile/invoices/stats',                    [MobileApiController::class, 'invoiceStats']);
+
+// Reminders
+$router->get('/api/mobile/erinnerungen',                      [MobileApiController::class, 'remindersList']);
+$router->get('/api/mobile/invoices/{id}/erinnerungen',        [MobileApiController::class, 'remindersForInvoice']);
+$router->post('/api/mobile/invoices/{id}/erinnerungen',       [MobileApiController::class, 'reminderCreate']);
+$router->post('/api/mobile/invoices/{id}/erinnerungen/{rid}/loeschen', [MobileApiController::class, 'reminderDelete']);
+$router->get('/api/mobile/ueberfaellig',                      [MobileApiController::class, 'overdueAlerts']);
+
+// Dunnings
+$router->get('/api/mobile/mahnungen',                         [MobileApiController::class, 'dunningsList']);
+$router->get('/api/mobile/invoices/{id}/mahnungen',           [MobileApiController::class, 'dunningsForInvoice']);
+$router->post('/api/mobile/invoices/{id}/mahnungen',          [MobileApiController::class, 'dunningCreate']);
+$router->post('/api/mobile/invoices/{id}/mahnungen/{did}/loeschen', [MobileApiController::class, 'dunningDelete']);
+
+// Patients — extended
+$router->post('/api/mobile/patients/{id}/loeschen',           [MobileApiController::class, 'patientDelete']);
+$router->post('/api/mobile/patients/{id}/foto',               [MobileApiController::class, 'patientPhotoUpload']);
+$router->post('/api/mobile/patients/{id}/timeline/{eid}/update', [MobileApiController::class, 'patientTimelineUpdate']);
+
+// Owners — extended
+$router->post('/api/mobile/owners/{id}/loeschen',             [MobileApiController::class, 'ownerDelete']);
+$router->get('/api/mobile/owners/{id}/rechnungen',            [MobileApiController::class, 'ownerInvoices']);
+$router->get('/api/mobile/owners/{id}/patienten',             [MobileApiController::class, 'ownerPatients']);
+
+// Appointments — extended
+$router->get('/api/mobile/appointments/heute',                [MobileApiController::class, 'appointmentToday']);
+$router->get('/api/mobile/appointments/{id}',                 [MobileApiController::class, 'appointmentShow']);
+$router->post('/api/mobile/appointments/{id}/status',         [MobileApiController::class, 'appointmentStatusUpdate']);
+
+// Waitlist
+$router->get('/api/mobile/warteliste',                        [MobileApiController::class, 'waitlistList']);
+$router->post('/api/mobile/warteliste',                       [MobileApiController::class, 'waitlistAdd']);
+$router->post('/api/mobile/warteliste/{id}/loeschen',         [MobileApiController::class, 'waitlistDelete']);
+$router->post('/api/mobile/warteliste/{id}/einplanen',        [MobileApiController::class, 'waitlistSchedule']);
+
+// Treatment types — full CRUD
+$router->get('/api/mobile/behandlungsarten/{id}',             [MobileApiController::class, 'treatmentTypeShow']);
+$router->post('/api/mobile/behandlungsarten',                 [MobileApiController::class, 'treatmentTypeCreate']);
+$router->post('/api/mobile/behandlungsarten/{id}/update',     [MobileApiController::class, 'treatmentTypeUpdate']);
+$router->post('/api/mobile/behandlungsarten/{id}/loeschen',   [MobileApiController::class, 'treatmentTypeDelete']);
+
+// Users (admin only)
+$router->get('/api/mobile/benutzer',                          [MobileApiController::class, 'usersList']);
+$router->get('/api/mobile/benutzer/{id}',                     [MobileApiController::class, 'userShow']);
+$router->post('/api/mobile/benutzer',                         [MobileApiController::class, 'userCreate']);
+$router->post('/api/mobile/benutzer/{id}/update',             [MobileApiController::class, 'userUpdate']);
+$router->post('/api/mobile/benutzer/{id}/deaktivieren',       [MobileApiController::class, 'userDeactivate']);
+$router->get('/api/mobile/benutzer/{id}/tokens',              [MobileApiController::class, 'userApiTokens']);
+$router->post('/api/mobile/benutzer/tokens/{tid}/widerrufen', [MobileApiController::class, 'userRevokeToken']);
+
+// Settings — write (admin)
+$router->post('/api/mobile/settings',                         [MobileApiController::class, 'settingsUpdate']);
+
+// Analytics
+$router->get('/api/mobile/analytics',                         [MobileApiController::class, 'analyticsOverview']);
+
+// Homework (old simple list)
+$router->get('/api/mobile/hausaufgaben',                      [MobileApiController::class, 'homeworkList']);
+$router->get('/api/mobile/patients/{id}/hausaufgaben',        [MobileApiController::class, 'homeworkList']);
+$router->get('/api/mobile/hausaufgaben/{id}',                 [MobileApiController::class, 'homeworkShow']);
+
+// ── Owner Portal Admin API ───────────────────────────────────────────
+
+// Portal user management
+$router->get('/api/mobile/portal-admin/stats',                [MobileApiController::class, 'portalStats']);
+$router->get('/api/mobile/portal-admin/benutzer',             [MobileApiController::class, 'portalUsersList']);
+$router->get('/api/mobile/portal-admin/benutzer/{id}',        [MobileApiController::class, 'portalUserShow']);
+$router->post('/api/mobile/portal-admin/einladen',            [MobileApiController::class, 'portalInvite']);
+$router->post('/api/mobile/portal-admin/benutzer/{id}/neu-einladen',   [MobileApiController::class, 'portalResendInvite']);
+$router->post('/api/mobile/portal-admin/benutzer/{id}/aktivieren',     [MobileApiController::class, 'portalActivate']);
+$router->post('/api/mobile/portal-admin/benutzer/{id}/deaktivieren',   [MobileApiController::class, 'portalDeactivate']);
+$router->post('/api/mobile/portal-admin/benutzer/{id}/loeschen',       [MobileApiController::class, 'portalUserDelete']);
+
+// Portal owner overview (portal user + pets + exercises + homework plans)
+$router->get('/api/mobile/portal-admin/besitzer/{id}/uebersicht', [MobileApiController::class, 'portalOwnerOverview']);
+
+// Exercises (Übungen) per patient
+$router->get('/api/mobile/portal-admin/patienten/{id}/uebungen',   [MobileApiController::class, 'exercisesList']);
+$router->post('/api/mobile/portal-admin/patienten/{id}/uebungen',  [MobileApiController::class, 'exerciseCreate']);
+$router->get('/api/mobile/portal-admin/uebungen/{id}',             [MobileApiController::class, 'exerciseShow']);
+$router->post('/api/mobile/portal-admin/uebungen/{id}/update',     [MobileApiController::class, 'exerciseUpdate']);
+$router->post('/api/mobile/portal-admin/uebungen/{id}/loeschen',   [MobileApiController::class, 'exerciseDelete']);
+
+// Homework plans (Hausaufgabenpläne)
+$router->get('/api/mobile/portal-admin/hausaufgabenplaene',                        [MobileApiController::class, 'homeworkPlanList']);
+$router->post('/api/mobile/portal-admin/hausaufgabenplaene',                       [MobileApiController::class, 'homeworkPlanCreate']);
+$router->get('/api/mobile/portal-admin/hausaufgabenplaene/{id}',                   [MobileApiController::class, 'homeworkPlanShow']);
+$router->post('/api/mobile/portal-admin/hausaufgabenplaene/{id}/update',           [MobileApiController::class, 'homeworkPlanUpdate']);
+$router->post('/api/mobile/portal-admin/hausaufgabenplaene/{id}/loeschen',         [MobileApiController::class, 'homeworkPlanDelete']);
+$router->get('/api/mobile/portal-admin/hausaufgabenplaene/{id}/pdf',               [MobileApiController::class, 'homeworkPlanPdfUrl']);
+$router->post('/api/mobile/portal-admin/hausaufgabenplaene/{id}/senden',           [MobileApiController::class, 'homeworkPlanSend']);
+
+// Homework templates (read-only)
+$router->get('/api/mobile/portal-admin/vorlagen',             [MobileApiController::class, 'homeworkTemplates']);
+
+// ── Profile ──────────────────────────────────────────────────────────
+$router->get('/api/mobile/profil',                            [MobileApiController::class, 'profileGet']);
+$router->post('/api/mobile/profil',                           [MobileApiController::class, 'profileUpdate']);
+$router->post('/api/mobile/profil/passwort',                  [MobileApiController::class, 'profileChangePassword']);
+
+// ── Therapy Care Pro (tcp) ───────────────────────────────────────────
+
+// Progress tracking
+$router->get('/api/mobile/tcp/fortschritt/kategorien',                   [MobileApiController::class, 'tcpProgressCategories']);
+$router->get('/api/mobile/tcp/patienten/{id}/fortschritt',               [MobileApiController::class, 'tcpProgressList']);
+$router->post('/api/mobile/tcp/patienten/{id}/fortschritt',              [MobileApiController::class, 'tcpProgressStore']);
+$router->post('/api/mobile/tcp/fortschritt/{entry_id}/loeschen',         [MobileApiController::class, 'tcpProgressDelete']);
+
+// Exercise feedback
+$router->get('/api/mobile/tcp/patienten/{id}/feedback',                  [MobileApiController::class, 'tcpFeedbackList']);
+$router->get('/api/mobile/tcp/feedback/problematisch',                   [MobileApiController::class, 'tcpFeedbackProblematic']);
+
+// Therapy reports
+$router->get('/api/mobile/tcp/patienten/{id}/berichte',                  [MobileApiController::class, 'tcpReportList']);
+$router->post('/api/mobile/tcp/patienten/{id}/berichte',                 [MobileApiController::class, 'tcpReportCreate']);
+$router->get('/api/mobile/tcp/berichte/{id}',                            [MobileApiController::class, 'tcpReportShow']);
+$router->get('/api/mobile/tcp/berichte/{id}/pdf',                        [MobileApiController::class, 'tcpReportPdfUrl']);
+$router->post('/api/mobile/tcp/berichte/{id}/loeschen',                  [MobileApiController::class, 'tcpReportDelete']);
+
+// Exercise library
+$router->get('/api/mobile/tcp/bibliothek',                               [MobileApiController::class, 'tcpLibraryList']);
+$router->post('/api/mobile/tcp/bibliothek',                              [MobileApiController::class, 'tcpLibraryCreate']);
+$router->get('/api/mobile/tcp/bibliothek/{id}',                          [MobileApiController::class, 'tcpLibraryShow']);
+$router->post('/api/mobile/tcp/bibliothek/{id}/update',                  [MobileApiController::class, 'tcpLibraryUpdate']);
+$router->post('/api/mobile/tcp/bibliothek/{id}/loeschen',                [MobileApiController::class, 'tcpLibraryDelete']);
+
+// Natural therapy
+$router->get('/api/mobile/tcp/patienten/{id}/naturheilkunde',            [MobileApiController::class, 'tcpNaturalList']);
+$router->post('/api/mobile/tcp/patienten/{id}/naturheilkunde',           [MobileApiController::class, 'tcpNaturalCreate']);
+$router->post('/api/mobile/tcp/naturheilkunde/{id}/update',              [MobileApiController::class, 'tcpNaturalUpdate']);
+$router->post('/api/mobile/tcp/naturheilkunde/{id}/loeschen',            [MobileApiController::class, 'tcpNaturalDelete']);
+
+// Reminder queue (TCP)
+$router->get('/api/mobile/tcp/erinnerungen/vorlagen',                    [MobileApiController::class, 'tcpReminderTemplates']);
+$router->get('/api/mobile/tcp/patienten/{id}/erinnerungen',              [MobileApiController::class, 'tcpReminderQueue']);
+$router->post('/api/mobile/tcp/patienten/{id}/erinnerungen',             [MobileApiController::class, 'tcpReminderQueueStore']);
+
+// ── Tax Export Pro (Steuerexport) ────────────────────────────────────
+$router->get('/api/mobile/steuerexport',                                 [MobileApiController::class, 'taxExportList']);
+$router->get('/api/mobile/steuerexport/export-url',                      [MobileApiController::class, 'taxExportUrls']);
+$router->get('/api/mobile/steuerexport/audit-log',                       [MobileApiController::class, 'taxExportAuditLog']);
+$router->post('/api/mobile/steuerexport/{id}/finalisieren',              [MobileApiController::class, 'taxExportFinalize']);
+$router->post('/api/mobile/steuerexport/{id}/stornieren',                [MobileApiController::class, 'taxExportCancel']);
+
+// ── Mailbox (IMAP/SMTP) ──────────────────────────────────────────────
+$router->get('/api/mobile/mailbox/status',                               [MobileApiController::class, 'mailboxStatus']);
+$router->get('/api/mobile/mailbox/nachrichten',                          [MobileApiController::class, 'mailboxList']);
+$router->get('/api/mobile/mailbox/nachrichten/{uid}',                    [MobileApiController::class, 'mailboxShow']);
+$router->post('/api/mobile/mailbox/senden',                              [MobileApiController::class, 'mailboxSend']);
+$router->post('/api/mobile/mailbox/nachrichten/{uid}/loeschen',          [MobileApiController::class, 'mailboxDelete']);
+
+// ── Google Calendar Sync ─────────────────────────────────────────────
+$router->get('/api/mobile/google-kalender/status',                       [MobileApiController::class, 'googleCalendarStatus']);
+$router->post('/api/mobile/google-kalender/sync',                        [MobileApiController::class, 'googleCalendarTriggerSync']);
+
+// ── System / Cron ────────────────────────────────────────────────────
+$router->get('/api/mobile/system/status',                                [MobileApiController::class, 'systemStatus']);
+$router->get('/api/mobile/system/cronjobs',                              [MobileApiController::class, 'systemCronJobs']);
+
+// ── Owner Portal — Auth (Besitzerportal) ─────────────────────────────
+$router->post('/api/mobile/portal/login',                                [MobileApiController::class, 'portalLogin']);
+$router->post('/api/mobile/portal/logout',                               [MobileApiController::class, 'portalLogout']);
+$router->post('/api/mobile/portal/passwort-setzen/{token}',              [MobileApiController::class, 'portalSetPassword']);
+
+// ── Owner Portal — Dashboard ──────────────────────────────────────────
+$router->get('/api/mobile/portal/dashboard',                             [MobileApiController::class, 'ownerPortalDashboard']);
+
+// ── Owner Portal — Meine Tiere ────────────────────────────────────────
+$router->get('/api/mobile/portal/tiere',                                 [MobileApiController::class, 'ownerPortalPetList']);
+$router->get('/api/mobile/portal/tiere/{id}',                            [MobileApiController::class, 'ownerPortalPetDetail']);
+$router->post('/api/mobile/portal/tiere/{id}/bearbeiten',                [MobileApiController::class, 'ownerPortalPetEdit']);
+
+// ── Owner Portal — Rechnungen ─────────────────────────────────────────
+$router->get('/api/mobile/portal/rechnungen',                            [MobileApiController::class, 'ownerPortalInvoices']);
+$router->get('/api/mobile/portal/rechnungen/{id}/pdf-url',               [MobileApiController::class, 'ownerPortalInvoicePdfUrl']);
+
+// ── Owner Portal — Termine ────────────────────────────────────────────
+$router->get('/api/mobile/portal/termine',                               [MobileApiController::class, 'ownerPortalAppointments']);
+
+// ── Owner Portal — Nachrichten ────────────────────────────────────────
+$router->get('/api/mobile/portal/nachrichten/ungelesen',                 [MobileApiController::class, 'ownerPortalUnread']);
+$router->get('/api/mobile/portal/nachrichten',                           [MobileApiController::class, 'ownerPortalThreadList']);
+$router->post('/api/mobile/portal/nachrichten/neu',                      [MobileApiController::class, 'ownerPortalNewThread']);
+$router->get('/api/mobile/portal/nachrichten/{id}',                      [MobileApiController::class, 'ownerPortalThreadShow']);
+$router->post('/api/mobile/portal/nachrichten/{id}/antworten',           [MobileApiController::class, 'ownerPortalReply']);
+
+// ── Owner Portal — Profil ─────────────────────────────────────────────
+$router->get('/api/mobile/portal/profil',                                [MobileApiController::class, 'ownerPortalProfile']);
+$router->post('/api/mobile/portal/profil/passwort',                      [MobileApiController::class, 'ownerPortalChangePassword']);
+
+// ── Patient Intake (Patientenanmeldung) ──────────────────────────────
+$router->post('/api/mobile/anmeldung',                                   [MobileApiController::class, 'intakeSubmit']);
+$router->get('/api/mobile/anmeldung/benachrichtigungen',                 [MobileApiController::class, 'intakeNotifications']);
+$router->get('/api/mobile/anmeldung',                                    [MobileApiController::class, 'intakeInbox']);
+$router->get('/api/mobile/anmeldung/{id}',                               [MobileApiController::class, 'intakeShow']);
+$router->post('/api/mobile/anmeldung/{id}/annehmen',                     [MobileApiController::class, 'intakeAccept']);
+$router->post('/api/mobile/anmeldung/{id}/ablehnen',                     [MobileApiController::class, 'intakeReject']);
+
+// ── Patient Invite (Einladungslinks) ─────────────────────────────────
+$router->get('/api/mobile/einladungen/benachrichtigungen',               [MobileApiController::class, 'inviteNotifications']);
+$router->get('/api/mobile/einladungen',                                  [MobileApiController::class, 'inviteList']);
+$router->post('/api/mobile/einladungen',                                 [MobileApiController::class, 'inviteSend']);
+$router->post('/api/mobile/einladungen/{id}/widerrufen',                 [MobileApiController::class, 'inviteRevoke']);
+$router->get('/api/mobile/einladungen/{id}/whatsapp',                    [MobileApiController::class, 'inviteWhatsapp']);
+
 // Hausaufgaben Plan-Meta API
 $router->get('/api/patients/{patient_id}/homework/plan-meta', [HomeworkController::class, 'getPlanMeta'], ['auth']);
 $router->post('/api/patients/{patient_id}/homework/plan-meta', [HomeworkController::class, 'savePlanMeta'], ['auth']);
