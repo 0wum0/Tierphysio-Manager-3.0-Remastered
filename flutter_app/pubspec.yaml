@@ -70,7 +70,7 @@ dependencies:
 
   # Local notifications (no external push service)
   flutter_local_notifications: ^17.2.4
-  workmanager: ^0.5.2
+  timezone: ^0.9.4
 
 dev_dependencies:
   flutter_test:

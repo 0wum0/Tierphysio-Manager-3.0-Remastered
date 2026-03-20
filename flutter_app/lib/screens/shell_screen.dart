@@ -59,9 +59,6 @@ class _ShellScreenState extends State<ShellScreen> {
       if (mounted) setState(() => _now = DateTime.now());
     });
     NotificationService.requestPermission();
-    Future.delayed(const Duration(seconds: 5), () {
-      if (mounted) NotificationService.checkNow();
-    });
   }
 
   @override
@@ -77,6 +74,7 @@ class _ShellScreenState extends State<ShellScreen> {
         _newIntakes    = (d['new_intakes'] as num?)?.toInt() ?? 0;
         _birthdayCount = ((d['birthdays_today'] as List?)?.length) ?? 0;
       });
+      NotificationService.checkNow(d, _api).ignore();
     } catch (_) {}
     Future.delayed(const Duration(minutes: 5), () {
       if (mounted) _pollNotifications();
