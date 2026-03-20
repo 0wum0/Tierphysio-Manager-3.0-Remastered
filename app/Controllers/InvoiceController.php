@@ -570,16 +570,18 @@ class InvoiceController extends Controller
     {
         $this->requireAdmin();
 
-        $summary       = $this->invoiceService->getFinancialSummary();
-        $byMonth       = $this->invoiceService->getRevenueByMonth(24);
-        $byQuarter     = $this->invoiceService->getRevenueByQuarter(3);
-        $byYear        = $this->invoiceService->getRevenueByYear();
-        $ownerSpeed    = $this->invoiceService->getOwnerPaymentSpeed();
-        $ownerRevenue  = $this->invoiceService->getOwnerRevenue(15);
-        $aging         = $this->invoiceService->getOverdueAging();
-        $payMethods    = $this->invoiceService->getPaymentMethodStats();
-        $forecast      = $this->invoiceService->getRevenueForForecast(18);
-        $topPositions  = $this->invoiceService->getTopPositions(10);
+        $summary            = $this->invoiceService->getFinancialSummary();
+        $byMonth            = $this->invoiceService->getRevenueByMonth(24);
+        $byQuarter          = $this->invoiceService->getRevenueByQuarter(3);
+        $byYear             = $this->invoiceService->getRevenueByYear();
+        $ownerSpeed         = $this->invoiceService->getOwnerPaymentSpeed();
+        $ownerRevenue       = $this->invoiceService->getOwnerRevenue(15);
+        $ownerActivity      = $this->invoiceService->getOwnerActivity(15);
+        $ownerMonthly       = $this->invoiceService->getOwnerMonthlyRevenue(5);
+        $aging              = $this->invoiceService->getOverdueAging();
+        $payMethods         = $this->invoiceService->getPaymentMethodStats();
+        $forecast           = $this->invoiceService->getRevenueForForecast(18);
+        $topPositions       = $this->invoiceService->getTopPositions(10);
 
         /* ── Linear regression forecast (next 6 months) ── */
         $values = array_column($forecast, 'revenue');
@@ -613,18 +615,20 @@ class InvoiceController extends Controller
         $yoyGrowth = $lastYearRev > 0 ? round((array_sum(array_slice($lastYearRow['revenue'], 12)) - $lastYearRev) / $lastYearRev * 100, 1) : null;
 
         $this->json([
-            'summary'       => $summary,
-            'by_month'      => $byMonth,
-            'by_quarter'    => $byQuarter,
-            'by_year'       => $byYear,
-            'owner_speed'   => $ownerSpeed,
-            'owner_revenue' => $ownerRevenue,
-            'aging'         => $aging,
-            'pay_methods'   => $payMethods,
+            'summary'          => $summary,
+            'by_month'         => $byMonth,
+            'by_quarter'       => $byQuarter,
+            'by_year'          => $byYear,
+            'owner_speed'      => $ownerSpeed,
+            'owner_revenue'    => $ownerRevenue,
+            'owner_activity'   => $ownerActivity,
+            'owner_monthly'    => $ownerMonthly,
+            'aging'            => $aging,
+            'pay_methods'      => $payMethods,
             'forecast_history' => $forecast,
-            'forecast_next' => $forecastMonths,
-            'top_positions' => $topPositions,
-            'yoy_growth'    => $yoyGrowth,
+            'forecast_next'    => $forecastMonths,
+            'top_positions'    => $topPositions,
+            'yoy_growth'       => $yoyGrowth,
         ]);
     }
 

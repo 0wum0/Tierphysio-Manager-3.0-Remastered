@@ -687,6 +687,70 @@ class InvoiceRepository extends Repository
         return $result;
     }
 
+    /** Most active owners by invoice count + total volume */
+    public function getOwnerActivity(int $limit = 15): array
+    {
+        $rows = $this->db->fetchAll(
+            "SELECT
+                CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
+                o.id AS owner_id,
+                COUNT(i.id) AS invoice_count,
+                SUM(i.total_gross) AS total_volume,
+                SUM(CASE WHEN i.status='paid' THEN i.total_gross ELSE 0 END) AS paid_volume,
+                SUM(CASE WHEN i.status IN ('open','overdue') THEN i.total_gross ELSE 0 END) AS outstanding_volume,
+                MAX(i.issue_date) AS last_invoice_date,
+                COUNT(CASE WHEN i.issue_date >= DATE_SUB(CURDATE(), INTERVAL 90 DAY) THEN 1 END) AS invoices_last_90d
+             FROM invoices i
+             JOIN owners o ON o.id = i.owner_id
+             GROUP BY o.id, o.first_name, o.last_name
+             ORDER BY invoice_count DESC, total_volume DESC
+             LIMIT ?",
+            [$limit]
+        );
+        return $rows ?: [];
+    }
+
+    /** Per-owner monthly revenue for last 12 months (top N owners by volume) */
+    public function getOwnerMonthlyRevenue(int $topN = 5): array
+    {
+        $topOwners = $this->db->fetchAll(
+            "SELECT o.id, CONCAT(o.first_name,' ',o.last_name) AS owner_name
+             FROM invoices i
+             JOIN owners o ON o.id = i.owner_id
+             WHERE i.status = 'paid'
+             GROUP BY o.id, o.first_name, o.last_name
+             ORDER BY SUM(i.total_gross) DESC
+             LIMIT ?",
+            [$topN]
+        );
+        if (!$topOwners) return [];
+
+        $result = [];
+        foreach ($topOwners as $owner) {
+            $rows = $this->db->fetchAll(
+                "SELECT DATE_FORMAT(issue_date,'%Y-%m') AS month, SUM(total_gross) AS revenue
+                 FROM invoices
+                 WHERE status = 'paid' AND owner_id = ?
+                   AND issue_date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+                 GROUP BY month ORDER BY month ASC",
+                [$owner['id']]
+            );
+            $map = [];
+            foreach ($rows as $r) { $map[$r['month']] = (float)$r['revenue']; }
+            $monthly = [];
+            for ($i = 11; $i >= 0; $i--) {
+                $key = date('Y-m', strtotime("-{$i} months"));
+                $monthly[] = $map[$key] ?? 0;
+            }
+            $result[] = [
+                'owner_id'   => $owner['id'],
+                'owner_name' => $owner['owner_name'],
+                'monthly'    => $monthly,
+            ];
+        }
+        return $result;
+    }
+
     /** Top treatment positions by revenue */
     public function getTopPositions(int $limit = 10): array
     {

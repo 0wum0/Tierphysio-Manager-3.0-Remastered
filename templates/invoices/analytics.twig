@@ -4,9 +4,9 @@
 <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
     <div>
         <h1 class="page-title mb-0">Finanz-Analyse</h1>
-        <p class="text-muted mb-0" style="font-size:.8rem;">Umsatzauswertung, Zahlungsverhalten & Prognose</p>
+        <p class="text-muted mb-0" style="font-size:.8rem;">Umsatz · Zahlungsverhalten · Prognosen · Besitzer-Ranking</p>
     </div>
-    <div class="d-flex gap-2 align-items-center">
+    <div class="d-flex gap-2 align-items-center flex-wrap">
         <a href="/rechnungen" class="btn btn-secondary btn-sm">
             <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="15 18 9 12 15 6"/></svg>
             Rechnungen
@@ -153,44 +153,111 @@
 {# ══════════════════════════════════════════════════════ TAB: BESITZER #}
 <div id="atab-besitzer" class="atab-pane d-none">
 
-    <div class="row g-3 mb-3">
+    {# ── Aktivste Besitzer ── #}
+    <div class="row g-3 mb-4">
         <div class="col-12">
-            <div class="card">
+            <div class="card" style="border-left:3px solid #4f7cff;">
                 <div class="card-body p-3">
-                    <div class="fw-semibold mb-1" style="font-size:.9rem;">Umsatz pro Tierhalter (Top 15)</div>
-                    <div class="text-muted mb-2" style="font-size:.75rem;">Bezahlt vs. ausstehend</div>
-                    <canvas id="chart-owner-revenue" height="100"></canvas>
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span style="font-size:1.3rem;">🏆</span>
+                        <div>
+                            <div class="fw-bold" style="font-size:1rem;">Aktivste Besitzer — Ranking</div>
+                            <div class="text-muted" style="font-size:.75rem;">Nach Anzahl Rechnungen sortiert · inkl. letzter Aktivität</div>
+                        </div>
+                    </div>
+                    <div style="overflow-x:auto;">
+                        <table class="table table-sm mb-0" style="font-size:.8rem;">
+                            <thead><tr>
+                                <th>#</th>
+                                <th>Tierhalter</th>
+                                <th class="text-end">Rechnungen</th>
+                                <th class="text-end">letzten 90 Tage</th>
+                                <th class="text-end">Gesamtumsatz</th>
+                                <th class="text-end">Davon bezahlt</th>
+                                <th class="text-end">Ausstehend</th>
+                                <th class="text-end">Letzte Rechnung</th>
+                                <th class="text-center">Aktivität</th>
+                            </tr></thead>
+                            <tbody id="owner-activity-tbody"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row g-3">
-        {# Fastest payers chart #}
-        <div class="col-12 col-xl-6">
+    {# ── Umsatz-Chart ── #}
+    <div class="row g-3 mb-4">
+        <div class="col-12">
             <div class="card">
                 <div class="card-body p-3">
-                    <div class="fw-semibold mb-1" style="font-size:.9rem;">Zahlungsgeschwindigkeit</div>
-                    <div class="text-muted mb-2" style="font-size:.75rem;">Ø Tage von Rechnungsdatum bis Zahlung</div>
-                    <canvas id="chart-pay-speed" height="160"></canvas>
+                    <div class="fw-bold mb-1" style="font-size:.95rem;">💰 Umsatz pro Tierhalter (Top 15)</div>
+                    <div class="text-muted mb-2" style="font-size:.75rem;">Bezahlt (grün) vs. Ausstehend (gelb)</div>
+                    <canvas id="chart-owner-revenue" height="90"></canvas>
                 </div>
             </div>
         </div>
-        {# Payment speed table #}
+    </div>
+
+    {# ── Schnellste & Langsamste Zahler — PROMINENT ── #}
+    <div class="row g-3 mb-4">
+        {# Schnellste #}
+        <div class="col-12 col-lg-6">
+            <div class="card h-100" style="border-left:3px solid #22c55e;">
+                <div class="card-body p-3">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span style="font-size:1.4rem;">⚡</span>
+                        <div>
+                            <div class="fw-bold" style="font-size:.95rem;color:#22c55e;">Schnellste Zahler</div>
+                            <div class="text-muted" style="font-size:.75rem;">Zahlen am schnellsten nach Rechnungsstellung</div>
+                        </div>
+                    </div>
+                    <div id="fastest-payers-cards"></div>
+                </div>
+            </div>
+        </div>
+        {# Langsamste #}
+        <div class="col-12 col-lg-6">
+            <div class="card h-100" style="border-left:3px solid #ef4444;">
+                <div class="card-body p-3">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span style="font-size:1.4rem;">🐢</span>
+                        <div>
+                            <div class="fw-bold" style="font-size:.95rem;color:#ef4444;">Langsamste Zahler</div>
+                            <div class="text-muted" style="font-size:.75rem;">Brauchen am längsten bis zur Zahlung</div>
+                        </div>
+                    </div>
+                    <div id="slowest-payers-cards"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ── Zahlungsgeschwindigkeit Detail ── #}
+    <div class="row g-3">
         <div class="col-12 col-xl-6">
             <div class="card">
                 <div class="card-body p-3">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <div class="fw-semibold" style="font-size:.9rem;">Tierhalter-Ranking: Zahlungsverhalten</div>
-                    </div>
+                    <div class="fw-bold mb-1" style="font-size:.95rem;">📊 Zahlungsgeschwindigkeit — Alle Besitzer</div>
+                    <div class="text-muted mb-2" style="font-size:.75rem;">Ø Tage von Rechnungsdatum bis Zahlung (Grün = schnell, Rot = langsam)</div>
+                    <canvas id="chart-pay-speed" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-6">
+            <div class="card">
+                <div class="card-body p-3">
+                    <div class="fw-bold mb-2" style="font-size:.95rem;">📋 Vollständige Zahlungsverhalten-Tabelle</div>
                     <div style="overflow-x:auto;">
-                        <table class="table table-sm mb-0" style="font-size:.8rem;" id="owner-speed-table">
+                        <table class="table table-sm mb-0" style="font-size:.78rem;">
                             <thead><tr>
                                 <th>#</th>
                                 <th>Tierhalter</th>
                                 <th class="text-end">Ø Tage</th>
+                                <th class="text-end">Min</th>
+                                <th class="text-end">Max</th>
                                 <th class="text-end">Rechnungen</th>
-                                <th class="text-end">Gesamt</th>
+                                <th class="text-end">Umsatz</th>
                                 <th class="text-center">Bewertung</th>
                             </tr></thead>
                             <tbody id="owner-speed-tbody"></tbody>
@@ -205,76 +272,103 @@
 {# ══════════════════════════════════════════════════════ TAB: PROGNOSE #}
 <div id="atab-prognose" class="atab-pane d-none">
 
-    <div class="row g-3 mb-3">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body p-3">
-                    <div class="d-flex align-items-start justify-content-between mb-2">
-                        <div>
-                            <div class="fw-semibold" style="font-size:.9rem;">Umsatzprognose — nächste 6 Monate</div>
-                            <div class="text-muted" style="font-size:.75rem;">Basis: Lineare Regression der letzten 18 Monate. Gestrichelte Linie = Prognose.</div>
-                        </div>
-                        <span class="badge bg-primary" id="forecast-trend-badge">—</span>
-                    </div>
-                    <canvas id="chart-forecast" height="100"></canvas>
+    {# ── Gesamtprognose KPIs ── #}
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-4">
+            <div class="card" style="border-left:3px solid #10b981;">
+                <div class="card-body p-3 text-center">
+                    <div class="text-muted small mb-1" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;">🔮 Progn. Jahresumsatz</div>
+                    <div class="fw-bold" id="forecast-annual" style="font-size:1.7rem;color:#10b981;">—</div>
+                    <div class="text-muted" style="font-size:.72rem;">nächste 12 Monate (Lineare Regression)</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card" style="border-left:3px solid #4f7cff;">
+                <div class="card-body p-3 text-center">
+                    <div class="text-muted small mb-1" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;">📅 Stärkster Prognose-Monat</div>
+                    <div class="fw-bold" id="forecast-best-month" style="font-size:1.4rem;color:#4f7cff;">—</div>
+                    <div class="text-muted" id="forecast-best-val" style="font-size:.72rem;">Erwarteter Umsatz: —</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card" style="border-left:3px solid #8b5cf6;">
+                <div class="card-body p-3 text-center">
+                    <div class="text-muted small mb-1" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;">📈 Ø Monatswachstum</div>
+                    <div class="fw-bold" id="forecast-growth-rate" style="font-size:1.4rem;color:#8b5cf6;">—</div>
+                    <div class="text-muted" style="font-size:.72rem;">Prognose-Zeitraum 6 Monate</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row g-3 mb-3">
-        {# Forecast table #}
-        <div class="col-12 col-md-6">
+    {# ── Gesamtumsatz-Prognose Chart ── #}
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body p-3">
+                    <div class="d-flex align-items-start justify-content-between mb-3">
+                        <div>
+                            <div class="fw-bold" style="font-size:1rem;">📈 Gesamtumsatz-Prognose — nächste 6 Monate</div>
+                            <div class="text-muted" style="font-size:.75rem;">Blau = tatsächlicher Umsatz (18 Monate) · Grün gestrichelt = Prognose (Lineare Regression)</div>
+                        </div>
+                        <span class="badge bg-secondary fs-6" id="forecast-trend-badge">—</span>
+                    </div>
+                    <canvas id="chart-forecast" height="95"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ── Monatliche Prognose-Tabelle + Einschätzungen ── #}
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-lg-5">
             <div class="card h-100">
                 <div class="card-body p-3">
-                    <div class="fw-semibold mb-2" style="font-size:.9rem;">Prognose-Tabelle</div>
-                    <table class="table table-sm" style="font-size:.82rem;">
-                        <thead><tr><th>Monat</th><th class="text-end">Erwarteter Umsatz</th><th class="text-end">Trend</th></tr></thead>
+                    <div class="fw-bold mb-3" style="font-size:.95rem;">📋 Monatliche Prognose-Tabelle</div>
+                    <table class="table table-sm" style="font-size:.83rem;">
+                        <thead><tr>
+                            <th>Monat</th>
+                            <th class="text-end">Erwarteter Umsatz</th>
+                            <th class="text-end">Veränderung</th>
+                        </tr></thead>
                         <tbody id="forecast-table-body"></tbody>
                     </table>
                 </div>
             </div>
         </div>
-        {# Forecast insights #}
-        <div class="col-12 col-md-6">
+        <div class="col-12 col-lg-7">
             <div class="card h-100">
                 <div class="card-body p-3">
-                    <div class="fw-semibold mb-3" style="font-size:.9rem;">Einschätzung & Empfehlungen</div>
-                    <div id="forecast-insights" style="font-size:.85rem;line-height:1.7;"></div>
+                    <div class="fw-bold mb-3" style="font-size:.95rem;">💡 Einschätzung & Empfehlungen</div>
+                    <div id="forecast-insights" style="font-size:.85rem;line-height:1.8;"></div>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="row g-3">
-        <div class="col-12 col-md-4">
-            <div class="card">
-                <div class="card-body p-3 text-center">
-                    <div class="text-muted small mb-1" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;">Progn. Jahresumsatz</div>
-                    <div class="fw-bold" id="forecast-annual" style="font-size:1.6rem;color:#10b981;">—</div>
-                    <div class="text-muted" style="font-size:.72rem;">nächste 12 Monate (linear)</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-md-4">
-            <div class="card">
-                <div class="card-body p-3 text-center">
-                    <div class="text-muted small mb-1" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;">Bestes Prognose-Monat</div>
-                    <div class="fw-bold" id="forecast-best-month" style="font-size:1.4rem;color:#4f7cff;">—</div>
-                    <div class="text-muted" id="forecast-best-val" style="font-size:.72rem;">—</div>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-md-4">
-            <div class="card">
-                <div class="card-body p-3 text-center">
-                    <div class="text-muted small mb-1" style="font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;">Wachstumsrate (6M)</div>
-                    <div class="fw-bold" id="forecast-growth-rate" style="font-size:1.4rem;color:#8b5cf6;">—</div>
-                    <div class="text-muted" style="font-size:.72rem;">Ø Monatswachstum</div>
+    {# ── BESITZER-PROGNOSEN ── #}
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="card" style="border-left:3px solid #f59e0b;">
+                <div class="card-body p-3">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <span style="font-size:1.3rem;">👥</span>
+                        <div>
+                            <div class="fw-bold" style="font-size:1rem;">Besitzer-Prognosen — Top 5 nach Umsatz</div>
+                            <div class="text-muted" style="font-size:.75rem;">Monatsverlauf der letzten 12 Monate mit linearer Prognose für die nächsten 3 Monate pro Besitzer</div>
+                        </div>
+                    </div>
+                    <canvas id="chart-owner-forecast" height="110"></canvas>
                 </div>
             </div>
         </div>
     </div>
+
+    {# ── Besitzer-Prognose Karten ── #}
+    <div class="row g-3" id="owner-forecast-cards"></div>
+
 </div>
 
 {# ══════════════════════════════════════════════════════ TAB: DETAILS #}
@@ -417,12 +511,19 @@ function renderAll(d){
     renderPayMethod(d);
     renderAging(d);
     renderTopPositions(d);
+    /* Besitzer tab */
+    renderOwnerActivityTable(d);
     renderOwnerRevenue(d);
+    renderFastSlowPayerCards(d);
     renderOwnerSpeed(d);
     renderOwnerTable(d);
+    /* Prognose tab */
     renderForecast(d);
     renderForecastTable(d);
     renderForecastInsights(d);
+    renderOwnerForecast(d);
+    renderOwnerForecastCards(d);
+    /* Details tab */
     renderHeatmap(d);
     renderAgingDetail(d);
     renderPayerExtremes(d);
@@ -966,6 +1067,212 @@ function renderPayerExtremes(d){
     });
     html+='</div>';
     div.innerHTML=html;
+}
+
+/* ── Owner Activity Table ────────────────────────────────────── */
+function renderOwnerActivityTable(d){
+    var tbody=el('owner-activity-tbody');
+    var owners=d.owner_activity||[];
+    if(!owners.length){ tbody.innerHTML='<tr><td colspan="9" class="text-center text-muted">Keine Daten</td></tr>'; return; }
+    var html='';
+    owners.forEach(function(o,i){
+        var last90=parseInt(o.invoices_last_90d)||0;
+        var actColor=last90>=3?'#22c55e':last90>=1?'#f59e0b':'#ef4444';
+        var actLabel=last90>=3?'Sehr aktiv':last90>=1?'Aktiv':'Inaktiv';
+        var lastDate=o.last_invoice_date?o.last_invoice_date.substring(0,10):'—';
+        html+='<tr>'
+            +'<td class="text-muted fw-semibold">'+(i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)+'.')+'</td>'
+            +'<td><a href="/tierhalter/'+o.owner_id+'" style="color:inherit;font-weight:600;">'+o.owner_name+'</a></td>'
+            +'<td class="text-end fw-bold" style="color:#4f7cff;">'+o.invoice_count+'</td>'
+            +'<td class="text-end"><span style="color:'+actColor+';font-weight:600;">'+last90+'</span></td>'
+            +'<td class="text-end fw-bold">'+fmt(o.total_volume)+'</td>'
+            +'<td class="text-end" style="color:#22c55e;">'+fmt(o.paid_volume)+'</td>'
+            +'<td class="text-end" style="color:#f59e0b;">'+fmt(o.outstanding_volume)+'</td>'
+            +'<td class="text-end text-muted" style="font-size:.75rem;">'+lastDate+'</td>'
+            +'<td class="text-center"><span style="font-size:.72rem;padding:2px 9px;border-radius:20px;background:'+actColor+'22;color:'+actColor+';font-weight:700;">'+actLabel+'</span></td>'
+            +'</tr>';
+    });
+    tbody.innerHTML=html;
+}
+
+/* ── Fast & Slow Payer Cards ────────────────────────────────── */
+function renderFastSlowPayerCards(d){
+    var speeds=d.owner_speed||[];
+    var fastDiv=el('fastest-payers-cards');
+    var slowDiv=el('slowest-payers-cards');
+    if(!speeds.length){
+        fastDiv.innerHTML='<div class="text-muted">Keine Daten (noch keine bezahlten Rechnungen mit Zahlungsdatum)</div>';
+        slowDiv.innerHTML='<div class="text-muted">Keine Daten</div>';
+        return;
+    }
+    var sorted=[].concat(speeds).sort(function(a,b){ return (parseFloat(a.avg_days)||0)-(parseFloat(b.avg_days)||0); });
+    var fastest=sorted.slice(0,7);
+    var slowest=sorted.slice(-7).reverse();
+
+    function makeCard(o, rank, isfast){
+        var days=parseFloat(o.avg_days)||0;
+        var color=isfast?'#22c55e':'#ef4444';
+        var medal=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':'';
+        var speed=isfast?(days<=1?'Sofort':days<=3?'Sehr schnell':days<=7?'Schnell':'Zügig'):(days>90?'Sehr langsam':days>60?'Langsam':days>30?'Etwas langsam':'Mittel');
+        return '<div class="d-flex align-items-center justify-content-between p-2 mb-2" style="background:rgba(255,255,255,.04);border-radius:8px;border-left:3px solid '+color+';">'
+            +'<div class="d-flex align-items-center gap-2">'
+            +'<span style="font-size:1rem;min-width:22px;">'+medal+'</span>'
+            +'<div>'
+            +'<div style="font-weight:600;font-size:.83rem;"><a href="/tierhalter/'+o.owner_id+'" style="color:inherit;text-decoration:none;">'+o.owner_name+'</a></div>'
+            +'<div style="font-size:.72rem;color:rgba(255,255,255,.45);">'+o.invoice_count+' Rechnungen · '+fmt(o.total_paid)+'</div>'
+            +'</div>'
+            +'</div>'
+            +'<div class="text-end">'
+            +'<div style="font-weight:700;font-size:.95rem;color:'+color+';">'+days.toFixed(1)+' T</div>'
+            +'<div style="font-size:.7rem;color:rgba(255,255,255,.4);">'+speed+'</div>'
+            +'</div>'
+            +'</div>';
+    }
+    fastDiv.innerHTML=fastest.map(function(o,i){ return makeCard(o,i+1,true); }).join('');
+    slowDiv.innerHTML=slowest.map(function(o,i){ return makeCard(o,i+1,false); }).join('');
+}
+
+/* ── Owner Forecast Line Chart ───────────────────────────────── */
+function renderOwnerForecast(d){
+    destroyChart('owner-forecast');
+    var monthly=d.owner_monthly||[];
+    if(!monthly.length){ return; }
+    var ctx=el('chart-owner-forecast').getContext('2d');
+
+    /* Build 12-month labels */
+    var labels=[];
+    for(var i=11;i>=0;i--){
+        var d2=new Date(); d2.setDate(1); d2.setMonth(d2.getMonth()-i);
+        labels.push(d2.toLocaleString('de-DE',{month:'short',year:'2-digit'}));
+    }
+    /* Add 3 forecast months */
+    for(var f=1;f<=3;f++){
+        var fd=new Date(); fd.setDate(1); fd.setMonth(fd.getMonth()+f);
+        labels.push('▶ '+fd.toLocaleString('de-DE',{month:'short',year:'2-digit'}));
+    }
+
+    var datasets=monthly.map(function(owner,idx){
+        var hist=owner.monthly||[];
+        /* Simple linear regression on last 6 months */
+        var recent=hist.slice(-6);
+        var n=recent.length;
+        var slope=0;
+        if(n>=2){
+            var sumX=0,sumY=0,sumXY=0,sumX2=0;
+            for(var i=0;i<n;i++){ sumX+=i; sumY+=recent[i]; sumXY+=i*recent[i]; sumX2+=i*i; }
+            var denom=(n*sumX2-sumX*sumX);
+            if(denom!==0) slope=(n*sumXY-sumX*sumY)/denom;
+        }
+        var lastVal=hist[hist.length-1]||0;
+        var forecastVals=[null,null,null,null,null,null,null,null,null,null,null,null];
+        forecastVals.push(Math.max(0,lastVal+slope));
+        forecastVals.push(Math.max(0,lastVal+slope*2));
+        forecastVals.push(Math.max(0,lastVal+slope*3));
+
+        var color=PALETTE[idx%PALETTE.length];
+        return [{
+            label:owner.owner_name+' (Ist)',
+            data:hist.concat([null,null,null]),
+            borderColor:color, backgroundColor:color+'22',
+            borderWidth:2, pointRadius:2, fill:false, tension:0.3
+        },{
+            label:owner.owner_name+' (Prog.)',
+            data:forecastVals,
+            borderColor:color, backgroundColor:'transparent',
+            borderWidth:2, borderDash:[5,4],
+            pointRadius:4, pointBackgroundColor:color,
+            fill:false, tension:0.3
+        }];
+    }).flat();
+
+    _charts['owner-forecast']=new Chart(ctx,{
+        type:'line',
+        data:{ labels:labels, datasets:datasets },
+        options:Object.assign({},chartDefaults,{
+            plugins:Object.assign({},chartDefaults.plugins,{
+                tooltip:{ callbacks:{ label:function(ctx){ return ' '+ctx.dataset.label+': '+fmt(ctx.parsed.y); } } }
+            })
+        })
+    });
+}
+
+/* ── Owner Forecast Cards ────────────────────────────────────── */
+function renderOwnerForecastCards(d){
+    var container=el('owner-forecast-cards');
+    var monthly=d.owner_monthly||[];
+    var speeds=d.owner_speed||[];
+    var speedMap={};
+    speeds.forEach(function(s){ speedMap[s.owner_id]=parseFloat(s.avg_days)||null; });
+
+    if(!monthly.length){
+        container.innerHTML='<div class="col-12"><div class="text-muted text-center py-3">Keine Daten für Besitzer-Prognosen</div></div>';
+        return;
+    }
+
+    var html='';
+    monthly.forEach(function(owner,idx){
+        var hist=owner.monthly||[];
+        var n=hist.length;
+        var slope=0, intercept=0;
+        if(n>=3){
+            var sumX=0,sumY=0,sumXY=0,sumX2=0;
+            for(var i=0;i<n;i++){ sumX+=i; sumY+=hist[i]; sumXY+=i*hist[i]; sumX2+=i*i; }
+            var denom=(n*sumX2-sumX*sumX);
+            if(denom!==0){ slope=(n*sumXY-sumX*sumY)/denom; intercept=(sumY-slope*sumX)/n; }
+        }
+        var p1=Math.max(0,intercept+slope*n);
+        var p2=Math.max(0,intercept+slope*(n+1));
+        var p3=Math.max(0,intercept+slope*(n+2));
+        var trend=intercept>0?(p3-hist[0])/Math.max(intercept,1)*100:0;
+        var trendColor=trend>=5?'#22c55e':trend<-5?'#ef4444':'#f59e0b';
+        var trendLabel=trend>=5?'↑ Wachsend':trend<-5?'↓ Rückläufig':'→ Stabil';
+        var lastYear=hist.reduce(function(a,b){return a+b;},0);
+        var avgDays=speedMap[owner.owner_id];
+        var speedLabel=avgDays===null?'—':avgDays.toFixed(1)+' Tage Ø';
+        var color=PALETTE[idx%PALETTE.length];
+
+        /* Next 3 months labels */
+        var months3=[];
+        for(var f=1;f<=3;f++){
+            var fd=new Date(); fd.setDate(1); fd.setMonth(fd.getMonth()+f);
+            months3.push(fd.toLocaleString('de-DE',{month:'long'}));
+        }
+
+        html+='<div class="col-12 col-md-6 col-xl-4">'
+            +'<div class="card h-100" style="border-top:3px solid '+color+';">'
+            +'<div class="card-body p-3">'
+            +'<div class="d-flex align-items-center justify-content-between mb-2">'
+            +'<div>'
+            +'<div style="font-weight:700;font-size:.9rem;color:'+color+';"><a href="/tierhalter/'+owner.owner_id+'" style="color:inherit;text-decoration:none;">'+owner.owner_name+'</a></div>'
+            +'<div style="font-size:.72rem;color:rgba(255,255,255,.45);">Umsatz letzte 12 Monate: '+fmt(lastYear)+'</div>'
+            +'</div>'
+            +'<span style="font-size:.72rem;padding:3px 10px;border-radius:20px;background:'+trendColor+'22;color:'+trendColor+';font-weight:700;">'+trendLabel+'</span>'
+            +'</div>'
+
+            +'<div class="d-flex gap-2 mb-3">'
+            +'<div style="flex:1;background:rgba(255,255,255,.05);border-radius:8px;padding:8px;text-align:center;">'
+            +'<div style="font-size:.65rem;color:rgba(255,255,255,.45);margin-bottom:2px;">'+months3[0]+'</div>'
+            +'<div style="font-weight:700;font-size:.9rem;color:'+color+';">'+fmt(p1)+'</div>'
+            +'</div>'
+            +'<div style="flex:1;background:rgba(255,255,255,.05);border-radius:8px;padding:8px;text-align:center;">'
+            +'<div style="font-size:.65rem;color:rgba(255,255,255,.45);margin-bottom:2px;">'+months3[1]+'</div>'
+            +'<div style="font-weight:700;font-size:.9rem;color:'+color+';">'+fmt(p2)+'</div>'
+            +'</div>'
+            +'<div style="flex:1;background:rgba(255,255,255,.05);border-radius:8px;padding:8px;text-align:center;">'
+            +'<div style="font-size:.65rem;color:rgba(255,255,255,.45);margin-bottom:2px;">'+months3[2]+'</div>'
+            +'<div style="font-weight:700;font-size:.9rem;color:'+color+';">'+fmt(p3)+'</div>'
+            +'</div>'
+            +'</div>'
+
+            +'<div class="d-flex justify-content-between" style="font-size:.75rem;border-top:1px solid rgba(255,255,255,.08);padding-top:8px;">'
+            +'<span class="text-muted">⚡ Zahlungsgeschwindigkeit</span>'
+            +'<span style="font-weight:600;">'+(avgDays===null?'—':(avgDays<=7?'<span style=color:#22c55e>'+speedLabel+'</span>':avgDays<=30?'<span style=color:#f59e0b>'+speedLabel+'</span>':'<span style=color:#ef4444>'+speedLabel+'</span>'))+'</span>'
+            +'</div>'
+            +'</div>'
+            +'</div>'
+            +'</div>';
+    });
+    container.innerHTML=html;
 }
 
 /* ── Boot ────────────────────────────────────────────────────── */

@@ -167,7 +167,9 @@ class InvoiceService
     public function getOverdueAging(): array                    { return $this->invoiceRepository->getOverdueAging(); }
     public function getPaymentMethodStats(): array              { return $this->invoiceRepository->getPaymentMethodStats(); }
     public function getRevenueForForecast(int $months = 18): array { return $this->invoiceRepository->getRevenueForForecast($months); }
-    public function getTopPositions(int $limit = 10): array     { return $this->invoiceRepository->getTopPositions($limit); }
+    public function getTopPositions(int $limit = 10): array        { return $this->invoiceRepository->getTopPositions($limit); }
+    public function getOwnerActivity(int $limit = 15): array       { return $this->invoiceRepository->getOwnerActivity($limit); }
+    public function getOwnerMonthlyRevenue(int $topN = 5): array   { return $this->invoiceRepository->getOwnerMonthlyRevenue($topN); }
 
     private function calculateTotals(array $positions): array
     {
