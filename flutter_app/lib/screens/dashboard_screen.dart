@@ -61,12 +61,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_data?['company_name'] as String? ?? 'Dashboard'),
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _load),
-        ],
-      ),
       body: _loading
           ? _buildShimmer()
           : _error != null
@@ -121,8 +115,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         // Notification banners
         ..._buildAlertBanners(d),
 
+        // Birthday banners
+        ..._buildBirthdayBanners(d),
+
         // Quick actions
         _buildQuickActions(),
+        const SizedBox(height: 16),
+
+        // Today's appointments
+        _buildTodayAppointments(d),
         const SizedBox(height: 16),
 
         // Finance + Appointments row (tablet: side by side)
@@ -183,6 +184,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return banners;
   }
 
+  List<Widget> _buildBirthdayBanners(Map<String, dynamic> d) {
+    final birthdays = List<Map<String, dynamic>>.from(
+      (d['birthdays_today'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)));
+    if (birthdays.isEmpty) return [];
+    return [
+      ...birthdays.map((b) => _AlertBanner(
+        icon: Icons.cake_rounded,
+        color: AppTheme.secondary,
+        message: '🎂 ${b['name']} hat heute Geburtstag! (${b['age']} Jahre)',
+        action: 'Profil',
+        onTap: () => context.push('/patienten/${b['id']}'),
+      )),
+      const SizedBox(height: 4),
+    ];
+  }
+
+  Widget _buildTodayAppointments(Map<String, dynamic> d) {
+    final apts = List<Map<String, dynamic>>.from(
+      (d['today_appointments'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)));
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(padding: const EdgeInsets.fromLTRB(16, 14, 12, 6), child: Row(children: [
+          Icon(Icons.today_rounded, size: 18, color: AppTheme.tertiary),
+          const SizedBox(width: 8),
+          Expanded(child: Text(
+            'Heute — ${DateFormat('d. MMMM', 'de_DE').format(DateTime.now())}',
+            style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.tertiary, fontSize: 14),
+          )),
+          TextButton(
+            onPressed: () => context.go('/kalender'),
+            child: const Text('Kalender'),
+          ),
+        ])),
+        const Divider(height: 1),
+        if (apts.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            child: Row(children: [
+              Icon(Icons.event_available_rounded, size: 20,
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
+              const SizedBox(width: 10),
+              Text('Keine Termine heute', style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
+            ]),
+          )
+        else
+          ...apts.map((apt) => _AppointmentCard(apt: apt)),
+      ]),
+    );
+  }
+
   Widget _buildQuickActions() {
     return Row(children: [
       Expanded(child: _QuickAction(icon: Icons.search_rounded, label: 'Suche', color: AppTheme.primary,
@@ -237,6 +295,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ]),
     );
   }
+
 
   Widget _greeting(Map<String, dynamic> d) {
     final hour = DateTime.now().hour;
@@ -443,6 +502,123 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 // ── Sub-widgets ─────────────────────────────────────────────────────────────
+
+class _AppointmentCard extends StatelessWidget {
+  final Map<String, dynamic> apt;
+  const _AppointmentCard({required this.apt});
+
+  Color _parseColor(String? hex, Color fallback) {
+    if (hex == null || hex.isEmpty) return fallback;
+    try {
+      final h = hex.replaceAll('#', '');
+      return Color(int.parse('FF$h', radix: 16));
+    } catch (_) { return fallback; }
+  }
+
+  String _statusLabel(String? s) => switch (s) {
+    'confirmed'  => 'Bestätigt',
+    'completed'  => 'Abgeschlossen',
+    'cancelled'  => 'Abgesagt',
+    'noshow'     => 'Nicht erschienen',
+    _            => 'Geplant',
+  };
+
+  Color _statusColor(String? s) => switch (s) {
+    'confirmed'  => AppTheme.success,
+    'completed'  => AppTheme.tertiary,
+    'cancelled'  => AppTheme.danger,
+    'noshow'     => AppTheme.warning,
+    _            => AppTheme.primary,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final aptColor  = _parseColor(apt['treatment_color'] as String? ?? apt['color'] as String?, AppTheme.primary);
+    final startStr  = apt['start_at'] as String? ?? '';
+    final endStr    = apt['end_at']   as String? ?? '';
+    DateTime? start, end;
+    try { start = DateTime.parse(startStr); } catch (_) {}
+    try { end   = DateTime.parse(endStr);   } catch (_) {}
+    final timeStr = start != null
+        ? '${DateFormat('HH:mm').format(start)}${end != null ? ' – ${DateFormat('HH:mm').format(end)}' : ''}'
+        : '';
+    final patient   = apt['patient_name']       as String? ?? '';
+    final owner     = apt['owner_name']          as String? ?? '';
+    final treatment = apt['treatment_type_name'] as String? ?? '';
+    final status    = apt['status']              as String? ?? 'scheduled';
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      decoration: BoxDecoration(
+        color: aptColor.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: aptColor.withValues(alpha: 0.25)),
+      ),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // Color strip
+        Container(
+          width: 4,
+          height: 72,
+          margin: const EdgeInsets.only(right: 12),
+          decoration: BoxDecoration(
+            color: aptColor,
+            borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
+          ),
+        ),
+        Expanded(
+          child: Padding(padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 0), child:
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Icon(Icons.schedule_rounded, size: 13, color: aptColor),
+                const SizedBox(width: 4),
+                Text(timeStr, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: aptColor)),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: _statusColor(status).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(_statusLabel(status),
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
+                      color: _statusColor(status))),
+                ),
+                const SizedBox(width: 8),
+              ]),
+              const SizedBox(height: 3),
+              Text(
+                apt['title'] as String? ?? '',
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                maxLines: 1, overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 2),
+              Row(children: [
+                if (patient.isNotEmpty) ...[Icon(Icons.pets_rounded, size: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  const SizedBox(width: 4),
+                  Text(patient, style: const TextStyle(fontSize: 11)),
+                  const SizedBox(width: 8),
+                ],
+                if (owner.isNotEmpty) ...[Icon(Icons.person_outline_rounded, size: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  const SizedBox(width: 4),
+                  Expanded(child: Text(owner,
+                    style: const TextStyle(fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                ],
+                if (treatment.isNotEmpty && owner.isEmpty) ...[Icon(Icons.medical_services_outlined, size: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  const SizedBox(width: 4),
+                  Expanded(child: Text(treatment,
+                    style: const TextStyle(fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                ],
+              ]),
+            ]),
+          ),
+        ),
+      ]),
+    );
+  }
+}
 
 class _ChartCard extends StatelessWidget {
   final String title, subtitle;

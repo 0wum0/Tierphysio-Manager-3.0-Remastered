@@ -212,14 +212,47 @@ class MobileApiController
         );
         $ownersTotal = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM owners");
 
-        $todayApts = 0;
-        $upcomingApts = 0;
+        $todayApts    = 0;
+        $upcomingApts  = 0;
+        $todayAptsList = [];
+        $newIntakes    = 0;
+        $birthdaysToday = [];
         try {
             $todayApts = (int)$this->db->fetchColumn(
                 "SELECT COUNT(*) FROM appointments WHERE DATE(start_at) = CURDATE() AND status != 'cancelled'"
             );
             $upcomingApts = (int)$this->db->fetchColumn(
                 "SELECT COUNT(*) FROM appointments WHERE start_at > NOW() AND status IN ('scheduled','confirmed')"
+            );
+            $todayAptsList = $this->db->fetchAll(
+                "SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.color,
+                        p.name AS patient_name, p.species AS patient_species,
+                        CONCAT(o.first_name,' ',o.last_name) AS owner_name,
+                        tt.name AS treatment_type_name, tt.color AS treatment_color
+                 FROM appointments a
+                 LEFT JOIN patients p  ON p.id = a.patient_id
+                 LEFT JOIN owners o    ON o.id = a.owner_id
+                 LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+                 WHERE DATE(a.start_at) = CURDATE() AND a.status != 'cancelled'
+                 ORDER BY a.start_at ASC"
+            );
+        } catch (\Throwable) {}
+        try {
+            $newIntakes = (int)$this->db->fetchColumn(
+                "SELECT COUNT(*) FROM patients WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
+            );
+        } catch (\Throwable) {}
+        try {
+            $birthdaysToday = $this->db->fetchAll(
+                "SELECT p.id, p.name, p.species,
+                        CONCAT(o.first_name,' ',o.last_name) AS owner_name,
+                        p.date_of_birth,
+                        TIMESTAMPDIFF(YEAR, p.date_of_birth, CURDATE()) AS age
+                 FROM patients p
+                 LEFT JOIN owners o ON o.id = p.owner_id
+                 WHERE p.date_of_birth IS NOT NULL
+                   AND DATE_FORMAT(p.date_of_birth, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')
+                 ORDER BY p.name ASC"
             );
         } catch (\Throwable) {}
 
@@ -251,20 +284,23 @@ class MobileApiController
         }
 
         $this->json([
-            'company_name'    => $settings['company_name'] ?? '',
-            'user_name'       => $userName,
-            'patients_total'  => $patientsTotal,
-            'patients_new'    => $patientsNew,
-            'owners_total'    => $ownersTotal,
-            'today_apts'      => $todayApts,
-            'upcoming_apts'   => $upcomingApts,
-            'revenue_month'   => round($stats['revenue_month'], 2),
-            'revenue_year'    => round($stats['revenue_year'], 2),
-            'open_invoices'   => $stats['open_count'],
-            'overdue_invoices'=> $stats['overdue_count'],
-            'open_amount'     => round($stats['open_amount'], 2),
-            'overdue_amount'  => round($stats['overdue_amount'], 2),
-            'monthly_revenue' => $monthlyRevenue,
+            'company_name'      => $settings['company_name'] ?? '',
+            'user_name'         => $userName,
+            'patients_total'    => $patientsTotal,
+            'patients_new'      => $patientsNew,
+            'owners_total'      => $ownersTotal,
+            'today_apts'        => $todayApts,
+            'upcoming_apts'     => $upcomingApts,
+            'today_appointments'=> $todayAptsList,
+            'new_intakes'       => $newIntakes,
+            'birthdays_today'   => $birthdaysToday,
+            'revenue_month'     => round($stats['revenue_month'], 2),
+            'revenue_year'      => round($stats['revenue_year'], 2),
+            'open_invoices'     => $stats['open_count'],
+            'overdue_invoices'  => $stats['overdue_count'],
+            'open_amount'       => round($stats['open_amount'], 2),
+            'overdue_amount'    => round($stats['overdue_amount'], 2),
+            'monthly_revenue'   => $monthlyRevenue,
         ]);
     }
 

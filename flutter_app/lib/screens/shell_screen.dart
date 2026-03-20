@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:intl/intl.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../core/theme.dart';
@@ -17,7 +19,11 @@ class ShellScreen extends StatefulWidget {
 class _ShellScreenState extends State<ShellScreen> {
   final _api = ApiService();
   int _unreadMessages = 0;
-  int _overdueCount  = 0;
+  int _overdueCount   = 0;
+  int _newIntakes     = 0;
+  int _birthdayCount  = 0;
+  late Timer _clockTimer;
+  DateTime _now = DateTime.now();
 
   // Primary bottom-nav routes (phone)
   static const _primaryRoutes = [
@@ -47,6 +53,29 @@ class _ShellScreenState extends State<ShellScreen> {
     super.initState();
     _pollUnread();
     _loadOverdue();
+    _pollNotifications();
+    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _now = DateTime.now());
+    });
+  }
+
+  @override
+  void dispose() {
+    _clockTimer.cancel();
+    super.dispose();
+  }
+
+  Future<void> _pollNotifications() async {
+    try {
+      final d = await _api.dashboard();
+      if (mounted) setState(() {
+        _newIntakes    = (d['new_intakes'] as num?)?.toInt() ?? 0;
+        _birthdayCount = ((d['birthdays_today'] as List?)?.length) ?? 0;
+      });
+    } catch (_) {}
+    Future.delayed(const Duration(minutes: 5), () {
+      if (mounted) _pollNotifications();
+    });
   }
 
   Future<void> _pollUnread() async {
@@ -236,12 +265,95 @@ class _ShellScreenState extends State<ShellScreen> {
     );
   }
 
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    final timeStr = DateFormat('HH:mm', 'de_DE').format(_now);
+    final totalBadge = _newIntakes + _birthdayCount;
+    return AppBar(
+      automaticallyImplyLeading: false,
+      titleSpacing: 16,
+      title: Row(
+        children: [
+          // Logo + TeraPano
+          SvgPicture.asset('assets/icons/paw.svg', width: 22, height: 22,
+            colorFilter: ColorFilter.mode(AppTheme.primary, BlendMode.srcIn)),
+          const SizedBox(width: 8),
+          RichText(text: TextSpan(
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+            children: [
+              TextSpan(text: 'Tera', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+              TextSpan(text: 'Pano', style: TextStyle(
+                foreground: Paint()..shader = LinearGradient(
+                  colors: [AppTheme.primary, AppTheme.secondary],
+                ).createShader(const Rect.fromLTWH(0, 0, 60, 20)),
+              )),
+            ],
+          )),
+          // Live clock — centered
+          Expanded(
+            child: Center(
+              child: Text(timeStr, style: TextStyle(
+                fontSize: 15, fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontFeatures: const [FontFeature.tabularFigures()],
+              )),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        // Notification bell
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.notifications_outlined),
+              tooltip: 'Benachrichtigungen',
+              onPressed: () => _showNotificationPanel(context),
+            ),
+            if (totalBadge > 0)
+              Positioned(
+                top: 8, right: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: AppTheme.danger,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  child: Text('$totalBadge',
+                    style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
+                    textAlign: TextAlign.center),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(width: 4),
+      ],
+    );
+  }
+
+  void _showNotificationPanel(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _NotificationSheet(
+        newIntakes:    _newIntakes,
+        birthdayCount: _birthdayCount,
+        onTap: (route) { Navigator.pop(ctx); context.push(route); },
+      ),
+    );
+  }
+
   Widget _buildNarrowLayout(BuildContext context) {
     final location = GoRouterState.of(context).matchedLocation;
     final primaryIdx = _primaryRoutes.indexWhere((r) => location.startsWith(r));
     final navIdx = primaryIdx >= 0 ? primaryIdx : 0;
 
     return Scaffold(
+      appBar: _buildAppBar(context),
       body: widget.child,
       bottomNavigationBar: NavigationBar(
         selectedIndex: navIdx,
@@ -399,4 +511,101 @@ class _SheetItem {
   final String route;
   final int? badge;
   const _SheetItem(this.icon, this.label, this.color, this.route, {this.badge});
+}
+
+// ── Notification bottom sheet ──────────────────────────────────────────────────
+
+class _NotificationSheet extends StatelessWidget {
+  final int newIntakes;
+  final int birthdayCount;
+  final void Function(String route) onTap;
+
+  const _NotificationSheet({
+    required this.newIntakes,
+    required this.birthdayCount,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasAny = newIntakes > 0 || birthdayCount > 0;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+        Text('Benachrichtigungen',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 16),
+        if (!hasAny)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Column(children: [
+              Icon(Icons.notifications_none_rounded, size: 48,
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
+              const SizedBox(height: 8),
+              Text('Keine neuen Benachrichtigungen',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            ]),
+          ),
+        if (newIntakes > 0)
+          _NotifTile(
+            icon: Icons.assignment_ind_rounded,
+            color: AppTheme.primary,
+            title: '$newIntakes neue Anmeldung${newIntakes == 1 ? '' : 'en'}',
+            subtitle: 'Neue Patienten in den letzten 7 Tagen',
+            onTap: () => onTap('/patienten'),
+          ),
+        if (birthdayCount > 0)
+          _NotifTile(
+            icon: Icons.cake_rounded,
+            color: AppTheme.secondary,
+            title: '$birthdayCount Geburtstag${birthdayCount == 1 ? '' : 'e'} heute!',
+            subtitle: 'Tier${birthdayCount == 1 ? '' : 'e'} haben heute Geburtstag',
+            onTap: () => onTap('/patienten'),
+          ),
+      ]),
+    );
+  }
+}
+
+class _NotifTile extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String title, subtitle;
+  final VoidCallback onTap;
+  const _NotifTile({required this.icon, required this.color,
+    required this.title, required this.subtitle, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(children: [
+              Container(
+                width: 42, height: 42,
+                decoration: BoxDecoration(color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
+                child: Icon(icon, color: color, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(title, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: color)),
+                Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+              ])),
+              Icon(Icons.chevron_right_rounded, color: color, size: 18),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
 }
