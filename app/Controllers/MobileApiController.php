@@ -279,7 +279,7 @@ class MobileApiController
 
         $userName = '';
         if (!empty($this->authUser)) {
-            $userName = trim(($this->authUser['first_name'] ?? '') . ' ' . ($this->authUser['last_name'] ?? ''));
+            $userName = trim($this->authUser['name'] ?? '');
             if ($userName === '') $userName = $this->authUser['email'] ?? '';
         }
 

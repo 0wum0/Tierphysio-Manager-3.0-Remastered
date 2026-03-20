@@ -278,13 +278,20 @@ class _ShellScreenState extends State<ShellScreen> {
             colorFilter: ColorFilter.mode(AppTheme.primary, BlendMode.srcIn)),
           const SizedBox(width: 8),
           RichText(text: TextSpan(
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+            style: const TextStyle(
+              fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.5,
+              decoration: TextDecoration.none,
+            ),
             children: [
-              TextSpan(text: 'Tera', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+              TextSpan(text: 'Thera', style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                decoration: TextDecoration.none,
+              )),
               TextSpan(text: 'Pano', style: TextStyle(
+                decoration: TextDecoration.none,
                 foreground: Paint()..shader = LinearGradient(
                   colors: [AppTheme.primary, AppTheme.secondary],
-                ).createShader(const Rect.fromLTWH(0, 0, 60, 20)),
+                ).createShader(const Rect.fromLTWH(0, 0, 56, 20)),
               )),
             ],
           )),

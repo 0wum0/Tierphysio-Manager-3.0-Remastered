@@ -16,17 +16,17 @@ void main() async {
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
-  runApp(const TeraPanoApp());
+  runApp(const TheraPanoApp());
 }
 
-class TeraPanoApp extends StatefulWidget {
-  const TeraPanoApp({super.key});
+class TheraPanoApp extends StatefulWidget {
+  const TheraPanoApp({super.key});
 
   @override
-  State<TeraPanoApp> createState() => _TeraPanoAppState();
+  State<TheraPanoApp> createState() => _TheraPanoAppState();
 }
 
-class _TeraPanoAppState extends State<TeraPanoApp> {
+class _TheraPanoAppState extends State<TheraPanoApp> {
   final _authService = AuthService();
 
   @override
@@ -39,7 +39,7 @@ class _TeraPanoAppState extends State<TeraPanoApp> {
       child: Builder(builder: (context) {
         final router = AppRouter(context.read<AuthService>()).router;
         return MaterialApp.router(
-          title: 'TeraPano',
+          title: 'TheraPano',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),
@@ -75,6 +75,7 @@ class _SplashOverlay extends StatefulWidget {
   @override
   State<_SplashOverlay> createState() => _SplashOverlayState();
 }
+
 
 class _SplashOverlayState extends State<_SplashOverlay> {
   bool _splashDone = false;
