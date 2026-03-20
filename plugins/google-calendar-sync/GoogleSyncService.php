@@ -232,6 +232,11 @@ class GoogleSyncService
                 $this->repo->log((int)$connection['id'], 'pull', true, 'SyncToken abgelaufen, führe vollständige Synchronisation durch.');
                 return $this->pullFromGoogle($timeMin);
             }
+            if ($e->getMessage() === 'TOKEN_REVOKED') {
+                $msg = 'Google-Zugang wurde widerrufen. Bitte unter Einstellungen → Google Kalender erneut verbinden.';
+                $this->repo->log((int)$connection['id'], 'error', false, $msg);
+                return ['success' => false, 'message' => $msg, 'imported' => 0, 'updated' => 0, 'deleted' => 0];
+            }
             $this->repo->log((int)$connection['id'], 'error', false, 'Pull fehlgeschlagen: ' . $e->getMessage());
             return ['success' => false, 'message' => $e->getMessage(), 'imported' => 0, 'updated' => 0, 'deleted' => 0];
         } catch (\Throwable $e) {

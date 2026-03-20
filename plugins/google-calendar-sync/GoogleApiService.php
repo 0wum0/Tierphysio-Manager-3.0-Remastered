@@ -93,6 +93,10 @@ class GoogleApiService
         ]);
 
         if (empty($response['access_token'])) {
+            /* invalid_grant = token revoked or expired permanently — needs re-auth */
+            if (($response['error'] ?? '') === 'invalid_grant') {
+                throw new \RuntimeException('TOKEN_REVOKED');
+            }
             throw new \RuntimeException('Token refresh failed: ' . ($response['error_description'] ?? json_encode($response)));
         }
 
