@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import '../core/theme.dart';
@@ -16,6 +17,8 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final _api = ApiService();
   Map<String, dynamic>? _data;
+  Map<String, dynamic>? _notifications;
+  List<Map<String, dynamic>> _waitlist = [];
   bool _loading = true;
   String? _error;
 
@@ -25,8 +28,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final data = await _api.dashboard();
-      setState(() { _data = data; _loading = false; });
+      final results = await Future.wait([
+        _api.dashboard(),
+        _api.notificationSummary().catchError((_) => <String, dynamic>{}),
+        _api.waitlistList().catchError((_) => <dynamic>[]),
+      ]);
+      setState(() {
+        _data          = results[0] as Map<String, dynamic>;
+        _notifications = results[1] as Map<String, dynamic>;
+        _waitlist      = (results[2] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _loading = false;
+      });
     } catch (e) {
       setState(() { _error = e.toString(); _loading = false; });
     }
@@ -96,7 +108,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         // Stats row
         _buildStatsRow(isTablet, d),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
+
+        // Notification banners
+        ..._buildAlertBanners(d),
+
+        // Quick actions
+        _buildQuickActions(),
+        const SizedBox(height: 16),
 
         // Finance + Appointments row (tablet: side by side)
         if (isTablet)
@@ -113,7 +132,100 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         const SizedBox(height: 16),
         _invoiceStats(d),
+        if (_waitlist.isNotEmpty) ...[const SizedBox(height: 16), _waitlistPreview()],
         const SizedBox(height: 80),
+      ]),
+    );
+  }
+
+  List<Widget> _buildAlertBanners(Map<String, dynamic> d) {
+    final overdue  = (d['overdue_invoices'] as num?)?.toInt() ?? 0;
+    final unread   = (_notifications?['unread_messages'] as num?)?.toInt() ?? 0;
+    final waitCnt  = _waitlist.length;
+    final banners  = <Widget>[];
+
+    if (overdue > 0) {
+      banners.add(_AlertBanner(
+        icon: Icons.warning_amber_rounded,
+        color: AppTheme.danger,
+        message: '$overdue überfällige Rechnung${overdue == 1 ? '' : 'en'}',
+        action: 'Anzeigen',
+        onTap: () => context.push('/mahnungen'),
+      ));
+    }
+    if (unread > 0) {
+      banners.add(_AlertBanner(
+        icon: Icons.chat_rounded,
+        color: AppTheme.primary,
+        message: '$unread ungelesene Nachricht${unread == 1 ? '' : 'en'}',
+        action: 'Öffnen',
+        onTap: () => context.go('/nachrichten'),
+      ));
+    }
+    if (waitCnt > 0) {
+      banners.add(_AlertBanner(
+        icon: Icons.people_alt_rounded,
+        color: AppTheme.warning,
+        message: '$waitCnt Patient${waitCnt == 1 ? '' : 'en'} auf der Warteliste',
+        action: 'Anzeigen',
+        onTap: () => context.push('/warteliste'),
+      ));
+    }
+    if (banners.isNotEmpty) banners.add(const SizedBox(height: 16));
+    return banners;
+  }
+
+  Widget _buildQuickActions() {
+    return Row(children: [
+      Expanded(child: _QuickAction(icon: Icons.search_rounded, label: 'Suche', color: AppTheme.primary,
+        onTap: () => context.push('/suche'))),
+      const SizedBox(width: 10),
+      Expanded(child: _QuickAction(icon: Icons.people_alt_rounded, label: 'Warteliste', color: AppTheme.warning,
+        onTap: () => context.push('/warteliste'))),
+      const SizedBox(width: 10),
+      Expanded(child: _QuickAction(icon: Icons.warning_amber_rounded, label: 'Mahnungen', color: AppTheme.danger,
+        onTap: () => context.push('/mahnungen'))),
+      const SizedBox(width: 10),
+      Expanded(child: _QuickAction(icon: Icons.person_rounded, label: 'Profil', color: AppTheme.secondary,
+        onTap: () => context.push('/profil'))),
+    ]);
+  }
+
+  Widget _waitlistPreview() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.warning.withValues(alpha: 0.3)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(padding: const EdgeInsets.fromLTRB(16, 14, 12, 6), child: Row(children: [
+          Icon(Icons.people_alt_rounded, size: 18, color: AppTheme.warning),
+          const SizedBox(width: 8),
+          Expanded(child: Text('Warteliste (${_waitlist.length})',
+            style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.warning, fontSize: 14))),
+          TextButton(
+            onPressed: () => context.push('/warteliste'),
+            child: const Text('Alle'),
+          ),
+        ])),
+        const Divider(height: 1),
+        ...(_waitlist.take(3).toList().asMap().entries.map((e) {
+          final item = e.value;
+          return ListTile(
+            dense: true,
+            leading: CircleAvatar(
+              radius: 14,
+              backgroundColor: AppTheme.warning.withValues(alpha: 0.12),
+              child: Text('${e.key + 1}', style: TextStyle(color: AppTheme.warning, fontSize: 11, fontWeight: FontWeight.w700)),
+            ),
+            title: Text(item['patient_name'] as String? ?? '—',
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+            subtitle: (item['owner_name'] as String? ?? '').isNotEmpty
+              ? Text(item['owner_name'] as String, style: const TextStyle(fontSize: 11))
+              : null,
+          );
+        })),
       ]),
     );
   }
@@ -381,6 +493,65 @@ class _InvoiceStat extends StatelessWidget {
       const SizedBox(height: 2),
       Text(label, style: Theme.of(context).textTheme.bodySmall),
     ]);
+  }
+}
+
+class _AlertBanner extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String message;
+  final String action;
+  final VoidCallback onTap;
+  const _AlertBanner({required this.icon, required this.color, required this.message, required this.action, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), child: Row(children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(width: 10),
+            Expanded(child: Text(message, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 13))),
+            Text(action, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 12,
+              decoration: TextDecoration.underline, decorationColor: color)),
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right_rounded, color: color, size: 16),
+          ])),
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+  const _QuickAction({required this.icon, required this.label, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: color.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Column(children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(height: 4),
+          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 10),
+            textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ])),
+      ),
+    );
   }
 }
 

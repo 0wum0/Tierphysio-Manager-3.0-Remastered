@@ -15,6 +15,14 @@ import '../screens/invoices/invoice_form_screen.dart';
 import '../screens/calendar/calendar_screen.dart';
 import '../screens/messages/messages_screen.dart';
 import '../screens/messages/message_thread_screen.dart';
+import '../screens/waitlist/waitlist_screen.dart';
+import '../screens/dunnings/dunnings_screen.dart';
+import '../screens/behandlungsarten/behandlungsarten_screen.dart';
+import '../screens/profile/profile_screen.dart';
+import '../screens/search/search_screen.dart';
+import '../screens/portal_admin/portal_admin_screen.dart';
+import '../screens/portal_admin/portal_user_detail_screen.dart';
+import '../screens/portal_admin/homework_plan_detail_screen.dart';
 
 class AppRouter {
   final AuthService authService;
@@ -81,6 +89,31 @@ class AppRouter {
                 builder: (_, s) => MessageThreadScreen(
                   threadId: int.parse(s.pathParameters['id']!),
                   prefill: s.extra is Map<String, dynamic> ? s.extra as Map<String, dynamic> : null,
+                ),
+              ),
+            ],
+          ),
+
+          GoRoute(path: '/warteliste',       builder: (_, __) => const WaitlistScreen()),
+          GoRoute(path: '/mahnungen',        builder: (_, __) => const DunningsScreen()),
+          GoRoute(path: '/behandlungsarten', builder: (_, __) => const BehandlungsartenScreen()),
+          GoRoute(path: '/profil',           builder: (_, __) => const ProfileScreen()),
+          GoRoute(path: '/suche',            builder: (_, __) => const SearchScreen()),
+
+          GoRoute(
+            path: '/portal-admin',
+            builder: (_, __) => const PortalAdminScreen(),
+            routes: [
+              GoRoute(
+                path: 'benutzer/:id',
+                builder: (_, s) => PortalUserDetailScreen(
+                  id: int.parse(s.pathParameters['id']!),
+                ),
+              ),
+              GoRoute(
+                path: 'hausaufgabenplan/:id',
+                builder: (_, s) => HomeworkPlanDetailScreen(
+                  id: int.parse(s.pathParameters['id']!),
                 ),
               ),
             ],
