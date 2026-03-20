@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 import '../core/theme.dart';
 
 class ShellScreen extends StatefulWidget {
@@ -56,6 +57,10 @@ class _ShellScreenState extends State<ShellScreen> {
     _pollNotifications();
     _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() => _now = DateTime.now());
+    });
+    NotificationService.requestPermission();
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) NotificationService.checkNow();
     });
   }
 

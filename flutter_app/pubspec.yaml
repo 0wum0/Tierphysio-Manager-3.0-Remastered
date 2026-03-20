@@ -68,6 +68,10 @@ dependencies:
   package_info_plus: ^8.0.0
   path_provider: ^2.1.3
 
+  # Local notifications (no external push service)
+  flutter_local_notifications: ^17.2.4
+  workmanager: ^0.5.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

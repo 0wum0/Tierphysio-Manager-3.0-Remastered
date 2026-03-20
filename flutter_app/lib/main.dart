@@ -6,10 +6,13 @@ import 'core/router.dart';
 import 'core/theme.dart';
 import 'services/auth_service.dart';
 import 'services/api_service.dart';
+import 'services/notification_service.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await ApiService.init();
+  await NotificationService.init();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
@@ -85,9 +88,12 @@ class _SplashOverlayState extends State<_SplashOverlay> {
     return Stack(children: [
       widget.child,
       if (!_splashDone)
-        SplashScreen(
-          authService: widget.authService,
-          onComplete: () => setState(() => _splashDone = true),
+        Material(
+          type: MaterialType.transparency,
+          child: SplashScreen(
+            authService: widget.authService,
+            onComplete: () => setState(() => _splashDone = true),
+          ),
         ),
     ]);
   }
