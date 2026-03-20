@@ -355,7 +355,7 @@ class CalendarController extends Controller
         $this->redirect('/kalender/warteliste');
     }
 
-    /* ── Waitlist: delete ── */
+    /* ── Waitlist: delete section ── */
     public function waitlistDelete(array $params = []): void
     {
         $this->validateCsrf();

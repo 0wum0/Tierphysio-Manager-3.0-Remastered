@@ -79,7 +79,7 @@ class CronAdminController extends Controller
         }
 
         if (empty($job['token'])) {
-            $this->session->flash('error', "Cron-Job „{$job['label']}": Kein Token konfiguriert. Bitte zuerst in den Einstellungen hinterlegen.");
+            $this->session->flash('error', 'Cron-Job "' . $job['label'] . '": Kein Token konfiguriert. Bitte zuerst in den Einstellungen hinterlegen.');
             $this->redirect('/admin/cronjobs');
             return;
         }
@@ -95,9 +95,9 @@ class CronAdminController extends Controller
         $this->logRunInstance($key, $status, $message, $ms, 'manual');
 
         if ($status === 'success') {
-            $this->session->flash('success', "✓ „{$job['label']}" erfolgreich ausgeführt ({$ms} ms).");
+            $this->session->flash('success', 'Cron-Job "' . $job['label'] . '" erfolgreich ausgefuehrt (' . $ms . ' ms).');
         } else {
-            $this->session->flash('error', "„{$job['label']}" fehlgeschlagen (HTTP {$response['http_code']}): " . mb_substr($message, 0, 200));
+            $this->session->flash('error', 'Cron-Job "' . $job['label'] . '" fehlgeschlagen (HTTP ' . $response['http_code'] . '): ' . mb_substr($message, 0, 200));
         }
 
         $this->redirect('/admin/cronjobs');
