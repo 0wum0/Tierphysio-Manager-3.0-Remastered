@@ -386,6 +386,41 @@ HTML;
         return str_replace(array_keys($placeholders), array_values($placeholders), $template);
     }
 
+    public function sendHomeworkNotification(array $patient, array $owner, string $planTitle, string $portalUrl): bool
+    {
+        try {
+            $companyName = $this->settingsRepository->get('company_name', 'Tierphysio Praxis');
+            $ownerName   = trim(($owner['first_name'] ?? '') . ' ' . ($owner['last_name'] ?? ''));
+            $patientName = $patient['name'] ?? '';
+
+            $subject  = "Neue Übungen für {$patientName} – {$companyName}";
+            $bodyText = "Hallo {$ownerName},\n\n"
+                      . "für {$patientName} wurden neue Übungen/Hausaufgaben erstellt: **{$planTitle}**\n\n"
+                      . "Du kannst diese direkt in deinem Besitzerportal einsehen und herunterladen:\n"
+                      . "{$portalUrl}\n\n"
+                      . "Viele Grüße\n{$companyName}";
+
+            $htmlBody = "<p>Hallo {$ownerName},</p>"
+                      . "<p>für <strong>{$patientName}</strong> wurden neue Übungen/Hausaufgaben erstellt: <strong>" . htmlspecialchars($planTitle) . "</strong></p>"
+                      . "<p><a href=\"{$portalUrl}\" style=\"display:inline-block;padding:12px 24px;background:#4f46e5;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;\">📋 Zum Besitzerportal</a></p>"
+                      . "<p style=\"font-size:12px;color:#666;\">Oder kopiere diesen Link: <a href=\"{$portalUrl}\">{$portalUrl}</a></p>"
+                      . "<p>Viele Grüße<br>{$companyName}</p>";
+
+            $mailer = $this->createMailer();
+            $mailer->addAddress($owner['email'], $ownerName);
+            $mailer->Subject = $subject;
+            $mailer->isHTML(true);
+            $mailer->Body    = $this->wrapInEmailLayout($subject, $htmlBody, '📋');
+            $mailer->AltBody = $bodyText;
+
+            return $mailer->send();
+        } catch (\Throwable $e) {
+            $this->lastError = $e->getMessage();
+            error_log('[MailService::sendHomeworkNotification] ' . $e->getMessage());
+            return false;
+        }
+    }
+
     public function sendHomework(array $patient, array $owner, string $pdfContent): bool
     {
         try {

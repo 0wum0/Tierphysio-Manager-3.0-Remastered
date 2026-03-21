@@ -12,6 +12,7 @@ use App\Repositories\InvoiceRepository;
 use App\Repositories\SettingsRepository;
 use App\Repositories\ReminderDunningRepository;
 use App\Repositories\TreatmentTypeRepository;
+use App\Services\MailService;
 
 /**
  * Mobile REST API — Bearer token authentication.
@@ -27,6 +28,7 @@ class MobileApiController
     private SettingsRepository       $settings;
     private ReminderDunningRepository $reminderDunning;
     private TreatmentTypeRepository  $treatmentTypeRepo;
+    private MailService              $mail;
 
     private ?array $authUser  = null;
     private ?array $bodyCache = null;
@@ -39,7 +41,8 @@ class MobileApiController
         InvoiceRepository         $invoiceRepository,
         SettingsRepository        $settingsRepository,
         ReminderDunningRepository $reminderDunningRepository,
-        TreatmentTypeRepository   $treatmentTypeRepository
+        TreatmentTypeRepository   $treatmentTypeRepository,
+        MailService               $mailService
     ) {
         $this->db                = $db;
         $this->users             = $userRepository;
@@ -49,6 +52,7 @@ class MobileApiController
         $this->settings          = $settingsRepository;
         $this->reminderDunning   = $reminderDunningRepository;
         $this->treatmentTypeRepo = $treatmentTypeRepository;
+        $this->mail              = $mailService;
     }
 
     /* ══════════════════════════════════════════════════════
@@ -2552,6 +2556,16 @@ class MobileApiController
             $planId = (int)$this->db->lastInsertId();
 
             $this->saveHomeworkTasks($planId, $data['tasks'] ?? []);
+
+            // Send e-mail notification to owner with portal link
+            $patient = $this->patients->findById($patientId);
+            $owner   = $this->owners->findById($ownerId);
+            if ($patient && $owner && !empty($owner['email'])) {
+                $portalUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
+                    . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/portal';
+                $planTitle = $data['general_notes'] ?? $data['physio_principles'] ?? 'Neuer Hausaufgabenplan';
+                $this->mail->sendHomeworkNotification($patient, $owner, $planTitle, $portalUrl);
+            }
         } catch (\Throwable $e) {
             $this->error('Fehler: ' . $e->getMessage(), 500);
         }

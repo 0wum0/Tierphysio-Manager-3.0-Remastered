@@ -6,18 +6,29 @@ use App\Core\Auth;
 use App\Core\Database;
 use App\Repositories\HomeworkRepository;
 use App\Repositories\PatientRepository;
+use App\Repositories\OwnerRepository;
+use App\Services\MailService;
 
 class HomeworkController
 {
     private HomeworkRepository $homeworkRepository;
     private PatientRepository $patientRepository;
     private Database $db;
+    private OwnerRepository $ownerRepository;
+    private MailService $mailService;
 
-    public function __construct(HomeworkRepository $homeworkRepository, PatientRepository $patientRepository, Database $db)
-    {
+    public function __construct(
+        HomeworkRepository $homeworkRepository,
+        PatientRepository $patientRepository,
+        Database $db,
+        OwnerRepository $ownerRepository,
+        MailService $mailService
+    ) {
         $this->homeworkRepository = $homeworkRepository;
-        $this->patientRepository = $patientRepository;
-        $this->db = $db;
+        $this->patientRepository  = $patientRepository;
+        $this->db                 = $db;
+        $this->ownerRepository    = $ownerRepository;
+        $this->mailService        = $mailService;
     }
 
     public function getTemplates(): void
@@ -150,6 +161,16 @@ class HomeworkController
                 'therapist_notes' => $therapistNotes,
                 'assigned_by' => Auth::getCurrentUserId()
             ]);
+
+            // Send e-mail notification to owner with portal link
+            if (!empty($patient['owner_id'])) {
+                $owner = $this->ownerRepository->findById((int)$patient['owner_id']);
+                if ($owner && !empty($owner['email'])) {
+                    $portalUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
+                        . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost') . '/portal';
+                    $this->mailService->sendHomeworkNotification($patient, $owner, $title, $portalUrl);
+                }
+            }
 
             header('Content-Type: application/json');
             echo json_encode(['success' => true, 'homework_id' => $homeworkId]);

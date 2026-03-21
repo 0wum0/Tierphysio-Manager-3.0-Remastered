@@ -496,8 +496,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
     try {
       if (id == null) {
         await _api.appointmentCreate(payload);
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: const Text('✓ Termin erstellt'), backgroundColor: Colors.green.shade700,
+            behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 3)));
       } else {
         await _api.appointmentUpdate(id, payload);
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: const Text('✓ Termin gespeichert'), backgroundColor: Colors.green.shade700,
+            behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 3)));
       }
       _loadMonth(_focusedDay);
     } catch (e) {
@@ -527,6 +533,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (ok != true || !mounted) return;
     try {
       await _api.appointmentDelete(id);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: const Text('✓ Termin gelöscht'), backgroundColor: Colors.orange.shade700,
+          behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 3)));
       _loadMonth(_focusedDay);
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));

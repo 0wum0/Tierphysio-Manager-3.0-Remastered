@@ -123,7 +123,17 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
         'notes':          _notesCtrl.text.trim(),
         'positions':      _positions.where((p) => p.description.isNotEmpty).map((p) => p.toMap()).toList(),
       });
-      if (mounted) context.pop();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('✓ Rechnung gespeichert'),
+            backgroundColor: Colors.green.shade700,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+        context.pop();
+      }
     } catch (e) {
       if (mounted) { setState(() => _loading = false); ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()))); }
     }
