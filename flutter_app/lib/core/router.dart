@@ -23,6 +23,9 @@ import '../screens/search/search_screen.dart';
 import '../screens/portal_admin/portal_admin_screen.dart';
 import '../screens/portal_admin/portal_user_detail_screen.dart';
 import '../screens/portal_admin/homework_plan_detail_screen.dart';
+import '../screens/intake/intake_screen.dart';
+import '../screens/intake/intake_detail_screen.dart';
+import '../screens/invite/invite_screen.dart';
 
 class AppRouter {
   final AuthService authService;
@@ -96,6 +99,16 @@ class AppRouter {
 
           GoRoute(path: '/warteliste',       builder: (_, __) => const WaitlistScreen()),
           GoRoute(path: '/mahnungen',        builder: (_, __) => const DunningsScreen()),
+
+          GoRoute(
+            path: '/anmeldungen',
+            builder: (_, __) => const IntakeScreen(),
+            routes: [
+              GoRoute(path: ':id', builder: (_, s) => IntakeDetailScreen(id: int.parse(s.pathParameters['id']!))),
+            ],
+          ),
+
+          GoRoute(path: '/einladungen', builder: (_, __) => const InviteScreen()),
           GoRoute(path: '/behandlungsarten', builder: (_, __) => const BehandlungsartenScreen()),
           GoRoute(path: '/profil',           builder: (_, __) => const ProfileScreen()),
           GoRoute(path: '/suche',            builder: (_, __) => const SearchScreen()),

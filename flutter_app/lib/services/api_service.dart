@@ -410,6 +410,36 @@ class ApiService {
   Future<void> userDeactivate(int id) async =>
       await post('/benutzer/$id/deaktivieren', {});
 
+  /* ── Intake (Anmeldungen) ── */
+
+  Future<List<dynamic>> intakeInbox() async =>
+      List<dynamic>.from(await get('/anmeldung'));
+
+  Future<Map<String, dynamic>> intakeShow(int id) async =>
+      Map<String, dynamic>.from(await get('/anmeldung/$id'));
+
+  Future<Map<String, dynamic>> intakeAccept(int id) async =>
+      Map<String, dynamic>.from(await post('/anmeldung/$id/annehmen', {}));
+
+  Future<Map<String, dynamic>> intakeReject(int id, {String? reason}) async =>
+      Map<String, dynamic>.from(await post('/anmeldung/$id/ablehnen', {
+        if (reason != null) 'reason': reason,
+      }));
+
+  /* ── Invitations (Einladungen) ── */
+
+  Future<List<dynamic>> inviteList() async =>
+      List<dynamic>.from(await get('/einladungen'));
+
+  Future<Map<String, dynamic>> inviteSend(Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/einladungen', data));
+
+  Future<void> inviteRevoke(int id) async =>
+      await post('/einladungen/$id/widerrufen', {});
+
+  Future<Map<String, dynamic>> inviteWhatsapp(int id) async =>
+      Map<String, dynamic>.from(await get('/einladungen/$id/whatsapp'));
+
   /* ── Portal Admin ── */
 
   Future<Map<String, dynamic>> portalStats() async =>

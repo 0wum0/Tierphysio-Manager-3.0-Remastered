@@ -54,6 +54,8 @@ class _ShellScreenState extends State<ShellScreen>
     '/nachrichten',
     '/warteliste',
     '/mahnungen',
+    '/anmeldungen',
+    '/einladungen',
     '/behandlungsarten',
     '/portal-admin',
   ];
@@ -165,9 +167,11 @@ class _ShellScreenState extends State<ShellScreen>
       ),
       builder: (ctx) {
         final items = [
-          _GridItem(Icons.person_rounded,         'Tierhalter',       AppTheme.secondary, '/tierhalter'),
+          _GridItem(Icons.person_rounded,          'Tierhalter',       AppTheme.secondary, '/tierhalter'),
           _GridItem(Icons.people_alt_rounded,      'Warteliste',       AppTheme.warning,   '/warteliste'),
           _GridItem(Icons.warning_amber_rounded,   'Mahnungen',        AppTheme.danger,    '/mahnungen',  badge: _overdueCount),
+          _GridItem(Icons.assignment_ind_rounded,  'Anmeldungen',      AppTheme.primary,   '/anmeldungen', badge: _newIntakes),
+          _GridItem(Icons.send_rounded,            'Einladungen',      AppTheme.secondary, '/einladungen'),
           _GridItem(Icons.category_rounded,        'Behandlungs\narten', AppTheme.tertiary, '/behandlungsarten'),
           _GridItem(Icons.home_work_rounded,       'Portal Admin',     AppTheme.tertiary,  '/portal-admin'),
           _GridItem(Icons.search_rounded,          'Suche',            AppTheme.primary,   '/suche'),
@@ -277,10 +281,12 @@ class _ShellScreenState extends State<ShellScreen>
       _SidebarDest(Icons.receipt_long_outlined,   Icons.receipt_long_rounded,      'Rechnungen'),
       _SidebarDest(Icons.calendar_month_outlined, Icons.calendar_month_rounded,    'Kalender'),
       _SidebarDest(Icons.chat_outlined,           Icons.chat_rounded,              'Nachrichten',  badge: _unreadMessages),
-      _SidebarDest(Icons.people_alt_outlined,     Icons.people_alt_rounded,        'Warteliste'),
-      _SidebarDest(Icons.warning_amber_outlined,  Icons.warning_amber_rounded,     'Mahnungen',    badge: _overdueCount),
-      _SidebarDest(Icons.category_outlined,       Icons.category_rounded,          'Behandlungsarten'),
-      _SidebarDest(Icons.home_work_outlined,      Icons.home_work_rounded,         'Portal Admin'),
+      _SidebarDest(Icons.people_alt_outlined,           Icons.people_alt_rounded,          'Warteliste'),
+      _SidebarDest(Icons.warning_amber_outlined,        Icons.warning_amber_rounded,       'Mahnungen',    badge: _overdueCount),
+      _SidebarDest(Icons.assignment_ind_outlined,       Icons.assignment_ind_rounded,      'Anmeldungen',  badge: _newIntakes),
+      _SidebarDest(Icons.send_outlined,                 Icons.send_rounded,                'Einladungen'),
+      _SidebarDest(Icons.category_outlined,             Icons.category_rounded,            'Behandlungsarten'),
+      _SidebarDest(Icons.home_work_outlined,            Icons.home_work_rounded,           'Portal Admin'),
     ];
 
     return Scaffold(
@@ -772,43 +778,46 @@ class _NotificationSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasAny = newIntakes > 0 || birthdayCount > 0;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16),
-          decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
-        Text('Benachrichtigungen',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 16),
-        if (!hasAny)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Column(children: [
-              Icon(Icons.notifications_none_rounded, size: 48,
-                color: Theme.of(context).colorScheme.onSurfaceVariant),
-              const SizedBox(height: 8),
-              Text('Keine neuen Benachrichtigungen',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
-            ]),
-          ),
-        if (newIntakes > 0)
-          _NotifTile(
-            icon: Icons.assignment_ind_rounded,
-            color: AppTheme.primary,
-            title: '$newIntakes neue Anmeldung${newIntakes == 1 ? '' : 'en'}',
-            subtitle: 'Neue Patienten in den letzten 7 Tagen',
-            onTap: () => onTap('/patienten'),
-          ),
-        if (birthdayCount > 0)
-          _NotifTile(
-            icon: Icons.cake_rounded,
-            color: AppTheme.secondary,
-            title: '$birthdayCount Geburtstag${birthdayCount == 1 ? '' : 'e'} heute!',
-            subtitle: 'Tier${birthdayCount == 1 ? '' : 'e'} haben heute Geburtstag',
-            onTap: () => onTap('/patienten'),
-          ),
-      ]),
+    return SafeArea(
+      top: false,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+          Text('Benachrichtigungen',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 16),
+          if (!hasAny)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Column(children: [
+                Icon(Icons.notifications_none_rounded, size: 48,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+                const SizedBox(height: 8),
+                Text('Keine neuen Benachrichtigungen',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              ]),
+            ),
+          if (newIntakes > 0)
+            _NotifTile(
+              icon: Icons.assignment_ind_rounded,
+              color: AppTheme.primary,
+              title: '$newIntakes neue Anmeldung${newIntakes == 1 ? '' : 'en'}',
+              subtitle: 'Zur Bestätigung antippen',
+              onTap: () => onTap('/anmeldungen'),
+            ),
+          if (birthdayCount > 0)
+            _NotifTile(
+              icon: Icons.cake_rounded,
+              color: AppTheme.secondary,
+              title: '$birthdayCount Geburtstag${birthdayCount == 1 ? '' : 'e'} heute!',
+              subtitle: 'Tier${birthdayCount == 1 ? '' : 'e'} haben heute Geburtstag',
+              onTap: () => onTap('/patienten'),
+            ),
+        ]),
+      ),
     );
   }
 }
