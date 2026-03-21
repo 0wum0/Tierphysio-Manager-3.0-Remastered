@@ -321,7 +321,7 @@ class MobileApiController
         $result = $this->patients->getPaginated($page, $per, $search, $filter);
         $result['items'] = array_map(static function (array $p): array {
             if (!empty($p['photo'])) {
-                $p['photo_url'] = '/patient-photos/' . $p['id'] . '/' . $p['photo'];
+                $p['photo_url'] = '/api/mobile/patients/' . $p['id'] . '/foto/' . rawurlencode(basename($p['photo']));
             }
             return $p;
         }, $result['items'] ?? []);
@@ -340,18 +340,17 @@ class MobileApiController
         $rawTimeline  = $this->patients->getTimeline($id);
         $invoiceStats = $this->invoices->getInvoiceStatsByPatientId($id);
 
-        // Expose attachment as file_url so Flutter can render media
+        // Expose attachment as file_url using the mobile API media endpoint (Bearer auth)
         $timeline = array_map(static function (array $e): array {
             if (!empty($e['attachment'])) {
-                $att      = $e['attachment'];
-                $filename = basename($att);
-                $e['file_url'] = '/patient-timeline/' . $e['patient_id'] . '/' . $filename;
+                $filename = basename($e['attachment']);
+                $e['file_url'] = '/api/mobile/patients/' . $e['patient_id'] . '/media/' . rawurlencode($filename);
             }
             return $e;
         }, $rawTimeline);
 
         if (!empty($patient['photo'])) {
-            $patient['photo_url'] = '/patient-photos/' . $id . '/' . $patient['photo'];
+            $patient['photo_url'] = '/api/mobile/patients/' . $id . '/foto/' . rawurlencode(basename($patient['photo']));
         }
         $patient['timeline']      = $timeline;
         $patient['invoice_stats'] = $invoiceStats;
@@ -499,7 +498,7 @@ class MobileApiController
         $dest     = $uploadDir . $filename;
         if (!move_uploaded_file($file['tmp_name'], $dest)) $this->error('Datei konnte nicht gespeichert werden.');
 
-        $fileUrl  = '/patient-timeline/' . $patientId . '/' . $filename;
+        $fileUrl  = '/api/mobile/patients/' . $patientId . '/media/' . rawurlencode($filename);
 
         $entryId = $this->patients->addTimelineEntry([
             'patient_id'        => $patientId,
@@ -533,6 +532,102 @@ class MobileApiController
         }
 
         $this->json(['success' => true]);
+    }
+
+    /**
+     * Serve a patient photo — Bearer authenticated.
+     * Searches: storage/patients/{id}/{file}, storage/patients/{file}, storage/intake/{file}
+     */
+    public function mediaServePhoto(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+
+        $id   = (int)($params['id'] ?? 0);
+        $file = basename($params['file'] ?? '');
+        if ($file === '') { http_response_code(404); exit; }
+
+        $storageBase = defined('STORAGE_PATH') ? rtrim(STORAGE_PATH, '/') : rtrim(dirname(__DIR__, 2) . '/storage', '/');
+        $candidates  = [
+            $storageBase . '/patients/' . $id . '/' . $file,
+            $storageBase . '/patients/' . $file,
+            $storageBase . '/intake/' . $file,
+        ];
+
+        $path = null;
+        foreach ($candidates as $c) {
+            if (is_file($c)) { $path = $c; break; }
+        }
+        if ($path === null) { http_response_code(404); exit; }
+
+        $this->streamFile($path);
+    }
+
+    /**
+     * Serve a patient timeline media file — Bearer authenticated.
+     * Searches: storage/patients/{id}/timeline/{file}, storage/patients/{id}/{file}
+     */
+    public function mediaServeFile(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+
+        $id   = (int)($params['id'] ?? 0);
+        $file = basename($params['file'] ?? '');
+        if ($file === '') { http_response_code(404); exit; }
+
+        $storageBase = defined('STORAGE_PATH') ? rtrim(STORAGE_PATH, '/') : rtrim(dirname(__DIR__, 2) . '/storage', '/');
+        $candidates  = [
+            $storageBase . '/patients/' . $id . '/timeline/' . $file,
+            $storageBase . '/patients/' . $id . '/' . $file,
+        ];
+
+        $path = null;
+        foreach ($candidates as $c) {
+            if (is_file($c)) { $path = $c; break; }
+        }
+        if ($path === null) { http_response_code(404); exit; }
+
+        $this->streamFile($path);
+    }
+
+    private function streamFile(string $path): void
+    {
+        $finfo    = new \finfo(FILEINFO_MIME_TYPE);
+        $mime     = $finfo->file($path);
+        $size     = filesize($path);
+        $filename = basename($path);
+
+        header('Content-Type: ' . $mime);
+        header('Content-Length: ' . $size);
+        header('Content-Disposition: inline; filename="' . addslashes($filename) . '"');
+        header('Cache-Control: private, max-age=86400');
+        header('Accept-Ranges: bytes');
+
+        // Support range requests for video streaming
+        $start = 0;
+        $end   = $size - 1;
+        if (isset($_SERVER['HTTP_RANGE'])) {
+            preg_match('/bytes=(\d+)-(\d*)/', $_SERVER['HTTP_RANGE'], $m);
+            $start = (int)($m[1] ?? 0);
+            $end   = isset($m[2]) && $m[2] !== '' ? (int)$m[2] : $size - 1;
+            $end   = min($end, $size - 1);
+            http_response_code(206);
+            header('Content-Range: bytes ' . $start . '-' . $end . '/' . $size);
+            header('Content-Length: ' . ($end - $start + 1));
+        }
+
+        $fp = fopen($path, 'rb');
+        fseek($fp, $start);
+        $remaining = $end - $start + 1;
+        while ($remaining > 0 && !feof($fp)) {
+            $chunk = fread($fp, min(8192, $remaining));
+            echo $chunk;
+            $remaining -= strlen($chunk);
+            flush();
+        }
+        fclose($fp);
+        exit;
     }
 
     /* ══════════════════════════════════════════════════════

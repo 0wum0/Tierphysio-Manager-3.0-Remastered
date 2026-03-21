@@ -90,6 +90,8 @@ $router->post('/api/mobile/invoices/{id}/mahnungen/{did}/loeschen', [MobileApiCo
 // Patients — extended
 $router->post('/api/mobile/patients/{id}/loeschen',           [MobileApiController::class, 'patientDelete']);
 $router->post('/api/mobile/patients/{id}/foto',               [MobileApiController::class, 'patientPhotoUpload']);
+$router->get('/api/mobile/patients/{id}/foto/{file}',         [MobileApiController::class, 'mediaServePhoto']);
+$router->get('/api/mobile/patients/{id}/media/{file}',        [MobileApiController::class, 'mediaServeFile']);
 $router->post('/api/mobile/patients/{id}/timeline/{eid}/update', [MobileApiController::class, 'patientTimelineUpdate']);
 
 // Owners — extended
