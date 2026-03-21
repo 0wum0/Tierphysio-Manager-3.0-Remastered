@@ -9,6 +9,9 @@ import '../services/api_service.dart';
 import '../services/notification_service.dart';
 import '../core/theme.dart';
 
+const double _kSidebarCollapsed = 72.0;
+const double _kSidebarExpanded  = 240.0;
+
 class ShellScreen extends StatefulWidget {
   final Widget child;
   const ShellScreen({super.key, required this.child});
@@ -17,7 +20,8 @@ class ShellScreen extends StatefulWidget {
   State<ShellScreen> createState() => _ShellScreenState();
 }
 
-class _ShellScreenState extends State<ShellScreen> {
+class _ShellScreenState extends State<ShellScreen>
+    with SingleTickerProviderStateMixin {
   final _api = ApiService();
   int _unreadMessages = 0;
   int _overdueCount   = 0;
@@ -25,6 +29,11 @@ class _ShellScreenState extends State<ShellScreen> {
   int _birthdayCount  = 0;
   late Timer _clockTimer;
   DateTime _now = DateTime.now();
+
+  // Sidebar animation
+  bool _sidebarExpanded = true;
+  late AnimationController _sidebarCtrl;
+  late Animation<double> _sidebarAnim;
 
   // Primary bottom-nav routes (phone)
   static const _primaryRoutes = [
@@ -59,12 +68,32 @@ class _ShellScreenState extends State<ShellScreen> {
       if (mounted) setState(() => _now = DateTime.now());
     });
     NotificationService.requestPermission();
+
+    _sidebarCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+      value: 1.0,
+    );
+    _sidebarAnim = CurvedAnimation(
+      parent: _sidebarCtrl,
+      curve: Curves.easeInOut,
+    );
   }
 
   @override
   void dispose() {
     _clockTimer.cancel();
+    _sidebarCtrl.dispose();
     super.dispose();
+  }
+
+  void _toggleSidebar() {
+    setState(() => _sidebarExpanded = !_sidebarExpanded);
+    if (_sidebarExpanded) {
+      _sidebarCtrl.forward();
+    } else {
+      _sidebarCtrl.reverse();
+    }
   }
 
   Future<void> _pollNotifications() async {
@@ -124,32 +153,8 @@ class _ShellScreenState extends State<ShellScreen> {
     );
   }
 
-  Widget _overdueBadge({bool selected = false}) {
-    final icon = Icon(selected ? Icons.warning_amber_rounded : Icons.warning_amber_outlined);
-    if (_overdueCount == 0) return icon;
-    return Badge(
-      label: Text('$_overdueCount', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700)),
-      backgroundColor: AppTheme.warning,
-      child: icon,
-    );
-  }
-
   void _openMoreDrawer() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => _MoreSheet(
-        unread: _unreadMessages,
-        overdue: _overdueCount,
-        onTap: (route) {
-          Navigator.pop(ctx);
-          context.push(route);
-        },
-      ),
-    );
+    Scaffold.of(context).openDrawer();
   }
 
   @override
@@ -163,104 +168,171 @@ class _ShellScreenState extends State<ShellScreen> {
   }
 
   Widget _buildWideLayout(BuildContext context) {
-    final extended = MediaQuery.of(context).size.width >= 960;
-    // sync selectedIndex for rail
     final location = GoRouterState.of(context).matchedLocation;
-    final railIdx = _railRoutes.indexWhere((r) => location.startsWith(r));
-    final railSelected = railIdx >= 0 ? railIdx : 0;
+    final railIdx  = _railRoutes.indexWhere((r) => location.startsWith(r));
+    final selected = railIdx >= 0 ? railIdx : 0;
+    final cs = Theme.of(context).colorScheme;
+
+    final destinations = [
+      _SidebarDest(Icons.dashboard_outlined,      Icons.dashboard_rounded,         'Dashboard'),
+      _SidebarDest(Icons.pets_outlined,           Icons.pets_rounded,              'Patienten'),
+      _SidebarDest(Icons.person_outline_rounded,  Icons.person_rounded,            'Tierhalter'),
+      _SidebarDest(Icons.receipt_long_outlined,   Icons.receipt_long_rounded,      'Rechnungen'),
+      _SidebarDest(Icons.calendar_month_outlined, Icons.calendar_month_rounded,    'Kalender'),
+      _SidebarDest(Icons.chat_outlined,           Icons.chat_rounded,              'Nachrichten',  badge: _unreadMessages),
+      _SidebarDest(Icons.people_alt_outlined,     Icons.people_alt_rounded,        'Warteliste'),
+      _SidebarDest(Icons.warning_amber_outlined,  Icons.warning_amber_rounded,     'Mahnungen',    badge: _overdueCount),
+      _SidebarDest(Icons.category_outlined,       Icons.category_rounded,          'Behandlungsarten'),
+      _SidebarDest(Icons.home_work_outlined,      Icons.home_work_rounded,         'Portal Admin'),
+    ];
 
     return Scaffold(
       body: Row(children: [
-        NavigationRail(
-          extended: extended,
-          selectedIndex: railSelected,
-          onDestinationSelected: _onRailSelected,
-          leading: Column(children: [
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppTheme.primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: SvgPicture.asset('assets/icons/paw.svg', width: 26, height: 26,
-                colorFilter: ColorFilter.mode(AppTheme.primary, BlendMode.srcIn)),
-            ),
-            if (extended) ...[const SizedBox(height: 4),
-              Text('TierPhysio', style: TextStyle(
-                fontSize: 12, fontWeight: FontWeight.w800,
-                color: AppTheme.primary, letterSpacing: -0.3)),
-            ],
-            const SizedBox(height: 4),
-            if (extended)
-              SizedBox(width: 180, child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                child: TextButton.icon(
-                  icon: const Icon(Icons.search_rounded, size: 16),
-                  label: const Text('Suche', style: TextStyle(fontSize: 12)),
-                  onPressed: () => context.push('/suche'),
-                  style: TextButton.styleFrom(alignment: Alignment.centerLeft),
-                ),
-              ))
-            else
-              IconButton(
-                icon: const Icon(Icons.search_rounded, size: 20),
-                tooltip: 'Suche',
-                onPressed: () => context.push('/suche'),
-              ),
-            const SizedBox(height: 8),
-          ]),
-          trailing: Expanded(
-            child: Align(
-              alignment: Alignment.bottomCenter,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  extended
-                    ? TextButton.icon(
-                        icon: const Icon(Icons.person_rounded, size: 18),
-                        label: const Text('Profil', style: TextStyle(fontSize: 13)),
-                        onPressed: () => context.push('/profil'),
-                      )
-                    : IconButton(
-                        icon: const Icon(Icons.person_rounded),
-                        tooltip: 'Profil',
-                        onPressed: () => context.push('/profil'),
+        AnimatedBuilder(
+          animation: _sidebarAnim,
+          builder: (context, _) {
+            final w = _kSidebarCollapsed +
+                (_kSidebarExpanded - _kSidebarCollapsed) * _sidebarAnim.value;
+            final showLabels = _sidebarAnim.value > 0.5;
+            return Container(
+              width: w,
+              color: cs.surface,
+              child: Column(
+                children: [
+                  // ── Header ──
+                  SizedBox(
+                    height: 64,
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 14),
+                        Container(
+                          width: 36, height: 36,
+                          decoration: BoxDecoration(
+                            color: AppTheme.primary.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Center(
+                            child: SvgPicture.asset(
+                              'assets/icons/paw.svg', width: 20, height: 20,
+                              colorFilter: ColorFilter.mode(AppTheme.primary, BlendMode.srcIn),
+                            ),
+                          ),
+                        ),
+                        if (showLabels) ...[  
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: RichText(
+                              overflow: TextOverflow.clip,
+                              text: TextSpan(
+                                style: const TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.4,
+                                  decoration: TextDecoration.none,
+                                ),
+                                children: [
+                                  TextSpan(text: 'Thera',
+                                    style: TextStyle(color: cs.onSurface, decoration: TextDecoration.none)),
+                                  TextSpan(text: 'Pano', style: TextStyle(
+                                    decoration: TextDecoration.none,
+                                    foreground: Paint()..shader = LinearGradient(
+                                      colors: [AppTheme.primary, AppTheme.secondary],
+                                    ).createShader(const Rect.fromLTWH(0, 0, 50, 18)),
+                                  )),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                        // Toggle button
+                        SizedBox(
+                          width: 36,
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            icon: AnimatedRotation(
+                              turns: _sidebarExpanded ? 0.5 : 0,
+                              duration: const Duration(milliseconds: 280),
+                              child: const Icon(Icons.chevron_right_rounded, size: 20),
+                            ),
+                            tooltip: _sidebarExpanded ? 'Einklappen' : 'Ausklappen',
+                            onPressed: _toggleSidebar,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Divider(height: 1, color: cs.outlineVariant),
+                  // ── Search ──
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    child: showLabels
+                        ? InkWell(
+                            borderRadius: BorderRadius.circular(10),
+                            onTap: () => context.push('/suche'),
+                            child: Container(
+                              height: 36,
+                              decoration: BoxDecoration(
+                                color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              child: Row(children: [
+                                Icon(Icons.search_rounded, size: 16,
+                                  color: cs.onSurfaceVariant),
+                                const SizedBox(width: 8),
+                                Text('Suche', style: TextStyle(
+                                  fontSize: 13, color: cs.onSurfaceVariant)),
+                              ]),
+                            ),
+                          )
+                        : IconButton(
+                            icon: const Icon(Icons.search_rounded, size: 20),
+                            tooltip: 'Suche',
+                            onPressed: () => context.push('/suche'),
+                          ),
+                  ),
+                  // ── Nav items ──
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      itemCount: destinations.length,
+                      itemBuilder: (ctx, i) {
+                        final dest = destinations[i];
+                        final isSelected = i == selected;
+                        return _SidebarTile(
+                          dest: dest,
+                          isSelected: isSelected,
+                          showLabel: showLabels,
+                          onTap: () => _onRailSelected(i),
+                        );
+                      },
+                    ),
+                  ),
+                  Divider(height: 1, color: cs.outlineVariant),
+                  // ── Footer ──
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      _SidebarTile(
+                        dest: _SidebarDest(Icons.person_outline_rounded,
+                            Icons.person_rounded, 'Profil'),
+                        isSelected: false,
+                        showLabel: showLabels,
+                        onTap: () => context.push('/profil'),
                       ),
-                  extended
-                    ? TextButton.icon(
-                        icon: const Icon(Icons.logout_rounded, size: 18),
-                        label: const Text('Abmelden', style: TextStyle(fontSize: 13)),
-                        onPressed: () => _confirmLogout(context),
-                        style: TextButton.styleFrom(foregroundColor: AppTheme.danger),
-                      )
-                    : IconButton(
-                        icon: const Icon(Icons.logout_rounded),
-                        tooltip: 'Abmelden',
-                        onPressed: () => _confirmLogout(context),
+                      _SidebarTile(
+                        dest: _SidebarDest(Icons.logout_rounded,
+                            Icons.logout_rounded, 'Abmelden',
+                            color: AppTheme.danger),
+                        isSelected: false,
+                        showLabel: showLabels,
+                        onTap: () => _confirmLogout(context),
                       ),
-                ]),
+                    ]),
+                  ),
+                ],
               ),
-            ),
-          ),
-          destinations: [
-            const NavigationRailDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard_rounded), label: Text('Dashboard')),
-            const NavigationRailDestination(icon: Icon(Icons.pets_outlined),      selectedIcon: Icon(Icons.pets_rounded),      label: Text('Patienten')),
-            const NavigationRailDestination(icon: Icon(Icons.person_outline_rounded), selectedIcon: Icon(Icons.person_rounded), label: Text('Tierhalter')),
-            const NavigationRailDestination(icon: Icon(Icons.receipt_long_outlined), selectedIcon: Icon(Icons.receipt_long_rounded), label: Text('Rechnungen')),
-            const NavigationRailDestination(icon: Icon(Icons.calendar_month_outlined), selectedIcon: Icon(Icons.calendar_month_rounded), label: Text('Kalender')),
-            NavigationRailDestination(
-              icon: _msgBadge(rail: true), selectedIcon: _msgBadge(selected: true, rail: true),
-              label: const Text('Nachrichten'),
-            ),
-            const NavigationRailDestination(icon: Icon(Icons.people_alt_outlined), selectedIcon: Icon(Icons.people_alt_rounded), label: Text('Warteliste')),
-            NavigationRailDestination(
-              icon: _overdueBadge(), selectedIcon: _overdueBadge(selected: true),
-              label: const Text('Mahnungen'),
-            ),
-            const NavigationRailDestination(icon: Icon(Icons.category_outlined), selectedIcon: Icon(Icons.category_rounded), label: Text('Behandlungsarten')),
-            const NavigationRailDestination(icon: Icon(Icons.home_work_outlined), selectedIcon: Icon(Icons.home_work_rounded), label: Text('Portal Admin')),
-          ],
+            );
+          },
         ),
         VerticalDivider(width: 1, color: Theme.of(context).dividerColor),
         Expanded(child: widget.child),
@@ -364,6 +436,7 @@ class _ShellScreenState extends State<ShellScreen> {
 
     return Scaffold(
       appBar: _buildAppBar(context),
+      drawer: _buildDrawer(context),
       body: widget.child,
       bottomNavigationBar: NavigationBar(
         selectedIndex: navIdx,
@@ -417,6 +490,136 @@ class _ShellScreenState extends State<ShellScreen> {
     );
   }
 
+  Widget _buildDrawer(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final location = GoRouterState.of(context).matchedLocation;
+
+    final items = [
+      _DrawerItem(Icons.dashboard_rounded,        'Dashboard',        AppTheme.primary,   '/dashboard'),
+      _DrawerItem(Icons.pets_rounded,             'Patienten',        AppTheme.primary,   '/patienten'),
+      _DrawerItem(Icons.person_rounded,           'Tierhalter',       AppTheme.secondary, '/tierhalter'),
+      _DrawerItem(Icons.receipt_long_rounded,     'Rechnungen',       AppTheme.tertiary,  '/rechnungen'),
+      _DrawerItem(Icons.calendar_month_rounded,   'Kalender',         AppTheme.primary,   '/kalender'),
+      _DrawerItem(Icons.chat_rounded,             'Nachrichten',      AppTheme.secondary, '/nachrichten', badge: _unreadMessages),
+      _DrawerItem(Icons.people_alt_rounded,       'Warteliste',       AppTheme.warning,   '/warteliste'),
+      _DrawerItem(Icons.warning_amber_rounded,    'Mahnungen',        AppTheme.danger,    '/mahnungen',   badge: _overdueCount),
+      _DrawerItem(Icons.category_rounded,         'Behandlungsarten', AppTheme.tertiary,  '/behandlungsarten'),
+      _DrawerItem(Icons.home_work_rounded,        'Portal Admin',     AppTheme.tertiary,  '/portal-admin'),
+      _DrawerItem(Icons.search_rounded,           'Suche',            AppTheme.primary,   '/suche'),
+    ];
+
+    return Drawer(
+      width: 280,
+      child: SafeArea(
+        child: Column(
+          children: [
+            // ── Header ──
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+              child: Row(children: [
+                Container(
+                  width: 40, height: 40,
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: SvgPicture.asset(
+                      'assets/icons/paw.svg', width: 22, height: 22,
+                      colorFilter: ColorFilter.mode(AppTheme.primary, BlendMode.srcIn),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                RichText(text: TextSpan(
+                  style: const TextStyle(
+                    fontSize: 20, fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5, decoration: TextDecoration.none,
+                  ),
+                  children: [
+                    TextSpan(text: 'Thera',
+                      style: TextStyle(color: cs.onSurface, decoration: TextDecoration.none)),
+                    TextSpan(text: 'Pano', style: TextStyle(
+                      decoration: TextDecoration.none,
+                      foreground: Paint()..shader = LinearGradient(
+                        colors: [AppTheme.primary, AppTheme.secondary],
+                      ).createShader(const Rect.fromLTWH(0, 0, 60, 22)),
+                    )),
+                  ],
+                )),
+              ]),
+            ),
+            Divider(height: 1, color: cs.outlineVariant),
+            // ── Nav items ──
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                itemCount: items.length,
+                itemBuilder: (ctx, i) {
+                  final item = items[i];
+                  final isActive = location.startsWith(item.route);
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: ListTile(
+                      dense: true,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      tileColor: isActive
+                          ? item.color.withValues(alpha: 0.12)
+                          : Colors.transparent,
+                      leading: Badge(
+                        isLabelVisible: (item.badge ?? 0) > 0,
+                        label: Text('${item.badge}',
+                          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700)),
+                        backgroundColor: AppTheme.danger,
+                        child: Icon(item.icon,
+                          color: isActive ? item.color : cs.onSurfaceVariant,
+                          size: 22),
+                      ),
+                      title: Text(item.label, style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                        color: isActive ? item.color : cs.onSurface,
+                      )),
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.go(item.route);
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+            Divider(height: 1, color: cs.outlineVariant),
+            // ── Footer ──
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                ListTile(
+                  dense: true,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  leading: Icon(Icons.person_rounded, color: cs.onSurfaceVariant, size: 22),
+                  title: Text('Mein Profil',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: cs.onSurface)),
+                  onTap: () { Navigator.pop(context); context.push('/profil'); },
+                ),
+                ListTile(
+                  dense: true,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  leading: Icon(Icons.logout_rounded, color: AppTheme.danger, size: 22),
+                  title: Text('Abmelden',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.danger)),
+                  onTap: () { Navigator.pop(context); _confirmLogout(context); },
+                ),
+              ]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _confirmLogout(BuildContext context) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -435,92 +638,103 @@ class _ShellScreenState extends State<ShellScreen> {
   }
 }
 
-// ── "Mehr" bottom sheet ────────────────────────────────────────────────────────
+// ── Sidebar helpers ────────────────────────────────────────────────────────────
 
-class _MoreSheet extends StatelessWidget {
-  final int unread;
-  final int overdue;
-  final void Function(String route) onTap;
+class _SidebarDest {
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final int badge;
+  final Color? color;
+  const _SidebarDest(this.icon, this.selectedIcon, this.label,
+      {this.badge = 0, this.color});
+}
 
-  const _MoreSheet({required this.unread, required this.overdue, required this.onTap});
+class _SidebarTile extends StatelessWidget {
+  final _SidebarDest dest;
+  final bool isSelected;
+  final bool showLabel;
+  final VoidCallback onTap;
+
+  const _SidebarTile({
+    required this.dest,
+    required this.isSelected,
+    required this.showLabel,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16),
-          decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
-        Text('Menü', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 16),
-        _grid(context, [
-          _SheetItem(Icons.person_rounded,       'Tierhalter',       AppTheme.secondary, '/tierhalter'),
-          _SheetItem(Icons.people_alt_rounded,   'Warteliste',       AppTheme.warning,   '/warteliste'),
-          _SheetItem(Icons.warning_amber_rounded,'Mahnungen',        AppTheme.danger,    '/mahnungen',  badge: overdue),
-          _SheetItem(Icons.category_rounded,     'Behandlungs-\narten', AppTheme.tertiary, '/behandlungsarten'),
-          _SheetItem(Icons.search_rounded,       'Suche',            AppTheme.primary,   '/suche'),
-          _SheetItem(Icons.home_work_rounded,    'Portal\nAdmin',    AppTheme.tertiary,  '/portal-admin'),
-          _SheetItem(Icons.person_pin_rounded,   'Mein Profil',      cs.primary,         '/profil'),
-        ]),
-      ]),
-    );
-  }
+    final accent = dest.color ?? AppTheme.primary;
+    final fg = isSelected ? accent : cs.onSurfaceVariant;
 
-  Widget _grid(BuildContext context, List<_SheetItem> items) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 0.95,
-      ),
-      itemCount: items.length,
-      itemBuilder: (ctx, i) {
-        final item = items[i];
-        return InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: () => onTap(item.route),
-          child: Container(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2),
+      child: Tooltip(
+        message: showLabel ? '' : dest.label,
+        preferBelow: false,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
-              color: item.color.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: item.color.withValues(alpha: 0.18)),
+              color: isSelected ? accent.withValues(alpha: 0.12) : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
             ),
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Badge(
-                isLabelVisible: (item.badge ?? 0) > 0,
-                label: Text('${item.badge}', style: const TextStyle(fontSize: 9)),
-                backgroundColor: AppTheme.danger,
-                child: Container(
-                  width: 44, height: 44,
-                  decoration: BoxDecoration(
-                    color: item.color.withValues(alpha: 0.12),
-                    shape: BoxShape.circle,
+            padding: EdgeInsets.symmetric(
+              horizontal: showLabel ? 10 : 0,
+              vertical: 10,
+            ),
+            child: Row(
+              mainAxisAlignment: showLabel
+                  ? MainAxisAlignment.start
+                  : MainAxisAlignment.center,
+              children: [
+                Badge(
+                  isLabelVisible: dest.badge > 0,
+                  label: Text('${dest.badge}',
+                    style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700)),
+                  backgroundColor: AppTheme.danger,
+                  child: Icon(
+                    isSelected ? dest.selectedIcon : dest.icon,
+                    color: fg,
+                    size: 22,
                   ),
-                  child: Icon(item.icon, color: item.color, size: 22),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(item.label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: item.color),
-                textAlign: TextAlign.center, maxLines: 2),
-            ]),
+                if (showLabel) ...[
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      dest.label,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        color: isSelected ? accent : cs.onSurface,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
 
-class _SheetItem {
+// ── Drawer item model ──────────────────────────────────────────────────────────
+
+class _DrawerItem {
   final IconData icon;
   final String label;
   final Color color;
   final String route;
   final int? badge;
-  const _SheetItem(this.icon, this.label, this.color, this.route, {this.badge});
+  const _DrawerItem(this.icon, this.label, this.color, this.route, {this.badge});
 }
 
 // ── Notification bottom sheet ──────────────────────────────────────────────────
