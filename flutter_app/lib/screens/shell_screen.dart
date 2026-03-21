@@ -153,8 +153,10 @@ class _ShellScreenState extends State<ShellScreen>
     );
   }
 
+  final _narrowScaffoldKey = GlobalKey<ScaffoldState>();
+
   void _openMoreDrawer() {
-    Scaffold.of(context).openDrawer();
+    _narrowScaffoldKey.currentState?.openDrawer();
   }
 
   @override
@@ -335,7 +337,58 @@ class _ShellScreenState extends State<ShellScreen>
           },
         ),
         VerticalDivider(width: 1, color: Theme.of(context).dividerColor),
-        Expanded(child: widget.child),
+        Expanded(
+          child: Column(
+            children: [
+              _buildTopBar(context),
+              Expanded(child: widget.child),
+            ],
+          ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _buildTopBar(BuildContext context) {
+    final cs       = Theme.of(context).colorScheme;
+    final timeStr  = DateFormat('HH:mm', 'de_DE').format(_now);
+    final totalBadge = _newIntakes + _birthdayCount;
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        color: cs.surface,
+        border: Border(bottom: BorderSide(color: cs.outlineVariant, width: 1)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(children: [
+        Text(timeStr, style: TextStyle(
+          fontSize: 15, fontWeight: FontWeight.w600,
+          color: cs.onSurfaceVariant,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        )),
+        const Spacer(),
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.notifications_outlined),
+              tooltip: 'Benachrichtigungen',
+              onPressed: () => _showNotificationPanel(context),
+            ),
+            if (totalBadge > 0)
+              Positioned(
+                top: 8, right: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  child: Text('$totalBadge',
+                    style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
+                    textAlign: TextAlign.center),
+                ),
+              ),
+          ],
+        ),
       ]),
     );
   }
@@ -435,6 +488,7 @@ class _ShellScreenState extends State<ShellScreen>
     final navIdx = primaryIdx >= 0 ? primaryIdx : 0;
 
     return Scaffold(
+      key: _narrowScaffoldKey,
       appBar: _buildAppBar(context),
       drawer: _buildDrawer(context),
       body: widget.child,

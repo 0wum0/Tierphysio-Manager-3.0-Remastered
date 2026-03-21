@@ -155,12 +155,21 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
           ),
         ],
       ),
+      floatingActionButton: _dataReady
+          ? FloatingActionButton.extended(
+              onPressed: _loading ? null : _submit,
+              icon: _loading
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.save_rounded),
+              label: Text(_loading ? 'Speichern…' : 'Rechnung speichern'),
+            )
+          : null,
       body: !_dataReady
           ? const Center(child: CircularProgressIndicator())
           : Form(
               key: _formKey,
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
