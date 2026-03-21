@@ -27,8 +27,8 @@ class _InviteScreenState extends State<InviteScreen> {
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final items = await _api.inviteList();
-      setState(() { _items = items; _loading = false; });
+      final data = await _api.inviteList();
+      setState(() { _items = (data['items'] as List? ?? []); _loading = false; });
     } catch (e) {
       setState(() { _error = e.toString(); _loading = false; });
     }

@@ -412,8 +412,10 @@ class ApiService {
 
   /* ── Intake (Anmeldungen) ── */
 
-  Future<List<dynamic>> intakeInbox() async =>
-      List<dynamic>.from(await get('/anmeldung'));
+  Future<Map<String, dynamic>> intakeInbox({int page = 1, int perPage = 50}) async =>
+      Map<String, dynamic>.from(await get('/anmeldung', query: {
+        'page': page, 'per_page': perPage,
+      }));
 
   Future<Map<String, dynamic>> intakeShow(int id) async =>
       Map<String, dynamic>.from(await get('/anmeldung/$id'));
@@ -428,8 +430,10 @@ class ApiService {
 
   /* ── Invitations (Einladungen) ── */
 
-  Future<List<dynamic>> inviteList() async =>
-      List<dynamic>.from(await get('/einladungen'));
+  Future<Map<String, dynamic>> inviteList({int page = 1, int perPage = 50}) async =>
+      Map<String, dynamic>.from(await get('/einladungen', query: {
+        'page': page, 'per_page': perPage,
+      }));
 
   Future<Map<String, dynamic>> inviteSend(Map<String, dynamic> data) async =>
       Map<String, dynamic>.from(await post('/einladungen', data));
