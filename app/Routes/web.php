@@ -42,6 +42,7 @@ $router->post('/api/mobile/owners/{id}',  [MobileApiController::class, 'ownerUpd
 
 $router->get('/api/mobile/invoices',             [MobileApiController::class, 'invoicesList']);
 $router->post('/api/mobile/invoices',            [MobileApiController::class, 'invoiceCreate']);
+$router->get('/api/mobile/invoices/stats',       [MobileApiController::class, 'invoiceStats']);
 $router->get('/api/mobile/invoices/{id}',        [MobileApiController::class, 'invoiceShow']);
 $router->post('/api/mobile/invoices/{id}/status',[MobileApiController::class, 'invoiceUpdateStatus']);
 
@@ -72,7 +73,6 @@ $router->get('/api/mobile/search',                            [MobileApiControll
 $router->post('/api/mobile/invoices/{id}/update',             [MobileApiController::class, 'invoiceUpdate']);
 $router->post('/api/mobile/invoices/{id}/loeschen',           [MobileApiController::class, 'invoiceDelete']);
 $router->get('/api/mobile/invoices/{id}/pdf',                 [MobileApiController::class, 'invoicePdfUrl']);
-$router->get('/api/mobile/invoices/stats',                    [MobileApiController::class, 'invoiceStats']);
 
 // Reminders
 $router->get('/api/mobile/erinnerungen',                      [MobileApiController::class, 'remindersList']);

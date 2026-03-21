@@ -46,6 +46,7 @@ class NotificationService {
     if (_initialized) return;
     _initialized = true;
     tz.initializeTimeZones();
+    try { tz.setLocalLocation(tz.getLocation('Europe/Berlin')); } catch (_) {}
 
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     const initSettings    = InitializationSettings(android: androidSettings);
