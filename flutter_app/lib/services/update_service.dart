@@ -38,10 +38,10 @@ class UpdateService {
       final downloadUrl = apkAsset['browser_download_url'] as String? ?? '';
       if (downloadUrl.isEmpty) return;
 
-      // Compare versions: strip leading 'v'
-      final currentCode = int.tryParse(info.buildNumber) ?? 0;
-      final latestCode  = _parseVersionCode(latestTag);
-      if (latestCode <= currentCode) return;
+      // Compare semantic versions (e.g. v1.0.3 vs 1.0.3)
+      final currentVersion = info.version; // e.g. "1.0.3"
+      final latestVersion  = latestTag.replaceAll(RegExp(r'^[vV]'), '').split('+').first;
+      if (!_isNewerVersion(latestVersion, currentVersion)) return;
 
       if (!context.mounted) return;
       _showUpdateDialog(context, latestTag, releaseNotes, downloadUrl, info.version);
@@ -62,14 +62,22 @@ class UpdateService {
     return jsonDecode(res.body) as Map<String, dynamic>;
   }
 
-  static int _parseVersionCode(String tag) {
-    final clean = tag.replaceAll(RegExp(r'[^0-9+]'), '');
-    // Support tags like v1.2.3+45 → 45, or v1.0.0 → tries to parse as int
-    if (clean.contains('+')) {
-      return int.tryParse(clean.split('+').last) ?? 0;
+  /// Returns true if [latest] is strictly newer than [current].
+  /// Both strings must be in "major.minor.patch" format.
+  static bool _isNewerVersion(String latest, String current) {
+    List<int> parse(String v) =>
+        v.split('.').map((p) => int.tryParse(p.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0).toList();
+
+    final l = parse(latest);
+    final c = parse(current);
+    final len = l.length > c.length ? l.length : c.length;
+    for (int i = 0; i < len; i++) {
+      final lv = i < l.length ? l[i] : 0;
+      final cv = i < c.length ? c[i] : 0;
+      if (lv > cv) return true;
+      if (lv < cv) return false;
     }
-    // Fall back: join all digits e.g. "103" from "1.0.3"
-    return int.tryParse(clean) ?? 0;
+    return false; // equal
   }
 
   // ── UI Dialog ──────────────────────────────────────────────────────────────

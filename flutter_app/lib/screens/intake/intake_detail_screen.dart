@@ -102,19 +102,20 @@ class _IntakeDetailScreenState extends State<IntakeDetailScreen> {
 
   Widget _buildContent(ColorScheme cs) {
     final d = _item!;
-    final ownerName = '${d['first_name'] ?? ''} ${d['last_name'] ?? ''}'.trim();
-    final petName   = d['pet_name'] as String? ?? d['animal_name'] as String? ?? '';
-    final species   = d['species'] as String? ?? d['pet_species'] as String? ?? '';
-    final breed     = d['breed'] as String? ?? '';
-    final email     = d['email'] as String? ?? '';
-    final phone     = d['phone'] as String? ?? '';
-    final address   = d['address'] as String? ?? '';
-    final notes     = d['notes'] as String? ?? d['message'] as String? ?? '';
-    final status    = d['status'] as String? ?? 'pending';
-    final isPending = status == 'pending' || status == 'new';
+    final ownerName = '${d['owner_first_name'] ?? ''} ${d['owner_last_name'] ?? ''}'.trim();
+    final petName   = d['patient_name']    as String? ?? '';
+    final species   = d['patient_species'] as String? ?? '';
+    final breed     = d['patient_breed']   as String? ?? '';
+    final email     = d['owner_email']     as String? ?? '';
+    final phone     = d['owner_phone']     as String? ?? '';
+    final address   = [d['owner_street'] ?? '', d['owner_zip'] ?? '', d['owner_city'] ?? ''].where((s) => s.toString().isNotEmpty).join(', ');
+    final reason    = d['reason']          as String? ?? '';
+    final notes     = d['notes']           as String? ?? '';
+    final status    = d['status']          as String? ?? 'neu';
+    final isPending = status == 'neu' || status == 'in_bearbeitung';
 
     String createdStr = '';
-    final createdAt = d['created_at'] as String? ?? d['submitted_at'] as String? ?? '';
+    final createdAt = d['created_at'] as String? ?? '';
     if (createdAt.isNotEmpty) {
       try { createdStr = DateFormat('dd.MM.yyyy HH:mm', 'de_DE').format(DateTime.parse(createdAt)); } catch (_) {}
     }
@@ -129,7 +130,7 @@ class _IntakeDetailScreenState extends State<IntakeDetailScreen> {
           decoration: BoxDecoration(
             color: isPending
                 ? AppTheme.warning.withValues(alpha: 0.12)
-                : status == 'accepted'
+                : status == 'uebernommen'
                     ? Colors.green.withValues(alpha: 0.10)
                     : Colors.red.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(12),
@@ -137,19 +138,19 @@ class _IntakeDetailScreenState extends State<IntakeDetailScreen> {
           child: Row(children: [
             Icon(
               isPending ? Icons.pending_rounded
-                  : status == 'accepted' ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                  : status == 'uebernommen' ? Icons.check_circle_rounded : Icons.cancel_rounded,
               color: isPending ? AppTheme.warning
-                  : status == 'accepted' ? Colors.green.shade700 : Colors.red,
+                  : status == 'uebernommen' ? Colors.green.shade700 : Colors.red,
               size: 20,
             ),
             const SizedBox(width: 8),
             Text(
               isPending ? 'Warte auf Bestätigung'
-                  : status == 'accepted' ? 'Bestätigt' : 'Abgelehnt',
+                  : status == 'uebernommen' ? 'Übernommen' : 'Abgelehnt',
               style: TextStyle(
                 fontWeight: FontWeight.w600,
                 color: isPending ? AppTheme.warning
-                    : status == 'accepted' ? Colors.green.shade700 : Colors.red,
+                    : status == 'uebernommen' ? Colors.green.shade700 : Colors.red,
               ),
             ),
             if (createdStr.isNotEmpty) ...[
@@ -166,21 +167,31 @@ class _IntakeDetailScreenState extends State<IntakeDetailScreen> {
         if (phone.isNotEmpty) _row('Telefon', phone),
         if (address.isNotEmpty) _row('Adresse', address),
 
+        if (reason.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _section('Anfrage / Grund', Icons.healing_rounded, AppTheme.primary),
+          _row('Grund', reason),
+          if ((d['appointment_wish'] as String? ?? '').isNotEmpty)
+            _row('Terminwunsch', d['appointment_wish'] as String),
+        ],
+
         if (petName.isNotEmpty) ...[
           const SizedBox(height: 16),
           _section('Tier', Icons.pets_rounded, AppTheme.primary),
           _row('Name', petName),
           if (species.isNotEmpty) _row('Tierart', species),
           if (breed.isNotEmpty)   _row('Rasse', breed),
-          if ((d['date_of_birth'] as String? ?? '').isNotEmpty)
-            _row('Geburtsdatum', d['date_of_birth'] as String),
-          if ((d['gender'] as String? ?? '').isNotEmpty)
-            _row('Geschlecht', d['gender'] as String),
-          if ((d['chip_number'] as String? ?? '').isNotEmpty)
-            _row('Chip-Nr.', d['chip_number'] as String),
+          if ((d['patient_birth_date'] as String? ?? '').isNotEmpty)
+            _row('Geburtsdatum', d['patient_birth_date'] as String),
+          if ((d['patient_gender'] as String? ?? '').isNotEmpty)
+            _row('Geschlecht', d['patient_gender'] as String),
+          if ((d['patient_chip'] as String? ?? '').isNotEmpty)
+            _row('Chip-Nr.', d['patient_chip'] as String),
+          if ((d['patient_color'] as String? ?? '').isNotEmpty)
+            _row('Farbe', d['patient_color'] as String),
         ],
 
-        if (notes.isNotEmpty) ...[
+        if (notes.isNotEmpty || reason.isNotEmpty) ...[
           const SizedBox(height: 16),
           _section('Nachricht / Notizen', Icons.notes_rounded, AppTheme.tertiary),
           Container(

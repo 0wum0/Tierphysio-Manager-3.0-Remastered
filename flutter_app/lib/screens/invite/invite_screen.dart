@@ -205,25 +205,33 @@ class _InviteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final ownerName = item['owner_name'] as String?
-        ?? '${item['first_name'] ?? ''} ${item['last_name'] ?? ''}'.trim();
     final email = item['email'] as String? ?? '';
-    final phone = item['phone'] as String? ?? item['owner_phone'] as String? ?? '';
+    final phone = item['phone'] as String? ?? '';
+    final note  = item['note']  as String? ?? '';
     final status = item['status'] as String? ?? 'pending';
-    final expiresAt = item['expires_at'] as String? ?? item['invite_expires'] as String? ?? '';
+    final expiresAt = item['expires_at'] as String? ?? '';
     String expiresStr = '';
+    bool isExpired = false;
     if (expiresAt.isNotEmpty) {
       try {
         final dt = DateTime.parse(expiresAt);
         expiresStr = DateFormat('dd.MM.yyyy', 'de_DE').format(dt);
-        if (dt.isBefore(DateTime.now())) expiresStr = 'Abgelaufen ($expiresStr)';
+        isExpired = dt.isBefore(DateTime.now());
+        if (isExpired) expiresStr = 'Abgelaufen ($expiresStr)';
       } catch (_) {}
     }
-    final isActive = status == 'active' || status == 'accepted';
-    final isPending = status == 'pending' || status == 'invited';
+    final isPending = status == 'pending' && !isExpired;
+    final isRevoked = status == 'revoked';
+    final isUsed    = status == 'used';
 
-    Color statusColor = isPending ? AppTheme.warning : isActive ? Colors.green.shade700 : cs.onSurfaceVariant;
-    String statusLabel = isPending ? 'Ausstehend' : isActive ? 'Aktiv' : status;
+    Color statusColor = isPending ? AppTheme.warning
+        : isUsed ? Colors.green.shade700
+        : cs.onSurfaceVariant;
+    String statusLabel = isPending ? 'Ausstehend'
+        : isUsed ? 'Benutzt'
+        : isRevoked ? 'Widerrufen'
+        : isExpired ? 'Abgelaufen'
+        : status;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -242,10 +250,12 @@ class _InviteCard extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(ownerName.isNotEmpty ? ownerName : '—',
+              Text(email.isNotEmpty ? email : phone.isNotEmpty ? phone : '—',
                 style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-              if (email.isNotEmpty)
-                Text(email, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+              if (phone.isNotEmpty && email.isNotEmpty)
+                Text(phone, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+              if (note.isNotEmpty)
+                Text(note, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant), maxLines: 1, overflow: TextOverflow.ellipsis),
             ])),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -264,7 +274,7 @@ class _InviteCard extends StatelessWidget {
               Text('Ablaufdatum: $expiresStr', style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
             ]),
           ],
-          if (isPending && phone.isNotEmpty) ...[
+          if ((isPending) && phone.isNotEmpty) ...[
             const SizedBox(height: 10),
             Row(children: [
               Expanded(child: OutlinedButton.icon(

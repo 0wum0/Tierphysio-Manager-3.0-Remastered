@@ -142,18 +142,18 @@ class _IntakeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final name = '${item['first_name'] ?? ''} ${item['last_name'] ?? ''}'.trim();
-    final petName = item['pet_name'] as String? ?? item['animal_name'] as String? ?? '';
-    final species = item['species'] as String? ?? item['pet_species'] as String? ?? '';
-    final createdAt = item['created_at'] as String? ?? item['submitted_at'] as String? ?? '';
+    final name = '${item['owner_first_name'] ?? ''} ${item['owner_last_name'] ?? ''}'.trim();
+    final petName = item['patient_name'] as String? ?? '';
+    final species = item['patient_species'] as String? ?? '';
+    final createdAt = item['created_at'] as String? ?? '';
     String dateStr = '';
     if (createdAt.isNotEmpty) {
       try {
         dateStr = DateFormat('dd.MM.yyyy HH:mm', 'de_DE').format(DateTime.parse(createdAt));
       } catch (_) {}
     }
-    final status = item['status'] as String? ?? 'pending';
-    final isPending = status == 'pending' || status == 'new';
+    final status = item['status'] as String? ?? 'neu';
+    final isPending = status == 'neu' || status == 'in_bearbeitung';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
@@ -184,20 +184,20 @@ class _IntakeCard extends StatelessWidget {
               if (dateStr.isNotEmpty)
                 Text(dateStr, style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
             ]),
-            if (item['email'] != null || item['phone'] != null) ...[
+            if (item['owner_email'] != null || item['owner_phone'] != null) ...[
               const SizedBox(height: 8),
               Wrap(spacing: 12, children: [
-                if (item['email'] != null && (item['email'] as String).isNotEmpty)
+                if ((item['owner_email'] as String? ?? '').isNotEmpty)
                   Row(mainAxisSize: MainAxisSize.min, children: [
                     Icon(Icons.email_outlined, size: 14, color: cs.onSurfaceVariant),
                     const SizedBox(width: 4),
-                    Text(item['email'] as String, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                    Text(item['owner_email'] as String, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
                   ]),
-                if (item['phone'] != null && (item['phone'] as String).isNotEmpty)
+                if ((item['owner_phone'] as String? ?? '').isNotEmpty)
                   Row(mainAxisSize: MainAxisSize.min, children: [
                     Icon(Icons.phone_outlined, size: 14, color: cs.onSurfaceVariant),
                     const SizedBox(width: 4),
-                    Text(item['phone'] as String, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                    Text(item['owner_phone'] as String, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
                   ]),
               ]),
             ],
@@ -225,9 +225,9 @@ class _IntakeCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Chip(
-                  label: Text(status == 'accepted' ? 'Bestätigt' : 'Abgelehnt',
+                  label: Text(status == 'uebernommen' ? 'Übernommen' : 'Abgelehnt',
                     style: const TextStyle(fontSize: 12)),
-                  backgroundColor: status == 'accepted'
+                  backgroundColor: status == 'uebernommen'
                       ? Colors.green.withValues(alpha: 0.12)
                       : Colors.red.withValues(alpha: 0.12),
                   side: BorderSide.none,
