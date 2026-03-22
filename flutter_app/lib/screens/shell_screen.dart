@@ -490,6 +490,19 @@ class _ShellScreenState extends State<ShellScreen>
           child: Column(
             children: [
               _buildTopBar(context),
+              if (_isOffline)
+                Material(
+                  color: Colors.orange.shade700,
+                  child: const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                    child: Row(children: [
+                      Icon(Icons.wifi_off_rounded, color: Colors.white, size: 16),
+                      SizedBox(width: 8),
+                      Text('Keine Internetverbindung',
+                        style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                    ]),
+                  ),
+                ),
               Expanded(child: widget.child),
             ],
           ),

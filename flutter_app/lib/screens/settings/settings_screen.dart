@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../services/api_service.dart';
 import '../../services/theme_service.dart';
 import '../../core/theme.dart';
@@ -16,6 +17,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   late TabController _tabs;
   bool _loading = true;
   bool _saving  = false;
+  String _appVersion = '…';
 
   // Praxis
   final _nameCtrl    = TextEditingController();
@@ -34,13 +36,6 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool _portalHomework = true;
 
   @override
-  void initState() {
-    super.initState();
-    _tabs = TabController(length: 3, vsync: this);
-    _load();
-  }
-
-  @override
   void dispose() {
     _tabs.dispose();
     _nameCtrl.dispose(); _addrCtrl.dispose(); _phoneCtrl.dispose();
@@ -48,6 +43,16 @@ class _SettingsScreenState extends State<SettingsScreen>
     _taxCtrl.dispose(); _prefixCtrl.dispose();
     _portalUrlCtrl.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _tabs = TabController(length: 3, vsync: this);
+    _load();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) setState(() => _appVersion = '${info.version}+${info.buildNumber}');
+    });
   }
 
   Future<void> _load() async {
@@ -307,6 +312,7 @@ class _SettingsScreenState extends State<SettingsScreen>
           title: 'App-Info',
           child: Column(children: [
             _infoRow(Icons.apps_rounded,         'App-Name',   'TheraPano'),
+            _infoRow(Icons.tag_rounded,          'Version',    _appVersion),
             _infoRow(Icons.business_rounded,     'Entwickler', 'Tierphysio Manager'),
             _infoRow(Icons.code_rounded,         'Framework',  'Flutter'),
             _infoRow(Icons.android_rounded,      'Plattform',  'Android'),

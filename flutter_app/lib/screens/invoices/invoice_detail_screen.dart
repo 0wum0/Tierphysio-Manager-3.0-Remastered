@@ -88,7 +88,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen>
   Future<void> _openPdf() async {
     try {
       final data = await _api.invoicePdfUrl(widget.id);
-      final url  = data['url'] as String? ?? '';
+      final url  = data['pdf_url'] as String? ?? '';
       if (url.isEmpty) { _showSnack('Keine PDF-URL verfügbar.', error: true); return; }
       final fullUrl = url.startsWith('http') ? url : '${ApiService.baseUrl}$url';
       final uri = Uri.parse(fullUrl);
@@ -99,7 +99,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen>
   Future<void> _sharePdfWhatsApp() async {
     try {
       final data = await _api.invoicePdfUrl(widget.id);
-      final url  = data['url'] as String? ?? '';
+      final url  = data['pdf_url'] as String? ?? '';
       if (url.isEmpty) { _showSnack('Keine PDF-URL verfügbar.', error: true); return; }
       final fullUrl = url.startsWith('http') ? url : '${ApiService.baseUrl}$url';
       final inv = _invoice!;

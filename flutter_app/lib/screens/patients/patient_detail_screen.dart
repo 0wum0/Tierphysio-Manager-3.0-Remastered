@@ -89,6 +89,23 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     }
   }
 
+  Future<void> _uploadProfilePhoto() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: false);
+    if (result == null || result.files.single.path == null) return;
+    setState(() => _uploading = true);
+    try {
+      await _api.patientPhotoUpload(widget.id, File(result.files.single.path!));
+      _load();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Foto aktualisiert ✓'), backgroundColor: Colors.green));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final p = _patient;
@@ -214,13 +231,35 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 52, 100, 0),
                       child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                        Hero(
-                          tag: 'patient_${widget.id}',
-                          child: PawAvatar(
-                            photoPath: p['photo_url'] as String?,
-                            species: species,
-                            name: p['name'] as String?,
-                            radius: 30,
+                        GestureDetector(
+                          onTap: _uploading ? null : _uploadProfilePhoto,
+                          child: Stack(
+                            children: [
+                              Hero(
+                                tag: 'patient_${widget.id}',
+                                child: PawAvatar(
+                                  photoPath: p['photo_url'] as String?,
+                                  species: species,
+                                  name: p['name'] as String?,
+                                  radius: 30,
+                                ),
+                              ),
+                              Positioned(
+                                bottom: 0, right: 0,
+                                child: Container(
+                                  width: 22, height: 22,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: _uploading
+                                      ? const Padding(
+                                          padding: EdgeInsets.all(3),
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black54))
+                                      : const Icon(Icons.camera_alt_rounded, size: 14, color: Colors.black87),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(width: 12),
