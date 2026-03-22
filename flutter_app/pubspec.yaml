@@ -16,13 +16,13 @@ dependencies:
   http: ^1.2.0
 
   # Secure storage for token
-  flutter_secure_storage: ^9.0.0
+  flutter_secure_storage: ^10.0.0
 
   # Shared preferences
   shared_preferences: ^2.2.2
 
   # Navigation
-  go_router: ^13.0.0
+  go_router: ^14.0.0
 
   # State management
   provider: ^6.1.1
@@ -46,7 +46,7 @@ dependencies:
   easy_refresh: ^3.3.3
 
   # Charts
-  fl_chart: ^0.70.0
+  fl_chart: ^1.0.0
 
   # SVG
   flutter_svg: ^2.0.9
@@ -58,24 +58,24 @@ dependencies:
   animations: ^2.0.11
 
   # File picker + video
-  file_picker: ^8.0.0
+  file_picker: ^10.0.0
   video_player: ^2.8.6
 
   # HTML rendering
   flutter_html: ^3.0.0-beta.2
 
   # App version info + temp dir (for in-app update checker)
-  package_info_plus: ^8.0.0
+  package_info_plus: ^9.0.0
   path_provider: ^2.1.3
 
   # Local notifications (no external push service)
-  flutter_local_notifications: ^17.2.4
-  timezone: ^0.9.4
+  flutter_local_notifications: ^18.0.0
+  timezone: ^0.10.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: ^5.0.0
 
 flutter:
   uses-material-design: true
