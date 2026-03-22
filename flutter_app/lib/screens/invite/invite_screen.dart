@@ -320,9 +320,13 @@ class _InviteDialogState extends State<_InviteDialog> {
   final _api = ApiService();
   final _emailCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
-  int? _ownerId;
+  final _noteCtrl  = TextEditingController();
+  final _searchCtrl = TextEditingController();
+  String? _ownerDisplayName;
   List<dynamic> _owners = [];
-  bool _loading = true;
+  List<dynamic> _filtered = [];
+  bool _loadingOwners = true;
+  String _search = '';
 
   @override
   void initState() {
@@ -333,75 +337,244 @@ class _InviteDialogState extends State<_InviteDialog> {
   Future<void> _loadOwners() async {
     try {
       final data = await _api.owners(perPage: 500);
-      setState(() {
-        _owners = (data['items'] as List? ?? []);
-        _loading = false;
-      });
+      final items = (data['items'] as List? ?? []);
+      setState(() { _owners = items; _filtered = items; _loadingOwners = false; });
     } catch (_) {
-      setState(() => _loading = false);
+      setState(() => _loadingOwners = false);
     }
+  }
+
+  String _ownerName(Map o) {
+    final fn = o['first_name'] as String? ?? '';
+    final ln = o['last_name']  as String? ?? '';
+    final n  = o['name']       as String? ?? '';
+    if (ln.isNotEmpty) return '$ln, $fn'.trim().replaceAll(RegExp(r',\s*$'), '');
+    return n.isNotEmpty ? n : '—';
+  }
+
+  void _filterOwners(String q) {
+    final lq = q.toLowerCase();
+    setState(() {
+      _search   = q;
+      _filtered = q.isEmpty
+          ? _owners
+          : _owners.where((o) =>
+              _ownerName(o as Map).toLowerCase().contains(lq) ||
+              (o['email'] as String? ?? '').toLowerCase().contains(lq) ||
+              (o['phone'] as String? ?? '').toLowerCase().contains(lq)
+            ).toList();
+    });
+  }
+
+  void _selectOwner(Map o) {
+    setState(() {
+      _ownerDisplayName = _ownerName(o);
+      if ((o['email'] as String? ?? '').isNotEmpty) _emailCtrl.text = o['email'] as String;
+      if ((o['phone'] as String? ?? '').isNotEmpty) _phoneCtrl.text = o['phone'] as String;
+    });
+    Navigator.pop(context);
+  }
+
+  Future<void> _pickOwner() async {
+    _searchCtrl.clear();
+    _filterOwners('');
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, ss) {
+          final isDark = Theme.of(ctx).brightness == Brightness.dark;
+          final cs     = Theme.of(ctx).colorScheme;
+          return Container(
+            height: MediaQuery.of(ctx).size.height * 0.75,
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF12151F) : Colors.white,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 12, bottom: 4),
+                child: Container(width: 40, height: 4,
+                  decoration: BoxDecoration(
+                    color: cs.onSurface.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(2))),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 16, 12),
+                child: Row(children: [
+                  const Expanded(child: Text('Tierhalter auswählen (optional)',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700))),
+                  IconButton(icon: const Icon(Icons.close_rounded),
+                    onPressed: () => Navigator.pop(ctx)),
+                ]),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: TextField(
+                  controller: _searchCtrl, autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: 'Suchen...',
+                    prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                    suffixIcon: _search.isNotEmpty
+                        ? IconButton(icon: const Icon(Icons.clear_rounded, size: 18),
+                            onPressed: () { _searchCtrl.clear(); ss(() => _filterOwners('')); })
+                        : null,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
+                  ),
+                  onChanged: (v) => ss(() => _filterOwners(v)),
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(child: _loadingOwners
+                  ? const Center(child: CircularProgressIndicator())
+                  : _filtered.isEmpty
+                      ? Center(child: Text('Keine Tierhalter gefunden',
+                          style: TextStyle(color: cs.onSurface.withValues(alpha: 0.4))))
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 20),
+                          itemCount: _filtered.length,
+                          itemBuilder: (_, i) {
+                            final o     = _filtered[i] as Map;
+                            final dname = _ownerName(o);
+                            final email = o['email'] as String? ?? '';
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(12),
+                                onTap: () => _selectOwner(o),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: cs.outline.withValues(alpha: 0.15)),
+                                  ),
+                                  child: Row(children: [
+                                    Icon(Icons.person_outline_rounded, size: 16,
+                                      color: cs.onSurface.withValues(alpha: 0.4)),
+                                    const SizedBox(width: 10),
+                                    Expanded(child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(dname, style: const TextStyle(fontWeight: FontWeight.w600)),
+                                        if (email.isNotEmpty)
+                                          Text(email, style: TextStyle(fontSize: 11,
+                                            color: cs.onSurface.withValues(alpha: 0.5))),
+                                      ],
+                                    )),
+                                    Icon(Icons.chevron_right_rounded, size: 18,
+                                      color: cs.onSurface.withValues(alpha: 0.3)),
+                                  ]),
+                                ),
+                              ),
+                            );
+                          },
+                        )),
+            ]),
+          );
+        },
+      ),
+    );
   }
 
   @override
   void dispose() {
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
+    _noteCtrl.dispose();
+    _searchCtrl.dispose();
     super.dispose();
+  }
+
+  bool get _canSend {
+    final e = _emailCtrl.text.trim();
+    final p = _phoneCtrl.text.trim();
+    return e.isNotEmpty || p.isNotEmpty;
   }
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return AlertDialog(
-      title: const Text('Besitzer einladen'),
+      title: const Text('Einladung senden'),
       content: SizedBox(
-        width: 340,
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : Column(mainAxisSize: MainAxisSize.min, children: [
-                DropdownButtonFormField<int>(
-                  isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Tierhalter *', isDense: true, border: OutlineInputBorder()),
-                  items: [
-                    const DropdownMenuItem(value: null, child: Text('— auswählen —')),
-                    ..._owners.map((o) => DropdownMenuItem<int>(
-                      value: int.tryParse(o['id'].toString()),
-                      child: Text('${o['last_name']}, ${o['first_name']}', overflow: TextOverflow.ellipsis),
-                    )),
-                  ],
-                  onChanged: (v) {
-                    setState(() => _ownerId = v);
-                    if (v != null) {
-                      final owner = _owners.firstWhere(
-                        (o) => int.tryParse(o['id'].toString()) == v, orElse: () => {});
-                      _emailCtrl.text = owner['email'] as String? ?? '';
-                      _phoneCtrl.text = owner['phone'] as String? ?? '';
-                    }
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _emailCtrl,
-                  decoration: const InputDecoration(labelText: 'E-Mail *', isDense: true, border: OutlineInputBorder()),
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _phoneCtrl,
-                  decoration: const InputDecoration(labelText: 'Telefon (für WhatsApp)', isDense: true, border: OutlineInputBorder()),
-                  keyboardType: TextInputType.phone,
-                ),
-              ]),
+        width: 360,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          /* Optional: prefill from existing owner */
+          OutlinedButton.icon(
+            onPressed: _pickOwner,
+            icon: const Icon(Icons.person_search_rounded, size: 18),
+            label: Text(_ownerDisplayName != null
+                ? 'Tierhalter: $_ownerDisplayName'
+                : 'Aus Tierhaltern befüllen (optional)'),
+            style: OutlinedButton.styleFrom(
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              textStyle: const TextStyle(fontSize: 13),
+              foregroundColor: _ownerDisplayName != null
+                  ? AppTheme.primary
+                  : cs.onSurface.withValues(alpha: 0.6),
+              side: BorderSide(
+                color: _ownerDisplayName != null
+                    ? AppTheme.primary.withValues(alpha: 0.4)
+                    : cs.outline.withValues(alpha: 0.4)),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text('oder E-Mail/Telefon direkt eingeben:',
+            style: TextStyle(fontSize: 11, color: cs.onSurface.withValues(alpha: 0.4))),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _emailCtrl,
+            decoration: const InputDecoration(
+              labelText: 'E-Mail',
+              hintText: 'z.B. max@beispiel.de',
+              isDense: true,
+              prefixIcon: Icon(Icons.email_outlined, size: 18),
+              border: OutlineInputBorder()),
+            keyboardType: TextInputType.emailAddress,
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _phoneCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Telefon (für WhatsApp)',
+              hintText: 'z.B. +49 151 12345678',
+              isDense: true,
+              prefixIcon: Icon(Icons.phone_outlined, size: 18),
+              border: OutlineInputBorder()),
+            keyboardType: TextInputType.phone,
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _noteCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Notiz (optional)',
+              isDense: true,
+              prefixIcon: Icon(Icons.notes_rounded, size: 18),
+              border: OutlineInputBorder()),
+          ),
+          const SizedBox(height: 6),
+          Text('Mindestens E-Mail oder Telefon erforderlich.',
+            style: TextStyle(fontSize: 11, color: cs.onSurface.withValues(alpha: 0.4))),
+        ]),
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Abbrechen')),
         FilledButton(
-          onPressed: _ownerId == null || _emailCtrl.text.trim().isEmpty
-              ? null
-              : () => Navigator.pop(context, {
-                  'owner_id': _ownerId,
+          onPressed: _canSend
+              ? () => Navigator.pop(context, {
                   'email': _emailCtrl.text.trim(),
                   'phone': _phoneCtrl.text.trim(),
-                }),
+                  'note':  _noteCtrl.text.trim(),
+                })
+              : null,
           child: const Text('Einladung senden'),
         ),
       ],
