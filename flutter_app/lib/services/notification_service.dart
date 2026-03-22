@@ -37,7 +37,7 @@ class NotificationService {
   static const _kFeedbackCount = 'notif_feedback_count';
 
   // ── Channels ──────────────────────────────────────────────────────────────
-  static const _chIntake = AndroidNotificationChannel(
+  static final _chIntake = AndroidNotificationChannel(
     'therapano_intakes',
     'Neue Anmeldungen',
     description: 'Benachrichtigungen bei neuen Tierhalter-Anmeldungen',
@@ -56,7 +56,7 @@ class NotificationService {
     enableVibration: true,
   );
 
-  static const _chAppointment = AndroidNotificationChannel(
+  static final _chAppointment = AndroidNotificationChannel(
     'therapano_appointments',
     'Termine',
     description: 'Erinnerungen für bevorstehende Termine',
@@ -66,7 +66,7 @@ class NotificationService {
     vibrationPattern: Int64List.fromList([0, 200, 100, 200]),
   );
 
-  static const _chMessage = AndroidNotificationChannel(
+  static final _chMessage = AndroidNotificationChannel(
     'therapano_messages',
     'Neue Nachrichten',
     description: 'Benachrichtigungen bei neuen Portal-Nachrichten',
