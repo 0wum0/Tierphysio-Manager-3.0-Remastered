@@ -99,6 +99,7 @@ class ServiceProvider
         $router->post('/portal-admin/hausaufgaben/{id}/senden',      [OwnerPortalAdminController::class, 'homeworkPlanSend'],   ['auth']);
 
         /* ── Owner portal homework view + checklist ── */
+        $router->get('/portal/hausaufgaben',                                          [OwnerPortalController::class, 'homeworkOverview'],   []);
         $router->get('/portal/tiere/{id}/hausaufgaben',                              [OwnerPortalController::class, 'homework'],          []);
         $router->get('/portal/tiere/{id}/hausaufgaben/{plan_id}/pdf',                [OwnerPortalController::class, 'homeworkPdf'],        []);
         $router->post('/api/portal/hausaufgaben/{plan_id}/aufgabe/{task_id}/abhaken',[OwnerPortalController::class, 'homeworkTaskToggle'], []);

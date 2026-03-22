@@ -1,0 +1,163 @@
+{% extends '@owner-portal/portal_layout.twig' %}
+{% set active_nav = 'hausaufgaben' %}
+{% block content %}
+
+<h1 class="portal-page-title">📋 Meine Hausaufgaben</h1>
+
+{% if plans %}
+    {% for plan in plans %}
+    {% set tasks  = tasks_by_plan[plan.id]  ?? [] %}
+    {% set checks = checks_by_plan[plan.id] ?? {} %}
+
+    {# Count how many tasks are checked #}
+    {% set checked_count = 0 %}
+    {% for task in tasks %}
+        {% if checks[task.id] ?? false %}{% set checked_count = checked_count + 1 %}{% endif %}
+    {% endfor %}
+
+    <div class="card mb-4">
+      <div class="card-body">
+
+        {# ── Plan header ── #}
+        <div class="d-flex align-items-start justify-content-between flex-wrap gap-3 mb-3 pb-3 border-bottom">
+            <div>
+                <div class="fw-semibold">
+                    📅 Hausaufgabenplan vom {{ plan.plan_date|date('d.m.Y') }}
+                </div>
+                {% if plan.patient_name %}
+                <div class="small mt-1">🐾 {{ plan.patient_name }}</div>
+                {% endif %}
+                {% if plan.therapist_name %}
+                <div class="small text-secondary mt-1">{{ plan.therapist_name }}</div>
+                {% endif %}
+                {% if plan.next_appointment %}
+                <div class="small text-secondary mt-1">🔄 Wiedervorstellung: {{ plan.next_appointment }}</div>
+                {% endif %}
+                {% if tasks|length > 0 %}
+                <div class="small mt-2">
+                    <span style="color:{% if checked_count == tasks|length %}#22c55e{% else %}var(--bs-secondary-color){% endif %};">
+                        ✓ {{ checked_count }} / {{ tasks|length }} erledigt
+                    </span>
+                    {% if tasks|length > 0 %}
+                    <div style="height:4px;background:rgba(128,128,128,0.2);border-radius:999px;overflow:hidden;margin-top:4px;width:120px;">
+                        <div style="height:100%;width:{{ ((checked_count / tasks|length) * 100)|round }}%;background:#22c55e;border-radius:999px;transition:width .3s;"></div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            <div class="d-flex flex-column gap-2" style="flex-shrink:0;">
+                <a href="/portal/tiere/{{ plan.patient_id }}/hausaufgaben/{{ plan.id }}/pdf" target="_blank"
+                   class="portal-btn portal-btn-secondary portal-btn-sm">
+                    📄 PDF
+                </a>
+                <a href="/portal/tiere/{{ plan.patient_id }}/hausaufgaben"
+                   class="portal-btn portal-btn-secondary portal-btn-sm">
+                    Details →
+                </a>
+            </div>
+        </div>
+
+        {# ── Tasks / Checkliste ── #}
+        {% if tasks %}
+        <div class="mb-2">
+            <div class="small text-secondary text-uppercase fw-semibold mb-2" style="letter-spacing:0.06em;">Therapieplan</div>
+            {% for task in tasks %}
+            {% set is_checked = checks[task.id] ?? false %}
+            <div class="border rounded mb-2 overflow-hidden homework-task-item {% if is_checked %}task-done{% endif %}"
+                 data-task-id="{{ task.id }}" data-plan-id="{{ plan.id }}"
+                 style="transition:opacity .2s;">
+                <div class="d-flex align-items-center gap-3 px-3 py-2" style="background:var(--bs-tertiary-bg);">
+                    <button class="task-check-btn btn p-0 border-0 flex-shrink-0"
+                            data-task="{{ task.id }}" data-plan="{{ plan.id }}"
+                            data-checked="{{ is_checked ? '1' : '0' }}"
+                            type="button"
+                            style="width:24px;height:24px;border-radius:6px;background:{% if is_checked %}#22c55e{% else %}rgba(128,128,128,0.15){% endif %};display:flex;align-items:center;justify-content:center;transition:background .2s;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="opacity:{% if is_checked %}1{% else %}0.3{% endif %};transition:opacity .2s;">
+                            <path stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M20 6L9 17l-5-5"/>
+                        </svg>
+                    </button>
+                    <div class="fw-semibold small flex-fill {% if is_checked %}text-decoration-line-through text-secondary{% endif %}"
+                         style="transition:all .2s;">{{ task.title }}</div>
+                    {% if task.frequency or task.duration %}
+                    <div class="small text-secondary text-nowrap">
+                        {% if task.frequency %}{{ task.frequency }}{% endif %}
+                        {% if task.frequency and task.duration %} · {% endif %}
+                        {% if task.duration %}{{ task.duration }}{% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% if task.description %}
+                <div class="px-3 py-2">
+                    <div class="small" style="white-space:pre-line;line-height:1.55;">{{ task.description }}</div>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {# ── General notes ── #}
+        {% if plan.general_notes %}
+        <div class="alert alert-warning d-flex gap-2 align-items-start mb-0 mt-2">
+            <span>⚠️</span>
+            <div>
+                <div class="fw-semibold small text-uppercase mb-1">Beachte</div>
+                <div class="small" style="white-space:pre-line;">{{ plan.general_notes }}</div>
+            </div>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="card">
+      <div class="card-body text-center py-5">
+        <div class="fs-1 mb-2" style="opacity:.3;">📋</div>
+        <p class="text-secondary">Noch keine Hausaufgaben hinterlegt.</p>
+        <p class="text-secondary small">Ihr Therapeut wird bald einen Plan erstellen.</p>
+      </div>
+    </div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+    document.querySelectorAll('.task-check-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var taskId  = btn.dataset.task;
+            var planId  = btn.dataset.plan;
+            var checked = btn.dataset.checked === '1';
+            var newVal  = !checked;
+
+            var item  = btn.closest('.homework-task-item');
+            var label = item.querySelector('.fw-semibold.flex-fill');
+            var svg   = btn.querySelector('svg');
+
+            btn.dataset.checked        = newVal ? '1' : '0';
+            btn.style.background       = newVal ? '#22c55e' : 'rgba(128,128,128,0.15)';
+            svg.style.opacity          = newVal ? '1' : '0.3';
+            label.style.textDecoration = newVal ? 'line-through' : '';
+            label.style.opacity        = newVal ? '0.5' : '1';
+
+            fetch('/api/portal/hausaufgaben/' + planId + '/aufgabe/' + taskId + '/abhaken', {
+                method:  'POST',
+                headers: {'Content-Type': 'application/json'},
+                body:    JSON.stringify({checked: newVal})
+            })
+            .then(function(r){ return r.json(); })
+            .catch(function() {
+                btn.dataset.checked        = checked ? '1' : '0';
+                btn.style.background       = checked ? '#22c55e' : 'rgba(128,128,128,0.15)';
+                svg.style.opacity          = checked ? '1' : '0.3';
+                label.style.textDecoration = checked ? 'line-through' : '';
+                label.style.opacity        = checked ? '0.5' : '1';
+            });
+        });
+    });
+})();
+</script>
+{% endblock %}

@@ -24,6 +24,12 @@
         <div class="fs-2 fw-bold" style="color:var(--bs-purple,#a78bfa);">{{ exercises|length }}</div>
         <div class="small text-secondary mt-1">Übungen</div>
     </div></div></div>
+    {% if show_homework ?? false %}
+    <div class="col"><div class="card text-center h-100"><div class="card-body py-3">
+        <div class="fs-2 fw-bold" style="color:var(--bs-teal,#14b8a6);">{{ homework_plans|length }}</div>
+        <div class="small text-secondary mt-1">Hausaufgaben</div>
+    </div></div></div>
+    {% endif %}
 </div>
 
 {# ── My Pets ── #}
@@ -111,7 +117,9 @@
 {% if exercises %}
 <div class="card mb-3">
   <div class="card-body">
-    <h2 class="h5 mb-3">💪 Heimübungen</h2>
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 class="h5 mb-0">💪 Heimübungen</h2>
+    </div>
     {% for ex in exercises|slice(0, 2) %}
     <div class="exercise-card">
         <div class="exercise-title">{{ ex.title }}</div>
@@ -121,6 +129,34 @@
     {% endfor %}
     {% if exercises|length > 2 %}
         <div class="small text-secondary mt-2">+ {{ exercises|length - 2 }} weitere Übungen</div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+{# ── Homework teaser ── #}
+{% if (show_homework ?? false) and homework_plans is defined and homework_plans|length > 0 %}
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 class="h5 mb-0">📋 Hausaufgaben</h2>
+    </div>
+    {% for plan in homework_plans|slice(0, 3) %}
+    <a href="/portal/tiere/{{ plan.patient_id }}/hausaufgaben"
+       class="d-flex align-items-center gap-3 py-2 text-decoration-none"
+       style="border-bottom:1px solid var(--bs-border-color);color:inherit;">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--bs-teal,#14b8a6);flex-shrink:0;"></div>
+        <div class="flex-fill">
+            <div class="fw-500 small">Hausaufgabenplan vom {{ plan.plan_date|date('d.m.Y') }}</div>
+            {% if plan.patient_name %}
+            <div class="small text-secondary">🐾 {{ plan.patient_name }}</div>
+            {% endif %}
+        </div>
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="opacity:.4;flex-shrink:0;"><polyline stroke="currentColor" stroke-width="2" points="9 18 15 12 9 6"/></svg>
+    </a>
+    {% endfor %}
+    {% if homework_plans|length > 3 %}
+    <div class="small text-secondary mt-2 pt-1">+ {{ homework_plans|length - 3 }} weitere Pläne</div>
     {% endif %}
   </div>
 </div>

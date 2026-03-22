@@ -20,6 +20,11 @@ class MessagingOwnerController extends Controller
     private MessagingMailService  $mailer;
     private SettingsRepository    $settingsRepository;
 
+    private function isHomeworkEnabled(): bool
+    {
+        return ($this->settingsRepository->get('portal_show_homework', '1') === '1');
+    }
+
     public function __construct(
         View $view,
         Session $session,
@@ -77,6 +82,7 @@ class MessagingOwnerController extends Controller
             'threads'             => $threads,
             'unread'              => $unread,
             'portal_unread_count' => $unread,
+            'show_homework_nav'   => $this->isHomeworkEnabled(),
             'csrf_token'          => $this->session->generateCsrfToken(),
         ]);
     }
@@ -105,6 +111,7 @@ class MessagingOwnerController extends Controller
             'thread'              => $thread,
             'messages'            => $messages,
             'portal_unread_count' => $unread,
+            'show_homework_nav'   => $this->isHomeworkEnabled(),
             'csrf_token'          => $this->session->generateCsrfToken(),
         ]);
     }
