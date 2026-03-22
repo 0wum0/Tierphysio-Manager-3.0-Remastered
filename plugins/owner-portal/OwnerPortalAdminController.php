@@ -398,6 +398,26 @@ class OwnerPortalAdminController extends Controller
 
         $this->repo->saveTasksForPlan($planId, $this->parseTasksFromPost());
 
+        /* ── Email-Benachrichtigung an Besitzer ── */
+        try {
+            $owner   = $this->getOwnerById($ownerId);
+            $patient = $this->getPatientById($patientId);
+            if ($owner && !empty($owner['email']) && $patient) {
+                $mailerService = new OwnerPortalMailService($this->settingsRepository, $this->mailService);
+                $ownerName   = trim(($owner['first_name'] ?? '') . ' ' . ($owner['last_name'] ?? ''));
+                $planDate    = !empty($_POST['plan_date']) ? date('d.m.Y', strtotime($_POST['plan_date'])) : date('d.m.Y');
+                $therapist   = htmlspecialchars(strip_tags(trim($_POST['therapist_name'] ?? '')), ENT_QUOTES, 'UTF-8');
+                $mailerService->sendNewHomework(
+                    $owner['email'],
+                    $ownerName,
+                    $patient['name'] ?? 'Ihr Tier',
+                    $planDate,
+                    $therapist ?: 'Ihr Therapeut',
+                    $patientId
+                );
+            }
+        } catch (\Throwable) { /* Mail optional – kein Abbruch */ }
+
         $this->session->flash('success', 'Hausaufgabenplan erstellt.');
         $this->redirect('/portal-admin/tiere/' . $ownerId . '/hausaufgaben');
     }
@@ -566,6 +586,40 @@ class OwnerPortalAdminController extends Controller
             ];
         }
         return $tasks;
+    }
+
+    /* ── GET /api/portal-admin/check-notifications ── */
+    public function checkNotifications(array $params = []): void
+    {
+        $this->requireStaffAuth();
+        $items = $this->repo->getCheckNotifications(30);
+        $unread = $this->repo->countUnreadCheckNotifications();
+        header('Content-Type: application/json');
+        echo json_encode([
+            'unread_count' => $unread,
+            'items'        => $items,
+        ]);
+        exit;
+    }
+
+    /* ── POST /api/portal-admin/check-notifications/gelesen ── */
+    public function checkNotificationsMarkRead(array $params = []): void
+    {
+        $this->requireStaffAuth();
+        $this->repo->markCheckNotificationsRead();
+        header('Content-Type: application/json');
+        echo json_encode(['ok' => true]);
+        exit;
+    }
+
+    private function requireStaffAuth(): void
+    {
+        if (!$this->session->get('user_id')) {
+            http_response_code(401);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Unauthorized']);
+            exit;
+        }
     }
 
     private function getOwnerById(int $id): ?array

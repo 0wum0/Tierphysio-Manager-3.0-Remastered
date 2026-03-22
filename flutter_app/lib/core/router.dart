@@ -26,6 +26,7 @@ import '../screens/portal_admin/homework_plan_detail_screen.dart';
 import '../screens/intake/intake_screen.dart';
 import '../screens/intake/intake_detail_screen.dart';
 import '../screens/invite/invite_screen.dart';
+import '../screens/homework/homework_screen.dart';
 
 class AppRouter {
   final AuthService authService;
@@ -108,7 +109,8 @@ class AppRouter {
             ],
           ),
 
-          GoRoute(path: '/einladungen', builder: (_, __) => const InviteScreen()),
+          GoRoute(path: '/einladungen',    builder: (_, __) => const InviteScreen()),
+          GoRoute(path: '/hausaufgaben',   builder: (_, __) => const HomeworkScreen()),
           GoRoute(path: '/behandlungsarten', builder: (_, __) => const BehandlungsartenScreen()),
           GoRoute(path: '/profil',           builder: (_, __) => const ProfileScreen()),
           GoRoute(path: '/suche',            builder: (_, __) => const SearchScreen()),

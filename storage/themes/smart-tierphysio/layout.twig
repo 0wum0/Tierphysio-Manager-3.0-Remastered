@@ -341,6 +341,35 @@
         </div>
         {% endif %}
 
+        {# Portal Check-Notifications (Besitzer hat Aufgabe abgehakt) #}
+        <button type="button" class="btn btn-system dropdown-toggle no-arrow"
+                id="btn-check-notif" data-bs-toggle="dropdown" aria-expanded="false"
+                aria-label="Portal-Checklisten-Aktivitäten" title="Besitzer-Aktivitäten im Portal">
+            <span id="check-notif-badge" class="badge badge-icon pos-top pos-end"
+                  style="display:none;background:#22c55e;"></span>
+            <svg class="sa-icon sa-icon-2x" fill="none" viewBox="0 0 24 24">
+                <path stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+        </button>
+        <div class="dropdown-menu dropdown-menu-animated dropdown-xl dropdown-menu-end p-0" id="check-notif-dropdown">
+            <div class="notification-header rounded-top mb-0" style="background:linear-gradient(135deg,#16a34a,#22c55e);">
+                <h4 class="m-0">
+                    <span id="check-notif-count">0</span> Neu
+                    <small class="mb-0 opacity-80">Besitzer-Aktivitäten</small>
+                </h4>
+            </div>
+            <div class="custom-scroll" style="max-height:340px;overflow-y:auto;" id="check-notif-list">
+                <div class="p-4 text-center text-muted fs-sm">Lade...</div>
+            </div>
+            <div class="py-2 px-3 d-flex justify-content-between align-items-center border-top">
+                <button class="btn btn-xs btn-outline-secondary" id="btn-mark-checks-read" style="font-size:.7rem;">
+                    Alle als gelesen
+                </button>
+                <a href="/patienten" class="fs-xs fw-500">Patienten öffnen →</a>
+            </div>
+        </div>
+
         {# User avatar + dropdown #}
         <button type="button" data-bs-toggle="dropdown"
                 title="{{ current_user.email ?? current_user.name }}"
@@ -1030,6 +1059,108 @@
 
     setTimeout(poll, 3000);
     setInterval(poll, 60000);
+})();
+</script>
+
+{# ── Portal Check-Notification Polling ── #}
+<script>
+(function(){
+    var CHECK_API    = '/api/portal-admin/check-notifications';
+    var MARK_API     = '/api/portal-admin/check-notifications/gelesen';
+    var badge        = document.getElementById('check-notif-badge');
+    var countEl      = document.getElementById('check-notif-count');
+    var listEl       = document.getElementById('check-notif-list');
+    var markBtn      = document.getElementById('btn-mark-checks-read');
+    var lastCount    = -1;
+
+    function esc(s){ var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+    function relTime(ts){
+        if (!ts) return '';
+        var d = new Date(ts.replace(' ','T'));
+        var diff = Math.round((Date.now() - d.getTime()) / 1000);
+        if (diff < 60) return 'gerade eben';
+        if (diff < 3600) return Math.floor(diff/60) + ' Min.';
+        if (diff < 86400) return Math.floor(diff/3600) + ' Std.';
+        return Math.floor(diff/86400) + ' Tagen';
+    }
+
+    function loadNotifications(){
+        fetch(CHECK_API, { headers: {'X-Requested-With': 'XMLHttpRequest'} })
+            .then(function(r){ return r.ok ? r.json() : Promise.reject(); })
+            .then(function(data){
+                var unread = data.unread_count || 0;
+                var items  = data.items || [];
+
+                /* Update badge */
+                if (badge) {
+                    if (unread > 0) {
+                        badge.textContent  = unread > 9 ? '9+' : String(unread);
+                        badge.style.display = '';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                }
+                if (countEl) countEl.textContent = unread;
+
+                /* Show toast for new notifications */
+                if (lastCount >= 0 && unread > lastCount && items.length > 0) {
+                    var n = items[0];
+                    window.showAppToast && window.showAppToast({
+                        id:      'check_' + n.id,
+                        type:    'success',
+                        color:   'success',
+                        title:   '✅ Aufgabe abgehakt',
+                        message: esc(n.owner_name) + ' hat „' + esc(n.task_title) + '" für ' + esc(n.pet_name) + ' abgehakt.',
+                        url:     '/patienten/' + n.patient_id
+                    }, 8000);
+                }
+                lastCount = unread;
+
+                /* Render list */
+                if (!listEl) return;
+                if (items.length === 0) {
+                    listEl.innerHTML = '<div class="p-4 text-center text-muted fs-sm">Keine Aktivitäten 🎉</div>';
+                    return;
+                }
+                var html = '<ul class="notification">';
+                items.forEach(function(n){
+                    var unreadClass = n.read_at ? '' : ' unread';
+                    html += '<li class="alert alert-dismissable' + unreadClass + '">'
+                          + '<a href="/patienten/' + n.patient_id + '" class="d-flex align-items-start gap-2 text-decoration-none">'
+                          + '<span style="width:32px;height:32px;border-radius:8px;background:rgba(34,197,94,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+                          + '<svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+                          + '</span>'
+                          + '<span class="d-flex flex-column flex-1 ms-1" style="min-width:0;">'
+                          + '<span class="name text-truncate">' + esc(n.owner_name) + '</span>'
+                          + '<span class="msg-a fs-sm text-truncate">✓ ' + esc(n.task_title) + ' · ' + esc(n.pet_name) + '</span>'
+                          + '<span class="fs-nano text-muted mt-1">' + relTime(n.created_at) + '</span>'
+                          + '</span>'
+                          + '</a></li>';
+                });
+                html += '</ul>';
+                listEl.innerHTML = html;
+            })
+            .catch(function(){});
+    }
+
+    /* Mark all read */
+    if (markBtn) {
+        markBtn.addEventListener('click', function(){
+            fetch(MARK_API, { method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'} })
+                .then(function(){ lastCount = 0; loadNotifications(); })
+                .catch(function(){});
+        });
+    }
+
+    /* Open dropdown → load immediately */
+    var dropBtn = document.getElementById('btn-check-notif');
+    if (dropBtn) {
+        dropBtn.addEventListener('show.bs.dropdown', loadNotifications);
+    }
+
+    /* Polling every 90s */
+    setTimeout(loadNotifications, 5000);
+    setInterval(loadNotifications, 90000);
 })();
 </script>
 

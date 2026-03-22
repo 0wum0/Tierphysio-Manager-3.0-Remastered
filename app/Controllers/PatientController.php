@@ -100,18 +100,27 @@ class PatientController extends Controller
             }
         } catch (\Throwable) {}
 
+        /* ── Portal check-notifications for this patient ── */
+        $portalCheckNotifications = [];
+        try {
+            $db         = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $portalRepo = new \Plugins\OwnerPortal\OwnerPortalRepository($db);
+            $portalCheckNotifications = $portalRepo->getCheckNotificationsForPatient((int)$params['id']);
+        } catch (\Throwable) {}
+
         $this->render('patients/show.twig', [
-            'page_title'          => $patient['name'],
-            'patient'             => $patient,
-            'owner'               => $owner,
-            'timeline'            => $timeline,
-            'owners'              => $owners,
-            'treatment_types'     => $treatmentTypes,
-            'next_number'         => $this->invoiceService->generateInvoiceNumber(),
-            'kleinunternehmer'    => ($settings['kleinunternehmer'] ?? '0') === '1',
-            'default_tax_rate'    => $settings['default_tax_rate'] ?? '19',
-            'invoice_stats'       => $invoiceStats,
-            'plugin_header_actions' => $headerActions,
+            'page_title'               => $patient['name'],
+            'patient'                  => $patient,
+            'owner'                    => $owner,
+            'timeline'                 => $timeline,
+            'owners'                   => $owners,
+            'treatment_types'          => $treatmentTypes,
+            'next_number'              => $this->invoiceService->generateInvoiceNumber(),
+            'kleinunternehmer'         => ($settings['kleinunternehmer'] ?? '0') === '1',
+            'default_tax_rate'         => $settings['default_tax_rate'] ?? '19',
+            'invoice_stats'            => $invoiceStats,
+            'plugin_header_actions'    => $headerActions,
+            'portal_check_notifications' => $portalCheckNotifications,
         ]);
     }
 
@@ -328,6 +337,32 @@ class PatientController extends Controller
         }
 
         $this->patientService->addTimelineEntry($data);
+
+        /* ── Email an Besitzer bei neuem Behandlungseintrag ── */
+        if (($data['type'] === 'treatment') && !empty($patient['owner_id'])) {
+            try {
+                $db         = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+                $owner      = $this->ownerService->findById((int)$patient['owner_id']);
+                $portalUser = (new \Plugins\OwnerPortal\OwnerPortalRepository($db))
+                    ->findUserByOwnerId((int)$patient['owner_id']);
+                if ($owner && $portalUser && !empty($owner['email'])) {
+                    $settings = \App\Core\Application::getInstance()->getContainer()
+                        ->get(\App\Repositories\SettingsRepository::class);
+                    $mailer   = \App\Core\Application::getInstance()->getContainer()
+                        ->get(\App\Services\MailService::class);
+                    $svc = new \Plugins\OwnerPortal\OwnerPortalMailService($settings, $mailer);
+                    $svc->sendNewTreatment(
+                        $owner['email'],
+                        trim(($owner['first_name'] ?? '') . ' ' . ($owner['last_name'] ?? '')),
+                        $patient['name'] ?? 'Ihr Tier',
+                        $data['title'] ?: 'Behandlung',
+                        date('d.m.Y', strtotime($data['entry_date'])),
+                        (int)$params['id']
+                    );
+                }
+            } catch (\Throwable) { /* optional */ }
+        }
+
         $this->session->flash('success', $this->translator->trans('patients.timeline_added'));
         $this->redirect("/patienten/{$params['id']}");
     }

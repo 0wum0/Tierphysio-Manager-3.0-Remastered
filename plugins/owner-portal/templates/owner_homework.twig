@@ -71,14 +71,29 @@
         </div>
         {% endif %}
 
-        {# ── Tasks / Therapieplan ── #}
+        {# ── Tasks / Therapieplan mit Checkliste ── #}
         {% if tasks %}
+        {% set checks = checks_by_plan[plan.id] ?? {} %}
         <div class="mb-3">
             <div class="small text-secondary text-uppercase fw-semibold mb-2" style="letter-spacing:0.06em;">Therapieplan</div>
             {% for task in tasks %}
-            <div class="border rounded mb-2 overflow-hidden">
-                <div class="d-flex align-items-center justify-content-between gap-2 px-3 py-2" style="background:var(--bs-tertiary-bg);">
-                    <div class="fw-semibold small">{{ task.title }}</div>
+            {% set is_checked = checks[task.id] ?? false %}
+            <div class="border rounded mb-2 overflow-hidden homework-task-item {% if is_checked %}task-done{% endif %}"
+                 data-task-id="{{ task.id }}" data-plan-id="{{ plan.id }}"
+                 style="transition:opacity .2s;">
+                <div class="d-flex align-items-center gap-3 px-3 py-2" style="background:var(--bs-tertiary-bg);">
+                    {# ── Checkbox ── #}
+                    <button class="task-check-btn btn p-0 border-0 flex-shrink-0"
+                            data-task="{{ task.id }}" data-plan="{{ plan.id }}"
+                            data-checked="{{ is_checked ? '1' : '0' }}"
+                            type="button"
+                            style="width:24px;height:24px;border-radius:6px;background:{% if is_checked %}#22c55e{% else %}rgba(128,128,128,0.15){% endif %};display:flex;align-items:center;justify-content:center;transition:background .2s;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style="opacity:{% if is_checked %}1{% else %}0.3{% endif %};transition:opacity .2s;">
+                            <path stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M20 6L9 17l-5-5"/>
+                        </svg>
+                    </button>
+                    <div class="fw-semibold small flex-fill {% if is_checked %}text-decoration-line-through text-secondary{% endif %}"
+                         style="transition:all .2s;">{{ task.title }}</div>
                     {% if task.frequency or task.duration %}
                     <div class="small text-secondary text-nowrap">
                         {% if task.frequency %}{{ task.frequency }}{% endif %}
@@ -126,4 +141,45 @@
     </div>
 {% endif %}
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+    document.querySelectorAll('.task-check-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var taskId  = btn.dataset.task;
+            var planId  = btn.dataset.plan;
+            var checked = btn.dataset.checked === '1';
+            var newVal  = !checked;
+
+            /* Optimistic UI update */
+            var item  = btn.closest('.homework-task-item');
+            var label = item.querySelector('.fw-semibold.flex-fill');
+            var svg   = btn.querySelector('svg');
+
+            btn.dataset.checked        = newVal ? '1' : '0';
+            btn.style.background       = newVal ? '#22c55e' : 'rgba(128,128,128,0.15)';
+            svg.style.opacity          = newVal ? '1' : '0.3';
+            label.style.textDecoration = newVal ? 'line-through' : '';
+            label.style.opacity        = newVal ? '0.5' : '1';
+
+            fetch('/api/portal/hausaufgaben/' + planId + '/aufgabe/' + taskId + '/abhaken', {
+                method:  'POST',
+                headers: {'Content-Type': 'application/json'},
+                body:    JSON.stringify({checked: newVal})
+            })
+            .then(function(r){ return r.json(); })
+            .catch(function() {
+                /* Revert on error */
+                btn.dataset.checked        = checked ? '1' : '0';
+                btn.style.background       = checked ? '#22c55e' : 'rgba(128,128,128,0.15)';
+                svg.style.opacity          = checked ? '1' : '0.3';
+                label.style.textDecoration = checked ? 'line-through' : '';
+                label.style.opacity        = checked ? '0.5' : '1';
+            });
+        });
+    });
+})();
+</script>
 {% endblock %}

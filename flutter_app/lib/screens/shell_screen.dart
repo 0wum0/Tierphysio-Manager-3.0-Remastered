@@ -70,6 +70,9 @@ class _ShellScreenState extends State<ShellScreen>
       if (mounted) setState(() => _now = DateTime.now());
     });
     NotificationService.requestPermission();
+    NotificationService.onTap = (route) {
+      if (mounted) context.go(route);
+    };
 
     _sidebarCtrl = AnimationController(
       vsync: this,
@@ -172,8 +175,9 @@ class _ShellScreenState extends State<ShellScreen>
           _GridItem(Icons.warning_amber_rounded,   'Mahnungen',        AppTheme.danger,    '/mahnungen',  badge: _overdueCount),
           _GridItem(Icons.assignment_ind_rounded,  'Anmeldungen',      AppTheme.primary,   '/anmeldungen', badge: _newIntakes),
           _GridItem(Icons.send_rounded,            'Einladungen',      AppTheme.secondary, '/einladungen'),
-          _GridItem(Icons.category_rounded,        'Behandlungs\narten', AppTheme.tertiary, '/behandlungsarten'),
-          _GridItem(Icons.home_work_rounded,       'Portal Admin',     AppTheme.tertiary,  '/portal-admin'),
+          _GridItem(Icons.category_rounded,        'Behandlungs\narten', AppTheme.tertiary,   '/behandlungsarten'),
+          _GridItem(Icons.assignment_rounded,      'Hausaufgaben',     AppTheme.primary,    '/hausaufgaben'),
+          _GridItem(Icons.home_work_rounded,       'Portal Admin',     AppTheme.tertiary,   '/portal-admin'),
           _GridItem(Icons.search_rounded,          'Suche',            AppTheme.primary,   '/suche'),
           _GridItem(Icons.person_outline_rounded,  'Mein Profil',      AppTheme.primary,   '/profil'),
         ];

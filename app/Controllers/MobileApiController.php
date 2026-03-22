@@ -4912,6 +4912,26 @@ class MobileApiController
         $this->json(['pending' => $count]);
     }
 
+    /* ── GET /api/mobile/portal/feedback/neu — check-notification count for Flutter ── */
+    public function portalFeedbackNew(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+
+        $since = $_GET['since'] ?? date('Y-m-d H:i:s', strtotime('-5 minutes'));
+        $count = 0;
+
+        try {
+            $stmt  = $this->db->query(
+                'SELECT COUNT(*) FROM portal_check_notifications WHERE created_at > ?',
+                [$since]
+            );
+            $count = (int)$stmt->fetchColumn();
+        } catch (\Throwable) {}
+
+        $this->json(['count' => $count]);
+    }
+
     /* ── private helper: resolve photo URL for a patient row ── */
     private function resolvePatientPhotoUrl(array $patient): ?string
     {

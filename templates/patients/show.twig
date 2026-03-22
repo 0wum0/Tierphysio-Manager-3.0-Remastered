@@ -154,6 +154,15 @@
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="portal-checks-tab" data-bs-toggle="tab" data-bs-target="#portal-checks" type="button" role="tab" aria-controls="portal-checks" aria-selected="false">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Portal-Checkliste
+                        {% if portal_check_notifications|length > 0 %}
+                        <span class="badge" style="font-size:0.6rem;background:rgba(34,197,94,0.15);color:#22c55e;border:1px solid rgba(34,197,94,0.3);margin-left:4px;">{{ portal_check_notifications|length }}</span>
+                        {% endif %}
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
                     <button class="nav-link" id="historie-tab" data-bs-toggle="tab" data-bs-target="#historie" type="button" role="tab" aria-controls="historie" aria-selected="false">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><path stroke="currentColor" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         Historie
@@ -239,6 +248,50 @@
                     </div>
                 </div>
                 
+                <!-- Portal-Checkliste Tab -->
+                <div class="tab-pane fade" id="portal-checks" role="tabpanel" aria-labelledby="portal-checks-tab">
+                    {% if portal_check_notifications is defined and portal_check_notifications|length > 0 %}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <p class="small mb-0" style="color:var(--text-muted);">
+                            Aufgaben und Übungen, die der Besitzer im Portal abgehakt hat. Diese Einträge erscheinen <strong>nicht</strong> in der Timeline.
+                        </p>
+                        <span class="badge" style="background:rgba(34,197,94,0.12);color:#22c55e;border:1px solid rgba(34,197,94,0.25);font-size:0.7rem;">
+                            {{ portal_check_notifications|length }} Einträge
+                        </span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                        {% for n in portal_check_notifications %}
+                        <div style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.9rem;border-radius:10px;background:var(--glass-bg, rgba(255,255,255,0.04));border:1px solid var(--glass-border, rgba(255,255,255,0.08));">
+                            <div style="width:28px;height:28px;border-radius:8px;background:{% if n.type == 'homework' %}rgba(34,197,94,0.12){% else %}rgba(79,124,255,0.12){% endif %};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                                {% if n.type == 'homework' %}
+                                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                {% else %}
+                                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="#4f7cff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                {% endif %}
+                            </div>
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-size:0.85rem;font-weight:600;">{{ n.task_title }}</div>
+                                <div style="font-size:0.75rem;color:var(--text-muted);">
+                                    {{ n.owner_name }}
+                                    · {{ n.type == 'homework' ? 'Hausaufgabe' : 'Übung' }}
+                                    · <span title="{{ n.created_at }}">{{ n.created_at|date('d.m.Y H:i') }}</span>
+                                </div>
+                            </div>
+                            <span style="font-size:0.68rem;padding:2px 8px;border-radius:6px;background:rgba(34,197,94,0.1);color:#22c55e;border:1px solid rgba(34,197,94,0.2);white-space:nowrap;">
+                                ✓ Abgehakt
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5" style="color:var(--text-muted);">
+                        <svg width="40" height="40" fill="none" viewBox="0 0 24 24" style="opacity:0.2;margin-bottom:12px;"><path stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <p style="font-size:0.9rem;">Noch keine abgehakten Aufgaben im Besitzerportal.</p>
+                        <p style="font-size:0.8rem;opacity:0.6;">Sobald der Besitzer eine Aufgabe oder Übung abhakt, erscheint sie hier.</p>
+                    </div>
+                    {% endif %}
+                </div>
+
                 <!-- Historie Tab -->
                 <div class="tab-pane fade" id="historie" role="tabpanel" aria-labelledby="historie-tab">
                     {% if timeline %}

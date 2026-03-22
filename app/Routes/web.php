@@ -170,6 +170,9 @@ $router->post('/api/mobile/portal-admin/hausaufgabenplaene/{id}/senden',        
 // Homework templates (read-only)
 $router->get('/api/mobile/portal-admin/vorlagen',             [MobileApiController::class, 'homeworkTemplates']);
 
+// Portal check-notifications (Besitzer hat Aufgabe/Übung abgehakt)
+$router->get('/api/mobile/portal/feedback/neu',               [MobileApiController::class, 'portalFeedbackNew']);
+
 // ── Profile ──────────────────────────────────────────────────────────
 $router->get('/api/mobile/profil',                            [MobileApiController::class, 'profileGet']);
 $router->post('/api/mobile/profil',                           [MobileApiController::class, 'profileUpdate']);

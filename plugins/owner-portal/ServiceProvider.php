@@ -98,9 +98,14 @@ class ServiceProvider
         $router->get('/portal-admin/hausaufgaben/{id}/pdf',          [OwnerPortalAdminController::class, 'homeworkPlanPdf'],    ['auth']);
         $router->post('/portal-admin/hausaufgaben/{id}/senden',      [OwnerPortalAdminController::class, 'homeworkPlanSend'],   ['auth']);
 
-        /* ── Owner portal homework view ── */
-        $router->get('/portal/tiere/{id}/hausaufgaben',                    [OwnerPortalController::class, 'homework'],    []);
-        $router->get('/portal/tiere/{id}/hausaufgaben/{plan_id}/pdf',      [OwnerPortalController::class, 'homeworkPdf'], []);
+        /* ── Owner portal homework view + checklist ── */
+        $router->get('/portal/tiere/{id}/hausaufgaben',                              [OwnerPortalController::class, 'homework'],          []);
+        $router->get('/portal/tiere/{id}/hausaufgaben/{plan_id}/pdf',                [OwnerPortalController::class, 'homeworkPdf'],        []);
+        $router->post('/api/portal/hausaufgaben/{plan_id}/aufgabe/{task_id}/abhaken',[OwnerPortalController::class, 'homeworkTaskToggle'], []);
+
+        /* ── Check-Notification API (Besitzer hat Aufgabe abgehakt) ── */
+        $router->get('/api/portal-admin/check-notifications',           [OwnerPortalAdminController::class, 'checkNotifications'],       ['auth']);
+        $router->post('/api/portal-admin/check-notifications/gelesen',  [OwnerPortalAdminController::class, 'checkNotificationsMarkRead'],['auth']);
 
         /* ── Messaging: Admin routes ── */
         $router->get('/portal-admin/nachrichten',                                    [MessagingAdminController::class, 'index'],     ['auth']);

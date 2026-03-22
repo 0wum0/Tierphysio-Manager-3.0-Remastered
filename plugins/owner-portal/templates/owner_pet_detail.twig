@@ -52,10 +52,9 @@
 </div>
 
 {# ── Tab Navigation ── #}
+{# NOTE: Behandlungen und Notizen sind nur für Therapeuten sichtbar, nicht im Besitzerportal #}
 <div class="d-flex gap-1 border-bottom mb-3" style="overflow-x:auto;">
     {% set tabs = [
-        {id:'behandlungen',   label:'Behandlungen',   count: treatments|length},
-        {id:'notizen',        label:'Notizen',        count: notes|length},
         {id:'dokumente',      label:'Dokumente',      count: documents|length},
         {id:'fotos',          label:'Fotos',          count: photos|length},
     ] %}
@@ -80,53 +79,8 @@
     {% endfor %}
 </div>
 
-{# ── Behandlungen ── #}
-<div class="pet-tab-panel" id="panel-behandlungen">
-    <div class="card mb-3">
-      <div class="card-body">
-        <h2 class="h5 mb-3">Behandlungen</h2>
-        {% if treatments %}
-            {% for entry in treatments %}
-            <div class="timeline-entry">
-                <div class="timeline-date">{{ entry.entry_date|date('d.m.Y H:i') }}{% if entry.user_name %} · {{ entry.user_name }}{% endif %}</div>
-                <div class="timeline-title">{{ entry.title }}</div>
-                {% if entry.content %}<div class="timeline-content">{{ entry.content|raw }}</div>{% endif %}
-                {% if entry.status_badge %}
-                    <div style="margin-top:0.4rem;">
-                        <span class="badge-status badge-paid" style="font-size:0.68rem;">{{ entry.status_badge }}</span>
-                    </div>
-                {% endif %}
-            </div>
-            {% endfor %}
-        {% else %}
-            <p class="text-secondary small">Keine Behandlungen vorhanden.</p>
-        {% endif %}
-      </div>
-    </div>
-</div>
-
-{# ── Notizen ── #}
-<div class="pet-tab-panel" id="panel-notizen" style="display:none;">
-    <div class="card mb-3">
-      <div class="card-body">
-        <h2 class="h5 mb-3">Notizen</h2>
-        {% if notes %}
-            {% for entry in notes %}
-            <div class="timeline-entry">
-                <div class="timeline-date">{{ entry.entry_date|date('d.m.Y H:i') }}{% if entry.user_name %} · {{ entry.user_name }}{% endif %}</div>
-                <div class="timeline-title">{{ entry.title }}</div>
-                {% if entry.content %}<div class="timeline-content">{{ entry.content|raw }}</div>{% endif %}
-            </div>
-            {% endfor %}
-        {% else %}
-            <p class="text-secondary small">Keine Notizen vorhanden.</p>
-        {% endif %}
-      </div>
-    </div>
-</div>
-
 {# ── Dokumente ── #}
-<div class="pet-tab-panel" id="panel-dokumente" style="display:none;">
+<div class="pet-tab-panel" id="panel-dokumente">
     <div class="card mb-3">
       <div class="card-body">
         <h2 class="h5 mb-3">Dokumente</h2>
@@ -317,7 +271,7 @@
         panels.forEach(function(p){ p.style.display = p.id === 'panel-' + id ? '' : 'none'; });
     }
     btns.forEach(function(b){ b.addEventListener('click', function(){ activate(b.dataset.tab); }); });
-    activate('behandlungen');
+    activate('dokumente');
 })();
 </script>
 {% endblock %}

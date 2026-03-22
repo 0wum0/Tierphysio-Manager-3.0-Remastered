@@ -483,4 +483,159 @@ class OwnerPortalRepository
             return [];
         }
     }
+
+    /* ─── Homework Checklist ─── */
+
+    public function getChecksForPlan(int $planId, int $ownerId): array
+    {
+        try {
+            $stmt = $this->db->query(
+                'SELECT task_id, checked FROM portal_homework_task_checks WHERE plan_id = ? AND owner_id = ?',
+                [$planId, $ownerId]
+            );
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $map  = [];
+            foreach ($rows as $r) { $map[(int)$r['task_id']] = (bool)$r['checked']; }
+            return $map;
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    public function setTaskCheck(int $taskId, int $planId, int $ownerId, bool $checked): void
+    {
+        $checkedAt = $checked ? date('Y-m-d H:i:s') : null;
+        $this->db->execute(
+            'INSERT INTO portal_homework_task_checks (task_id, plan_id, owner_id, checked, checked_at)
+             VALUES (?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE checked = VALUES(checked), checked_at = VALUES(checked_at), updated_at = NOW()',
+            [$taskId, $planId, $ownerId, $checked ? 1 : 0, $checkedAt]
+        );
+    }
+
+    /* ─── Check Notifications (for admin + Flutter polling) ─── */
+
+    public function createCheckNotification(array $data): void
+    {
+        try {
+            $this->db->execute(
+                'INSERT INTO portal_check_notifications
+                 (owner_id, patient_id, task_id, exercise_id, plan_id, task_title, owner_name, pet_name, type, checked)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [
+                    $data['owner_id'],
+                    $data['patient_id'],
+                    $data['task_id']     ?? null,
+                    $data['exercise_id'] ?? null,
+                    $data['plan_id']     ?? null,
+                    $data['task_title'],
+                    $data['owner_name'],
+                    $data['pet_name'],
+                    $data['type'] ?? 'homework',
+                    $data['checked'] ? 1 : 0,
+                ]
+            );
+        } catch (\Throwable) {}
+    }
+
+    /** Returns count of unread check-notifications (for badge) */
+    public function countUnreadCheckNotifications(): int
+    {
+        try {
+            $stmt = $this->db->query(
+                'SELECT COUNT(*) FROM portal_check_notifications WHERE read_at IS NULL'
+            );
+            return (int)$stmt->fetchColumn();
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
+    /** Returns recent check-notifications for admin panel */
+    public function getCheckNotifications(int $limit = 50): array
+    {
+        try {
+            $stmt = $this->db->query(
+                'SELECT n.*,
+                        o.first_name, o.last_name
+                 FROM portal_check_notifications n
+                 LEFT JOIN owners o ON o.id = n.owner_id
+                 ORDER BY n.created_at DESC
+                 LIMIT ' . $limit
+            );
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /** Returns notifications for a specific patient (for Patienten-Akte tab) */
+    public function getCheckNotificationsForPatient(int $patientId, int $limit = 100): array
+    {
+        try {
+            $stmt = $this->db->query(
+                'SELECT n.*,
+                        o.first_name, o.last_name
+                 FROM portal_check_notifications n
+                 LEFT JOIN owners o ON o.id = n.owner_id
+                 WHERE n.patient_id = ?
+                 ORDER BY n.created_at DESC
+                 LIMIT ' . $limit,
+                [$patientId]
+            );
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /** Mark all check-notifications as read */
+    public function markCheckNotificationsRead(): void
+    {
+        try {
+            $this->db->execute(
+                'UPDATE portal_check_notifications SET read_at = NOW() WHERE read_at IS NULL'
+            );
+        } catch (\Throwable) {}
+    }
+
+    /** Get count of new check-notifications since timestamp (for Flutter polling) */
+    public function countNewCheckNotificationsSince(string $since): int
+    {
+        try {
+            $stmt = $this->db->query(
+                'SELECT COUNT(*) FROM portal_check_notifications WHERE created_at > ?',
+                [$since]
+            );
+            return (int)$stmt->fetchColumn();
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
+    public function getOwnerWithPetByOwnerId(int $ownerId): ?array
+    {
+        try {
+            $stmt = $this->db->query(
+                'SELECT o.first_name, o.last_name FROM owners o WHERE o.id = ? LIMIT 1',
+                [$ownerId]
+            );
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    public function getPatientNameById(int $patientId): string
+    {
+        try {
+            $stmt = $this->db->query(
+                'SELECT name FROM patients WHERE id = ? LIMIT 1',
+                [$patientId]
+            );
+            return (string)($stmt->fetchColumn() ?: '');
+        } catch (\Throwable) {
+            return '';
+        }
+    }
 }

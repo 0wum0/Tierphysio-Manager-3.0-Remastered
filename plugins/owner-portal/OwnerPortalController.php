@@ -426,10 +426,12 @@ class OwnerPortalController extends Controller
 
         $plans = $this->repo->getHomeworkPlansByPatient($petId);
 
-        // Load tasks for each plan
-        $tasksByPlan = [];
+        $tasksByPlan  = [];
+        $checksByPlan = [];
         foreach ($plans as $p) {
-            $tasksByPlan[$p['id']] = $this->repo->getTasksByPlan((int)$p['id']);
+            $pid                  = (int)$p['id'];
+            $tasksByPlan[$pid]    = $this->repo->getTasksByPlan($pid);
+            $checksByPlan[$pid]   = $this->repo->getChecksForPlan($pid, $ownerId);
         }
 
         $this->render('@owner-portal/owner_homework.twig', [
@@ -438,7 +440,67 @@ class OwnerPortalController extends Controller
             'pet'                 => $pet,
             'plans'               => $plans,
             'tasks_by_plan'       => $tasksByPlan,
+            'checks_by_plan'      => $checksByPlan,
             'portal_unread_count' => $this->portalUnread($ownerId),
         ]);
+    }
+
+    /* ── POST /api/portal/hausaufgaben/{plan_id}/aufgabe/{task_id}/abhaken ── */
+    public function homeworkTaskToggle(array $params = []): void
+    {
+        $user    = $this->requireOwnerAuth();
+        $ownerId = (int)$user['owner_id'];
+        $planId  = (int)($params['plan_id'] ?? 0);
+        $taskId  = (int)($params['task_id'] ?? 0);
+
+        $body    = json_decode(file_get_contents('php://input'), true) ?? [];
+        $checked = (bool)($body['checked'] ?? false);
+
+        /* Security: plan must belong to this owner */
+        $plan = $this->repo->getHomeworkPlanById($planId);
+        if (!$plan || (int)$plan['owner_id'] !== $ownerId) {
+            http_response_code(403);
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'error' => 'Kein Zugriff']);
+            exit;
+        }
+
+        $this->repo->setTaskCheck($taskId, $planId, $ownerId, $checked);
+
+        /* ── Write notification only when checking (not unchecking) ── */
+        if ($checked) {
+            /* Fetch task title */
+            $tasks     = $this->repo->getTasksByPlan($planId);
+            $taskTitle = '';
+            foreach ($tasks as $t) {
+                if ((int)$t['id'] === $taskId) { $taskTitle = $t['title']; break; }
+            }
+
+            /* Owner name */
+            $ownerRow  = $this->repo->getOwnerWithPetByOwnerId($ownerId);
+            $ownerName = $ownerRow
+                ? trim(($ownerRow['first_name'] ?? '') . ' ' . ($ownerRow['last_name'] ?? ''))
+                : 'Besitzer';
+
+            /* Pet name */
+            $patientId = (int)$plan['patient_id'];
+            $petName   = $this->repo->getPatientNameById($patientId);
+
+            $this->repo->createCheckNotification([
+                'owner_id'   => $ownerId,
+                'patient_id' => $patientId,
+                'task_id'    => $taskId,
+                'plan_id'    => $planId,
+                'task_title' => $taskTitle ?: 'Aufgabe',
+                'owner_name' => $ownerName,
+                'pet_name'   => $petName,
+                'type'       => 'homework',
+                'checked'    => true,
+            ]);
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode(['ok' => true, 'checked' => $checked]);
+        exit;
     }
 }
