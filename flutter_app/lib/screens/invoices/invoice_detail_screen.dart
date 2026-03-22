@@ -96,6 +96,24 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen>
     } catch (e) { _showSnack(e.toString(), error: true); }
   }
 
+  Future<void> _sharePdfWhatsApp() async {
+    try {
+      final data = await _api.invoicePdfUrl(widget.id);
+      final url  = data['url'] as String? ?? '';
+      if (url.isEmpty) { _showSnack('Keine PDF-URL verfügbar.', error: true); return; }
+      final fullUrl = url.startsWith('http') ? url : '${ApiService.baseUrl}$url';
+      final inv = _invoice!;
+      final num = inv['invoice_number'] as String? ?? 'Rechnung';
+      final msg = Uri.encodeComponent('Ihre Rechnung $num: $fullUrl');
+      final waUri = Uri.parse('https://wa.me/?text=$msg');
+      if (await canLaunchUrl(waUri)) {
+        await launchUrl(waUri, mode: LaunchMode.externalApplication);
+      } else {
+        _showSnack('WhatsApp nicht verfügbar.', error: true);
+      }
+    } catch (e) { _showSnack(e.toString(), error: true); }
+  }
+
   Future<void> _delete() async {
     final ok = await showDialog<bool>(context: context, builder: (_) => AlertDialog(
       title: const Text('Rechnung löschen'),
@@ -210,8 +228,17 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen>
             IconButton(icon: const Icon(Icons.picture_as_pdf_rounded), tooltip: 'PDF öffnen', onPressed: _openPdf),
             IconButton(icon: const Icon(Icons.swap_horiz_rounded), tooltip: 'Status ändern', onPressed: _changeStatus),
             PopupMenuButton<String>(
-              onSelected: (v) { if (v == 'delete') _delete(); },
+              onSelected: (v) {
+                if (v == 'delete')    _delete();
+                if (v == 'whatsapp') _sharePdfWhatsApp();
+              },
               itemBuilder: (_) => [
+                const PopupMenuItem(value: 'whatsapp', child: Row(children: [
+                  Icon(Icons.share_rounded, color: Color(0xFF25D366), size: 18),
+                  SizedBox(width: 8),
+                  Text('Per WhatsApp teilen'),
+                ])),
+                const PopupMenuDivider(),
                 const PopupMenuItem(value: 'delete', child: Row(children: [
                   Icon(Icons.delete_outline_rounded, color: Colors.red, size: 18),
                   SizedBox(width: 8),

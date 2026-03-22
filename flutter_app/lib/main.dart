@@ -7,23 +7,27 @@ import 'core/theme.dart';
 import 'services/auth_service.dart';
 import 'services/api_service.dart';
 import 'services/notification_service.dart';
+import 'services/theme_service.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ApiService.init();
   await NotificationService.init();
+  final themeService = ThemeService();
+  await themeService.init();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
-  runApp(const TheraPanoApp());
+  runApp(TheraPanoApp(themeService: themeService));
 }
 
 class TheraPanoApp extends StatefulWidget {
-  const TheraPanoApp({super.key});
+  final ThemeService themeService;
+  const TheraPanoApp({super.key, required this.themeService});
 
   @override
   State<TheraPanoApp> createState() => _TheraPanoAppState();
@@ -37,16 +41,18 @@ class _TheraPanoAppState extends State<TheraPanoApp> {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: _authService),
+        ChangeNotifierProvider.value(value: widget.themeService),
         Provider(create: (_) => ApiService()),
       ],
       child: Builder(builder: (context) {
         final router = AppRouter(context.read<AuthService>()).router;
+        final themeMode = context.watch<ThemeService>().mode;
         return MaterialApp.router(
           title: 'TheraPano',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),
-          themeMode: ThemeMode.system,
+          themeMode: themeMode,
           routerConfig: router,
           builder: (context, child) {
             // Show splash on top until it signals completion.

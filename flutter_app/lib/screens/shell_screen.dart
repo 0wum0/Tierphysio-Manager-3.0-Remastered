@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../services/auth_service.dart';
 import '../services/api_service.dart';
 import '../services/notification_service.dart';
+import '../services/theme_service.dart';
 import '../core/theme.dart';
 
 const double _kSidebarCollapsed = 72.0;
@@ -28,7 +30,9 @@ class _ShellScreenState extends State<ShellScreen>
   int _newIntakes     = 0;
   int _birthdayCount  = 0;
   late Timer _clockTimer;
+  late Timer _connectivityTimer;
   DateTime _now = DateTime.now();
+  bool _isOffline = false;
 
   // Sidebar animation
   bool _sidebarExpanded = true;
@@ -73,6 +77,10 @@ class _ShellScreenState extends State<ShellScreen>
     NotificationService.onTap = (route) {
       if (mounted) context.go(route);
     };
+    _checkConnectivity();
+    _connectivityTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (mounted) _checkConnectivity();
+    });
 
     _sidebarCtrl = AnimationController(
       vsync: this,
@@ -88,8 +96,19 @@ class _ShellScreenState extends State<ShellScreen>
   @override
   void dispose() {
     _clockTimer.cancel();
+    _connectivityTimer.cancel();
     _sidebarCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkConnectivity() async {
+    try {
+      final result = await InternetAddress.lookup('google.com')
+          .timeout(const Duration(seconds: 4));
+      if (mounted) setState(() => _isOffline = result.isEmpty || result.first.rawAddress.isEmpty);
+    } catch (_) {
+      if (mounted) setState(() => _isOffline = true);
+    }
   }
 
   void _toggleSidebar() {
@@ -178,8 +197,9 @@ class _ShellScreenState extends State<ShellScreen>
           _GridItem(Icons.category_rounded,        'Behandlungs\narten', AppTheme.tertiary,   '/behandlungsarten'),
           _GridItem(Icons.assignment_rounded,      'Hausaufgaben',     AppTheme.primary,    '/hausaufgaben'),
           _GridItem(Icons.home_work_rounded,       'Portal Admin',     AppTheme.tertiary,   '/portal-admin'),
-          _GridItem(Icons.search_rounded,          'Suche',            AppTheme.primary,   '/suche'),
-          _GridItem(Icons.person_outline_rounded,  'Mein Profil',      AppTheme.primary,   '/profil'),
+          _GridItem(Icons.search_rounded,          'Suche',            AppTheme.primary,    '/suche'),
+          _GridItem(Icons.person_outline_rounded,  'Mein Profil',      AppTheme.primary,    '/profil'),
+          _GridItem(Icons.settings_rounded,        'Einstellungen',    AppTheme.tertiary,   '/einstellungen'),
         ];
         return SafeArea(
           child: Padding(
@@ -443,6 +463,14 @@ class _ShellScreenState extends State<ShellScreen>
                         onTap: () => context.push('/profil'),
                       ),
                       _SidebarTile(
+                        dest: _SidebarDest(Icons.settings_outlined,
+                            Icons.settings_rounded, 'Einstellungen',
+                            color: AppTheme.tertiary),
+                        isSelected: location.startsWith('/einstellungen'),
+                        showLabel: showLabels,
+                        onTap: () => context.push('/einstellungen'),
+                      ),
+                      _SidebarTile(
                         dest: _SidebarDest(Icons.logout_rounded,
                             Icons.logout_rounded, 'Abmelden',
                             color: AppTheme.danger),
@@ -557,6 +585,25 @@ class _ShellScreenState extends State<ShellScreen>
         ],
       ),
       actions: [
+        // Theme toggle
+        Consumer<ThemeService>(
+          builder: (_, ts, __) => IconButton(
+            icon: Icon(switch (ts.mode) {
+              ThemeMode.light  => Icons.light_mode_rounded,
+              ThemeMode.dark   => Icons.dark_mode_rounded,
+              ThemeMode.system => Icons.brightness_auto_rounded,
+            }),
+            tooltip: 'Theme wechseln',
+            onPressed: () {
+              final next = switch (ts.mode) {
+                ThemeMode.system => ThemeMode.light,
+                ThemeMode.light  => ThemeMode.dark,
+                ThemeMode.dark   => ThemeMode.system,
+              };
+              ts.setMode(next);
+            },
+          ),
+        ),
         // Notification bell
         Stack(
           alignment: Alignment.center,
@@ -614,7 +661,25 @@ class _ShellScreenState extends State<ShellScreen>
     return Scaffold(
       key: _narrowScaffoldKey,
       appBar: _buildAppBar(context),
-      body: widget.child,
+      body: Column(children: [
+        if (_isOffline)
+          Material(
+            color: Colors.orange.shade700,
+            child: const SafeArea(
+              top: false, bottom: false,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                child: Row(children: [
+                  Icon(Icons.wifi_off_rounded, color: Colors.white, size: 16),
+                  SizedBox(width: 8),
+                  Text('Keine Internetverbindung',
+                    style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                ]),
+              ),
+            ),
+          ),
+        Expanded(child: widget.child),
+      ]),
       bottomNavigationBar: NavigationBar(
         selectedIndex: navIdx,
         onDestinationSelected: (idx) {

@@ -27,6 +27,7 @@ import '../screens/intake/intake_screen.dart';
 import '../screens/intake/intake_detail_screen.dart';
 import '../screens/invite/invite_screen.dart';
 import '../screens/homework/homework_screen.dart';
+import '../screens/settings/settings_screen.dart';
 
 class AppRouter {
   final AuthService authService;
@@ -113,6 +114,7 @@ class AppRouter {
           GoRoute(path: '/hausaufgaben',   builder: (_, __) => const HomeworkScreen()),
           GoRoute(path: '/behandlungsarten', builder: (_, __) => const BehandlungsartenScreen()),
           GoRoute(path: '/profil',           builder: (_, __) => const ProfileScreen()),
+          GoRoute(path: '/einstellungen',    builder: (_, __) => const SettingsScreen()),
           GoRoute(path: '/suche',            builder: (_, __) => const SearchScreen()),
 
           GoRoute(
