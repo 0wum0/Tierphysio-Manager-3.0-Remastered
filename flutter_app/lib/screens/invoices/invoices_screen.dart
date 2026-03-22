@@ -148,32 +148,97 @@ class _InvoicesScreenState extends State<InvoicesScreen>
                 onPressed: () { _page++; _load(reset: false); },
                 child: const Text('Mehr laden')),
           );
-          final inv = _items[i] as Map<String, dynamic>;
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: ListTile(
-              leading: _StatusIcon(status: inv['status'] as String? ?? ''),
-              title: Text(inv['invoice_number'] as String? ?? '',
-                  style: const TextStyle(fontWeight: FontWeight.w700)),
-              subtitle: Text(
-                '${inv['owner_name'] ?? ''}${inv['patient_name'] != null ? " · ${inv['patient_name']}" : ""}',
-                style: const TextStyle(fontSize: 12)),
-              trailing: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(_eur(inv['total_gross']),
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                  _StatusBadge(status: inv['status'] as String? ?? ''),
-                ],
+          final inv    = _items[i] as Map<String, dynamic>;
+          final status = inv['status'] as String? ?? '';
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final statusColor = _resolveStatusColor(status);
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Material(
+              color: isDark ? const Color(0xFF1A1D27) : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () => context.push('/rechnungen/${inv['id']}').then((_) => _load()),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.06)
+                          : Colors.black.withValues(alpha: 0.06),
+                    ),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Row(children: [
+                    Container(
+                      width: 44, height: 44,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [statusColor, statusColor.withValues(alpha: 0.65)],
+                          begin: Alignment.topLeft, end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(13),
+                        boxShadow: [
+                          BoxShadow(
+                            color: statusColor.withValues(alpha: isDark ? 0.22 : 0.28),
+                            blurRadius: 8, offset: const Offset(0, 3)),
+                        ],
+                      ),
+                      child: Icon(_resolveStatusIcon(status), color: Colors.white, size: 20),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(inv['invoice_number'] as String? ?? '',
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, height: 1.2)),
+                        const SizedBox(height: 3),
+                        Text(
+                          '${inv['owner_name'] ?? ''}${inv['patient_name'] != null ? " · ${inv['patient_name']}" : ""}',
+                          style: TextStyle(fontSize: 12,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant),
+                          overflow: TextOverflow.ellipsis),
+                      ],
+                    )),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(_eur(inv['total_gross']),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800, fontSize: 15,
+                            color: isDark ? Colors.white : const Color(0xFF0F172A))),
+                        const SizedBox(height: 4),
+                        _StatusBadge(status: status),
+                      ],
+                    ),
+                  ]),
+                ),
               ),
-              onTap: () => context.push('/rechnungen/${inv['id']}').then((_) => _load()),
             ),
           );
         },
       ),
     );
   }
+
+  static Color _resolveStatusColor(String s) => switch (s) {
+    'paid'    => AppTheme.success,
+    'open'    => AppTheme.primary,
+    'overdue' => AppTheme.danger,
+    'draft'   => Colors.grey,
+    _         => AppTheme.primary,
+  };
+
+  static IconData _resolveStatusIcon(String s) => switch (s) {
+    'paid'    => Icons.check_circle_rounded,
+    'open'    => Icons.pending_rounded,
+    'overdue' => Icons.warning_rounded,
+    'draft'   => Icons.edit_note_rounded,
+    _         => Icons.receipt_long_rounded,
+  };
 
   // ═══════════════════════════════════════ ANALYTICS TAB ═══════════════════
 
@@ -374,19 +439,39 @@ class _ChartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color ?? Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).dividerColor),
+        color: isDark ? const Color(0xFF1A1D27) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.07)
+              : Colors.black.withValues(alpha: 0.06),
+        ),
+        boxShadow: isDark ? null : [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12, offset: const Offset(0, 4)),
+        ],
       ),
-      padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-        Text(subtitle, style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant)),
-        const SizedBox(height: 16),
-        SizedBox(height: 180, child: child),
+        Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 12), child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+            const SizedBox(height: 1),
+            Text(subtitle, style: TextStyle(fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          ],
+        )),
+        Divider(height: 1,
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : Colors.black.withValues(alpha: 0.05)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+          child: SizedBox(height: 180, child: child)),
       ]),
     );
   }
@@ -407,26 +492,6 @@ class _Legend extends StatelessWidget {
         Text(value, style: TextStyle(fontWeight: FontWeight.w700, color: color, fontSize: 12)),
       ]),
     ]);
-  }
-}
-
-class _StatusIcon extends StatelessWidget {
-  final String status;
-  const _StatusIcon({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    final (icon, color) = switch (status) {
-      'paid'    => (Icons.check_circle,   Colors.green),
-      'open'    => (Icons.pending,        Colors.blue),
-      'overdue' => (Icons.warning,        Colors.red),
-      'draft'   => (Icons.edit_note,      Colors.grey),
-      _         => (Icons.receipt,        Colors.grey),
-    };
-    return CircleAvatar(
-      backgroundColor: color.withValues(alpha: 0.15),
-      child: Icon(icon, color: color, size: 20),
-    );
   }
 }
 

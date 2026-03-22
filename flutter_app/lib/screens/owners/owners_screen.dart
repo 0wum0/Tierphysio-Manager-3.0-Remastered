@@ -158,55 +158,89 @@ class _OwnerTile extends StatelessWidget {
     final pCount   = o['patients_count'] as int? ?? (o['patients_count'] is String ? int.tryParse(o['patients_count'] as String) ?? 0 : 0);
     final sub      = [email, phone].where((s) => s.isNotEmpty).join(' · ');
 
-    return Card(
-      child: InkWell(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Material(
+        color: isDark ? const Color(0xFF1A1D27) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-          child: Row(children: [
-            Container(
-              width: 46, height: 46,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [color, Color.lerp(color, AppTheme.secondary, 0.4)!],
-                  begin: Alignment.topLeft, end: Alignment.bottomRight,
-                ),
-                shape: BoxShape.circle,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.black.withValues(alpha: 0.06),
               ),
-              alignment: Alignment.center,
-              child: Text(initials.isEmpty ? '?' : initials,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
             ),
-            const SizedBox(width: 12),
-            Expanded(child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(fullName,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
-                  overflow: TextOverflow.ellipsis),
-                if (sub.isNotEmpty) Text(sub,
-                  style: Theme.of(context).textTheme.bodySmall,
-                  overflow: TextOverflow.ellipsis, maxLines: 1),
-              ],
-            )),
-            if (pCount > 0)
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(children: [
+              /* Gradient avatar circle */
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                width: 50, height: 50,
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
+                  gradient: LinearGradient(
+                    colors: [color, Color.lerp(color, AppTheme.secondary, 0.45)!],
+                    begin: Alignment.topLeft, end: Alignment.bottomRight,
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withValues(alpha: isDark ? 0.25 : 0.30),
+                      blurRadius: 10, offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.pets_rounded, size: 12, color: color),
-                  const SizedBox(width: 3),
-                  Text('$pCount', style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 12)),
-                ]),
+                alignment: Alignment.center,
+                child: Text(initials.isEmpty ? '?' : initials,
+                  style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w800, fontSize: 17)),
               ),
-            const SizedBox(width: 4),
-            Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400, size: 20),
-          ]),
+              const SizedBox(width: 14),
+              /* Info */
+              Expanded(child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(fullName,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, height: 1.2),
+                    overflow: TextOverflow.ellipsis),
+                  if (sub.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(sub,
+                      style: TextStyle(fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      overflow: TextOverflow.ellipsis, maxLines: 1),
+                  ],
+                ],
+              )),
+              /* Patient-count badge */
+              if (pCount > 0) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: isDark ? 0.18 : 0.10),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: color.withValues(alpha: 0.20)),
+                  ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.pets_rounded, size: 11, color: color),
+                    const SizedBox(width: 4),
+                    Text('$pCount',
+                      style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 12)),
+                  ]),
+                ),
+              ],
+              const SizedBox(width: 6),
+              Icon(Icons.chevron_right_rounded, size: 20,
+                color: Theme.of(context).colorScheme.onSurfaceVariant
+                    .withValues(alpha: 0.4)),
+            ]),
+          ),
         ),
       ),
     );

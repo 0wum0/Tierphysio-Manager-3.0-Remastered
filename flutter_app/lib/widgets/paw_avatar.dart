@@ -54,20 +54,39 @@ class PawAvatar extends StatelessWidget {
   }
 
   Widget _fallback(Color bg, double r) {
+    final initial = (name != null && name!.isNotEmpty) ? name![0].toUpperCase() : null;
     return Container(
       width: r * 2,
       height: r * 2,
       decoration: BoxDecoration(
-        color: bg.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(r),
+        gradient: LinearGradient(
+          colors: [bg, bg.withValues(alpha: 0.65)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(r * 0.55),
+        boxShadow: [
+          BoxShadow(
+            color: bg.withValues(alpha: 0.25),
+            blurRadius: 8, offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Center(
-        child: SvgPicture.asset(
-          'assets/icons/paw.svg',
-          width: r * 0.9,
-          height: r * 0.9,
-          colorFilter: ColorFilter.mode(bg, BlendMode.srcIn),
-        ),
+        child: initial != null
+            ? Text(initial,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: r * 0.75,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                ))
+            : SvgPicture.asset(
+                'assets/icons/paw.svg',
+                width: r * 0.85,
+                height: r * 0.85,
+                colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+              ),
       ),
     );
   }

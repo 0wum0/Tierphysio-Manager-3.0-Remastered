@@ -198,11 +198,12 @@ class _ShellScreenState extends State<ShellScreen>
                 GridView.count(
                   shrinkWrap: true,
                   crossAxisCount: 4,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: 0.85,
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  childAspectRatio: 0.82,
                   physics: const NeverScrollableScrollPhysics(),
                   children: items.map((item) {
+                    final isDark = Theme.of(ctx).brightness == Brightness.dark;
                     return GestureDetector(
                       onTap: () {
                         Navigator.pop(ctx);
@@ -215,35 +216,50 @@ class _ShellScreenState extends State<ShellScreen>
                             clipBehavior: Clip.none,
                             children: [
                               Container(
-                                width: 58, height: 58,
+                                width: 56, height: 56,
                                 decoration: BoxDecoration(
-                                  color: item.color.withValues(alpha: 0.13),
-                                  borderRadius: BorderRadius.circular(18),
+                                  gradient: LinearGradient(
+                                    colors: [item.color, item.color.withValues(alpha: 0.72)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: item.color.withValues(alpha: isDark ? 0.25 : 0.32),
+                                      blurRadius: 10, offset: const Offset(0, 4),
+                                    ),
+                                  ],
                                 ),
-                                child: Icon(item.icon, color: item.color, size: 28),
+                                child: Icon(item.icon, color: Colors.white, size: 26),
                               ),
                               if ((item.badge ?? 0) > 0)
                                 Positioned(
-                                  top: -4, right: -4,
+                                  top: -5, right: -5,
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                                     decoration: BoxDecoration(
                                       color: AppTheme.danger,
                                       borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: isDark ? const Color(0xFF1A1D27) : Colors.white,
+                                        width: 1.5),
                                     ),
                                     child: Text('${item.badge}',
-                                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
+                                      style: const TextStyle(
+                                        color: Colors.white, fontSize: 9,
+                                        fontWeight: FontWeight.w800)),
                                   ),
                                 ),
                             ],
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 7),
                           Text(
                             item.label,
                             textAlign: TextAlign.center,
                             maxLines: 2,
                             style: TextStyle(
-                              fontSize: 11,
+                              fontSize: 10.5,
                               fontWeight: FontWeight.w600,
                               color: cs.onSurface,
                               height: 1.2,
@@ -552,16 +568,19 @@ class _ShellScreenState extends State<ShellScreen>
             ),
             if (totalBadge > 0)
               Positioned(
-                top: 8, right: 8,
+                top: 6, right: 6,
                 child: Container(
-                  padding: const EdgeInsets.all(3),
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   decoration: BoxDecoration(
                     color: AppTheme.danger,
-                    shape: BoxShape.circle,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.surface,
+                      width: 1.5),
                   ),
                   constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                   child: Text('$totalBadge',
-                    style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
+                    style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800),
                     textAlign: TextAlign.center),
                 ),
               ),

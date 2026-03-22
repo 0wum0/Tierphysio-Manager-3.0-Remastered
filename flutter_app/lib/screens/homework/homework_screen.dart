@@ -135,23 +135,42 @@ class _PlanCard extends StatelessWidget {
     final status  = plan['status']        as String? ?? 'active';
     final tasks   = (plan['exercises'] as List?)?.length ?? 0;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: onTap,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: isDark ? const Color(0xFF1A1D27) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.07)
+                    : Colors.black.withValues(alpha: 0.06),
+              ),
+            ),
+            padding: const EdgeInsets.all(14),
+            child: Row(children: [
               Container(
                 width: 48, height: 48,
                 decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.12),
+                  gradient: const LinearGradient(
+                    colors: [AppTheme.primary, AppTheme.secondary],
+                    begin: Alignment.topLeft, end: Alignment.bottomRight,
+                  ),
                   borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.primary.withValues(alpha: isDark ? 0.25 : 0.30),
+                      blurRadius: 10, offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: const Icon(Icons.assignment_rounded,
-                    color: AppTheme.primary, size: 24),
+                    color: Colors.white, size: 24),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -159,27 +178,35 @@ class _PlanCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(name,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 15)),
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, height: 1.2)),
                     const SizedBox(height: 3),
-                    Text('Plan vom $date',
-                        style: TextStyle(
-                            fontSize: 13,
-                            color: cs.onSurface.withValues(alpha: 0.6))),
+                    Row(children: [
+                      Icon(Icons.calendar_today_rounded, size: 11,
+                        color: cs.onSurface.withValues(alpha: 0.45)),
+                      const SizedBox(width: 4),
+                      Text('Plan vom $date',
+                        style: TextStyle(fontSize: 12,
+                          color: cs.onSurface.withValues(alpha: 0.55))),
+                    ]),
                     if (tasks > 0) ...[
-                      const SizedBox(height: 4),
-                      Text('$tasks Aufgabe${tasks == 1 ? '' : 'n'}',
-                          style: TextStyle(fontSize: 12,
-                              color: cs.onSurface.withValues(alpha: 0.45))),
+                      const SizedBox(height: 3),
+                      Row(children: [
+                        Icon(Icons.checklist_rounded, size: 11,
+                          color: AppTheme.success.withValues(alpha: 0.7)),
+                        const SizedBox(width: 4),
+                        Text('$tasks Aufgabe${tasks == 1 ? '' : 'n'}',
+                          style: TextStyle(fontSize: 11,
+                            color: cs.onSurface.withValues(alpha: 0.45))),
+                      ]),
                     ],
                   ],
                 ),
               ),
               _StatusChip(status: status),
               const SizedBox(width: 8),
-              Icon(Icons.chevron_right_rounded,
-                  color: cs.onSurface.withValues(alpha: 0.3)),
-            ],
+              Icon(Icons.chevron_right_rounded, size: 20,
+                color: cs.onSurface.withValues(alpha: 0.3)),
+            ]),
           ),
         ),
       ),

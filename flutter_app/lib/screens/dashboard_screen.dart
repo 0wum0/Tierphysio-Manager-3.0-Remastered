@@ -299,34 +299,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _greeting(Map<String, dynamic> d) {
     final hour = DateTime.now().hour;
+    final emoji   = hour < 12 ? '☀️' : hour < 18 ? '👋' : '🌙';
     final greeting = hour < 12 ? 'Guten Morgen' : hour < 18 ? 'Guten Tag' : 'Guten Abend';
-    return Row(children: [
+    final name     = d['user_name'] as String? ?? 'Willkommen';
+    final isDark   = Theme.of(context).brightness == Brightness.dark;
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(greeting, style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          )),
-          const SizedBox(height: 2),
-          Text(
-            d['user_name'] as String? ?? 'Willkommen',
+          Row(children: [
+            Text(emoji, style: const TextStyle(fontSize: 18)),
+            const SizedBox(width: 6),
+            Text(greeting,
+              style: TextStyle(fontSize: 13,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500)),
+          ]),
+          const SizedBox(height: 3),
+          Text(name,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800, letterSpacing: -0.5,
-            ),
-          ),
+              fontWeight: FontWeight.w800, letterSpacing: -0.5, height: 1.15)),
         ]),
       ),
+      const SizedBox(width: 12),
       Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
         decoration: BoxDecoration(
-          color: AppTheme.primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(20),
+          gradient: LinearGradient(
+            colors: [AppTheme.primary.withValues(alpha: 0.12),
+                     AppTheme.secondary.withValues(alpha: 0.08)],
+          ),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: AppTheme.primary.withValues(alpha: isDark ? 0.2 : 0.15)),
         ),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(Icons.calendar_today_rounded, size: 14, color: AppTheme.primary),
+          Icon(Icons.calendar_today_rounded, size: 13, color: AppTheme.primary),
           const SizedBox(width: 6),
           Text(
-            DateFormat('d. MMM', 'de_DE').format(DateTime.now()),
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.primary),
+            DateFormat('EEE, d. MMM', 'de_DE').format(DateTime.now()),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppTheme.primary),
           ),
         ]),
       ),
@@ -479,23 +490,53 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _invoiceStats(Map<String, dynamic> d) {
-    return _ChartCard(
-      title: 'Rechnungen',
-      subtitle: _eur(d['revenue_year']) + ' Jahresumsatz',
-      child: Row(children: [
-        Expanded(child: _InvoiceStat(
-          label: 'Offen', count: '${d['open_invoices'] ?? 0}',
-          amount: _eur(d['open_amount']), color: AppTheme.primary,
-        )),
-        Container(width: 1, height: 60, color: Theme.of(context).dividerColor),
-        Expanded(child: _InvoiceStat(
-          label: 'Überfällig', count: '${d['overdue_invoices'] ?? 0}',
-          amount: _eur(d['overdue_amount']), color: AppTheme.danger,
-        )),
-        Container(width: 1, height: 60, color: Theme.of(context).dividerColor),
-        Expanded(child: _InvoiceStat(
-          label: 'Jahresumsatz', count: '', amount: _eur(d['revenue_year']), color: AppTheme.success,
-        )),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1D27) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.07)
+              : Colors.black.withValues(alpha: 0.06)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 12), child: Row(children: [
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Rechnungen', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+            Text(_eur(d['revenue_year']) + ' Jahresumsatz',
+              style: TextStyle(fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          ])),
+        ])),
+        Divider(height: 1,
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : Colors.black.withValues(alpha: 0.05)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+          child: Row(children: [
+            Expanded(child: _InvoiceStat(
+              label: 'Offen', count: '${d['open_invoices'] ?? 0}',
+              amount: _eur(d['open_amount']), color: AppTheme.primary,
+            )),
+            Container(width: 1, height: 52,
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.07)
+                  : Colors.black.withValues(alpha: 0.07)),
+            Expanded(child: _InvoiceStat(
+              label: 'Überfällig', count: '${d['overdue_invoices'] ?? 0}',
+              amount: _eur(d['overdue_amount']), color: AppTheme.danger,
+            )),
+            Container(width: 1, height: 52,
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.07)
+                  : Colors.black.withValues(alpha: 0.07)),
+            Expanded(child: _InvoiceStat(
+              label: 'Jahr', count: '', amount: _eur(d['revenue_year']), color: AppTheme.success,
+            )),
+          ]),
+        ),
       ]),
     );
   }
@@ -509,113 +550,120 @@ class _AppointmentCard extends StatelessWidget {
 
   Color _parseColor(String? hex, Color fallback) {
     if (hex == null || hex.isEmpty) return fallback;
-    try {
-      final h = hex.replaceAll('#', '');
-      return Color(int.parse('FF$h', radix: 16));
-    } catch (_) { return fallback; }
+    try { return Color(int.parse('FF${hex.replaceAll('#', '')}', radix: 16)); }
+    catch (_) { return fallback; }
   }
 
   String _statusLabel(String? s) => switch (s) {
-    'confirmed'  => 'Bestätigt',
-    'completed'  => 'Abgeschlossen',
-    'cancelled'  => 'Abgesagt',
-    'noshow'     => 'Nicht erschienen',
-    _            => 'Geplant',
+    'confirmed' => 'Bestätigt', 'completed' => 'Fertig',
+    'cancelled' => 'Abgesagt',  'noshow'    => 'Nicht da',
+    _ => 'Geplant',
   };
 
   Color _statusColor(String? s) => switch (s) {
-    'confirmed'  => AppTheme.success,
-    'completed'  => AppTheme.tertiary,
-    'cancelled'  => AppTheme.danger,
-    'noshow'     => AppTheme.warning,
-    _            => AppTheme.primary,
+    'confirmed' => AppTheme.success, 'completed' => AppTheme.tertiary,
+    'cancelled' => AppTheme.danger,  'noshow'    => AppTheme.warning,
+    _ => AppTheme.primary,
   };
 
   @override
   Widget build(BuildContext context) {
+    final isDark    = Theme.of(context).brightness == Brightness.dark;
     final aptColor  = _parseColor(apt['treatment_color'] as String? ?? apt['color'] as String?, AppTheme.primary);
     final startStr  = apt['start_at'] as String? ?? '';
     final endStr    = apt['end_at']   as String? ?? '';
     DateTime? start, end;
     try { start = DateTime.parse(startStr); } catch (_) {}
     try { end   = DateTime.parse(endStr);   } catch (_) {}
-    final timeStr = start != null
+    final timeStr   = start != null
         ? '${DateFormat('HH:mm').format(start)}${end != null ? ' – ${DateFormat('HH:mm').format(end)}' : ''}'
         : '';
     final patient   = apt['patient_name']       as String? ?? '';
     final owner     = apt['owner_name']          as String? ?? '';
-    final treatment = apt['treatment_type_name'] as String? ?? '';
+    final title     = apt['title']               as String? ?? '';
     final status    = apt['status']              as String? ?? 'scheduled';
+    final sc        = _statusColor(status);
 
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
       decoration: BoxDecoration(
-        color: aptColor.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: aptColor.withValues(alpha: 0.25)),
+        color: isDark
+            ? aptColor.withValues(alpha: 0.08)
+            : aptColor.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: aptColor.withValues(alpha: isDark ? 0.18 : 0.14)),
       ),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // Color strip
-        Container(
-          width: 4,
-          height: 72,
-          margin: const EdgeInsets.only(right: 12),
-          decoration: BoxDecoration(
-            color: aptColor,
-            borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
-          ),
-        ),
-        Expanded(
-          child: Padding(padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 0), child:
-            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Icon(Icons.schedule_rounded, size: 13, color: aptColor),
-                const SizedBox(width: 4),
-                Text(timeStr, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: aptColor)),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: _statusColor(status).withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(_statusLabel(status),
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
-                      color: _statusColor(status))),
-                ),
-                const SizedBox(width: 8),
-              ]),
-              const SizedBox(height: 3),
-              Text(
-                apt['title'] as String? ?? '',
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                maxLines: 1, overflow: TextOverflow.ellipsis,
+      child: IntrinsicHeight(
+        child: Row(children: [
+          /* Gradient left strip */
+          Container(
+            width: 5,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                colors: [aptColor, aptColor.withValues(alpha: 0.5)],
               ),
-              const SizedBox(height: 2),
-              Row(children: [
-                if (patient.isNotEmpty) ...[Icon(Icons.pets_rounded, size: 12,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant),
-                  const SizedBox(width: 4),
-                  Text(patient, style: const TextStyle(fontSize: 11)),
-                  const SizedBox(width: 8),
-                ],
-                if (owner.isNotEmpty) ...[Icon(Icons.person_outline_rounded, size: 12,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant),
-                  const SizedBox(width: 4),
-                  Expanded(child: Text(owner,
-                    style: const TextStyle(fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                ],
-                if (treatment.isNotEmpty && owner.isEmpty) ...[Icon(Icons.medical_services_outlined, size: 12,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant),
-                  const SizedBox(width: 4),
-                  Expanded(child: Text(treatment,
-                    style: const TextStyle(fontSize: 11), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                ],
-              ]),
-            ]),
+              borderRadius: const BorderRadius.horizontal(left: Radius.circular(14)),
+            ),
           ),
-        ),
-      ]),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Padding(padding: const EdgeInsets.symmetric(vertical: 11), child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: aptColor.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.schedule_rounded, size: 11, color: aptColor),
+                      const SizedBox(width: 4),
+                      Text(timeStr,
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: aptColor)),
+                    ]),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: sc.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: sc.withValues(alpha: 0.2)),
+                    ),
+                    child: Text(_statusLabel(status),
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: sc)),
+                  ),
+                  const SizedBox(width: 10),
+                ]),
+                const SizedBox(height: 5),
+                Text(title,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, height: 1.2),
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 4),
+                Row(children: [
+                  if (patient.isNotEmpty) ...[Icon(Icons.pets_rounded, size: 11,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 3),
+                    Text(patient, style: TextStyle(fontSize: 11,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                    const SizedBox(width: 10),
+                  ],
+                  if (owner.isNotEmpty) ...[Icon(Icons.person_outline_rounded, size: 11,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 3),
+                    Expanded(child: Text(owner,
+                      style: TextStyle(fontSize: 11,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      maxLines: 1, overflow: TextOverflow.ellipsis)),
+                  ],
+                ]),
+              ]),
+            ),
+          ),
+        ]),
+      ),
     );
   }
 }
@@ -627,20 +675,41 @@ class _ChartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).cardTheme.color,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).dividerColor),
+        color: isDark ? const Color(0xFF1A1D27) : Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.07)
+              : Colors.black.withValues(alpha: 0.06),
+        ),
+        boxShadow: isDark ? null : [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 12, offset: const Offset(0, 4)),
+        ],
       ),
-      padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-        Text(subtitle, style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 12), child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+              const SizedBox(height: 1),
+              Text(subtitle, style: TextStyle(fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            ])),
+          ],
         )),
-        const SizedBox(height: 16),
-        SizedBox(height: 160, child: child),
+        Divider(height: 1, thickness: 1,
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : Colors.black.withValues(alpha: 0.05)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+          child: SizedBox(height: 160, child: child)),
       ]),
     );
   }
@@ -693,20 +762,42 @@ class _AlertBanner extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Material(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           onTap: onTap,
-          child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10), child: Row(children: [
-            Icon(icon, color: color, size: 18),
-            const SizedBox(width: 10),
-            Expanded(child: Text(message, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 13))),
-            Text(action, style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 12,
-              decoration: TextDecoration.underline, decorationColor: color)),
-            const SizedBox(width: 4),
-            Icon(Icons.chevron_right_rounded, color: color, size: 16),
-          ])),
+          child: Container(
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: color.withValues(alpha: 0.20)),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+            child: Row(children: [
+              Container(
+                width: 32, height: 32,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 17),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: Text(message,
+                style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 13))),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(action,
+                  style: TextStyle(color: color, fontWeight: FontWeight.w700, fontSize: 11)),
+              ),
+            ]),
+          ),
         ),
       ),
     );
@@ -722,18 +813,48 @@ class _QuickAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Material(
-      color: color.withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(12),
+      color: isDark ? const Color(0xFF1A1D27) : Colors.white,
+      borderRadius: BorderRadius.circular(14),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         onTap: onTap,
-        child: Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Column(children: [
-          Icon(icon, color: color, size: 22),
-          const SizedBox(height: 4),
-          Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 10),
-            textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
-        ])),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.06)
+                  : Colors.black.withValues(alpha: 0.06)),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Column(children: [
+            Container(
+              width: 38, height: 38,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [color, color.withValues(alpha: 0.7)],
+                  begin: Alignment.topLeft, end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(11),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.3),
+                    blurRadius: 8, offset: const Offset(0, 3)),
+                ],
+              ),
+              child: Icon(icon, color: Colors.white, size: 20),
+            ),
+            const SizedBox(height: 7),
+            Text(label,
+              style: TextStyle(
+                color: isDark ? Colors.white70 : Colors.black87,
+                fontWeight: FontWeight.w600, fontSize: 10),
+              textAlign: TextAlign.center,
+              maxLines: 1, overflow: TextOverflow.ellipsis),
+          ]),
+        ),
       ),
     );
   }

@@ -105,38 +105,83 @@ class _DunningsScreenState extends State<DunningsScreen>
           final d = _dunnings[i];
           final level = d['level'] as int? ?? 1;
           final color = level >= 3 ? AppTheme.danger : level == 2 ? AppTheme.warning : AppTheme.tertiary;
-          return Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardTheme.color,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: color.withValues(alpha: 0.3)),
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-              leading: Container(
-                width: 42, height: 42,
-                decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
-                child: Center(child: Text('M$level', style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 13))),
-              ),
-              title: Text(d['invoice_number'] as String? ?? '—',
-                style: const TextStyle(fontWeight: FontWeight.w700)),
-              subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                if (d['patient_name'] != null)
-                  Text(d['patient_name'] as String, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                Text('Gesendet: ${_fmt(d['sent_at'] as String?)}',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-              ]),
-              trailing: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text(_money(d['amount']), style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 14)),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(6)),
-                  child: Text('Stufe $level', style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600)),
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          return Material(
+            color: isDark ? const Color(0xFF1A1D27) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: d['invoice_id'] != null ? () => context.push('/rechnungen/${d['invoice_id']}') : null,
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: color.withValues(alpha: isDark ? 0.28 : 0.20)),
                 ),
-              ]),
-              onTap: d['invoice_id'] != null
-                  ? () => context.push('/rechnungen/${d['invoice_id']}')
-                  : null,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(children: [
+                  Container(
+                    width: 46, height: 46,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [color, color.withValues(alpha: 0.65)],
+                        begin: Alignment.topLeft, end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: color.withValues(alpha: isDark ? 0.22 : 0.28),
+                          blurRadius: 8, offset: const Offset(0, 3)),
+                      ],
+                    ),
+                    alignment: Alignment.center,
+                    child: Text('M$level',
+                      style: const TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14)),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(d['invoice_number'] as String? ?? '—',
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, height: 1.2)),
+                      if (d['patient_name'] != null) ...[const SizedBox(height: 2),
+                        Row(children: [
+                          Icon(Icons.pets_rounded, size: 11,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                          const SizedBox(width: 3),
+                          Text(d['patient_name'] as String,
+                            style: TextStyle(fontSize: 12,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                        ]),
+                      ],
+                      const SizedBox(height: 2),
+                      Row(children: [
+                        Icon(Icons.send_rounded, size: 11,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                        const SizedBox(width: 3),
+                        Text('Gesendet: ${_fmt(d['sent_at'] as String?)}',
+                          style: TextStyle(fontSize: 11,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6))),
+                      ]),
+                    ],
+                  )),
+                  const SizedBox(width: 10),
+                  Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Text(_money(d['amount']),
+                      style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 15)),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: isDark ? 0.18 : 0.10),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: color.withValues(alpha: 0.20))),
+                      child: Text('Stufe $level',
+                        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700)),
+                    ),
+                  ]),
+                ]),
+              ),
             ),
           );
         },
@@ -157,36 +202,80 @@ class _DunningsScreenState extends State<DunningsScreen>
           final inv = _overdue[i];
           final overdueDays = inv['overdue_days'] as int? ?? 0;
           final color = overdueDays > 60 ? AppTheme.danger : overdueDays > 30 ? AppTheme.warning : AppTheme.tertiary;
-          return Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardTheme.color,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: color.withValues(alpha: 0.3)),
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-              leading: Container(
-                width: 42, height: 42,
-                decoration: BoxDecoration(color: color.withValues(alpha: 0.12), shape: BoxShape.circle),
-                child: Icon(Icons.schedule_rounded, color: color, size: 22),
-              ),
-              title: Text(inv['invoice_number'] as String? ?? '—',
-                style: const TextStyle(fontWeight: FontWeight.w700)),
-              subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                if (inv['patient_name'] != null)
-                  Text(inv['patient_name'] as String, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                Row(children: [
-                  Icon(Icons.calendar_today_rounded, size: 11, color: Colors.grey.shade500),
-                  const SizedBox(width: 4),
-                  Text('Fällig: ${_fmt(inv['due_date'] as String?)}',
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-                ]),
-              ]),
-              trailing: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Text(_money(inv['total']), style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 14)),
-                Text('$overdueDays Tage', style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
-              ]),
+          final isDark2 = Theme.of(context).brightness == Brightness.dark;
+          return Material(
+            color: isDark2 ? const Color(0xFF1A1D27) : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
               onTap: () => context.push('/rechnungen/${inv['id']}'),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: color.withValues(alpha: isDark2 ? 0.28 : 0.20)),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                child: Row(children: [
+                  Container(
+                    width: 46, height: 46,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [color, color.withValues(alpha: 0.65)],
+                        begin: Alignment.topLeft, end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: color.withValues(alpha: isDark2 ? 0.22 : 0.28),
+                          blurRadius: 8, offset: const Offset(0, 3)),
+                      ],
+                    ),
+                    child: const Icon(Icons.schedule_rounded, color: Colors.white, size: 22),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(inv['invoice_number'] as String? ?? '—',
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, height: 1.2)),
+                      if (inv['patient_name'] != null) ...[const SizedBox(height: 2),
+                        Row(children: [
+                          Icon(Icons.pets_rounded, size: 11,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                          const SizedBox(width: 3),
+                          Text(inv['patient_name'] as String,
+                            style: TextStyle(fontSize: 12,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                        ]),
+                      ],
+                      const SizedBox(height: 2),
+                      Row(children: [
+                        Icon(Icons.calendar_today_rounded, size: 11,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                        const SizedBox(width: 3),
+                        Text('Fällig: ${_fmt(inv['due_date'] as String?)}',
+                          style: TextStyle(fontSize: 11,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6))),
+                      ]),
+                    ],
+                  )),
+                  const SizedBox(width: 10),
+                  Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Text(_money(inv['total']),
+                      style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 15)),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: isDark2 ? 0.18 : 0.10),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: color.withValues(alpha: 0.20))),
+                      child: Text('$overdueDays Tage',
+                        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700)),
+                    ),
+                  ]),
+                ]),
+              ),
             ),
           );
         },

@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import '../../services/api_service.dart';
 import '../../widgets/search_bar_widget.dart';
 import '../../widgets/paw_avatar.dart';
-import '../../widgets/status_badge.dart';
 import '../../widgets/shimmer_list.dart';
 
 class PatientsScreen extends StatefulWidget {
@@ -140,49 +139,130 @@ class _PatientTile extends StatelessWidget {
   final VoidCallback onTap;
   const _PatientTile({required this.patient, required this.onTap});
 
+  static const _avatarColors = [
+    Color(0xFF5B8AF0), Color(0xFF8B5CF6), Color(0xFF06B6D4),
+    Color(0xFF10B981), Color(0xFFF59E0B), Color(0xFFEF4444),
+  ];
+
+  Color _avatarColor(String name) =>
+      _avatarColors[name.isNotEmpty ? name.codeUnitAt(0) % _avatarColors.length : 0];
+
+  String _speciesEmoji(String s) {
+    final l = s.toLowerCase();
+    if (l.contains('hund') || l.contains('dog'))  return '🐕';
+    if (l.contains('katze') || l.contains('cat')) return '🐈';
+    if (l.contains('pferd') || l.contains('horse')) return '🐴';
+    if (l.contains('vogel') || l.contains('bird')) return '🦜';
+    return '🐾';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final p = patient;
+    final p       = patient;
+    final name    = p['name']    as String? ?? '';
     final species = p['species'] as String? ?? '';
     final breed   = p['breed']   as String? ?? '';
+    final owner   = p['owner_name'] as String? ?? '';
+    final status  = p['status'] as String? ?? 'active';
     final sub     = [species, breed].where((s) => s.isNotEmpty).join(' · ');
+    final isDark  = Theme.of(context).brightness == Brightness.dark;
+    final color   = _avatarColor(name);
 
-    return Card(
-      child: InkWell(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Material(
+        color: isDark ? const Color(0xFF1A1D27) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          child: Row(children: [
-            PawAvatar(
-              photoPath: p['photo_url'] as String?,
-              species: species,
-              name: p['name'] as String?,
-              radius: 24,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.black.withValues(alpha: 0.06),
+              ),
             ),
-            const SizedBox(width: 12),
-            Expanded(child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(p['name'] as String? ?? '',
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(children: [
+              /* Avatar */
+              Stack(children: [
+                p['photo_url'] != null && (p['photo_url'] as String).isNotEmpty
+                    ? PawAvatar(
+                        photoPath: p['photo_url'] as String,
+                        species: species, name: name, radius: 26)
+                    : Container(
+                        width: 52, height: 52,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [color, color.withValues(alpha: 0.7)],
+                            begin: Alignment.topLeft, end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Center(
+                          child: Text(
+                            species.isNotEmpty ? _speciesEmoji(species)
+                                : (name.isNotEmpty ? name[0].toUpperCase() : '?'),
+                            style: const TextStyle(fontSize: 22),
+                          ),
+                        ),
+                      ),
+                /* Status dot */
+                Positioned(
+                  right: 0, bottom: 0,
+                  child: Container(
+                    width: 12, height: 12,
+                    decoration: BoxDecoration(
+                      color: status == 'active'   ? const Color(0xFF10B981)
+                           : status == 'inactive' ? const Color(0xFF6B7280)
+                           : const Color(0xFFF59E0B),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF1A1D27) : Colors.white,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+              ]),
+              const SizedBox(width: 14),
+              /* Info */
+              Expanded(child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name,
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15, height: 1.2),
                     overflow: TextOverflow.ellipsis),
-                if (sub.isNotEmpty) Text(sub,
-                    style: Theme.of(context).textTheme.bodySmall,
-                    overflow: TextOverflow.ellipsis),
-              ],
-            )),
-            const SizedBox(width: 8),
-            Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
-              if (p['owner_name'] != null)
-                Text(p['owner_name'] as String,
-                    style: Theme.of(context).textTheme.bodySmall,
-                    overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 4),
-              StatusBadge(status: p['status'] as String? ?? 'active'),
+                  if (sub.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(sub,
+                      style: TextStyle(fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      overflow: TextOverflow.ellipsis),
+                  ],
+                  if (owner.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Row(children: [
+                      Icon(Icons.person_outline_rounded, size: 11,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 3),
+                      Expanded(child: Text(owner,
+                        style: TextStyle(fontSize: 11,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        overflow: TextOverflow.ellipsis)),
+                    ]),
+                  ],
+                ],
+              )),
+              /* Arrow */
+              Icon(Icons.chevron_right_rounded, size: 20,
+                color: Theme.of(context).colorScheme.onSurfaceVariant
+                    .withValues(alpha: 0.4)),
             ]),
-          ]),
+          ),
         ),
       ),
     );

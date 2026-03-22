@@ -150,6 +150,8 @@ class _WaitlistScreenState extends State<WaitlistScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg),
       backgroundColor: error ? AppTheme.danger : AppTheme.success,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ));
   }
 
@@ -200,53 +202,138 @@ class _WaitlistScreenState extends State<WaitlistScreen> {
                             final d = DateTime.parse(item['created_at'] as String? ?? '');
                             dateStr = DateFormat('dd.MM.yy', 'de_DE').format(d);
                           } catch (_) {}
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).cardTheme.color,
-                              borderRadius: BorderRadius.circular(14),
-                              border: Border.all(color: AppTheme.warning.withValues(alpha: 0.2)),
-                            ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
-                              leading: CircleAvatar(
-                                backgroundColor: AppTheme.warning.withValues(alpha: 0.12),
-                                child: Text('$position', style: TextStyle(color: AppTheme.warning, fontWeight: FontWeight.w800)),
+                          final isDark = Theme.of(context).brightness == Brightness.dark;
+                          return Material(
+                            color: isDark ? const Color(0xFF1A1D27) : Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isDark
+                                      ? Colors.white.withValues(alpha: 0.07)
+                                      : Colors.black.withValues(alpha: 0.06),
+                                ),
                               ),
-                              title: Text(item['patient_name'] as String? ?? '—',
-                                style: const TextStyle(fontWeight: FontWeight.w700)),
-                              subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                                if ((item['owner_name'] as String? ?? '').isNotEmpty)
-                                  Row(children: [
-                                    Icon(Icons.person_rounded, size: 12, color: Colors.grey.shade500),
-                                    const SizedBox(width: 4),
-                                    Text(item['owner_name'] as String, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                                  ]),
-                                if ((item['phone'] as String? ?? '').isNotEmpty)
-                                  Row(children: [
-                                    Icon(Icons.phone_rounded, size: 12, color: Colors.grey.shade500),
-                                    const SizedBox(width: 4),
-                                    Text(item['phone'] as String, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                                  ]),
-                                if (dateStr != null)
-                                  Text('Seit $dateStr', style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
-                              ]),
-                              trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                                IconButton(
-                                  icon: Icon(Icons.event_available_rounded, color: AppTheme.success),
-                                  tooltip: 'Einplanen',
-                                  onPressed: () => _schedule(item),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              child: Row(children: [
+                                /* Position badge */
+                                Container(
+                                  width: 44, height: 44,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [AppTheme.warning, AppTheme.warning.withValues(alpha: 0.65)],
+                                      begin: Alignment.topLeft, end: Alignment.bottomRight,
+                                    ),
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppTheme.warning.withValues(alpha: isDark ? 0.22 : 0.28),
+                                        blurRadius: 8, offset: const Offset(0, 3)),
+                                    ],
+                                  ),
+                                  alignment: Alignment.center,
+                                  child: Text('$position',
+                                    style: const TextStyle(
+                                      color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
                                 ),
-                                IconButton(
-                                  icon: Icon(Icons.delete_outline_rounded, color: AppTheme.danger),
-                                  tooltip: 'Entfernen',
-                                  onPressed: () => _delete(item['id'] as int),
-                                ),
+                                const SizedBox(width: 14),
+                                /* Info */
+                                Expanded(child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(item['patient_name'] as String? ?? '—',
+                                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, height: 1.2)),
+                                    if ((item['owner_name'] as String? ?? '').isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Row(children: [
+                                        Icon(Icons.person_outline_rounded, size: 11,
+                                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6)),
+                                        const SizedBox(width: 3),
+                                        Text(item['owner_name'] as String,
+                                          style: TextStyle(fontSize: 12,
+                                            color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                                      ]),
+                                    ],
+                                    if ((item['phone'] as String? ?? '').isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Row(children: [
+                                        Icon(Icons.phone_outlined, size: 11,
+                                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                                        const SizedBox(width: 3),
+                                        Text(item['phone'] as String,
+                                          style: TextStyle(fontSize: 12,
+                                            color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7))),
+                                      ]),
+                                    ],
+                                    if (dateStr != null) ...[
+                                      const SizedBox(height: 2),
+                                      Text('Seit $dateStr',
+                                        style: TextStyle(fontSize: 11,
+                                          color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.45))),
+                                    ],
+                                  ],
+                                )),
+                                /* Actions */
+                                Row(mainAxisSize: MainAxisSize.min, children: [
+                                  _ActionBtn(
+                                    icon: Icons.event_available_rounded,
+                                    color: AppTheme.success,
+                                    tooltip: 'Einplanen',
+                                    onTap: () => _schedule(item),
+                                    isDark: isDark,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  _ActionBtn(
+                                    icon: Icons.delete_outline_rounded,
+                                    color: AppTheme.danger,
+                                    tooltip: 'Entfernen',
+                                    onTap: () => _delete(item['id'] as int),
+                                    isDark: isDark,
+                                  ),
+                                ]),
                               ]),
                             ),
                           );
                         },
                       ),
                     ),
+    );
+  }
+}
+
+class _ActionBtn extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String tooltip;
+  final VoidCallback onTap;
+  final bool isDark;
+
+  const _ActionBtn({
+    required this.icon,
+    required this.color,
+    required this.tooltip,
+    required this.onTap,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Container(
+          width: 36, height: 36,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: isDark ? 0.15 : 0.10),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: color.withValues(alpha: 0.20)),
+          ),
+          child: Icon(icon, color: color, size: 18),
+        ),
+      ),
     );
   }
 }

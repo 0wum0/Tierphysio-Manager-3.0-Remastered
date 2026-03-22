@@ -151,114 +151,156 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
     return RefreshIndicator(
       onRefresh: _load,
-      child: ListView.separated(
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(vertical: 6),
         itemCount: _filtered.length,
-        separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
         itemBuilder: (ctx, i) {
-          final t       = _filtered[i] as Map<String, dynamic>;
-          final unread  = (t['unread_count'] as int?) ?? 0;
-          final isClosed= t['status'] == 'closed';
+          final t         = _filtered[i] as Map<String, dynamic>;
+          final unread    = (t['unread_count'] as int?) ?? 0;
+          final isClosed  = t['status'] == 'closed';
           final ownerName = t['owner_name'] as String? ?? '?';
           final initial   = ownerName.isNotEmpty ? ownerName[0].toUpperCase() : '?';
-          final colors    = [AppTheme.primary, AppTheme.secondary, AppTheme.tertiary,
+          final _colors   = [AppTheme.primary, AppTheme.secondary, AppTheme.tertiary,
             AppTheme.success, AppTheme.warning];
-          final avatarColor = colors[(ownerName.codeUnitAt(0)) % colors.length];
+          final avatarColor = _colors[(ownerName.codeUnitAt(0)) % _colors.length];
+          final isDark    = Theme.of(context).brightness == Brightness.dark;
+          final lastBody  = t['last_body'] as String? ?? '';
+          final timeAgo   = _timeAgo(t['last_message_at'] as String?);
 
-          return ListTile(
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-            leading: Stack(clipBehavior: Clip.none, children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: avatarColor.withValues(alpha: 0.15),
-                child: Text(initial,
-                    style: TextStyle(
-                        color: avatarColor,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16)),
-              ),
-              if (unread > 0)
-                Positioned(
-                  right: -2, top: -2,
-                  child: Container(
-                    width: 18, height: 18,
-                    decoration: BoxDecoration(
-                        color: AppTheme.danger,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5)),
-                    child: Center(
-                      child: Text('$unread',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800)),
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Material(
+              color: unread > 0
+                  ? (isDark
+                      ? AppTheme.primary.withValues(alpha: 0.08)
+                      : AppTheme.primary.withValues(alpha: 0.04))
+                  : (isDark ? const Color(0xFF1A1D27) : Colors.white),
+              borderRadius: BorderRadius.circular(16),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () => context
+                    .push('/nachrichten/${t['id']}', extra: t)
+                    .then((_) => _load()),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: unread > 0
+                          ? AppTheme.primary.withValues(alpha: isDark ? 0.22 : 0.16)
+                          : (isDark
+                              ? Colors.white.withValues(alpha: 0.06)
+                              : Colors.black.withValues(alpha: 0.06)),
                     ),
                   ),
-                ),
-            ]),
-            title: Row(children: [
-              Expanded(
-                child: Text(
-                  t['subject'] as String? ?? '',
-                  style: TextStyle(
-                      fontWeight: unread > 0
-                          ? FontWeight.w700
-                          : FontWeight.w500,
-                      fontSize: 14),
-                  overflow: TextOverflow.ellipsis,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  child: Row(children: [
+                    /* Avatar */
+                    Stack(clipBehavior: Clip.none, children: [
+                      Container(
+                        width: 48, height: 48,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [avatarColor, avatarColor.withValues(alpha: 0.65)],
+                            begin: Alignment.topLeft, end: Alignment.bottomRight,
+                          ),
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: avatarColor.withValues(alpha: isDark ? 0.22 : 0.28),
+                              blurRadius: 8, offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(initial,
+                          style: const TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+                      ),
+                      if (unread > 0)
+                        Positioned(
+                          right: -2, top: -2,
+                          child: Container(
+                            width: 18, height: 18,
+                            decoration: BoxDecoration(
+                              color: AppTheme.danger,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isDark ? const Color(0xFF1A1D27) : Colors.white,
+                                width: 1.5),
+                            ),
+                            child: Center(child: Text('$unread',
+                              style: const TextStyle(
+                                color: Colors.white, fontSize: 9,
+                                fontWeight: FontWeight.w800))),
+                          ),
+                        ),
+                    ]),
+                    const SizedBox(width: 14),
+                    /* Content */
+                    Expanded(child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(children: [
+                          Expanded(
+                            child: Text(t['subject'] as String? ?? '',
+                              style: TextStyle(
+                                fontWeight: unread > 0 ? FontWeight.w700 : FontWeight.w600,
+                                fontSize: 14, height: 1.2),
+                              overflow: TextOverflow.ellipsis),
+                          ),
+                          if (timeAgo.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            Text(timeAgo, style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant
+                                  .withValues(alpha: 0.6))),
+                          ],
+                        ]),
+                        const SizedBox(height: 3),
+                        Row(children: [
+                          Icon(Icons.person_outline_rounded, size: 11,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.55)),
+                          const SizedBox(width: 3),
+                          Text(ownerName, style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant
+                                .withValues(alpha: 0.65))),
+                          if (isClosed) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(6)),
+                              child: const Text('Geschlossen',
+                                style: TextStyle(fontSize: 9,
+                                  color: Colors.grey, fontWeight: FontWeight.w600)),
+                            ),
+                          ],
+                        ]),
+                        if (lastBody.isNotEmpty) ...[
+                          const SizedBox(height: 3),
+                          Text(lastBody,
+                            maxLines: 1, overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: unread > 0
+                                  ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8)
+                                  : Theme.of(context).colorScheme.onSurfaceVariant
+                                      .withValues(alpha: 0.5),
+                              fontWeight: unread > 0 ? FontWeight.w500 : FontWeight.normal)),
+                        ],
+                      ],
+                    )),
+                    const SizedBox(width: 8),
+                    Icon(Icons.chevron_right_rounded, size: 18,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant
+                          .withValues(alpha: 0.35)),
+                  ]),
                 ),
               ),
-              const SizedBox(width: 8),
-              if (isClosed)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                      color: Colors.grey.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(6)),
-                  child: const Text('Geschlossen',
-                      style: TextStyle(
-                          fontSize: 9,
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w600)),
-                ),
-            ]),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 2),
-                Row(children: [
-                  Icon(Icons.person_outline_rounded,
-                      size: 12, color: Colors.grey.shade500),
-                  const SizedBox(width: 3),
-                  Text(ownerName,
-                      style: TextStyle(
-                          fontSize: 12, color: Colors.grey.shade600)),
-                  const SizedBox(width: 8),
-                  Text(_timeAgo(t['last_message_at'] as String?),
-                      style: TextStyle(
-                          fontSize: 11, color: Colors.grey.shade400)),
-                ]),
-                if ((t['last_body'] as String? ?? '').isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    t['last_body'] as String,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: unread > 0
-                            ? Theme.of(context).colorScheme.onSurface
-                            : Colors.grey.shade500,
-                        fontWeight: unread > 0
-                            ? FontWeight.w600
-                            : FontWeight.normal),
-                  ),
-                ],
-              ],
             ),
-            onTap: () => context
-                .push('/nachrichten/${t['id']}', extra: t)
-                .then((_) => _load()),
           );
         },
       ),
