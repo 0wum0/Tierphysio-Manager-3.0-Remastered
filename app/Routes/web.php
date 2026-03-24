@@ -90,6 +90,10 @@ $router->post('/api/mobile/invoices/{id}/mahnungen',          [MobileApiControll
 $router->post('/api/mobile/invoices/{id}/mahnungen/{did}/loeschen', [MobileApiController::class, 'dunningDelete']);
 $router->post('/api/mobile/invoices/{id}/mahnungen/{did}/senden',   [MobileApiController::class, 'dunningSendEmail']);
 
+// Google Calendar Sync
+$router->get('/api/mobile/google-sync/status',                [MobileApiController::class, 'googleSyncStatus']);
+$router->post('/api/mobile/google-sync/pull',                 [MobileApiController::class, 'googleSyncPull']);
+
 // Patients — extended
 $router->post('/api/mobile/patients/{id}/loeschen',           [MobileApiController::class, 'patientDelete']);
 $router->post('/api/mobile/patients/{id}/foto',               [MobileApiController::class, 'patientPhotoUpload']);

@@ -331,6 +331,14 @@ class ApiService {
   Future<void> dunningDelete(int invoiceId, int dunningId) async =>
       await post('/invoices/$invoiceId/mahnungen/$dunningId/loeschen', {});
 
+  /* ── Google Calendar Sync ── */
+
+  Future<Map<String, dynamic>> googleSyncStatus() async =>
+      Map<String, dynamic>.from(await get('/google-sync/status'));
+
+  Future<Map<String, dynamic>> googleSyncPull() async =>
+      Map<String, dynamic>.from(await post('/google-sync/pull', {}));
+
   /* ── Appointments extended ── */
 
   Future<List<dynamic>> appointmentsToday() async =>

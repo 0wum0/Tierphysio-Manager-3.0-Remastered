@@ -3,6 +3,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import '../../services/api_service.dart';
 import '../../core/theme.dart';
+import '../../widgets/google_sync_panel.dart';
 
 class CalendarScreen extends StatefulWidget {
   const CalendarScreen({super.key});
@@ -109,7 +110,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           IconButton(
             icon: const Icon(Icons.sync_rounded),
             tooltip: 'Google Kalender Sync',
-            onPressed: () => _showGoogleSyncInfo(context),
+            onPressed: () => _openGoogleSyncPanel(context),
           ),
           IconButton(
             icon: const Icon(Icons.add_rounded),
@@ -566,37 +567,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
-  void _showGoogleSyncInfo(BuildContext context) {
-    showDialog(
+  void _openGoogleSyncPanel(BuildContext context) {
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        icon: const Icon(Icons.sync_rounded, size: 36, color: Color(0xFF4285F4)),
-        title: const Text('Google Kalender Sync'),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Der Google 2-Wege-Sync wird über das Web-Backend verwaltet.',
-              style: TextStyle(fontSize: 14),
-            ),
-            SizedBox(height: 12),
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Icon(Icons.info_outline_rounded, size: 16, color: Colors.blue),
-              SizedBox(width: 6),
-              Expanded(child: Text(
-                'Gehe im Browser zu Einstellungen → Kalender → Google Sync, um die Verbindung einzurichten oder zu prüfen.',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              )),
-            ]),
-          ],
-        ),
-        actions: [
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('OK'),
-          ),
-        ],
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => GoogleSyncPanel(
+        onPullDone: () => _loadMonth(_focusedDay),
       ),
     );
   }
