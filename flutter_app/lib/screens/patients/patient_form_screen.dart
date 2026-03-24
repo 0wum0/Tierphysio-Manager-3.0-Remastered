@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../services/api_service.dart';
 
 class PatientFormScreen extends StatefulWidget {
@@ -30,6 +32,8 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
   int? _ownerId;
 
   List<dynamic> _owners = [];
+  File? _pickedPhoto;
+  String? _existingPhotoUrl;
 
   bool get _isEdit => widget.patientId != null;
 
@@ -62,11 +66,54 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
       _status    = p['status'] as String? ?? 'active';
       _birthDate = p['birth_date'] as String?;
       _ownerId   = p['owner_id'] != null ? int.tryParse(p['owner_id'].toString()) : null;
+      final photoUrl = p['photo_url'] as String?;
+      if (photoUrl != null && photoUrl.isNotEmpty) {
+        _existingPhotoUrl = ApiService.mediaUrl(photoUrl);
+      }
       setState(() => _loadingData = false);
     } catch (e) {
       setState(() => _loadingData = false);
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
+  }
+
+  Future<void> _pickPhoto() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Kamera'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Galerie'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+            if (_pickedPhoto != null || _existingPhotoUrl != null)
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: const Text('Foto entfernen', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  setState(() {
+                    _pickedPhoto = null;
+                    _existingPhotoUrl = null;
+                  });
+                  Navigator.pop(ctx);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+    final picker = ImagePicker();
+    final xfile = await picker.pickImage(source: source, imageQuality: 85, maxWidth: 1200);
+    if (xfile != null) setState(() => _pickedPhoto = File(xfile.path));
   }
 
   @override
@@ -79,7 +126,7 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
-    final data = {
+    final data = <String, dynamic>{
       'name':        _nameCtrl.text.trim(),
       'species':     _speciesCtrl.text.trim(),
       'breed':       _breedCtrl.text.trim(),
@@ -87,16 +134,26 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
       'birth_date':  _birthDate ?? '',
       'chip_number': _chipCtrl.text.trim(),
       'color':       _colorCtrl.text.trim(),
-      'weight':      _weightCtrl.text.isNotEmpty ? double.tryParse(_weightCtrl.text) ?? 0 : 0,
       'notes':       _notesCtrl.text.trim(),
       'status':      _status,
       if (_ownerId != null) 'owner_id': _ownerId,
+      if (_weightCtrl.text.isNotEmpty) 'weight': double.tryParse(_weightCtrl.text) ?? 0,
     };
     try {
+      int patientId;
       if (_isEdit) {
         await _api.patientUpdate(widget.patientId!, data);
+        patientId = widget.patientId!;
       } else {
-        await _api.patientCreate(data);
+        final created = await _api.patientCreate(data);
+        patientId = created['id'] is int
+            ? created['id'] as int
+            : int.parse(created['id'].toString());
+      }
+      if (_pickedPhoto != null) {
+        try {
+          await _api.patientPhotoUpload(patientId, _pickedPhoto!);
+        } catch (_) {}
       }
       if (mounted) context.pop();
     } catch (e) {
@@ -105,6 +162,46 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     }
+  }
+
+  Widget _buildPhotoWidget(BuildContext context) {
+    final token = ApiService.getToken();
+    ImageProvider? imageProvider;
+    if (_pickedPhoto != null) {
+      imageProvider = FileImage(_pickedPhoto!);
+    } else if (_existingPhotoUrl != null) {
+      imageProvider = NetworkImage(_existingPhotoUrl!);
+    }
+
+    return Center(
+      child: Stack(
+        children: [
+          GestureDetector(
+            onTap: _pickPhoto,
+            child: CircleAvatar(
+              radius: 52,
+              backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+              backgroundImage: imageProvider,
+              child: imageProvider == null
+                  ? Icon(Icons.pets, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant)
+                  : null,
+            ),
+          ),
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: GestureDetector(
+              onTap: _pickPhoto,
+              child: CircleAvatar(
+                radius: 16,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -119,6 +216,8 @@ class _PatientFormScreenState extends State<PatientFormScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
+                    _buildPhotoWidget(context),
+                    const SizedBox(height: 20),
                     TextFormField(
                       controller: _nameCtrl,
                       decoration: const InputDecoration(labelText: 'Name *', prefixIcon: Icon(Icons.pets)),

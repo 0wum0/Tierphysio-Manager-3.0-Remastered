@@ -431,19 +431,25 @@ class MobileApiController
             if (empty($data[$f])) $this->error("Feld '{$f}' ist erforderlich.");
         }
 
-        $id = $this->patients->create([
+        $insertData = [
             'name'       => trim($data['name']),
             'species'    => trim($data['species']),
             'breed'      => trim($data['breed'] ?? ''),
             'gender'     => $data['gender'] ?? 'unbekannt',
-            'birth_date' => $data['birth_date'] ?? null,
-            'owner_id'   => $data['owner_id'] ? (int)$data['owner_id'] : null,
+            'birth_date' => ($data['birth_date'] ?? '') !== '' ? $data['birth_date'] : null,
             'chip_number'=> trim($data['chip_number'] ?? ''),
             'color'      => trim($data['color'] ?? ''),
-            'weight'     => isset($data['weight']) ? (float)$data['weight'] : null,
             'notes'      => trim($data['notes'] ?? ''),
             'status'     => $data['status'] ?? 'active',
-        ]);
+        ];
+        if (!empty($data['owner_id'])) {
+            $insertData['owner_id'] = (int)$data['owner_id'];
+        }
+        if (isset($data['weight']) && $data['weight'] !== '' && $data['weight'] !== null) {
+            $insertData['weight'] = (float)$data['weight'];
+        }
+
+        $id = $this->patients->create($insertData);
 
         $patient = $this->patients->findById((int)$id);
         $this->json($patient, 201);
