@@ -1831,11 +1831,40 @@ class MobileApiController
 
             $result = $sync->pullFromGoogle();
             $this->json([
-                'success' => $result['success'],
-                'message' => $result['message'],
+                'success'   => $result['success'],
+                'message'   => $result['message'],
+                'direction' => 'pull',
             ]);
         } catch (\Throwable $e) {
             $this->error('Google Pull fehlgeschlagen: ' . $e->getMessage(), 500);
+        }
+    }
+
+    public function googleSyncPush(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+
+        try {
+            $repo   = new \Plugins\GoogleCalendarSync\GoogleCalendarRepository($this->db);
+            $api    = new \Plugins\GoogleCalendarSync\GoogleApiService($repo);
+            $sync   = new \Plugins\GoogleCalendarSync\GoogleSyncService($repo, $api, $this->db);
+            $result = $sync->bulkSyncAll();
+
+            $total   = ($result['success'] ?? 0) + ($result['failed'] ?? 0);
+            $success = $result['success'] ?? 0;
+            $failed  = $result['failed'] ?? 0;
+
+            $this->json([
+                'success'   => $failed === 0,
+                'message'   => "Push abgeschlossen: {$success} synchronisiert" . ($failed > 0 ? ", {$failed} Fehler" : ''),
+                'synced'    => $success,
+                'failed'    => $failed,
+                'total'     => $total,
+                'direction' => 'push',
+            ]);
+        } catch (\Throwable $e) {
+            $this->error('Google Push fehlgeschlagen: ' . $e->getMessage(), 500);
         }
     }
 

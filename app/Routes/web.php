@@ -93,6 +93,7 @@ $router->post('/api/mobile/invoices/{id}/mahnungen/{did}/senden',   [MobileApiCo
 // Google Calendar Sync
 $router->get('/api/mobile/google-sync/status',                [MobileApiController::class, 'googleSyncStatus']);
 $router->post('/api/mobile/google-sync/pull',                 [MobileApiController::class, 'googleSyncPull']);
+$router->post('/api/mobile/google-sync/push',                 [MobileApiController::class, 'googleSyncPush']);
 
 // Patients — extended
 $router->post('/api/mobile/patients/{id}/loeschen',           [MobileApiController::class, 'patientDelete']);

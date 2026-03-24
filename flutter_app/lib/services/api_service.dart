@@ -339,6 +339,9 @@ class ApiService {
   Future<Map<String, dynamic>> googleSyncPull() async =>
       Map<String, dynamic>.from(await post('/google-sync/pull', {}));
 
+  Future<Map<String, dynamic>> googleSyncPush() async =>
+      Map<String, dynamic>.from(await post('/google-sync/push', {}));
+
   /* ── Appointments extended ── */
 
   Future<List<dynamic>> appointmentsToday() async =>

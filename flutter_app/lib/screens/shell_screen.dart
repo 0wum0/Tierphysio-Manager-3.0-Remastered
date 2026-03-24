@@ -87,6 +87,10 @@ class _ShellScreenState extends State<ShellScreen>
     _connectivityTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       if (mounted) _checkConnectivity();
     });
+    // Auto 2-Wege-Sync beim App-Start (still im Hintergrund)
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) _autoGoogleSync();
+    });
 
     _sidebarCtrl = AnimationController(
       vsync: this,
@@ -137,6 +141,33 @@ class _ShellScreenState extends State<ShellScreen>
     } else {
       _sidebarCtrl.reverse();
     }
+  }
+
+  Future<void> _autoGoogleSync() async {
+    if (_isOffline) {
+      Future.delayed(const Duration(minutes: 30), () {
+        if (mounted) _autoGoogleSync();
+      });
+      return;
+    }
+    try {
+      // Prüfe ob Sync überhaupt aktiv ist
+      final status = await _api.googleSyncStatus();
+      final connected = status['connected'] as bool? ?? false;
+      final enabled   = status['sync_enabled'] as bool? ?? false;
+      if (!connected || !enabled) return;
+
+      // Push (TheraPano → Google) + Pull (Google → TheraPano) parallel
+      await Future.wait([
+        _api.googleSyncPush().catchError((_) => <String, dynamic>{}),
+        _api.googleSyncPull().catchError((_) => <String, dynamic>{}),
+      ]);
+    } catch (_) {}
+
+    // Alle 30 Minuten wiederholen solange App offen ist
+    Future.delayed(const Duration(minutes: 30), () {
+      if (mounted) _autoGoogleSync();
+    });
   }
 
   Future<void> _pollNotifications() async {
