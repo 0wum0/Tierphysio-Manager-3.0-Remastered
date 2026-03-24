@@ -174,7 +174,7 @@
             <div class="tab-content" id="akteTabsContent">
                 <!-- Neuer Eintrag Tab -->
                 <div class="tab-pane fade show active" id="neuer-eintrag" role="tabpanel" aria-labelledby="neuer-eintrag-tab">
-                    <form action="/patienten/{{ patient.id }}/timeline" method="POST" enctype="multipart/form-data">
+                    <form id="show-timeline-form" action="/patienten/{{ patient.id }}/timeline-json" method="POST" enctype="multipart/form-data" data-patient-id="{{ patient.id }}">
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                         <div class="form-grid form-grid-2" style="margin-bottom:0.75rem;">
                             <div class="form-group">
@@ -1245,6 +1245,35 @@ document.addEventListener('DOMContentLoaded', function() {
     fvClose.addEventListener('click', closeViewer);
     overlay.addEventListener('click', function (e) { if (e.target === overlay) closeViewer(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeViewer(); });
+})();
+
+/* ── Timeline-Formular AJAX (show.twig) ── */
+(function () {
+    var form = document.getElementById('show-timeline-form');
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var btn = form.querySelector('[type=submit]');
+        var origHtml = btn ? btn.innerHTML : '';
+        if (btn) { btn.disabled = true; btn.textContent = '…'; }
+
+        fetch(form.action, { method: 'POST', body: new FormData(form) })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.ok) {
+                    form.reset();
+                    /* Reload page so the timeline list updates cleanly */
+                    window.location.reload();
+                } else {
+                    alert('Fehler beim Speichern.');
+                    if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+                }
+            })
+            .catch(function () {
+                alert('Netzwerkfehler beim Speichern.');
+                if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+            });
+    });
 })();
 </script>
 {% endblock %}

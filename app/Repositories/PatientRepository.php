@@ -93,8 +93,9 @@ class PatientRepository extends Repository
         ];
     }
 
-    public function getTimeline(int $patientId): array
+    public function getTimeline(int $patientId, int $limit = 0): array
     {
+        $limitSql = $limit > 0 ? ' LIMIT ' . $limit : '';
         try {
             return $this->db->fetchAll(
                 "SELECT t.*, u.name AS user_name,
@@ -103,7 +104,7 @@ class PatientRepository extends Repository
                  LEFT JOIN users u ON t.user_id = u.id
                  LEFT JOIN treatment_types tt ON t.treatment_type_id = tt.id
                  WHERE t.patient_id = ?
-                 ORDER BY t.entry_date DESC",
+                 ORDER BY t.entry_date DESC" . $limitSql,
                 [$patientId]
             );
         } catch (\Throwable) {
@@ -112,7 +113,7 @@ class PatientRepository extends Repository
                  FROM patient_timeline t
                  LEFT JOIN users u ON t.user_id = u.id
                  WHERE t.patient_id = ?
-                 ORDER BY t.entry_date DESC",
+                 ORDER BY t.entry_date DESC" . $limitSql,
                 [$patientId]
             );
         }

@@ -50,9 +50,9 @@ class PatientService
         $this->patientRepository->delete($id);
     }
 
-    public function getTimeline(int $patientId): array
+    public function getTimeline(int $patientId, int $limit = 0): array
     {
-        return $this->patientRepository->getTimeline($patientId);
+        return $this->patientRepository->getTimeline($patientId, $limit);
     }
 
     public function addTimelineEntry(array $data): void

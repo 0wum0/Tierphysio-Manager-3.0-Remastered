@@ -468,6 +468,8 @@ HTML;
         $mailer->Username   = $this->settingsRepository->get('smtp_username', '');
         $mailer->Password   = $this->settingsRepository->get('smtp_password', '');
         $mailer->SMTPAuth   = !empty($mailer->Username);
+        $mailer->Timeout    = 10;
+        $mailer->SMTPKeepAlive = false;
         $enc = $this->settingsRepository->get('smtp_encryption', 'tls');
         if ($enc === 'ssl') {
             $mailer->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;

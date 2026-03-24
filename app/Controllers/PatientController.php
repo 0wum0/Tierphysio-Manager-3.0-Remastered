@@ -418,7 +418,7 @@ class PatientController extends Controller
         }
 
         $this->patientService->addTimelineEntry($data);
-        $timeline = $this->patientService->getTimeline((int)$params['id']);
+        $timeline = $this->patientService->getTimeline((int)$params['id'], 100);
 
         header('Content-Type: application/json');
         echo json_encode(['ok' => true, 'timeline' => $timeline]);
@@ -528,7 +528,7 @@ class PatientController extends Controller
         ];
 
         $this->patientService->updateTimelineEntry((int)$params['entryId'], $data);
-        $timeline = $this->patientService->getTimeline((int)$params['id']);
+        $timeline = $this->patientService->getTimeline((int)$params['id'], 100);
 
         header('Content-Type: application/json');
         echo json_encode(['ok' => true, 'timeline' => $timeline]);
@@ -542,7 +542,7 @@ class PatientController extends Controller
         if (!$patient) { http_response_code(404); header('Content-Type: application/json'); echo json_encode(['error' => 'not found']); exit; }
 
         $this->patientService->deleteTimelineEntry((int)$params['entryId']);
-        $timeline = $this->patientService->getTimeline((int)$params['id']);
+        $timeline = $this->patientService->getTimeline((int)$params['id'], 100);
 
         header('Content-Type: application/json');
         echo json_encode(['ok' => true, 'timeline' => $timeline]);
