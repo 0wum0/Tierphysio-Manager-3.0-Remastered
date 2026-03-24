@@ -38,10 +38,15 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   bool _loadingHomework = false;
   bool _homeworkLoaded  = false;
 
+  // Befundbögen
+  List<Map<String, dynamic>> _befunde = [];
+  bool _loadingBefunde = false;
+  bool _befundeLoaded  = false;
+
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: 4, vsync: this);
+    _tabCtrl = TabController(length: 5, vsync: this);
     _tabCtrl.addListener(_onTabChanged);
     _load();
   }
@@ -50,6 +55,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     if (_tabCtrl.indexIsChanging) return;
     if (_tabCtrl.index == 1 && !_exercisesLoaded) _loadExercises();
     if (_tabCtrl.index == 2 && !_homeworkLoaded)  _loadHomework();
+    if (_tabCtrl.index == 3 && !_befundeLoaded)   _loadBefunde();
   }
 
   Future<void> _loadExercises() async {
@@ -74,6 +80,18 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
         _loadingHomework = false;
       });
     } catch (_) { setState(() => _loadingHomework = false); }
+  }
+
+  Future<void> _loadBefunde() async {
+    setState(() => _loadingBefunde = true);
+    try {
+      final list = await _api.befundeByPatient(widget.id);
+      setState(() {
+        _befunde = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _befundeLoaded  = true;
+        _loadingBefunde = false;
+      });
+    } catch (_) { setState(() => _loadingBefunde = false); }
   }
 
   @override
@@ -320,6 +338,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                 Tab(text: 'Akte',         icon: Icon(Icons.folder_open_rounded,     size: 16)),
                 Tab(text: 'Übungen',      icon: Icon(Icons.fitness_center_rounded,   size: 16)),
                 Tab(text: 'Hausaufgaben', icon: Icon(Icons.assignment_rounded,       size: 16)),
+                Tab(text: 'Befunde',      icon: Icon(Icons.medical_information_rounded, size: 16)),
                 Tab(text: 'Daten',        icon: Icon(Icons.info_outline_rounded,     size: 16)),
               ],
             ),
@@ -333,6 +352,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                 _buildTimeline(timeline),
                 _buildExercisesTab(),
                 _buildHomeworkTab(),
+                _buildBefundeTab(),
                 _buildInfo(p),
               ],
             ),
@@ -522,6 +542,34 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
               itemCount: _homework.length,
               separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (_, i) => _HomeworkCard(homework: _homework[i]),
+            ),
+    );
+  }
+
+  // ── Befunde Tab ────────────────────────────────────────────
+
+  Widget _buildBefundeTab() {
+    if (_loadingBefunde) return const Center(child: CircularProgressIndicator());
+    return RefreshIndicator(
+      onRefresh: () async { _befundeLoaded = false; await _loadBefunde(); },
+      child: _befunde.isEmpty
+          ? ListView(padding: const EdgeInsets.all(32), children: [
+              Center(child: Column(children: [
+                const SizedBox(height: 40),
+                Icon(Icons.medical_information_rounded, size: 72, color: Colors.grey.shade300),
+                const SizedBox(height: 16),
+                Text('Keine Befundbögen', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+                const SizedBox(height: 8),
+                Text('Befundbögen werden in der Patientenakte erstellt.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+              ])),
+            ])
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+              itemCount: _befunde.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (_, i) => _BefundCard(befund: _befunde[i]),
             ),
     );
   }
@@ -1448,6 +1496,80 @@ class _HomeworkCard extends StatelessWidget {
           ),
         ],
       ]),
+    );
+  }
+}
+
+// ── Befund Card ───────────────────────────────────────────────────────────────
+
+class _BefundCard extends StatelessWidget {
+  final Map<String, dynamic> befund;
+  const _BefundCard({required this.befund});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark   = Theme.of(context).brightness == Brightness.dark;
+    final status   = befund['status'] as String? ?? '';
+    final color    = switch (status) {
+      'versendet'    => Colors.green,
+      'abgeschlossen'=> Colors.blue,
+      _              => Colors.grey,
+    };
+    final label = switch (status) {
+      'versendet'    => 'Versendet',
+      'abgeschlossen'=> 'Abgeschlossen',
+      _              => 'Entwurf',
+    };
+    final id      = int.tryParse(befund['id']?.toString() ?? '0') ?? 0;
+    final datum   = befund['datum'] as String? ?? '';
+    String datumFmt = datum;
+    try {
+      final d = DateTime.parse(datum);
+      datumFmt = '${d.day.toString().padLeft(2,'0')}.${d.month.toString().padLeft(2,'0')}.${d.year}';
+    } catch (_) {}
+    final ersteller = befund['ersteller_name'] as String? ?? '';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1D27) : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04), blurRadius: 6, offset: const Offset(0, 2))],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.medical_information_rounded, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('BF-${id.toString().padLeft(4, '0')}',
+              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13,
+                color: isDark ? Colors.white : Colors.black87, fontFamily: 'monospace')),
+            const SizedBox(height: 2),
+            Text(datumFmt, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+            if (ersteller.isNotEmpty) ...[
+              const SizedBox(height: 1),
+              Text(ersteller, style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+            ],
+          ])),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(label,
+              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color)),
+          ),
+        ]),
+      ),
     );
   }
 }

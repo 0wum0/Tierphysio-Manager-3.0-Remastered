@@ -58,6 +58,12 @@
         {id:'dokumente',      label:'Dokumente',      count: documents|length},
         {id:'fotos',          label:'Fotos',          count: photos|length},
     ] %}
+    {% if homework_plans is defined and homework_plans|length > 0 %}
+        {% set tabs = tabs|merge([{id:'hausaufgaben', label:'Hausaufgaben', count: homework_plans|length}]) %}
+    {% endif %}
+    {% if befunde is defined and befunde|length > 0 %}
+        {% set tabs = tabs|merge([{id:'befunde', label:'Befundbögen', count: befunde|length}]) %}
+    {% endif %}
     {% if tcp_progress is defined and tcp_progress|length > 0 %}
         {% set tabs = tabs|merge([{id:'fortschritt', label:'Fortschritt', count: tcp_progress|length}]) %}
     {% endif %}
@@ -132,6 +138,84 @@
       </div>
     </div>
 </div>
+
+{# ── Hausaufgaben ── #}
+{% if homework_plans is defined and homework_plans|length > 0 %}
+<div class="pet-tab-panel" id="panel-hausaufgaben" style="display:none;">
+    {% for plan in homework_plans %}
+    {% set planId = plan.id %}
+    {% set tasks = tasks_by_plan[planId] ?? [] %}
+    {% set checks = checks_by_plan[planId] ?? [] %}
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <h3 class="h6 mb-0 fw-semibold">{{ plan.title ?? 'Hausaufgabenplan' }}</h3>
+            {% if plan.plan_date %}<div class="text-secondary" style="font-size:0.75rem;">{{ plan.plan_date|date('d.m.Y') }}</div>{% endif %}
+          </div>
+          <div class="d-flex gap-2">
+            {% if tasks|length > 0 %}
+              {% set doneCount = 0 %}
+              {% for t in tasks %}{% if checks[t.id] is defined and checks[t.id] %}{% set doneCount = doneCount + 1 %}{% endif %}{% endfor %}
+              <span class="badge bg-primary bg-opacity-25 text-primary" style="font-size:0.7rem;">{{ doneCount }}/{{ tasks|length }}</span>
+            {% endif %}
+            <a href="/portal/tiere/{{ pet.id }}/hausaufgaben/{{ plan.id }}/pdf"
+               class="portal-btn portal-btn-secondary portal-btn-sm" target="_blank">PDF</a>
+          </div>
+        </div>
+        {% if plan.description %}
+        <p class="text-secondary small mb-2">{{ plan.description }}</p>
+        {% endif %}
+        {% if tasks %}
+        <ul class="list-unstyled mb-0">
+        {% for task in tasks %}
+            {% set isChecked = checks[task.id] is defined and checks[task.id] %}
+            <li class="d-flex align-items-start gap-2 py-2" style="border-top:1px solid var(--bs-border-color);">
+                <input type="checkbox" class="homework-check mt-1" style="cursor:pointer;width:16px;height:16px;flex-shrink:0;"
+                       data-plan="{{ plan.id }}" data-task="{{ task.id }}"
+                       {% if isChecked %}checked{% endif %}
+                       title="Aufgabe abhaken">
+                <div class="flex-fill">
+                    <div class="fw-medium" style="font-size:0.875rem;{% if isChecked %}text-decoration:line-through;opacity:0.6;{% endif %}">{{ task.title }}</div>
+                    {% if task.description %}<div class="text-secondary" style="font-size:0.78rem;">{{ task.description }}</div>{% endif %}
+                    {% if task.repetitions %}<div class="text-secondary" style="font-size:0.72rem;">{{ task.repetitions }}</div>{% endif %}
+                </div>
+            </li>
+        {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-secondary small mb-0">Keine Aufgaben in diesem Plan.</p>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{# ── Befundbögen ── #}
+{% if befunde is defined and befunde|length > 0 %}
+<div class="pet-tab-panel" id="panel-befunde" style="display:none;">
+    <div class="card mb-3">
+      <div class="card-body">
+        <h2 class="h5 mb-3">Befundbögen</h2>
+        {% for bf in befunde %}
+        <div class="d-flex align-items-center gap-3 py-2" style="border-bottom:1px solid var(--bs-border-color);">
+            <div class="flex-fill">
+                <div class="fw-semibold" style="font-size:0.875rem;">
+                    BF-{{ '%04d'|format(bf.id) }} &mdash; {{ bf.datum|date('d.m.Y') }}
+                </div>
+                {% if bf.ersteller_name %}<div class="text-secondary" style="font-size:0.75rem;">{{ bf.ersteller_name }}</div>{% endif %}
+                <span class="badge-status {% if bf.status == 'versendet' %}badge-paid{% elseif bf.status == 'abgeschlossen' %}bg-info bg-opacity-25 text-info{% else %}badge-draft{% endif %}" style="font-size:0.65rem;">
+                    {% if bf.status == 'versendet' %}Versendet{% elseif bf.status == 'abgeschlossen' %}Abgeschlossen{% else %}Entwurf{% endif %}
+                </span>
+            </div>
+            <a href="/portal/befunde/{{ bf.id }}" class="portal-btn portal-btn-secondary portal-btn-sm">Ansehen →</a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+</div>
+{% endif %}
 
 {# ── TherapyCare Pro: Fortschritt ── #}
 {% if tcp_progress is defined and tcp_progress|length > 0 %}
@@ -273,5 +357,28 @@
     btns.forEach(function(b){ b.addEventListener('click', function(){ activate(b.dataset.tab); }); });
     activate('dokumente');
 })();
+</script>
+
+<script>
+/* Homework checkbox toggle */
+document.querySelectorAll('.homework-check').forEach(function(cb) {
+    cb.addEventListener('change', function() {
+        var planId = this.dataset.plan;
+        var taskId = this.dataset.task;
+        var checked = this.checked;
+        var li = this.closest('li');
+        var titleEl = li ? li.querySelector('.fw-medium') : null;
+        fetch('/api/portal/hausaufgaben/' + planId + '/aufgabe/' + taskId + '/abhaken', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({checked: checked})
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.ok && titleEl) {
+                titleEl.style.textDecoration = checked ? 'line-through' : '';
+                titleEl.style.opacity = checked ? '0.6' : '1';
+            }
+        }).catch(function() {});
+    });
+});
 </script>
 {% endblock %}

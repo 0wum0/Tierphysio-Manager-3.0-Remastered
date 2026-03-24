@@ -563,6 +563,43 @@ class OwnerPortalAdminController extends Controller
         $this->redirect('/portal-admin/tiere/' . $plan['owner_id'] . '/hausaufgaben');
     }
 
+    /* ── GET /portal-admin/tiere/{owner_id}/befunde ── */
+    public function befundeIndex(array $params = []): void
+    {
+        $ownerId = (int)($params['owner_id'] ?? 0);
+        $db      = \App\Core\Application::getInstance()->getContainer()->get(Database::class);
+
+        $ownerStmt = $db->query(
+            'SELECT o.*, u.email AS portal_email FROM owners o LEFT JOIN owner_portal_users u ON u.owner_id = o.id WHERE o.id = ? LIMIT 1',
+            [$ownerId]
+        );
+        $owner = $ownerStmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$owner) { $this->abort(404); return; }
+
+        $patients = $this->repo->getPetsByOwnerId($ownerId);
+
+        $befundeByPatient = [];
+        foreach ($patients as $p) {
+            $stmt = $db->query(
+                "SELECT b.*, u2.name AS ersteller_name
+                 FROM befundboegen b
+                 LEFT JOIN users u2 ON u2.id = b.created_by
+                 WHERE b.patient_id = ?
+                 ORDER BY b.datum DESC",
+                [(int)$p['id']]
+            );
+            $befundeByPatient[$p['id']] = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        }
+
+        $this->render('@owner-portal/admin_befunde.twig', [
+            'page_title'         => 'Befundbögen — ' . trim($owner['first_name'] . ' ' . $owner['last_name']),
+            'owner'              => $owner,
+            'patients'           => $patients,
+            'befunde_by_patient' => $befundeByPatient,
+            'csrf_token'         => $this->session->generateCsrfToken(),
+        ]);
+    }
+
     /* ── Helpers ── */
 
     private function parseTasksFromPost(): array

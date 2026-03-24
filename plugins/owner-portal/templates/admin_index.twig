@@ -120,6 +120,10 @@
                                            class="btn btn-xs btn-outline-success" title="Hausaufgaben verwalten">
                                             📋
                                         </a>
+                                        <a href="/portal-admin/tiere/{{ u.owner_id }}/befunde"
+                                           class="btn btn-xs btn-outline-primary" title="Befundbögen verwalten">
+                                            🩺
+                                        </a>
                                         <form method="POST" action="/portal-admin/{{ u.id }}/neu-einladen" style="display:inline;">
                                             <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                                             <button type="submit" class="btn btn-xs btn-outline-primary" title="Neu einladen"

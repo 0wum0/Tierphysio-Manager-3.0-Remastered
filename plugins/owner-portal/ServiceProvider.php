@@ -89,6 +89,9 @@ class ServiceProvider
         $router->post('/portal-admin/uebungen/{id}/loeschen',    [OwnerPortalAdminController::class, 'exerciseDelete'], ['auth']);
         $router->post('/portal-admin/uebungen/{id}/bearbeiten',  [OwnerPortalAdminController::class, 'exerciseUpdate'], ['auth']);
 
+        /* ── Befundbögen (admin view) ── */
+        $router->get('/portal-admin/tiere/{owner_id}/befunde',       [OwnerPortalAdminController::class, 'befundeIndex'],       ['auth']);
+
         /* ── Homework plans ── */
         $router->get('/portal-admin/tiere/{owner_id}/hausaufgaben',  [OwnerPortalAdminController::class, 'homeworkPlanIndex'],  ['auth']);
         $router->post('/portal-admin/tiere/{owner_id}/hausaufgaben', [OwnerPortalAdminController::class, 'homeworkPlanStore'],  ['auth']);

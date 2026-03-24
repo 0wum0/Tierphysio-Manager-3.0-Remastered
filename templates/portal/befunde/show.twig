@@ -1,19 +1,15 @@
-{% extends active_theme_layout ?? 'layouts/base.twig' %}
-
+{% extends '@owner-portal/portal_layout.twig' %}
+{% set active_nav = 'befunde' %}
 {% block content %}
-<div class="page-header">
-    <div class="flex items-center gap-3">
-        <a href="/portal/befunde" class="btn btn-secondary btn-sm">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="15 18 9 12 15 6"/></svg>
-            Meine Befundbögen
-        </a>
-        <h1 class="page-title">{{ page_title }}</h1>
-    </div>
-    <a href="/portal/befunde/{{ befundbogen.id }}/pdf" target="_blank" class="btn btn-primary btn-sm">
-        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>
+
+<div class="mb-3 d-flex justify-content-between align-items-center">
+    <a href="/portal/befunde" class="small text-secondary text-decoration-none">← Meine Befundbögen</a>
+    <a href="/portal/befunde/{{ befundbogen.id }}/pdf" target="_blank" class="portal-btn portal-btn-secondary portal-btn-sm">
+        <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>
         Als PDF herunterladen
     </a>
 </div>
+<h1 class="portal-page-title">{{ page_title }}</h1>
 
 <div class="row g-4">
     {# ── Left: meta ── #}

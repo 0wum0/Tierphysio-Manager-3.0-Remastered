@@ -1,0 +1,109 @@
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+{% block content %}
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Befundbögen — {{ owner.first_name }} {{ owner.last_name }}</h1>
+        <p class="page-subtitle">Alle Befundbögen für Patienten dieses Tierhalters</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/portal-admin/tiere/{{ owner.id }}/hausaufgaben" class="btn btn-secondary btn-sm">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" stroke-width="2"/></svg>
+            Hausaufgaben
+        </a>
+        <a href="/portal-admin/tiere/{{ owner.id }}/uebungen" class="btn btn-secondary btn-sm">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M6 4v16M18 4v16M6 12h12"/></svg>
+            Übungen
+        </a>
+        <a href="/portal-admin" class="btn btn-secondary btn-sm">
+            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="15 18 9 12 15 6"/></svg>
+            Portal-Verwaltung
+        </a>
+    </div>
+</div>
+
+{% if patients is empty %}
+<div class="alert alert-warning">Keine Patienten für diesen Tierhalter gefunden.</div>
+{% else %}
+
+<div class="accordion" id="acc-befunde-patients">
+{% for patient in patients %}
+{% set bList = befunde_by_patient[patient.id] ?? [] %}
+<div class="card mb-3">
+    <div class="card-header d-flex align-items-center justify-content-between gap-2 py-2 px-3"
+         style="cursor:pointer;" data-bs-toggle="collapse"
+         data-bs-target="#acc-bf-{{ patient.id }}" aria-expanded="true">
+        <div class="d-flex align-items-center gap-2">
+            <span class="fw-600">🐾 {{ patient.name }}</span>
+            {% if patient.species %}<span class="badge bg-secondary fs-nano">{{ patient.species }}</span>{% endif %}
+            <span class="badge bg-primary fs-nano">{{ bList|length }} Befundbogen{{ bList|length != 1 ? 'bögen' : '' }}</span>
+        </div>
+        <a href="/patienten/{{ patient.id }}/befunde/erstellen" class="btn btn-xs btn-primary" onclick="event.stopPropagation();">
+            <i class="fal fa-plus mr-1"></i> Neuer Befundbogen
+        </a>
+    </div>
+    <div id="acc-bf-{{ patient.id }}" class="collapse show">
+        <div class="card-body p-0">
+            {% if bList %}
+            <div class="table-responsive">
+            <table class="table table-hover mb-0" style="font-size:0.875rem;">
+                <thead>
+                    <tr>
+                        <th style="padding:.5rem .75rem;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--bs-secondary-color);">Nr.</th>
+                        <th style="padding:.5rem .75rem;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--bs-secondary-color);">Datum</th>
+                        <th style="padding:.5rem .75rem;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--bs-secondary-color);">Ersteller</th>
+                        <th style="padding:.5rem .75rem;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--bs-secondary-color);">Status</th>
+                        <th style="padding:.5rem .75rem;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--bs-secondary-color);">Versendet</th>
+                        <th style="padding:.5rem .75rem;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--bs-secondary-color);" class="text-end">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for b in bList %}
+                <tr>
+                    <td style="padding:.5rem .75rem;font-family:monospace;font-weight:700;">BF-{{ '%04d'|format(b.id) }}</td>
+                    <td style="padding:.5rem .75rem;">{{ b.datum|date('d.m.Y') }}</td>
+                    <td style="padding:.5rem .75rem;">{{ b.ersteller_name ?? '—' }}</td>
+                    <td style="padding:.5rem .75rem;">
+                        {% if b.status == 'versendet' %}
+                            <span class="badge bg-success">Versendet</span>
+                        {% elseif b.status == 'abgeschlossen' %}
+                            <span class="badge bg-info text-dark">Abgeschlossen</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Entwurf</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding:.5rem .75rem;font-size:.78rem;color:var(--bs-secondary-color);">
+                        {% if b.sent_at %}{{ b.sent_at|date('d.m.Y') }}{% else %}—{% endif %}
+                    </td>
+                    <td style="padding:.5rem .75rem;" class="text-end">
+                        <div class="d-flex gap-1 justify-content-end">
+                            <a href="/portal-admin/befunde/{{ b.id }}" class="btn btn-xs btn-outline-primary" title="Ansehen">
+                                <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>
+                            </a>
+                            <a href="/patienten/{{ patient.id }}/befunde/{{ b.id }}/bearbeiten" class="btn btn-xs btn-outline-secondary" title="Bearbeiten">
+                                <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            </a>
+                            <a href="/patienten/{{ patient.id }}/befunde/{{ b.id }}/pdf" target="_blank" class="btn btn-xs btn-outline-secondary" title="PDF">
+                                <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% else %}
+            <div class="p-3 text-center text-muted" style="font-size:.875rem;">
+                Noch keine Befundbögen für <strong>{{ patient.name }}</strong>.
+                <a href="/patienten/{{ patient.id }}/befunde/erstellen" class="ms-2 text-primary">Jetzt erstellen →</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endfor %}
+</div>
+
+{% endif %}
+{% endblock %}

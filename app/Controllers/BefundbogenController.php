@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Config;
+use App\Core\Database;
 use App\Core\Session;
 use App\Core\Translator;
 use App\Core\View;
@@ -319,44 +320,47 @@ class BefundbogenController extends Controller
     /** GET /portal/befunde — owner sees own befunde */
     public function portalIndex(array $params = []): void
     {
-        $ownerId = $this->resolvePortalOwnerId();
-        if (!$ownerId) { $this->abort(403); }
-
+        $base    = $this->requirePortalAuth();
+        $ownerId = (int)$base['portal_user']['owner_id'];
         $befunde = $this->repo->findByOwner($ownerId);
 
-        $this->render('portal/befunde/index.twig', [
+        $this->render('portal/befunde/index.twig', array_merge($base, [
             'page_title' => 'Meine Befundbögen',
+            'active_nav' => 'befunde',
             'befunde'    => $befunde,
-        ]);
+        ]));
     }
 
     /** GET /portal/befunde/{id} — owner reads single befund */
     public function portalShow(array $params = []): void
     {
-        $ownerId     = $this->resolvePortalOwnerId();
+        $base        = $this->requirePortalAuth();
+        $ownerId     = (int)$base['portal_user']['owner_id'];
         $befundbogen = $this->repo->findWithFelder((int)$params['id']);
 
-        if (!$ownerId || !$befundbogen || (int)$befundbogen['owner_id'] !== $ownerId || $befundbogen['status'] === 'entwurf') {
+        if (!$befundbogen || (int)$befundbogen['owner_id'] !== $ownerId || $befundbogen['status'] === 'entwurf') {
             $this->abort(403);
         }
 
         $patient = $this->fetchPatient((int)$befundbogen['patient_id']);
 
-        $this->render('portal/befunde/show.twig', [
+        $this->render('portal/befunde/show.twig', array_merge($base, [
             'page_title'  => 'Befundbogen — ' . ($patient['name'] ?? ''),
+            'active_nav'  => 'befunde',
             'befundbogen' => $befundbogen,
             'felder'      => $befundbogen['felder'],
             'patient'     => $patient,
-        ]);
+        ]));
     }
 
     /** GET /portal/befunde/{id}/pdf */
     public function portalPdf(array $params = []): void
     {
-        $ownerId     = $this->resolvePortalOwnerId();
+        $base        = $this->requirePortalAuth();
+        $ownerId     = (int)$base['portal_user']['owner_id'];
         $befundbogen = $this->repo->findWithFelder((int)$params['id']);
 
-        if (!$ownerId || !$befundbogen || (int)$befundbogen['owner_id'] !== $ownerId || $befundbogen['status'] === 'entwurf') {
+        if (!$befundbogen || (int)$befundbogen['owner_id'] !== $ownerId || $befundbogen['status'] === 'entwurf') {
             $this->abort(403);
         }
 
@@ -441,5 +445,55 @@ class BefundbogenController extends Controller
     {
         $ownerId = $this->session->get('owner_portal_owner_id');
         return $ownerId ? (int)$ownerId : null;
+    }
+
+    /**
+     * Require owner-portal session and return base template vars
+     * (mirrors OwnerPortalController::requireOwnerAuth + portalBase).
+     * Redirects to login if not authenticated.
+     */
+    private function requirePortalAuth(): array
+    {
+        $userId = $this->session->get('owner_portal_user_id');
+        if (!$userId) {
+            $this->redirect('/portal/login');
+            exit;
+        }
+
+        try {
+            $db       = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $userStmt = $db->query(
+                'SELECT u.*, o.first_name, o.last_name FROM owner_portal_users u JOIN owners o ON o.id = u.owner_id WHERE u.id = ? LIMIT 1',
+                [(int)$userId]
+            );
+            $user = $userStmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+        } catch (\Throwable) {
+            $user = null;
+        }
+
+        if (!$user || !$user['is_active']) {
+            $this->session->remove('owner_portal_user_id');
+            $this->session->remove('owner_portal_owner_id');
+            $this->redirect('/portal/login');
+            exit;
+        }
+
+        /* Unread message count */
+        $unread = 0;
+        try {
+            $db2   = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $uStmt = $db2->query(
+                "SELECT COUNT(*) FROM portal_messages WHERE thread_id IN (SELECT id FROM portal_threads WHERE owner_id = ?) AND sender = 'admin' AND is_read = 0",
+                [(int)$user['owner_id']]
+            );
+            $unread = (int)($uStmt->fetchColumn() ?: 0);
+        } catch (\Throwable) {}
+
+        return [
+            'portal_user'         => $user,
+            'portal_unread_count' => $unread,
+            'csrf_token'          => $this->session->generateCsrfToken(),
+            'show_homework_nav'   => true,
+        ];
     }
 }

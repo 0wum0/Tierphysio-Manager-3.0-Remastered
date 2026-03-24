@@ -280,8 +280,8 @@ $router->get('/api/mobile/portal/befunde/{id}/pdf-url',                  [Mobile
 // ── Befundbögen (admin API) ────────────────────────────────────────────
 $router->get('/api/mobile/befunde',                                      [MobileApiController::class, 'befundeList']);
 $router->get('/api/mobile/befunde/patient/{id}',                         [MobileApiController::class, 'befundeByPatient']);
-$router->get('/api/mobile/befunde/{id}',                                 [MobileApiController::class, 'befundeShow']);
 $router->get('/api/mobile/befunde/{id}/pdf-url',                         [MobileApiController::class, 'befundePdfUrl']);
+$router->get('/api/mobile/befunde/{id}',                                 [MobileApiController::class, 'befundeShow']);
 
 // ── Owner Portal — Profil ─────────────────────────────────────────────
 $router->get('/api/mobile/portal/profil',                                [MobileApiController::class, 'ownerPortalProfile']);

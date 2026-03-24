@@ -562,8 +562,8 @@ class ApiService {
         if (status.isNotEmpty) 'status': status,
       }));
 
-  Future<Map<String, dynamic>> befundeByPatient(int patientId) async =>
-      Map<String, dynamic>.from(await get('/befunde/patient/$patientId'));
+  Future<List<dynamic>> befundeByPatient(int patientId) async =>
+      List<dynamic>.from(await get('/befunde/patient/$patientId') as List);
 
   Future<Map<String, dynamic>> befundeShow(int id) async =>
       Map<String, dynamic>.from(await get('/befunde/$id'));

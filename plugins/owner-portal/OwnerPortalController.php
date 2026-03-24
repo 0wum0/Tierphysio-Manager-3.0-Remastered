@@ -170,19 +170,48 @@ class OwnerPortalController extends Controller
             }
         } catch (\Throwable) {}
 
+        /* ── Homework plans for this pet ── */
+        $homeworkPlans = $this->repo->getHomeworkPlansByPatient($petId);
+        $tasksByPlan   = [];
+        $checksByPlan  = [];
+        foreach ($homeworkPlans as $p) {
+            $pid               = (int)$p['id'];
+            $tasksByPlan[$pid]  = $this->repo->getTasksByPlan($pid);
+            $checksByPlan[$pid] = $this->repo->getChecksForPlan($pid, $ownerId);
+        }
+
+        /* ── Befundbögen for this pet (non-draft) ── */
+        $befunde = [];
+        try {
+            $db = \App\Core\Application::getInstance()->getContainer()->get(Database::class);
+            $stmt = $db->query(
+                "SELECT b.*, u.name AS ersteller_name
+                 FROM befundboegen b
+                 LEFT JOIN users u ON u.id = b.created_by
+                 WHERE b.patient_id = ? AND b.status != 'entwurf'
+                 ORDER BY b.datum DESC",
+                [$petId]
+            );
+            $befunde = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Throwable) {}
+
         $this->render('@owner-portal/owner_pet_detail.twig', array_merge($this->portalBase($user), [
-            'page_title'   => $pet['name'],
-            'pet'          => $pet,
-            'treatments'   => array_values($treatments),
-            'notes'        => array_values($notes),
-            'photos'       => array_values($photos),
-            'documents'    => array_values($documents),
-            'exercises'    => $exercises,
-            'show_homework'=> $this->isHomeworkEnabled(),
-            'tcp_progress' => $tcpProgress,
-            'tcp_natural'  => $tcpNatural,
-            'tcp_reports'  => $tcpReports,
-            'tcp_feedback' => $tcpFeedback,
+            'page_title'     => $pet['name'],
+            'pet'            => $pet,
+            'treatments'     => array_values($treatments),
+            'notes'          => array_values($notes),
+            'photos'         => array_values($photos),
+            'documents'      => array_values($documents),
+            'exercises'      => $exercises,
+            'show_homework'  => $this->isHomeworkEnabled(),
+            'homework_plans' => $homeworkPlans,
+            'tasks_by_plan'  => $tasksByPlan,
+            'checks_by_plan' => $checksByPlan,
+            'befunde'        => $befunde,
+            'tcp_progress'   => $tcpProgress,
+            'tcp_natural'    => $tcpNatural,
+            'tcp_reports'    => $tcpReports,
+            'tcp_feedback'   => $tcpFeedback,
         ]));
     }
 
