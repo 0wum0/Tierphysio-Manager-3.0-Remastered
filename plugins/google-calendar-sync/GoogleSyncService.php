@@ -255,6 +255,14 @@ class GoogleSyncService
             /* Handle cancellations / deletions */
             if (($event['status'] ?? '') === 'cancelled') {
                 $this->repo->deleteImportedEvent($googleEventId, (int)$connection['id']);
+
+                // NEU: Dazugehörigen Appointment-Eintrag canceln
+                $this->db->execute(
+                    "UPDATE appointments SET status = 'cancelled', updated_at = NOW()
+                     WHERE google_event_id = ?",
+                    [$googleEventId]
+                );
+
                 $deleted++;
                 continue;
             }
@@ -288,6 +296,9 @@ class GoogleSyncService
                 'google_status'      => $event['status'] ?? 'confirmed',
                 'raw_json'           => json_encode($event),
             ]);
+
+            // NEU: Google-Termin auch in appointments schreiben (Flutter-Sichtbarkeit)
+            $this->upsertAppointmentFromGoogle($event, $googleEventId, $startDt, $endDt, $isAllDay);
 
             if ($existing) {
                 $updated++;
@@ -353,5 +364,87 @@ class GoogleSyncService
         $connectionId = $connection ? (int)$connection['id'] : 0;
         error_log("[GoogleCalendarSync] {$action} failed for appointment #{$appointmentId}: {$error}");
         $this->repo->log($connectionId, 'error', false, $error, $appointmentId);
+    }
+
+    /**
+     * Google-Event in die appointments-Tabelle schreiben/aktualisieren.
+     * Macht Google-Termine für die Flutter App sichtbar (die nur appointments liest).
+     * Fehler werden still geloggt — der Pull läuft immer weiter.
+     */
+    private function upsertAppointmentFromGoogle(
+        array     $event,
+        string    $googleEventId,
+        \DateTime $startDt,
+        \DateTime $endDt,
+        bool      $isAllDay = false
+    ): void {
+        try {
+            $existing = $this->db->fetch(
+                "SELECT id FROM appointments WHERE google_event_id = ? LIMIT 1",
+                [$googleEventId]
+            );
+
+            $title = mb_substr(
+                $event['summary'] ?? '(Google Termin)',
+                0, 255
+            );
+            $desc = mb_substr(
+                $event['description'] ?? '',
+                0, 65535
+            );
+
+            if ($existing) {
+                // Vorhandenen Eintrag aktualisieren
+                $this->db->execute(
+                    "UPDATE appointments
+                     SET title       = ?,
+                         description = ?,
+                         start_at    = ?,
+                         end_at      = ?,
+                         all_day     = ?,
+                         updated_at  = NOW()
+                     WHERE google_event_id = ?",
+                    [
+                        $title,
+                        $desc,
+                        $startDt->format('Y-m-d H:i:s'),
+                        $endDt->format('Y-m-d H:i:s'),
+                        $isAllDay ? 1 : 0,
+                        $googleEventId,
+                    ]
+                );
+            } else {
+                // Neuen Eintrag anlegen
+                $this->db->execute(
+                    "INSERT INTO appointments
+                         (title, description, start_at, end_at, status,
+                          google_event_id, color, all_day, created_at, updated_at)
+                     VALUES (?, ?, ?, ?, 'scheduled', ?, '#4285F4', ?, NOW(), NOW())",
+                    [
+                        $title,
+                        $desc,
+                        $startDt->format('Y-m-d H:i:s'),
+                        $endDt->format('Y-m-d H:i:s'),
+                        $googleEventId,
+                        $isAllDay ? 1 : 0,
+                    ]
+                );
+
+                // Rückverlinkung: appointment_id in imported_events setzen
+                $newId = $this->db->lastInsertId();
+                if ($newId) {
+                    $this->db->execute(
+                        "UPDATE google_calendar_imported_events
+                         SET appointment_id = ?
+                         WHERE google_event_id = ?",
+                        [(int)$newId, $googleEventId]
+                    );
+                }
+            }
+        } catch (\Throwable $e) {
+            // Nicht-kritisch: nur loggen, Sync läuft weiter
+            error_log('[GoogleSync] upsertAppointmentFromGoogle failed for '
+                . $googleEventId . ': ' . $e->getMessage());
+        }
     }
 }
