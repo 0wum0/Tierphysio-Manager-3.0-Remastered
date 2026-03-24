@@ -27,7 +27,14 @@ class _IntakeScreenState extends State<IntakeScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final data = await _api.intakeInbox();
-      setState(() { _items = (data['items'] as List? ?? []); _loading = false; });
+      final all = data['items'] as List? ?? [];
+      setState(() {
+        _items = all.where((e) {
+          final s = (e as Map)['status'] as String? ?? 'neu';
+          return s == 'neu' || s == 'in_bearbeitung' || s == 'pending';
+        }).toList();
+        _loading = false;
+      });
     } catch (e) {
       setState(() { _error = e.toString(); _loading = false; });
     }

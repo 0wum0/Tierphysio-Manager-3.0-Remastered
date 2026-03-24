@@ -23,16 +23,22 @@ class ShellScreen extends StatefulWidget {
 }
 
 class _ShellScreenState extends State<ShellScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   final _api = ApiService();
   int _unreadMessages = 0;
   int _overdueCount   = 0;
   int _newIntakes     = 0;
   int _birthdayCount  = 0;
+  List<Map<String, dynamic>> _pendingIntakes = [];
   late Timer _clockTimer;
   late Timer _connectivityTimer;
   DateTime _now = DateTime.now();
   bool _isOffline = false;
+
+  // Bell shake animation
+  late AnimationController _bellCtrl;
+  late Animation<double> _bellAnim;
+  int _lastBellCount = 0;
 
   // Sidebar animation
   bool _sidebarExpanded = true;
@@ -91,6 +97,18 @@ class _ShellScreenState extends State<ShellScreen>
       parent: _sidebarCtrl,
       curve: Curves.easeInOut,
     );
+
+    _bellCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _bellAnim = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end:  0.18), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 0.18, end: -0.18), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -0.18, end: 0.12), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 0.12, end: -0.08), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -0.08, end: 0.0),  weight: 1),
+    ]).animate(CurvedAnimation(parent: _bellCtrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -98,6 +116,7 @@ class _ShellScreenState extends State<ShellScreen>
     _clockTimer.cancel();
     _connectivityTimer.cancel();
     _sidebarCtrl.dispose();
+    _bellCtrl.dispose();
     super.dispose();
   }
 
@@ -122,11 +141,31 @@ class _ShellScreenState extends State<ShellScreen>
 
   Future<void> _pollNotifications() async {
     try {
-      final d = await _api.dashboard();
-      if (mounted) setState(() {
-        _newIntakes    = (d['new_intakes'] as num?)?.toInt() ?? 0;
-        _birthdayCount = ((d['birthdays_today'] as List?)?.length) ?? 0;
-      });
+      final results = await Future.wait([
+        _api.dashboard(),
+        _api.intakeInbox().catchError((_) => <String, dynamic>{}),
+      ]);
+      final d = results[0] as Map<String, dynamic>;
+      final intakeData = results[1] as Map<String, dynamic>;
+      final allIntakes = (intakeData['items'] as List? ?? []);
+      final pending = allIntakes.where((e) {
+        final s = (e as Map)['status'] as String? ?? 'neu';
+        return s == 'neu' || s == 'in_bearbeitung' || s == 'pending';
+      }).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+
+      if (mounted) {
+        final newCount = pending.length + ((d['birthdays_today'] as List?)?.length ?? 0);
+        final hadMore  = newCount > _lastBellCount && _lastBellCount >= 0;
+        setState(() {
+          _newIntakes     = pending.length;
+          _pendingIntakes = pending;
+          _birthdayCount  = ((d['birthdays_today'] as List?)?.length) ?? 0;
+        });
+        if (hadMore && _lastBellCount >= 0) {
+          _bellCtrl.forward(from: 0);
+        }
+        _lastBellCount = newCount;
+      }
       NotificationService.checkNow(d, _api).ignore();
     } catch (_) {}
     Future.delayed(const Duration(minutes: 5), () {
@@ -617,34 +656,47 @@ class _ShellScreenState extends State<ShellScreen>
             },
           ),
         ),
-        // Notification bell
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              tooltip: 'Benachrichtigungen',
-              onPressed: () => _showNotificationPanel(context),
-            ),
-            if (totalBadge > 0)
-              Positioned(
-                top: 6, right: 6,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppTheme.danger,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.surface,
-                      width: 1.5),
-                  ),
-                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                  child: Text('$totalBadge',
-                    style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800),
-                    textAlign: TextAlign.center),
+        // Notification bell with shake animation
+        AnimatedBuilder(
+          animation: _bellAnim,
+          builder: (context, child) => Transform.rotate(
+            angle: _bellAnim.value,
+            child: child,
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              IconButton(
+                icon: Icon(
+                  totalBadge > 0
+                      ? Icons.notifications_rounded
+                      : Icons.notifications_outlined,
                 ),
+                tooltip: 'Benachrichtigungen',
+                onPressed: () => _showNotificationPanel(context),
               ),
-          ],
+              if (totalBadge > 0)
+                Positioned(
+                  top: 6, right: 6,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.elasticOut,
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.danger,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.surface,
+                        width: 1.5),
+                    ),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    child: Text('$totalBadge',
+                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800),
+                      textAlign: TextAlign.center),
+                  ),
+                ),
+            ],
+          ),
         ),
         const SizedBox(width: 4),
       ],
@@ -658,9 +710,11 @@ class _ShellScreenState extends State<ShellScreen>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
+      isScrollControlled: true,
       builder: (ctx) => _NotificationSheet(
-        newIntakes:    _newIntakes,
-        birthdayCount: _birthdayCount,
+        newIntakes:     _newIntakes,
+        pendingIntakes: _pendingIntakes,
+        birthdayCount:  _birthdayCount,
         onTap: (route) { Navigator.pop(ctx); context.push(route); },
       ),
     );
@@ -865,59 +919,119 @@ class _GridItem {
 
 // ── Notification bottom sheet ──────────────────────────────────────────────────
 
-class _NotificationSheet extends StatelessWidget {
+class _NotificationSheet extends StatefulWidget {
   final int newIntakes;
+  final List<Map<String, dynamic>> pendingIntakes;
   final int birthdayCount;
   final void Function(String route) onTap;
 
   const _NotificationSheet({
     required this.newIntakes,
+    required this.pendingIntakes,
     required this.birthdayCount,
     required this.onTap,
   });
 
   @override
+  State<_NotificationSheet> createState() => _NotificationSheetState();
+}
+
+class _NotificationSheetState extends State<_NotificationSheet>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _entryCtrl;
+  late Animation<double> _fadeAnim;
+  late Animation<Offset> _slideAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _entryCtrl = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 350));
+    _fadeAnim  = CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut);
+    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOutCubic));
+    _entryCtrl.forward();
+  }
+
+  @override
+  void dispose() { _entryCtrl.dispose(); super.dispose(); }
+
+  @override
   Widget build(BuildContext context) {
-    final hasAny = newIntakes > 0 || birthdayCount > 0;
-    return SafeArea(
-      top: false,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16),
-            decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
-          Text('Benachrichtigungen',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 16),
-          if (!hasAny)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Column(children: [
-                Icon(Icons.notifications_none_rounded, size: 48,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant),
-                const SizedBox(height: 8),
-                Text('Keine neuen Benachrichtigungen',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
+    final hasAny = widget.newIntakes > 0 || widget.birthdayCount > 0;
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: SlideTransition(
+        position: _slideAnim,
+        child: SafeArea(
+          top: false,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.75,
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  Text('Benachrichtigungen',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  if (hasAny)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppTheme.danger.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text('${widget.newIntakes + widget.birthdayCount} neu',
+                        style: TextStyle(color: AppTheme.danger, fontSize: 11, fontWeight: FontWeight.w700)),
+                    ),
+                ]),
+                const SizedBox(height: 16),
+                if (!hasAny)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Column(children: [
+                      Icon(Icons.notifications_none_rounded, size: 48,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      const SizedBox(height: 8),
+                      Text('Keine neuen Benachrichtigungen',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                    ]),
+                  ),
+                // Individual pending intakes
+                ...widget.pendingIntakes.map((intake) {
+                  final ownerFirst = intake['owner_first_name'] as String? ?? '';
+                  final ownerLast  = intake['owner_last_name']  as String? ?? '';
+                  final ownerName  = '$ownerFirst $ownerLast'.trim();
+                  final petName    = intake['patient_name'] as String? ?? '';
+                  final species    = intake['patient_species'] as String? ?? '';
+                  final subtitle   = [
+                    if (petName.isNotEmpty) petName,
+                    if (species.isNotEmpty) species,
+                  ].join(' · ');
+                  return _NotifTile(
+                    icon: Icons.assignment_ind_rounded,
+                    color: AppTheme.primary,
+                    title: ownerName.isNotEmpty ? ownerName : 'Neue Anmeldung',
+                    subtitle: subtitle.isNotEmpty ? subtitle : 'Zur Bestätigung antippen',
+                    onTap: () => widget.onTap('/anmeldungen/${intake['id']}'),
+                  );
+                }),
+                if (widget.birthdayCount > 0)
+                  _NotifTile(
+                    icon: Icons.cake_rounded,
+                    color: AppTheme.secondary,
+                    title: '${widget.birthdayCount} Geburtstag${widget.birthdayCount == 1 ? '' : 'e'} heute!',
+                    subtitle: 'Tier${widget.birthdayCount == 1 ? '' : 'e'} haben heute Geburtstag',
+                    onTap: () => widget.onTap('/patienten'),
+                  ),
               ]),
             ),
-          if (newIntakes > 0)
-            _NotifTile(
-              icon: Icons.assignment_ind_rounded,
-              color: AppTheme.primary,
-              title: '$newIntakes neue Anmeldung${newIntakes == 1 ? '' : 'en'}',
-              subtitle: 'Zur Bestätigung antippen',
-              onTap: () => onTap('/anmeldungen'),
-            ),
-          if (birthdayCount > 0)
-            _NotifTile(
-              icon: Icons.cake_rounded,
-              color: AppTheme.secondary,
-              title: '$birthdayCount Geburtstag${birthdayCount == 1 ? '' : 'e'} heute!',
-              subtitle: 'Tier${birthdayCount == 1 ? '' : 'e'} haben heute Geburtstag',
-              onTap: () => onTap('/patienten'),
-            ),
-        ]),
+          ),
+        ),
       ),
     );
   }

@@ -69,20 +69,33 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen>
     };
     final selected = await showDialog<String>(
       context: context,
-      builder: (_) => SimpleDialog(
-        title: const Text('Status ändern'),
-        children: options.entries.map((e) => SimpleDialogOption(
-          onPressed: () => Navigator.pop(context, e.key),
-          child: Row(children: [
-            SizedBox(width: 24, child: e.key == current ? const Icon(Icons.check, size: 16) : null),
-            Text(e.value),
-          ]),
-        )).toList(),
+      builder: (ctx) => AlertDialog(
+        title: const Row(children: [
+          Icon(Icons.swap_horiz_rounded, size: 20),
+          SizedBox(width: 8),
+          Text('Status ändern'),
+        ]),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: options.entries.map((e) => RadioListTile<String>(
+            value: e.key,
+            groupValue: current,
+            title: Text(e.value),
+            onChanged: (v) => Navigator.pop(ctx, v),
+            activeColor: AppTheme.primary,
+            dense: true,
+          )).toList(),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Abbrechen'))],
       ),
     );
     if (selected == null || selected == current) return;
-    try { await _api.invoiceUpdateStatus(widget.id, selected); _load(); }
-    catch (e) { _showSnack(e.toString(), error: true); }
+    try {
+      setState(() => _loading = true);
+      await _api.invoiceUpdateStatus(widget.id, selected);
+      await _load();
+      _showSnack('Status auf "${options[selected]}" geändert ✓');
+    } catch (e) { _showSnack(e.toString(), error: true); }
   }
 
   Future<void> _openPdf() async {
@@ -115,18 +128,49 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen>
   }
 
   Future<void> _delete() async {
-    final ok = await showDialog<bool>(context: context, builder: (_) => AlertDialog(
-      title: const Text('Rechnung löschen'),
-      content: const Text('Diese Rechnung wirklich dauerhaft löschen?'),
+    final inv = _invoice;
+    final num = inv?['invoice_number'] as String? ?? 'diese Rechnung';
+    final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+      icon: Icon(Icons.delete_forever_rounded, color: AppTheme.danger, size: 32),
+      title: const Text('Rechnung löschen?'),
+      content: Text('Möchtest du $num wirklich dauerhaft löschen? Diese Aktion kann nicht rückgängig gemacht werden.'),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Abbrechen')),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Löschen'),
-          style: FilledButton.styleFrom(backgroundColor: AppTheme.danger)),
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Abbrechen')),
+        FilledButton.icon(
+          icon: const Icon(Icons.delete_forever_rounded, size: 16),
+          label: const Text('Ja, löschen'),
+          style: FilledButton.styleFrom(backgroundColor: AppTheme.danger),
+          onPressed: () => Navigator.pop(ctx, true),
+        ),
       ],
     ));
     if (ok != true) return;
-    try { await _api.invoiceDelete(widget.id); if (mounted) context.pop(); }
-    catch (e) { _showSnack(e.toString(), error: true); }
+    try {
+      await _api.invoiceDelete(widget.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: const Row(children: [
+            Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+            SizedBox(width: 8),
+            Text('Rechnung gelöscht'),
+          ]),
+          backgroundColor: AppTheme.danger,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ));
+        context.pop();
+      }
+    } catch (e) { _showSnack(e.toString(), error: true); }
+  }
+
+  Future<void> _sendEmail() async {
+    _showSnack('E-Mail wird gesendet…');
+    try {
+      final result = await _api.invoiceSendEmail(widget.id);
+      final email = result['email'] as String? ?? '';
+      _showSnack('Rechnung per E-Mail gesendet an $email ✓');
+      _load();
+    } catch (e) { _showSnack(e.toString(), error: true); }
   }
 
   Future<void> _addDunning() async {
@@ -213,8 +257,19 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen>
 
   void _showSnack(String msg, {bool error = false}) {
     if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg), backgroundColor: error ? AppTheme.danger : AppTheme.success));
+      content: Row(children: [
+        Icon(error ? Icons.error_outline_rounded : Icons.check_circle_rounded,
+          color: Colors.white, size: 16),
+        const SizedBox(width: 8),
+        Expanded(child: Text(msg, style: const TextStyle(color: Colors.white))),
+      ]),
+      backgroundColor: error ? AppTheme.danger : AppTheme.success,
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      margin: const EdgeInsets.all(12),
+    ));
   }
 
   @override
@@ -231,8 +286,14 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen>
               onSelected: (v) {
                 if (v == 'delete')    _delete();
                 if (v == 'whatsapp') _sharePdfWhatsApp();
+                if (v == 'email')    _sendEmail();
               },
               itemBuilder: (_) => [
+                const PopupMenuItem(value: 'email', child: Row(children: [
+                  Icon(Icons.email_rounded, color: Colors.blue, size: 18),
+                  SizedBox(width: 8),
+                  Text('Per E-Mail senden'),
+                ])),
                 const PopupMenuItem(value: 'whatsapp', child: Row(children: [
                   Icon(Icons.share_rounded, color: Color(0xFF25D366), size: 18),
                   SizedBox(width: 8),
@@ -415,13 +476,44 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen>
                     title: Text('Mahnung Stufe $level', style: const TextStyle(fontWeight: FontWeight.w700)),
                     subtitle: Text(_date(d['sent_at'] as String? ?? d['created_at'] as String?),
                       style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                    trailing: IconButton(
-                      icon: Icon(Icons.delete_outline_rounded, color: AppTheme.danger),
-                      onPressed: () async {
-                        try { await _api.dunningDelete(widget.id, d['id'] as int); _load(); }
-                        catch (e) { _showSnack(e.toString(), error: true); }
-                      },
-                    ),
+                    trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                      IconButton(
+                        icon: const Icon(Icons.email_rounded, size: 20),
+                        color: Colors.blue,
+                        tooltip: 'Per E-Mail senden',
+                        onPressed: () async {
+                          _showSnack('Mahnung wird gesendet…');
+                          try {
+                            final r = await _api.dunningSendEmail(widget.id, d['id'] as int);
+                            _showSnack('Mahnung gesendet an ${r['email'] ?? ''} ✓');
+                            _load();
+                          } catch (e) { _showSnack(e.toString(), error: true); }
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete_outline_rounded, color: AppTheme.danger),
+                        tooltip: 'Löschen',
+                        onPressed: () async {
+                          final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+                            icon: Icon(Icons.delete_rounded, color: AppTheme.danger),
+                            title: const Text('Mahnung löschen?'),
+                            content: Text('Mahnung Stufe $level wirklich löschen?'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Abbrechen')),
+                              FilledButton.icon(
+                                icon: const Icon(Icons.delete_rounded, size: 16),
+                                label: const Text('Löschen'),
+                                style: FilledButton.styleFrom(backgroundColor: AppTheme.danger),
+                                onPressed: () => Navigator.pop(ctx, true),
+                              ),
+                            ],
+                          ));
+                          if (ok != true) return;
+                          try { await _api.dunningDelete(widget.id, d['id'] as int); _showSnack('Mahnung gelöscht ✓'); _load(); }
+                          catch (e) { _showSnack(e.toString(), error: true); }
+                        },
+                      ),
+                    ]),
                   ),
                 );
               },
@@ -474,9 +566,38 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen>
                           style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600)),
                       ),
                       IconButton(
-                        icon: Icon(Icons.delete_outline_rounded, color: AppTheme.danger),
+                        icon: const Icon(Icons.email_rounded, size: 20),
+                        color: Colors.blue,
+                        tooltip: 'Per E-Mail senden',
                         onPressed: () async {
-                          try { await _api.reminderDelete(widget.id, r['id'] as int); _load(); }
+                          _showSnack('Erinnerung wird gesendet…');
+                          try {
+                            final res = await _api.reminderSendEmail(widget.id, r['id'] as int);
+                            _showSnack('Erinnerung gesendet an ${res['email'] ?? ''} ✓');
+                            _load();
+                          } catch (e) { _showSnack(e.toString(), error: true); }
+                        },
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete_outline_rounded, color: AppTheme.danger),
+                        tooltip: 'Löschen',
+                        onPressed: () async {
+                          final ok = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+                            icon: Icon(Icons.delete_rounded, color: AppTheme.danger),
+                            title: const Text('Erinnerung löschen?'),
+                            content: const Text('Diese Erinnerung wirklich löschen?'),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Abbrechen')),
+                              FilledButton.icon(
+                                icon: const Icon(Icons.delete_rounded, size: 16),
+                                label: const Text('Löschen'),
+                                style: FilledButton.styleFrom(backgroundColor: AppTheme.danger),
+                                onPressed: () => Navigator.pop(ctx, true),
+                              ),
+                            ],
+                          ));
+                          if (ok != true) return;
+                          try { await _api.reminderDelete(widget.id, r['id'] as int); _showSnack('Erinnerung gelöscht ✓'); _load(); }
                           catch (e) { _showSnack(e.toString(), error: true); }
                         },
                       ),

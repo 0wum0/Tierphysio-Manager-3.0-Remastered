@@ -1387,6 +1387,105 @@ class MobileApiController
         $this->json($stats);
     }
 
+    public function invoiceSendEmail(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+
+        $id      = (int)($params['id'] ?? 0);
+        $invoice = $this->invoices->findById($id);
+        if (!$invoice) $this->error('Rechnung nicht gefunden.', 404);
+
+        $owner = $invoice['owner_id'] ? $this->owners->findById((int)$invoice['owner_id']) : null;
+        if (!$owner || empty($owner['email'])) {
+            $this->error('Kein E-Mail-Versand möglich – keine E-Mail-Adresse hinterlegt.', 422);
+        }
+
+        try {
+            $positions = $this->invoices->getPositions($id);
+            $patient   = $invoice['patient_id'] ? $this->patients->findById((int)$invoice['patient_id']) : null;
+            $pdfService = \App\Core\Application::getInstance()->getContainer()->get(\App\Services\PdfService::class);
+            $pdf = $pdfService->generateInvoicePdf($invoice, $positions, $owner, $patient);
+            $sent = $this->mail->sendInvoice($invoice, $owner, $pdf);
+            if ($sent) {
+                $this->invoices->markEmailSent($id);
+                $this->json(['success' => true, 'email' => $owner['email']]);
+            } else {
+                $this->error('E-Mail-Versand fehlgeschlagen: ' . ($this->mail->getLastError() ?? ''), 500);
+            }
+        } catch (\Throwable $e) {
+            $this->error('Fehler: ' . $e->getMessage(), 500);
+        }
+    }
+
+    public function reminderSendEmail(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+
+        $reminderId = (int)($params['rid'] ?? 0);
+        $reminder   = $this->reminderDunning->findReminderById($reminderId);
+        if (!$reminder) $this->error('Erinnerung nicht gefunden.', 404);
+
+        $invoice = $this->invoices->findById((int)$reminder['invoice_id']);
+        if (!$invoice) $this->error('Rechnung nicht gefunden.', 404);
+
+        $owner   = $invoice['owner_id'] ? $this->owners->findById((int)$invoice['owner_id']) : null;
+        $patient = $invoice['patient_id'] ? $this->patients->findById((int)$invoice['patient_id']) : null;
+
+        if (!$owner || empty($owner['email'])) {
+            $this->error('Kein E-Mail-Versand möglich – keine E-Mail-Adresse hinterlegt.', 422);
+        }
+
+        try {
+            $pdfService = \App\Core\Application::getInstance()->getContainer()->get(\App\Services\PdfService::class);
+            $pdf  = $pdfService->generateReminderPdf($invoice, $reminder, $owner, $patient);
+            $sent = $this->mail->sendInvoiceReminder($invoice, $reminder, $owner, $pdf);
+            if ($sent) {
+                $this->reminderDunning->markReminderSent($reminderId, $owner['email']);
+                $this->json(['success' => true, 'email' => $owner['email']]);
+            } else {
+                $this->error('E-Mail-Versand fehlgeschlagen: ' . ($this->mail->getLastError() ?? ''), 500);
+            }
+        } catch (\Throwable $e) {
+            $this->error('Fehler: ' . $e->getMessage(), 500);
+        }
+    }
+
+    public function dunningSendEmail(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+
+        $dunningId = (int)($params['did'] ?? 0);
+        $dunning   = $this->reminderDunning->findDunningById($dunningId);
+        if (!$dunning) $this->error('Mahnung nicht gefunden.', 404);
+
+        $invoice = $this->invoices->findById((int)$dunning['invoice_id']);
+        if (!$invoice) $this->error('Rechnung nicht gefunden.', 404);
+
+        $owner   = $invoice['owner_id'] ? $this->owners->findById((int)$invoice['owner_id']) : null;
+        $patient = $invoice['patient_id'] ? $this->patients->findById((int)$invoice['patient_id']) : null;
+
+        if (!$owner || empty($owner['email'])) {
+            $this->error('Kein E-Mail-Versand möglich – keine E-Mail-Adresse hinterlegt.', 422);
+        }
+
+        try {
+            $pdfService = \App\Core\Application::getInstance()->getContainer()->get(\App\Services\PdfService::class);
+            $pdf  = $pdfService->generateDunningPdf($invoice, $dunning, $owner, $patient);
+            $sent = $this->mail->sendDunning($invoice, $dunning, $owner, $pdf);
+            if ($sent) {
+                $this->reminderDunning->markDunningSent($dunningId, $owner['email']);
+                $this->json(['success' => true, 'email' => $owner['email']]);
+            } else {
+                $this->error('E-Mail-Versand fehlgeschlagen: ' . ($this->mail->getLastError() ?? ''), 500);
+            }
+        } catch (\Throwable $e) {
+            $this->error('Fehler: ' . $e->getMessage(), 500);
+        }
+    }
+
     /* ══════════════════════════════════════════════════════
        REMINDERS (Zahlungserinnerungen)
     ══════════════════════════════════════════════════════ */

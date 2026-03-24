@@ -73,12 +73,14 @@ $router->get('/api/mobile/search',                            [MobileApiControll
 $router->post('/api/mobile/invoices/{id}/update',             [MobileApiController::class, 'invoiceUpdate']);
 $router->post('/api/mobile/invoices/{id}/loeschen',           [MobileApiController::class, 'invoiceDelete']);
 $router->get('/api/mobile/invoices/{id}/pdf',                 [MobileApiController::class, 'invoicePdfUrl']);
+$router->post('/api/mobile/invoices/{id}/senden',             [MobileApiController::class, 'invoiceSendEmail']);
 
 // Reminders
 $router->get('/api/mobile/erinnerungen',                      [MobileApiController::class, 'remindersList']);
 $router->get('/api/mobile/invoices/{id}/erinnerungen',        [MobileApiController::class, 'remindersForInvoice']);
 $router->post('/api/mobile/invoices/{id}/erinnerungen',       [MobileApiController::class, 'reminderCreate']);
 $router->post('/api/mobile/invoices/{id}/erinnerungen/{rid}/loeschen', [MobileApiController::class, 'reminderDelete']);
+$router->post('/api/mobile/invoices/{id}/erinnerungen/{rid}/senden',   [MobileApiController::class, 'reminderSendEmail']);
 $router->get('/api/mobile/ueberfaellig',                      [MobileApiController::class, 'overdueAlerts']);
 
 // Dunnings
@@ -86,6 +88,7 @@ $router->get('/api/mobile/mahnungen',                         [MobileApiControll
 $router->get('/api/mobile/invoices/{id}/mahnungen',           [MobileApiController::class, 'dunningsForInvoice']);
 $router->post('/api/mobile/invoices/{id}/mahnungen',          [MobileApiController::class, 'dunningCreate']);
 $router->post('/api/mobile/invoices/{id}/mahnungen/{did}/loeschen', [MobileApiController::class, 'dunningDelete']);
+$router->post('/api/mobile/invoices/{id}/mahnungen/{did}/senden',   [MobileApiController::class, 'dunningSendEmail']);
 
 // Patients — extended
 $router->post('/api/mobile/patients/{id}/loeschen',           [MobileApiController::class, 'patientDelete']);

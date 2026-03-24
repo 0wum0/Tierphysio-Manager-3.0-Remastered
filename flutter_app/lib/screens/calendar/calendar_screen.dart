@@ -107,6 +107,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
               child: Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))),
             ),
           IconButton(
+            icon: const Icon(Icons.sync_rounded),
+            tooltip: 'Google Kalender Sync',
+            onPressed: () => _showGoogleSyncInfo(context),
+          ),
+          IconButton(
             icon: const Icon(Icons.add_rounded),
             tooltip: 'Neuer Termin',
             onPressed: () => _openAppointmentDialog(null),
@@ -533,13 +538,67 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (ok != true || !mounted) return;
     try {
       await _api.appointmentDelete(id);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: const Text('✓ Termin gelöscht'), backgroundColor: Colors.orange.shade700,
-          behavior: SnackBarBehavior.floating, duration: const Duration(seconds: 3)));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: const Row(children: [
+          Icon(Icons.check_circle_rounded, color: Colors.white, size: 16),
+          SizedBox(width: 8),
+          Text('Termin gelöscht'),
+        ]),
+        backgroundColor: Colors.orange.shade700,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(12),
+        duration: const Duration(seconds: 3),
+      ));
       _loadMonth(_focusedDay);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Row(children: [
+          const Icon(Icons.error_outline_rounded, color: Colors.white, size: 16),
+          const SizedBox(width: 8),
+          Expanded(child: Text(e.toString())),
+        ]),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(12),
+      ));
     }
+  }
+
+  void _showGoogleSyncInfo(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.sync_rounded, size: 36, color: Color(0xFF4285F4)),
+        title: const Text('Google Kalender Sync'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Der Google 2-Wege-Sync wird über das Web-Backend verwaltet.',
+              style: TextStyle(fontSize: 14),
+            ),
+            SizedBox(height: 12),
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Icon(Icons.info_outline_rounded, size: 16, color: Colors.blue),
+              SizedBox(width: 6),
+              Expanded(child: Text(
+                'Gehe im Browser zu Einstellungen → Kalender → Google Sync, um die Verbindung einzurichten oder zu prüfen.',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              )),
+            ]),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

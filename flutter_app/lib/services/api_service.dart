@@ -291,6 +291,15 @@ class ApiService {
   Future<Map<String, dynamic>> invoiceStats() async =>
       Map<String, dynamic>.from(await get('/invoices/stats'));
 
+  Future<Map<String, dynamic>> invoiceSendEmail(int id) async =>
+      Map<String, dynamic>.from(await post('/invoices/$id/senden', {}));
+
+  Future<Map<String, dynamic>> reminderSendEmail(int invoiceId, int reminderId) async =>
+      Map<String, dynamic>.from(await post('/invoices/$invoiceId/erinnerungen/$reminderId/senden', {}));
+
+  Future<Map<String, dynamic>> dunningSendEmail(int invoiceId, int dunningId) async =>
+      Map<String, dynamic>.from(await post('/invoices/$invoiceId/mahnungen/$dunningId/senden', {}));
+
   /* ── Reminders ── */
 
   Future<List<dynamic>> remindersList() async =>
