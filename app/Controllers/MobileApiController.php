@@ -5285,7 +5285,7 @@ class MobileApiController
                             calendar_name, last_pull_at, created_at
                      FROM google_calendar_connections ORDER BY id ASC LIMIT 1'
                 );
-            } catch (\Throwable) {
+            } catch (\Throwable $e) {
                 $this->json(['connected' => false, 'sync_enabled' => false, 'note' => 'plugin_not_installed']);
                 return;
             }
@@ -5336,7 +5336,7 @@ class MobileApiController
                     'SELECT action, success, message, created_at
                      FROM google_calendar_sync_log ORDER BY created_at DESC LIMIT 10'
                 );
-            } catch (\Throwable) { /* log tables may not exist yet */ }
+            } catch (\Throwable $e) { /* log tables may not exist yet */ }
             $this->json([
                 'connected'       => true,
                 'sync_enabled'    => (bool)$conn['sync_enabled'],
