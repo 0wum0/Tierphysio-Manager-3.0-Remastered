@@ -345,6 +345,7 @@ $router->get('/patienten/{id}/foto/{file}', [PatientController::class, 'servePho
 $router->post('/patienten/{id}/dokumente', [PatientController::class, 'uploadDocument'], ['auth']);
 
 // ── Befundbögen — per Patient ─────────────────────────────────────────
+$router->get('/api/patienten/{patient_id}/befunde',                        [BefundbogenController::class, 'apiByPatient'], ['auth']);
 $router->get('/patienten/{patient_id}/befunde',                            [BefundbogenController::class, 'index'],  ['auth']);
 $router->get('/patienten/{patient_id}/befunde/neu',                        [BefundbogenController::class, 'create'], ['auth']);
 $router->post('/patienten/{patient_id}/befunde/speichern',                 [BefundbogenController::class, 'store'],  ['auth']);

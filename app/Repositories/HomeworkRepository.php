@@ -43,13 +43,14 @@ class HomeworkRepository
         
         try {
             $result = $this->db->fetchAll(
-                "SELECT ph.*, u.first_name, u.last_name,
+                "SELECT ph.*, u.name AS assigned_by_name,
                         CASE 
                             WHEN ph.frequency = 'daily' THEN 'Täglich'
                             WHEN ph.frequency = 'twice_daily' THEN '2x täglich'
                             WHEN ph.frequency = 'three_times_daily' THEN '3x täglich'
                             WHEN ph.frequency = 'weekly' THEN 'Wöchentlich'
                             WHEN ph.frequency = 'as_needed' THEN 'Bei Bedarf'
+                            ELSE ph.frequency
                         END as frequency_display,
                         CONCAT(ph.duration_value, ' ', 
                             CASE ph.duration_unit
@@ -57,6 +58,7 @@ class HomeworkRepository
                                 WHEN 'hours' THEN 'Stunden'
                                 WHEN 'days' THEN 'Tage'
                                 WHEN 'weeks' THEN 'Wochen'
+                                ELSE ph.duration_unit
                             END
                         ) as duration_display
                 FROM patient_homework ph

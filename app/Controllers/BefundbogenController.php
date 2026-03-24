@@ -235,6 +235,16 @@ class BefundbogenController extends Controller
         $this->redirect('/patienten/' . $params['patient_id'] . '/befunde');
     }
 
+    /** GET /api/patienten/{patient_id}/befunde — JSON list for web patient page */
+    public function apiByPatient(array $params = []): void
+    {
+        $patientId = (int)$params['patient_id'];
+        $items = $this->repo->findByPatient($patientId);
+        header('Content-Type: application/json');
+        echo json_encode(['items' => $items, 'total' => count($items)]);
+        exit;
+    }
+
     /* ══════════════════════════════════════════════════════
        PORTAL ADMIN — manage befunde for all patients
     ══════════════════════════════════════════════════════ */

@@ -800,7 +800,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function loadBefundboegen() {
         const container = document.getElementById('befunde-list-container');
         if (!container) return;
-        fetch('/api/mobile/befunde/patient/{{ patient.id }}', {
+        fetch('/api/patienten/{{ patient.id }}/befunde', {
             headers: { 'Accept': 'application/json' }
         })
         .then(r => r.json())
