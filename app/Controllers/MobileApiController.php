@@ -4836,8 +4836,8 @@ class MobileApiController
         try {
             $this->db->execute(
                 "INSERT INTO patient_invite_tokens (token, email, phone, note, status, expires_at, created_by, created_at)
-                 VALUES (?, ?, ?, ?, 'pending', ?, ?, NOW())",
-                [$token, $email ?: null, $phone ?: null, $note, $expires, (int)$auth['user_id']]
+                 VALUES (?, ?, ?, ?, 'offen', ?, ?, NOW())",
+                [$token, $email ?: '', $phone ?: '', $note ?: '', $expires, (int)$auth['user_id']]
             );
             $id = (int)$this->db->lastInsertId();
         } catch (\Throwable $e) {
@@ -4869,7 +4869,7 @@ class MobileApiController
         $id = (int)($params['id'] ?? 0);
         try {
             $this->db->execute(
-                "UPDATE patient_invite_tokens SET status = 'revoked', expires_at = NOW() WHERE id = ?",
+                "UPDATE patient_invite_tokens SET status = 'abgelaufen', expires_at = NOW() WHERE id = ?",
                 [$id]
             );
         } catch (\Throwable $e) {
@@ -4906,7 +4906,7 @@ class MobileApiController
         $this->requireAuth();
         try {
             $count = (int)$this->db->fetchColumn(
-                "SELECT COUNT(*) FROM patient_invite_tokens WHERE status = 'pending' AND expires_at > NOW()"
+                "SELECT COUNT(*) FROM patient_invite_tokens WHERE status = 'offen' AND expires_at > NOW()"
             );
         } catch (\Throwable) { $count = 0; }
         $this->json(['pending' => $count]);

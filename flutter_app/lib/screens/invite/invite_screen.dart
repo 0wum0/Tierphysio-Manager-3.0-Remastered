@@ -43,15 +43,17 @@ class _InviteScreenState extends State<InviteScreen> {
     try {
       final resp = await _api.inviteSend(result);
       if (!mounted) return;
-      final link = resp['invite_link'] as String? ?? '';
+      final link     = resp['invite_url'] as String? ?? resp['invite_link'] as String? ?? '';
+      final waUrl    = resp['whatsapp_url'] as String? ?? '';
+      final phone    = result['phone'] as String? ?? '';
       if (link.isNotEmpty) {
         await showDialog(
           context: context,
-          builder: (_) => _InviteLinkDialog(link: link, phone: result['phone'] as String? ?? ''),
+          builder: (_) => _InviteLinkDialog(link: link, phone: phone, whatsappUrl: waUrl),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: const Text('✓ Einladung gesendet'),
+          content: const Text('✓ Einladung erstellt'),
           backgroundColor: Colors.green.shade700,
           behavior: SnackBarBehavior.floating,
         ));
@@ -77,32 +79,11 @@ class _InviteScreenState extends State<InviteScreen> {
   }
 
   Future<void> _openWhatsApp(String waUrl, String phone) async {
-    final cleanPhone = phone.replaceAll(RegExp(r'[^\d+]'), '');
-    final message = Uri.encodeComponent(waUrl);
-
-    // 1. WhatsApp Business (com.whatsapp.w4b) via Android intent scheme
-    final businessIntentUri = Uri.parse(
-      'intent://send?phone=$cleanPhone&text=$message'
-      '#Intent;scheme=whatsapp;package=com.whatsapp.w4b;end',
-    );
-    // 2. Regular WhatsApp (com.whatsapp) via Android intent scheme
-    final waIntentUri = Uri.parse(
-      'intent://send?phone=$cleanPhone&text=$message'
-      '#Intent;scheme=whatsapp;package=com.whatsapp;end',
-    );
-    // 3. Generic whatsapp:// deep-link
-    final waDeepLink = Uri.parse('whatsapp://send?phone=$cleanPhone&text=$message');
-    // 4. Web fallback
-    final webUri = Uri.parse('https://wa.me/$cleanPhone?text=$message');
-
-    if (await canLaunchUrl(businessIntentUri)) {
-      await launchUrl(businessIntentUri, mode: LaunchMode.externalApplication);
-    } else if (await canLaunchUrl(waIntentUri)) {
-      await launchUrl(waIntentUri, mode: LaunchMode.externalApplication);
-    } else if (await canLaunchUrl(waDeepLink)) {
-      await launchUrl(waDeepLink, mode: LaunchMode.externalApplication);
-    } else {
-      await launchUrl(webUri, mode: LaunchMode.externalApplication);
+    // waUrl is already a full wa.me URL from backend — open it directly
+    final uri = Uri.tryParse(waUrl);
+    if (uri == null) return;
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
 
@@ -220,15 +201,15 @@ class _InviteCard extends StatelessWidget {
         if (isExpired) expiresStr = 'Abgelaufen ($expiresStr)';
       } catch (_) {}
     }
-    final isPending = status == 'pending' && !isExpired;
-    final isRevoked = status == 'revoked';
-    final isUsed    = status == 'used';
+    final isPending = (status == 'offen' || status == 'pending') && !isExpired;
+    final isRevoked = status == 'abgelaufen' || status == 'revoked';
+    final isUsed    = status == 'angenommen' || status == 'used';
 
     Color statusColor = isPending ? AppTheme.warning
         : isUsed ? Colors.green.shade700
         : cs.onSurfaceVariant;
     String statusLabel = isPending ? 'Ausstehend'
-        : isUsed ? 'Benutzt'
+        : isUsed ? 'Angenommen'
         : isRevoked ? 'Widerrufen'
         : isExpired ? 'Abgelaufen'
         : status;
@@ -587,7 +568,8 @@ class _InviteDialogState extends State<_InviteDialog> {
 class _InviteLinkDialog extends StatelessWidget {
   final String link;
   final String phone;
-  const _InviteLinkDialog({required this.link, required this.phone});
+  final String whatsappUrl;
+  const _InviteLinkDialog({required this.link, required this.phone, this.whatsappUrl = ''});
 
   @override
   Widget build(BuildContext context) {
@@ -615,27 +597,16 @@ class _InviteLinkDialog extends StatelessWidget {
           icon: const Icon(Icons.copy_rounded, size: 16),
           label: const Text('Kopieren'),
         ),
-        if (phone.isNotEmpty)
+        if (whatsappUrl.isNotEmpty || phone.isNotEmpty)
           FilledButton.icon(
             onPressed: () async {
               Navigator.pop(context);
-              final cleanPhone = phone.replaceAll(RegExp(r'[^\d+]'), '');
-              final msg = Uri.encodeComponent('Hier ist dein Einladungslink zum Portal: $link');
-              final businessUri = Uri.parse(
-                'intent://send?phone=$cleanPhone&text=$msg'
-                '#Intent;scheme=whatsapp;package=com.whatsapp.w4b;end',
-              );
-              final waUri = Uri.parse(
-                'intent://send?phone=$cleanPhone&text=$msg'
-                '#Intent;scheme=whatsapp;package=com.whatsapp;end',
-              );
-              final webUri = Uri.parse('https://wa.me/$cleanPhone?text=$msg');
-              if (await canLaunchUrl(businessUri)) {
-                await launchUrl(businessUri, mode: LaunchMode.externalApplication);
-              } else if (await canLaunchUrl(waUri)) {
-                await launchUrl(waUri, mode: LaunchMode.externalApplication);
-              } else {
-                await launchUrl(webUri, mode: LaunchMode.externalApplication);
+              final urlToOpen = whatsappUrl.isNotEmpty
+                  ? whatsappUrl
+                  : 'https://wa.me/${phone.replaceAll(RegExp(r'[^\d+]'), '')}?text=${Uri.encodeComponent('Einladungslink: $link')}';
+              final uri = Uri.tryParse(urlToOpen);
+              if (uri != null && await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
               }
             },
             icon: const Icon(Icons.chat_rounded, size: 16),

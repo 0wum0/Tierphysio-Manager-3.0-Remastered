@@ -47,7 +47,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   }
 
   void _onTabChanged() {
-    if (!_tabCtrl.indexIsChanging) return;
+    if (_tabCtrl.indexIsChanging) return;
     if (_tabCtrl.index == 1 && !_exercisesLoaded) _loadExercises();
     if (_tabCtrl.index == 2 && !_homeworkLoaded)  _loadHomework();
   }
@@ -371,26 +371,131 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     if (_loadingExercises) return const Center(child: CircularProgressIndicator());
     return RefreshIndicator(
       onRefresh: () async { _exercisesLoaded = false; await _loadExercises(); },
-      child: _exercises.isEmpty
-          ? ListView(padding: const EdgeInsets.all(32), children: [
-              Center(child: Column(children: [
-                const SizedBox(height: 40),
-                Icon(Icons.fitness_center_rounded, size: 72, color: Colors.grey.shade300),
-                const SizedBox(height: 16),
-                Text('Keine Übungen', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
-                const SizedBox(height: 8),
-                Text('Übungen werden über das Portal Admin vergeben.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
-              ])),
-            ])
-          : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-              itemCount: _exercises.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (_, i) => _ExerciseCard(exercise: _exercises[i]),
+      child: Stack(
+        children: [
+          _exercises.isEmpty
+              ? ListView(padding: const EdgeInsets.all(32), children: [
+                  Center(child: Column(children: [
+                    const SizedBox(height: 40),
+                    Icon(Icons.fitness_center_rounded, size: 72, color: Colors.grey.shade300),
+                    const SizedBox(height: 16),
+                    Text('Keine Übungen', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+                    const SizedBox(height: 8),
+                    FilledButton.icon(
+                      onPressed: _showAddExerciseSheet,
+                      icon: const Icon(Icons.add_rounded),
+                      label: const Text('Übung hinzufügen'),
+                    ),
+                  ])),
+                ])
+              : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                  itemCount: _exercises.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (_, i) => _ExerciseCard(
+                    exercise: _exercises[i],
+                    onDelete: () => _deleteExercise(_exercises[i]),
+                  ),
+                ),
+          if (_exercises.isNotEmpty)
+            Positioned(
+              bottom: 16, right: 16,
+              child: FloatingActionButton.small(
+                heroTag: 'add_exercise',
+                onPressed: _showAddExerciseSheet,
+                child: const Icon(Icons.add_rounded),
+              ),
             ),
+        ],
+      ),
     );
+  }
+
+  void _showAddExerciseSheet() {
+    final titleCtrl = TextEditingController();
+    final descCtrl  = TextEditingController();
+    final videoCtrl = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, ss) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+              Text('Übung hinzufügen',
+                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              TextField(controller: titleCtrl, decoration: const InputDecoration(
+                labelText: 'Titel *', prefixIcon: Icon(Icons.fitness_center_rounded))),
+              const SizedBox(height: 12),
+              TextField(controller: descCtrl, maxLines: 3, decoration: const InputDecoration(
+                labelText: 'Beschreibung', prefixIcon: Icon(Icons.notes_rounded))),
+              const SizedBox(height: 12),
+              TextField(controller: videoCtrl, decoration: const InputDecoration(
+                labelText: 'Video-URL (optional)', prefixIcon: Icon(Icons.videocam_rounded))),
+              const SizedBox(height: 20),
+              SizedBox(width: double.infinity, child: FilledButton.icon(
+                icon: const Icon(Icons.save_rounded),
+                label: const Text('Speichern'),
+                onPressed: () async {
+                  if (titleCtrl.text.trim().isEmpty) return;
+                  Navigator.pop(ctx);
+                  try {
+                    await _api.exerciseCreate(widget.id, {
+                      'title':       titleCtrl.text.trim(),
+                      'description': descCtrl.text.trim(),
+                      'video_url':   videoCtrl.text.trim(),
+                    });
+                    _exercisesLoaded = false;
+                    await _loadExercises();
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('✓ Übung hinzugefügt'), backgroundColor: Colors.green));
+                  } catch (e) {
+                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
+                  }
+                },
+              )),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteExercise(Map<String, dynamic> ex) async {
+    final id = int.tryParse(ex['id'].toString());
+    if (id == null) return;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dlgCtx) => AlertDialog(
+        title: const Text('Übung löschen'),
+        content: Text('"${ex['title'] ?? ex['name'] ?? ''}" wirklich löschen?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dlgCtx, false), child: const Text('Abbrechen')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(dlgCtx, true),
+            child: const Text('Löschen'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await _api.exerciseDelete(id);
+      _exercisesLoaded = false;
+      await _loadExercises();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Übung gelöscht'), backgroundColor: Colors.orange));
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
+    }
   }
 
   // ── Homework Tab ───────────────────────────────────────────
@@ -466,9 +571,8 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
         if (p['invoice_stats'] != null) ...[
           const SizedBox(height: 12),
           _ModernInfoCard(title: 'Rechnungsstatistik', icon: Icons.receipt_long_rounded, color: AppTheme.tertiary, items: {
-            'Gesamt': '${p['invoice_stats']['total'] ?? 0}',
-            'Offen':  '${p['invoice_stats']['open'] ?? 0}',
-            'Bezahlt':'${p['invoice_stats']['paid'] ?? 0}',
+            'Offen':   '${p['invoice_stats']['open_count'] ?? p['invoice_stats']['open'] ?? 0}',
+            'Bezahlt': '${p['invoice_stats']['paid_count'] ?? p['invoice_stats']['paid'] ?? 0}',
           }),
         ],
       ]),
@@ -1047,7 +1151,8 @@ class _TimelineCard extends StatelessWidget {
 
 class _ExerciseCard extends StatelessWidget {
   final Map<String, dynamic> exercise;
-  const _ExerciseCard({required this.exercise});
+  final VoidCallback? onDelete;
+  const _ExerciseCard({required this.exercise, this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -1080,6 +1185,14 @@ class _ExerciseCard extends StatelessWidget {
               exercise['name'] as String? ?? exercise['title'] as String? ?? '—',
               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
             )),
+            if (onDelete != null)
+              IconButton(
+                icon: Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red.shade300),
+                onPressed: onDelete,
+                tooltip: 'Löschen',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              ),
           ]),
           if (notes.isNotEmpty) ...[
             const SizedBox(height: 8),

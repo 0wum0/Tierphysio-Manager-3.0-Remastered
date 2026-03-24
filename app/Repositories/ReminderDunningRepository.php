@@ -79,7 +79,13 @@ class ReminderDunningRepository
 
     public function getAllReminders(string $search = '', string $status = ''): array
     {
-        $sql = 'SELECT r.*, i.invoice_number, i.total_gross, i.status AS invoice_status,
+        $sql = 'SELECT r.*,
+                       i.invoice_number,
+                       i.due_date AS invoice_due_date,
+                       i.issue_date AS invoice_issue_date,
+                       COALESCE(NULLIF(i.total_gross, 0), (SELECT SUM(ip.total) FROM invoice_positions ip WHERE ip.invoice_id = i.id)) AS total_gross,
+                       i.status AS invoice_status,
+                       DATEDIFF(CURDATE(), COALESCE(i.due_date, i.issue_date)) AS days_overdue,
                        o.first_name, o.last_name, o.email AS owner_email,
                        p.name AS patient_name
                 FROM invoice_reminders r
@@ -183,7 +189,13 @@ class ReminderDunningRepository
 
     public function getAllDunnings(string $search = '', string $status = ''): array
     {
-        $sql = 'SELECT d.*, i.invoice_number, i.total_gross, i.status AS invoice_status,
+        $sql = 'SELECT d.*,
+                       i.invoice_number,
+                       i.due_date AS invoice_due_date,
+                       i.issue_date AS invoice_issue_date,
+                       COALESCE(NULLIF(i.total_gross, 0), (SELECT SUM(ip.total) FROM invoice_positions ip WHERE ip.invoice_id = i.id)) AS total_gross,
+                       i.status AS invoice_status,
+                       DATEDIFF(CURDATE(), COALESCE(i.due_date, i.issue_date)) AS days_overdue,
                        o.first_name, o.last_name, o.email AS owner_email,
                        p.name AS patient_name
                 FROM invoice_dunnings d

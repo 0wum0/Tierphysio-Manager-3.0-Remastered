@@ -340,6 +340,11 @@
                     <td>
                         {% if invoice.due_date %}
                             <span class="{{ invoice.status == 'overdue' ? 'text-danger' : '' }}">{{ invoice.due_date|date_de }}</span>
+                            {% if invoice.days_overdue is not null and invoice.days_overdue > 0 %}
+                                <span class="badge {{ invoice.days_overdue > 60 ? 'bg-danger' : (invoice.days_overdue > 30 ? 'bg-warning text-dark' : 'bg-secondary') }} ms-1" style="font-size:.65rem;">
+                                    {{ invoice.days_overdue }}d
+                                </span>
+                            {% endif %}
                         {% else %}—{% endif %}
                     </td>
                     <td class="font-semibold">{{ invoice.total_gross|money }}</td>

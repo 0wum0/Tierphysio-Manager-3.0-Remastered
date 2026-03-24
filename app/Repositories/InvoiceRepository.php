@@ -139,8 +139,12 @@ class InvoiceRepository extends Repository
 
         $items = $this->db->fetchAll(
             "SELECT i.*,
+                    COALESCE(NULLIF(i.total_gross, 0), (SELECT SUM(ip.total) FROM invoice_positions ip WHERE ip.invoice_id = i.id)) AS total_gross,
                     CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
-                    p.name AS patient_name
+                    p.name AS patient_name,
+                    CASE WHEN i.status IN ('open','overdue') AND i.due_date < CURDATE()
+                         THEN DATEDIFF(CURDATE(), i.due_date)
+                         ELSE NULL END AS days_overdue
              FROM invoices i
              LEFT JOIN owners o ON i.owner_id = o.id
              LEFT JOIN patients p ON i.patient_id = p.id
@@ -239,11 +243,13 @@ class InvoiceRepository extends Repository
         );
 
         $openAmount = (float)$this->db->fetchColumn(
-            "SELECT COALESCE(SUM(total_gross), 0) FROM invoices WHERE status = 'open'"
+            "SELECT COALESCE(SUM(COALESCE(NULLIF(i.total_gross,0),(SELECT SUM(ip.total) FROM invoice_positions ip WHERE ip.invoice_id=i.id))),0)
+             FROM invoices i WHERE i.status = 'open'"
         );
 
         $overdueAmount = (float)$this->db->fetchColumn(
-            "SELECT COALESCE(SUM(total_gross), 0) FROM invoices WHERE status = 'overdue' OR (status = 'open' AND due_date < ?)",
+            "SELECT COALESCE(SUM(COALESCE(NULLIF(i.total_gross,0),(SELECT SUM(ip.total) FROM invoice_positions ip WHERE ip.invoice_id=i.id))),0)
+             FROM invoices i WHERE i.status = 'overdue' OR (i.status = 'open' AND i.due_date < ?)",
             [$now]
         );
 
