@@ -1,0 +1,354 @@
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+
+{% block content %}
+<div class="page-header">
+    <div class="flex items-center gap-3">
+        <a href="/patienten/{{ patient.id }}/befunde" class="btn btn-secondary btn-sm">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="15 18 9 12 15 6"/></svg>
+            Zurück
+        </a>
+        <h1 class="page-title">{{ page_title }}</h1>
+    </div>
+</div>
+
+{% set is_edit = befundbogen is not null %}
+{% set action = is_edit
+    ? '/patienten/' ~ patient.id ~ '/befunde/' ~ befundbogen.id ~ '/aktualisieren'
+    : '/patienten/' ~ patient.id ~ '/befunde/speichern' %}
+
+<form method="POST" action="{{ action }}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+    <div class="row g-4">
+
+        {# ── LEFT: Meta ──────────────────────────────────────── #}
+        <div class="col-lg-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h6 class="fw-700 mb-3 text-muted text-uppercase" style="font-size:.75rem;letter-spacing:.05em;">Allgemein</h6>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-600">Datum <span class="text-danger">*</span></label>
+                        <input type="date" name="datum" class="form-control"
+                               value="{{ is_edit ? befundbogen.datum : 'now'|date('Y-m-d') }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-600">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="entwurf"       {{ (is_edit ? befundbogen.status : 'entwurf') == 'entwurf'       ? 'selected' : '' }}>Entwurf</option>
+                            <option value="abgeschlossen" {{ (is_edit ? befundbogen.status : '') == 'abgeschlossen' ? 'selected' : '' }}>Abgeschlossen</option>
+                            <option value="versendet"     {{ (is_edit ? befundbogen.status : '') == 'versendet'     ? 'selected' : '' }}>Versendet</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-600">Nächster Termin</label>
+                        <input type="date" name="naechster_termin" class="form-control"
+                               value="{{ is_edit ? befundbogen.naechster_termin : '' }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-600">Allgemeine Notizen</label>
+                        <textarea name="notizen" class="form-control" rows="4"
+                                  placeholder="Interne Bemerkungen...">{{ is_edit ? befundbogen.notizen : '' }}</textarea>
+                    </div>
+
+                    {# Patient info #}
+                    <hr>
+                    <h6 class="fw-700 mb-2 text-muted text-uppercase" style="font-size:.75rem;letter-spacing:.05em;">Patient</h6>
+                    <div class="text-sm fw-600">{{ patient.name }}</div>
+                    {% if patient.species %}<div class="text-xs text-muted">{{ patient.species }}{% if patient.breed %} · {{ patient.breed }}{% endif %}</div>{% endif %}
+                    {% if owner %}
+                    <div class="text-xs text-muted mt-1">{{ owner.first_name }} {{ owner.last_name }}</div>
+                    {% if owner.email %}<div class="text-xs text-muted">{{ owner.email }}</div>{% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {# ── RIGHT: Fields ───────────────────────────────────── #}
+        <div class="col-lg-9">
+
+            {# ── Anamnese ──────────────────────────────────────── #}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" class="me-2"><path stroke="currentColor" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"/></svg>
+                        Anamnese &amp; Vorgeschichte
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-600">Hauptbeschwerde</label>
+                            <textarea name="hauptbeschwerde" class="form-control" rows="2" placeholder="Beschreibung der Hauptbeschwerde...">{{ felder.hauptbeschwerde ?? '' }}</textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-600">Seit wann / Verlauf</label>
+                            <input type="text" name="seit_wann" class="form-control" placeholder="z.B. seit 3 Wochen, zunehmend" value="{{ felder.seit_wann ?? '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-600">Vorerkrankungen / OPs</label>
+                            <input type="text" name="vorerkrankungen" class="form-control" placeholder="z.B. Bandscheibenvorfall 2022" value="{{ felder.vorerkrankungen ?? '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-600">Medikamente</label>
+                            <input type="text" name="medikamente" class="form-control" placeholder="z.B. Carprofen 2x täglich" value="{{ felder.medikamente ?? '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-600">Allergien</label>
+                            <input type="text" name="allergien" class="form-control" placeholder="z.B. keine bekannt" value="{{ felder.allergien ?? '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-600">Ernährung</label>
+                            <input type="text" name="ernaehrung" class="form-control" placeholder="z.B. Trockenfutter, 2x täglich" value="{{ felder.ernaehrung ?? '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-600">Bewegung</label>
+                            <input type="text" name="bewegung" class="form-control" placeholder="z.B. 30 min Spaziergang täglich" value="{{ felder.bewegung ?? '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-600">Haltung</label>
+                            <input type="text" name="haltung" class="form-control" placeholder="z.B. Wohnungshund, Garten" value="{{ felder.haltung ?? '' }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-600">Bisherige Therapien</label>
+                            <textarea name="bisherige_therapien" class="form-control" rows="2" placeholder="z.B. Physiotherapie, Akupunktur...">{{ felder.bisherige_therapien ?? '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# ── Allgemeinbefund ────────────────────────────────── #}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" class="me-2"><path stroke="currentColor" stroke-width="2" d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                        Allgemeinbefund
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-600">Allgemeinbefinden</label>
+                            <select name="allgemeinbefinden" class="form-select">
+                                <option value="">— Bitte wählen —</option>
+                                {% for opt in ['gut','mäßig','reduziert','schlecht'] %}
+                                <option value="{{ opt }}" {{ (felder.allgemeinbefinden ?? '') == opt ? 'selected' : '' }}>{{ opt|capitalize }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-600">Ernährungszustand</label>
+                            <select name="ernaehrungszustand" class="form-select">
+                                <option value="">— Bitte wählen —</option>
+                                {% for opt in ['ideal','übergewichtig','untergewichtig','kachektisch'] %}
+                                <option value="{{ opt }}" {{ (felder.ernaehrungszustand ?? '') == opt ? 'selected' : '' }}>{{ opt|capitalize }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-600">Temperament</label>
+                            <select name="temperament" class="form-select">
+                                <option value="">— Bitte wählen —</option>
+                                {% for opt in ['ruhig','ausgeglichen','nervös','aggressiv','ängstlich'] %}
+                                <option value="{{ opt }}" {{ (felder.temperament ?? '') == opt ? 'selected' : '' }}>{{ opt|capitalize }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-600">Körpertemperatur (°C)</label>
+                            <input type="text" name="koerpertemperatur" class="form-control" placeholder="z.B. 38,5" value="{{ felder.koerpertemperatur ?? '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-600">Körperhaltung</label>
+                            <input type="text" name="koerperhaltung" class="form-control" placeholder="z.B. Hohlkreuz" value="{{ felder.koerperhaltung ?? '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-600">Gangbild</label>
+                            <input type="text" name="gangbild" class="form-control" placeholder="z.B. lahmend links hinten" value="{{ felder.gangbild ?? '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-600">Lahmheitsgrad (0–5)</label>
+                            <input type="number" name="lahmheitsgrad" class="form-control" min="0" max="5" placeholder="0" value="{{ felder.lahmheitsgrad ?? '' }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# ── Bewegungsapparat ───────────────────────────────── #}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" class="me-2"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path stroke="currentColor" stroke-width="2" d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="15" y1="9" x2="15.01" y2="9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        Bewegungsapparat &amp; Muskulatur
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-600">Betroffene Regionen</label>
+                            <input type="text" name="betroffene_regionen" class="form-control" placeholder="z.B. LWS, linkes Hüftgelenk" value="{{ felder.betroffene_regionen ?? '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-600">Muskeltonus</label>
+                            <input type="text" name="muskeltonus" class="form-control" placeholder="z.B. hyerton paravertebral" value="{{ felder.muskeltonus ?? '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-600">Triggerpunkte / Verspannungen</label>
+                            <input type="text" name="triggerpunkte" class="form-control" placeholder="z.B. M. iliopsoas bds." value="{{ felder.triggerpunkte ?? '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-600">Schmerzskala NRS (0–10)</label>
+                            <input type="number" name="schmerz_nrs" class="form-control" min="0" max="10" placeholder="0" value="{{ felder.schmerz_nrs ?? '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label fw-600">Gelenkbefund</label>
+                            <input type="text" name="gelenke_befund" class="form-control" placeholder="z.B. Erguss Knie re." value="{{ felder.gelenke_befund ?? '' }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-600">Neurologischer Status</label>
+                            <textarea name="neurologischer_status" class="form-control" rows="2" placeholder="z.B. Propriozeption reduziert links hinten...">{{ felder.neurologischer_status ?? '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# ── Naturheilkunde ─────────────────────────────────── #}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" class="me-2"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        Naturheilkundliche Diagnostik
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-600">Konstitutionstyp / Miasma</label>
+                            <input type="text" name="konstitutionstyp" class="form-control" value="{{ felder.konstitutionstyp ?? '' }}" placeholder="z.B. Sycose, Psora">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-600">Energetischer Gesamteindruck</label>
+                            <input type="text" name="energetischer_eindruck" class="form-control" value="{{ felder.energetischer_eindruck ?? '' }}" placeholder="z.B. erschöpft, lebendig">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-600">Bach-Blüten Emotionskategorien</label>
+                            <div class="d-flex flex-wrap gap-2 mt-1">
+                                {% set bachEmotions = ['Angst','Unsicherheit','Mangelndes Interesse','Einsamkeit','Überempfindlichkeit','Mutlosigkeit','Übermäßige Fürsorge'] %}
+                                {% set selectedEmotions = felder.bachblueten_emotionen is defined ? (felder.bachblueten_emotionen is iterable ? felder.bachblueten_emotionen : [felder.bachblueten_emotionen]) : [] %}
+                                {% for emo in bachEmotions %}
+                                <label class="form-check-label d-flex align-items-center gap-1" style="cursor:pointer;">
+                                    <input type="checkbox" name="bachblueten_emotionen[]" value="{{ emo }}" class="form-check-input"
+                                        {{ emo in selectedEmotions ? 'checked' : '' }}>
+                                    <span style="font-size:.85rem;">{{ emo }}</span>
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-600">Bach-Blüten Mischung</label>
+                            <input type="text" name="bachblueten_auswahl" class="form-control" value="{{ felder.bachblueten_auswahl ?? '' }}" placeholder="z.B. Mimulus, Aspen, Rock Rose">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-600">Bach-Blüten Dosierung</label>
+                            <input type="text" name="bachblueten_dosierung" class="form-control" value="{{ felder.bachblueten_dosierung ?? '' }}" placeholder="z.B. 4x2 Tropfen täglich">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-600">Homöopathisches Mittel</label>
+                            <input type="text" name="homoeopathie_mittel" class="form-control" value="{{ felder.homoeopathie_mittel ?? '' }}" placeholder="z.B. Arnica montana">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-600">Potenz</label>
+                            <input type="text" name="homoeopathie_potenz" class="form-control" value="{{ felder.homoeopathie_potenz ?? '' }}" placeholder="z.B. C30">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-600">Wiederholung / Dauer</label>
+                            <input type="text" name="homoeopathie_dauer" class="form-control" value="{{ felder.homoeopathie_dauer ?? '' }}" placeholder="z.B. 1x wöchentlich für 4 Wochen">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-600">Phytotherapie / Kräuter</label>
+                            <input type="text" name="phytotherapie" class="form-control" value="{{ felder.phytotherapie ?? '' }}" placeholder="z.B. Teufelskralle Tinktur">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-600">Schüssler Salze</label>
+                            <input type="text" name="schuesslersalze" class="form-control" value="{{ felder.schuesslersalze ?? '' }}" placeholder="z.B. Nr. 8 und Nr. 11">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-600">Weitere Naturheilmittel</label>
+                            <input type="text" name="weitere_naturheilmittel" class="form-control" value="{{ felder.weitere_naturheilmittel ?? '' }}" placeholder="z.B. Akupunktur, Laser...">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# ── Physiotherapie ─────────────────────────────────── #}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" class="me-2"><path stroke="currentColor" stroke-width="2" d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z"/><path stroke="currentColor" stroke-width="2" d="M8 12h8M12 8v8"/></svg>
+                        Physiotherapeutische Maßnahmen
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-600">Angewandte Methoden</label>
+                            <textarea name="pt_methoden" class="form-control" rows="2" placeholder="z.B. Massage, TENS, Ultraschall, Manuelle Therapie...">{{ felder.pt_methoden ?? '' }}</textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-600">Therapieziele</label>
+                            <textarea name="therapieziele" class="form-control" rows="2" placeholder="z.B. Schmerzreduktion, Verbesserung Beweglichkeit...">{{ felder.therapieziele ?? '' }}</textarea>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-600">Hausaufgaben / Heimübungen</label>
+                            <textarea name="hausaufgaben" class="form-control" rows="2" placeholder="z.B. 3x täglich Sit-to-Stand Übung...">{{ felder.hausaufgaben ?? '' }}</textarea>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-600">Frequenz</label>
+                            <input type="text" name="therapiefrequenz" class="form-control" value="{{ felder.therapiefrequenz ?? '' }}" placeholder="z.B. 1x wöchentlich">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-600">Dauer</label>
+                            <input type="text" name="therapiedauer" class="form-control" value="{{ felder.therapiedauer ?? '' }}" placeholder="z.B. 45 Minuten">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-600">Kontrolltermin</label>
+                            <input type="text" name="kontrolltermin" class="form-control" value="{{ felder.kontrolltermin ?? '' }}" placeholder="z.B. in 4 Wochen">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# ── Verlauf ────────────────────────────────────────── #}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" class="me-2"><path stroke="currentColor" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Verlauf &amp; Notizen
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <textarea name="verlauf_notizen" class="form-control" rows="4"
+                              placeholder="Verlaufsbeobachtungen, Reaktionen auf Therapie...">{{ felder.verlauf_notizen ?? '' }}</textarea>
+                </div>
+            </div>
+
+            {# ── Actions ────────────────────────────────────────── #}
+            <div class="d-flex gap-2 justify-content-end mb-4">
+                <a href="/patienten/{{ patient.id }}/befunde" class="btn btn-secondary">Abbrechen</a>
+                <button type="submit" name="status" value="entwurf" class="btn btn-secondary">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><path stroke="currentColor" stroke-width="2" d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline stroke="currentColor" stroke-width="2" points="17 21 17 13 7 13 7 21"/><polyline stroke="currentColor" stroke-width="2" points="7 3 7 8 15 8"/></svg>
+                    Als Entwurf speichern
+                </button>
+                <button type="submit" name="status" value="abgeschlossen" class="btn btn-primary">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><path stroke="currentColor" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Abschließen &amp; Speichern
+                </button>
+            </div>
+
+        </div>{# end col-lg-9 #}
+    </div>{# end row #}
+</form>
+{% endblock %}

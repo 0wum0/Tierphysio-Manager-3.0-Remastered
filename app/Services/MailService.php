@@ -421,6 +421,40 @@ HTML;
         }
     }
 
+    public function sendBefundbogen(array $befundbogen, array $owner, string $pdfContent): bool
+    {
+        try {
+            $companyName = $this->settingsRepository->get('company_name', 'Tierphysio Praxis');
+            $ownerName   = trim(($owner['first_name'] ?? '') . ' ' . ($owner['last_name'] ?? ''));
+            $patName     = $befundbogen['patient_name'] ?? 'Ihr Tier';
+            $datumStr    = !empty($befundbogen['datum'])
+                ? (new \DateTime($befundbogen['datum']))->format('d.m.Y')
+                : date('d.m.Y');
+
+            $subject  = "Befundbogen für {$patName} vom {$datumStr} – {$companyName}";
+            $bodyText = "Hallo {$ownerName},\n\n"
+                      . "anbei erhalten Sie den Befundbogen für {$patName} vom {$datumStr}.\n\n"
+                      . "Bei Fragen stehen wir Ihnen gerne zur Verfügung.\n\n"
+                      . "Viele Grüße\n{$companyName}";
+
+            $filename = 'Befundbogen-' . preg_replace('/[^A-Za-z0-9_\-]/', '_', $patName) . '-' . date('Ymd', strtotime($befundbogen['datum'])) . '.pdf';
+
+            $mailer = $this->createMailer();
+            $mailer->addAddress($owner['email'], $ownerName);
+            $mailer->Subject = $subject;
+            $mailer->isHTML(true);
+            $mailer->Body    = $this->wrapInEmailLayout($subject, $bodyText, '🐾');
+            $mailer->AltBody = $bodyText;
+            $mailer->addStringAttachment($pdfContent, $filename, PHPMailer::ENCODING_BASE64, 'application/pdf');
+
+            return $mailer->send();
+        } catch (\Throwable $e) {
+            $this->lastError = $e->getMessage();
+            error_log('[MailService::sendBefundbogen] ' . $e->getMessage());
+            return false;
+        }
+    }
+
     public function sendHomework(array $patient, array $owner, string $pdfContent): bool
     {
         try {

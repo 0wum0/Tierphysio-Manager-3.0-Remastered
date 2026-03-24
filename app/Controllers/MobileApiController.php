@@ -4902,6 +4902,198 @@ class MobileApiController
     }
 
     /* ══════════════════════════════════════════════════════
+       BEFUNDBÖGEN
+    ══════════════════════════════════════════════════════ */
+
+    /** GET /api/mobile/befunde — all befunde (paginated, optional ?status= ?search=) */
+    public function befundeList(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+
+        $page   = max(1, (int)($_GET['page']   ?? 1));
+        $limit  = min(50, max(1, (int)($_GET['limit']  ?? 20)));
+        $offset = ($page - 1) * $limit;
+        $search = trim($_GET['search'] ?? '');
+        $status = trim($_GET['status'] ?? '');
+
+        $conditions = [];
+        $params2    = [];
+
+        if ($status !== '') {
+            $conditions[] = 'b.status = ?';
+            $params2[]    = $status;
+        }
+        if ($search !== '') {
+            $conditions[] = '(p.name LIKE ? OR CONCAT(o.first_name,\' \',o.last_name) LIKE ?)';
+            $params2[]    = "%{$search}%";
+            $params2[]    = "%{$search}%";
+        }
+
+        $where = $conditions ? 'WHERE ' . implode(' AND ', $conditions) : '';
+
+        try {
+            $items = $this->db->fetchAll(
+                "SELECT b.id, b.patient_id, b.owner_id, b.status, b.datum, b.naechster_termin,
+                        b.pdf_sent_at, b.pdf_sent_to, b.created_at, b.updated_at,
+                        p.name AS patient_name, p.species AS patient_species,
+                        CONCAT(o.first_name,' ',o.last_name) AS owner_name,
+                        u.name AS ersteller_name
+                 FROM befundboegen b
+                 LEFT JOIN patients p ON p.id = b.patient_id
+                 LEFT JOIN owners o ON o.id = b.owner_id
+                 LEFT JOIN users u ON u.id = b.created_by
+                 {$where}
+                 ORDER BY b.datum DESC, b.created_at DESC
+                 LIMIT ? OFFSET ?",
+                [...$params2, $limit, $offset]
+            );
+            $total = (int)$this->db->fetchColumn(
+                "SELECT COUNT(*) FROM befundboegen b
+                 LEFT JOIN patients p ON p.id = b.patient_id
+                 LEFT JOIN owners o ON o.id = b.owner_id
+                 {$where}",
+                $params2
+            );
+        } catch (\Throwable $e) {
+            $this->error('Datenbankfehler: ' . $e->getMessage(), 500);
+        }
+
+        $this->json(['items' => $items, 'total' => $total, 'page' => $page, 'limit' => $limit]);
+    }
+
+    /** GET /api/mobile/befunde/patient/{id} — befunde for one patient */
+    public function befundeByPatient(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+        $patientId = (int)($params['id'] ?? 0);
+
+        try {
+            $items = $this->db->fetchAll(
+                "SELECT b.id, b.patient_id, b.owner_id, b.status, b.datum, b.naechster_termin,
+                        b.pdf_sent_at, b.pdf_sent_to, b.created_at, b.updated_at,
+                        u.name AS ersteller_name
+                 FROM befundboegen b
+                 LEFT JOIN users u ON u.id = b.created_by
+                 WHERE b.patient_id = ?
+                 ORDER BY b.datum DESC, b.created_at DESC",
+                [$patientId]
+            );
+        } catch (\Throwable $e) {
+            $this->error('Datenbankfehler: ' . $e->getMessage(), 500);
+        }
+
+        $this->json(['items' => $items, 'total' => count($items)]);
+    }
+
+    /** GET /api/mobile/befunde/{id} — single befundbogen with felder */
+    public function befundeShow(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+        $id = (int)($params['id'] ?? 0);
+
+        try {
+            $row = $this->db->fetch(
+                "SELECT b.*, u.name AS ersteller_name,
+                        p.name AS patient_name, p.species AS patient_species,
+                        CONCAT(o.first_name,' ',o.last_name) AS owner_name
+                 FROM befundboegen b
+                 LEFT JOIN users u ON u.id = b.created_by
+                 LEFT JOIN patients p ON p.id = b.patient_id
+                 LEFT JOIN owners o ON o.id = b.owner_id
+                 WHERE b.id = ? LIMIT 1",
+                [$id]
+            );
+        } catch (\Throwable $e) {
+            $this->error('Datenbankfehler: ' . $e->getMessage(), 500);
+        }
+
+        if (!$row) $this->error('Befundbogen nicht gefunden.', 404);
+
+        try {
+            $feldRows = $this->db->fetchAll(
+                "SELECT feldname, feldwert FROM befundbogen_felder WHERE befundbogen_id = ?",
+                [$id]
+            );
+            $felder = [];
+            foreach ($feldRows as $f) {
+                $decoded = json_decode($f['feldwert'], true);
+                $felder[$f['feldname']] = ($decoded !== null && json_last_error() === JSON_ERROR_NONE)
+                    ? $decoded : $f['feldwert'];
+            }
+            $row['felder'] = $felder;
+        } catch (\Throwable) {
+            $row['felder'] = [];
+        }
+
+        $this->json($row);
+    }
+
+    /** GET /api/mobile/befunde/{id}/pdf-url — returns a URL to download the PDF */
+    public function befundePdfUrl(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+        $id  = (int)($params['id'] ?? 0);
+        $url = $this->resolveAppUrl() . '/patienten/0/befunde/' . $id . '/pdf';
+        $this->json(['pdf_url' => $url]);
+    }
+
+    /* ── Owner Portal Befunde ────────────────────────────── */
+
+    /** GET /api/mobile/portal/befunde — owner portal: list own befunde (abgeschlossen/versendet) */
+    public function ownerPortalBefunde(array $params = []): void
+    {
+        $this->cors();
+        $portalUser = $this->requirePortalAuth();
+        $ownerId    = (int)$portalUser['owner_id'];
+
+        try {
+            $items = $this->db->fetchAll(
+                "SELECT b.id, b.patient_id, b.status, b.datum, b.naechster_termin,
+                        b.pdf_sent_at, b.created_at,
+                        p.name AS patient_name, p.species AS patient_species
+                 FROM befundboegen b
+                 LEFT JOIN patients p ON p.id = b.patient_id
+                 WHERE b.owner_id = ? AND b.status != 'entwurf'
+                 ORDER BY b.datum DESC, b.created_at DESC",
+                [$ownerId]
+            );
+        } catch (\Throwable $e) {
+            $this->error('Datenbankfehler: ' . $e->getMessage(), 500);
+        }
+
+        $this->json(['items' => $items, 'total' => count($items)]);
+    }
+
+    /** GET /api/mobile/portal/befunde/{id}/pdf-url — owner portal: PDF download URL */
+    public function ownerPortalBefundPdfUrl(array $params = []): void
+    {
+        $this->cors();
+        $portalUser  = $this->requirePortalAuth();
+        $ownerId     = (int)$portalUser['owner_id'];
+        $id          = (int)($params['id'] ?? 0);
+
+        try {
+            $row = $this->db->fetch(
+                "SELECT id, owner_id, status FROM befundboegen WHERE id = ? LIMIT 1",
+                [$id]
+            );
+        } catch (\Throwable $e) {
+            $this->error('Datenbankfehler: ' . $e->getMessage(), 500);
+        }
+
+        if (!$row || (int)$row['owner_id'] !== $ownerId || $row['status'] === 'entwurf') {
+            $this->error('Nicht gefunden oder kein Zugriff.', 403);
+        }
+
+        $url = $this->resolveAppUrl() . '/portal/befunde/' . $id . '/pdf';
+        $this->json(['pdf_url' => $url]);
+    }
+
+    /* ══════════════════════════════════════════════════════
        PATIENT INVITE (Einladungslinks)
     ══════════════════════════════════════════════════════ */
 

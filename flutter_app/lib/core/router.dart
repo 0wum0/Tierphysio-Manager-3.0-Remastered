@@ -28,6 +28,8 @@ import '../screens/intake/intake_detail_screen.dart';
 import '../screens/invite/invite_screen.dart';
 import '../screens/homework/homework_screen.dart';
 import '../screens/settings/settings_screen.dart';
+import '../screens/befunde/befunde_screen.dart';
+import '../screens/befunde/befund_detail_screen.dart';
 
 class AppRouter {
   final AuthService authService;
@@ -107,6 +109,14 @@ class AppRouter {
             builder: (_, __) => const IntakeScreen(),
             routes: [
               GoRoute(path: ':id', builder: (_, s) => IntakeDetailScreen(id: int.parse(s.pathParameters['id']!))),
+            ],
+          ),
+
+          GoRoute(
+            path: '/befunde',
+            builder: (_, __) => const BefundeScreen(),
+            routes: [
+              GoRoute(path: ':id', builder: (_, s) => BefundDetailScreen(id: int.parse(s.pathParameters['id']!))),
             ],
           ),
 

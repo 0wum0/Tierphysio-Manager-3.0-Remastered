@@ -546,6 +546,42 @@ class ApiService {
 
   Future<List<dynamic>> homeworkTemplates() async =>
       List<dynamic>.from(await get('/portal-admin/vorlagen'));
+
+  /* ── Befundbögen (admin) ── */
+
+  Future<Map<String, dynamic>> befundeList({
+    int page = 1,
+    int limit = 20,
+    String search = '',
+    String status = '',
+  }) async =>
+      Map<String, dynamic>.from(await get('/befunde', query: {
+        'page': page,
+        'limit': limit,
+        if (search.isNotEmpty) 'search': search,
+        if (status.isNotEmpty) 'status': status,
+      }));
+
+  Future<Map<String, dynamic>> befundeByPatient(int patientId) async =>
+      Map<String, dynamic>.from(await get('/befunde/patient/$patientId'));
+
+  Future<Map<String, dynamic>> befundeShow(int id) async =>
+      Map<String, dynamic>.from(await get('/befunde/$id'));
+
+  Future<String> befundePdfUrl(int id) async {
+    final data = await get('/befunde/$id/pdf-url');
+    return (data as Map)['pdf_url'] as String? ?? '';
+  }
+
+  /* ── Befundbögen (owner portal) ── */
+
+  Future<Map<String, dynamic>> portalBefunde() async =>
+      Map<String, dynamic>.from(await get('/portal/befunde'));
+
+  Future<String> portalBefundPdfUrl(int id) async {
+    final data = await get('/portal/befunde/$id/pdf-url');
+    return (data as Map)['pdf_url'] as String? ?? '';
+  }
 }
 
 class ApiException implements Exception {

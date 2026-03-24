@@ -1,0 +1,88 @@
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">{{ page_title }}</h1>
+</div>
+
+{# Filter bar #}
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="GET" action="/portal-admin/befunde" class="d-flex gap-2 align-items-center flex-wrap">
+            <input type="text" name="search" class="form-control form-control-sm" style="max-width:220px;"
+                   placeholder="Patient / Besitzer..." value="{{ search }}">
+            <select name="status" class="form-select form-select-sm" style="max-width:160px;">
+                <option value="">Alle Status</option>
+                {% for s in ['entwurf','abgeschlossen','versendet'] %}
+                <option value="{{ s }}" {{ status == s ? 'selected' : '' }}>{{ s|capitalize }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-sm btn-primary">Filtern</button>
+            {% if search or status %}
+            <a href="/portal-admin/befunde" class="btn btn-sm btn-secondary">Zurücksetzen</a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+{% if befunde|length > 0 %}
+<div class="card">
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Nr.</th>
+                    <th>Patient</th>
+                    <th>Tierhalter</th>
+                    <th>Datum</th>
+                    <th>Status</th>
+                    <th>Erstellt von</th>
+                    <th>Versendet</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for b in befunde %}
+                <tr>
+                    <td><span style="font-family:monospace;font-weight:700;">BF-{{ '%04d'|format(b.id) }}</span></td>
+                    <td>
+                        <a href="/patienten/{{ b.patient_id }}/befunde/{{ b.id }}" class="fw-600 text-decoration-none">{{ b.patient_name }}</a>
+                        {% if b.patient_species %}<div class="text-xs text-muted">{{ b.patient_species }}</div>{% endif %}
+                    </td>
+                    <td>{{ b.owner_name ?: '—' }}</td>
+                    <td>{{ b.datum|date('d.m.Y') }}</td>
+                    <td>
+                        <span class="badge {% if b.status == 'versendet' %}bg-success{% elseif b.status == 'abgeschlossen' %}bg-primary{% else %}bg-secondary{% endif %}">
+                            {{ b.status|capitalize }}
+                        </span>
+                    </td>
+                    <td>{{ b.ersteller_name ?: '—' }}</td>
+                    <td>
+                        {% if b.pdf_sent_at %}
+                        <span class="text-success" style="font-size:.8rem;">
+                            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" class="me-1"><path stroke="currentColor" stroke-width="2" d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline stroke="currentColor" stroke-width="2" points="22 4 12 14.01 9 11.01"/></svg>
+                            {{ b.pdf_sent_at|date('d.m.Y') }}
+                        </span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td class="text-end">
+                        <a href="/portal-admin/befunde/{{ b.id }}" class="btn btn-sm btn-outline-secondary">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="card">
+    <div class="card-body text-center py-5 text-muted">
+        <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="opacity:.15;margin-bottom:16px;"><path stroke="currentColor" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"/></svg>
+        <h5>Keine Befundbögen gefunden</h5>
+        <p class="text-muted">Befundbögen werden über die Patientenakte erstellt.</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

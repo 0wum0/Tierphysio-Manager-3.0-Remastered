@@ -67,6 +67,7 @@ class _ShellScreenState extends State<ShellScreen>
     '/anmeldungen',
     '/einladungen',
     '/behandlungsarten',
+    '/befunde',
     '/portal-admin',
   ];
 
@@ -266,6 +267,7 @@ class _ShellScreenState extends State<ShellScreen>
           _GridItem(Icons.send_rounded,            'Einladungen',      AppTheme.secondary, '/einladungen'),
           _GridItem(Icons.category_rounded,        'Behandlungs\narten', AppTheme.tertiary,   '/behandlungsarten'),
           _GridItem(Icons.assignment_rounded,      'Hausaufgaben',     AppTheme.primary,    '/hausaufgaben'),
+          _GridItem(Icons.description_rounded,     'Befundbögen',      AppTheme.secondary,  '/befunde'),
           _GridItem(Icons.home_work_rounded,       'Portal Admin',     AppTheme.tertiary,   '/portal-admin'),
           _GridItem(Icons.search_rounded,          'Suche',            AppTheme.primary,    '/suche'),
           _GridItem(Icons.person_outline_rounded,  'Mein Profil',      AppTheme.primary,    '/profil'),

@@ -17,6 +17,7 @@ use App\Controllers\CronPixelController;
 use App\Controllers\HomeworkController;
 use App\Controllers\ReminderDunningController;
 use App\Controllers\MobileApiController;
+use App\Controllers\BefundbogenController;
 
 /** @var \App\Core\Router $router */
 
@@ -272,6 +273,16 @@ $router->post('/api/mobile/portal/nachrichten/neu',                      [Mobile
 $router->get('/api/mobile/portal/nachrichten/{id}',                      [MobileApiController::class, 'ownerPortalThreadShow']);
 $router->post('/api/mobile/portal/nachrichten/{id}/antworten',           [MobileApiController::class, 'ownerPortalReply']);
 
+// ── Owner Portal — Befundbögen ─────────────────────────────────────────
+$router->get('/api/mobile/portal/befunde',                               [MobileApiController::class, 'ownerPortalBefunde']);
+$router->get('/api/mobile/portal/befunde/{id}/pdf-url',                  [MobileApiController::class, 'ownerPortalBefundPdfUrl']);
+
+// ── Befundbögen (admin API) ────────────────────────────────────────────
+$router->get('/api/mobile/befunde',                                      [MobileApiController::class, 'befundeList']);
+$router->get('/api/mobile/befunde/patient/{id}',                         [MobileApiController::class, 'befundeByPatient']);
+$router->get('/api/mobile/befunde/{id}',                                 [MobileApiController::class, 'befundeShow']);
+$router->get('/api/mobile/befunde/{id}/pdf-url',                         [MobileApiController::class, 'befundePdfUrl']);
+
 // ── Owner Portal — Profil ─────────────────────────────────────────────
 $router->get('/api/mobile/portal/profil',                                [MobileApiController::class, 'ownerPortalProfile']);
 $router->post('/api/mobile/portal/profil/passwort',                      [MobileApiController::class, 'ownerPortalChangePassword']);
@@ -332,6 +343,27 @@ $router->post('/patienten/{id}/hausaufgaben/email', [PatientController::class, '
 $router->get('/patienten/{id}/dokumente/{file}', [PatientController::class, 'downloadDocument'], ['auth']);
 $router->get('/patienten/{id}/foto/{file}', [PatientController::class, 'servePhoto'], ['auth']);
 $router->post('/patienten/{id}/dokumente', [PatientController::class, 'uploadDocument'], ['auth']);
+
+// ── Befundbögen — per Patient ─────────────────────────────────────────
+$router->get('/patienten/{patient_id}/befunde',                            [BefundbogenController::class, 'index'],  ['auth']);
+$router->get('/patienten/{patient_id}/befunde/neu',                        [BefundbogenController::class, 'create'], ['auth']);
+$router->post('/patienten/{patient_id}/befunde/speichern',                 [BefundbogenController::class, 'store'],  ['auth']);
+$router->get('/patienten/{patient_id}/befunde/{id}',                       [BefundbogenController::class, 'show'],   ['auth']);
+$router->get('/patienten/{patient_id}/befunde/{id}/bearbeiten',            [BefundbogenController::class, 'edit'],   ['auth']);
+$router->post('/patienten/{patient_id}/befunde/{id}/aktualisieren',        [BefundbogenController::class, 'update'], ['auth']);
+$router->get('/patienten/{patient_id}/befunde/{id}/pdf',                   [BefundbogenController::class, 'pdf'],    ['auth']);
+$router->post('/patienten/{patient_id}/befunde/{id}/senden',               [BefundbogenController::class, 'senden'], ['auth']);
+$router->post('/patienten/{patient_id}/befunde/{id}/loeschen',             [BefundbogenController::class, 'delete'], ['auth']);
+
+// ── Befundbögen — Portal Admin ────────────────────────────────────────
+$router->get('/portal-admin/befunde',                                      [BefundbogenController::class, 'adminIndex'],  ['auth']);
+$router->get('/portal-admin/befunde/{id}',                                 [BefundbogenController::class, 'adminShow'],   ['auth']);
+$router->post('/portal-admin/befunde/{id}/senden',                         [BefundbogenController::class, 'adminSenden'], ['auth']);
+
+// ── Befundbögen — Owner Portal ────────────────────────────────────────
+$router->get('/portal/befunde',                                            [BefundbogenController::class, 'portalIndex'], []);
+$router->get('/portal/befunde/{id}',                                       [BefundbogenController::class, 'portalShow'],  []);
+$router->get('/portal/befunde/{id}/pdf',                                   [BefundbogenController::class, 'portalPdf'],   []);
 
 $router->get('/tierhalter', [OwnerController::class, 'index'], ['auth']);
 $router->post('/tierhalter', [OwnerController::class, 'store'], ['auth']);

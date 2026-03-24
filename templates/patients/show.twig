@@ -206,6 +206,15 @@
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="befunde-tab" data-bs-toggle="tab" data-bs-target="#befunde" type="button" role="tab" aria-controls="befunde" aria-selected="false">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><path stroke="currentColor" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"/></svg>
+                        Befundbögen
+                        {% if befunde_count is defined and befunde_count > 0 %}
+                        <span class="badge" style="background:rgba(79,124,255,0.15);color:var(--bs-primary);border:1px solid rgba(79,124,255,0.3);font-size:.6rem;margin-left:3px;">{{ befunde_count }}</span>
+                        {% endif %}
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
                     <button class="nav-link" id="historie-tab" data-bs-toggle="tab" data-bs-target="#historie" type="button" role="tab" aria-controls="historie" aria-selected="false">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><path stroke="currentColor" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         Historie
@@ -333,6 +342,22 @@
                         <p style="font-size:0.8rem;opacity:0.6;">Sobald der Besitzer eine Aufgabe oder Übung abhakt, erscheint sie hier.</p>
                     </div>
                     {% endif %}
+                </div>
+
+                <!-- Befundbögen Tab -->
+                <div class="tab-pane fade" id="befunde" role="tabpanel" aria-labelledby="befunde-tab">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 style="font-size:0.9rem;color:var(--text-muted);margin:0;">Befundbögen für {{ patient.name }}</h5>
+                        <a href="/patienten/{{ patient.id }}/befunde/neu" class="btn btn-sm btn-primary">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            Neuer Befundbogen
+                        </a>
+                    </div>
+                    <div id="befunde-list-container">
+                        <div class="text-center py-3" style="color:var(--text-muted);font-size:.85rem;">
+                            <span class="spinner-border spinner-border-sm me-2"></span> Lade Befundbögen...
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Historie Tab -->
@@ -763,6 +788,54 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('hausaufgaben-tab')?.addEventListener('shown.bs.tab', function() {
         loadPatientHomework();
     });
+
+    // Befundbögen Tab — lazy load
+    let befundeLoaded = false;
+    document.getElementById('befunde-tab')?.addEventListener('shown.bs.tab', function() {
+        if (befundeLoaded) return;
+        befundeLoaded = true;
+        loadBefundboegen();
+    });
+
+    function loadBefundboegen() {
+        const container = document.getElementById('befunde-list-container');
+        if (!container) return;
+        fetch('/api/mobile/befunde/patient/{{ patient.id }}', {
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            const items = data.items ?? [];
+            if (items.length === 0) {
+                container.innerHTML = `
+                    <div style="text-align:center;padding:2rem 1rem;color:var(--text-muted);">
+                        <svg width="36" height="36" fill="none" viewBox="0 0 24 24" style="opacity:.2;margin-bottom:10px;display:block;margin-inline:auto;"><path stroke="currentColor" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"/></svg>
+                        <p style="font-size:.85rem;">Noch keine Befundbögen vorhanden.</p>
+                    </div>`;
+                return;
+            }
+            const statusColor = { versendet:'#22c55e', abgeschlossen:'var(--bs-primary)', entwurf:'#6c757d' };
+            let html = '<div style="display:flex;flex-direction:column;gap:.5rem;">';
+            items.forEach(b => {
+                const color = statusColor[b.status] ?? '#6c757d';
+                const label = { versendet:'Versendet', abgeschlossen:'Abgeschlossen', entwurf:'Entwurf' }[b.status] ?? b.status;
+                html += `<div style="display:flex;align-items:center;gap:.75rem;padding:.6rem .9rem;border-radius:10px;background:var(--glass-bg,rgba(255,255,255,.04));border:1px solid var(--glass-border,rgba(255,255,255,.08));">
+                    <div style="flex:1;min-width:0;">
+                        <div style="font-size:.82rem;font-weight:700;font-family:monospace;color:var(--text-muted);">BF-${String(b.id).padStart(4,'0')}</div>
+                        <div style="font-size:.88rem;font-weight:600;">${b.datum ? new Date(b.datum).toLocaleDateString('de-DE') : '—'}</div>
+                        ${b.ersteller_name ? `<div style="font-size:.75rem;color:var(--text-muted);">${b.ersteller_name}</div>` : ''}
+                    </div>
+                    <span style="font-size:.65rem;padding:2px 8px;border-radius:6px;background:${color}22;color:${color};border:1px solid ${color}44;white-space:nowrap;">${label}</span>
+                    <a href="/patienten/{{ patient.id }}/befunde/${b.id}" class="btn btn-xs btn-outline-secondary" style="font-size:.75rem;padding:3px 8px;white-space:nowrap;">Ansehen</a>
+                </div>`;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        })
+        .catch(() => {
+            container.innerHTML = `<a href="/patienten/{{ patient.id }}/befunde" class="btn btn-sm btn-outline-secondary">Alle Befundbögen anzeigen</a>`;
+        });
+    }
 });
 </script>
 
