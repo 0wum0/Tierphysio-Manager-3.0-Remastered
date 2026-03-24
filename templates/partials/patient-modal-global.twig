@@ -822,8 +822,15 @@ function renderTimeline(timeline, patientId) {
             var fd = new FormData(); fd.append('_csrf_token', csrf);
             fetch('/patienten/'+patId+'/timeline/'+entryId+'/delete-json', {method:'POST',body:fd})
                 .then(function(r){return r.json();})
-                .then(function(data){ if(data.ok) renderTimeline(data.timeline, patId); })
-                .catch(function(){ alert('Fehler beim Löschen.'); });
+                .then(function(data){
+                    if(data.ok) {
+                        renderTimeline(data.timeline, patId);
+                        _hwShowToast('Eintrag gelöscht', 'success');
+                    } else {
+                        _hwShowToast('Fehler beim Löschen.', 'error');
+                    }
+                })
+                .catch(function(){ _hwShowToast('Fehler beim Löschen.', 'error'); });
         });
     });
 }
@@ -885,9 +892,12 @@ if (teSaveBtn) {
                 if(data.ok){
                     bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-timeline-edit')).hide();
                     renderTimeline(data.timeline, patientId);
+                    _hwShowToast('✓ Eintrag aktualisiert', 'success');
+                } else {
+                    _hwShowToast('Fehler beim Speichern.', 'error');
                 }
             })
-            .catch(function(){ alert('Fehler beim Speichern.'); })
+            .catch(function(){ _hwShowToast('Netzwerkfehler beim Speichern.', 'error'); })
             .finally(function(){ teSaveBtn.disabled=false; teSaveBtn.textContent='Speichern'; });
     });
 }
@@ -952,6 +962,7 @@ document.addEventListener('submit', function (e) {
             fd.delete('attachment'); /* nicht nochmal hochladen */
             fd.append('uploaded_filename', uploadedFilename);
         }
+        if (btn) { btn.disabled = true; btn.innerHTML = '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" style="vertical-align:text-bottom;animation:spin 0.8s linear infinite"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" opacity="0.25"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 2a10 10 0 0 1 10 10"/></svg> Speichern…'; }
         fetch('/patienten/'+patientId+'/timeline-json', {method:'POST', body:fd})
             .then(function(r){ return r.json(); })
             .then(function(data) {
@@ -960,17 +971,18 @@ document.addEventListener('submit', function (e) {
                     form.reset();
                     if (quillEditor) quillEditor.setContents([]);
                     hideProgress();
+                    _hwShowToast('✓ Eintrag gespeichert', 'success');
                 } else {
-                    alert('Fehler beim Speichern des Eintrags.');
+                    _hwShowToast('Fehler beim Speichern des Eintrags.', 'error');
                 }
             })
-            .catch(function() { alert('Netzwerkfehler beim Speichern.'); })
+            .catch(function() { _hwShowToast('Netzwerkfehler beim Speichern.', 'error'); })
             .finally(function() {
                 if (btn) { btn.disabled = false; btn.innerHTML = origText; }
             });
     }
 
-    if (btn) { btn.disabled = true; btn.innerHTML = '…'; }
+    if (btn) { btn.disabled = true; btn.innerHTML = '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" style="vertical-align:text-bottom;animation:spin 0.8s linear infinite"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" opacity="0.25"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 2a10 10 0 0 1 10 10"/></svg> Wird geprüft…'; }
 
     if (isVideo) {
         /* Phase 1: Video separat hochladen mit XHR für Fortschritt */
