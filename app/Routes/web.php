@@ -283,12 +283,12 @@ $router->get('/api/mobile/anmeldung',                                    [Mobile
 $router->get('/api/mobile/anmeldung/{id}',                               [MobileApiController::class, 'intakeShow']);
 $router->post('/api/mobile/anmeldung/{id}/annehmen',                     [MobileApiController::class, 'intakeAccept']);
 $router->post('/api/mobile/anmeldung/{id}/ablehnen',                     [MobileApiController::class, 'intakeReject']);
-
 // ── Patient Invite (Einladungslinks) ─────────────────────────────────
 $router->get('/api/mobile/einladungen/benachrichtigungen',               [MobileApiController::class, 'inviteNotifications']);
 $router->get('/api/mobile/einladungen',                                  [MobileApiController::class, 'inviteList']);
 $router->post('/api/mobile/einladungen',                                 [MobileApiController::class, 'inviteSend']);
 $router->post('/api/mobile/einladungen/{id}/widerrufen',                 [MobileApiController::class, 'inviteRevoke']);
+$router->post('/api/mobile/einladungen/{id}/bearbeiten',                 [MobileApiController::class, 'inviteUpdate']);
 $router->get('/api/mobile/einladungen/{id}/whatsapp',                    [MobileApiController::class, 'inviteWhatsapp']);
 
 // Hausaufgaben Plan-Meta API

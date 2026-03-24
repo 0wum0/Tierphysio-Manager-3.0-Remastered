@@ -4947,14 +4947,15 @@ class MobileApiController
 
         $token   = bin2hex(random_bytes(32));
         $expires = date('Y-m-d H:i:s', strtotime('+7 days'));
-        $baseUrl = $this->settings->get('app_url', '');
+        $baseUrl = $this->resolveAppUrl();
         $inviteUrl = $baseUrl . '/einladung/' . $token;
+        $sentVia   = $phone && !$email ? 'whatsapp' : ($phone && $email ? 'both' : 'email');
 
         try {
             $this->db->execute(
-                "INSERT INTO patient_invite_tokens (token, email, phone, note, status, expires_at, created_by, created_at)
-                 VALUES (?, ?, ?, ?, 'offen', ?, ?, NOW())",
-                [$token, $email ?: '', $phone ?: '', $note ?: '', $expires, (int)$auth['user_id']]
+                "INSERT INTO patient_invite_tokens (token, email, phone, note, status, sent_via, expires_at, created_by, created_at)
+                 VALUES (?, ?, ?, ?, 'offen', ?, ?, ?, NOW())",
+                [$token, $email ?: '', $phone ?: '', $note ?: '', $sentVia, $expires, (int)$auth['user_id']]
             );
             $id = (int)$this->db->lastInsertId();
         } catch (\Throwable $e) {
@@ -4963,10 +4964,7 @@ class MobileApiController
 
         $whatsappUrl = null;
         if ($phone) {
-            $cleanPhone  = preg_replace('/[^0-9+]/', '', $phone);
-            $appName     = $this->settings->get('practice_name', 'Tierphysio');
-            $msg         = "Hallo! Sie wurden eingeladen, sich bei {$appName} anzumelden.\n\n{$inviteUrl}\n\nDer Link ist 7 Tage gültig.";
-            $whatsappUrl = 'https://wa.me/' . ltrim($cleanPhone, '+') . '?text=' . rawurlencode($msg);
+            $whatsappUrl = $this->buildWhatsAppUrl($phone, $inviteUrl, $note);
         }
 
         $this->json([
@@ -5006,14 +5004,45 @@ class MobileApiController
         } catch (\Throwable) { $row = null; }
         if (!$row) $this->error('Einladung nicht gefunden.', 404);
 
-        $baseUrl   = $this->settings->get('app_url', '');
-        $appName   = $this->settings->get('practice_name', 'Tierphysio');
+        $baseUrl   = $this->resolveAppUrl();
         $inviteUrl = $baseUrl . '/einladung/' . $row['token'];
-        $phone     = preg_replace('/[^0-9+]/', '', $row['phone'] ?? '');
-        $msg       = "Hallo! Sie wurden eingeladen, sich bei {$appName} anzumelden.\n\n{$inviteUrl}\n\nDer Link ist 7 Tage gültig.";
-        $waUrl     = $phone ? 'https://wa.me/' . ltrim($phone, '+') . '?text=' . rawurlencode($msg) : null;
+        $phone     = $row['phone'] ?? '';
+        $note      = $row['note']  ?? '';
+        $waUrl     = $phone ? $this->buildWhatsAppUrl($phone, $inviteUrl, $note) : null;
 
-        $this->json(['ok' => true, 'url' => $waUrl, 'invite_url' => $inviteUrl]);
+        $this->json(['ok' => true, 'url' => $waUrl, 'whatsapp_url' => $waUrl, 'invite_url' => $inviteUrl]);
+    }
+
+    /** POST /api/mobile/einladungen/{id}/bearbeiten — edit pending invite (note/phone) */
+    public function inviteUpdate(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+        $id   = (int)($params['id'] ?? 0);
+        $data = $this->body();
+        try {
+            $row = $this->db->fetch("SELECT * FROM patient_invite_tokens WHERE id = ? LIMIT 1", [$id]);
+        } catch (\Throwable) { $row = null; }
+        if (!$row) $this->error('Einladung nicht gefunden.', 404);
+        if ($row['status'] !== 'offen') $this->error('Nur offene Einladungen können bearbeitet werden.', 422);
+
+        $phone = isset($data['phone']) ? trim($data['phone']) : $row['phone'];
+        $note  = isset($data['note'])  ? trim($data['note'])  : $row['note'];
+
+        try {
+            $this->db->execute(
+                "UPDATE patient_invite_tokens SET phone = ?, note = ? WHERE id = ?",
+                [$phone, $note, $id]
+            );
+        } catch (\Throwable $e) {
+            $this->error($e->getMessage(), 500);
+        }
+
+        $baseUrl     = $this->resolveAppUrl();
+        $inviteUrl   = $baseUrl . '/einladung/' . $row['token'];
+        $whatsappUrl = $phone ? $this->buildWhatsAppUrl($phone, $inviteUrl, $note) : null;
+
+        $this->json(['ok' => true, 'whatsapp_url' => $whatsappUrl, 'invite_url' => $inviteUrl]);
     }
 
     /** GET /api/mobile/einladungen/benachrichtigungen — pending invite count */
@@ -5236,5 +5265,32 @@ class MobileApiController
         } catch (\Throwable $e) {
             $this->json(['success' => false, 'message' => $e->getMessage()]);
         }
+    }
+
+    /* ── Private helpers ─────────────────────────────────────────── */
+
+    /** Resolve the full app base URL from settings or $_SERVER fallback */
+    private function resolveAppUrl(): string
+    {
+        $url = rtrim($this->settings->get('app_url', '') ?? '', '/');
+        if ($url !== '') return $url;
+
+        /* Fallback: build from current request */
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host   = $_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? 'localhost');
+        return $scheme . '://' . $host;
+    }
+
+    /** Build a wa.me URL with a rich, personalised invitation message */
+    private function buildWhatsAppUrl(string $phone, string $inviteUrl, string $note = ''): string
+    {
+        $phone   = preg_replace('/[^0-9+]/', '', $phone);
+        $appName = $this->settings->get('company_name', $this->settings->get('practice_name', 'Tierphysio Manager'));
+        $msg  = "Hallo! 👋\n\nSie wurden von {$appName} eingeladen, sich direkt in unserem System zu registrieren.";
+        if ($note !== '') {
+            $msg .= "\n\n💬 {$note}";
+        }
+        $msg .= "\n\nKlicken Sie auf den folgenden Link, um Ihr Tier und sich selbst zu registrieren:\n👉 {$inviteUrl}\n\nDer Link ist 7 Tage gültig.";
+        return 'https://wa.me/' . ltrim($phone, '+') . '?text=' . rawurlencode($msg);
     }
 }

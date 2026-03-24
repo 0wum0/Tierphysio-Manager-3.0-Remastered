@@ -141,6 +141,29 @@ class InviteController extends Controller
         $this->json(['ok' => true, 'url' => $inviteUrl]);
     }
 
+    public function update(array $params = []): void
+    {
+        $invite = $this->repo->findById((int)$params['id']);
+        if (!$invite) {
+            $this->json(['ok' => false, 'error' => 'Nicht gefunden'], 404);
+            return;
+        }
+        if ($invite['status'] !== 'offen') {
+            $this->json(['ok' => false, 'error' => 'Nur offene Einladungen können bearbeitet werden.'], 422);
+            return;
+        }
+
+        $phone = trim($this->post('phone', $invite['phone'] ?? ''));
+        $note  = trim($this->post('note',  $invite['note']  ?? ''));
+
+        $db  = Application::getInstance()->getContainer()->get(Database::class);
+        $pdo = $db->getPdo();
+        $pdo->prepare("UPDATE `patient_invite_tokens` SET phone = ?, note = ? WHERE id = ?")
+            ->execute([$phone, $note, (int)$params['id']]);
+
+        $this->json(['ok' => true]);
+    }
+
     public function revoke(array $params = []): void
     {
         $invite = $this->repo->findById((int)$params['id']);

@@ -70,7 +70,10 @@ class _InviteScreenState extends State<InviteScreen> {
       final resp = await _api.inviteWhatsapp(id);
       final link = resp['whatsapp_url'] as String? ?? resp['url'] as String? ?? '';
       if (link.isNotEmpty) {
-        await _openWhatsApp(link, phone);
+        final uri = Uri.tryParse(link);
+        if (uri != null && await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
       }
     } catch (e) {
       if (!mounted) return;
@@ -78,12 +81,28 @@ class _InviteScreenState extends State<InviteScreen> {
     }
   }
 
-  Future<void> _openWhatsApp(String waUrl, String phone) async {
-    // waUrl is already a full wa.me URL from backend — open it directly
-    final uri = Uri.tryParse(waUrl);
-    if (uri == null) return;
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+  Future<void> _editInvite(Map<String, dynamic> item) async {
+    final id = int.tryParse(item['id'].toString());
+    if (id == null) return;
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => _EditInviteDialog(
+        phone: item['phone'] as String? ?? '',
+        note:  item['note']  as String? ?? '',
+      ),
+    );
+    if (result == null || !mounted) return;
+    try {
+      await _api.inviteUpdate(id, result);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Einladung aktualisiert'),
+        behavior: SnackBarBehavior.floating,
+      ));
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
   }
 
@@ -166,7 +185,8 @@ class _InviteScreenState extends State<InviteScreen> {
                             int.tryParse(_items[i]['id'].toString()) ?? 0,
                             _items[i]['phone'] as String? ?? _items[i]['owner_phone'] as String? ?? '',
                           ),
-                          onRevoke: () => _revoke(Map<String, dynamic>.from(_items[i] as Map)),
+                          onEdit:    () => _editInvite(Map<String, dynamic>.from(_items[i] as Map)),
+                          onRevoke:  () => _revoke(Map<String, dynamic>.from(_items[i] as Map)),
                         ),
                       ),
                     ),
@@ -179,9 +199,10 @@ class _InviteScreenState extends State<InviteScreen> {
 class _InviteCard extends StatelessWidget {
   final Map<String, dynamic> item;
   final VoidCallback onWhatsApp;
+  final VoidCallback onEdit;
   final VoidCallback onRevoke;
 
-  const _InviteCard({required this.item, required this.onWhatsApp, required this.onRevoke});
+  const _InviteCard({required this.item, required this.onWhatsApp, required this.onEdit, required this.onRevoke});
 
   @override
   Widget build(BuildContext context) {
@@ -255,32 +276,28 @@ class _InviteCard extends StatelessWidget {
               Text('Ablaufdatum: $expiresStr', style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
             ]),
           ],
-          if ((isPending) && phone.isNotEmpty) ...[
+          if (isPending) ...[
             const SizedBox(height: 10),
-            Row(children: [
-              Expanded(child: OutlinedButton.icon(
-                onPressed: onWhatsApp,
-                icon: const Icon(Icons.chat_rounded, size: 16),
-                label: const Text('WhatsApp senden'),
-                style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF25D366)),
-              )),
-              const SizedBox(width: 10),
-              OutlinedButton(
+            Wrap(spacing: 8, runSpacing: 6, children: [
+              if (phone.isNotEmpty)
+                OutlinedButton.icon(
+                  onPressed: onWhatsApp,
+                  icon: const Icon(Icons.chat_rounded, size: 16),
+                  label: const Text('WhatsApp'),
+                  style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF25D366)),
+                ),
+              OutlinedButton.icon(
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit_rounded, size: 16),
+                label: const Text('Bearbeiten'),
+              ),
+              OutlinedButton.icon(
                 onPressed: onRevoke,
+                icon: const Icon(Icons.block_rounded, size: 16),
+                label: const Text('Widerrufen'),
                 style: OutlinedButton.styleFrom(foregroundColor: Colors.red, side: const BorderSide(color: Colors.red)),
-                child: const Text('Widerrufen'),
               ),
             ]),
-          ] else if (isPending) ...[
-            const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerRight,
-              child: OutlinedButton(
-                onPressed: onRevoke,
-                style: OutlinedButton.styleFrom(foregroundColor: Colors.red, side: const BorderSide(color: Colors.red)),
-                child: const Text('Widerrufen'),
-              ),
-            ),
           ],
         ]),
       ),
@@ -614,6 +631,80 @@ class _InviteLinkDialog extends StatelessWidget {
             style: FilledButton.styleFrom(backgroundColor: const Color(0xFF25D366)),
           ),
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Schließen')),
+      ],
+    );
+  }
+}
+
+// ── Edit Invite Dialog ────────────────────────────────────────────────────────
+
+class _EditInviteDialog extends StatefulWidget {
+  final String phone;
+  final String note;
+  const _EditInviteDialog({required this.phone, required this.note});
+
+  @override
+  State<_EditInviteDialog> createState() => _EditInviteDialogState();
+}
+
+class _EditInviteDialogState extends State<_EditInviteDialog> {
+  late final TextEditingController _phoneCtrl;
+  late final TextEditingController _noteCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _phoneCtrl = TextEditingController(text: widget.phone);
+    _noteCtrl  = TextEditingController(text: widget.note);
+  }
+
+  @override
+  void dispose() {
+    _phoneCtrl.dispose();
+    _noteCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Einladung bearbeiten'),
+      content: SizedBox(
+        width: 360,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          TextField(
+            controller: _phoneCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Telefon (für WhatsApp)',
+              hintText: 'z.B. +49 151 12345678',
+              isDense: true,
+              prefixIcon: Icon(Icons.phone_outlined, size: 18),
+              border: OutlineInputBorder(),
+            ),
+            keyboardType: TextInputType.phone,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _noteCtrl,
+            decoration: const InputDecoration(
+              labelText: 'Notiz (optional)',
+              isDense: true,
+              prefixIcon: Icon(Icons.notes_rounded, size: 18),
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 3,
+          ),
+        ]),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Abbrechen')),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, {
+            'phone': _phoneCtrl.text.trim(),
+            'note':  _noteCtrl.text.trim(),
+          }),
+          child: const Text('Speichern'),
+        ),
       ],
     );
   }

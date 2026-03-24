@@ -461,6 +461,9 @@ class ApiService {
   Future<void> inviteRevoke(int id) async =>
       await post('/einladungen/$id/widerrufen', {});
 
+  Future<Map<String, dynamic>> inviteUpdate(int id, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/einladungen/$id/bearbeiten', data));
+
   Future<Map<String, dynamic>> inviteWhatsapp(int id) async =>
       Map<String, dynamic>.from(await get('/einladungen/$id/whatsapp'));
 
