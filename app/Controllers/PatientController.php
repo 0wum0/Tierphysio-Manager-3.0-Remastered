@@ -108,6 +108,24 @@ class PatientController extends Controller
             $portalCheckNotifications = $portalRepo->getCheckNotificationsForPatient((int)$params['id']);
         } catch (\Throwable) {}
 
+        /* ── Next appointment for this patient ── */
+        $nextAppointment = null;
+        try {
+            $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $nextAppointment = $db->fetch(
+                "SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.notes,
+                        tt.name AS treatment_type_name, tt.color AS treatment_color,
+                        CONCAT(o.first_name, ' ', o.last_name) AS owner_name
+                 FROM appointments a
+                 LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+                 LEFT JOIN owners o ON o.id = a.owner_id
+                 WHERE a.patient_id = ? AND a.start_at >= NOW() AND a.status NOT IN ('cancelled','noshow')
+                 ORDER BY a.start_at ASC
+                 LIMIT 1",
+                [(int)$params['id']]
+            ) ?: null;
+        } catch (\Throwable) {}
+
         $this->render('patients/show.twig', [
             'page_title'               => $patient['name'],
             'patient'                  => $patient,
@@ -121,6 +139,7 @@ class PatientController extends Controller
             'invoice_stats'            => $invoiceStats,
             'plugin_header_actions'    => $headerActions,
             'portal_check_notifications' => $portalCheckNotifications,
+            'next_appointment'         => $nextAppointment,
         ]);
     }
 

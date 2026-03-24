@@ -34,8 +34,10 @@ class DashboardController extends Controller
         $user           = $this->session->getUser();
         $savedLayout    = $user ? $this->dashboardService->loadLayout((int)$user['id']) : null;
 
-        $birthdays      = $this->dashboardService->getUpcomingBirthdays(14);
-        $appointments   = $this->dashboardService->getUpcomingAppointments(8);
+        $birthdays           = $this->dashboardService->getUpcomingBirthdays(14);
+        $appointments        = $this->dashboardService->getUpcomingAppointments(8);
+        $todayAppointments   = $this->dashboardService->getTodayAppointments();
+        $nextAppointments    = $this->dashboardService->getNextUpcomingAppointments(3);
         $patientTrend   = $this->dashboardService->getPatientTrendData();
         try {
             $chartWeekly  = $this->dashboardService->getChartDataByStatus('weekly');
@@ -60,6 +62,8 @@ class DashboardController extends Controller
             'saved_layout'          => $savedLayout,
             'upcoming_birthdays'    => $birthdays,
             'upcoming_appointments' => $appointments,
+            'today_appointments'    => $todayAppointments,
+            'next_appointments'     => $nextAppointments,
             'patient_trend'         => $patientTrend,
             'chart_weekly'          => $chartWeekly,
             'chart_monthly'         => $chartMonthly,

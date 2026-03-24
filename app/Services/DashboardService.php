@@ -46,6 +46,7 @@ class DashboardService
     {
         return $this->db->fetchAll(
             "SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.notes,
+                    a.patient_id,
                     p.name AS patient_name, p.species AS patient_species,
                     CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
                     tt.name AS treatment_type_name, tt.color AS treatment_color
@@ -54,6 +55,42 @@ class DashboardService
              LEFT JOIN owners o ON o.id = a.owner_id
              LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
              WHERE a.start_at >= NOW() AND a.status NOT IN ('cancelled','noshow')
+             ORDER BY a.start_at ASC
+             LIMIT ?",
+            [$limit]
+        );
+    }
+
+    public function getTodayAppointments(): array
+    {
+        return $this->db->fetchAll(
+            "SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.notes,
+                    a.patient_id,
+                    p.name AS patient_name, p.species AS patient_species,
+                    CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
+                    tt.name AS treatment_type_name, tt.color AS treatment_color
+             FROM appointments a
+             LEFT JOIN patients p ON p.id = a.patient_id
+             LEFT JOIN owners o ON o.id = a.owner_id
+             LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+             WHERE DATE(a.start_at) = CURDATE() AND a.status NOT IN ('cancelled','noshow')
+             ORDER BY a.start_at ASC"
+        );
+    }
+
+    public function getNextUpcomingAppointments(int $limit = 3): array
+    {
+        return $this->db->fetchAll(
+            "SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.notes,
+                    a.patient_id,
+                    p.name AS patient_name, p.species AS patient_species,
+                    CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
+                    tt.name AS treatment_type_name, tt.color AS treatment_color
+             FROM appointments a
+             LEFT JOIN patients p ON p.id = a.patient_id
+             LEFT JOIN owners o ON o.id = a.owner_id
+             LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+             WHERE DATE(a.start_at) > CURDATE() AND a.status NOT IN ('cancelled','noshow')
              ORDER BY a.start_at ASC
              LIMIT ?",
             [$limit]
