@@ -897,12 +897,17 @@ class MobileApiController
                 "SELECT a.*,
                         p.name AS patient_name,
                         CONCAT(o.first_name,' ',o.last_name) AS owner_name,
-                        tt.name AS treatment_type_name, tt.color AS treatment_type_color
+                        tt.name AS treatment_type_name, tt.color AS treatment_type_color,
+                        CASE
+                            WHEN a.google_event_id IS NOT NULL THEN 'google'
+                            ELSE 'internal'
+                        END AS source
                  FROM appointments a
                  LEFT JOIN patients p  ON p.id  = a.patient_id
                  LEFT JOIN owners o    ON o.id  = a.owner_id
                  LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
                  WHERE a.start_at >= ? AND a.start_at <= ?
+                   AND a.status != 'cancelled'
                  ORDER BY a.start_at ASC",
                 [$start . ' 00:00:00', $end . ' 23:59:59']
             );
