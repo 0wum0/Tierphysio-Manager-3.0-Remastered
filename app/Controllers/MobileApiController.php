@@ -5268,4 +5268,143 @@ class MobileApiController
         /* Fallback — assume per-patient folder */
         return '/patient-photos/' . $pid . '/' . $file;
     }
+
+    /* ══════════════════════════════════════════════════════
+       GOOGLE CALENDAR SYNC (2-Wege)
+    ══════════════════════════════════════════════════════ */
+
+    public function googleSyncStatus(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+        try {
+            $conn = $this->db->fetch(
+                'SELECT id, google_email, sync_enabled, auto_sync, calendar_id,
+                        calendar_name, last_pull_at, created_at
+                 FROM google_calendar_connections ORDER BY id ASC LIMIT 1'
+            );
+            if (!$conn) {
+                $this->json(['connected' => false, 'sync_enabled' => false]);
+                return;
+            }
+            $lastSuccess = $this->db->fetchColumn(
+                "SELECT created_at FROM google_calendar_sync_log
+                 WHERE success = 1 AND action IN ('create','update','delete','pull')
+                 ORDER BY created_at DESC LIMIT 1"
+            );
+            $lastError = $this->db->fetch(
+                'SELECT message, created_at FROM google_calendar_sync_log
+                 WHERE success = 0 ORDER BY created_at DESC LIMIT 1'
+            );
+            $lastPush = $this->db->fetchColumn(
+                "SELECT created_at FROM google_calendar_sync_log
+                 WHERE success = 1 AND action IN ('create','update','delete')
+                 ORDER BY created_at DESC LIMIT 1"
+            );
+            $pendingPush = (int)$this->db->fetchColumn(
+                "SELECT COUNT(*) FROM google_calendar_sync_map WHERE sync_status = 'pending'"
+            );
+            $pushToday = (int)$this->db->fetchColumn(
+                "SELECT COUNT(*) FROM google_calendar_sync_log
+                 WHERE success = 1 AND action IN ('create','update','delete')
+                 AND DATE(created_at) = CURDATE()"
+            );
+            $lastPullLog = $this->db->fetchColumn(
+                "SELECT created_at FROM google_calendar_sync_log
+                 WHERE success = 1 AND action = 'pull'
+                 ORDER BY created_at DESC LIMIT 1"
+            );
+            $pullToday = (int)$this->db->fetchColumn(
+                "SELECT COUNT(*) FROM google_calendar_sync_log
+                 WHERE success = 1 AND action = 'pull' AND DATE(created_at) = CURDATE()"
+            );
+            $syncedToday = (int)$this->db->fetchColumn(
+                "SELECT COUNT(*) FROM google_calendar_sync_log
+                 WHERE success = 1 AND DATE(created_at) = CURDATE()"
+            );
+            $recentLogs = $this->db->fetchAll(
+                'SELECT action, success, message, created_at
+                 FROM google_calendar_sync_log ORDER BY created_at DESC LIMIT 10'
+            );
+            $this->json([
+                'connected'       => true,
+                'sync_enabled'    => (bool)$conn['sync_enabled'],
+                'auto_sync'       => (bool)($conn['auto_sync'] ?? false),
+                'google_email'    => $conn['google_email'],
+                'calendar_name'   => $conn['calendar_name'] ?? $conn['calendar_id'] ?? 'Primär',
+                'last_pull_at'    => $conn['last_pull_at'],
+                'last_success_at' => $lastSuccess ?: null,
+                'last_error'      => $lastError ?: null,
+                'synced_today'    => $syncedToday,
+                'push_last_at'    => $lastPush ?: null,
+                'push_pending'    => $pendingPush,
+                'push_today'      => $pushToday,
+                'pull_last_at'    => $lastPullLog ?: ($conn['last_pull_at'] ?? null),
+                'pull_today'      => $pullToday,
+                'recent_logs'     => $recentLogs,
+            ]);
+        } catch (\Throwable $e) {
+            $this->json(['connected' => false, 'sync_enabled' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    public function googleSyncPull(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+        try {
+            $repo   = new \Plugins\GoogleCalendarSync\GoogleCalendarRepository($this->db);
+            $api    = new \Plugins\GoogleCalendarSync\GoogleApiService($repo);
+            $sync   = new \Plugins\GoogleCalendarSync\GoogleSyncService($repo, $api, $this->db);
+            $result = $sync->pullFromGoogle();
+            $this->json(['success' => $result['success'], 'message' => $result['message'], 'direction' => 'pull']);
+        } catch (\Throwable $e) {
+            $this->error('Google Pull fehlgeschlagen: ' . $e->getMessage(), 500);
+        }
+    }
+
+    public function googleSyncPush(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+        try {
+            $repo   = new \Plugins\GoogleCalendarSync\GoogleCalendarRepository($this->db);
+            $api    = new \Plugins\GoogleCalendarSync\GoogleApiService($repo);
+            $sync   = new \Plugins\GoogleCalendarSync\GoogleSyncService($repo, $api, $this->db);
+            $result = $sync->bulkSyncAll();
+            $success = $result['success'] ?? 0;
+            $failed  = $result['failed']  ?? 0;
+            $this->json([
+                'success'   => $failed === 0,
+                'message'   => "Push abgeschlossen: {$success} synchronisiert" . ($failed > 0 ? ", {$failed} Fehler" : ''),
+                'synced'    => $success,
+                'failed'    => $failed,
+                'direction' => 'push',
+            ]);
+        } catch (\Throwable $e) {
+            $this->error('Google Push fehlgeschlagen: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /* ── Alias für alte Route /google-kalender/status ── */
+    public function googleCalendarStatus(array $params = []): void
+    {
+        $this->googleSyncStatus($params);
+    }
+
+    public function googleCalendarTriggerSync(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+        try {
+            $repo   = new \Plugins\GoogleCalendarSync\GoogleCalendarRepository($this->db);
+            $api    = new \Plugins\GoogleCalendarSync\GoogleApiService($repo);
+            $sync   = new \Plugins\GoogleCalendarSync\GoogleSyncService($repo, $api, $this->db);
+            $push   = $sync->bulkSyncAll();
+            $pull   = $sync->pullFromGoogle();
+            $this->json(['success' => true, 'push' => $push, 'pull' => $pull]);
+        } catch (\Throwable $e) {
+            $this->error($e->getMessage(), 500);
+        }
+    }
 }
