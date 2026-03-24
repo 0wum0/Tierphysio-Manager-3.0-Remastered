@@ -2231,15 +2231,29 @@ class MobileApiController
         if ($patientId && !$this->patients->findById($patientId)) $this->error('Patient nicht gefunden.', 404);
 
         try {
-            $sql = "SELECT hp.*, p.name AS patient_name
-                    FROM homework_plans hp
-                    LEFT JOIN patients p ON p.id = hp.patient_id";
-            $params2 = [];
-            if ($patientId) { $sql .= " WHERE hp.patient_id = ?"; $params2[] = $patientId; }
-            $sql .= " ORDER BY hp.created_at DESC LIMIT 50";
-            $rows = $this->db->fetchAll($sql, $params2);
-        } catch (\Throwable) { $rows = []; }
-        $this->json($rows);
+            $sql = "SELECT hp.*,
+                           p.name  AS patient_name,
+                           u.name  AS therapist_name_resolved
+                    FROM portal_homework_plans hp
+                    LEFT JOIN patients p ON p.id = hp.patient_id
+                    LEFT JOIN users    u ON u.id = hp.created_by";
+            $args = [];
+            if ($patientId) { $sql .= " WHERE hp.patient_id = ?"; $args[] = $patientId; }
+            $sql .= " ORDER BY hp.plan_date DESC LIMIT 50";
+            $plans = $this->db->fetchAll($sql, $args);
+
+            /* Attach tasks to each plan */
+            foreach ($plans as &$plan) {
+                try {
+                    $plan['tasks'] = $this->db->fetchAll(
+                        "SELECT * FROM portal_homework_plan_tasks WHERE plan_id = ? ORDER BY sort_order ASC, id ASC",
+                        [(int)$plan['id']]
+                    );
+                } catch (\Throwable) { $plan['tasks'] = []; }
+            }
+            unset($plan);
+        } catch (\Throwable) { $plans = []; }
+        $this->json($plans);
     }
 
     public function homeworkShow(array $params = []): void

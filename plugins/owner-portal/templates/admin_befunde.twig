@@ -38,7 +38,7 @@
             {% if patient.species %}<span class="badge bg-secondary fs-nano">{{ patient.species }}</span>{% endif %}
             <span class="badge bg-primary fs-nano">{{ bList|length }} Befundbogen{{ bList|length != 1 ? 'bögen' : '' }}</span>
         </div>
-        <a href="/patienten/{{ patient.id }}/befunde/erstellen" class="btn btn-xs btn-primary" onclick="event.stopPropagation();">
+        <a href="/patienten/{{ patient.id }}/befunde/neu" class="btn btn-xs btn-primary" onclick="event.stopPropagation();">
             <i class="fal fa-plus mr-1"></i> Neuer Befundbogen
         </a>
     </div>
@@ -96,7 +96,7 @@
             {% else %}
             <div class="p-3 text-center text-muted" style="font-size:.875rem;">
                 Noch keine Befundbögen für <strong>{{ patient.name }}</strong>.
-                <a href="/patienten/{{ patient.id }}/befunde/erstellen" class="ms-2 text-primary">Jetzt erstellen →</a>
+                <a href="/patienten/{{ patient.id }}/befunde/neu" class="ms-2 text-primary">Jetzt erstellen →</a>
             </div>
             {% endif %}
         </div>

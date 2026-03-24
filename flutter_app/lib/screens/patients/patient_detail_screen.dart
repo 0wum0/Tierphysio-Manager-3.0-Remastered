@@ -1422,15 +1422,18 @@ class _HomeworkCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title    = homework['title'] as String? ?? homework['name'] as String? ?? '—';
-    final desc     = homework['description'] as String? ?? homework['content'] as String? ?? '';
-    final dueDate  = homework['due_date'] as String? ?? homework['deadline'] as String?;
-    final done     = homework['completed'] == true || homework['done'] == true ||
-                     homework['status'] == 'completed' || homework['status'] == 'done';
-    final color    = done ? AppTheme.success : AppTheme.primary;
+    // portal_homework_plans fields
+    final planDate  = homework['plan_date'] as String?;
+    final therapist = homework['therapist_name'] as String?
+                   ?? homework['therapist_name_resolved'] as String?;
+    final title     = planDate != null ? 'Hausaufgaben ${_fmt(planDate)}' : '—';
+    final desc      = homework['general_notes'] as String?
+                   ?? homework['physio_principles'] as String? ?? '';
+    final done      = homework['status'] == 'archived';
+    final color     = done ? AppTheme.success : AppTheme.primary;
 
-    // tasks / exercises sub-list
-    final tasks = List<dynamic>.from(homework['tasks'] as List? ?? homework['exercises'] as List? ?? []);
+    // tasks sub-list
+    final tasks = List<dynamic>.from(homework['tasks'] as List? ?? []);
 
     return Container(
       decoration: BoxDecoration(
@@ -1450,10 +1453,9 @@ class _HomeworkCard extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-              if (dueDate != null)
-                Text('Fällig: ${_fmt(dueDate)}',
-                  style: TextStyle(fontSize: 11, color: done ? AppTheme.success : AppTheme.warning,
-                    fontWeight: FontWeight.w600)),
+              if (therapist != null && therapist.isNotEmpty)
+                Text(therapist,
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
             ])),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

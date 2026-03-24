@@ -499,7 +499,7 @@ class ApiService {
   /* ── Patient Homework (Hausaufgaben per Patient) ── */
 
   Future<List<dynamic>> patientHomeworkList(int patientId) async =>
-      List<dynamic>.from(await get('/patients/$patientId/hausaufgaben'));
+      List<dynamic>.from(await get('/patients/$patientId/hausaufgaben') as List);
 
   Future<Map<String, dynamic>> patientHomeworkShow(int id) async =>
       Map<String, dynamic>.from(await get('/hausaufgaben/$id'));
