@@ -239,11 +239,12 @@ class ReminderDunningRepository
     public function getOverdueAlertInvoices(): array
     {
         $rows = $this->db->fetchAll(
-            "SELECT i.id, i.invoice_number, i.total_gross, i.issue_date, i.due_date, i.status,
+            "SELECT i.id, i.invoice_number, i.issue_date, i.due_date, i.status,
+                    COALESCE(NULLIF(i.total_gross, 0), (SELECT SUM(ip.total) FROM invoice_positions ip WHERE ip.invoice_id = i.id)) AS total_gross,
                     CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
                     o.email AS owner_email,
                     p.name AS patient_name,
-                    DATEDIFF(CURDATE(), i.issue_date) AS days_open,
+                    DATEDIFF(CURDATE(), COALESCE(i.due_date, i.issue_date)) AS overdue_days,
                     (SELECT COUNT(*) FROM invoice_reminders r WHERE r.invoice_id = i.id) AS reminder_count,
                     (SELECT COUNT(*) FROM invoice_dunnings d WHERE d.invoice_id = i.id) AS dunning_count
              FROM invoices i
@@ -251,7 +252,7 @@ class ReminderDunningRepository
              LEFT JOIN patients p ON p.id = i.patient_id
              WHERE i.status IN ('open', 'overdue')
                AND i.issue_date <= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-             ORDER BY i.issue_date ASC
+             ORDER BY overdue_days DESC
              LIMIT 50"
         );
         return $rows ?: [];

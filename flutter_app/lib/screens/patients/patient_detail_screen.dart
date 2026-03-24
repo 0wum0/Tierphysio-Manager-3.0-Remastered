@@ -567,6 +567,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
             ]),
           ),
         ],
+        // Next appointment card
+        const SizedBox(height: 12),
+        _buildNextAppointmentCard(p),
         // Invoice stats if present
         if (p['invoice_stats'] != null) ...[
           const SizedBox(height: 12),
@@ -577,6 +580,137 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
         ],
       ]),
     );
+  }
+
+  // ── Next Appointment Card ─────────────────────────────────
+
+  Widget _buildNextAppointmentCard(Map<String, dynamic> p) {
+    final upcoming = p['upcoming_appointments'] as List? ?? [];
+    final Map<String, dynamic>? next = upcoming.isNotEmpty
+        ? Map<String, dynamic>.from(upcoming.first as Map)
+        : null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = AppTheme.tertiary;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1A1D27) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withValues(alpha: isDark ? 0.25 : 0.18)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(Icons.event_rounded, color: accent, size: 18),
+          const SizedBox(width: 8),
+          Text('Nächster Termin',
+            style: TextStyle(fontWeight: FontWeight.w700, color: accent, fontSize: 14)),
+          const Spacer(),
+          GestureDetector(
+            onTap: () => context.go('/kalender'),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text('Kalender',
+                style: TextStyle(color: accent, fontSize: 11, fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ]),
+        const SizedBox(height: 10),
+        if (next == null)
+          Row(children: [
+            Icon(Icons.event_busy_rounded, size: 16,
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+            const SizedBox(width: 8),
+            Text('Kein Termin geplant',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 13)),
+          ])
+        else
+          _buildNextAptDetail(next, accent),
+      ]),
+    );
+  }
+
+  Widget _buildNextAptDetail(Map<String, dynamic> apt, Color accent) {
+    DateTime? start;
+    try { start = DateTime.parse(apt['start_at'] as String? ?? ''); } catch (_) {}
+    final isToday = start != null &&
+        start.year == DateTime.now().year &&
+        start.month == DateTime.now().month &&
+        start.day == DateTime.now().day;
+    final dateStr = start != null
+        ? DateFormat('EEEE, d. MMMM yyyy', 'de_DE').format(start)
+        : '—';
+    final timeStr = start != null ? DateFormat('HH:mm').format(start) : '';
+    final treatName = apt['treatment_type_name'] as String? ?? '';
+    final title     = apt['title'] as String? ?? '';
+
+    Color aptColor = accent;
+    final colorHex = apt['treatment_color'] as String? ?? apt['color'] as String?;
+    if (colorHex != null && colorHex.isNotEmpty) {
+      try { aptColor = Color(int.parse('FF${colorHex.replaceAll('#', '')}', radix: 16)); }
+      catch (_) {}
+    }
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Container(
+        width: 48, height: 48,
+        decoration: BoxDecoration(
+          color: aptColor.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: aptColor.withValues(alpha: 0.3)),
+        ),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          if (start != null) ...[
+            Text(DateFormat('d', 'de_DE').format(start),
+              style: TextStyle(fontWeight: FontWeight.w800, color: aptColor, fontSize: 16, height: 1.0)),
+            Text(DateFormat('MMM', 'de_DE').format(start),
+              style: TextStyle(fontSize: 9, color: aptColor, fontWeight: FontWeight.w600)),
+          ] else
+            Icon(Icons.event_rounded, color: aptColor, size: 20),
+        ]),
+      ),
+      const SizedBox(width: 12),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(child: Text(title.isNotEmpty ? title : (treatName.isNotEmpty ? treatName : 'Termin'),
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+            maxLines: 1, overflow: TextOverflow.ellipsis)),
+          if (isToday)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: aptColor, borderRadius: BorderRadius.circular(8)),
+              child: const Text('Heute',
+                style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
+            ),
+        ]),
+        const SizedBox(height: 3),
+        Text(dateStr, style: TextStyle(
+          fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        if (timeStr.isNotEmpty) ...[
+          const SizedBox(height: 2),
+          Row(children: [
+            Icon(Icons.schedule_rounded, size: 12, color: aptColor),
+            const SizedBox(width: 4),
+            Text(timeStr + ' Uhr',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: aptColor)),
+            if (treatName.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Expanded(child: Text('· $treatName',
+                style: TextStyle(fontSize: 11,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+                maxLines: 1, overflow: TextOverflow.ellipsis)),
+            ],
+          ]),
+        ],
+      ])),
+    ]);
   }
 
   // ── Helpers ───────────────────────────────────────────────

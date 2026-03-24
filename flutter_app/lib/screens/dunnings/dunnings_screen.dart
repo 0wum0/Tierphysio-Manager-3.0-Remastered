@@ -167,7 +167,7 @@ class _DunningsScreenState extends State<DunningsScreen>
                   )),
                   const SizedBox(width: 10),
                   Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Text(_money(d['amount']),
+                    Text(_money(d['total_gross'] ?? d['amount']),
                       style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 15)),
                     const SizedBox(height: 4),
                     Container(
@@ -261,7 +261,7 @@ class _DunningsScreenState extends State<DunningsScreen>
                   )),
                   const SizedBox(width: 10),
                   Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Text(_money(inv['total']),
+                    Text(_money(inv['total_gross'] ?? inv['total']),
                       style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 15)),
                     const SizedBox(height: 4),
                     Container(

@@ -216,11 +216,13 @@ class MobileApiController
         );
         $ownersTotal = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM owners");
 
-        $todayApts    = 0;
-        $upcomingApts  = 0;
-        $todayAptsList = [];
-        $newIntakes    = 0;
-        $birthdaysToday = [];
+        $todayApts       = 0;
+        $upcomingApts    = 0;
+        $todayAptsList   = [];
+        $nextAptsList    = [];
+        $newIntakes      = 0;
+        $birthdaysToday  = [];
+        $upcomingBirthdays = [];
         try {
             $todayApts = (int)$this->db->fetchColumn(
                 "SELECT COUNT(*) FROM appointments WHERE DATE(start_at) = CURDATE() AND status != 'cancelled'"
@@ -230,6 +232,7 @@ class MobileApiController
             );
             $todayAptsList = $this->db->fetchAll(
                 "SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.color,
+                        a.patient_id,
                         p.name AS patient_name, p.species AS patient_species,
                         CONCAT(o.first_name,' ',o.last_name) AS owner_name,
                         tt.name AS treatment_type_name, tt.color AS treatment_color
@@ -237,15 +240,35 @@ class MobileApiController
                  LEFT JOIN patients p  ON p.id = a.patient_id
                  LEFT JOIN owners o    ON o.id = a.owner_id
                  LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
-                 WHERE DATE(a.start_at) = CURDATE() AND a.status != 'cancelled'
+                 WHERE DATE(a.start_at) = CURDATE() AND a.status NOT IN ('cancelled','noshow')
                  ORDER BY a.start_at ASC"
+            );
+            $nextAptsList = $this->db->fetchAll(
+                "SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.color,
+                        a.patient_id,
+                        p.name AS patient_name, p.species AS patient_species,
+                        CONCAT(o.first_name,' ',o.last_name) AS owner_name,
+                        tt.name AS treatment_type_name, tt.color AS treatment_color
+                 FROM appointments a
+                 LEFT JOIN patients p  ON p.id = a.patient_id
+                 LEFT JOIN owners o    ON o.id = a.owner_id
+                 LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+                 WHERE DATE(a.start_at) > CURDATE() AND a.status NOT IN ('cancelled','noshow')
+                 ORDER BY a.start_at ASC
+                 LIMIT 3"
             );
         } catch (\Throwable) {}
         try {
             $newIntakes = (int)$this->db->fetchColumn(
-                "SELECT COUNT(*) FROM patients WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
+                "SELECT COUNT(*) FROM patient_intake WHERE status = 'pending'"
             );
-        } catch (\Throwable) {}
+        } catch (\Throwable) {
+            try {
+                $newIntakes = (int)$this->db->fetchColumn(
+                    "SELECT COUNT(*) FROM patients WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
+                );
+            } catch (\Throwable) {}
+        }
         try {
             $birthdaysToday = $this->db->fetchAll(
                 "SELECT p.id, p.name, p.species,
@@ -257,6 +280,24 @@ class MobileApiController
                  WHERE p.date_of_birth IS NOT NULL
                    AND DATE_FORMAT(p.date_of_birth, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')
                  ORDER BY p.name ASC"
+            );
+            $upcomingBirthdays = $this->db->fetchAll(
+                "SELECT p.id, p.name, p.species,
+                        CONCAT(o.first_name,' ',o.last_name) AS owner_name,
+                        p.date_of_birth,
+                        TIMESTAMPDIFF(YEAR, p.date_of_birth, CURDATE()) + 1 AS age,
+                        DAYOFYEAR(DATE(CONCAT(YEAR(CURDATE()),'-',DATE_FORMAT(p.date_of_birth,'%m-%d'))))
+                          - DAYOFYEAR(CURDATE()) AS days_until
+                 FROM patients p
+                 LEFT JOIN owners o ON o.id = p.owner_id
+                 WHERE p.date_of_birth IS NOT NULL
+                   AND DATE_FORMAT(p.date_of_birth, '%m-%d') != DATE_FORMAT(CURDATE(), '%m-%d')
+                   AND (
+                     DAYOFYEAR(DATE(CONCAT(YEAR(CURDATE()),'-',DATE_FORMAT(p.date_of_birth,'%m-%d'))))
+                       - DAYOFYEAR(CURDATE())
+                   ) BETWEEN 1 AND 14
+                 ORDER BY days_until ASC
+                 LIMIT 3"
             );
         } catch (\Throwable) {}
 
@@ -295,9 +336,11 @@ class MobileApiController
             'owners_total'      => $ownersTotal,
             'today_apts'        => $todayApts,
             'upcoming_apts'     => $upcomingApts,
-            'today_appointments'=> $todayAptsList,
-            'new_intakes'       => $newIntakes,
-            'birthdays_today'   => $birthdaysToday,
+            'today_appointments'  => $todayAptsList,
+            'next_appointments'   => $nextAptsList,
+            'new_intakes'         => $newIntakes,
+            'birthdays_today'     => $birthdaysToday,
+            'upcoming_birthdays'  => $upcomingBirthdays,
             'revenue_month'     => round($stats['revenue_month'], 2),
             'revenue_year'      => round($stats['revenue_year'], 2),
             'open_invoices'     => $stats['open_count'],
@@ -358,6 +401,22 @@ class MobileApiController
         }
         $patient['timeline']      = $timeline;
         $patient['invoice_stats'] = $invoiceStats;
+
+        try {
+            $patient['upcoming_appointments'] = $this->db->fetchAll(
+                "SELECT a.id, a.title, a.start_at, a.end_at, a.status,
+                        tt.name AS treatment_type_name, tt.color AS treatment_color
+                 FROM appointments a
+                 LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+                 WHERE a.patient_id = ? AND a.start_at >= NOW() AND a.status NOT IN ('cancelled','noshow')
+                 ORDER BY a.start_at ASC
+                 LIMIT 1",
+                [$id]
+            );
+        } catch (\Throwable) {
+            $patient['upcoming_appointments'] = [];
+        }
+
         $this->json($patient);
     }
 

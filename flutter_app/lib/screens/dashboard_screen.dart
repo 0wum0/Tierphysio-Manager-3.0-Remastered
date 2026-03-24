@@ -115,15 +115,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
         // Notification banners
         ..._buildAlertBanners(d),
 
-        // Birthday banners
+        // Birthday banners (today)
         ..._buildBirthdayBanners(d),
+
+        // Upcoming birthdays (next 14 days, max 3)
+        ..._buildUpcomingBirthdays(d),
 
         // Quick actions
         _buildQuickActions(),
         const SizedBox(height: 16),
 
-        // Today's appointments
-        _buildTodayAppointments(d),
+        // Today's appointments + next 3 upcoming
+        _buildAppointmentPanel(d),
         const SizedBox(height: 16),
 
         // Finance + Appointments row (tablet: side by side)
@@ -200,9 +203,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ];
   }
 
-  Widget _buildTodayAppointments(Map<String, dynamic> d) {
-    final apts = List<Map<String, dynamic>>.from(
+  List<Widget> _buildUpcomingBirthdays(Map<String, dynamic> d) {
+    final upcoming = List<Map<String, dynamic>>.from(
+      (d['upcoming_birthdays'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)));
+    if (upcoming.isEmpty) return [];
+    return [
+      ...upcoming.map((b) {
+        final days = (b['days_until'] as num?)?.toInt() ?? 0;
+        return _AlertBanner(
+          icon: Icons.cake_outlined,
+          color: AppTheme.tertiary,
+          message: '🎂 ${b['name']} hat in $days Tag${days == 1 ? '' : 'en'} Geburtstag (${b['age']} Jahre)',
+          action: 'Profil',
+          onTap: () => context.push('/patienten/${b['id']}'),
+        );
+      }),
+      const SizedBox(height: 4),
+    ];
+  }
+
+  Widget _buildAppointmentPanel(Map<String, dynamic> d) {
+    final todayApts = List<Map<String, dynamic>>.from(
       (d['today_appointments'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)));
+    final nextApts = List<Map<String, dynamic>>.from(
+      (d['next_appointments'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)));
+    final hasAny = todayApts.isNotEmpty || nextApts.isNotEmpty;
 
     return Container(
       decoration: BoxDecoration(
@@ -211,11 +236,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // Header
         Padding(padding: const EdgeInsets.fromLTRB(16, 14, 12, 6), child: Row(children: [
-          Icon(Icons.today_rounded, size: 18, color: AppTheme.tertiary),
+          Icon(Icons.calendar_month_rounded, size: 18, color: AppTheme.tertiary),
           const SizedBox(width: 8),
           Expanded(child: Text(
-            'Heute — ${DateFormat('d. MMMM', 'de_DE').format(DateTime.now())}',
+            'Terminvorschau',
             style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.tertiary, fontSize: 14),
           )),
           TextButton(
@@ -224,19 +250,78 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ])),
         const Divider(height: 1),
-        if (apts.isEmpty)
+
+        // ── Heute ──
+        Padding(padding: const EdgeInsets.fromLTRB(14, 10, 14, 4), child: Row(children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text('Heute  ${DateFormat('d. MMM', 'de_DE').format(DateTime.now())}',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.primary)),
+          ),
+          if (todayApts.isNotEmpty) ...[  
+            const SizedBox(width: 8),
+            Text('${todayApts.length} Termin${todayApts.length == 1 ? '' : 'e'}',
+              style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          ],
+        ])),
+        if (todayApts.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            child: Row(children: [
+              Icon(Icons.event_available_rounded, size: 18,
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+              const SizedBox(width: 8),
+              Text('Keine Termine heute', style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
+            ]),
+          )
+        else
+          ...todayApts.map((apt) => _AppointmentCard(
+            apt: apt,
+            onTap: apt['patient_id'] != null
+                ? () => context.push('/patienten/${apt['patient_id']}')
+                : () => context.go('/kalender'),
+          )),
+
+        // ── Nächste Termine ──
+        if (nextApts.isNotEmpty) ...[  
+          Divider(height: 1, color: Theme.of(context).dividerColor.withValues(alpha: 0.5)),
+          Padding(padding: const EdgeInsets.fromLTRB(14, 10, 14, 4), child: Row(children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text('Kommende Termine',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            ),
+          ])),
+          ...nextApts.map((apt) => _AppointmentCard(
+            apt: apt,
+            showDate: true,
+            onTap: apt['patient_id'] != null
+                ? () => context.push('/patienten/${apt['patient_id']}')
+                : () => context.go('/kalender'),
+          )),
+        ],
+
+        if (!hasAny)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
             child: Row(children: [
               Icon(Icons.event_available_rounded, size: 20,
                 color: Theme.of(context).colorScheme.onSurfaceVariant),
               const SizedBox(width: 10),
-              Text('Keine Termine heute', style: TextStyle(
+              Text('Keine anstehenden Termine', style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 13)),
             ]),
-          )
-        else
-          ...apts.map((apt) => _AppointmentCard(apt: apt)),
+          ),
       ]),
     );
   }
@@ -546,7 +631,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
 class _AppointmentCard extends StatelessWidget {
   final Map<String, dynamic> apt;
-  const _AppointmentCard({required this.apt});
+  final VoidCallback? onTap;
+  final bool showDate;
+  const _AppointmentCard({required this.apt, this.onTap, this.showDate = false});
 
   Color _parseColor(String? hex, Color fallback) {
     if (hex == null || hex.isEmpty) return fallback;
@@ -584,7 +671,9 @@ class _AppointmentCard extends StatelessWidget {
     final status    = apt['status']              as String? ?? 'scheduled';
     final sc        = _statusColor(status);
 
-    return Container(
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
       decoration: BoxDecoration(
         color: isDark
@@ -643,6 +732,13 @@ class _AppointmentCard extends StatelessWidget {
                   maxLines: 1, overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 4),
                 Row(children: [
+                  if (showDate) ...[Icon(Icons.calendar_today_rounded, size: 11,
+                      color: aptColor.withValues(alpha: 0.8)),
+                    const SizedBox(width: 3),
+                    Text(DateFormat('EEE d. MMM', 'de_DE').format(start ?? DateTime.now()),
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: aptColor.withValues(alpha: 0.9))),
+                    const SizedBox(width: 10),
+                  ],
                   if (patient.isNotEmpty) ...[Icon(Icons.pets_rounded, size: 11,
                       color: Theme.of(context).colorScheme.onSurfaceVariant),
                     const SizedBox(width: 3),
@@ -658,13 +754,17 @@ class _AppointmentCard extends StatelessWidget {
                         color: Theme.of(context).colorScheme.onSurfaceVariant),
                       maxLines: 1, overflow: TextOverflow.ellipsis)),
                   ],
+                  if (onTap != null) ...[const Spacer(),
+                    Icon(Icons.chevron_right_rounded, size: 16,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
+                  ],
                 ]),
               ]),
             ),
           ),
         ]),
       ),
-    );
+    ));
   }
 }
 
