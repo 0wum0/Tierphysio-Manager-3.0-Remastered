@@ -15,18 +15,26 @@ class HomeworkRepository
 
     public function findAllTemplates(): array
     {
-        return $this->db->fetchAll(
-            "SELECT * FROM homework_templates WHERE is_active = 1 ORDER BY category, title"
-        );
+        try {
+            return $this->db->fetchAll(
+                "SELECT * FROM homework_templates WHERE is_active = 1 ORDER BY category, title"
+            );
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     public function findTemplateById(int $id): ?array
     {
-        $template = $this->db->fetch(
-            "SELECT * FROM homework_templates WHERE id = ? AND is_active = 1",
-            [$id]
-        );
-        return $template ?: null;
+        try {
+            $template = $this->db->fetch(
+                "SELECT * FROM homework_templates WHERE id = ? AND is_active = 1",
+                [$id]
+            );
+            return $template ?: null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function findPatientHomework(int $patientId): array

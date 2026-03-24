@@ -196,8 +196,18 @@ class InstallerController extends Controller
             $sql = file_get_contents($file);
             $statements = array_filter(array_map('trim', explode(';', $sql)));
             foreach ($statements as $statement) {
-                if (!empty($statement)) {
+                if (empty($statement) || preg_match('/^--/', ltrim($statement))) {
+                    continue;
+                }
+                try {
                     $pdo->exec($statement);
+                } catch (\PDOException $e) {
+                    // 1060 = Duplicate column, 1061 = Duplicate key name, 1091 = Can't DROP non-existent
+                    // These are safe to ignore on re-installs
+                    $code = (int)$e->errorInfo[1];
+                    if (!in_array($code, [1060, 1061, 1091], true)) {
+                        throw $e;
+                    }
                 }
             }
         }

@@ -11,5 +11,5 @@ CREATE TABLE IF NOT EXISTS `birthday_emails_sent` (
 -- Default settings for birthday mails
 INSERT IGNORE INTO `settings` (`key`, `value`) VALUES
 ('birthday_mail_enabled', '0'),
-('birthday_mail_subject', '\uD83C\uDF82 Alles Gute zum Geburtstag, {{patient_name}}!'),
+('birthday_mail_subject', '🎂 Alles Gute zum Geburtstag, {{patient_name}}!'),
 ('birthday_cron_token',   '');
