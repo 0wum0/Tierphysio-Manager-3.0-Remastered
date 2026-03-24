@@ -47,6 +47,8 @@ class Application
 
     private function bootstrap(): void
     {
+        date_default_timezone_set('Europe/Berlin');
+
         $config = new Config($this->rootPath);
         $this->container->singleton(Config::class, fn() => $config);
 
