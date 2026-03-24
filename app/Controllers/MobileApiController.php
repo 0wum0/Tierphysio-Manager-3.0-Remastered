@@ -3852,59 +3852,6 @@ class MobileApiController
         $this->json(['success' => true]);
     }
 
-    /* ══════════════════════════════════════════════════════
-       GOOGLE CALENDAR SYNC — Status
-    ══════════════════════════════════════════════════════ */
-
-    /** GET /api/mobile/google-kalender/status */
-    public function googleCalendarStatus(array $params = []): void
-    {
-        $this->cors();
-        $this->requireAuth();
-
-        $connected    = false;
-        $calendarName = null;
-        $lastSync     = null;
-        $recentLogs   = [];
-
-        try {
-            $conn = $this->db->fetch(
-                "SELECT id, google_email, calendar_id, calendar_name, last_sync_at,
-                        sync_enabled, token_expires_at
-                 FROM google_calendar_connections LIMIT 1"
-            );
-            if ($conn) {
-                $connected    = !empty($conn['sync_enabled']);
-                $calendarName = $conn['calendar_name'] ?? null;
-                $lastSync     = $conn['last_sync_at']  ?? null;
-
-                $recentLogs = $this->db->fetchAll(
-                    "SELECT action, status, message, created_at
-                     FROM google_calendar_sync_log
-                     ORDER BY created_at DESC LIMIT 10"
-                );
-            }
-        } catch (\Throwable) {}
-
-        $this->json([
-            'connected'     => $connected,
-            'calendar_name' => $calendarName,
-            'last_sync_at'  => $lastSync,
-            'recent_logs'   => $recentLogs,
-        ]);
-    }
-
-    /** POST /api/mobile/google-kalender/sync — manually trigger sync (calls web endpoint internally) */
-    public function googleCalendarTriggerSync(array $params = []): void
-    {
-        $this->cors();
-        $this->requireAdmin();
-        $this->json([
-            'success' => false,
-            'message' => 'Sync bitte über den Browser unter /google-kalender auslösen.',
-            'web_url' => '/google-kalender',
-        ], 501);
-    }
 
     /**
      * Fire-and-forget Google Calendar sync for a single appointment.
