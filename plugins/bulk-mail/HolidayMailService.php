@@ -388,22 +388,22 @@ HTML;
     {
         return match($slug) {
             'weihnachten' =>
-                "Hallo {{vorname}},\n\nwir möchten Ihnen und Ihren Liebsten wunderschöne Weihnachten wünschen.\n\nMögen die Festtage Ihnen Ruhe, Wärme und schöne Momente mit Ihren Tieren bringen.\n\nMit herzlichen Grüßen,\nIhr Team von {{praxis}}",
+                "Liebe/r {{vorname}},\n\nich wünsche Ihnen und Ihren Liebsten von Herzen ein besinnliches und frohes Weihnachtsfest.\n\nMögen die Festtage Ihnen Ruhe, Wärme und viele schöne Momente mit Ihren Tieren schenken.\n\nHerzliche Weihnachtsgrüße,\n{{praxis}}",
             'neujahr' =>
-                "Hallo {{vorname}},\n\nwir wünschen Ihnen einen wunderbaren Jahreswechsel und ein gesundes, erfolgreiches neues Jahr – für Sie und Ihre tierischen Begleiter!\n\nHerzliche Grüße,\nIhr Team von {{praxis}}",
+                "Liebe/r {{vorname}},\n\nich wünsche Ihnen einen wunderschönen Jahreswechsel und ein gesundes, glückliches neues Jahr – für Sie und Ihre tierischen Begleiter!\n\nAuf ein tolles gemeinsames Jahr,\n{{praxis}}",
             'ostern' =>
-                "Hallo {{vorname}},\n\nwir wünschen Ihnen und Ihren Liebsten ein frohes Osterfest voller bunter Überraschungen!\n\nGenießen Sie die freien Tage mit Ihren Tieren in der Frühlingssonne.\n\nHerzliche Grüße,\nIhr Team von {{praxis}}",
+                "Liebe/r {{vorname}},\n\nich wünsche Ihnen und Ihrer Familie ein fröhliches Osterfest voller bunter Überraschungen!\n\nGenießen Sie die freien Tage in der Frühlingssonne – am besten gemeinsam mit Ihren Tieren.\n\nHerzliche Ostergrüße,\n{{praxis}}",
             'pfingsten' =>
-                "Hallo {{vorname}},\n\nschöne Pfingsttage wünscht Ihnen das Team von {{praxis}}!\n\nNutzen Sie das verlängerte Wochenende für schöne Ausflüge mit Ihren Tieren.\n\nHerzliche Grüße,\nIhr Team",
+                "Liebe/r {{vorname}},\n\nich wünsche Ihnen schöne und erholsame Pfingsttage!\n\nNutzen Sie das verlängerte Wochenende für entspannte Ausflüge mit Ihren Tieren und genießen Sie die warme Jahreszeit.\n\nHerzliche Grüße,\n{{praxis}}",
             'valentinstag' =>
-                "Hallo {{vorname}},\n\nam Valentinstag denken wir auch an die besondere Verbindung zwischen Ihnen und Ihren Tieren – diese Liebe ist etwas ganz Besonderes!\n\nAlles Liebe wünscht\nIhr Team von {{praxis}}",
+                "Liebe/r {{vorname}},\n\nam Valentinstag denke ich auch an die wunderbare Verbindung zwischen Ihnen und Ihrem Tier – diese besondere Liebe ist etwas ganz Einzigartiges!\n\nAlles Liebe zum Valentinstag,\n{{praxis}}",
             'muttertag' =>
-                "Hallo {{vorname}},\n\nal allen Tierhalter-Mamas möchten wir heute einen besonderen Gruß senden: Danke, dass Sie sich so liebevoll um Ihre pelzigen Familienmitglieder kümmern!\n\nAlles Gute zum Muttertag!\nIhr Team von {{praxis}}",
+                "Liebe/r {{vorname}},\n\nheute möchte ich Ihnen ganz persönlich danken: Als Tierhalter-Mama kümmern Sie sich täglich mit so viel Herz und Hingabe um Ihre pelzigen Familienmitglieder – das ist wunderschön!\n\nAlles Gute zum Muttertag,\n{{praxis}}",
             'tag_der_arbeit' =>
-                "Hallo {{vorname}},\n\nwir wünschen Ihnen einen entspannten Feiertag – verdient eine Pause!\n\nGenießen Sie den Tag mit Ihrer Familie und natürlich mit Ihren Tieren.\n\nHerzliche Grüße,\nIhr Team von {{praxis}}",
+                "Liebe/r {{vorname}},\n\nich wünsche Ihnen einen entspannten und erholsamen Feiertag – Sie haben sich eine Pause mehr als verdient!\n\nGenießen Sie den Tag mit Ihrer Familie und natürlich mit Ihren Tieren.\n\nHerzliche Grüße,\n{{praxis}}",
             'halloween' =>
-                "Hallo {{vorname}},\n\nHappy Halloween! 🎃\n\nWir hoffen, Ihre Tiere lassen sich von den Kostümen und dem Trubel nicht zu sehr erschrecken.\n\nGruselige Grüße,\nIhr Team von {{praxis}}",
-            default => "Hallo {{vorname}},\n\nherzliche Grüße von Ihrem Team bei {{praxis}}!",
+                "Liebe/r {{vorname}},\n\nHappy Halloween! 🎃\n\nIch hoffe, Ihre Tiere lassen sich von den Kostümen und dem Trubel heute Abend nicht allzu sehr erschrecken!\n\nGruselig-herzliche Grüße,\n{{praxis}}",
+            default => "Liebe/r {{vorname}},\n\nherzliche Grüße von {{praxis}}!",
         };
     }
 
