@@ -369,7 +369,7 @@ HTML;
         };
     }
 
-    private function defaultSubject(string $slug, string $label): string
+    public function defaultSubject(string $slug, string $label): string
     {
         return match($slug) {
             'weihnachten'    => 'Frohe Weihnachten von {{praxis}}!',
@@ -384,7 +384,7 @@ HTML;
         };
     }
 
-    private function defaultBody(string $slug): string
+    public function defaultBody(string $slug): string
     {
         return match($slug) {
             'weihnachten' =>
@@ -409,7 +409,7 @@ HTML;
 
     /* ── Helpers ── */
 
-    private function resolveRecipients(string $group): array
+    public function resolveRecipients(string $group): array
     {
         $sql = "SELECT o.id AS owner_id,
                        CONCAT(o.first_name,' ',o.last_name) AS name,
@@ -422,7 +422,7 @@ HTML;
         try { return $this->db->fetchAll($sql); } catch (\Throwable) { return []; }
     }
 
-    private function sendRaw(string $to, string $name, string $subject, string $html, string $text): bool
+    public function sendRaw(string $to, string $name, string $subject, string $html, string $text): bool
     {
         try {
             $pm = new \PHPMailer\PHPMailer\PHPMailer(true);

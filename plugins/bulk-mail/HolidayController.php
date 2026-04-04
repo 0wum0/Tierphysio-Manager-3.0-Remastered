@@ -33,10 +33,12 @@ class HolidayController extends Controller
 
         $configured = [];
         foreach ($holidays as $slug => $h) {
+            $savedSubject = $this->settings->get("holiday_mail_{$slug}_subject", '');
+            $savedBody    = $this->settings->get("holiday_mail_{$slug}_body", '');
             $configured[$slug] = array_merge($h, [
                 'enabled'  => $this->settings->get("holiday_mail_{$slug}_enabled", '0') === '1',
-                'subject'  => $this->settings->get("holiday_mail_{$slug}_subject", ''),
-                'body'     => $this->settings->get("holiday_mail_{$slug}_body", ''),
+                'subject'  => $savedSubject !== '' ? $savedSubject : $this->holidayService->defaultSubject($slug, $h['label']),
+                'body'     => $savedBody    !== '' ? $savedBody    : $this->holidayService->defaultBody($slug),
                 'group'    => $this->settings->get("holiday_mail_{$slug}_group", 'with_email'),
                 'last_sent'=> $this->settings->get("holiday_mail_{$slug}_last_sent", ''),
             ]);
@@ -93,10 +95,7 @@ class HolidayController extends Controller
         $company = $this->settings->get('company_name', 'Tierphysio Praxis');
         $body    = $this->settings->get("holiday_mail_{$slug}_body", '');
         if ($body === '') {
-            $svc  = $this->holidayService;
-            $ref  = new \ReflectionMethod($svc, 'defaultBody');
-            $ref->setAccessible(true);
-            $body = $ref->invoke($svc, $slug);
+            $body = $this->holidayService->defaultBody($slug);
         }
         $personal = str_replace(['{{name}}','{{vorname}}','{{praxis}}'], ['Max Mustermann','Max',$company], $body);
         $html     = $this->holidayService->buildHolidayHtml($slug, $h['label'], $personal, $company);
@@ -121,26 +120,12 @@ class HolidayController extends Controller
         $bodyText    = $this->settings->get("holiday_mail_{$slug}_body", '');
         $group       = $this->settings->get("holiday_mail_{$slug}_group", 'with_email');
 
-        /* Use defaults if not yet saved */
         $svc = $this->holidayService;
-        if ($subject === '') {
-            $r = new \ReflectionMethod($svc, 'defaultSubject');
-            $r->setAccessible(true);
-            $subject = $r->invoke($svc, $slug, $h['label']);
-        }
-        if ($bodyText === '') {
-            $r = new \ReflectionMethod($svc, 'defaultBody');
-            $r->setAccessible(true);
-            $bodyText = $r->invoke($svc, $slug);
-        }
+        if ($subject === '') $subject  = $svc->defaultSubject($slug, $h['label']);
+        if ($bodyText === '') $bodyText = $svc->defaultBody($slug);
 
-        $rRecip = new \ReflectionMethod($svc, 'resolveRecipients');
-        $rRecip->setAccessible(true);
-        $recipients = $rRecip->invoke($svc, $group);
-
+        $recipients = $svc->resolveRecipients($group);
         $sent = 0; $failed = [];
-        $rSend = new \ReflectionMethod($svc, 'sendRaw');
-        $rSend->setAccessible(true);
 
         foreach ($recipients as $r) {
             if (empty($r['email'])) continue;
@@ -150,7 +135,7 @@ class HolidayController extends Controller
                 $html = $svc->buildHolidayHtml($slug, $h['label'], $personal, $company);
                 $subjectPersonal = str_replace(['{{name}}','{{vorname}}','{{praxis}}'],
                     [$r['name'], $r['first_name'] ?? $r['name'], $company], $subject);
-                $ok = $rSend->invoke($svc, $r['email'], $r['name'], $subjectPersonal, $html, $personal);
+                $ok = $svc->sendRaw($r['email'], $r['name'], $subjectPersonal, $html, $personal);
                 $ok ? $sent++ : ($failed[] = $r['email']);
             } catch (\Throwable $e) {
                 $failed[] = $r['email'];
