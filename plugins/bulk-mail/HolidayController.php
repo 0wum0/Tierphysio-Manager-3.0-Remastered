@@ -129,12 +129,17 @@ class HolidayController extends Controller
 
         foreach ($recipients as $r) {
             if (empty($r['email'])) continue;
-            $personal = str_replace(['{{name}}','{{vorname}}','{{praxis}}'],
-                [$r['name'], $r['first_name'] ?? $r['name'], $company], $bodyText);
+            $lastName = $r['last_name'] ?? '';
+            $anrede   = $lastName !== '' ? 'Frau/Herr ' . $lastName : $r['name'];
+            $patients = $r['patient_names'] ?? '';
+            $personal = str_replace(
+                ['{{name}}','{{vorname}}','{{praxis}}','{{patient}}'],
+                [$anrede, $r['first_name'] ?? $r['name'], $company, $patients], $bodyText);
             try {
                 $html = $svc->buildHolidayHtml($slug, $h['label'], $personal, $company);
-                $subjectPersonal = str_replace(['{{name}}','{{vorname}}','{{praxis}}'],
-                    [$r['name'], $r['first_name'] ?? $r['name'], $company], $subject);
+                $subjectPersonal = str_replace(
+                    ['{{name}}','{{vorname}}','{{praxis}}','{{patient}}'],
+                    [$anrede, $r['first_name'] ?? $r['name'], $company, $patients], $subject);
                 $ok = $svc->sendRaw($r['email'], $r['name'], $subjectPersonal, $html, $personal);
                 $ok ? $sent++ : ($failed[] = $r['email']);
             } catch (\Throwable $e) {

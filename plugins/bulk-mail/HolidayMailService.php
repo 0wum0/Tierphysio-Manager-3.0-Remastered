@@ -107,9 +107,12 @@ class HolidayMailService
             $sent = 0; $failed = 0;
             foreach ($recipients as $r) {
                 if (empty($r['email'])) continue;
+                $lastName  = $r['last_name'] ?? '';
+                $anrede    = $lastName !== '' ? 'Frau/Herr ' . $lastName : $r['name'];
+                $patients  = $r['patient_names'] ?? '';
                 $personal = str_replace(
-                    ['{{name}}', '{{vorname}}', '{{praxis}}'],
-                    [$r['name'], $r['first_name'] ?? $r['name'], $companyName],
+                    ['{{name}}', '{{vorname}}', '{{praxis}}', '{{patient}}'],
+                    [$anrede, $r['first_name'] ?? $r['name'], $companyName, $patients],
                     $bodyText
                 );
                 try {
@@ -388,22 +391,22 @@ HTML;
     {
         return match($slug) {
             'weihnachten' =>
-                "Liebe/r {{vorname}},\n\nich wünsche Ihnen und Ihren Liebsten von Herzen ein besinnliches und frohes Weihnachtsfest.\n\nMögen die Festtage Ihnen Ruhe, Wärme und viele schöne Momente mit Ihren Tieren schenken.\n\nHerzliche Weihnachtsgrüße,\n{{praxis}}",
+                "Sehr geehrte/r {{name}},\n\nich wünsche Ihnen und Ihren Liebsten von Herzen ein besinnliches und frohes Weihnachtsfest.\n\nBesonders {{patient}} darf sich sicher über etwas ganz Besonderes freuen – mögen die Festtage Ihnen alle Ruhe, Wärme und schöne gemeinsame Momente schenken.\n\nHerzliche Weihnachtsgrüße,\n{{praxis}}",
             'neujahr' =>
-                "Liebe/r {{vorname}},\n\nich wünsche Ihnen einen wunderschönen Jahreswechsel und ein gesundes, glückliches neues Jahr – für Sie und Ihre tierischen Begleiter!\n\nAuf ein tolles gemeinsames Jahr,\n{{praxis}}",
+                "Sehr geehrte/r {{name}},\n\nich wünsche Ihnen und {{patient}} einen wunderschönen Jahreswechsel und ein gesundes, glückliches neues Jahr!\n\nAuf ein tolles gemeinsames Jahr,\n{{praxis}}",
             'ostern' =>
-                "Liebe/r {{vorname}},\n\nich wünsche Ihnen und Ihrer Familie ein fröhliches Osterfest voller bunter Überraschungen!\n\nGenießen Sie die freien Tage in der Frühlingssonne – am besten gemeinsam mit Ihren Tieren.\n\nHerzliche Ostergrüße,\n{{praxis}}",
+                "Sehr geehrte/r {{name}},\n\nich wünsche Ihnen und Ihrer Familie ein fröhliches Osterfest voller bunter Überraschungen!\n\nGenießen Sie die freien Tage in der Frühlingssonne – am besten gemeinsam mit {{patient}}.\n\nHerzliche Ostergrüße,\n{{praxis}}",
             'pfingsten' =>
-                "Liebe/r {{vorname}},\n\nich wünsche Ihnen schöne und erholsame Pfingsttage!\n\nNutzen Sie das verlängerte Wochenende für entspannte Ausflüge mit Ihren Tieren und genießen Sie die warme Jahreszeit.\n\nHerzliche Grüße,\n{{praxis}}",
+                "Sehr geehrte/r {{name}},\n\nich wünsche Ihnen schöne und erholsame Pfingsttage!\n\nNutzen Sie das verlängerte Wochenende für entspannte Ausflüge mit {{patient}} und genießen Sie die warme Jahreszeit.\n\nHerzliche Grüße,\n{{praxis}}",
             'valentinstag' =>
-                "Liebe/r {{vorname}},\n\nam Valentinstag denke ich auch an die wunderbare Verbindung zwischen Ihnen und Ihrem Tier – diese besondere Liebe ist etwas ganz Einzigartiges!\n\nAlles Liebe zum Valentinstag,\n{{praxis}}",
+                "Sehr geehrte/r {{name}},\n\nam Valentinstag denke ich auch an die wunderbare Verbindung zwischen Ihnen und {{patient}} – diese besondere Liebe ist etwas ganz Einzigartiges!\n\nAlles Liebe zum Valentinstag,\n{{praxis}}",
             'muttertag' =>
-                "Liebe/r {{vorname}},\n\nheute möchte ich Ihnen ganz persönlich danken: Als Tierhalter-Mama kümmern Sie sich täglich mit so viel Herz und Hingabe um Ihre pelzigen Familienmitglieder – das ist wunderschön!\n\nAlles Gute zum Muttertag,\n{{praxis}}",
+                "Sehr geehrte/r {{name}},\n\nheute möchte ich Ihnen ganz persönlich danken: Die Fürsorge, die Sie {{patient}} täglich entgegenbringen, ist wunderschön und von Herzen!\n\nAlles Gute zum Muttertag,\n{{praxis}}",
             'tag_der_arbeit' =>
-                "Liebe/r {{vorname}},\n\nich wünsche Ihnen einen entspannten und erholsamen Feiertag – Sie haben sich eine Pause mehr als verdient!\n\nGenießen Sie den Tag mit Ihrer Familie und natürlich mit Ihren Tieren.\n\nHerzliche Grüße,\n{{praxis}}",
+                "Sehr geehrte/r {{name}},\n\nich wünsche Ihnen einen entspannten und erholsamen Feiertag – Sie haben sich eine Pause mehr als verdient!\n\nGenießen Sie den Tag mit Ihrer Familie und natürlich mit {{patient}}.\n\nHerzliche Grüße,\n{{praxis}}",
             'halloween' =>
-                "Liebe/r {{vorname}},\n\nHappy Halloween! 🎃\n\nIch hoffe, Ihre Tiere lassen sich von den Kostümen und dem Trubel heute Abend nicht allzu sehr erschrecken!\n\nGruselig-herzliche Grüße,\n{{praxis}}",
-            default => "Liebe/r {{vorname}},\n\nherzliche Grüße von {{praxis}}!",
+                "Sehr geehrte/r {{name}},\n\nHappy Halloween! 🎃\n\nIch hoffe, {{patient}} lässt sich von den Kostümen und dem Trubel heute Abend nicht allzu sehr erschrecken!\n\nGruselig-herzliche Grüße,\n{{praxis}}",
+            default => "Sehr geehrte/r {{name}},\n\nherzliche Grüße von {{praxis}}!",
         };
     }
 
@@ -413,7 +416,13 @@ HTML;
     {
         $sql = "SELECT o.id AS owner_id,
                        CONCAT(o.first_name,' ',o.last_name) AS name,
-                       o.first_name, o.email
+                       o.first_name, o.last_name, o.email,
+                       (
+                           SELECT GROUP_CONCAT(p2.name ORDER BY p2.name SEPARATOR ', ')
+                           FROM patients p2
+                           WHERE p2.owner_id = o.id
+                           AND (p2.status IS NULL OR p2.status != 'archiviert')
+                       ) AS patient_names
                 FROM owners o WHERE o.email IS NOT NULL AND o.email != ''";
         if ($group === 'active') {
             $sql .= " AND EXISTS (SELECT 1 FROM patients p WHERE p.owner_id=o.id AND p.status='aktiv')";
