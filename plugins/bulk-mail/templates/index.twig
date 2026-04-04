@@ -1,0 +1,331 @@
+﻿{% extends active_theme_layout ?? 'layouts/base.twig' %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h1 class="h3 mb-0 fw-700">Massen-Kommunikation</h1>
+      <p class="text-muted fs-sm mb-0">E-Mails und Portal-Nachrichten an mehrere Besitzer gleichzeitig senden.</p>
+    </div>
+    <a href="/bulk-mail/verlauf" class="btn btn-outline-secondary btn-sm">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><path d="M12 8v4l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/></svg>
+      Verlauf
+    </a>
+  </div>
+
+  <div class="row g-4">
+
+    {{-- Left: Composer --}}
+    <div class="col-lg-8">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-header bg-transparent border-bottom d-flex align-items-center gap-2 py-3">
+          <ul class="nav nav-pills gap-2" id="sendTypeTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="tab-email" data-bs-toggle="pill" data-bs-target="#pane-email" type="button" role="tab">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><path d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6z" stroke="currentColor" stroke-width="2"/><polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2"/></svg>
+                Massen-E-Mail
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="tab-portal" data-bs-toggle="pill" data-bs-target="#pane-portal" type="button" role="tab">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2"/></svg>
+                Portal-Nachrichten
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card-body tab-content p-4">
+
+          {{-- ── Email Tab ── --}}
+          <div class="tab-pane fade show active" id="pane-email" role="tabpanel">
+            <form id="form-email" autocomplete="off">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+              <div class="mb-3">
+                <label class="form-label fw-600">Empfängergruppe</label>
+                <select name="group" class="form-select recipient-group" data-form="email">
+                  {% for value, label in owner_groups %}
+                    <option value="{{ value }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-600">Betreff</label>
+                <input type="text" name="subject" class="form-control" placeholder="Betreff der E-Mail" required>
+              </div>
+
+              <div class="mb-1">
+                <label class="form-label fw-600">Nachricht</label>
+                <div class="d-flex gap-2 mb-2 flex-wrap">
+                  <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{name}}">{{name}}</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{vorname}}">{{vorname}}</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{praxis}}">{{praxis}}</button>
+                  <span class="text-muted fs-xs align-self-center">— Platzhalter einfügen</span>
+                </div>
+                <textarea name="body" class="form-control bulk-body" rows="10" placeholder="Ihre Nachricht an alle Empfänger..." required></textarea>
+              </div>
+              <div class="text-muted fs-xs mb-3">Platzhalter werden pro Empfänger ersetzt: <code>{{name}}</code> = Vollständiger Name, <code>{{vorname}}</code> = Vorname, <code>{{praxis}}</code> = Praxisname</div>
+
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary btn-preview" data-form="email">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                  Vorschau
+                </button>
+                <button type="submit" class="btn btn-primary btn-send-email">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon points="22 2 15 22 11 13 2 9 22 2" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+                  E-Mails senden
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {{-- ── Portal Tab ── --}}
+          <div class="tab-pane fade" id="pane-portal" role="tabpanel">
+            <div class="alert alert-info d-flex gap-2 align-items-start fs-sm mb-4">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" class="flex-shrink-0 mt-1"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <span>Nur Besitzer mit aktivem Portal-Zugang erhalten diese Nachricht. Für Besitzer ohne Portal wird die Nachricht übersprungen.</span>
+            </div>
+            <form id="form-portal" autocomplete="off">
+              <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+              <div class="mb-3">
+                <label class="form-label fw-600">Empfängergruppe</label>
+                <select name="group" class="form-select recipient-group" data-form="portal">
+                  {% for value, label in owner_groups %}
+                    <option value="{{ value }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label fw-600">Betreff / Thema</label>
+                <input type="text" name="subject" class="form-control" placeholder="z.B. Praxisnews April 2026" required>
+              </div>
+
+              <div class="mb-1">
+                <label class="form-label fw-600">Nachricht</label>
+                <div class="d-flex gap-2 mb-2 flex-wrap">
+                  <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{name}}">{{name}}</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{vorname}}">{{vorname}}</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{praxis}}">{{praxis}}</button>
+                  <span class="text-muted fs-xs align-self-center">— Platzhalter einfügen</span>
+                </div>
+                <textarea name="body" class="form-control bulk-body" rows="10" placeholder="Ihre Portal-Nachricht..." required></textarea>
+              </div>
+              <div class="text-muted fs-xs mb-3">Jeder Besitzer erhält eine eigene Konversation im Posteingang seines Portals.</div>
+
+              <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary btn-preview" data-form="portal">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                  Vorschau
+                </button>
+                <button type="submit" class="btn btn-primary btn-send-portal">
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="2"/></svg>
+                  Portal-Nachrichten senden
+                </button>
+              </div>
+            </form>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    {{-- Right: Recipient preview + Result --}}
+    <div class="col-lg-4">
+      <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-transparent border-bottom py-3">
+          <h6 class="mb-0 fw-600">Empfänger-Vorschau</h6>
+        </div>
+        <div class="card-body p-0" id="preview-panel">
+          <div class="text-center text-muted py-5 px-3 fs-sm">
+            <svg width="32" height="32" fill="none" viewBox="0 0 24 24" class="mb-2 opacity-40"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2"/><path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke="currentColor" stroke-width="2"/><path d="M16 3.13a4 4 0 0 1 0 7.75" stroke="currentColor" stroke-width="2"/></svg>
+            <br>Klicken Sie auf <strong>Vorschau</strong>, um<br>die Empfängerliste zu laden.
+          </div>
+        </div>
+      </div>
+
+      <div class="card shadow-sm border-0" id="result-card" style="display:none">
+        <div class="card-header bg-transparent border-bottom py-3">
+          <h6 class="mb-0 fw-600">Ergebnis</h6>
+        </div>
+        <div class="card-body" id="result-body"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{{-- Confirm Modal --}}
+<div class="modal fade" id="confirm-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirm-title">Senden bestätigen</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="confirm-body">
+        Möchten Sie diese Nachricht wirklich an <strong id="confirm-count">0</strong> Empfänger senden?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+        <button type="button" class="btn btn-primary" id="confirm-send-btn">Jetzt senden</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const csrf = document.querySelector('[name="_csrf_token"]')?.value ?? '';
+
+  /* ── Insert placeholder at cursor ── */
+  document.querySelectorAll('.insert-placeholder').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const active = document.querySelector('.tab-pane.active .bulk-body');
+      if (!active) return;
+      const val = btn.dataset.value;
+      const s = active.selectionStart, e = active.selectionEnd;
+      active.value = active.value.slice(0, s) + val + active.value.slice(e);
+      active.selectionStart = active.selectionEnd = s + val.length;
+      active.focus();
+    });
+  });
+
+  /* ── Preview ── */
+  document.querySelectorAll('.btn-preview').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const formId = btn.dataset.form;
+      const form   = document.getElementById('form-' + formId);
+      const group  = form.querySelector('[name="group"]').value;
+      btn.disabled = true;
+      btn.textContent = 'Lädt…';
+      try {
+        const fd = new FormData();
+        fd.append('_csrf_token', form.querySelector('[name="_csrf_token"]').value);
+        fd.append('group', group);
+        const res  = await fetch('/bulk-mail/vorschau', { method: 'POST', body: fd });
+        const data = await res.json();
+        renderPreview(data);
+      } catch (err) {
+        showPreviewError('Vorschau fehlgeschlagen.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Vorschau';
+      }
+    });
+  });
+
+  function renderPreview(data) {
+    const panel = document.getElementById('preview-panel');
+    if (!data.count) {
+      panel.innerHTML = '<div class="text-center text-muted py-4 fs-sm">Keine Empfänger in dieser Gruppe.</div>';
+      return;
+    }
+    let html = '<div class="px-3 pt-3 pb-2"><span class="badge bg-primary fs-xs">' + data.count + ' Empfänger</span></div>';
+    html += '<ul class="list-group list-group-flush" style="max-height:320px;overflow-y:auto">';
+    data.recipients.forEach(r => {
+      const portalBadge = r.has_portal
+        ? '<span class="badge bg-success-subtle text-success ms-1" style="font-size:0.65rem">Portal</span>'
+        : '';
+      const emailIcon   = r.email
+        ? '<svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6z" stroke="currentColor" stroke-width="1.5"/><polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="1.5"/></svg>'
+        : '<svg width="12" height="12" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+      html += '<li class="list-group-item px-3 py-2 d-flex align-items-center justify-content-between">';
+      html += '<div><div class="fw-600 fs-sm">' + esc(r.name) + portalBadge + '</div>';
+      html += '<div class="text-muted" style="font-size:0.72rem">' + esc(r.email || '—') + '</div></div>';
+      html += '<span class="text-muted">' + emailIcon + '</span></li>';
+    });
+    html += '</ul>';
+    panel.innerHTML = html;
+  }
+
+  function showPreviewError(msg) {
+    document.getElementById('preview-panel').innerHTML =
+      '<div class="text-danger text-center py-4 fs-sm">' + esc(msg) + '</div>';
+  }
+
+  /* ── Send Email ── */
+  let pendingForm = null;
+  let pendingEndpoint = null;
+
+  document.getElementById('form-email').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await triggerSend('form-email', '/bulk-mail/senden-email', 'E-Mails');
+  });
+
+  document.getElementById('form-portal').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await triggerSend('form-portal', '/bulk-mail/senden-portal', 'Portal-Nachrichten');
+  });
+
+  async function triggerSend(formId, endpoint, label) {
+    const form  = document.getElementById(formId);
+    const group = form.querySelector('[name="group"]').value;
+    const fd    = new FormData();
+    fd.append('_csrf_token', form.querySelector('[name="_csrf_token"]').value);
+    fd.append('group', group);
+    try {
+      const res  = await fetch('/bulk-mail/vorschau', { method: 'POST', body: fd });
+      const data = await res.json();
+      document.getElementById('confirm-count').textContent = data.count;
+      document.getElementById('confirm-title').textContent = label + ' senden';
+      document.getElementById('confirm-body').innerHTML =
+        'Möchten Sie <strong>' + label + '</strong> wirklich an <strong>' + data.count + ' Empfänger</strong> senden?';
+      pendingForm     = formId;
+      pendingEndpoint = endpoint;
+      new bootstrap.Modal(document.getElementById('confirm-modal')).show();
+    } catch (err) {
+      showResult('error', 'Vorschau fehlgeschlagen.');
+    }
+  }
+
+  document.getElementById('confirm-send-btn').addEventListener('click', async () => {
+    bootstrap.Modal.getInstance(document.getElementById('confirm-modal'))?.hide();
+    if (!pendingForm || !pendingEndpoint) return;
+    const form = document.getElementById(pendingForm);
+    const fd   = new FormData(form);
+    const btn  = form.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    const origText = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Wird gesendet…';
+    try {
+      const res  = await fetch(pendingEndpoint, { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.error) {
+        showResult('error', data.error);
+      } else {
+        let msg = '<strong>' + data.sent + ' Nachrichten</strong> erfolgreich gesendet.';
+        if (data.failed && data.failed.length) {
+          msg += '<br><span class="text-warning">' + data.failed.length + ' fehlgeschlagen: ' + data.failed.slice(0,5).map(esc).join(', ') + (data.failed.length > 5 ? '…' : '') + '</span>';
+        }
+        showResult('success', msg);
+        form.reset();
+      }
+    } catch (err) {
+      showResult('error', 'Ein Fehler ist aufgetreten.');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = origText;
+    }
+  });
+
+  function showResult(type, msg) {
+    const card = document.getElementById('result-card');
+    const body = document.getElementById('result-body');
+    card.style.display = '';
+    body.innerHTML = '<div class="alert alert-' + (type === 'success' ? 'success' : 'danger') + ' mb-0">' + msg + '</div>';
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+})();
+</script>
+{% endblock %}

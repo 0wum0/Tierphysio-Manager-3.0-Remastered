@@ -1,0 +1,10 @@
+{
+    "name": "Massen-Kommunikation",
+    "slug": "bulk-mail",
+    "version": "1.0.0",
+    "description": "Massen-E-Mails und Besitzerportal-Nachrichten an alle oder gefilterte Besitzer senden.",
+    "author": "Tierphysio Manager",
+    "min_app_version": "3.0.0",
+    "service_provider": "Plugins\\BulkMail\\ServiceProvider",
+    "hooks": ["registerRoutes"]
+}
