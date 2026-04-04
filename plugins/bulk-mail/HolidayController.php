@@ -152,10 +152,10 @@ class HolidayController extends Controller
         $this->json(['sent' => $sent, 'failed' => $failed]);
     }
 
-    /* GET /api/holiday-cron?key=SECRET  — called by server cron */
+    /* GET /api/holiday-cron?token=SECRET  — called by server cron */
     public function cron(array $params = []): void
     {
-        $key      = $_GET['key'] ?? '';
+        $key      = $_GET['token'] ?? $_GET['key'] ?? '';
         $expected = $this->settings->get('cron_secret', '');
         if ($expected === '' || $key !== $expected) {
             http_response_code(403);

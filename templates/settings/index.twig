@@ -1658,6 +1658,49 @@ function openEditHT(ht) {
         </div>
         {% endif %}
 
+        {# ── 5. Feiertagsgrüße ── #}
+        {% if plugins['bulk-mail'] is defined and plugins['bulk-mail'].enabled %}
+        <div class="mb-3 p-3 rounded" style="background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.2);">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span style="font-size:1.2rem;">🎉</span>
+                    <div>
+                        <div class="fw-600 fs-sm">Feiertagsgrüße</div>
+                        <div class="fs-nano text-muted">Zeitplan: <code>0 8 * * *</code> — täglich 08:00 Uhr</div>
+                    </div>
+                </div>
+                {% if settings.cron_secret ?? '' %}
+                    <span class="badge bg-success">🔑 Token gesetzt</span>
+                {% else %}
+                    <span class="badge bg-danger">⚠️ Kein Token</span>
+                {% endif %}
+            </div>
+            <div class="d-flex gap-2 mb-2">
+                <input type="text" name="cron_secret" class="form-control font-monospace"
+                       id="holiday-cron-token"
+                       value="{{ settings.cron_secret ?? '' }}"
+                       placeholder="Sicheres zufälliges Token eingeben..."
+                       style="font-size:0.82rem;"
+                       oninput="(function(v){var b=document.getElementById('cron-holiday-url');if(b)b.value=document.getElementById('holiday-cron-base').value+'?token='+v;})(this.value)">
+                <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;"
+                        onclick="var t=Math.random().toString(36).substr(2,12)+Math.random().toString(36).substr(2,12);document.getElementById('holiday-cron-token').value=t;document.getElementById('holiday-cron-token').dispatchEvent(new Event('input'));">
+                    🔀 Generieren
+                </button>
+            </div>
+            <input type="hidden" id="holiday-cron-base" value="{{ app_url }}/api/holiday-cron">
+            {% if settings.cron_secret ?? '' %}
+            <div class="d-flex gap-2 align-items-center">
+                <input type="text" class="form-control font-monospace" readonly id="cron-holiday-url"
+                       value="{{ app_url }}/api/holiday-cron?token={{ settings.cron_secret }}"
+                       style="font-size:0.72rem;">
+                <button type="button" class="btn btn-secondary btn-sm" style="white-space:nowrap;"
+                        onclick="(function(b){var el=document.getElementById('cron-holiday-url');navigator.clipboard&&navigator.clipboard.writeText(el.value);b.textContent='✓';setTimeout(function(){b.textContent='📋'},1500)})(this)">📋</button>
+            </div>
+            <div class="fs-nano text-muted mt-1">Token schützt den Endpunkt. Feiertage aktivieren unter <a href="/bulk-mail/feiertagsgruesse">Feiertagsgrüße →</a></div>
+            {% endif %}
+        </div>
+        {% endif %}
+
         {# ── Anleitung Hostinger ── #}
         <div class="glass-card mt-3" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);">
             <h4 class="fw-600 mb-3" style="font-size:0.9rem;">📖 Schritt-für-Schritt: Hostinger Cron-Job einrichten</h4>

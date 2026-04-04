@@ -181,6 +181,20 @@ class CronAdminController extends Controller
             'border'   => 'rgba(34,197,94,0.25)',
         ];
 
+        /* 5 — Feiertagsgrüße */
+        $jobs[] = [
+            'key'      => 'holiday_greetings',
+            'label'    => 'Feiertagsgrüße',
+            'icon'     => '🎉',
+            'desc'     => 'Prüft täglich ob ein Feiertags-Gruß fällig ist und sendet ihn automatisch per E-Mail.',
+            'url'      => $appUrl . '/api/holiday-cron',
+            'token'    => $s->get('cron_secret', ''),
+            'schedule' => '0 8 * * *',
+            'schedule_label' => 'täglich 08:00 Uhr',
+            'color'    => 'rgba(255,165,0,0.12)',
+            'border'   => 'rgba(255,165,0,0.3)',
+        ];
+
         return $jobs;
     }
 
