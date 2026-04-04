@@ -60,16 +60,14 @@
               <div class="mb-1">
                 <label class="form-label fw-600">Nachricht</label>
                 <div class="d-flex gap-2 mb-2 flex-wrap">
-                  {% raw %}
-                  <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{name}}">{{name}}</button>
-                  <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{vorname}}">{{vorname}}</button>
-                  <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{praxis}}">{{praxis}}</button>
-                  {% endraw %}
+                  <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{ '{{name}}' }}">{{ '{{name}}' }}</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{ '{{vorname}}' }}">{{ '{{vorname}}' }}</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{ '{{praxis}}' }}">{{ '{{praxis}}' }}</button>
                   <span class="text-muted fs-xs align-self-center">— Platzhalter einfügen</span>
                 </div>
                 <textarea name="body" class="form-control bulk-body" rows="10" placeholder="Ihre Nachricht an alle Empfänger..." required></textarea>
               </div>
-              <div class="text-muted fs-xs mb-3">Platzhalter werden pro Empfänger ersetzt: <code>{% raw %}{{name}}{% endraw %}</code> = Vollständiger Name, <code>{% raw %}{{vorname}}{% endraw %}</code> = Vorname, <code>{% raw %}{{praxis}}{% endraw %}</code> = Praxisname</div>
+              <div class="text-muted fs-xs mb-3">Platzhalter werden pro Empfänger ersetzt: <code>{{ '{{name}}' }}</code> = Vollständiger Name, <code>{{ '{{vorname}}' }}</code> = Vorname, <code>{{ '{{praxis}}' }}</code> = Praxisname</div>
 
               <div class="d-flex gap-2">
                 <button type="button" class="btn btn-outline-secondary btn-preview" data-form="email">
@@ -110,11 +108,9 @@
               <div class="mb-1">
                 <label class="form-label fw-600">Nachricht</label>
                 <div class="d-flex gap-2 mb-2 flex-wrap">
-                  {% raw %}
-                  <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{name}}">{{name}}</button>
-                  <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{vorname}}">{{vorname}}</button>
-                  <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{praxis}}">{{praxis}}</button>
-                  {% endraw %}
+                  <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{ '{{name}}' }}">{{ '{{name}}' }}</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{ '{{vorname}}' }}">{{ '{{vorname}}' }}</button>
+                  <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{ '{{praxis}}' }}">{{ '{{praxis}}' }}</button>
                   <span class="text-muted fs-xs align-self-center">— Platzhalter einfügen</span>
                 </div>
                 <textarea name="body" class="form-control bulk-body" rows="10" placeholder="Ihre Portal-Nachricht..." required></textarea>
