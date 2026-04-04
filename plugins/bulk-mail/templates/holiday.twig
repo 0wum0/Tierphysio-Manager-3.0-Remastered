@@ -1,0 +1,230 @@
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h1 class="h3 mb-0 fw-700">Automatische Feiertagsgrüße</h1>
+      <p class="text-muted fs-sm mb-0">Personalisierte E-Mails werden automatisch am jeweiligen Feiertag versendet.</p>
+    </div>
+    <a href="/bulk-mail" class="btn btn-outline-secondary btn-sm">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><path d="M19 12H5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polyline points="12 19 5 12 12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Zurück
+    </a>
+  </div>
+
+  {% if success is not empty %}
+  <div class="alert alert-success alert-dismissible fade show mb-4">{{ success }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endif %}
+  {% if error is not empty %}
+  <div class="alert alert-danger alert-dismissible fade show mb-4">{{ error }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+  {% endif %}
+
+  <div class="alert alert-info d-flex gap-2 align-items-start fs-sm mb-4">
+    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" class="flex-shrink-0 mt-1"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <span>Der automatische Versand erfolgt per Cron-Job. Rufen Sie täglich <code>/api/holiday-cron?key=IHR_CRON_SECRET</code> auf. Das Cron-Secret finden Sie in den <a href="/einstellungen" class="alert-link">Einstellungen</a>.</span>
+  </div>
+
+  <form method="POST" action="/bulk-mail/feiertagsgruesse/speichern" id="holiday-form">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+    <div class="row g-4">
+      {% for slug, h in holidays %}
+      <div class="col-12">
+        <div class="card shadow-sm border-0 holiday-card" id="card-{{ slug }}">
+          <div class="card-header bg-transparent border-bottom py-3 d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-3">
+              <div class="form-check form-switch mb-0">
+                <input class="form-check-input holiday-toggle" type="checkbox" role="switch"
+                       id="toggle-{{ slug }}" name="holiday_{{ slug }}_enabled"
+                       {% if h.enabled %}checked{% endif %}
+                       data-slug="{{ slug }}">
+                <label class="form-check-label fw-600" for="toggle-{{ slug }}">{{ h.label }}</label>
+              </div>
+              {% if h.date %}
+              <span class="badge bg-secondary-subtle text-secondary fs-xs">
+                {{ h.date|date('d.m.Y') }}
+                {% if h.days_before > 0 %}&nbsp;({{ h.days_before }} Tag{{ h.days_before > 1 ? 'e' : '' }} vorher){% endif %}
+              </span>
+              {% endif %}
+              {% if h.last_sent %}
+              <span class="badge bg-success-subtle text-success fs-xs">Zuletzt gesendet: {{ h.last_sent }}</span>
+              {% endif %}
+            </div>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-xs btn-outline-info btn-preview-holiday" data-slug="{{ slug }}" title="E-Mail Vorschau">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><line x1="21" y1="21" x2="16.65" y2="16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                Vorschau
+              </button>
+              <button type="button" class="btn btn-xs btn-outline-success btn-send-now" data-slug="{{ slug }}" title="Jetzt sofort senden">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon points="22 2 15 22 11 13 2 9 22 2" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+                Jetzt senden
+              </button>
+            </div>
+          </div>
+
+          <div class="card-body p-4 holiday-body {% if not h.enabled %}opacity-50{% endif %}">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label fw-600 fs-sm">Empfängergruppe</label>
+                <select name="holiday_{{ slug }}_group" class="form-select form-select-sm">
+                  <option value="with_email" {% if h.group == 'with_email' %}selected{% endif %}>Alle mit E-Mail</option>
+                  <option value="active"     {% if h.group == 'active'     %}selected{% endif %}>Besitzer mit aktivem Patient</option>
+                  <option value="all"        {% if h.group == 'all'        %}selected{% endif %}>Alle Besitzer</option>
+                </select>
+              </div>
+              <div class="col-md-8">
+                <label class="form-label fw-600 fs-sm">Betreff</label>
+                <input type="text" name="holiday_{{ slug }}_subject" class="form-control form-control-sm"
+                       value="{{ h.subject }}"
+                       placeholder="Standard wird verwendet wenn leer">
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-600 fs-sm">Nachrichtentext</label>
+                <textarea name="holiday_{{ slug }}_body" class="form-control form-control-sm" rows="5"
+                          placeholder="Standard wird verwendet wenn leer">{{ h.body }}</textarea>
+                <div class="text-muted mt-1" style="font-size:0.72rem">
+                  Platzhalter: <code>{{ '{{vorname}}' }}</code> <code>{{ '{{name}}' }}</code> <code>{{ '{{praxis}}' }}</code>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="d-flex justify-content-end mt-4 gap-2">
+      <button type="submit" class="btn btn-primary">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" stroke="currentColor" stroke-width="2"/><polyline points="17 21 17 13 7 13 7 21" stroke="currentColor" stroke-width="2"/><polyline points="7 3 7 8 15 8" stroke="currentColor" stroke-width="2"/></svg>
+        Einstellungen speichern
+      </button>
+    </div>
+  </form>
+</div>
+
+{# Preview Modal #}
+<div class="modal fade" id="preview-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">E-Mail Vorschau</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0">
+        <iframe id="preview-frame" srcdoc="" style="width:100%;height:520px;border:none;"></iframe>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Confirm Send Modal #}
+<div class="modal fade" id="confirm-send-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Jetzt senden?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        Möchten Sie die <strong id="send-label"></strong>-Grüße jetzt sofort an alle Empfänger senden?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+        <button type="button" class="btn btn-success" id="confirm-send-now-btn">Jetzt senden</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# Result Toast #}
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:9999">
+  <div id="result-toast" class="toast align-items-center border-0" role="alert">
+    <div class="d-flex">
+      <div class="toast-body" id="toast-body"></div>
+      <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const csrf = document.querySelector('[name="_csrf_token"]').value;
+  let pendingSlug = null;
+
+  /* Toggle opacity on enable/disable */
+  document.querySelectorAll('.holiday-toggle').forEach(toggle => {
+    toggle.addEventListener('change', () => {
+      const body = document.querySelector('#card-' + toggle.dataset.slug + ' .holiday-body');
+      if (body) body.classList.toggle('opacity-50', !toggle.checked);
+    });
+  });
+
+  /* Preview */
+  document.querySelectorAll('.btn-preview-holiday').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const slug = btn.dataset.slug;
+      btn.disabled = true;
+      try {
+        const fd = new FormData();
+        fd.append('_csrf_token', csrf);
+        fd.append('slug', slug);
+        const res  = await fetch('/bulk-mail/feiertagsgruesse/vorschau', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.html) {
+          document.getElementById('preview-frame').srcdoc = data.html;
+          new bootstrap.Modal(document.getElementById('preview-modal')).show();
+        } else {
+          showToast('danger', data.error ?? 'Fehler beim Laden der Vorschau.');
+        }
+      } catch (e) { showToast('danger', 'Netzwerkfehler.'); }
+      finally { btn.disabled = false; }
+    });
+  });
+
+  /* Send now */
+  document.querySelectorAll('.btn-send-now').forEach(btn => {
+    btn.addEventListener('click', () => {
+      pendingSlug = btn.dataset.slug;
+      const label = btn.closest('.card').querySelector('.form-check-label').textContent.trim();
+      document.getElementById('send-label').textContent = label;
+      new bootstrap.Modal(document.getElementById('confirm-send-modal')).show();
+    });
+  });
+
+  document.getElementById('confirm-send-now-btn').addEventListener('click', async () => {
+    bootstrap.Modal.getInstance(document.getElementById('confirm-send-modal'))?.hide();
+    if (!pendingSlug) return;
+    const slug = pendingSlug;
+    const btn  = document.querySelector(`.btn-send-now[data-slug="${slug}"]`);
+    if (btn) { btn.disabled = true; btn.textContent = 'Wird gesendet…'; }
+    try {
+      const fd = new FormData();
+      fd.append('_csrf_token', csrf);
+      fd.append('slug', slug);
+      const res  = await fetch('/bulk-mail/feiertagsgruesse/jetzt-senden', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.error) {
+        showToast('danger', data.error);
+      } else {
+        const failTxt = data.failed?.length ? `, ${data.failed.length} fehlgeschlagen` : '';
+        showToast('success', `${data.sent} E-Mails gesendet${failTxt}.`);
+      }
+    } catch (e) { showToast('danger', 'Netzwerkfehler.'); }
+    finally {
+      if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon points="22 2 15 22 11 13 2 9 22 2" stroke="currentColor" stroke-width="2" fill="none"/></svg> Jetzt senden'; }
+    }
+  });
+
+  function showToast(type, msg) {
+    const toast = document.getElementById('result-toast');
+    toast.className = `toast align-items-center border-0 text-bg-${type}`;
+    document.getElementById('toast-body').textContent = msg;
+    new bootstrap.Toast(toast, { delay: 5000 }).show();
+  }
+})();
+</script>
+{% endblock %}

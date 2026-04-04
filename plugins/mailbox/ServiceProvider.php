@@ -30,6 +30,7 @@ class ServiceProvider
             'children' => [
                 ['label' => 'Posteingang',          'href' => '/mailbox'],
                 ['label' => 'Massen-Kommunikation', 'href' => '/bulk-mail'],
+                ['label' => 'Feiertagsgrüße',       'href' => '/bulk-mail/feiertagsgruesse'],
             ],
         ];
         $view->addGlobal('plugin_nav_items', $navItems);

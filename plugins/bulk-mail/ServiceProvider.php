@@ -12,6 +12,8 @@ class ServiceProvider
     public function register(PluginManager $pluginManager): void
     {
         require_once __DIR__ . '/BulkMailController.php';
+        require_once __DIR__ . '/HolidayMailService.php';
+        require_once __DIR__ . '/HolidayController.php';
 
         $this->runMigrations();
 
@@ -23,10 +25,16 @@ class ServiceProvider
 
     public function registerRoutes(Router $router): void
     {
-        $router->get( '/bulk-mail',               [BulkMailController::class, 'index'],       ['auth']);
-        $router->post('/bulk-mail/vorschau',       [BulkMailController::class, 'preview'],     ['auth']);
-        $router->post('/bulk-mail/senden-email',   [BulkMailController::class, 'sendEmail'],   ['auth']);
-        $router->post('/bulk-mail/senden-portal',  [BulkMailController::class, 'sendPortal'],  ['auth']);
+        $router->get( '/bulk-mail',                                [BulkMailController::class,  'index'],      ['auth']);
+        $router->post('/bulk-mail/vorschau',                       [BulkMailController::class,  'preview'],    ['auth']);
+        $router->post('/bulk-mail/senden-email',                   [BulkMailController::class,  'sendEmail'],  ['auth']);
+        $router->post('/bulk-mail/senden-portal',                  [BulkMailController::class,  'sendPortal'], ['auth']);
+
+        $router->get( '/bulk-mail/feiertagsgruesse',               [HolidayController::class,   'index'],      ['auth']);
+        $router->post('/bulk-mail/feiertagsgruesse/speichern',     [HolidayController::class,   'save'],       ['auth']);
+        $router->post('/bulk-mail/feiertagsgruesse/vorschau',      [HolidayController::class,   'preview'],    ['auth']);
+        $router->post('/bulk-mail/feiertagsgruesse/jetzt-senden',  [HolidayController::class,   'sendNow'],    ['auth']);
+        $router->get( '/api/holiday-cron',                         [HolidayController::class,   'cron'],       []);
     }
 
     private function runMigrations(): void
