@@ -19,7 +19,6 @@ class ServiceProvider
         $view->addTemplatePath(__DIR__ . '/templates', 'bulk-mail');
 
         $pluginManager->hook('registerRoutes', [$this, 'registerRoutes']);
-        $pluginManager->hook('navItems',       [$this, 'navItem']);
     }
 
     public function registerRoutes(Router $router): void
@@ -28,15 +27,6 @@ class ServiceProvider
         $router->post('/bulk-mail/vorschau',       [BulkMailController::class, 'preview'],     ['auth']);
         $router->post('/bulk-mail/senden-email',   [BulkMailController::class, 'sendEmail'],   ['auth']);
         $router->post('/bulk-mail/senden-portal',  [BulkMailController::class, 'sendPortal'],  ['auth']);
-    }
-
-    public function navItem(array $context): array
-    {
-        return [
-            'label' => 'Massen-Kommunikation',
-            'href'  => '/bulk-mail',
-            'icon'  => '<svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><polyline points="22,6 12,13 2,6" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
-        ];
     }
 
     private function runMigrations(): void

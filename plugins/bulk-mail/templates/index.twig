@@ -8,9 +8,9 @@
       <h1 class="h3 mb-0 fw-700">Massen-Kommunikation</h1>
       <p class="text-muted fs-sm mb-0">E-Mails und Portal-Nachrichten an mehrere Besitzer gleichzeitig senden.</p>
     </div>
-    <a href="/bulk-mail/verlauf" class="btn btn-outline-secondary btn-sm">
-      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><path d="M12 8v4l3 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/></svg>
-      Verlauf
+    <a href="/mailbox" class="btn btn-outline-secondary btn-sm">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><path d="M19 12H5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polyline points="12 19 5 12 12 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Zur Mailbox
     </a>
   </div>
 
@@ -60,14 +60,16 @@
               <div class="mb-1">
                 <label class="form-label fw-600">Nachricht</label>
                 <div class="d-flex gap-2 mb-2 flex-wrap">
+                  {% raw %}
                   <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{name}}">{{name}}</button>
                   <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{vorname}}">{{vorname}}</button>
                   <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{praxis}}">{{praxis}}</button>
+                  {% endraw %}
                   <span class="text-muted fs-xs align-self-center">— Platzhalter einfügen</span>
                 </div>
                 <textarea name="body" class="form-control bulk-body" rows="10" placeholder="Ihre Nachricht an alle Empfänger..." required></textarea>
               </div>
-              <div class="text-muted fs-xs mb-3">Platzhalter werden pro Empfänger ersetzt: <code>{{name}}</code> = Vollständiger Name, <code>{{vorname}}</code> = Vorname, <code>{{praxis}}</code> = Praxisname</div>
+              <div class="text-muted fs-xs mb-3">Platzhalter werden pro Empfänger ersetzt: <code>{% raw %}{{name}}{% endraw %}</code> = Vollständiger Name, <code>{% raw %}{{vorname}}{% endraw %}</code> = Vorname, <code>{% raw %}{{praxis}}{% endraw %}</code> = Praxisname</div>
 
               <div class="d-flex gap-2">
                 <button type="button" class="btn btn-outline-secondary btn-preview" data-form="email">
@@ -108,9 +110,11 @@
               <div class="mb-1">
                 <label class="form-label fw-600">Nachricht</label>
                 <div class="d-flex gap-2 mb-2 flex-wrap">
+                  {% raw %}
                   <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{name}}">{{name}}</button>
                   <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{vorname}}">{{vorname}}</button>
                   <button type="button" class="btn btn-xs btn-outline-secondary insert-placeholder" data-value="{{praxis}}">{{praxis}}</button>
+                  {% endraw %}
                   <span class="text-muted fs-xs align-self-center">— Platzhalter einfügen</span>
                 </div>
                 <textarea name="body" class="form-control bulk-body" rows="10" placeholder="Ihre Portal-Nachricht..." required></textarea>
