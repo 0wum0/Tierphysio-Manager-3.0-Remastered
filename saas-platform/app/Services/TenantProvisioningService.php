@@ -37,12 +37,16 @@ class TenantProvisioningService
         return $this->db->transaction(function (Database $db) use ($data, $plan): array {
 
             // 1. Create tenant record
-            $uuid    = Uuid::uuid4()->toString();
-            $dbName  = $this->config->get('tenant_db.prefix') . preg_replace('/[^a-z0-9_]/', '_', strtolower($data['email']));
-            $dbName  = substr($dbName, 0, 64);
+            $uuid         = Uuid::uuid4()->toString();
+            $dbName       = $this->config->get('tenant_db.prefix') . preg_replace('/[^a-z0-9_]/', '_', strtolower($data['email']));
+            $dbName       = substr($dbName, 0, 64);
+            $tid          = $this->generateTid($data['practice_name']);
+            $passwordHash = password_hash($data['admin_password'] ?? bin2hex(random_bytes(8)), PASSWORD_BCRYPT, ['cost' => 12]);
+            $trialEndsAt  = date('Y-m-d H:i:s', strtotime('+14 days'));
 
-            $tenantId = $this->tenantRepo->create([
+            $tenantId = $this->tenantRepo->createWithAuth([
                 'uuid'          => $uuid,
+                'tid'           => $tid,
                 'practice_name' => $data['practice_name'],
                 'owner_name'    => $data['owner_name'],
                 'email'         => $data['email'],
@@ -52,8 +56,9 @@ class TenantProvisioningService
                 'zip'           => $data['zip'] ?? null,
                 'country'       => $data['country'] ?? 'DE',
                 'plan_id'       => (int)$plan['id'],
-                'status'        => 'pending',
-                'trial_ends_at' => null,
+                'status'        => 'trial',
+                'password_hash' => $passwordHash,
+                'trial_ends_at' => $trialEndsAt,
             ]);
 
             // 2. Create tenant database
@@ -73,8 +78,8 @@ class TenantProvisioningService
             );
             $this->tenantRepo->setAdminCreated($tenantId);
 
-            // 4. Activate tenant
-            $this->tenantRepo->setStatus($tenantId, 'active');
+            // 4. Activate tenant (stays in trial until payment confirmed)
+            $this->tenantRepo->setStatus($tenantId, 'trial');
 
             // 5. Create subscription
             $billingCycle = $data['billing_cycle'] ?? 'monthly';
@@ -118,13 +123,26 @@ class TenantProvisioningService
             return [
                 'tenant_id'      => $tenantId,
                 'tenant_uuid'    => $uuid,
+                'tenant_tid'     => $tid,
                 'db_name'        => $dbName,
                 'admin_email'    => $data['email'],
                 'admin_password' => $adminPassword,
                 'license_token'  => $licenseToken,
                 'plan'           => $plan['slug'],
+                'trial_ends_at'  => $trialEndsAt,
             ];
         });
+    }
+
+    /**
+     * Generate a short, URL-safe tenant identifier from the practice name.
+     */
+    private function generateTid(string $practiceName): string
+    {
+        $base = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $practiceName));
+        $base = trim(substr($base, 0, 20), '-');
+        $suffix = substr(bin2hex(random_bytes(3)), 0, 6);
+        return $base . '-' . $suffix;
     }
 
     /**

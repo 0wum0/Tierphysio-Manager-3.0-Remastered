@@ -126,6 +126,15 @@ class TenantRepository
         );
     }
 
+    public function createWithAuth(array $data): int
+    {
+        return (int)$this->db->insert(
+            "INSERT INTO tenants (uuid, tid, practice_name, owner_name, email, phone, address, city, zip, country, plan_id, status, password_hash, trial_ends_at)
+             VALUES (:uuid, :tid, :practice_name, :owner_name, :email, :phone, :address, :city, :zip, :country, :plan_id, :status, :password_hash, :trial_ends_at)",
+            $data
+        );
+    }
+
     public function update(int $id, array $data): void
     {
         $sets   = [];

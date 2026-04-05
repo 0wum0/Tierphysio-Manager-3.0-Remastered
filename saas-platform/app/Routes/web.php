@@ -55,8 +55,8 @@ $router->get('/admin/legal',            [LegalController::class, 'index']);
 $router->get('/admin/legal/{id}/edit',  [LegalController::class, 'edit']);
 $router->post('/admin/legal/{id}/edit', [LegalController::class, 'update']);
 
-// ── Root redirect ──────────────────────────────────────────────────────────
-$router->get('/', function (array $params): void {
+// ── Root redirect (only used on platform domain / fallback) ────────────────
+$router->get('/admin/dashboard', function (array $params): void {
     header('Location: /admin');
     exit;
 });

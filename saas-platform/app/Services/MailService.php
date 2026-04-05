@@ -30,6 +30,17 @@ class MailService
         return $mail;
     }
 
+    public function send(string $to, string $toName, string $subject, string $htmlBody, string $textBody = ''): void
+    {
+        $mail = $this->mailer();
+        $mail->addAddress($to, $toName);
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+        $mail->Body    = $htmlBody;
+        $mail->AltBody = $textBody ?: strip_tags($htmlBody);
+        $mail->send();
+    }
+
     public function sendWelcome(
         string $email,
         string $name,
@@ -38,13 +49,14 @@ class MailService
         string $password,
         string $licenseToken
     ): void {
-        $appUrl = rtrim($this->config->get('app.url', ''), '/');
+        $platformUrl = rtrim($this->config->get('platform.url', ''), '/');
+        $loginUrl    = $platformUrl ? $platformUrl . '/login' : '/login';
         $mail   = $this->mailer();
         $mail->addAddress($email, $name);
         $mail->isHTML(true);
-        $mail->Subject = 'Willkommen bei Tierphysio Manager – Ihre Zugangsdaten';
-        $mail->Body    = $this->welcomeHtml($name, $practiceName, $loginEmail, $password, $appUrl);
-        $mail->AltBody = "Willkommen {$name},\n\nIhre Praxis '{$practiceName}' wurde erfolgreich eingerichtet.\n\nLogin: {$loginEmail}\nPasswort: {$password}\n\nBitte ändern Sie Ihr Passwort nach dem ersten Login.\n\nMit freundlichen Grüßen\nTierphysio Team";
+        $mail->Subject = 'Willkommen bei TheraPano – Ihre Zugangsdaten';
+        $mail->Body    = $this->welcomeHtml($name, $practiceName, $loginEmail, $password, $loginUrl);
+        $mail->AltBody = "Willkommen {$name},\n\nIhre Praxis '{$practiceName}' wurde erfolgreich eingerichtet.\n\nLogin: {$loginEmail}\nPasswort: {$password}\nLogin-URL: {$loginUrl}\n\nBitte ändern Sie Ihr Passwort nach dem ersten Login.\n\nMit freundlichen Grüßen\nDas TheraPano-Team";
         $mail->send();
     }
 
@@ -53,7 +65,7 @@ class MailService
         $mail = $this->mailer();
         $mail->addAddress($email, $name);
         $mail->isHTML(true);
-        $mail->Subject = 'Passwort zurücksetzen – Tierphysio SaaS';
+        $mail->Subject = 'Passwort zurücksetzen – TheraPano';
         $mail->Body    = $this->resetHtml($name, $resetUrl);
         $mail->AltBody = "Hallo {$name},\n\nPasswort zurücksetzen: {$resetUrl}\n\nDieser Link ist 2 Stunden gültig.";
         $mail->send();
@@ -68,7 +80,7 @@ class MailService
         ];
         $mail = $this->mailer();
         $mail->addAddress($email, $name);
-        $mail->Subject = 'Kontostatusänderung – Tierphysio SaaS';
+        $mail->Subject = 'Kontostatusänderung – TheraPano';
         $mail->Body    = '<p>Hallo ' . htmlspecialchars($name) . ',</p><p>' . ($messages[$status] ?? 'Ihr Kontostatus hat sich geändert.') . '</p>';
         $mail->AltBody = 'Hallo ' . $name . ', ' . ($messages[$status] ?? 'Ihr Kontostatus hat sich geändert.');
         $mail->send();
@@ -103,7 +115,7 @@ body{font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:0}
     <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
     <p>Mit freundlichen Grüßen<br>Das Tierphysio Team</p>
   </div>
-  <div class="footer">Tierphysio Manager SaaS &bull; DSGVO-konform &bull; EU-Hosting</div>
+  <div class="footer">TheraPano &bull; DSGVO-konform &bull; EU-Hosting</div>
 </div>
 </body></html>
 HTML;
@@ -132,7 +144,7 @@ body{font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:0}
     <p>Dieser Link ist <strong>2 Stunden</strong> gültig.</p>
     <p>Falls Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese E-Mail.</p>
   </div>
-  <div class="footer">Tierphysio Manager SaaS &bull; DSGVO-konform &bull; EU-Hosting</div>
+  <div class="footer">TheraPano &bull; DSGVO-konform &bull; EU-Hosting</div>
 </div>
 </body></html>
 HTML;
