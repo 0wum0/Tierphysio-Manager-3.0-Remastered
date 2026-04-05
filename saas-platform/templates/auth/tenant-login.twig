@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="de" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anmelden – TheraPano</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root { --tp-primary: #2563eb; --tp-primary-dark: #1d4ed8; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f172a;
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            padding: 1.5rem;
+        }
+        body::before {
+            content: '';
+            position: fixed; inset: 0; pointer-events: none;
+            background:
+                radial-gradient(ellipse 70% 60% at 20% 30%, rgba(37,99,235,.12) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 50% at 80% 80%, rgba(124,58,237,.08) 0%, transparent 60%);
+        }
+
+        .auth-wrap {
+            width: 100%; max-width: 440px;
+            position: relative; z-index: 1;
+        }
+        .auth-brand {
+            text-align: center; margin-bottom: 2rem;
+        }
+        .auth-brand .logo {
+            display: inline-flex; align-items: center; gap: .5rem;
+            font-size: 1.5rem; font-weight: 800; color: #fff;
+            text-decoration: none; margin-bottom: .5rem;
+        }
+        .auth-brand .logo span { color: var(--tp-primary); }
+        .auth-brand p { color: #64748b; font-size: .875rem; margin: 0; }
+
+        .auth-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 1.25rem;
+            padding: 2.25rem;
+        }
+        .auth-card h4 { color: #fff; font-weight: 700; font-size: 1.25rem; margin-bottom: .5rem; }
+        .auth-card .sub { color: #64748b; font-size: .875rem; margin-bottom: 1.75rem; }
+
+        .form-label { color: #94a3b8; font-size: .8rem; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+        .form-control {
+            background: #0f172a; border-color: #334155; color: #e2e8f0;
+            padding: .75rem 1rem; border-radius: .625rem;
+        }
+        .form-control:focus {
+            background: #0f172a; border-color: var(--tp-primary); color: #e2e8f0;
+            box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+        }
+        .form-control::placeholder { color: #475569; }
+
+        .btn-login {
+            background: var(--tp-primary); border: none; color: #fff;
+            width: 100%; padding: .875rem; border-radius: .625rem;
+            font-weight: 600; font-size: .95rem;
+            transition: background .15s, transform .1s;
+            display: flex; align-items: center; justify-content: center; gap: .5rem;
+        }
+        .btn-login:hover { background: var(--tp-primary-dark); transform: translateY(-1px); }
+        .btn-login:active { transform: none; }
+
+        .auth-footer {
+            text-align: center; margin-top: 1.5rem;
+            font-size: .8rem; color: #475569;
+        }
+        .auth-footer a { color: #94a3b8; text-decoration: none; }
+        .auth-footer a:hover { color: var(--tp-primary); }
+
+        .divider {
+            display: flex; align-items: center; gap: 1rem;
+            color: #334155; font-size: .8rem; margin: 1.25rem 0;
+        }
+        .divider::before, .divider::after {
+            content: ''; flex: 1; height: 1px; background: #334155;
+        }
+
+        .alert { border-radius: .625rem; font-size: .875rem; }
+        .alert-success { background: rgba(6,78,59,.3); border-color: #065f46; color: #6ee7b7; }
+        .alert-danger  { background: rgba(127,29,29,.3); border-color: #991b1b; color: #fca5a5; }
+        .alert-info    { background: rgba(12,42,74,.3); border-color: #1e40af; color: #93c5fd; }
+
+        .badge-secure {
+            display: inline-flex; align-items: center; gap: .35rem;
+            background: rgba(6,78,59,.2); border: 1px solid rgba(6,78,59,.4);
+            color: #6ee7b7; font-size: .7rem; font-weight: 600; padding: .3rem .75rem;
+            border-radius: 2rem; margin: 0 .25rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="auth-wrap">
+    <div class="auth-brand">
+        <a href="/" class="logo">Thera<span>Pano</span></a>
+        <p>Die Praxis-Software für Tierphysiotherapeuten</p>
+    </div>
+
+    <div class="auth-card">
+        <h4>Willkommen zurück</h4>
+        <p class="sub">Melden Sie sich mit Ihrer Praxis-E-Mail an.</p>
+
+        {% if logged_out %}
+            <div class="alert alert-info mb-3">
+                <i class="bi bi-box-arrow-left me-1"></i> Sie wurden erfolgreich abgemeldet.
+            </div>
+        {% endif %}
+        {% if flash_error %}
+            <div class="alert alert-danger mb-3">
+                <i class="bi bi-exclamation-triangle me-1"></i> {{ flash_error }}
+            </div>
+        {% endif %}
+        {% if flash_success %}
+            <div class="alert alert-success mb-3">
+                <i class="bi bi-check-circle me-1"></i> {{ flash_success }}
+            </div>
+        {% endif %}
+
+        <form method="POST" action="/login" autocomplete="on">
+            {{ csrf_field()|raw }}
+            <div class="mb-3">
+                <label class="form-label">E-Mail-Adresse</label>
+                <input
+                    type="email"
+                    name="email"
+                    class="form-control"
+                    placeholder="praxis@beispiel.de"
+                    autocomplete="email"
+                    required
+                    autofocus
+                >
+            </div>
+            <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <label class="form-label mb-0">Passwort</label>
+                    <a href="/forgot-password" style="font-size:.8rem;color:#64748b;text-decoration:none;">
+                        Vergessen?
+                    </a>
+                </div>
+                <input
+                    type="password"
+                    name="password"
+                    class="form-control"
+                    placeholder="••••••••"
+                    autocomplete="current-password"
+                    required
+                >
+            </div>
+            <button type="submit" class="btn-login">
+                <i class="bi bi-box-arrow-in-right"></i> Anmelden
+            </button>
+        </form>
+
+        <div class="divider">oder</div>
+
+        <div class="text-center" style="font-size:.875rem;color:#64748b;">
+            Noch kein Konto?
+            <a href="/register" style="color:#60a5fa;font-weight:600;text-decoration:none;"> Kostenlos registrieren</a>
+        </div>
+    </div>
+
+    <div class="auth-footer">
+        <span class="badge-secure"><i class="bi bi-shield-lock-fill"></i> SSL</span>
+        <span class="badge-secure"><i class="bi bi-geo-fill"></i> EU-Hosting</span>
+        <span class="badge-secure"><i class="bi bi-patch-check-fill"></i> DSGVO</span>
+        <div class="mt-2">
+            <a href="/impressum">Impressum</a> &bull;
+            <a href="/datenschutz">Datenschutz</a>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

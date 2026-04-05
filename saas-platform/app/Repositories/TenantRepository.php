@@ -65,6 +65,58 @@ class TenantRepository
         );
     }
 
+    public function findByTid(string $tid): array|false
+    {
+        return $this->db->fetch(
+            "SELECT t.*, p.name AS plan_name, p.slug AS plan_slug,
+                    p.features AS plan_features, p.max_users
+             FROM tenants t
+             LEFT JOIN plans p ON p.id = t.plan_id
+             WHERE t.tid = ?",
+            [$tid]
+        );
+    }
+
+    public function findByEmailForAuth(string $email): array|false
+    {
+        return $this->db->fetch(
+            "SELECT * FROM tenants WHERE email = ? AND status IN ('active','trial')",
+            [$email]
+        );
+    }
+
+    public function updateLastLogin(int $id): void
+    {
+        $this->db->execute(
+            "UPDATE tenants SET last_login_at = NOW() WHERE id = ?",
+            [$id]
+        );
+    }
+
+    public function setPasswordResetToken(int $id, string $token, string $expiresAt): void
+    {
+        $this->db->execute(
+            "UPDATE tenants SET reset_token = ?, reset_token_expires_at = ? WHERE id = ?",
+            [$token, $expiresAt, $id]
+        );
+    }
+
+    public function findByResetToken(string $token): array|false
+    {
+        return $this->db->fetch(
+            "SELECT * FROM tenants WHERE reset_token = ? AND reset_token_expires_at > NOW()",
+            [$token]
+        );
+    }
+
+    public function clearResetToken(int $id, string $newPasswordHash): void
+    {
+        $this->db->execute(
+            "UPDATE tenants SET password_hash = ?, reset_token = NULL, reset_token_expires_at = NULL WHERE id = ?",
+            [$newPasswordHash, $id]
+        );
+    }
+
     public function create(array $data): int
     {
         return (int)$this->db->insert(

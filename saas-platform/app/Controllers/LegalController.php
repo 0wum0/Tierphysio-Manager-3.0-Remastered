@@ -79,4 +79,14 @@ class LegalController extends Controller
             'page_title' => $doc['title'],
         ]);
     }
+
+    public function impressum(array $params = []): void
+    {
+        $this->view(['slug' => 'impressum']);
+    }
+
+    public function datenschutz(array $params = []): void
+    {
+        $this->view(['slug' => 'datenschutz']);
+    }
 }

@@ -17,13 +17,14 @@ class Config
     {
         $this->data = [
             'app' => [
-                'name'      => $_ENV['APP_NAME']      ?? 'Tierphysio SaaS',
-                'env'       => $_ENV['APP_ENV']       ?? 'production',
-                'debug'     => filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOLEAN),
-                'url'       => $_ENV['APP_URL']       ?? '',
-                'key'       => $_ENV['APP_KEY']       ?? '',
-                'locale'    => $_ENV['APP_LOCALE']    ?? 'de',
-                'installed' => filter_var($_ENV['INSTALLED'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'name'        => $_ENV['APP_NAME']      ?? 'Tierphysio SaaS',
+                'env'         => $_ENV['APP_ENV']       ?? 'production',
+                'debug'       => filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                'url'         => $_ENV['APP_URL']       ?? '',
+                'platform_url'=> rtrim($_ENV['PLATFORM_URL'] ?? '', '/'),
+                'key'         => $_ENV['APP_KEY']       ?? '',
+                'locale'      => $_ENV['APP_LOCALE']    ?? 'de',
+                'installed'   => filter_var($_ENV['INSTALLED'] ?? false, FILTER_VALIDATE_BOOLEAN),
             ],
             'db' => [
                 'host'     => $_ENV['DB_HOST']     ?? 'localhost',
@@ -46,6 +47,11 @@ class Config
             'session' => [
                 'lifetime' => (int)($_ENV['SESSION_LIFETIME'] ?? 120),
                 'secure'   => filter_var($_ENV['SESSION_SECURE'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                'domain'   => $_ENV['SESSION_DOMAIN'] ?? '',
+            ],
+            'platform' => [
+                'url'     => $_ENV['PLATFORM_URL'] ?? '',
+                'app_url' => $_ENV['APP_URL']      ?? '',
             ],
             'mail' => [
                 'driver'    => $_ENV['MAIL_DRIVER']       ?? 'smtp',

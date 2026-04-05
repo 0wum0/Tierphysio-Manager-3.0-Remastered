@@ -16,14 +16,20 @@ class Session
 
         $lifetime = $this->config->get('session.lifetime', 120) * 60;
         $secure   = $this->config->get('session.secure', true);
+        $domain   = $this->config->get('session.domain', '');
 
-        session_set_cookie_params([
+        $cookieParams = [
             'lifetime' => $lifetime,
             'path'     => '/',
             'secure'   => $secure,
             'httponly' => true,
             'samesite' => 'Lax',
-        ]);
+        ];
+        if ($domain !== '') {
+            $cookieParams['domain'] = $domain;
+        }
+
+        session_set_cookie_params($cookieParams);
 
         session_name('SAAS_SESSION');
         session_start();

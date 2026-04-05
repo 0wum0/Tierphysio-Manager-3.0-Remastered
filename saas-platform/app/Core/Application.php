@@ -53,19 +53,45 @@ class Application
             // Expose logged-in user to view
             $view->addGlobal('auth_user', $session->get('saas_user'));
             $view->addGlobal('auth_role', $session->get('saas_role'));
+
+            // Expose tenant session data for app-domain views
+            $view->addGlobal('tenant_name',  $session->get('platform_name'));
+            $view->addGlobal('tenant_email', $session->get('platform_email'));
         }
 
+        // Expose domain config to all views
+        $view->addGlobal('platform_url', $config->get('platform.url', ''));
+        $view->addGlobal('app_url',      $config->get('platform.app_url', ''));
+
         $this->router = new Router($this->container);
-        $this->registerRoutes($config);
+        $this->registerRoutes($config, $session);
     }
 
-    private function registerRoutes(Config $config): void
+    private function registerRoutes(Config $config, Session $session): void
     {
         if (!$config->get('app.installed', false)) {
             $this->router->loadRoutes($this->rootPath . '/app/Routes/installer.php');
             return;
         }
-        $this->router->loadRoutes($this->rootPath . '/app/Routes/web.php');
+
+        $host       = $_SERVER['HTTP_HOST'] ?? '';
+        $isAppDomain = str_starts_with($host, 'app.');
+
+        if ($isAppDomain) {
+            // Guard: no tenant session → redirect to platform login
+            if (!$session->has('platform_tid')) {
+                $platformUrl = $config->get('platform.url', '');
+                $loginUrl    = $platformUrl !== '' ? $platformUrl . '/login' : '/login';
+                header('Location: ' . $loginUrl);
+                exit;
+            }
+            $this->router->loadRoutes($this->rootPath . '/app/Routes/web.php');
+        } else {
+            // therapano.de: public platform routes (landing, register, login, legal)
+            $this->router->loadRoutes($this->rootPath . '/app/Routes/platform.php');
+            // Admin routes always available on platform domain
+            $this->router->loadRoutes($this->rootPath . '/app/Routes/web.php');
+        }
     }
 
     public function run(): void
