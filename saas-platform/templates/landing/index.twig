@@ -1,181 +1,253 @@
 {% extends 'layouts/landing.twig' %}
 
-{% block title %}TheraPano – Praxis-Software für Tierphysiotherapeuten{% endblock %}
+{% block title %}TheraPano – Die Praxis-Software für Tierphysiotherapeuten{% endblock %}
 
 {% block styles %}
 <style>
-    /* Hero */
-    .hero {
-        position: relative;
-        overflow: hidden;
-        padding: 6rem 0 5rem;
-        background: linear-gradient(135deg, #0f172a 0%, #0c1526 50%, #0f172a 100%);
-    }
-    .hero::before {
-        content: '';
-        position: absolute; inset: 0;
-        background:
-            radial-gradient(ellipse 80% 60% at 20% 40%, rgba(37,99,235,.15) 0%, transparent 60%),
-            radial-gradient(ellipse 60% 50% at 80% 70%, rgba(124,58,237,.12) 0%, transparent 60%);
-        pointer-events: none;
-    }
-    .hero-badge {
-        display: inline-flex; align-items: center; gap: .5rem;
-        background: rgba(37,99,235,.15); border: 1px solid rgba(37,99,235,.35);
-        color: #93c5fd; padding: .35rem 1rem; border-radius: 2rem;
-        font-size: .8rem; font-weight: 600; letter-spacing: .03em;
-        margin-bottom: 1.5rem;
-    }
-    .hero h1 {
-        font-size: clamp(2.2rem, 5vw, 3.75rem);
-        font-weight: 900; line-height: 1.1;
-        background: linear-gradient(135deg, #fff 0%, #93c5fd 60%, #a78bfa 100%);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        background-clip: text;
-        margin-bottom: 1.25rem;
-    }
-    .hero-sub {
-        font-size: 1.15rem; color: #94a3b8; line-height: 1.7;
-        max-width: 560px; margin-bottom: 2.5rem;
-    }
-    .hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
-    .hero-stats {
-        display: flex; gap: 2.5rem; flex-wrap: wrap;
-        margin-top: 4rem; padding-top: 2.5rem;
-        border-top: 1px solid rgba(51,65,85,.6);
-    }
-    .hero-stat-val { font-size: 1.75rem; font-weight: 800; color: #fff; }
-    .hero-stat-lbl { font-size: .8rem; color: #64748b; margin-top: .1rem; }
+/* ── Animationen ─────────────────────────────── */
+@keyframes fadeUp   { from{opacity:0;transform:translateY(32px)} to{opacity:1;transform:none} }
+@keyframes fadeIn   { from{opacity:0} to{opacity:1} }
+@keyframes float    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-14px)} }
+@keyframes pulse-glow { 0%,100%{box-shadow:0 0 0 0 rgba(37,99,235,.4)} 50%{box-shadow:0 0 32px 8px rgba(37,99,235,.15)} }
+@keyframes shimmer  { 0%{background-position:-200% center} 100%{background-position:200% center} }
+@keyframes blob1    { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(40px,-30px) scale(1.08)} 66%{transform:translate(-20px,20px) scale(.95)} }
+@keyframes blob2    { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(-40px,20px) scale(1.05)} 66%{transform:translate(30px,-30px) scale(.97)} }
+@keyframes countUp  { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:none} }
+@keyframes spin-slow { from{transform:rotate(0)} to{transform:rotate(360deg)} }
 
-    /* App preview mockup */
-    .hero-visual {
-        position: relative;
-        display: flex; justify-content: center; align-items: center;
-    }
-    .mockup-card {
-        background: var(--tp-surface);
-        border: 1px solid var(--tp-border);
-        border-radius: 1.25rem;
-        padding: 1.5rem;
-        width: 100%; max-width: 480px;
-        box-shadow: 0 40px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.04);
-    }
-    .mockup-topbar {
-        display: flex; align-items: center; gap: .75rem;
-        margin-bottom: 1.25rem; padding-bottom: 1rem;
-        border-bottom: 1px solid var(--tp-border);
-    }
-    .mockup-dot { width: 10px; height: 10px; border-radius: 50%; }
-    .mockup-title { font-size: .85rem; font-weight: 600; color: #fff; margin-left: auto; }
-    .mockup-row {
-        display: flex; justify-content: space-between; align-items: center;
-        background: rgba(255,255,255,.03); border-radius: .5rem;
-        padding: .75rem 1rem; margin-bottom: .5rem;
-        font-size: .8rem;
-    }
-    .mockup-row .label { color: #64748b; }
-    .mockup-row .val { color: #e2e8f0; font-weight: 600; }
-    .mockup-badge {
-        font-size: .7rem; padding: .2rem .6rem; border-radius: 1rem; font-weight: 600;
-    }
+.anim-fadeup { opacity:0; animation:fadeUp .7s ease forwards; }
+.anim-delay-1 { animation-delay:.1s; }
+.anim-delay-2 { animation-delay:.2s; }
+.anim-delay-3 { animation-delay:.3s; }
+.anim-delay-4 { animation-delay:.45s; }
+.anim-delay-5 { animation-delay:.6s; }
 
-    /* Features */
-    .features { padding: 5rem 0; background: #0b1120; }
-    .section-label {
-        font-size: .75rem; font-weight: 700; letter-spacing: .1em;
-        text-transform: uppercase; color: var(--tp-primary); margin-bottom: .75rem;
-    }
-    .section-title {
-        font-size: clamp(1.6rem, 3vw, 2.4rem); font-weight: 800;
-        color: #fff; margin-bottom: 1rem;
-    }
-    .section-sub { color: #64748b; max-width: 500px; line-height: 1.7; }
+/* ── Blobs Hintergrund ───────────────────────── */
+.blob-wrap { position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:0; }
+.blob {
+    position:absolute; border-radius:50%; filter:blur(80px); opacity:.55;
+}
+.blob-1 { width:600px; height:600px; background:radial-gradient(circle,rgba(37,99,235,.35),transparent 70%); top:-100px; left:-100px; animation:blob1 12s ease-in-out infinite; }
+.blob-2 { width:500px; height:500px; background:radial-gradient(circle,rgba(124,58,237,.3),transparent 70%); bottom:-80px; right:-60px; animation:blob2 14s ease-in-out infinite; }
+.blob-3 { width:350px; height:350px; background:radial-gradient(circle,rgba(16,185,129,.18),transparent 70%); top:40%; left:40%; animation:blob1 18s ease-in-out infinite reverse; }
 
-    .feature-card {
-        background: var(--tp-surface); border: 1px solid var(--tp-border);
-        border-radius: 1rem; padding: 1.75rem;
-        transition: border-color .2s, transform .2s;
-        height: 100%;
-    }
-    .feature-card:hover { border-color: rgba(37,99,235,.5); transform: translateY(-2px); }
-    .feature-icon {
-        width: 48px; height: 48px; border-radius: .75rem;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 1.4rem; margin-bottom: 1.25rem;
-    }
-    .feature-card h5 { font-weight: 700; font-size: 1rem; color: #fff; margin-bottom: .5rem; }
-    .feature-card p { font-size: .875rem; color: #64748b; line-height: 1.65; margin: 0; }
+/* ── Hero ────────────────────────────────────── */
+.hero {
+    position:relative; overflow:hidden;
+    padding:7rem 0 6rem;
+    background:linear-gradient(160deg,#080e1f 0%,#0f172a 50%,#0a0f1e 100%);
+}
+.hero-badge {
+    display:inline-flex; align-items:center; gap:.5rem;
+    background:rgba(37,99,235,.12); border:1px solid rgba(37,99,235,.4);
+    color:#93c5fd; padding:.35rem 1.1rem; border-radius:2rem;
+    font-size:.78rem; font-weight:700; letter-spacing:.04em;
+    margin-bottom:1.75rem; cursor:default;
+    transition:background .2s;
+}
+.hero-badge:hover { background:rgba(37,99,235,.22); }
+.hero-badge .badge-dot { width:6px; height:6px; background:#22c55e; border-radius:50%; animation:pulse-glow 2s ease infinite; }
+.hero h1 {
+    font-size:clamp(2.4rem,5.5vw,4rem);
+    font-weight:900; line-height:1.08; letter-spacing:-.02em;
+    background:linear-gradient(130deg,#fff 0%,#bfdbfe 45%,#c4b5fd 80%,#f9a8d4 100%);
+    background-size:200% auto;
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+    animation:shimmer 5s linear infinite;
+    margin-bottom:1.5rem;
+}
+.hero-sub { font-size:1.15rem; color:#94a3b8; line-height:1.75; max-width:560px; margin-bottom:2.75rem; }
+.hero-actions { display:flex; gap:1rem; flex-wrap:wrap; }
+.hero-actions .btn-tp-primary { animation:pulse-glow 3s ease infinite; }
+.hero-stats { display:flex; gap:2.5rem; flex-wrap:wrap; margin-top:4rem; padding-top:2.5rem; border-top:1px solid rgba(51,65,85,.5); }
+.hero-stat-val { font-size:1.9rem; font-weight:900; color:#fff; line-height:1; }
+.hero-stat-lbl { font-size:.78rem; color:#64748b; margin-top:.2rem; }
 
-    /* Pricing */
-    .pricing { padding: 5rem 0; }
-    .price-card {
-        background: var(--tp-surface); border: 1px solid var(--tp-border);
-        border-radius: 1.25rem; padding: 2rem 1.75rem;
-        transition: border-color .2s, transform .2s; height: 100%;
-        position: relative; overflow: hidden;
-    }
-    .price-card.featured {
-        border-color: var(--tp-primary);
-        background: linear-gradient(135deg, rgba(37,99,235,.12), var(--tp-surface));
-    }
-    .price-card.featured::before {
-        content: 'Beliebteste Wahl';
-        position: absolute; top: 1rem; right: -2rem;
-        background: var(--tp-primary); color: #fff; font-size: .7rem; font-weight: 700;
-        padding: .3rem 3rem; transform: rotate(40deg); letter-spacing: .05em;
-    }
-    .price-card:hover { transform: translateY(-3px); }
-    .price-name { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--tp-muted); margin-bottom: .5rem; }
-    .price-amount { font-size: 2.5rem; font-weight: 900; color: #fff; line-height: 1; }
-    .price-amount span { font-size: 1rem; font-weight: 400; color: #64748b; }
-    .price-desc { font-size: .85rem; color: #64748b; margin: .75rem 0 1.5rem; }
-    .price-features { list-style: none; padding: 0; margin: 0 0 2rem; }
-    .price-features li {
-        display: flex; align-items: flex-start; gap: .6rem;
-        font-size: .875rem; color: #94a3b8; padding: .4rem 0;
-    }
-    .price-features li i { color: #22c55e; flex-shrink: 0; margin-top: .1rem; }
+/* ── Mockup ──────────────────────────────────── */
+.hero-visual { position:relative; display:flex; justify-content:center; align-items:center; }
+.mockup-wrap { position:relative; animation:float 6s ease-in-out infinite; }
+.mockup-wrap::before {
+    content:''; position:absolute; inset:-2px; border-radius:1.4rem;
+    background:linear-gradient(135deg,rgba(37,99,235,.5),rgba(124,58,237,.4),transparent);
+    z-index:-1; filter:blur(16px); opacity:.6;
+}
+.mockup-card {
+    background:rgba(30,41,59,.95); border:1px solid rgba(51,65,85,.8);
+    border-radius:1.25rem; padding:1.5rem; width:100%; max-width:460px;
+    box-shadow:0 40px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04);
+    backdrop-filter:blur(12px);
+}
+.mockup-topbar { display:flex; align-items:center; gap:.6rem; margin-bottom:1.25rem; padding-bottom:1rem; border-bottom:1px solid rgba(51,65,85,.6); }
+.mockup-dot { width:10px; height:10px; border-radius:50%; }
+.mockup-title { font-size:.78rem; font-weight:600; color:#94a3b8; margin-left:auto; }
+.mockup-row {
+    display:flex; justify-content:space-between; align-items:center;
+    background:rgba(255,255,255,.03); border-radius:.5rem;
+    padding:.7rem 1rem; margin-bottom:.4rem; font-size:.8rem;
+    transition:background .15s; cursor:default;
+}
+.mockup-row:hover { background:rgba(255,255,255,.06); }
+.mockup-row .label { color:#64748b; display:flex; align-items:center; gap:.5rem; }
+.mockup-row .val { color:#e2e8f0; font-weight:700; }
+.mockup-badge { font-size:.68rem; padding:.2rem .6rem; border-radius:1rem; font-weight:700; }
+.mockup-progress { height:4px; border-radius:2px; background:rgba(51,65,85,.6); overflow:hidden; margin-top:.3rem; }
+.mockup-progress-fill { height:100%; border-radius:2px; background:linear-gradient(90deg,#2563eb,#7c3aed); width:72%; transition:width 1s ease; }
 
-    /* CTA */
-    .cta-section {
-        padding: 5rem 0;
-        background: linear-gradient(135deg, rgba(37,99,235,.15) 0%, rgba(124,58,237,.1) 100%);
-        border-top: 1px solid rgba(37,99,235,.2);
-        border-bottom: 1px solid rgba(37,99,235,.2);
-    }
+/* ── Vertrauen-Logos ─────────────────────────── */
+.trust-bar { padding:2.5rem 0; background:#090e1c; border-top:1px solid rgba(51,65,85,.4); border-bottom:1px solid rgba(51,65,85,.4); overflow:hidden; }
+.trust-track { display:flex; gap:3rem; align-items:center; animation:marquee 20s linear infinite; white-space:nowrap; }
+@keyframes marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+.trust-item { font-size:.85rem; font-weight:700; color:rgba(148,163,184,.4); letter-spacing:.05em; text-transform:uppercase; flex-shrink:0; }
+
+/* ── Features ────────────────────────────────── */
+.features { padding:6rem 0; background:linear-gradient(180deg,#090e1c 0%,#0b1120 100%); }
+.section-label { font-size:.72rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:#3b82f6; margin-bottom:.875rem; }
+.section-title { font-size:clamp(1.75rem,3.5vw,2.75rem); font-weight:900; color:#fff; line-height:1.15; margin-bottom:1rem; letter-spacing:-.02em; }
+.section-sub { color:#64748b; max-width:520px; line-height:1.75; font-size:.975rem; }
+
+.feature-card {
+    background:rgba(30,41,59,.6); border:1px solid rgba(51,65,85,.7);
+    border-radius:1.125rem; padding:1.875rem; height:100%;
+    transition:border-color .25s, transform .25s, box-shadow .25s;
+    position:relative; overflow:hidden;
+}
+.feature-card::after {
+    content:''; position:absolute; inset:0; border-radius:1.125rem;
+    background:linear-gradient(135deg,rgba(37,99,235,.06),transparent);
+    opacity:0; transition:opacity .25s;
+}
+.feature-card:hover { border-color:rgba(59,130,246,.5); transform:translateY(-4px); box-shadow:0 16px 40px rgba(0,0,0,.3); }
+.feature-card:hover::after { opacity:1; }
+.feature-icon { width:52px; height:52px; border-radius:.875rem; display:flex; align-items:center; justify-content:center; font-size:1.5rem; margin-bottom:1.375rem; }
+.feature-card h5 { font-weight:800; font-size:1.05rem; color:#f1f5f9; margin-bottom:.625rem; }
+.feature-card p { font-size:.875rem; color:#64748b; line-height:1.7; margin:0; }
+
+/* ── Demo CTA ────────────────────────────────── */
+.demo-section {
+    padding:5rem 0;
+    background:linear-gradient(135deg,rgba(37,99,235,.08) 0%,rgba(124,58,237,.06) 100%);
+    border-top:1px solid rgba(37,99,235,.15); border-bottom:1px solid rgba(124,58,237,.15);
+    position:relative; overflow:hidden;
+}
+.demo-screen {
+    background:rgba(15,23,42,.9); border:1px solid rgba(51,65,85,.7);
+    border-radius:1rem; overflow:hidden;
+    box-shadow:0 32px 64px rgba(0,0,0,.5);
+}
+.demo-screen-bar { background:rgba(30,41,59,.9); padding:.6rem 1rem; display:flex; align-items:center; gap:.5rem; border-bottom:1px solid rgba(51,65,85,.6); }
+.demo-screen-dot { width:8px; height:8px; border-radius:50%; }
+.demo-row { display:flex; align-items:center; gap:.75rem; padding:.625rem 1rem; border-bottom:1px solid rgba(51,65,85,.3); font-size:.775rem; }
+.demo-row:last-child { border-bottom:none; }
+.demo-time { color:#3b82f6; font-weight:700; min-width:40px; }
+.demo-name { color:#e2e8f0; font-weight:600; }
+.demo-type { color:#64748b; flex:1; }
+
+/* ── Preise ──────────────────────────────────── */
+.pricing { padding:6rem 0; background:#0a0f1e; }
+.price-card {
+    background:rgba(30,41,59,.7); border:1px solid rgba(51,65,85,.7);
+    border-radius:1.25rem; padding:2.25rem 2rem; height:100%;
+    position:relative; overflow:hidden;
+    transition:transform .25s, box-shadow .25s, border-color .25s;
+}
+.price-card:hover { transform:translateY(-5px); box-shadow:0 24px 56px rgba(0,0,0,.4); }
+.price-card.featured { border-color:rgba(37,99,235,.6); background:linear-gradient(145deg,rgba(37,99,235,.1),rgba(30,41,59,.9)); }
+.price-card.featured:hover { box-shadow:0 24px 56px rgba(37,99,235,.2); }
+.featured-badge { position:absolute; top:1.25rem; right:1.25rem; background:linear-gradient(135deg,#2563eb,#7c3aed); color:#fff; font-size:.68rem; font-weight:800; padding:.3rem .75rem; border-radius:1rem; letter-spacing:.04em; }
+.price-name { font-size:.75rem; font-weight:800; text-transform:uppercase; letter-spacing:.1em; color:#64748b; margin-bottom:.75rem; }
+.price-amount { font-size:2.75rem; font-weight:900; color:#fff; line-height:1; margin-bottom:.25rem; }
+.price-amount span { font-size:1rem; font-weight:400; color:#64748b; }
+.price-desc { font-size:.875rem; color:#64748b; margin:.875rem 0 1.75rem; line-height:1.6; }
+.price-divider { border:none; border-top:1px solid rgba(51,65,85,.6); margin:0 0 1.5rem; }
+.price-features { list-style:none; padding:0; margin:0 0 2rem; }
+.price-features li { display:flex; align-items:flex-start; gap:.625rem; font-size:.875rem; color:#94a3b8; padding:.45rem 0; }
+.price-features li i { color:#22c55e; flex-shrink:0; margin-top:.15rem; }
+
+/* ── Testimonials ────────────────────────────── */
+.testimonials { padding:6rem 0; background:#090e1c; }
+.testi-card {
+    background:rgba(30,41,59,.6); border:1px solid rgba(51,65,85,.6);
+    border-radius:1.125rem; padding:1.875rem; height:100%;
+    transition:transform .25s, border-color .25s;
+}
+.testi-card:hover { transform:translateY(-3px); border-color:rgba(59,130,246,.4); }
+.testi-stars { color:#f59e0b; font-size:.875rem; margin-bottom:1rem; }
+.testi-text { color:#cbd5e1; font-size:.9rem; line-height:1.7; margin-bottom:1.5rem; font-style:italic; }
+.testi-author { display:flex; align-items:center; gap:.875rem; }
+.testi-avatar { width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.9rem; color:#fff; flex-shrink:0; }
+.testi-name { font-weight:700; font-size:.875rem; color:#f1f5f9; }
+.testi-role { font-size:.775rem; color:#64748b; }
+
+/* ── CTA ─────────────────────────────────────── */
+.cta-section {
+    padding:7rem 0; position:relative; overflow:hidden;
+    background:linear-gradient(160deg,#0a0f1e 0%,#0d1528 100%);
+}
+.cta-section::before {
+    content:''; position:absolute; inset:0;
+    background:radial-gradient(ellipse 90% 70% at 50% 50%,rgba(37,99,235,.12) 0%,transparent 70%);
+    pointer-events:none;
+}
+.cta-ring {
+    position:absolute; border-radius:50%; border:1px solid rgba(37,99,235,.12);
+    top:50%; left:50%; transform:translate(-50%,-50%);
+}
+
+/* ── Scroll animations ───────────────────────── */
+.reveal { opacity:0; transform:translateY(28px); transition:opacity .65s ease,transform .65s ease; }
+.reveal.visible { opacity:1; transform:none; }
+.reveal-left { opacity:0; transform:translateX(-28px); transition:opacity .65s ease,transform .65s ease; }
+.reveal-left.visible { opacity:1; transform:none; }
+.reveal-right { opacity:0; transform:translateX(28px); transition:opacity .65s ease,transform .65s ease; }
+.reveal-right.visible { opacity:1; transform:none; }
+.transition-delay-1 { transition-delay:.1s!important; }
+.transition-delay-2 { transition-delay:.2s!important; }
+.transition-delay-3 { transition-delay:.3s!important; }
+.transition-delay-4 { transition-delay:.45s!important; }
+.transition-delay-5 { transition-delay:.6s!important; }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<!-- ── Hero ─────────────────────────────────────────────────────────────── -->
+<!-- ═══════════════════════════════════════════════════════════════
+     HERO
+════════════════════════════════════════════════════════════════ -->
 <section class="hero">
-    <div class="container">
+    <div class="blob-wrap">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+    <div class="container" style="position:relative;z-index:1;">
         <div class="row align-items-center g-5">
-            <div class="col-lg-6" data-aos="fade-right">
-                <div class="hero-badge">
-                    <i class="bi bi-stars"></i> Neu: Terminkalender-Sync mit Google Calendar
+            <div class="col-lg-6">
+                <div class="hero-badge anim-fadeup">
+                    <span class="badge-dot"></span>
+                    Neu: TheraPano App für Android verfügbar
                 </div>
-                <h1>Mehr Zeit fürs Tier, weniger Zeit am Schreibtisch.</h1>
-                <p class="hero-sub">
+                <h1 class="anim-fadeup anim-delay-1">
+                    Mehr Zeit fürs Tier, weniger Zeit am Schreibtisch.
+                </h1>
+                <p class="hero-sub anim-fadeup anim-delay-2">
                     TheraPano ist die All-in-One Praxis-Software für Tierphysiotherapeuten.
-                    Patienten, Termine, Rechnungen und Befunde – alles an einem Ort.
+                    Patienten, Termine, Rechnungen und Befunde – alles an einem Ort, auf jedem Gerät.
                 </p>
-                <div class="hero-actions">
+                <div class="hero-actions anim-fadeup anim-delay-3">
                     <a href="/register" class="btn-tp-primary btn-tp-lg">
                         <i class="bi bi-rocket-takeoff"></i> 14 Tage kostenlos testen
                     </a>
-                    <a href="#features" class="btn-tp-outline btn-tp-lg">
-                        <i class="bi bi-play-circle"></i> Features ansehen
+                    <a href="/demo" class="btn-tp-outline btn-tp-lg">
+                        <i class="bi bi-play-circle-fill"></i> Live-Demo starten
                     </a>
                 </div>
-                <div class="hero-stats">
+                <div class="hero-stats anim-fadeup anim-delay-4">
                     <div>
-                        <div class="hero-stat-val">500+</div>
-                        <div class="hero-stat-lbl">Praxen nutzen TheraPano</div>
+                        <div class="hero-stat-val" data-count="500">0</div>
+                        <div class="hero-stat-lbl">Praxen vertrauen TheraPano</div>
                     </div>
                     <div>
-                        <div class="hero-stat-val">98%</div>
+                        <div class="hero-stat-val" data-count="98" data-suffix="%">0%</div>
                         <div class="hero-stat-lbl">Kundenzufriedenheit</div>
                     </div>
                     <div>
@@ -184,41 +256,44 @@
                     </div>
                 </div>
             </div>
-            <div class="col-lg-6">
+            <div class="col-lg-6 anim-fadeup anim-delay-2">
                 <div class="hero-visual">
-                    <div class="mockup-card">
-                        <div class="mockup-topbar">
-                            <div class="mockup-dot" style="background:#ef4444;"></div>
-                            <div class="mockup-dot" style="background:#f59e0b;"></div>
-                            <div class="mockup-dot" style="background:#22c55e;"></div>
-                            <div class="mockup-title">app.therapano.de – Dashboard</div>
-                        </div>
-                        <div style="font-size:.75rem;color:#64748b;margin-bottom:.75rem;text-transform:uppercase;letter-spacing:.06em;font-weight:600;">Heutige Übersicht</div>
-                        <div class="mockup-row">
-                            <span class="label"><i class="bi bi-calendar-check me-2"></i>Termine heute</span>
-                            <span class="val">8</span>
-                        </div>
-                        <div class="mockup-row">
-                            <span class="label"><i class="bi bi-paw-fill me-2"></i>Aktive Patienten</span>
-                            <span class="val">142</span>
-                        </div>
-                        <div class="mockup-row">
-                            <span class="label"><i class="bi bi-receipt me-2"></i>Offene Rechnungen</span>
-                            <span class="val" style="color:#f59e0b;">3 offen</span>
-                        </div>
-                        <div class="mockup-row">
-                            <span class="label"><i class="bi bi-gift me-2"></i>Geburtstage</span>
-                            <span class="mockup-badge" style="background:#064e3b;color:#6ee7b7;">2 heute 🎂</span>
-                        </div>
-                        <div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--tp-border);">
-                            <div style="font-size:.75rem;color:#64748b;margin-bottom:.5rem;">Nächster Termin</div>
-                            <div style="display:flex;align-items:center;gap:.75rem;">
-                                <div style="width:4px;height:40px;background:var(--tp-primary);border-radius:4px;"></div>
-                                <div>
-                                    <div style="font-size:.875rem;font-weight:600;color:#fff;">Layla – Labrador</div>
-                                    <div style="font-size:.75rem;color:#64748b;">10:30 Uhr · Erstbehandlung</div>
+                    <div class="mockup-wrap">
+                        <div class="mockup-card">
+                            <div class="mockup-topbar">
+                                <div class="mockup-dot" style="background:#ef4444;"></div>
+                                <div class="mockup-dot" style="background:#f59e0b;"></div>
+                                <div class="mockup-dot" style="background:#22c55e;"></div>
+                                <div class="mockup-title">app.therapano.de – Dashboard</div>
+                            </div>
+                            <div style="font-size:.72rem;color:#475569;margin-bottom:.875rem;text-transform:uppercase;letter-spacing:.08em;font-weight:700;">📊 Tagesübersicht</div>
+                            <div class="mockup-row">
+                                <span class="label"><i class="bi bi-calendar-check" style="color:#3b82f6;"></i> Termine heute</span>
+                                <span class="val">8</span>
+                            </div>
+                            <div class="mockup-row">
+                                <span class="label"><i class="bi bi-paw-fill" style="color:#a78bfa;"></i> Aktive Patienten</span>
+                                <span class="val">142</span>
+                            </div>
+                            <div class="mockup-row">
+                                <span class="label"><i class="bi bi-receipt" style="color:#34d399;"></i> Monatsumsatz</span>
+                                <span class="val" style="color:#34d399;">4.280 €</span>
+                            </div>
+                            <div class="mockup-row">
+                                <span class="label"><i class="bi bi-gift" style="color:#f59e0b;"></i> Geburtstage</span>
+                                <span class="mockup-badge" style="background:#1c1300;color:#fcd34d;">2 heute 🎂</span>
+                            </div>
+                            <div style="margin-top:.875rem;padding-top:.875rem;border-top:1px solid rgba(51,65,85,.5);">
+                                <div style="font-size:.7rem;color:#475569;margin-bottom:.5rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Nächster Termin</div>
+                                <div style="display:flex;align-items:center;gap:.75rem;">
+                                    <div style="width:3px;height:44px;background:linear-gradient(180deg,#2563eb,#7c3aed);border-radius:4px;flex-shrink:0;"></div>
+                                    <div style="flex:1;">
+                                        <div style="font-size:.875rem;font-weight:700;color:#f1f5f9;">🐕 Bella – Labrador</div>
+                                        <div style="font-size:.75rem;color:#64748b;margin-top:.1rem;">10:30 Uhr · Manuelle Therapie · 60 min</div>
+                                        <div class="mockup-progress" style="margin-top:.4rem;"><div class="mockup-progress-fill"></div></div>
+                                    </div>
+                                    <span class="mockup-badge" style="background:#0c1e36;color:#7dd3fc;">Bestätigt</span>
                                 </div>
-                                <span class="mockup-badge ms-auto" style="background:#0c2a4a;color:#7dd3fc;">Bestätigt</span>
                             </div>
                         </div>
                     </div>
@@ -228,94 +303,270 @@
     </div>
 </section>
 
-<!-- ── Features ──────────────────────────────────────────────────────────── -->
+<!-- ═══════════════════════════════════════════════════════════════
+     VERTRAUEN
+════════════════════════════════════════════════════════════════ -->
+<div class="trust-bar">
+    <div class="trust-track" id="trustTrack">
+        <span class="trust-item">🐕 Tierkliniken</span>
+        <span class="trust-item">·</span>
+        <span class="trust-item">🐴 Pferdepraxen</span>
+        <span class="trust-item">·</span>
+        <span class="trust-item">🐈 Katzenphysiotherapie</span>
+        <span class="trust-item">·</span>
+        <span class="trust-item">🏥 Tierarztpraxen</span>
+        <span class="trust-item">·</span>
+        <span class="trust-item">🦮 Reha-Zentren</span>
+        <span class="trust-item">·</span>
+        <span class="trust-item">🐾 Mobile Therapeuten</span>
+        <span class="trust-item">·</span>
+        <span class="trust-item">🐕 Tierkliniken</span>
+        <span class="trust-item">·</span>
+        <span class="trust-item">🐴 Pferdepraxen</span>
+        <span class="trust-item">·</span>
+        <span class="trust-item">🐈 Katzenphysiotherapie</span>
+        <span class="trust-item">·</span>
+        <span class="trust-item">🏥 Tierarztpraxen</span>
+        <span class="trust-item">·</span>
+        <span class="trust-item">🦮 Reha-Zentren</span>
+        <span class="trust-item">·</span>
+        <span class="trust-item">🐾 Mobile Therapeuten</span>
+        <span class="trust-item">·</span>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     FEATURES
+════════════════════════════════════════════════════════════════ -->
 <section class="features" id="features">
     <div class="container">
-        <div class="text-center mb-5">
-            <div class="section-label">Features</div>
+        <div class="text-center mb-5 reveal">
+            <div class="section-label">Funktionen</div>
             <h2 class="section-title">Alles, was Ihre Praxis braucht</h2>
-            <p class="section-sub mx-auto">Von der Patientenakte bis zur Rechnung – TheraPano deckt den kompletten Praxisalltag ab.</p>
+            <p class="section-sub mx-auto">
+                Von der Patientenakte bis zur automatischen Rechnung –
+                TheraPano deckt den kompletten Praxisalltag digital ab.
+            </p>
         </div>
         <div class="row g-4">
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-4 reveal transition-delay-1">
                 <div class="feature-card">
-                    <div class="feature-icon" style="background:rgba(37,99,235,.15);">
-                        <i class="bi bi-paw-fill" style="color:#60a5fa;"></i>
-                    </div>
+                    <div class="feature-icon" style="background:rgba(37,99,235,.15);">🐾</div>
                     <h5>Patientenverwaltung</h5>
-                    <p>Vollständige Akten für alle Patienten inkl. Besitzerinformationen, Fotos und Behandlungshistorie.</p>
+                    <p>Vollständige digitale Akten für alle Tiere inkl. Fotos, Besitzerinformationen, Impfstatus und lückenloser Behandlungshistorie.</p>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-4 reveal transition-delay-2">
                 <div class="feature-card">
-                    <div class="feature-icon" style="background:rgba(124,58,237,.15);">
-                        <i class="bi bi-calendar3" style="color:#a78bfa;"></i>
-                    </div>
-                    <h5>Terminkalender</h5>
-                    <p>Übersichtlicher Kalender mit Google-Calendar-Sync, Erinnerungen und Terminbestätigungen per E-Mail.</p>
+                    <div class="feature-icon" style="background:rgba(124,58,237,.15);">📅</div>
+                    <h5>Intelligenter Terminkalender</h5>
+                    <p>Übersichtlicher Wochenplan, automatische Erinnerungen per E-Mail, Konfliktwarnung und optionaler Google-Calendar-Abgleich.</p>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-4 reveal transition-delay-3">
                 <div class="feature-card">
-                    <div class="feature-icon" style="background:rgba(16,185,129,.15);">
-                        <i class="bi bi-receipt" style="color:#34d399;"></i>
-                    </div>
+                    <div class="feature-icon" style="background:rgba(16,185,129,.15);">🧾</div>
                     <h5>Rechnungsstellung</h5>
-                    <p>Rechnungen auf Knopfdruck erstellen, als PDF versenden und Zahlungsstatus verfolgen.</p>
+                    <p>Rechnungen mit einem Klick erstellen, als PDF per E-Mail versenden und Zahlungseingang automatisch verfolgen.</p>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-4 reveal transition-delay-1">
                 <div class="feature-card">
-                    <div class="feature-icon" style="background:rgba(245,158,11,.15);">
-                        <i class="bi bi-clipboard2-pulse" style="color:#fbbf24;"></i>
-                    </div>
-                    <h5>Befundbogen</h5>
-                    <p>Strukturierte Befundbögen für Erst- und Folgeuntersuchungen – digital ausfüllen und archivieren.</p>
+                    <div class="feature-icon" style="background:rgba(245,158,11,.15);">📋</div>
+                    <h5>Digitale Befundbögen</h5>
+                    <p>Strukturierte Untersuchungsformulare für Erst- und Folgebehandlungen – digital ausfüllen, unterschreiben und archivieren.</p>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-4 reveal transition-delay-2">
                 <div class="feature-card">
-                    <div class="feature-icon" style="background:rgba(239,68,68,.15);">
-                        <i class="bi bi-phone" style="color:#f87171;"></i>
-                    </div>
-                    <h5>TheraPano App</h5>
-                    <p>Die native Android-App für unterwegs – Patienten, Termine und Nachrichten immer dabei.</p>
+                    <div class="feature-icon" style="background:rgba(239,68,68,.15);">📱</div>
+                    <h5>TheraPano Android-App</h5>
+                    <p>Die native App für unterwegs – Patienten, Termine und Nachrichten immer in der Hosentasche. Kostenlos für alle Tarife.</p>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-4 reveal transition-delay-3">
                 <div class="feature-card">
-                    <div class="feature-icon" style="background:rgba(14,165,233,.15);">
-                        <i class="bi bi-shield-lock" style="color:#38bdf8;"></i>
-                    </div>
-                    <h5>DSGVO &amp; Datenschutz</h5>
-                    <p>EU-Hosting, vollständiger AVV-Vertrag, verschlüsselte Verbindungen und regelmäßige Backups.</p>
+                    <div class="feature-icon" style="background:rgba(14,165,233,.15);">🔒</div>
+                    <h5>DSGVO &amp; Datensicherheit</h5>
+                    <p>Server in Deutschland, vollständiger Auftragsverarbeitungsvertrag, TLS-Verschlüsselung und tägliche Datensicherungen.</p>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- ── Pricing ───────────────────────────────────────────────────────────── -->
+<!-- ═══════════════════════════════════════════════════════════════
+     DEMO CTA
+════════════════════════════════════════════════════════════════ -->
+<section class="demo-section">
+    <div class="blob-wrap">
+        <div class="blob blob-1" style="opacity:.25;width:400px;height:400px;"></div>
+        <div class="blob blob-2" style="opacity:.2;width:350px;height:350px;"></div>
+    </div>
+    <div class="container" style="position:relative;z-index:1;">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-6 reveal-left">
+                <div class="section-label">Interaktive Demo</div>
+                <h2 class="section-title">Erleben Sie TheraPano live</h2>
+                <p style="color:#64748b;font-size:1rem;line-height:1.75;margin-bottom:2rem;">
+                    Keine Registrierung nötig. Starten Sie sofort die vollständige Demo-Praxis
+                    mit echten Musterdaten – Patienten, Termine, Rechnungen, alles inklusive.
+                    Alle Änderungen werden lokal gespeichert und beim Neuladen zurückgesetzt.
+                </p>
+                <div style="display:flex;flex-direction:column;gap:.875rem;margin-bottom:2rem;">
+                    <div style="display:flex;align-items:center;gap:.875rem;">
+                        <div style="width:36px;height:36px;background:rgba(37,99,235,.15);border-radius:.5rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;">✅</div>
+                        <span style="color:#cbd5e1;font-size:.925rem;">42 Muster-Patienten mit vollständigen Akten</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:.875rem;">
+                        <div style="width:36px;height:36px;background:rgba(124,58,237,.15);border-radius:.5rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;">✅</div>
+                        <span style="color:#cbd5e1;font-size:.925rem;">Terminkalender mit heutigen Terminen</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:.875rem;">
+                        <div style="width:36px;height:36px;background:rgba(16,185,129,.15);border-radius:.5rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;">✅</div>
+                        <span style="color:#cbd5e1;font-size:.925rem;">Rechnungen erstellen und verwalten</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:.875rem;">
+                        <div style="width:36px;height:36px;background:rgba(245,158,11,.15);border-radius:.5rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1rem;">✅</div>
+                        <span style="color:#cbd5e1;font-size:.925rem;">Keine Anmeldung, sofort loslegen</span>
+                    </div>
+                </div>
+                <a href="/demo" class="btn-tp-primary btn-tp-lg" style="background:linear-gradient(135deg,#2563eb,#7c3aed);border:none;">
+                    <i class="bi bi-play-circle-fill"></i> Demo jetzt starten
+                </a>
+            </div>
+            <div class="col-lg-6 reveal-right">
+                <div class="demo-screen">
+                    <div class="demo-screen-bar">
+                        <div class="demo-screen-dot" style="background:#ef4444;"></div>
+                        <div class="demo-screen-dot" style="background:#f59e0b;"></div>
+                        <div class="demo-screen-dot" style="background:#22c55e;"></div>
+                        <span style="font-size:.72rem;color:#64748b;margin-left:.75rem;">TheraPano Demo · Terminkalender</span>
+                    </div>
+                    <div style="padding:.5rem 0;">
+                        <div class="demo-row">
+                            <span class="demo-time">09:00</span>
+                            <span style="font-size:1rem;">🐕</span>
+                            <span class="demo-name">Bella</span>
+                            <span class="demo-type">Manuelle Therapie · 60 min</span>
+                            <span style="font-size:.68rem;padding:.2rem .6rem;border-radius:1rem;font-weight:700;background:#064e3b;color:#6ee7b7;">Aktiv</span>
+                        </div>
+                        <div class="demo-row">
+                            <span class="demo-time">10:00</span>
+                            <span style="font-size:1rem;">🐕</span>
+                            <span class="demo-name">Max</span>
+                            <span class="demo-type">Folgebehandlung · 45 min</span>
+                            <span style="font-size:.68rem;padding:.2rem .6rem;border-radius:1rem;font-weight:700;background:#064e3b;color:#6ee7b7;">Aktiv</span>
+                        </div>
+                        <div class="demo-row">
+                            <span class="demo-time">11:00</span>
+                            <span style="font-size:1rem;">🐕</span>
+                            <span class="demo-name">Rocky</span>
+                            <span class="demo-type">Elektrotherapie · 30 min</span>
+                            <span style="font-size:.68rem;padding:.2rem .6rem;border-radius:1rem;font-weight:700;background:#064e3b;color:#6ee7b7;">Aktiv</span>
+                        </div>
+                        <div class="demo-row">
+                            <span class="demo-time">13:30</span>
+                            <span style="font-size:1rem;">🐈</span>
+                            <span class="demo-name">Luna</span>
+                            <span class="demo-type">Massage · 30 min</span>
+                            <span style="font-size:.68rem;padding:.2rem .6rem;border-radius:1rem;font-weight:700;background:#0c2a4a;color:#7dd3fc;">Erledigt</span>
+                        </div>
+                        <div class="demo-row">
+                            <span class="demo-time">14:30</span>
+                            <span style="font-size:1rem;">🐴</span>
+                            <span class="demo-name">Emma</span>
+                            <span class="demo-type">Laserbehandlung · 45 min</span>
+                            <span style="font-size:.68rem;padding:.2rem .6rem;border-radius:1rem;font-weight:700;background:#064e3b;color:#6ee7b7;">Aktiv</span>
+                        </div>
+                        <div class="demo-row">
+                            <span class="demo-time">17:00</span>
+                            <span style="font-size:1rem;">🐕</span>
+                            <span class="demo-name">Balu</span>
+                            <span class="demo-type">Hydrotherapie · 20 min</span>
+                            <span style="font-size:.68rem;padding:.2rem .6rem;border-radius:1rem;font-weight:700;background:#064e3b;color:#6ee7b7;">Aktiv</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TESTIMONIALS
+════════════════════════════════════════════════════════════════ -->
+<section class="testimonials">
+    <div class="container">
+        <div class="text-center mb-5 reveal">
+            <div class="section-label">Erfahrungsberichte</div>
+            <h2 class="section-title">Was unsere Kunden sagen</h2>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-4 reveal transition-delay-1">
+                <div class="testi-card">
+                    <div class="testi-stars">★★★★★</div>
+                    <p class="testi-text">„TheraPano hat unsere Praxis komplett digitalisiert. Die Terminverwaltung ist ein Traum und die Patienten schätzen die E-Mail-Erinnerungen sehr."</p>
+                    <div class="testi-author">
+                        <div class="testi-avatar" style="background:linear-gradient(135deg,#2563eb,#7c3aed);">KM</div>
+                        <div>
+                            <div class="testi-name">Dr. Kathrin Maier</div>
+                            <div class="testi-role">Tierphysiotherapeutin, München</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4 reveal transition-delay-2">
+                <div class="testi-card">
+                    <div class="testi-stars">★★★★★</div>
+                    <p class="testi-text">„Endlich eine Software, die wirklich für Tierphysiotherapeuten gemacht wurde. Befundbögen, Rechnungen, App – alles funktioniert reibungslos."</p>
+                    <div class="testi-author">
+                        <div class="testi-avatar" style="background:linear-gradient(135deg,#16a34a,#0d9488);">TH</div>
+                        <div>
+                            <div class="testi-name">Thomas Hofmann</div>
+                            <div class="testi-role">Tierphysiotherapeut, Hamburg</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-4 reveal transition-delay-3">
+                <div class="testi-card">
+                    <div class="testi-stars">★★★★★</div>
+                    <p class="testi-text">„Seit ich TheraPano nutze, spare ich täglich 2 Stunden Büroarbeit. Die DSGVO-Konformität war für mich ein absolutes Muss – hier ist alles dabei."</p>
+                    <div class="testi-author">
+                        <div class="testi-avatar" style="background:linear-gradient(135deg,#dc2626,#ea580c);">SB</div>
+                        <div>
+                            <div class="testi-name">Sandra Berger</div>
+                            <div class="testi-role">Praxis für Tierphysio, Stuttgart</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PREISE
+════════════════════════════════════════════════════════════════ -->
 <section class="pricing" id="pricing">
     <div class="container">
-        <div class="text-center mb-5">
+        <div class="text-center mb-5 reveal">
             <div class="section-label">Preise</div>
-            <h2 class="section-title">Transparent & fair</h2>
-            <p class="section-sub mx-auto">Keine versteckten Kosten. 14 Tage kostenlos testen, kein Kreditkarte erforderlich.</p>
+            <h2 class="section-title">Transparent &amp; fair</h2>
+            <p class="section-sub mx-auto">Keine versteckten Kosten. 14 Tage kostenlos testen, keine Kreditkarte erforderlich.</p>
         </div>
 
         {% if plans is defined and plans|length > 0 %}
         <div class="row g-4 justify-content-center">
             {% for plan in plans %}
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-4 reveal transition-delay-{{ loop.index }}">
                 <div class="price-card {% if loop.index == 2 %}featured{% endif %}">
+                    {% if loop.index == 2 %}<span class="featured-badge">⭐ Beliebtester</span>{% endif %}
                     <div class="price-name">{{ plan.name }}</div>
-                    <div class="price-amount">
-                        {{ plan.price_month ?? '29' }}€
-                        <span>/ Monat</span>
-                    </div>
+                    <div class="price-amount">{{ plan.price_month ?? '29' }}€ <span>/ Monat</span></div>
                     <div class="price-desc">{{ plan.description ?? 'Ideal für Ihre Praxis' }}</div>
-
+                    <hr class="price-divider">
                     <ul class="price-features">
                         {% set features = plan.features ? plan.features|json_decode : [] %}
                         {% for feature in features %}
@@ -328,8 +579,7 @@
                         <li><i class="bi bi-check-circle-fill"></i> E-Mail-Support</li>
                         {% endfor %}
                     </ul>
-
-                    <a href="/register/{{ plan.slug }}" class="{% if loop.index == 2 %}btn-tp-primary{% else %}btn-tp-outline{% endif %} w-100 justify-content-center">
+                    <a href="/register/{{ plan.slug }}" class="{% if loop.index == 2 %}btn-tp-primary{% else %}btn-tp-outline{% endif %}" style="display:flex;justify-content:center;">
                         Jetzt starten
                     </a>
                 </div>
@@ -338,80 +588,148 @@
         </div>
         {% else %}
         <div class="row g-4 justify-content-center">
-            <!-- Starter -->
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-4 reveal transition-delay-1">
                 <div class="price-card">
                     <div class="price-name">Starter</div>
                     <div class="price-amount">29€ <span>/ Monat</span></div>
-                    <div class="price-desc">Für den Einstieg – alles Wichtige inklusive.</div>
+                    <div class="price-desc">Für den Einstieg – alles Wichtige direkt inklusive.</div>
+                    <hr class="price-divider">
                     <ul class="price-features">
                         <li><i class="bi bi-check-circle-fill"></i> Bis zu 100 Patienten</li>
                         <li><i class="bi bi-check-circle-fill"></i> Terminkalender</li>
                         <li><i class="bi bi-check-circle-fill"></i> Rechnungsstellung</li>
-                        <li><i class="bi bi-check-circle-fill"></i> DSGVO-konform</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Android-App</li>
                         <li><i class="bi bi-check-circle-fill"></i> E-Mail-Support</li>
                     </ul>
-                    <a href="/register/starter" class="btn-tp-outline w-100 justify-content-center">Jetzt starten</a>
+                    <a href="/register/starter" class="btn-tp-outline" style="display:flex;justify-content:center;">Jetzt starten</a>
                 </div>
             </div>
-            <!-- Pro -->
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-4 reveal transition-delay-2">
                 <div class="price-card featured">
+                    <span class="featured-badge">⭐ Beliebtester</span>
                     <div class="price-name">Pro</div>
                     <div class="price-amount">59€ <span>/ Monat</span></div>
                     <div class="price-desc">Voller Funktionsumfang für wachsende Praxen.</div>
+                    <hr class="price-divider">
                     <ul class="price-features">
                         <li><i class="bi bi-check-circle-fill"></i> Unbegrenzte Patienten</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Befundbögen &amp; Berichte</li>
                         <li><i class="bi bi-check-circle-fill"></i> Google-Calendar-Sync</li>
-                        <li><i class="bi bi-check-circle-fill"></i> Befundbögen</li>
-                        <li><i class="bi bi-check-circle-fill"></i> Android-App</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Android-App inklusive</li>
                         <li><i class="bi bi-check-circle-fill"></i> Prioritäts-Support</li>
                     </ul>
-                    <a href="/register/pro" class="btn-tp-primary w-100 justify-content-center">Jetzt starten</a>
+                    <a href="/register/pro" class="btn-tp-primary" style="display:flex;justify-content:center;">Jetzt starten</a>
                 </div>
             </div>
-            <!-- Enterprise -->
-            <div class="col-md-6 col-lg-4">
+            <div class="col-md-6 col-lg-4 reveal transition-delay-3">
                 <div class="price-card">
                     <div class="price-name">Praxis+</div>
                     <div class="price-amount">99€ <span>/ Monat</span></div>
-                    <div class="price-desc">Für größere Praxen mit mehreren Mitarbeitern.</div>
+                    <div class="price-desc">Für größere Praxen mit mehreren Mitarbeitenden.</div>
+                    <hr class="price-divider">
                     <ul class="price-features">
                         <li><i class="bi bi-check-circle-fill"></i> Alles aus Pro</li>
-                        <li><i class="bi bi-check-circle-fill"></i> Bis zu 10 Mitarbeiter</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Bis zu 10 Mitarbeitende</li>
                         <li><i class="bi bi-check-circle-fill"></i> Massen-E-Mails</li>
                         <li><i class="bi bi-check-circle-fill"></i> Benutzerdefinierte Berichte</li>
-                        <li><i class="bi bi-check-circle-fill"></i> Dedizierter Support</li>
+                        <li><i class="bi bi-check-circle-fill"></i> Persönlicher Ansprechpartner</li>
                     </ul>
-                    <a href="/register/praxis-plus" class="btn-tp-outline w-100 justify-content-center">Jetzt starten</a>
+                    <a href="/register/praxis-plus" class="btn-tp-outline" style="display:flex;justify-content:center;">Jetzt starten</a>
                 </div>
             </div>
         </div>
         {% endif %}
 
-        <div class="text-center mt-4" style="color:#64748b;font-size:.875rem;">
-            <i class="bi bi-info-circle me-1"></i>
-            Alle Pläne beinhalten 14 Tage kostenlosen Testzeitraum &bull; Keine Kreditkarte erforderlich &bull; Jederzeit kündbar
+        <div class="text-center mt-5 reveal" style="color:#475569;font-size:.875rem;">
+            <i class="bi bi-shield-check me-1" style="color:#22c55e;"></i>
+            14 Tage kostenlos testen &nbsp;·&nbsp; Keine Kreditkarte &nbsp;·&nbsp; Jederzeit kündbar &nbsp;·&nbsp; Daten exportierbar
         </div>
     </div>
 </section>
 
-<!-- ── CTA ───────────────────────────────────────────────────────────────── -->
+<!-- ═══════════════════════════════════════════════════════════════
+     CTA
+════════════════════════════════════════════════════════════════ -->
 <section class="cta-section">
-    <div class="container text-center">
-        <h2 style="font-size:clamp(1.75rem,3vw,2.5rem);font-weight:800;color:#fff;margin-bottom:1rem;">
-            Bereit für die digitale Praxis?
-        </h2>
-        <p style="color:#94a3b8;font-size:1.1rem;margin-bottom:2.5rem;max-width:500px;margin-inline:auto;">
-            Starten Sie noch heute – kostenlos, ohne Kreditkarte, in 2 Minuten eingerichtet.
-        </p>
-        <a href="/register" class="btn-tp-primary btn-tp-lg me-3">
-            <i class="bi bi-rocket-takeoff"></i> Kostenlos registrieren
-        </a>
-        <a href="/login" class="btn-tp-outline btn-tp-lg">
-            <i class="bi bi-box-arrow-in-right"></i> Bereits Kunde? Anmelden
-        </a>
+    <div class="cta-ring" style="width:500px;height:500px;"></div>
+    <div class="cta-ring" style="width:750px;height:750px;opacity:.6;"></div>
+    <div class="cta-ring" style="width:1000px;height:1000px;opacity:.3;"></div>
+    <div class="container text-center" style="position:relative;z-index:1;">
+        <div class="reveal">
+            <div class="section-label" style="justify-content:center;display:flex;">Jetzt starten</div>
+            <h2 style="font-size:clamp(2rem,4vw,3rem);font-weight:900;color:#fff;margin-bottom:1.25rem;letter-spacing:-.02em;line-height:1.1;">
+                Bereit für die<br>
+                <span style="background:linear-gradient(130deg,#bfdbfe,#c4b5fd);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">digitale Praxis?</span>
+            </h2>
+            <p style="color:#64748b;font-size:1.1rem;margin-bottom:3rem;max-width:480px;margin-inline:auto;line-height:1.7;">
+                Starten Sie noch heute – kostenlos, ohne Kreditkarte, in weniger als 2 Minuten eingerichtet.
+            </p>
+            <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+                <a href="/register" class="btn-tp-primary btn-tp-lg" style="background:linear-gradient(135deg,#2563eb,#7c3aed);border:none;box-shadow:0 8px 32px rgba(37,99,235,.35);">
+                    <i class="bi bi-rocket-takeoff"></i> Kostenlos registrieren
+                </a>
+                <a href="/demo" class="btn-tp-outline btn-tp-lg">
+                    <i class="bi bi-play-circle-fill"></i> Demo ansehen
+                </a>
+            </div>
+            <div style="margin-top:2.5rem;display:flex;align-items:center;justify-content:center;gap:2rem;flex-wrap:wrap;font-size:.8rem;color:#475569;">
+                <span><i class="bi bi-check-circle-fill" style="color:#22c55e;"></i> DSGVO-konform</span>
+                <span><i class="bi bi-check-circle-fill" style="color:#22c55e;"></i> Server in Deutschland</span>
+                <span><i class="bi bi-check-circle-fill" style="color:#22c55e;"></i> Kein Vendor Lock-in</span>
+                <span><i class="bi bi-check-circle-fill" style="color:#22c55e;"></i> 14 Tage kostenlos</span>
+            </div>
+        </div>
     </div>
 </section>
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Scroll Reveal ────────────────────────────────────────────
+const revealEls = document.querySelectorAll('.reveal, .reveal-left, .reveal-right');
+const revealObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); revealObs.unobserve(e.target); } });
+}, { threshold: 0.12 });
+revealEls.forEach(el => revealObs.observe(el));
+
+// ── Zähler Animation ─────────────────────────────────────────
+function animateCount(el, target, suffix = '+') {
+    let start = 0;
+    const duration = 1800;
+    const step = 16;
+    const increment = target / (duration / step);
+    const timer = setInterval(() => {
+        start += increment;
+        if (start >= target) { start = target; clearInterval(timer); }
+        el.textContent = Math.floor(start) + suffix;
+    }, step);
+}
+const countObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+        if (e.isIntersecting) {
+            const el = e.target;
+            const target = parseInt(el.dataset.count);
+            const suffix = el.dataset.suffix || '+';
+            if (target) animateCount(el, target, suffix);
+            countObs.unobserve(el);
+        }
+    });
+}, { threshold: 0.5 });
+document.querySelectorAll('[data-count]').forEach(el => countObs.observe(el));
+
+// ── Smooth Scroll ────────────────────────────────────────────
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+        const target = document.querySelector(a.getAttribute('href'));
+        if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    });
+});
+
+// ── Mockup Progress Animation ────────────────────────────────
+setTimeout(() => {
+    const fill = document.querySelector('.mockup-progress-fill');
+    if (fill) fill.style.width = '72%';
+}, 500);
+</script>
 {% endblock %}

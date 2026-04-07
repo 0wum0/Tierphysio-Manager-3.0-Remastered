@@ -5,9 +5,13 @@ declare(strict_types=1);
 use Saas\Controllers\TenantAuthController;
 use Saas\Controllers\RegistrationController;
 use Saas\Controllers\LegalController;
+use Saas\Controllers\DemoController;
 
 // ── Landing Page ────────────────────────────────────────────────────────────
 $router->get('/', [TenantAuthController::class, 'landing']);
+
+// ── Demo ─────────────────────────────────────────────────────────────────────
+$router->get('/demo', [DemoController::class, 'index']);
 
 // ── Tenant Auth ─────────────────────────────────────────────────────────────
 $router->get('/login',  [TenantAuthController::class, 'loginForm']);
