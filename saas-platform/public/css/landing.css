@@ -2,6 +2,12 @@
    TheraPano Landing Page – Styles
    ════════════════════════════════════════════════════════════════ */
 
+/* Ensure layout works without Google Fonts */
+:root {
+    --tp-font: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+body { font-family: var(--tp-font) !important; }
+
 /* ── Animationen ─────────────────────────────────────────────── */
 @keyframes fadeUp    { from { opacity:0; transform:translateY(32px) } to { opacity:1; transform:none } }
 @keyframes fadeIn    { from { opacity:0 } to { opacity:1 } }
