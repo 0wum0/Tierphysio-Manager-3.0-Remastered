@@ -86,33 +86,6 @@ $router->get('/admin/updates/system-info', [UpdateController::class, 'systemInfo
 $router->post('/admin/updates/apply',      [UpdateController::class, 'applyUpdate']);
 
 
-// ── Temporärer Debug-Endpunkt ───────────────────────────────────────────────
-$router->get('/admin/debug-settings', function (array $params): void {
-    $app = \Saas\Core\Application::getInstance();
-    $c   = $app->getContainer();
-    header('Content-Type: text/plain; charset=utf-8');
-    try {
-        $repo = $c->make(\Saas\Repositories\SettingsRepository::class);
-        echo "SettingsRepo OK\n";
-        $log  = $c->make(\Saas\Repositories\ActivityLogRepository::class);
-        echo "ActivityLogRepo OK\n";
-        $ctrl = $c->make(\Saas\Controllers\SettingsController::class);
-        echo "Controller OK\n";
-        $view = $c->get(\Saas\Core\View::class);
-        echo "View OK\n";
-        echo $view->render('admin/settings/index.twig', [
-            'page_title' => 'Test',
-            'settings'   => [],
-            'flat'       => [],
-            'tab'        => 'company',
-        ]);
-    } catch (\Throwable $e) {
-        echo "ERROR: " . $e->getMessage() . "\n";
-        echo "FILE: "  . $e->getFile() . ":" . $e->getLine() . "\n";
-        echo $e->getTraceAsString();
-    }
-    exit;
-});
 
 // ── Root redirect ──────────────────────────────────────────────────────────
 $router->get('/admin/dashboard', function (array $params): void {

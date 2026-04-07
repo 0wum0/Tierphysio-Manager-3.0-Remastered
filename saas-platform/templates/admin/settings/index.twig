@@ -228,10 +228,10 @@
                 <div class="section-title"><i class="bi bi-toggles me-2"></i>Benachrichtigungstypen</div>
                 <div class="d-flex flex-column gap-3">
                     {% set notifOptions = [
-                        ['key': 'notify_new_tenant',   'label': 'Neue Praxis registriert', 'desc': 'Wenn sich eine neue Praxis anmeldet', 'icon': 'bi-building-add'],
-                        ['key': 'notify_payment',      'label': 'Zahlung eingegangen',     'desc': 'Bei neuer Rechnungszahlung',           'icon': 'bi-credit-card-2-front'],
-                        ['key': 'notify_overdue',      'label': 'Rechnung überfällig',      'desc': 'Wenn eine Rechnung das Fälligkeitsdatum überschreitet', 'icon': 'bi-exclamation-triangle'],
-                        ['key': 'notify_trial_expiry', 'label': 'Trial läuft ab',          'desc': 'Wenn eine Praxis 3 Tage vor Trial-Ende ist', 'icon': 'bi-hourglass-split'],
+                        {'key': 'notify_new_tenant',   'label': 'Neue Praxis registriert', 'desc': 'Wenn sich eine neue Praxis anmeldet', 'icon': 'bi-building-add'},
+                        {'key': 'notify_payment',      'label': 'Zahlung eingegangen',     'desc': 'Bei neuer Rechnungszahlung',           'icon': 'bi-credit-card-2-front'},
+                        {'key': 'notify_overdue',      'label': 'Rechnung überfällig',     'desc': 'Wenn eine Rechnung das Fälligkeitsdatum überschreitet', 'icon': 'bi-exclamation-triangle'},
+                        {'key': 'notify_trial_expiry', 'label': 'Trial läuft ab',          'desc': 'Wenn eine Praxis 3 Tage vor Trial-Ende ist', 'icon': 'bi-hourglass-split'},
                     ] %}
                     {% for opt in notifOptions %}
                     <div class="d-flex align-items-center justify-content-between p-3" style="background:#0f172a;border:1px solid #334155;border-radius:.5rem;">
