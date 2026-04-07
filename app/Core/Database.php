@@ -57,13 +57,12 @@ class Database
             PDO::ATTR_EMULATE_PREPARES   => false,
         ];
 
-        // Connect without dbname first to allow creating the database
-        $dsnNoDB = "mysql:host={$host};port={$port};charset=utf8mb4";
-        $pdo = new PDO($dsnNoDB, $username, $password, $options);
-
-        $dbQuoted = '`' . str_replace('`', '``', $database) . '`';
-        $pdo->exec("CREATE DATABASE IF NOT EXISTS {$dbQuoted} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-        $pdo->exec("USE {$dbQuoted}");
+        // Connect directly to the existing database.
+        // On shared hosting (Hostinger etc.) CREATE DATABASE is not permitted;
+        // the database must already exist and be created via the hosting panel.
+        $dsn = "mysql:host={$host};port={$port};dbname={$database};charset=utf8mb4";
+        $pdo = new PDO($dsn, $username, $password, $options);
+        $pdo->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
 
         return $pdo;
     }

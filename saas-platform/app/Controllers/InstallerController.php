@@ -60,15 +60,15 @@ class InstallerController extends Controller
             return;
         }
 
-        // Test DB connection
+        // Test DB connection — connect directly to the existing DB.
+        // On shared hosting (Hostinger etc.) CREATE DATABASE is not permitted;
+        // the database must already be created via the hosting control panel.
         try {
-            $dsn = "mysql:host={$dbHost};port={$dbPort};charset=utf8mb4";
+            $dsn = "mysql:host={$dbHost};port={$dbPort};dbname={$dbName};charset=utf8mb4";
             $pdo = new PDO($dsn, $dbUser, $dbPass, [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             ]);
-            $safe = '`' . str_replace('`', '``', $dbName) . '`';
-            $pdo->exec("CREATE DATABASE IF NOT EXISTS {$safe} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-            $pdo->exec("USE {$safe}");
+            $pdo->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
         } catch (\Throwable $e) {
             $this->render('installer/index.twig', [
                 'page_title' => 'Tierphysio SaaS – Installation',
