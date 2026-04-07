@@ -24,8 +24,8 @@ class MailService
         $mail->Port       = (int)$this->config->get('mail.port', 587);
         $mail->CharSet    = 'UTF-8';
         $mail->setFrom(
-            $this->config->get('mail.from.address', 'noreply@tierphysio.de'),
-            $this->config->get('mail.from.name', 'Tierphysio SaaS')
+            $this->config->get('mail.from.address', 'noreply@therapano.de'),
+            $this->config->get('mail.from.name', 'TheraPano')
         );
         return $mail;
     }

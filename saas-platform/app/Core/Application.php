@@ -78,8 +78,11 @@ class Application
         $isAppDomain = str_starts_with($host, 'app.');
 
         if ($isAppDomain) {
-            // Guard: no tenant session → redirect to platform login
-            if (!$session->has('platform_tid')) {
+            $uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+            $isAdminPath = str_starts_with($uri, '/admin') || str_starts_with($uri, '/api/');
+
+            // Guard: no tenant session on non-admin paths → redirect to platform login
+            if (!$isAdminPath && !$session->has('platform_tid')) {
                 $platformUrl = $config->get('platform.url', '');
                 $loginUrl    = $platformUrl !== '' ? $platformUrl . '/login' : '/login';
                 header('Location: ' . $loginUrl);
@@ -89,7 +92,7 @@ class Application
         } else {
             // therapano.de: public platform routes (landing, register, login, legal)
             $this->router->loadRoutes($this->rootPath . '/app/Routes/platform.php');
-            // Admin routes always available on platform domain
+            // Admin routes also available on platform domain
             $this->router->loadRoutes($this->rootPath . '/app/Routes/web.php');
         }
     }

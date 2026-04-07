@@ -36,11 +36,12 @@
             <tbody>
                 {% for tenant in tenants %}
                 {% set statusMap = {
-                    'active': 'badge-active',
-                    'pending': 'badge-pending',
+                    'active':    'badge-active',
+                    'trial':     'badge-trial',
+                    'pending':   'badge-pending',
                     'suspended': 'badge-suspended',
                     'cancelled': 'badge-cancelled',
-                    'paused': 'badge-paused'
+                    'paused':    'badge-paused'
                 } %}
                 <tr>
                     <td class="px-4 text-secondary" style="font-size:.8rem;">{{ tenant.id }}</td>

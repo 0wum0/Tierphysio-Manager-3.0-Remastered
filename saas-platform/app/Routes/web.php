@@ -8,15 +8,6 @@ use Saas\Controllers\TenantController;
 use Saas\Controllers\PlansController;
 use Saas\Controllers\LegalController;
 use Saas\Controllers\LicenseApiController;
-use Saas\Controllers\RegistrationController;
-
-// ── Public Registration ────────────────────────────────────────────────────
-$router->get('/register',          [RegistrationController::class, 'index']);
-$router->get('/register/{plan}',   [RegistrationController::class, 'form']);
-$router->post('/register',         [RegistrationController::class, 'submit']);
-
-// ── Public Legal Documents ─────────────────────────────────────────────────
-$router->get('/legal/{slug}',      [LegalController::class, 'view']);
 
 // ── License API (called by Praxissoftware) ─────────────────────────────────
 $router->post('/api/license/verify',  [LicenseApiController::class, 'verify']);

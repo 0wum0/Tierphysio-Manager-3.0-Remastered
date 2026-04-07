@@ -189,6 +189,7 @@ class TenantRepository
         return [
             'total'     => $this->count(),
             'active'    => $this->countByStatus('active'),
+            'trial'     => $this->countByStatus('trial'),
             'pending'   => $this->countByStatus('pending'),
             'paused'    => $this->countByStatus('paused'),
             'cancelled' => $this->countByStatus('cancelled'),

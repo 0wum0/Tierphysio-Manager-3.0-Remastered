@@ -50,19 +50,25 @@
 </div>
 
 <div class="row g-3 mb-4">
-    <div class="col-sm-4">
+    <div class="col-sm-3">
+        <div class="card p-3 text-center">
+            <div class="fw-bold" style="color:#a78bfa;">{{ stats.trial }}</div>
+            <div class="stat-label">Testphase</div>
+        </div>
+    </div>
+    <div class="col-sm-3">
         <div class="card p-3 text-center">
             <div class="fw-bold" style="color:#fdba74;">{{ stats.pending }}</div>
             <div class="stat-label">Ausstehend</div>
         </div>
     </div>
-    <div class="col-sm-4">
+    <div class="col-sm-3">
         <div class="card p-3 text-center">
             <div class="fw-bold" style="color:#7dd3fc;">{{ stats.paused }}</div>
             <div class="stat-label">Pausiert</div>
         </div>
     </div>
-    <div class="col-sm-4">
+    <div class="col-sm-3">
         <div class="card p-3 text-center">
             <div class="fw-bold" style="color:#94a3b8;">{{ stats.cancelled }}</div>
             <div class="stat-label">Gekündigt</div>
@@ -97,11 +103,12 @@
                     </td>
                     <td>
                         {% set statusMap = {
-                            'active': 'badge-active',
-                            'pending': 'badge-pending',
+                            'active':    'badge-active',
+                            'trial':     'bg-purple',
+                            'pending':   'badge-pending',
                             'suspended': 'badge-suspended',
                             'cancelled': 'badge-cancelled',
-                            'paused': 'badge-paused'
+                            'paused':    'badge-paused'
                         } %}
                         <span class="badge {{ statusMap[tenant.status] ?? 'bg-secondary' }}">{{ tenant.status }}</span>
                     </td>

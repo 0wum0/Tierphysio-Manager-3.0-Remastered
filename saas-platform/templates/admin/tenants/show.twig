@@ -3,11 +3,12 @@
 
 {% block content %}
 {% set statusMap = {
-    'active': 'badge-active',
-    'pending': 'badge-pending',
+    'active':    'badge-active',
+    'trial':     'badge-trial',
+    'pending':   'badge-pending',
     'suspended': 'badge-suspended',
     'cancelled': 'badge-cancelled',
-    'paused': 'badge-paused'
+    'paused':    'badge-paused'
 } %}
 
 <div class="d-flex align-items-center justify-content-between mb-4">
@@ -18,7 +19,7 @@
         <a href="/admin/tenants/{{ tenant.id }}/edit" class="btn btn-sm btn-outline-primary">
             <i class="bi bi-pencil me-1"></i>Bearbeiten
         </a>
-        {% if tenant.status == 'active' or tenant.status == 'paused' %}
+        {% if tenant.status == 'active' or tenant.status == 'trial' or tenant.status == 'paused' %}
         <form method="POST" action="/admin/tenants/{{ tenant.id }}/suspend" class="d-inline" onsubmit="return confirm('Praxis wirklich sperren?')">
             {{ csrf_field()|raw }}
             <button class="btn btn-sm btn-warning"><i class="bi bi-pause-circle me-1"></i>Sperren</button>
