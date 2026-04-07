@@ -1,1051 +1,429 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" data-bs-theme="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Demo – TheraPano Praxis-Software</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <style>
-        :root {
-            --bg: #0f172a; --surface: #1e293b; --surface2: #263248;
-            --border: #334155; --text: #e2e8f0; --muted: #64748b;
-            --primary: #2563eb; --primary-light: #3b82f6; --accent: #7c3aed;
-            --success: #22c55e; --warning: #f59e0b; --danger: #ef4444;
-            --sidebar-w: 240px;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
-
-        /* ── Demo Banner ─────────────────────────────── */
-        .demo-banner {
-            background: linear-gradient(90deg, #7c3aed, #2563eb);
-            color: #fff; font-size: .8rem; font-weight: 600;
-            text-align: center; padding: .5rem 1rem;
-            position: sticky; top: 0; z-index: 2000;
-            display: flex; align-items: center; justify-content: center; gap: 1rem;
-        }
-        .demo-banner a { color: #fff; text-decoration: underline; }
-
-        /* ── Layout ──────────────────────────────────── */
-        .app-shell { display: flex; height: calc(100vh - 34px); }
-
-        /* ── Sidebar ─────────────────────────────────── */
-        .sidebar {
-            width: var(--sidebar-w); background: var(--surface);
-            border-right: 1px solid var(--border);
-            display: flex; flex-direction: column;
-            transition: transform .3s ease;
-            position: relative; z-index: 100; flex-shrink: 0;
-        }
-        .sidebar-brand {
-            padding: 1.25rem 1.5rem;
-            border-bottom: 1px solid var(--border);
-            font-weight: 800; font-size: 1.1rem; color: #fff;
-        }
-        .sidebar-brand span { color: var(--primary-light); }
-        .sidebar-brand small { display: block; font-size: .65rem; font-weight: 500; color: var(--muted); margin-top: .1rem; }
-        .sidebar-nav { flex: 1; overflow-y: auto; padding: .75rem 0; }
-        .nav-section { font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: .75rem 1.5rem .25rem; }
-        .nav-link {
-            display: flex; align-items: center; gap: .75rem;
-            padding: .6rem 1.5rem; color: var(--muted); text-decoration: none;
-            font-size: .875rem; font-weight: 500; cursor: pointer;
-            transition: color .15s, background .15s; border: none; background: none; width: 100%;
-            border-radius: 0;
-        }
-        .nav-link:hover { color: var(--text); background: rgba(255,255,255,.04); }
-        .nav-link.active { color: var(--primary-light); background: rgba(37,99,235,.12); }
-        .nav-link i { font-size: 1rem; width: 1.25rem; text-align: center; }
-        .sidebar-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); }
-        .sidebar-user { display: flex; align-items: center; gap: .75rem; }
-        .sidebar-avatar { width: 32px; height: 32px; background: linear-gradient(135deg, var(--primary), var(--accent)); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 700; color: #fff; flex-shrink: 0; }
-        .sidebar-user-info div:first-child { font-size: .8rem; font-weight: 600; color: var(--text); }
-        .sidebar-user-info div:last-child { font-size: .7rem; color: var(--muted); }
-
-        /* ── Main ────────────────────────────────────── */
-        .main-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        .topbar {
-            background: var(--surface); border-bottom: 1px solid var(--border);
-            padding: .875rem 1.5rem; display: flex; align-items: center; gap: 1rem;
-        }
-        .topbar-title { font-weight: 700; font-size: 1rem; flex: 1; }
-        .topbar-actions { display: flex; gap: .5rem; align-items: center; }
-        .hamburger { display: none; background: none; border: none; color: var(--text); font-size: 1.25rem; cursor: pointer; padding: .25rem; }
-        .page-content { flex: 1; overflow-y: auto; padding: 1.5rem; }
-
-        /* ── Cards ───────────────────────────────────── */
-        .card {
-            background: var(--surface); border: 1px solid var(--border);
-            border-radius: .75rem; overflow: hidden;
-        }
-        .card-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); font-weight: 600; display: flex; align-items: center; justify-content: space-between; }
-        .card-body { padding: 1.25rem; }
-
-        /* ── Stat Cards ──────────────────────────────── */
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-        .stat-card {
-            background: var(--surface); border: 1px solid var(--border);
-            border-radius: .75rem; padding: 1.25rem; position: relative; overflow: hidden;
-            transition: transform .2s, box-shadow .2s;
-        }
-        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.3); }
-        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
-        .stat-card.blue::before { background: linear-gradient(90deg, var(--primary), var(--primary-light)); }
-        .stat-card.green::before { background: linear-gradient(90deg, #16a34a, var(--success)); }
-        .stat-card.amber::before { background: linear-gradient(90deg, #d97706, var(--warning)); }
-        .stat-card.purple::before { background: linear-gradient(90deg, #6d28d9, var(--accent)); }
-        .stat-icon { font-size: 1.5rem; margin-bottom: .5rem; }
-        .stat-value { font-size: 1.75rem; font-weight: 800; color: #fff; line-height: 1; margin-bottom: .2rem; }
-        .stat-label { font-size: .75rem; color: var(--muted); }
-        .stat-delta { font-size: .7rem; margin-top: .5rem; }
-        .stat-delta.up { color: var(--success); }
-        .stat-delta.down { color: var(--danger); }
-
-        /* ── Table ───────────────────────────────────── */
-        .data-table { width: 100%; border-collapse: collapse; }
-        .data-table th { font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: .75rem 1rem; text-align: left; border-bottom: 1px solid var(--border); }
-        .data-table td { padding: .875rem 1rem; border-bottom: 1px solid rgba(51,65,85,.4); font-size: .875rem; }
-        .data-table tr:last-child td { border-bottom: none; }
-        .data-table tr:hover td { background: rgba(255,255,255,.02); }
-        .table-wrapper { overflow-x: auto; }
-
-        /* ── Badges ──────────────────────────────────── */
-        .badge { display: inline-flex; align-items: center; gap: .3rem; padding: .25rem .65rem; border-radius: 1rem; font-size: .7rem; font-weight: 700; }
-        .badge-active { background: #064e3b; color: #6ee7b7; }
-        .badge-pending { background: #451a03; color: #fcd34d; }
-        .badge-done { background: #0c2a4a; color: #7dd3fc; }
-        .badge-cancelled { background: #3b0f0f; color: #fca5a5; }
-
-        /* ── Buttons ─────────────────────────────────── */
-        .btn { display: inline-flex; align-items: center; gap: .4rem; padding: .5rem 1rem; border-radius: .5rem; font-size: .825rem; font-weight: 600; cursor: pointer; border: none; transition: all .15s; text-decoration: none; }
-        .btn-primary { background: var(--primary); color: #fff; }
-        .btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); }
-        .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
-        .btn-outline:hover { border-color: var(--primary); color: var(--primary-light); }
-        .btn-sm { padding: .3rem .75rem; font-size: .775rem; }
-        .btn-danger { background: #7f1d1d; color: #fca5a5; }
-        .btn-danger:hover { background: #991b1b; }
-        .btn-success { background: #14532d; color: #86efac; }
-        .btn-success:hover { background: #166534; }
-
-        /* ── Form ────────────────────────────────────── */
-        .form-group { margin-bottom: 1rem; }
-        .form-label { display: block; font-size: .8rem; font-weight: 600; color: var(--muted); margin-bottom: .4rem; }
-        .form-control {
-            width: 100%; background: var(--bg); border: 1px solid var(--border);
-            border-radius: .5rem; padding: .625rem .875rem; color: var(--text);
-            font-size: .875rem; font-family: inherit;
-            transition: border-color .15s;
-        }
-        .form-control:focus { outline: none; border-color: var(--primary); }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-        @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
-        .form-select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%2364748b' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right .75rem center; background-size: .75rem; padding-right: 2.5rem; }
-
-        /* ── Modal ───────────────────────────────────── */
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem; opacity: 0; transition: opacity .2s; pointer-events: none; }
-        .modal-overlay.open { opacity: 1; pointer-events: all; }
-        .modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 1rem; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; transform: scale(.95); transition: transform .2s; }
-        .modal-overlay.open .modal-box { transform: scale(1); }
-        .modal-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-        .modal-header h5 { font-weight: 700; font-size: 1rem; }
-        .modal-close { background: none; border: none; color: var(--muted); font-size: 1.25rem; cursor: pointer; padding: .25rem; }
-        .modal-close:hover { color: var(--text); }
-        .modal-body { padding: 1.5rem; }
-        .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; gap: .75rem; justify-content: flex-end; }
-
-        /* ── Pages ───────────────────────────────────── */
-        .page { display: none; animation: fadeIn .25s ease; }
-        .page.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-
-        /* ── Calendar ────────────────────────────────── */
-        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-        .cal-day-header { text-align: center; font-size: .7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; padding: .5rem 0; }
-        .cal-day { background: var(--surface2); border-radius: .5rem; padding: .5rem; min-height: 80px; cursor: pointer; transition: border .15s; border: 1px solid transparent; font-size: .75rem; }
-        .cal-day:hover { border-color: var(--primary); }
-        .cal-day.today { border-color: var(--primary); background: rgba(37,99,235,.1); }
-        .cal-day.other-month { opacity: .35; }
-        .cal-day-num { font-weight: 600; color: var(--muted); margin-bottom: .25rem; }
-        .cal-day.today .cal-day-num { color: var(--primary-light); }
-        .cal-event { background: rgba(37,99,235,.25); color: #93c5fd; border-radius: .25rem; padding: .15rem .35rem; font-size: .65rem; font-weight: 600; margin-bottom: .15rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .cal-event.done { background: rgba(34,197,94,.15); color: #86efac; }
-
-        /* ── Patient Avatar ──────────────────────────── */
-        .patient-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0; }
-
-        /* ── Timeline ────────────────────────────────── */
-        .timeline { position: relative; padding-left: 1.5rem; }
-        .timeline::before { content: ''; position: absolute; left: .5rem; top: 0; bottom: 0; width: 2px; background: var(--border); }
-        .timeline-item { position: relative; margin-bottom: 1.25rem; }
-        .timeline-item::before { content: ''; position: absolute; left: -1.1rem; top: .35rem; width: 10px; height: 10px; border-radius: 50%; background: var(--primary); border: 2px solid var(--bg); }
-        .timeline-date { font-size: .7rem; color: var(--muted); margin-bottom: .15rem; }
-        .timeline-text { font-size: .85rem; }
-
-        /* ── Toast ───────────────────────────────────── */
-        .toast-container { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: .5rem; }
-        .toast { background: var(--surface2); border: 1px solid var(--border); border-radius: .625rem; padding: .875rem 1.25rem; display: flex; align-items: center; gap: .75rem; font-size: .85rem; min-width: 280px; animation: slideUp .3s ease; box-shadow: 0 8px 24px rgba(0,0,0,.4); }
-        .toast.success { border-left: 3px solid var(--success); }
-        .toast.info { border-left: 3px solid var(--primary); }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
-
-        /* ── Demo note ───────────────────────────────── */
-        .demo-note { background: rgba(124,58,237,.1); border: 1px solid rgba(124,58,237,.3); border-radius: .5rem; padding: .75rem 1rem; font-size: .8rem; color: #c4b5fd; margin-bottom: 1.5rem; display: flex; align-items: center; gap: .5rem; }
-
-        /* ── Mobile ──────────────────────────────────── */
-        @media (max-width: 768px) {
-            .sidebar { position: fixed; left: 0; top: 34px; bottom: 0; transform: translateX(-100%); }
-            .sidebar.open { transform: translateX(0); box-shadow: 4px 0 24px rgba(0,0,0,.5); }
-            .hamburger { display: block; }
-            .stats-grid { grid-template-columns: repeat(2, 1fr); }
-            .page-content { padding: 1rem; }
-            .topbar { padding: .75rem 1rem; }
-            .cal-day { min-height: 50px; padding: .3rem; }
-            .cal-event { display: none; }
-            .cal-day.has-event::after { content: '•'; color: var(--primary-light); display: block; text-align: center; font-size: .8rem; }
-        }
-        @media (max-width: 480px) {
-            .stats-grid { grid-template-columns: 1fr 1fr; }
-            .form-row { grid-template-columns: 1fr; }
-        }
-        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 99; }
-        .sidebar-overlay.open { display: block; }
-
-        /* ── Invoice ─────────────────────────────────── */
-        .invoice-total { font-size: 1.5rem; font-weight: 800; color: #fff; }
-        .progress-bar-wrap { background: var(--border); border-radius: 1rem; height: 6px; overflow: hidden; }
-        .progress-bar-fill { height: 100%; border-radius: 1rem; background: linear-gradient(90deg, var(--primary), var(--primary-light)); transition: width .6s ease; }
-
-        /* Search */
-        .search-wrap { position: relative; }
-        .search-wrap input { padding-left: 2.25rem; }
-        .search-wrap i { position: absolute; left: .75rem; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TheraPano - Live-Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<style>
+:root{--sa-bg:#0f172a;--sa-surface:#1a2537;--sa-surface2:#1e2d42;--sa-border:#2a3a50;--sa-text:#c9d8e8;--sa-muted:#6b82a0;--sa-primary:#4f7cff;--sa-accent:#a855f7;--sa-success:#22c55e;--sa-warning:#f59e0b;--sa-danger:#ef4444;--sa-cyan:#06b6d4;--sa-sidebar-w:230px;--sa-header-h:52px;}
+*,*::before,*::after{box-sizing:border-box;}
+html,body{height:100%;margin:0;padding:0;}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--sa-bg);color:var(--sa-text);overflow-x:hidden;}
+.demo-banner{background:linear-gradient(90deg,#7c3aed,#2563eb);color:#fff;font-size:.78rem;font-weight:600;padding:.4rem 1rem;position:sticky;top:0;z-index:3000;display:flex;align-items:center;justify-content:center;gap:1.25rem;}
+.demo-banner a{color:#fff;text-decoration:underline;}
+.app-wrap{display:flex;flex-direction:column;height:calc(100vh - 32px);}
+.app-inner{display:flex;flex:1;overflow:hidden;}
+.app-header{height:var(--sa-header-h);background:var(--sa-surface);border-bottom:1px solid var(--sa-border);display:flex;align-items:center;gap:.75rem;padding:0 1.25rem;flex-shrink:0;}
+.app-logo{display:flex;align-items:center;gap:.6rem;text-decoration:none;font-weight:800;font-size:1.05rem;color:#fff;flex-shrink:0;}
+.app-logo-icon{width:28px;height:28px;border-radius:.5rem;background:linear-gradient(135deg,var(--sa-primary),var(--sa-accent));display:flex;align-items:center;justify-content:center;font-size:.85rem;}
+.app-logo span{color:var(--sa-primary);}
+.header-search{flex:1;max-width:340px;position:relative;margin-left:.5rem;}
+.header-search input{width:100%;background:var(--sa-surface2);border:1px solid var(--sa-border);border-radius:.5rem;padding:.35rem .875rem .35rem 2.1rem;font-size:.83rem;color:var(--sa-text);outline:none;font-family:inherit;}
+.header-search input::placeholder{color:var(--sa-muted);}
+.header-search i{position:absolute;left:.65rem;top:50%;transform:translateY(-50%);color:var(--sa-muted);font-size:.85rem;}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:.5rem;}
+.hbtn{background:transparent;border:1px solid var(--sa-border);border-radius:.5rem;color:var(--sa-muted);padding:.3rem .55rem;cursor:pointer;font-size:.9rem;transition:all .15s;position:relative;}
+.hbtn:hover{color:var(--sa-text);border-color:var(--sa-primary);}
+.hbtn .dot{position:absolute;top:4px;right:4px;width:7px;height:7px;background:var(--sa-danger);border-radius:50%;border:1.5px solid var(--sa-surface);}
+.header-user{display:flex;align-items:center;gap:.55rem;padding:.25rem .6rem;background:var(--sa-surface2);border:1px solid var(--sa-border);border-radius:.5rem;cursor:pointer;}
+.h-avatar{width:26px;height:26px;background:linear-gradient(135deg,var(--sa-primary),var(--sa-accent));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:800;color:#fff;}
+.app-nav{width:var(--sa-sidebar-w);background:var(--sa-surface);border-right:1px solid var(--sa-border);display:flex;flex-direction:column;overflow-y:auto;flex-shrink:0;transition:transform .3s;}
+.nav-sec{font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--sa-muted);padding:.875rem 1.25rem .3rem;}
+.snl{display:flex;align-items:center;gap:.65rem;padding:.5rem 1.25rem;color:var(--sa-muted);font-size:.83rem;font-weight:500;cursor:pointer;transition:color .15s,background .15s;border:none;background:none;width:100%;border-left:3px solid transparent;text-align:left;}
+.snl i{font-size:.95rem;width:1.1rem;text-align:center;flex-shrink:0;}
+.snl:hover{color:var(--sa-text);background:rgba(79,124,255,.06);}
+.snl.active{color:var(--sa-primary);background:rgba(79,124,255,.1);border-left-color:var(--sa-primary);font-weight:600;}
+.nav-badge{margin-left:auto;background:var(--sa-danger);color:#fff;font-size:.6rem;font-weight:800;padding:.1rem .42rem;border-radius:1rem;}
+.nav-foot{padding:1rem 1.25rem;border-top:1px solid var(--sa-border);margin-top:auto;}
+.nav-foot-user{display:flex;align-items:center;gap:.65rem;}
+.nf-av{width:34px;height:34px;background:linear-gradient(135deg,var(--sa-primary),var(--sa-accent));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:800;color:#fff;flex-shrink:0;}
+.nf-info div:first-child{font-size:.8rem;font-weight:700;color:var(--sa-text);}
+.nf-info div:last-child{font-size:.68rem;color:var(--sa-muted);}
+.app-main{flex:1;overflow-y:auto;}
+.pc{padding:1.5rem;}
+.page{display:none;}
+.page.active{display:block;}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;flex-wrap:wrap;gap:.75rem;}
+.pt{font-size:1.3rem;font-weight:800;color:#fff;margin:0;line-height:1.2;}
+.ps{font-size:.8rem;color:var(--sa-muted);margin:.15rem 0 0;}
+.panel{background:var(--sa-surface);border:1px solid var(--sa-border);border-radius:.75rem;overflow:hidden;margin-bottom:1rem;}
+.phdr{display:flex;align-items:center;padding:.7rem 1.1rem;border-bottom:1px solid var(--sa-border);min-height:46px;}
+.phdr h2{font-size:.875rem;font-weight:700;color:var(--sa-text);margin:0;display:flex;align-items:center;gap:.5rem;}
+.phdr h2 small{font-size:.72rem;font-weight:400;color:var(--sa-muted);}
+.ptb{margin-left:auto;display:flex;align-items:center;gap:.4rem;}
+.pcnt{padding:1.1rem;}
+.kpi{padding:1rem 1.1rem;border-radius:.625rem;border:1px solid rgba(255,255,255,.07);position:relative;overflow:hidden;}
+.kpi-lbl{font-size:.7rem;color:var(--sa-muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.4rem;}
+.kpi-val{font-size:1.75rem;font-weight:900;color:#fff;line-height:1;}
+.kpi-sub{font-size:.72rem;margin-top:.35rem;}
+.kpi-ico{position:absolute;right:1rem;top:50%;transform:translateY(-50%);font-size:2rem;opacity:.12;}
+.trend-up{color:var(--sa-success);}
+.trend-dn{color:var(--sa-danger);}
+.si{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.1rem;border-bottom:1px solid var(--sa-border);}
+.si:last-child{border-bottom:none;}
+.si-lbl{font-size:.82rem;color:var(--sa-muted);}
+.si-val{font-size:1.2rem;font-weight:800;}
+.ac{display:flex;align-items:center;gap:.875rem;padding:.75rem 1.1rem;border-bottom:1px solid var(--sa-border);color:inherit;transition:background .15s;}
+.ac:last-child{border-bottom:none;}
+.ac:hover{background:rgba(79,124,255,.05);}
+.adb{width:44px;height:44px;border-radius:.5rem;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;}
+.adb .day{font-size:1.1rem;font-weight:900;line-height:1;}
+.adb .dow,.adb .mon{font-size:.55rem;font-weight:700;text-transform:uppercase;opacity:.8;}
+.ai .nm{font-size:.875rem;font-weight:700;color:#fff;}
+.ai .mt{font-size:.72rem;color:var(--sa-muted);margin-top:.1rem;}
+.ast{margin-left:auto;flex-shrink:0;}
+.sat{width:100%;border-collapse:collapse;}
+.sat th{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--sa-muted);padding:.6rem 1rem;border-bottom:1px solid var(--sa-border);text-align:left;white-space:nowrap;}
+.sat td{padding:.75rem 1rem;border-bottom:1px solid rgba(42,58,80,.6);font-size:.83rem;vertical-align:middle;}
+.sat tr:last-child td{border-bottom:none;}
+.sat tbody tr:hover td{background:rgba(79,124,255,.04);}
+.tw{overflow-x:auto;}
+.sb{display:inline-flex;align-items:center;gap:.25rem;padding:.2rem .6rem;border-radius:1rem;font-size:.68rem;font-weight:700;}
+.b-aktiv{background:rgba(34,197,94,.15);color:#4ade80;}
+.b-erledigt{background:rgba(79,124,255,.15);color:#93c5fd;}
+.b-storniert{background:rgba(239,68,68,.15);color:#fca5a5;}
+.b-ausstehend{background:rgba(245,158,11,.15);color:#fcd34d;}
+.b-bezahlt{background:rgba(34,197,94,.15);color:#4ade80;}
+.b-ueberfaellig{background:rgba(239,68,68,.2);color:#ef4444;}
+.btn-p{display:inline-flex;align-items:center;gap:.4rem;padding:.4rem .875rem;border-radius:.45rem;font-size:.8rem;font-weight:600;cursor:pointer;border:none;text-decoration:none;transition:all .15s;font-family:inherit;}
+.btn-pri{background:var(--sa-primary);color:#fff;}
+.btn-pri:hover{background:#3b6de8;color:#fff;}
+.btn-out{background:transparent;color:var(--sa-text);border:1px solid var(--sa-border);}
+.btn-out:hover{border-color:var(--sa-primary);color:var(--sa-primary);}
+.btn-sm{padding:.25rem .6rem;font-size:.75rem;}
+.btn-dng{background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3);}
+.btn-suc{background:rgba(34,197,94,.15);color:#22c55e;border:1px solid rgba(34,197,94,.3);}
+.sa-lbl{display:block;font-size:.75rem;font-weight:700;color:var(--sa-muted);margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.05em;}
+.sa-inp{width:100%;background:var(--sa-surface2);border:1px solid var(--sa-border);border-radius:.45rem;padding:.55rem .875rem;color:var(--sa-text);font-size:.85rem;font-family:inherit;outline:none;transition:border-color .15s;}
+.sa-inp:focus{border-color:var(--sa-primary);}
+.sa-inp::placeholder{color:var(--sa-muted);}
+select.sa-inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%236b82a0' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .75rem center;background-size:.7rem;}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .2s;}
+.modal-bg.open{opacity:1;pointer-events:all;}
+.modal-box{background:var(--sa-surface);border:1px solid var(--sa-border);border-radius:.875rem;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;transform:scale(.96);transition:transform .2s;}
+.modal-bg.open .modal-box{transform:scale(1);}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem;border-bottom:1px solid var(--sa-border);}
+.modal-hdr h5{font-size:.95rem;font-weight:800;margin:0;color:#fff;}
+.modal-cls{background:none;border:none;color:var(--sa-muted);font-size:1.1rem;cursor:pointer;padding:.2rem .4rem;border-radius:.3rem;}
+.modal-cls:hover{color:var(--sa-text);}
+.modal-body{padding:1.25rem;}
+.modal-foot{display:flex;gap:.6rem;justify-content:flex-end;padding:.875rem 1.25rem;border-top:1px solid var(--sa-border);}
+.tw-wrap{position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:.5rem;}
+.tw-item{background:var(--sa-surface2);border:1px solid var(--sa-border);border-radius:.625rem;padding:.75rem 1.1rem;display:flex;align-items:center;gap:.65rem;font-size:.82rem;min-width:260px;animation:twIn .25s ease;box-shadow:0 8px 32px rgba(0,0,0,.4);}
+.tw-item.suc{border-left:3px solid var(--sa-success);}
+.tw-item.inf{border-left:3px solid var(--sa-primary);}
+@keyframes twIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
+.cal-dh{text-align:center;font-size:.65rem;font-weight:800;color:var(--sa-muted);text-transform:uppercase;padding:.5rem 0;}
+.cal-day{background:var(--sa-surface2);border-radius:.4rem;padding:.4rem .5rem;min-height:76px;cursor:pointer;border:1px solid transparent;font-size:.72rem;transition:border-color .15s;}
+.cal-day:hover{border-color:var(--sa-primary);}
+.cal-day.today{border-color:var(--sa-primary);background:rgba(79,124,255,.1);}
+.cal-day.om{opacity:.3;}
+.cal-dn{font-weight:700;color:var(--sa-muted);margin-bottom:.2rem;font-size:.75rem;}
+.cal-day.today .cal-dn{color:var(--sa-primary);}
+.cal-ev{background:rgba(79,124,255,.22);color:#93c5fd;border-radius:.25rem;padding:.1rem .3rem;font-size:.62rem;font-weight:700;margin-bottom:.15rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cal-ev.done{background:rgba(34,197,94,.15);color:#86efac;}
+.cal-ev.can{background:rgba(239,68,68,.12);color:#fca5a5;}
+.tl{position:relative;padding-left:1.4rem;}
+.tl::before{content:'';position:absolute;left:.45rem;top:0;bottom:0;width:2px;background:var(--sa-border);}
+.tl-it{position:relative;margin-bottom:1rem;}
+.tl-it::before{content:'';position:absolute;left:-1rem;top:.35rem;width:9px;height:9px;border-radius:50%;background:var(--sa-primary);border:2px solid var(--sa-bg);}
+.tl-dt{font-size:.68rem;color:var(--sa-muted);margin-bottom:.15rem;}
+.tl-tx{font-size:.82rem;}
+.dn{background:rgba(79,124,255,.08);border:1px solid rgba(79,124,255,.2);border-radius:.5rem;padding:.65rem 1rem;font-size:.8rem;color:#93c5fd;display:flex;align-items:center;gap:.5rem;margin-bottom:1.25rem;}
+.srch-wrap{position:relative;}
+.srch-wrap i{position:absolute;left:.65rem;top:50%;transform:translateY(-50%);color:var(--sa-muted);font-size:.85rem;}
+.srch-wrap input{padding-left:2.1rem;}
+@media(max-width:768px){.app-nav{position:fixed;left:0;top:0;bottom:0;z-index:500;transform:translateX(-100%);}.app-nav.open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.5);}.hamburger{display:flex!important;}.pc{padding:1rem;}.header-search{max-width:140px;}}
+.hamburger{display:none;background:none;border:none;color:var(--sa-text);font-size:1.2rem;cursor:pointer;padding:.25rem;}
+.nav-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:490;}
+.nav-ov.open{display:block;}
+</style>
 </head>
 <body>
-
-<!-- Demo Banner -->
 <div class="demo-banner">
-    <i class="bi bi-play-circle-fill"></i>
-    <span>Demo-Modus – alle Änderungen werden nur lokal gespeichert und beim Neuladen zurückgesetzt.</span>
-    <a href="/register">Jetzt kostenlos registrieren &rarr;</a>
+  <i class="bi bi-play-circle-fill"></i>
+  <span>Demo-Modus - alle Anderungen werden nur lokal gespeichert.</span>
+  <a href="/register">Jetzt kostenlos registrieren &rarr;</a>
 </div>
-
-<!-- Sidebar Overlay (Mobile) -->
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
-
-<div class="app-shell">
-    <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-brand">
-            Thera<span>Pano</span>
-            <small>Musterpraxis Müller</small>
-        </div>
-        <nav class="sidebar-nav">
-            <div class="nav-section">Übersicht</div>
-            <button class="nav-link active" onclick="showPage('dashboard', this)">
-                <i class="bi bi-speedometer2"></i> Dashboard
-            </button>
-
-            <div class="nav-section">Praxis</div>
-            <button class="nav-link" onclick="showPage('termine', this)">
-                <i class="bi bi-calendar3"></i> Terminkalender
-            </button>
-            <button class="nav-link" onclick="showPage('patienten', this)">
-                <i class="bi bi-paw-fill"></i> Patienten
-            </button>
-            <button class="nav-link" onclick="showPage('besitzer', this)">
-                <i class="bi bi-people-fill"></i> Besitzer
-            </button>
-
-            <div class="nav-section">Finanzen</div>
-            <button class="nav-link" onclick="showPage('rechnungen', this)">
-                <i class="bi bi-receipt"></i> Rechnungen
-            </button>
-
-            <div class="nav-section">System</div>
-            <button class="nav-link" onclick="showPage('einstellungen', this)">
-                <i class="bi bi-gear"></i> Einstellungen
-            </button>
-        </nav>
-        <div class="sidebar-footer">
-            <div class="sidebar-user">
-                <div class="sidebar-avatar">DM</div>
-                <div class="sidebar-user-info">
-                    <div>Dr. Maria Müller</div>
-                    <div>Demo-Praxis</div>
-                </div>
-            </div>
-        </div>
-    </aside>
-
-    <!-- Main Area -->
-    <div class="main-area">
-        <div class="topbar">
-            <button class="hamburger" onclick="toggleSidebar()"><i class="bi bi-list"></i></button>
-            <div class="topbar-title" id="pageTitle">Dashboard</div>
-            <div class="topbar-actions">
-                <button class="btn btn-primary btn-sm" onclick="openNewTermin()">
-                    <i class="bi bi-plus-lg"></i> <span class="d-none d-sm-inline">Neu</span>
-                </button>
-            </div>
-        </div>
-
-        <div class="page-content">
-
-            <!-- ─── DASHBOARD ─────────────────────────── -->
-            <div class="page active" id="page-dashboard">
-                <div class="demo-note"><i class="bi bi-info-circle-fill"></i> Demo-Praxis: Sie erleben TheraPano mit realistischen Musterdaten. Alle Eingaben werden im Browser gespeichert.</div>
-
-                <div class="stats-grid">
-                    <div class="stat-card blue">
-                        <div class="stat-icon">📅</div>
-                        <div class="stat-value" id="stat-termine">8</div>
-                        <div class="stat-label">Termine heute</div>
-                        <div class="stat-delta up"><i class="bi bi-arrow-up-short"></i> 2 mehr als gestern</div>
-                    </div>
-                    <div class="stat-card green">
-                        <div class="stat-icon">🐾</div>
-                        <div class="stat-value" id="stat-patienten">42</div>
-                        <div class="stat-label">Aktive Patienten</div>
-                        <div class="stat-delta up"><i class="bi bi-arrow-up-short"></i> 3 diesen Monat</div>
-                    </div>
-                    <div class="stat-card amber">
-                        <div class="stat-icon">💶</div>
-                        <div class="stat-value" id="stat-umsatz">2.840€</div>
-                        <div class="stat-label">Umsatz diesen Monat</div>
-                        <div class="stat-delta up"><i class="bi bi-arrow-up-short"></i> +12% zum Vormonat</div>
-                    </div>
-                    <div class="stat-card purple">
-                        <div class="stat-icon">📋</div>
-                        <div class="stat-value" id="stat-offen">3</div>
-                        <div class="stat-label">Offene Rechnungen</div>
-                        <div class="stat-delta down"><i class="bi bi-dot"></i> 680€ ausstehend</div>
-                    </div>
-                </div>
-
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
-                    <!-- Heutige Termine -->
-                    <div class="card" style="grid-column:span 2;">
-                        <div class="card-header">
-                            <span><i class="bi bi-calendar-check me-2" style="color:var(--primary-light)"></i>Heutige Termine</span>
-                            <button class="btn btn-outline btn-sm" onclick="showPage('termine',document.querySelector('[onclick*=termine]'))">Alle anzeigen</button>
-                        </div>
-                        <div class="table-wrapper">
-                            <table class="data-table">
-                                <thead><tr><th>Uhrzeit</th><th>Patient</th><th>Behandlung</th><th>Besitzer</th><th>Status</th></tr></thead>
-                                <tbody id="heute-termine"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
-                    <!-- Letzte Aktivitäten -->
-                    <div class="card">
-                        <div class="card-header"><span><i class="bi bi-activity me-2" style="color:var(--success)"></i>Letzte Aktivitäten</span></div>
-                        <div class="card-body">
-                            <div class="timeline" id="timeline"></div>
-                        </div>
-                    </div>
-                    <!-- Geburtstage -->
-                    <div class="card">
-                        <div class="card-header"><span><i class="bi bi-gift me-2" style="color:var(--warning)"></i>Geburtstage diese Woche</span></div>
-                        <div class="card-body" id="geburtstage"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ─── TERMINE ────────────────────────────── -->
-            <div class="page" id="page-termine">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
-                    <div style="display:flex;align-items:center;gap:.75rem;">
-                        <button class="btn btn-outline btn-sm" onclick="changeMonth(-1)"><i class="bi bi-chevron-left"></i></button>
-                        <span style="font-weight:700;font-size:1rem;" id="calMonthLabel"></span>
-                        <button class="btn btn-outline btn-sm" onclick="changeMonth(1)"><i class="bi bi-chevron-right"></i></button>
-                    </div>
-                    <button class="btn btn-primary" onclick="openNewTermin()"><i class="bi bi-plus-lg"></i> Neuer Termin</button>
-                </div>
-                <div class="card">
-                    <div class="card-body" style="padding:.75rem;">
-                        <div class="cal-grid" id="calGrid"></div>
-                    </div>
-                </div>
-                <div class="card" style="margin-top:1rem;">
-                    <div class="card-header"><span>Alle Termine</span></div>
-                    <div class="table-wrapper">
-                        <table class="data-table">
-                            <thead><tr><th>Datum</th><th>Uhrzeit</th><th>Patient</th><th>Behandlung</th><th>Status</th><th></th></tr></thead>
-                            <tbody id="termin-liste"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ─── PATIENTEN ──────────────────────────── -->
-            <div class="page" id="page-patienten">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
-                    <div class="search-wrap" style="flex:1;max-width:320px;">
-                        <i class="bi bi-search"></i>
-                        <input class="form-control" id="patientenSearch" placeholder="Patient suchen..." oninput="filterPatienten()">
-                    </div>
-                    <button class="btn btn-primary" onclick="openNewPatient()"><i class="bi bi-plus-lg"></i> Neuer Patient</button>
-                </div>
-                <div class="card">
-                    <div class="table-wrapper">
-                        <table class="data-table">
-                            <thead><tr><th>Patient</th><th>Tierart</th><th>Rasse</th><th>Besitzer</th><th>Letzter Besuch</th><th></th></tr></thead>
-                            <tbody id="patienten-liste"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ─── BESITZER ───────────────────────────── -->
-            <div class="page" id="page-besitzer">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
-                    <div class="search-wrap" style="flex:1;max-width:320px;">
-                        <i class="bi bi-search"></i>
-                        <input class="form-control" id="besitzerSearch" placeholder="Besitzer suchen..." oninput="filterBesitzer()">
-                    </div>
-                    <button class="btn btn-primary" onclick="openNewBesitzer()"><i class="bi bi-plus-lg"></i> Neuer Besitzer</button>
-                </div>
-                <div class="card">
-                    <div class="table-wrapper">
-                        <table class="data-table">
-                            <thead><tr><th>Name</th><th>E-Mail</th><th>Telefon</th><th>Patienten</th><th></th></tr></thead>
-                            <tbody id="besitzer-liste"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ─── RECHNUNGEN ─────────────────────────── -->
-            <div class="page" id="page-rechnungen">
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.25rem;">
-                    <div class="stat-card green"><div class="stat-icon">✅</div><div class="stat-value" id="r-bezahlt-sum">2.160€</div><div class="stat-label">Bezahlt</div></div>
-                    <div class="stat-card amber"><div class="stat-icon">⏳</div><div class="stat-value" id="r-offen-sum">680€</div><div class="stat-label">Ausstehend</div></div>
-                    <div class="stat-card blue"><div class="stat-icon">📄</div><div class="stat-value" id="r-gesamt">7</div><div class="stat-label">Rechnungen gesamt</div></div>
-                </div>
-                <div style="display:flex;justify-content:flex-end;margin-bottom:1rem;">
-                    <button class="btn btn-primary" onclick="openNewRechnung()"><i class="bi bi-plus-lg"></i> Neue Rechnung</button>
-                </div>
-                <div class="card">
-                    <div class="table-wrapper">
-                        <table class="data-table">
-                            <thead><tr><th>Nr.</th><th>Patient / Besitzer</th><th>Betrag</th><th>Datum</th><th>Status</th><th></th></tr></thead>
-                            <tbody id="rechnungen-liste"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ─── EINSTELLUNGEN ─────────────────────── -->
-            <div class="page" id="page-einstellungen">
-                <div class="demo-note"><i class="bi bi-lock-fill"></i> Im Demo-Modus werden Einstellungen im Browser gespeichert und beim Neuladen zurückgesetzt.</div>
-                <div class="card">
-                    <div class="card-header">Praxis-Informationen</div>
-                    <div class="card-body">
-                        <div class="form-row">
-                            <div class="form-group"><label class="form-label">Praxisname</label><input class="form-control" id="set-praxisname" value="Musterpraxis Müller"></div>
-                            <div class="form-group"><label class="form-label">Inhaberin</label><input class="form-control" id="set-inhaberin" value="Dr. Maria Müller"></div>
-                            <div class="form-group"><label class="form-label">E-Mail</label><input class="form-control" id="set-email" value="info@musterpraxis-mueller.de"></div>
-                            <div class="form-group"><label class="form-label">Telefon</label><input class="form-control" id="set-telefon" value="+49 89 123456789"></div>
-                            <div class="form-group"><label class="form-label">Adresse</label><input class="form-control" id="set-adresse" value="Musterstraße 12, 80331 München"></div>
-                        </div>
-                        <button class="btn btn-primary" onclick="saveSettings()"><i class="bi bi-check-lg"></i> Speichern (lokal)</button>
-                    </div>
-                </div>
-                <div class="card" style="margin-top:1rem;">
-                    <div class="card-header">Demo zurücksetzen</div>
-                    <div class="card-body">
-                        <p style="color:var(--muted);font-size:.875rem;margin-bottom:1rem;">Alle Demo-Daten auf den Ausgangszustand zurücksetzen.</p>
-                        <button class="btn btn-danger" onclick="resetDemo()"><i class="bi bi-arrow-counterclockwise"></i> Demo zurücksetzen</button>
-                    </div>
-                </div>
-            </div>
-
-        </div><!-- /page-content -->
-    </div><!-- /main-area -->
-</div><!-- /app-shell -->
-
-<!-- ─── Modals ─────────────────────────────────────────── -->
-
-<!-- Termin Modal -->
-<div class="modal-overlay" id="modal-termin">
-    <div class="modal-box">
-        <div class="modal-header"><h5 id="termin-modal-title">Neuer Termin</h5><button class="modal-close" onclick="closeModal('modal-termin')"><i class="bi bi-x-lg"></i></button></div>
-        <div class="modal-body">
-            <input type="hidden" id="termin-edit-id">
-            <div class="form-row">
-                <div class="form-group"><label class="form-label">Datum *</label><input class="form-control" type="date" id="t-datum"></div>
-                <div class="form-group"><label class="form-label">Uhrzeit *</label><input class="form-control" type="time" id="t-zeit" value="09:00"></div>
-            </div>
-            <div class="form-group"><label class="form-label">Patient *</label>
-                <select class="form-control form-select" id="t-patient"></select>
-            </div>
-            <div class="form-group"><label class="form-label">Behandlung</label>
-                <select class="form-control form-select" id="t-behandlung">
-                    <option>Erstbehandlung</option><option>Folgebehandlung</option><option>Manuelle Therapie</option>
-                    <option>Hydrotherapie</option><option>Elektrotherapie</option><option>Massage</option>
-                    <option>Laserbehandlung</option><option>Kontrolluntersuchung</option>
-                </select>
-            </div>
-            <div class="form-group"><label class="form-label">Notizen</label><textarea class="form-control" id="t-notiz" rows="2"></textarea></div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-outline" onclick="closeModal('modal-termin')">Abbrechen</button>
-            <button class="btn btn-primary" onclick="saveTermin()"><i class="bi bi-check-lg"></i> Speichern</button>
-        </div>
+<div class="app-wrap">
+<header class="app-header">
+  <button class="hamburger" onclick="toggleNav()"><i class="bi bi-list"></i></button>
+  <a href="#" class="app-logo" onclick="showPage('dashboard');return false;">
+    <div class="app-logo-icon">&#x1F43E;</div>Thera<span>Pano</span>
+  </a>
+  <div class="header-search ms-2">
+    <i class="bi bi-search"></i>
+    <input type="text" placeholder="Patient, Tierhalter suchen...">
+  </div>
+  <div class="header-right">
+    <button class="hbtn"><i class="bi bi-bell"></i><span class="dot"></span></button>
+    <button class="hbtn" onclick="showPage('einstellungen');return false;"><i class="bi bi-gear"></i></button>
+    <div class="header-user"><div class="h-avatar">MM</div><span style="font-size:.8rem;font-weight:600;">Dr. Muller</span></div>
+  </div>
+</header>
+<div class="app-inner">
+<div class="nav-ov" id="navOv" onclick="toggleNav()"></div>
+<nav class="app-nav" id="appNav">
+  <div class="nav-sec">Ubersicht</div>
+  <button class="snl active" id="nav-dashboard" onclick="showPage('dashboard',this)"><i class="bi bi-speedometer2"></i>Dashboard</button>
+  <div class="nav-sec">Praxis</div>
+  <button class="snl" id="nav-kalender" onclick="showPage('kalender',this)"><i class="bi bi-calendar3"></i>Terminkalender</button>
+  <button class="snl" id="nav-patienten" onclick="showPage('patienten',this)"><i class="bi bi-heart-pulse"></i>Patienten</button>
+  <button class="snl" id="nav-tierhalter" onclick="showPage('tierhalter',this)"><i class="bi bi-people-fill"></i>Tierhalter</button>
+  <button class="snl" id="nav-befunde" onclick="showPage('befunde',this)"><i class="bi bi-file-medical"></i>Befundbogen</button>
+  <div class="nav-sec">Finanzen</div>
+  <button class="snl" id="nav-rechnungen" onclick="showPage('rechnungen',this)"><i class="bi bi-receipt"></i>Rechnungen<span class="nav-badge" id="badge-offen">3</span></button>
+  <div class="nav-sec">System</div>
+  <button class="snl" id="nav-einstellungen" onclick="showPage('einstellungen',this)"><i class="bi bi-gear"></i>Einstellungen</button>
+  <div class="nav-foot">
+    <div class="nav-foot-user">
+      <div class="nf-av">MM</div>
+      <div class="nf-info"><div>Dr. Maria Muller</div><div>Musterpraxis Demo</div></div>
     </div>
-</div>
+  </div>
+</nav>
+<main class="app-main"><div class="pc">
 
-<!-- Patient Modal -->
-<div class="modal-overlay" id="modal-patient">
-    <div class="modal-box">
-        <div class="modal-header"><h5 id="patient-modal-title">Neuer Patient</h5><button class="modal-close" onclick="closeModal('modal-patient')"><i class="bi bi-x-lg"></i></button></div>
-        <div class="modal-body">
-            <input type="hidden" id="p-edit-id">
-            <div class="form-row">
-                <div class="form-group"><label class="form-label">Name des Tieres *</label><input class="form-control" id="p-name" placeholder="z.B. Bella"></div>
-                <div class="form-group"><label class="form-label">Tierart *</label>
-                    <select class="form-control form-select" id="p-tierart">
-                        <option>Hund</option><option>Katze</option><option>Pferd</option><option>Kaninchen</option><option>Vogel</option><option>Sonstige</option>
-                    </select>
-                </div>
-                <div class="form-group"><label class="form-label">Rasse</label><input class="form-control" id="p-rasse" placeholder="z.B. Labrador"></div>
-                <div class="form-group"><label class="form-label">Geburtsdatum</label><input class="form-control" type="date" id="p-geburtstag"></div>
-                <div class="form-group"><label class="form-label">Geschlecht</label>
-                    <select class="form-control form-select" id="p-geschlecht">
-                        <option>Männlich</option><option>Weiblich</option><option>Kastriert</option><option>Sterilisiert</option>
-                    </select>
-                </div>
-                <div class="form-group"><label class="form-label">Gewicht (kg)</label><input class="form-control" type="number" id="p-gewicht" step="0.1"></div>
-            </div>
-            <div class="form-group"><label class="form-label">Besitzer</label>
-                <select class="form-control form-select" id="p-besitzer"></select>
-            </div>
-            <div class="form-group"><label class="form-label">Diagnose / Befund</label><textarea class="form-control" id="p-diagnose" rows="2"></textarea></div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-outline" onclick="closeModal('modal-patient')">Abbrechen</button>
-            <button class="btn btn-primary" onclick="savePatient()"><i class="bi bi-check-lg"></i> Speichern</button>
-        </div>
+<div class="page active" id="page-dashboard">
+  <div class="ph">
+    <div><h1 class="pt">&#x1F43E; Willkommen, Maria!</h1><p class="ps" id="dash-date"></p></div>
+    <div class="d-flex gap-2 flex-wrap">
+      <button class="btn-p btn-out" onclick="openMod('mod-patient')"><i class="bi bi-plus-lg"></i> Neuer Patient</button>
+      <button class="btn-p btn-pri" onclick="openMod('mod-termin')"><i class="bi bi-plus-lg"></i> Neuer Termin</button>
     </div>
-</div>
-
-<!-- Rechnung Modal -->
-<div class="modal-overlay" id="modal-rechnung">
-    <div class="modal-box">
-        <div class="modal-header"><h5>Neue Rechnung</h5><button class="modal-close" onclick="closeModal('modal-rechnung')"><i class="bi bi-x-lg"></i></button></div>
-        <div class="modal-body">
-            <div class="form-group"><label class="form-label">Patient</label>
-                <select class="form-control form-select" id="r-patient"></select>
-            </div>
-            <div class="form-row">
-                <div class="form-group"><label class="form-label">Betrag (€)</label><input class="form-control" type="number" id="r-betrag" step="0.01" placeholder="0.00"></div>
-                <div class="form-group"><label class="form-label">Datum</label><input class="form-control" type="date" id="r-datum"></div>
-            </div>
-            <div class="form-group"><label class="form-label">Leistung</label><input class="form-control" id="r-leistung" placeholder="z.B. Physiotherapie 3x"></div>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-outline" onclick="closeModal('modal-rechnung')">Abbrechen</button>
-            <button class="btn btn-primary" onclick="saveRechnung()"><i class="bi bi-check-lg"></i> Erstellen</button>
-        </div>
+  </div>
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-xl-3"><div class="kpi" style="background:rgba(79,124,255,.08);border-color:rgba(79,124,255,.2);"><div class="kpi-lbl">Termine heute</div><div class="kpi-val" id="k-termine">8</div><div class="kpi-sub trend-up"><i class="bi bi-arrow-up-short"></i>2 mehr als gestern</div><i class="bi bi-calendar-check kpi-ico" style="color:var(--sa-primary);"></i></div></div>
+    <div class="col-6 col-xl-3"><div class="kpi" style="background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.2);"><div class="kpi-lbl">Patienten gesamt</div><div class="kpi-val" id="k-patienten">42</div><div class="kpi-sub trend-up"><i class="bi bi-arrow-up-short"></i>3 neu diese Woche</div><i class="bi bi-heart-pulse kpi-ico" style="color:var(--sa-success);"></i></div></div>
+    <div class="col-6 col-xl-3"><div class="kpi" style="background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.2);"><div class="kpi-lbl">Umsatz Monat</div><div class="kpi-val" id="k-umsatz">2.840 EUR</div><div class="kpi-sub trend-up"><i class="bi bi-arrow-up-short"></i>+12% Vormonat</div><i class="bi bi-currency-euro kpi-ico" style="color:var(--sa-warning);"></i></div></div>
+    <div class="col-6 col-xl-3"><div class="kpi" style="background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.2);"><div class="kpi-lbl">Offene Rechnungen</div><div class="kpi-val" id="k-offen">3</div><div class="kpi-sub" style="color:var(--sa-danger);">680 EUR ausstehend</div><i class="bi bi-receipt kpi-ico" style="color:var(--sa-danger);"></i></div></div>
+  </div>
+  <div class="row g-3">
+    <div class="col-12 col-xl-8">
+      <div class="panel"><div class="phdr"><h2><i class="bi bi-calendar-week me-2" style="color:var(--sa-primary);"></i>Terminvorschau <small>Heute &amp; kommende Termine</small></h2><div class="ptb"><button class="btn-p btn-out btn-sm" onclick="showPage('kalender',document.getElementById('nav-kalender'))">Kalender offnen</button></div></div><div id="appt-list"></div></div>
     </div>
+    <div class="col-12 col-xl-4">
+      <div class="panel"><div class="phdr"><h2><i class="bi bi-activity me-2" style="color:var(--sa-cyan);"></i>Aktivitat</h2></div>
+        <div class="si"><span class="si-lbl"><i class="bi bi-file-earmark-text me-2"></i>Offene Rechnungen</span><span class="si-val" style="color:var(--sa-cyan);" id="act-of">3</span></div>
+        <div class="si"><span class="si-lbl"><i class="bi bi-exclamation-triangle me-2"></i>Uberfällig</span><span class="si-val" style="color:var(--sa-danger);" id="act-ue">1</span></div>
+        <div class="si"><span class="si-lbl"><i class="bi bi-heart-pulse me-2"></i>Neue Patienten (30T)</span><span class="si-val" style="color:var(--sa-warning);" id="act-np">3</span></div>
+        <div class="si"><span class="si-lbl"><i class="bi bi-people me-2"></i>Tierhalter gesamt</span><span class="si-val" style="color:var(--sa-accent);" id="act-th">5</span></div>
+      </div>
+      <div class="panel"><div class="phdr"><h2><i class="bi bi-gift me-2" style="color:var(--sa-warning);"></i>Geburtstage diese Woche</h2></div><div class="pcnt" id="dash-bdays" style="font-size:.83rem;"></div></div>
+    </div>
+    <div class="col-12">
+      <div class="panel"><div class="phdr"><h2><i class="bi bi-clock-history me-2" style="color:var(--sa-success);"></i>Letzte Aktivitaten</h2></div><div class="pcnt"><div class="tl" id="dash-tl"></div></div></div>
+    </div>
+  </div>
 </div>
 
-<!-- Toast Container -->
-<div class="toast-container" id="toastContainer"></div>
+<div class="page" id="page-kalender">
+  <div class="ph"><div><h1 class="pt">&#x1F4C5; Terminkalender</h1><p class="ps">Ubersicht aller Termine</p></div><button class="btn-p btn-pri" onclick="openMod('mod-termin')"><i class="bi bi-plus-lg"></i> Neuer Termin</button></div>
+  <div class="panel">
+    <div class="phdr"><div class="d-flex align-items-center gap-2"><button class="btn-p btn-out btn-sm" onclick="changeMonth(-1)"><i class="bi bi-chevron-left"></i></button><span style="font-weight:700;font-size:.9rem;" id="calLbl"></span><button class="btn-p btn-out btn-sm" onclick="changeMonth(1)"><i class="bi bi-chevron-right"></i></button></div></div>
+    <div class="pcnt"><div class="cal-grid" id="calGrid"></div></div>
+  </div>
+  <div class="panel"><div class="phdr"><h2>Alle Termine</h2></div><div class="tw"><table class="sat"><thead><tr><th>Datum</th><th>Zeit</th><th>Patient</th><th>Behandlung</th><th>Status</th><th></th></tr></thead><tbody id="termin-tbl"></tbody></table></div></div>
+</div>
 
+<div class="page" id="page-patienten">
+  <div class="ph">
+    <div><h1 class="pt">&#x1F43E; Patienten</h1><p class="ps" id="p-cnt-lbl">42 Patienten</p></div>
+    <div class="d-flex gap-2">
+      <div class="srch-wrap"><i class="bi bi-search"></i><input class="sa-inp" style="width:200px;" placeholder="Suchen..." id="p-srch" oninput="filtP()"></div>
+      <button class="btn-p btn-pri" onclick="openMod('mod-patient')"><i class="bi bi-plus-lg"></i> Neuer Patient</button>
+    </div>
+  </div>
+  <div class="panel"><div class="tw"><table class="sat"><thead><tr><th>Patient</th><th>Tierart</th><th>Rasse</th><th>Tierhalter</th><th>Letzter Besuch</th><th>Status</th><th></th></tr></thead><tbody id="pat-tbl"></tbody></table></div></div>
+</div>
+
+<div class="page" id="page-tierhalter">
+  <div class="ph"><div><h1 class="pt">&#x1F464; Tierhalter</h1><p class="ps" id="th-cnt-lbl">5 Tierhalter</p></div><button class="btn-p btn-pri" onclick="addThPrompt()"><i class="bi bi-plus-lg"></i> Neuer Tierhalter</button></div>
+  <div class="panel"><div class="tw"><table class="sat"><thead><tr><th>Name</th><th>E-Mail</th><th>Telefon</th><th>Patienten</th><th></th></tr></thead><tbody id="th-tbl"></tbody></table></div></div>
+</div>
+
+<div class="page" id="page-befunde">
+  <div class="ph"><div><h1 class="pt">&#x1F4CB; Befundbogen</h1><p class="ps">Strukturierte Untersuchungsdokumente</p></div><button class="btn-p btn-pri" onclick="toast('Befundbogen-Erstellung im Demo-Modus nicht verfugbar','inf')"><i class="bi bi-plus-lg"></i> Neuer Befundbogen</button></div>
+  <div class="dn"><i class="bi bi-info-circle-fill"></i> Im Demo-Modus werden Beispiel-Befundbogen angezeigt.</div>
+  <div class="panel"><div class="tw"><table class="sat"><thead><tr><th>Datum</th><th>Patient</th><th>Erstellt von</th><th>Diagnose (Auszug)</th><th></th></tr></thead><tbody id="bef-tbl"></tbody></table></div></div>
+</div>
+
+<div class="page" id="page-rechnungen">
+  <div class="ph"><div><h1 class="pt">&#x1F9FE; Rechnungen</h1></div><button class="btn-p btn-pri" onclick="openMod('mod-rechnung')"><i class="bi bi-plus-lg"></i> Neue Rechnung</button></div>
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-3"><div class="kpi" style="background:rgba(34,197,94,.08);border-color:rgba(34,197,94,.2);"><div class="kpi-lbl">Bezahlt</div><div class="kpi-val" id="r-bez">2.160 EUR</div><i class="bi bi-check-circle kpi-ico" style="color:var(--sa-success);"></i></div></div>
+    <div class="col-6 col-md-3"><div class="kpi" style="background:rgba(245,158,11,.08);border-color:rgba(245,158,11,.2);"><div class="kpi-lbl">Ausstehend</div><div class="kpi-val" id="r-aus">680 EUR</div><i class="bi bi-hourglass-split kpi-ico" style="color:var(--sa-warning);"></i></div></div>
+    <div class="col-6 col-md-3"><div class="kpi" style="background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.2);"><div class="kpi-lbl">Uberfällig</div><div class="kpi-val" id="r-ueb">295 EUR</div><i class="bi bi-exclamation-triangle kpi-ico" style="color:var(--sa-danger);"></i></div></div>
+    <div class="col-6 col-md-3"><div class="kpi" style="background:rgba(79,124,255,.08);border-color:rgba(79,124,255,.2);"><div class="kpi-lbl">Gesamt</div><div class="kpi-val" id="r-ges">7</div><i class="bi bi-receipt kpi-ico" style="color:var(--sa-primary);"></i></div></div>
+  </div>
+  <div class="panel"><div class="tw"><table class="sat"><thead><tr><th>Nr.</th><th>Patient / Tierhalter</th><th>Betrag</th><th>Datum</th><th>Fallig</th><th>Status</th><th></th></tr></thead><tbody id="rech-tbl"></tbody></table></div></div>
+</div>
+
+<div class="page" id="page-einstellungen">
+  <div class="ph"><div><h1 class="pt">&#x2699;&#xFE0F; Einstellungen</h1><p class="ps">Praxis-Konfiguration</p></div></div>
+  <div class="dn"><i class="bi bi-lock-fill"></i> Im Demo-Modus werden Einstellungen nur lokal gespeichert.</div>
+  <div class="row g-3">
+    <div class="col-12 col-lg-6">
+      <div class="panel"><div class="phdr"><h2><i class="bi bi-building me-2"></i>Praxis-Informationen</h2></div>
+        <div class="pcnt">
+          <div class="mb-3"><label class="sa-lbl">Praxisname</label><input class="sa-inp" value="Musterpraxis Muller"></div>
+          <div class="mb-3"><label class="sa-lbl">Inhaberin</label><input class="sa-inp" value="Dr. Maria Muller"></div>
+          <div class="mb-3"><label class="sa-lbl">E-Mail</label><input class="sa-inp" value="info@musterpraxis-mueller.de"></div>
+          <div class="mb-3"><label class="sa-lbl">Telefon</label><input class="sa-inp" value="+49 89 123456789"></div>
+          <div class="mb-3"><label class="sa-lbl">Adresse</label><input class="sa-inp" value="Musterstrasse 12, 80331 Munchen"></div>
+          <button class="btn-p btn-pri" onclick="toast('Einstellungen gespeichert')"><i class="bi bi-check-lg"></i> Speichern</button>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-lg-6">
+      <div class="panel"><div class="phdr"><h2><i class="bi bi-arrow-counterclockwise me-2"></i>Demo zurucksetzen</h2></div>
+        <div class="pcnt"><p style="color:var(--sa-muted);font-size:.85rem;margin-bottom:1rem;">Alle Demo-Daten auf den Ausgangszustand zurucksetzen.</p><button class="btn-p btn-dng" onclick="resetDemo()"><i class="bi bi-arrow-counterclockwise"></i> Demo zurucksetzen</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div></main></div></div>
+
+<div class="modal-bg" id="mod-termin">
+  <div class="modal-box">
+    <div class="modal-hdr"><h5 id="t-mod-ttl">Neuer Termin</h5><button class="modal-cls" onclick="closeMod('mod-termin')"><i class="bi bi-x-lg"></i></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="t-eid">
+      <div class="row g-3">
+        <div class="col-6"><label class="sa-lbl">Datum *</label><input class="sa-inp" type="date" id="t-dat"></div>
+        <div class="col-6"><label class="sa-lbl">Uhrzeit *</label><input class="sa-inp" type="time" id="t-zeit" value="09:00"></div>
+        <div class="col-12"><label class="sa-lbl">Patient *</label><select class="sa-inp" id="t-pat"></select></div>
+        <div class="col-12"><label class="sa-lbl">Behandlung</label><select class="sa-inp" id="t-beh"><option>Erstbehandlung</option><option>Folgebehandlung</option><option>Manuelle Therapie</option><option>Hydrotherapie</option><option>Elektrotherapie</option><option>Massage</option><option>Laserbehandlung</option><option>Kontrolluntersuchung</option></select></div>
+        <div class="col-12"><label class="sa-lbl">Notizen</label><textarea class="sa-inp" id="t-not" rows="2"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn-p btn-out" onclick="closeMod('mod-termin')">Abbrechen</button><button class="btn-p btn-pri" onclick="saveTermin()"><i class="bi bi-check-lg"></i> Speichern</button></div>
+  </div>
+</div>
+<div class="modal-bg" id="mod-patient">
+  <div class="modal-box">
+    <div class="modal-hdr"><h5 id="p-mod-ttl">Neuer Patient</h5><button class="modal-cls" onclick="closeMod('mod-patient')"><i class="bi bi-x-lg"></i></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="p-eid">
+      <div class="row g-3">
+        <div class="col-6"><label class="sa-lbl">Name *</label><input class="sa-inp" id="p-name" placeholder="z.B. Bella"></div>
+        <div class="col-6"><label class="sa-lbl">Tierart *</label><select class="sa-inp" id="p-ta"><option>Hund</option><option>Katze</option><option>Pferd</option><option>Kaninchen</option><option>Vogel</option><option>Sonstige</option></select></div>
+        <div class="col-6"><label class="sa-lbl">Rasse</label><input class="sa-inp" id="p-rasse"></div>
+        <div class="col-6"><label class="sa-lbl">Geburtsdatum</label><input class="sa-inp" type="date" id="p-geb"></div>
+        <div class="col-6"><label class="sa-lbl">Geschlecht</label><select class="sa-inp" id="p-ges"><option>Mannlich</option><option>Weiblich</option><option>Kastriert</option><option>Sterilisiert</option></select></div>
+        <div class="col-6"><label class="sa-lbl">Gewicht (kg)</label><input class="sa-inp" type="number" id="p-gew" step="0.1"></div>
+        <div class="col-12"><label class="sa-lbl">Tierhalter</label><select class="sa-inp" id="p-bes"></select></div>
+        <div class="col-12"><label class="sa-lbl">Diagnose / Befund</label><textarea class="sa-inp" id="p-diag" rows="2"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn-p btn-out" onclick="closeMod('mod-patient')">Abbrechen</button><button class="btn-p btn-pri" onclick="savePatient()"><i class="bi bi-check-lg"></i> Speichern</button></div>
+  </div>
+</div>
+<div class="modal-bg" id="mod-rechnung">
+  <div class="modal-box">
+    <div class="modal-hdr"><h5>Neue Rechnung</h5><button class="modal-cls" onclick="closeMod('mod-rechnung')"><i class="bi bi-x-lg"></i></button></div>
+    <div class="modal-body">
+      <div class="row g-3">
+        <div class="col-12"><label class="sa-lbl">Patient</label><select class="sa-inp" id="r-pat"></select></div>
+        <div class="col-6"><label class="sa-lbl">Betrag (EUR)</label><input class="sa-inp" type="number" id="r-bet" step="0.01"></div>
+        <div class="col-6"><label class="sa-lbl">Datum</label><input class="sa-inp" type="date" id="r-dat"></div>
+        <div class="col-12"><label class="sa-lbl">Leistung</label><input class="sa-inp" id="r-lei" placeholder="z.B. Physiotherapie 3x"></div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn-p btn-out" onclick="closeMod('mod-rechnung')">Abbrechen</button><button class="btn-p btn-pri" onclick="saveRech()"><i class="bi bi-check-lg"></i> Erstellen</button></div>
+  </div>
+</div>
+<div class="tw-wrap" id="twWrap"></div>
 <script>
-// ══════════════════════════════════════════════════════════════
-// DEMO DATA — Standard-Zustand (wird bei Reset wiederhergestellt)
-// ══════════════════════════════════════════════════════════════
-const DEMO_DEFAULT = {
-    besitzer: [
-        {id:1,name:'Anna Bauer',email:'anna.bauer@mail.de',telefon:'0176 11223344',adresse:'Birkenweg 3, 80331 München'},
-        {id:2,name:'Klaus Hofmann',email:'k.hofmann@example.com',telefon:'0152 98765432',adresse:'Rosenstraße 8, 81667 München'},
-        {id:3,name:'Sandra Klein',email:'sandra.klein@web.de',telefon:'0170 33445566',adresse:'Lindenallee 22, 82031 Grünwald'},
-        {id:4,name:'Peter Wagner',email:'p.wagner@gmx.de',telefon:'0160 77889900',adresse:'Hauptstraße 55, 85737 Ismaning'},
-        {id:5,name:'Monika Schulz',email:'monika.schulz@t-online.de',telefon:'0178 12345678',adresse:'Waldweg 7, 82166 Gräfelfing'},
-    ],
-    patienten: [
-        {id:1,name:'Bella',tierart:'Hund',rasse:'Labrador',geschlecht:'Weiblich',geburtstag:'2019-03-15',gewicht:28.5,besitzerId:1,diagnose:'Hüftdysplasie, konservative Behandlung',letzterBesuch:'2025-04-02'},
-        {id:2,name:'Max',tierart:'Hund',rasse:'Golden Retriever',geschlecht:'Männlich',geburtstag:'2018-07-22',gewicht:32.0,besitzerId:2,diagnose:'Kreuzbandriss re., post-OP Rehabilitation',letzterBesuch:'2025-04-05'},
-        {id:3,name:'Luna',tierart:'Katze',rasse:'Britisch Kurzhaar',geschlecht:'Sterilisiert',geburtstag:'2020-11-08',gewicht:4.2,besitzerId:3,diagnose:'Wirbelsäulenprobleme',letzterBesuch:'2025-03-28'},
-        {id:4,name:'Rocky',tierart:'Hund',rasse:'Rottweiler',geschlecht:'Kastriert',geburtstag:'2017-05-30',gewicht:45.0,besitzerId:4,diagnose:'Spondylose LWS',letzterBesuch:'2025-04-01'},
-        {id:5,name:'Emma',tierart:'Pferd',rasse:'Warmblut',geschlecht:'Weiblich',geburtstag:'2015-09-12',gewicht:520,besitzerId:5,diagnose:'Rückenprobleme, muskuläre Verspannungen',letzterBesuch:'2025-03-30'},
-        {id:6,name:'Balu',tierart:'Hund',rasse:'Berner Sennenhund',geschlecht:'Männlich',geburtstag:'2021-02-14',gewicht:38.0,besitzerId:1,diagnose:'Ellenbogendysplasie',letzterBesuch:'2025-04-03'},
-        {id:7,name:'Mia',tierart:'Katze',rasse:'Maine Coon',geschlecht:'Weiblich',geburtstag:'2022-06-20',gewicht:6.1,besitzerId:2,diagnose:'Arthritis Vorderlauf',letzterBesuch:'2025-04-04'},
-    ],
-    termine: [
-        {id:1,datum:'2025-04-07',zeit:'09:00',patientId:1,behandlung:'Manuelle Therapie',status:'aktiv',notiz:'Fokus auf Hüfte links'},
-        {id:2,datum:'2025-04-07',zeit:'10:00',patientId:2,behandlung:'Folgebehandlung',status:'aktiv',notiz:'Übungen zeigen guten Fortschritt'},
-        {id:3,datum:'2025-04-07',zeit:'11:00',patientId:4,behandlung:'Elektrotherapie',status:'aktiv',notiz:'TENS Einheit 20min'},
-        {id:4,datum:'2025-04-07',zeit:'13:30',patientId:3,behandlung:'Massage',status:'erledigt',notiz:''},
-        {id:5,datum:'2025-04-07',zeit:'14:30',patientId:5,behandlung:'Laserbehandlung',status:'aktiv',notiz:''},
-        {id:6,datum:'2025-04-07',zeit:'15:30',patientId:6,behandlung:'Erstbehandlung',status:'aktiv',notiz:'Erstvorstellung'},
-        {id:7,datum:'2025-04-07',zeit:'16:30',patientId:7,behandlung:'Kontrolluntersuchung',status:'storniert',notiz:'Besitzer krank'},
-        {id:8,datum:'2025-04-07',zeit:'17:00',patientId:1,behandlung:'Hydrotherapie',status:'aktiv',notiz:'Aquatreadmill 15min'},
-        {id:9,datum:'2025-04-08',zeit:'09:00',patientId:2,behandlung:'Manuelle Therapie',status:'aktiv',notiz:''},
-        {id:10,datum:'2025-04-08',zeit:'10:30',patientId:3,behandlung:'Folgebehandlung',status:'aktiv',notiz:''},
-        {id:11,datum:'2025-04-09',zeit:'09:00',patientId:4,behandlung:'Elektrotherapie',status:'aktiv',notiz:''},
-        {id:12,datum:'2025-04-10',zeit:'11:00',patientId:5,behandlung:'Laserbehandlung',status:'aktiv',notiz:''},
-        {id:13,datum:'2025-04-03',zeit:'10:00',patientId:1,behandlung:'Manuelle Therapie',status:'erledigt',notiz:''},
-        {id:14,datum:'2025-04-02',zeit:'14:00',patientId:6,behandlung:'Erstbehandlung',status:'erledigt',notiz:''},
-    ],
-    rechnungen: [
-        {id:1,nr:'RE-2025-001',patientId:1,betrag:85.00,datum:'2025-04-03',leistung:'Manuelle Therapie 60 min',status:'bezahlt'},
-        {id:2,nr:'RE-2025-002',patientId:2,betrag:95.00,datum:'2025-04-05',leistung:'Folgebehandlung + Elektro',status:'bezahlt'},
-        {id:3,nr:'RE-2025-003',patientId:4,betrag:75.00,datum:'2025-04-01',leistung:'Elektrotherapie 30 min',status:'bezahlt'},
-        {id:4,nr:'RE-2025-004',patientId:3,betrag:65.00,datum:'2025-03-28',leistung:'Massage + Wärmebehandlung',status:'ausstehend'},
-        {id:5,nr:'RE-2025-005',patientId:5,betrag:320.00,datum:'2025-03-30',leistung:'Behandlungspaket Pferd 4x',status:'ausstehend'},
-        {id:6,nr:'RE-2025-006',patientId:6,betrag:95.00,datum:'2025-04-02',leistung:'Erstbehandlung + Befund',status:'bezahlt'},
-        {id:7,nr:'RE-2025-007',patientId:7,betrag:295.00,datum:'2025-04-04',leistung:'Behandlungspaket 3x + Laser',status:'ausstehend'},
-    ],
-    nextId: {termin:15, patient:8, besitzer:6, rechnung:8}
-};
-
-// ══════════════════════════════════════════════════════════════
-// STATE
-// ══════════════════════════════════════════════════════════════
-let state;
-let calYear, calMonth;
-
-function loadState() {
-    const saved = localStorage.getItem('therapano_demo');
-    if (saved) { try { state = JSON.parse(saved); } catch(e) { state = JSON.parse(JSON.stringify(DEMO_DEFAULT)); } }
-    else { state = JSON.parse(JSON.stringify(DEMO_DEFAULT)); }
-    const now = new Date();
-    calYear = now.getFullYear();
-    calMonth = now.getMonth();
+const DEF={besitzer:[{id:1,name:'Anna Bauer',email:'anna.bauer@mail.de',tel:'0176 11223344'},{id:2,name:'Klaus Hofmann',email:'k.hofmann@example.com',tel:'0152 98765432'},{id:3,name:'Sandra Klein',email:'sandra.klein@web.de',tel:'0170 33445566'},{id:4,name:'Peter Wagner',email:'p.wagner@gmx.de',tel:'0160 77889900'},{id:5,name:'Monika Schulz',email:'monika.schulz@t-online.de',tel:'0178 12345678'}],patienten:[{id:1,name:'Bella',ta:'Hund',rasse:'Labrador',ges:'Weiblich',geb:'2019-03-15',gew:28.5,bid:1,diag:'Huftdysplasie',lb:'2025-04-02',st:'aktiv'},{id:2,name:'Max',ta:'Hund',rasse:'Golden Retriever',ges:'Mannlich',geb:'2018-07-22',gew:32.0,bid:2,diag:'Kreuzbandriss re.',lb:'2025-04-05',st:'aktiv'},{id:3,name:'Luna',ta:'Katze',rasse:'Britisch Kurzhaar',ges:'Sterilisiert',geb:'2020-11-08',gew:4.2,bid:3,diag:'Wirbelsaulenprobleme',lb:'2025-03-28',st:'aktiv'},{id:4,name:'Rocky',ta:'Hund',rasse:'Rottweiler',ges:'Kastriert',geb:'2017-05-30',gew:45.0,bid:4,diag:'Spondylose LWS',lb:'2025-04-01',st:'aktiv'},{id:5,name:'Emma',ta:'Pferd',rasse:'Warmblut',ges:'Weiblich',geb:'2015-09-12',gew:520,bid:5,diag:'Ruckenprobleme',lb:'2025-03-30',st:'aktiv'},{id:6,name:'Balu',ta:'Hund',rasse:'Berner Sennenhund',ges:'Mannlich',geb:'2021-02-14',gew:38.0,bid:1,diag:'Ellenbogendysplasie',lb:'2025-04-03',st:'aktiv'},{id:7,name:'Mia',ta:'Katze',rasse:'Maine Coon',ges:'Weiblich',geb:'2022-06-20',gew:6.1,bid:2,diag:'Arthritis Vorderlauf',lb:'2025-04-04',st:'aktiv'}],termine:[{id:1,dat:'2025-04-07',zeit:'09:00',pid:1,beh:'Manuelle Therapie',st:'aktiv',not:'Fokus Hufte links'},{id:2,dat:'2025-04-07',zeit:'10:00',pid:2,beh:'Folgebehandlung',st:'aktiv',not:''},{id:3,dat:'2025-04-07',zeit:'11:00',pid:4,beh:'Elektrotherapie',st:'aktiv',not:'TENS 20min'},{id:4,dat:'2025-04-07',zeit:'13:30',pid:3,beh:'Massage',st:'erledigt',not:''},{id:5,dat:'2025-04-07',zeit:'14:30',pid:5,beh:'Laserbehandlung',st:'aktiv',not:''},{id:6,dat:'2025-04-07',zeit:'15:30',pid:6,beh:'Erstbehandlung',st:'aktiv',not:'Erstvorstellung'},{id:7,dat:'2025-04-07',zeit:'16:30',pid:7,beh:'Kontrolluntersuchung',st:'storniert',not:'Besitzer krank'},{id:8,dat:'2025-04-07',zeit:'17:00',pid:1,beh:'Hydrotherapie',st:'aktiv',not:'Aquatreadmill'},{id:9,dat:'2025-04-08',zeit:'09:00',pid:2,beh:'Manuelle Therapie',st:'aktiv',not:''},{id:10,dat:'2025-04-08',zeit:'10:30',pid:3,beh:'Folgebehandlung',st:'aktiv',not:''},{id:11,dat:'2025-04-03',zeit:'10:00',pid:1,beh:'Manuelle Therapie',st:'erledigt',not:''},{id:12,dat:'2025-04-02',zeit:'14:00',pid:6,beh:'Erstbehandlung',st:'erledigt',not:''}],rechnungen:[{id:1,nr:'RE-2025-001',pid:1,bet:85.00,dat:'2025-04-03',fae:'2025-04-17',lei:'Manuelle Therapie 60 min',st:'bezahlt'},{id:2,nr:'RE-2025-002',pid:2,bet:95.00,dat:'2025-04-05',fae:'2025-04-19',lei:'Folgebehandlung + Elektro',st:'bezahlt'},{id:3,nr:'RE-2025-003',pid:4,bet:75.00,dat:'2025-04-01',fae:'2025-04-15',lei:'Elektrotherapie 30 min',st:'bezahlt'},{id:4,nr:'RE-2025-004',pid:3,bet:65.00,dat:'2025-03-28',fae:'2025-04-11',lei:'Massage + Warme',st:'ausstehend'},{id:5,nr:'RE-2025-005',pid:5,bet:320.00,dat:'2025-03-30',fae:'2025-04-05',lei:'Behandlungspaket Pferd 4x',st:'ueberfaellig'},{id:6,nr:'RE-2025-006',pid:6,bet:95.00,dat:'2025-04-02',fae:'2025-04-16',lei:'Erstbehandlung + Befund',st:'bezahlt'},{id:7,nr:'RE-2025-007',pid:7,bet:295.00,dat:'2025-04-04',fae:'2025-04-18',lei:'Behandlungspaket 3x + Laser',st:'ausstehend'}],befunde:[{id:1,dat:'2025-04-03',pid:1,von:'Dr. Muller',diag:'Huftdysplasie bds., manuelle Therapie indiziert'},{id:2,dat:'2025-04-05',pid:2,von:'Dr. Muller',diag:'Post-OP Kreuzband: Reha Phase 2'},{id:3,dat:'2025-03-28',pid:3,von:'Dr. Muller',diag:'Bandscheibenvorfall LWS, konservativ'},{id:4,dat:'2025-04-01',pid:4,von:'Dr. Muller',diag:'Spondylose L4/L5, Elektrotherapie + Laser'}],nid:{t:13,p:8,b:6,r:8}};
+const ICONS={Hund:'\uD83D\uDC15',Katze:'\uD83D\uDC08',Pferd:'\uD83D\uDC34',Kaninchen:'\uD83D\uDC07',Vogel:'\uD83D\uDDA4',Sonstige:'\uD83D\uDC3E'};
+const MONTHS=['Januar','Februar','Marz','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+const WDAYS=['Mo','Di','Mi','Do','Fr','Sa','So'];
+let S,CY,CM;
+function loadS(){const s=localStorage.getItem('tp_demo3');if(s){try{S=JSON.parse(s);}catch(e){S=JSON.parse(JSON.stringify(DEF));}}else{S=JSON.parse(JSON.stringify(DEF));}const n=new Date();CY=n.getFullYear();CM=n.getMonth();}
+function saveS(){localStorage.setItem('tp_demo3',JSON.stringify(S));}
+function resetDemo(){if(!confirm('Demo zurucksetzen?'))return;localStorage.removeItem('tp_demo3');location.reload();}
+function gP(id){return S.patienten.find(p=>p.id==id);}
+function gB(id){return S.besitzer.find(b=>b.id==id);}
+function fd(d){if(!d)return'-';const p=d.split('-');return p[2]+'.'+p[1]+'.'+p[0];}
+function td(){return new Date().toISOString().slice(0,10);}
+function mon(v){return v.toLocaleString('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2})+' \u20AC';}
+function bdg(s){const c={aktiv:'b-aktiv',erledigt:'b-erledigt',storniert:'b-storniert',ausstehend:'b-ausstehend',bezahlt:'b-bezahlt',ueberfaellig:'b-ueberfaellig'};const l={aktiv:'Aktiv',erledigt:'Erledigt',storniert:'Storniert',ausstehend:'Ausstehend',bezahlt:'Bezahlt',ueberfaellig:'\xDCberf\xe4llig'};return '<span class="sb '+(c[s]||'b-ausstehend')+'">'+(l[s]||s)+'</span>';}
+function showPage(name,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById('page-'+name).classList.add('active');document.querySelectorAll('.snl').forEach(l=>l.classList.remove('active'));const nb=btn||document.getElementById('nav-'+name);if(nb)nb.classList.add('active');closeNav();renderPage(name);}
+function renderPage(n){if(n==='dashboard')rDash();else if(n==='kalender')rKal();else if(n==='patienten')rPat();else if(n==='tierhalter')rTh();else if(n==='befunde')rBef();else if(n==='rechnungen')rRech();}
+function toggleNav(){document.getElementById('appNav').classList.toggle('open');document.getElementById('navOv').classList.toggle('open');}
+function closeNav(){document.getElementById('appNav').classList.remove('open');document.getElementById('navOv').classList.remove('open');}
+function rDash(){
+  const today=td();
+  document.getElementById('dash-date').textContent=new Date().toLocaleDateString('de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const ht=S.termine.filter(t=>t.dat===today&&t.st!=='storniert').sort((a,b)=>a.zeit.localeCompare(b.zeit));
+  const nx=S.termine.filter(t=>t.dat>today&&t.st!=='storniert').sort((a,b)=>(a.dat+a.zeit).localeCompare(b.dat+b.zeit)).slice(0,4);
+  document.getElementById('k-termine').textContent=ht.length;
+  document.getElementById('k-patienten').textContent=S.patienten.length;
+  const bz=S.rechnungen.filter(r=>r.st==='bezahlt').reduce((s,r)=>s+r.bet,0);
+  document.getElementById('k-umsatz').textContent=mon(bz);
+  const of=S.rechnungen.filter(r=>r.st==='ausstehend'||r.st==='ueberfaellig');
+  document.getElementById('k-offen').textContent=of.length;
+  document.getElementById('badge-offen').textContent=of.length;
+  document.getElementById('act-of').textContent=S.rechnungen.filter(r=>r.st==='ausstehend').length;
+  document.getElementById('act-ue').textContent=S.rechnungen.filter(r=>r.st==='ueberfaellig').length;
+  document.getElementById('act-np').textContent=S.patienten.filter(p=>p.lb&&p.lb.slice(0,7)===today.slice(0,7)).length;
+  document.getElementById('act-th').textContent=S.besitzer.length;
+  let ah='';
+  if(ht.length){ah+='<div class="px-3 py-2 d-flex align-items-center gap-2" style="border-bottom:1px solid var(--sa-border)"><span class="sb" style="background:rgba(79,124,255,.2);color:#93c5fd;">Heute</span><span style="font-size:.75rem;color:var(--sa-muted);">'+new Date().toLocaleDateString('de-DE')+'</span><span style="margin-left:auto;font-size:.72rem;color:var(--sa-muted);">'+ht.length+' Termine</span></div>';ht.forEach(t=>{const p=gP(t.pid);const b=p?gB(p.bid):null;ah+='<div class="ac"><div class="adb" style="background:rgba(79,124,255,.12);border:1.5px solid rgba(79,124,255,.35);"><div class="day" style="color:#4f7cff;">'+t.zeit.slice(0,2)+'</div><div class="mon" style="color:#4f7cff;opacity:.8;">'+t.zeit.slice(3)+'</div></div><div class="ai flex-grow-1"><div class="nm">'+(p?ICONS[p.ta]+' '+p.name:'-')+'</div><div class="mt">'+t.beh+(b?' \u00b7 '+b.name:'')+'</div></div><div class="ast">'+bdg(t.st)+'</div></div>';});}
+  if(nx.length){ah+='<div class="px-3 py-2 d-flex align-items-center gap-2" style="border-top:1px solid var(--sa-border);border-bottom:1px solid var(--sa-border)"><span class="sb" style="background:rgba(100,115,130,.2);color:#94a3b8;">Kommend</span><span style="font-size:.75rem;color:var(--sa-muted);">nachste '+nx.length+' Termine</span></div>';nx.forEach(t=>{const p=gP(t.pid);const b=p?gB(p.bid):null;const d=t.dat.split('-');ah+='<div class="ac"><div class="adb" style="background:rgba(100,115,130,.1);border:1px solid rgba(100,115,130,.3);"><div class="day" style="color:#94a3b8;">'+d[2]+'</div><div class="dow" style="color:#94a3b8;">'+new Date(t.dat+'T00:00:00').toLocaleDateString('de-DE',{weekday:'short'})+'</div></div><div class="ai flex-grow-1"><div class="nm">'+(p?ICONS[p.ta]+' '+p.name:'-')+'</div><div class="mt">'+t.zeit+' Uhr \u00b7 '+t.beh+(b?' \u00b7 '+b.name:'')+'</div></div><div class="ast">'+bdg(t.st)+'</div></div>';});}
+  if(!ah)ah='<div class="pcnt" style="color:var(--sa-muted);font-size:.85rem;text-align:center;padding:2rem;">Keine anstehenden Termine</div>';
+  document.getElementById('appt-list').innerHTML=ah;
+  const now=new Date();const we=new Date();we.setDate(now.getDate()+7);
+  const bd=S.patienten.filter(p=>{if(!p.geb)return false;const d=new Date(p.geb);const ty=new Date(now.getFullYear(),d.getMonth(),d.getDate());return ty>=now&&ty<=we;});
+  document.getElementById('dash-bdays').innerHTML=bd.length?bd.map(p=>'<div style="display:flex;align-items:center;gap:.65rem;padding:.5rem 0;border-bottom:1px solid var(--sa-border);"><span style="font-size:1.3rem;">'+ICONS[p.ta]+'</span><div><div style="font-weight:700;">'+p.name+'</div><div style="font-size:.72rem;color:var(--sa-muted);">'+fd(p.geb)+' \uD83C\uDF82</div></div></div>').join(''):'<div style="color:var(--sa-muted);font-size:.83rem;">Keine Geburtstage diese Woche</div>';
+  const rc=S.termine.filter(t=>t.st==='erledigt').slice(-5).reverse();
+  document.getElementById('dash-tl').innerHTML=rc.map(t=>{const p=gP(t.pid);return'<div class="tl-it"><div class="tl-dt">'+fd(t.dat)+' \u00b7 '+t.zeit+' Uhr</div><div class="tl-tx">'+(p?ICONS[p.ta]:'')+' <strong>'+(p?p.name:'-')+'</strong> \u00b7 '+t.beh+' '+bdg('erledigt')+'</div></div>';}).join('')||'<div style="color:var(--sa-muted);font-size:.83rem;">Keine abgeschlossenen Termine</div>';
 }
-function saveState() { localStorage.setItem('therapano_demo', JSON.stringify(state)); }
-function resetDemo() {
-    if (!confirm('Demo-Daten zurücksetzen?')) return;
-    localStorage.removeItem('therapano_demo');
-    location.reload();
+function rKal(){
+  document.getElementById('calLbl').textContent=MONTHS[CM]+' '+CY;
+  const g=document.getElementById('calGrid');let h=WDAYS.map(d=>'<div class="cal-dh">'+d+'</div>').join('');
+  const first=new Date(CY,CM,1);const last=new Date(CY,CM+1,0);let dow=first.getDay();dow=dow===0?6:dow-1;
+  const today=td();
+  for(let i=0;i<dow;i++){const d=new Date(CY,CM,1-dow+i);h+='<div class="cal-day om"><div class="cal-dn">'+d.getDate()+'</div></div>';}
+  for(let d=1;d<=last.getDate();d++){const ds=CY+'-'+String(CM+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');const dt=S.termine.filter(t=>t.dat===ds);h+='<div class="cal-day '+(ds===today?'today':'')+'" onclick="openTerminDate(\''+ds+'\')"><div class="cal-dn">'+d+'</div>'+dt.slice(0,3).map(t=>{const p=gP(t.pid);return'<div class="cal-ev '+(t.st==='erledigt'?'done':t.st==='storniert'?'can':'')+'">'+t.zeit+' '+(p?p.name:'?')+'</div>';}).join('')+'</div>';}
+  const rem=(7-((dow+last.getDate())%7))%7;for(let i=1;i<=rem;i++)h+='<div class="cal-day om"><div class="cal-dn">'+i+'</div></div>';
+  g.innerHTML=h;
+  const sl=[...S.termine].sort((a,b)=>(a.dat+a.zeit).localeCompare(b.dat+b.zeit)).reverse().slice(0,25);
+  document.getElementById('termin-tbl').innerHTML=sl.map(t=>{const p=gP(t.pid);return'<tr><td>'+fd(t.dat)+'</td><td><strong>'+t.zeit+'</strong></td><td>'+(p?ICONS[p.ta]+' '+p.name:'-')+'</td><td>'+t.beh+'</td><td>'+bdg(t.st)+'</td><td style="display:flex;gap:.25rem;"><button class="btn-p btn-out btn-sm" onclick="editT('+t.id+')"><i class="bi bi-pencil"></i></button><button class="btn-p btn-dng btn-sm" onclick="delT('+t.id+')"><i class="bi bi-trash"></i></button></td></tr>';}).join('');
 }
-
-// ══════════════════════════════════════════════════════════════
-// HELPERS
-// ══════════════════════════════════════════════════════════════
-const TIER_ICONS = {Hund:'🐕',Katze:'🐈',Pferd:'🐴',Kaninchen:'🐇',Vogel:'🦜',Sonstige:'🐾'};
-function getPatient(id) { return state.patienten.find(p=>p.id==id); }
-function getBesitzer(id) { return state.besitzer.find(b=>b.id==id); }
-function fmtDate(d) { if(!d) return '–'; const p=d.split('-'); return p[2]+'.'+p[1]+'.'+p[0]; }
-function todayStr() { return new Date().toISOString().slice(0,10); }
-function statusBadge(s) {
-    const m={aktiv:'badge-active',erledigt:'badge-done',storniert:'badge-cancelled',ausstehend:'badge-pending',bezahlt:'badge-active'};
-    const l={aktiv:'Aktiv',erledigt:'Erledigt',storniert:'Storniert',ausstehend:'Ausstehend',bezahlt:'Bezahlt'};
-    return `<span class="badge ${m[s]||'badge-pending'}">${l[s]||s}</span>`;
-}
-
-function toast(msg, type='success') {
-    const c = document.getElementById('toastContainer');
-    const t = document.createElement('div');
-    t.className = `toast ${type}`;
-    const icon = type==='success' ? '✅' : 'ℹ️';
-    t.innerHTML = `<span>${icon}</span><span>${msg}</span>`;
-    c.appendChild(t);
-    setTimeout(() => t.remove(), 3500);
-}
-
-// ══════════════════════════════════════════════════════════════
-// NAVIGATION
-// ══════════════════════════════════════════════════════════════
-const pageTitles = {dashboard:'Dashboard',termine:'Terminkalender',patienten:'Patienten',besitzer:'Besitzer',rechnungen:'Rechnungen',einstellungen:'Einstellungen'};
-
-function showPage(name, btn) {
-    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-    document.getElementById('page-'+name).classList.add('active');
-    document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));
-    if(btn) btn.classList.add('active');
-    document.getElementById('pageTitle').textContent = pageTitles[name]||name;
-    closeSidebar();
-    renderPage(name);
-}
-function renderPage(name) {
-    if(name==='dashboard') renderDashboard();
-    else if(name==='termine') renderTermine();
-    else if(name==='patienten') renderPatienten();
-    else if(name==='besitzer') renderBesitzer();
-    else if(name==='rechnungen') renderRechnungen();
-}
-
-function toggleSidebar() {
-    document.getElementById('sidebar').classList.toggle('open');
-    document.getElementById('sidebarOverlay').classList.toggle('open');
-}
-function closeSidebar() {
-    document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('sidebarOverlay').classList.remove('open');
-}
-
-// ══════════════════════════════════════════════════════════════
-// DASHBOARD
-// ══════════════════════════════════════════════════════════════
-function renderDashboard() {
-    const today = todayStr();
-    const heuteTermine = state.termine.filter(t=>t.datum===today).sort((a,b)=>a.zeit.localeCompare(b.zeit));
-    const tbody = document.getElementById('heute-termine');
-    tbody.innerHTML = heuteTermine.map(t=>{
-        const p = getPatient(t.patientId);
-        const b = p ? getBesitzer(p.besitzerId) : null;
-        return `<tr>
-            <td><strong>${t.zeit}</strong></td>
-            <td><span style="font-size:1.1rem;">${p?TIER_ICONS[p.tierart]:'🐾'}</span> ${p?p.name:'–'}</td>
-            <td>${t.behandlung}</td>
-            <td>${b?b.name:'–'}</td>
-            <td>${statusBadge(t.status)}</td>
-        </tr>`;
-    }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem;">Keine Termine heute</td></tr>';
-
-    // Stats
-    document.getElementById('stat-termine').textContent = heuteTermine.filter(t=>t.status!=='storniert').length;
-    document.getElementById('stat-patienten').textContent = state.patienten.length;
-    const bezahlt = state.rechnungen.filter(r=>r.status==='bezahlt').reduce((s,r)=>s+r.betrag,0);
-    document.getElementById('stat-umsatz').textContent = bezahlt.toLocaleString('de-DE',{style:'currency',currency:'EUR',maximumFractionDigits:0});
-    document.getElementById('stat-offen').textContent = state.rechnungen.filter(r=>r.status==='ausstehend').length;
-
-    // Timeline
-    const recentTermine = [...state.termine].filter(t=>t.status==='erledigt').slice(-4).reverse();
-    document.getElementById('timeline').innerHTML = recentTermine.map(t=>{
-        const p = getPatient(t.patientId);
-        return `<div class="timeline-item"><div class="timeline-date">${fmtDate(t.datum)} · ${t.zeit}</div><div class="timeline-text">${p?TIER_ICONS[p.tierart]:''} <strong>${p?p.name:'–'}</strong> – ${t.behandlung} <span class="badge badge-done">Erledigt</span></div></div>`;
-    }).join('') || '<div style="color:var(--muted);font-size:.85rem;">Keine abgeschlossenen Termine</div>';
-
-    // Geburtstage
-    const now = new Date();
-    const weekEnd = new Date(); weekEnd.setDate(now.getDate()+7);
-    const geburtstage = state.patienten.filter(p=>{
-        if(!p.geburtstag) return false;
-        const bd = new Date(p.geburtstag);
-        const thisYear = new Date(now.getFullYear(), bd.getMonth(), bd.getDate());
-        return thisYear >= now && thisYear <= weekEnd;
-    });
-    document.getElementById('geburtstage').innerHTML = geburtstage.length
-        ? geburtstage.map(p=>`<div style="display:flex;align-items:center;gap:.75rem;padding:.6rem 0;border-bottom:1px solid var(--border);">
-            <span style="font-size:1.5rem;">${TIER_ICONS[p.tierart]}</span>
-            <div><div style="font-weight:600;">${p.name}</div><div style="font-size:.75rem;color:var(--muted);">${fmtDate(p.geburtstag)} 🎂</div></div>
-          </div>`).join('')
-        : '<div style="color:var(--muted);font-size:.85rem;padding:.5rem 0;">Keine Geburtstage diese Woche</div>';
-}
-
-// ══════════════════════════════════════════════════════════════
-// KALENDER
-// ══════════════════════════════════════════════════════════════
-function renderTermine() {
-    renderKalender();
-    renderTerminListe();
-}
-
-function renderKalender() {
-    const WOCHENTAGE = ['Mo','Di','Mi','Do','Fr','Sa','So'];
-    const MONATE = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
-    document.getElementById('calMonthLabel').textContent = MONATE[calMonth] + ' ' + calYear;
-
-    const grid = document.getElementById('calGrid');
-    let html = WOCHENTAGE.map(d=>`<div class="cal-day-header">${d}</div>`).join('');
-
-    const firstDay = new Date(calYear, calMonth, 1);
-    const lastDay = new Date(calYear, calMonth+1, 0);
-    let startDow = firstDay.getDay(); // 0=So
-    startDow = startDow === 0 ? 6 : startDow - 1; // Mo=0
-
-    const today = todayStr();
-
-    for(let i=0; i<startDow; i++) {
-        const d = new Date(calYear, calMonth, 1-startDow+i);
-        html += `<div class="cal-day other-month"><div class="cal-day-num">${d.getDate()}</div></div>`;
-    }
-    for(let d=1; d<=lastDay.getDate(); d++) {
-        const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-        const dayTermine = state.termine.filter(t=>t.datum===dateStr);
-        const isToday = dateStr === today;
-        const hasEvent = dayTermine.length > 0;
-        let evHtml = dayTermine.slice(0,3).map(t=>{
-            const p = getPatient(t.patientId);
-            return `<div class="cal-event ${t.status==='erledigt'?'done':''}">${t.zeit} ${p?p.name:'–'}</div>`;
-        }).join('');
-        html += `<div class="cal-day ${isToday?'today':''} ${hasEvent?'has-event':''}" onclick="openNewTerminOnDate('${dateStr}')">
-            <div class="cal-day-num">${d}</div>${evHtml}
-        </div>`;
-    }
-    const remaining = (7 - ((startDow + lastDay.getDate()) % 7)) % 7;
-    for(let i=1; i<=remaining; i++) html += `<div class="cal-day other-month"><div class="cal-day-num">${i}</div></div>`;
-    grid.innerHTML = html;
-}
-
-function renderTerminListe() {
-    const sorted = [...state.termine].sort((a,b)=>(a.datum+a.zeit).localeCompare(b.datum+b.zeit)).reverse().slice(0,20);
-    document.getElementById('termin-liste').innerHTML = sorted.map(t=>{
-        const p = getPatient(t.patientId);
-        return `<tr>
-            <td>${fmtDate(t.datum)}</td><td><strong>${t.zeit}</strong></td>
-            <td>${p?TIER_ICONS[p.tierart]+' '+p.name:'–'}</td>
-            <td>${t.behandlung}</td>
-            <td>${statusBadge(t.status)}</td>
-            <td><button class="btn btn-outline btn-sm" onclick="editTermin(${t.id})"><i class="bi bi-pencil"></i></button>
-                <button class="btn btn-danger btn-sm ms-1" onclick="deleteTermin(${t.id})" style="margin-left:.25rem;"><i class="bi bi-trash"></i></button></td>
-        </tr>`;
-    }).join('');
-}
-
-function changeMonth(dir) {
-    calMonth += dir;
-    if(calMonth > 11) { calMonth=0; calYear++; }
-    if(calMonth < 0) { calMonth=11; calYear--; }
-    renderKalender();
-}
-
-// ══════════════════════════════════════════════════════════════
-// PATIENTEN
-// ══════════════════════════════════════════════════════════════
-function renderPatienten(filter='') {
-    const list = state.patienten.filter(p=>!filter||p.name.toLowerCase().includes(filter)||p.rasse.toLowerCase().includes(filter));
-    document.getElementById('patienten-liste').innerHTML = list.map(p=>{
-        const b = getBesitzer(p.besitzerId);
-        return `<tr>
-            <td><span style="font-size:1.2rem;">${TIER_ICONS[p.tierart]}</span> <strong>${p.name}</strong></td>
-            <td>${p.tierart}</td><td>${p.rasse||'–'}</td>
-            <td>${b?b.name:'–'}</td>
-            <td>${fmtDate(p.letzterBesuch)}</td>
-            <td><button class="btn btn-outline btn-sm" onclick="editPatient(${p.id})"><i class="bi bi-pencil"></i></button>
-                <button class="btn btn-danger btn-sm" style="margin-left:.25rem;" onclick="deletePatient(${p.id})"><i class="bi bi-trash"></i></button></td>
-        </tr>`;
-    }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:2rem;">Keine Patienten gefunden</td></tr>';
-}
-
-function filterPatienten() { renderPatienten(document.getElementById('patientenSearch').value.toLowerCase()); }
-
-// ══════════════════════════════════════════════════════════════
-// BESITZER
-// ══════════════════════════════════════════════════════════════
-function renderBesitzer(filter='') {
-    const list = state.besitzer.filter(b=>!filter||b.name.toLowerCase().includes(filter)||b.email.toLowerCase().includes(filter));
-    document.getElementById('besitzer-liste').innerHTML = list.map(b=>{
-        const anzahl = state.patienten.filter(p=>p.besitzerId===b.id).length;
-        return `<tr>
-            <td><strong>${b.name}</strong></td>
-            <td>${b.email}</td><td>${b.telefon||'–'}</td>
-            <td><span class="badge badge-active">${anzahl} Tier${anzahl!==1?'e':''}</span></td>
-            <td><button class="btn btn-outline btn-sm" onclick="editBesitzer(${b.id})"><i class="bi bi-pencil"></i></button>
-                <button class="btn btn-danger btn-sm" style="margin-left:.25rem;" onclick="deleteBesitzer(${b.id})"><i class="bi bi-trash"></i></button></td>
-        </tr>`;
-    }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:2rem;">Keine Besitzer gefunden</td></tr>';
-}
-function filterBesitzer() { renderBesitzer(document.getElementById('besitzerSearch').value.toLowerCase()); }
-
-// ══════════════════════════════════════════════════════════════
-// RECHNUNGEN
-// ══════════════════════════════════════════════════════════════
-function renderRechnungen() {
-    const bezahlt = state.rechnungen.filter(r=>r.status==='bezahlt').reduce((s,r)=>s+r.betrag,0);
-    const offen = state.rechnungen.filter(r=>r.status==='ausstehend').reduce((s,r)=>s+r.betrag,0);
-    document.getElementById('r-bezahlt-sum').textContent = bezahlt.toLocaleString('de-DE',{style:'currency',currency:'EUR'});
-    document.getElementById('r-offen-sum').textContent = offen.toLocaleString('de-DE',{style:'currency',currency:'EUR'});
-    document.getElementById('r-gesamt').textContent = state.rechnungen.length;
-
-    const sorted = [...state.rechnungen].sort((a,b)=>b.datum.localeCompare(a.datum));
-    document.getElementById('rechnungen-liste').innerHTML = sorted.map(r=>{
-        const p = getPatient(r.patientId);
-        const b = p ? getBesitzer(p.besitzerId) : null;
-        return `<tr>
-            <td><strong>${r.nr}</strong></td>
-            <td>${p?TIER_ICONS[p.tierart]+' '+p.name:'–'} ${b?'<span style="color:var(--muted);font-size:.8rem;">/ '+b.name+'</span>':''}</td>
-            <td><strong>${r.betrag.toLocaleString('de-DE',{style:'currency',currency:'EUR'})}</strong></td>
-            <td>${fmtDate(r.datum)}</td>
-            <td>${statusBadge(r.status)}</td>
-            <td>
-                ${r.status==='ausstehend'?`<button class="btn btn-success btn-sm" onclick="markBezahlt(${r.id})"><i class="bi bi-check-lg"></i></button>`:''}
-                <button class="btn btn-danger btn-sm" style="margin-left:.25rem;" onclick="deleteRechnung(${r.id})"><i class="bi bi-trash"></i></button>
-            </td>
-        </tr>`;
-    }).join('');
-}
-
-function markBezahlt(id) {
-    const r = state.rechnungen.find(r=>r.id===id);
-    if(r) { r.status='bezahlt'; saveState(); renderRechnungen(); toast('Rechnung als bezahlt markiert'); }
-}
-function deleteRechnung(id) {
-    if(!confirm('Rechnung löschen?')) return;
-    state.rechnungen = state.rechnungen.filter(r=>r.id!==id);
-    saveState(); renderRechnungen(); toast('Rechnung gelöscht','info');
-}
-
-// ══════════════════════════════════════════════════════════════
-// MODALS
-// ══════════════════════════════════════════════════════════════
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-
-function fillPatientSelect(selectId, selectedId=null) {
-    const sel = document.getElementById(selectId);
-    sel.innerHTML = state.patienten.map(p=>`<option value="${p.id}" ${p.id==selectedId?'selected':''}>${TIER_ICONS[p.tierart]} ${p.name} (${p.tierart})</option>`).join('');
-}
-function fillBesitzerSelect(selectId, selectedId=null) {
-    const sel = document.getElementById(selectId);
-    sel.innerHTML = state.besitzer.map(b=>`<option value="${b.id}" ${b.id==selectedId?'selected':''}>${b.name}</option>`).join('');
-}
-
-// ─── Termin ───────────────────────────────────────────────────
-function openNewTermin() {
-    document.getElementById('termin-edit-id').value='';
-    document.getElementById('termin-modal-title').textContent='Neuer Termin';
-    document.getElementById('t-datum').value = todayStr();
-    document.getElementById('t-zeit').value = '09:00';
-    document.getElementById('t-notiz').value = '';
-    fillPatientSelect('t-patient');
-    openModal('modal-termin');
-}
-function openNewTerminOnDate(dateStr) {
-    openNewTermin();
-    document.getElementById('t-datum').value = dateStr;
-}
-function editTermin(id) {
-    const t = state.termine.find(t=>t.id===id);
-    if(!t) return;
-    document.getElementById('termin-edit-id').value = id;
-    document.getElementById('termin-modal-title').textContent = 'Termin bearbeiten';
-    document.getElementById('t-datum').value = t.datum;
-    document.getElementById('t-zeit').value = t.zeit;
-    document.getElementById('t-notiz').value = t.notiz||'';
-    fillPatientSelect('t-patient', t.patientId);
-    document.getElementById('t-behandlung').value = t.behandlung;
-    openModal('modal-termin');
-}
-function saveTermin() {
-    const editId = document.getElementById('termin-edit-id').value;
-    const datum = document.getElementById('t-datum').value;
-    const zeit = document.getElementById('t-zeit').value;
-    const patientId = parseInt(document.getElementById('t-patient').value);
-    const behandlung = document.getElementById('t-behandlung').value;
-    const notiz = document.getElementById('t-notiz').value;
-    if(!datum||!zeit) { toast('Bitte Datum und Uhrzeit eingeben','info'); return; }
-    if(editId) {
-        const t = state.termine.find(t=>t.id==editId);
-        Object.assign(t,{datum,zeit,patientId,behandlung,notiz});
-        toast('Termin aktualisiert');
-    } else {
-        state.termine.push({id:state.nextId.termin++,datum,zeit,patientId,behandlung,status:'aktiv',notiz});
-        toast('Termin erstellt');
-    }
-    saveState(); closeModal('modal-termin'); renderPage(document.querySelector('.page.active').id.replace('page-',''));
-}
-function deleteTermin(id) {
-    if(!confirm('Termin löschen?')) return;
-    state.termine = state.termine.filter(t=>t.id!==id);
-    saveState(); renderTermine(); toast('Termin gelöscht','info');
-}
-
-// ─── Patient ──────────────────────────────────────────────────
-function openNewPatient() {
-    document.getElementById('p-edit-id').value='';
-    document.getElementById('patient-modal-title').textContent='Neuer Patient';
-    ['p-name','p-rasse','p-diagnose'].forEach(id=>document.getElementById(id).value='');
-    document.getElementById('p-geburtstag').value='';
-    document.getElementById('p-gewicht').value='';
-    fillBesitzerSelect('p-besitzer');
-    openModal('modal-patient');
-}
-function editPatient(id) {
-    const p = state.patienten.find(p=>p.id===id);
-    if(!p) return;
-    document.getElementById('p-edit-id').value=id;
-    document.getElementById('patient-modal-title').textContent='Patient bearbeiten';
-    document.getElementById('p-name').value=p.name;
-    document.getElementById('p-rasse').value=p.rasse||'';
-    document.getElementById('p-geburtstag').value=p.geburtstag||'';
-    document.getElementById('p-gewicht').value=p.gewicht||'';
-    document.getElementById('p-geschlecht').value=p.geschlecht||'Männlich';
-    document.getElementById('p-tierart').value=p.tierart||'Hund';
-    document.getElementById('p-diagnose').value=p.diagnose||'';
-    fillBesitzerSelect('p-besitzer',p.besitzerId);
-    openModal('modal-patient');
-}
-function savePatient() {
-    const editId = document.getElementById('p-edit-id').value;
-    const name = document.getElementById('p-name').value.trim();
-    if(!name) { toast('Bitte Name eingeben','info'); return; }
-    const data = {
-        name, tierart:document.getElementById('p-tierart').value,
-        rasse:document.getElementById('p-rasse').value,
-        geschlecht:document.getElementById('p-geschlecht').value,
-        geburtstag:document.getElementById('p-geburtstag').value,
-        gewicht:parseFloat(document.getElementById('p-gewicht').value)||0,
-        besitzerId:parseInt(document.getElementById('p-besitzer').value),
-        diagnose:document.getElementById('p-diagnose').value,
-        letzterBesuch:todayStr()
-    };
-    if(editId) { Object.assign(state.patienten.find(p=>p.id==editId), data); toast('Patient aktualisiert'); }
-    else { state.patienten.push({id:state.nextId.patient++, ...data}); toast('Patient angelegt'); }
-    saveState(); closeModal('modal-patient'); renderPatienten();
-}
-function deletePatient(id) {
-    if(!confirm('Patient löschen?')) return;
-    state.patienten = state.patienten.filter(p=>p.id!==id);
-    saveState(); renderPatienten(); toast('Patient gelöscht','info');
-}
-
-// ─── Besitzer ─────────────────────────────────────────────────
-function openNewBesitzer() {
-    // Inline im Besitzer-Bereich — einfaches Prompt-basiertes Formular
-    const name = prompt('Name des Besitzers:');
-    if(!name) return;
-    const email = prompt('E-Mail:') || '';
-    const telefon = prompt('Telefon:') || '';
-    state.besitzer.push({id:state.nextId.besitzer++,name,email,telefon,adresse:''});
-    saveState(); renderBesitzer(); toast('Besitzer angelegt');
-}
-function editBesitzer(id) {
-    const b = getBesitzer(id);
-    if(!b) return;
-    const name = prompt('Name:', b.name);
-    if(!name) return;
-    b.name = name;
-    b.email = prompt('E-Mail:', b.email)||b.email;
-    b.telefon = prompt('Telefon:', b.telefon)||b.telefon;
-    saveState(); renderBesitzer(); toast('Besitzer aktualisiert');
-}
-function deleteBesitzer(id) {
-    if(!confirm('Besitzer löschen?')) return;
-    state.besitzer = state.besitzer.filter(b=>b.id!==id);
-    saveState(); renderBesitzer(); toast('Besitzer gelöscht','info');
-}
-
-// ─── Rechnung ─────────────────────────────────────────────────
-function openNewRechnung() {
-    document.getElementById('r-datum').value = todayStr();
-    document.getElementById('r-betrag').value = '';
-    document.getElementById('r-leistung').value = '';
-    fillPatientSelect('r-patient');
-    openModal('modal-rechnung');
-}
-function saveRechnung() {
-    const patientId = parseInt(document.getElementById('r-patient').value);
-    const betrag = parseFloat(document.getElementById('r-betrag').value);
-    const datum = document.getElementById('r-datum').value;
-    const leistung = document.getElementById('r-leistung').value;
-    if(!betrag||betrag<=0) { toast('Bitte gültigen Betrag eingeben','info'); return; }
-    const nr = 'RE-'+new Date().getFullYear()+'-'+String(state.nextId.rechnung).padStart(3,'0');
-    state.rechnungen.push({id:state.nextId.rechnung++,nr,patientId,betrag,datum,leistung,status:'ausstehend'});
-    saveState(); closeModal('modal-rechnung'); renderRechnungen(); toast('Rechnung erstellt');
-}
-
-// Einstellungen
-function saveSettings() { toast('Einstellungen lokal gespeichert'); }
-
-// Close modals on overlay click
-document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
-
-// Init
-loadState();
-renderDashboard();
+function changeMonth(d){CM+=d;if(CM>11){CM=0;CY++;}if(CM<0){CM=11;CY--;}rKal();}
+function rPat(f=''){const l=S.patienten.filter(p=>!f||p.name.toLowerCase().includes(f)||(p.rasse||'').toLowerCase().includes(f));document.getElementById('p-cnt-lbl').textContent=l.length+' Patient'+(l.length!==1?'en':'');document.getElementById('pat-tbl').innerHTML=l.map(p=>{const b=gB(p.bid);return'<tr><td><span style="font-size:1.1rem;margin-right:.4rem;">'+ICONS[p.ta]+'</span><strong>'+p.name+'</strong></td><td>'+p.ta+'</td><td>'+(p.rasse||'-')+'</td><td>'+(b?b.name:'-')+'</td><td>'+fd(p.lb)+'</td><td>'+bdg(p.st||'aktiv')+'</td><td style="display:flex;gap:.25rem;"><button class="btn-p btn-out btn-sm" onclick="editP('+p.id+')"><i class="bi bi-pencil"></i></button><button class="btn-p btn-dng btn-sm" onclick="delP('+p.id+')"><i class="bi bi-trash"></i></button></td></tr>';}).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--sa-muted);padding:2rem;">Keine Patienten gefunden</td></tr>';}
+function filtP(){rPat(document.getElementById('p-srch').value.toLowerCase());}
+function rTh(){document.getElementById('th-cnt-lbl').textContent=S.besitzer.length+' Tierhalter';document.getElementById('th-tbl').innerHTML=S.besitzer.map(b=>{const a=S.patienten.filter(p=>p.bid===b.id).length;return'<tr><td><strong>'+b.name+'</strong></td><td>'+b.email+'</td><td>'+(b.tel||'-')+'</td><td><span class="sb b-aktiv">'+a+' Tier'+(a!==1?'e':'')+'</span></td><td style="display:flex;gap:.25rem;"><button class="btn-p btn-out btn-sm" onclick="editBes('+b.id+')"><i class="bi bi-pencil"></i></button><button class="btn-p btn-dng btn-sm" onclick="delBes('+b.id+')"><i class="bi bi-trash"></i></button></td></tr>';}).join('');}
+function addThPrompt(){const n=prompt('Name:');if(!n)return;const e=prompt('E-Mail:')||'';const t=prompt('Telefon:')||'';S.besitzer.push({id:S.nid.b++,name:n,email:e,tel:t});saveS();rTh();toast('Tierhalter angelegt');}
+function editBes(id){const b=gB(id);if(!b)return;const n=prompt('Name:',b.name);if(!n)return;b.name=n;b.email=prompt('E-Mail:',b.email)||b.email;b.tel=prompt('Telefon:',b.tel)||b.tel;saveS();rTh();toast('Tierhalter aktualisiert');}
+function delBes(id){if(!confirm('Tierhalter loschen?'))return;S.besitzer=S.besitzer.filter(b=>b.id!==id);saveS();rTh();toast('Geloscht','inf');}
+function rBef(){document.getElementById('bef-tbl').innerHTML=S.befunde.map(b=>{const p=gP(b.pid);return'<tr><td>'+fd(b.dat)+'</td><td>'+(p?ICONS[p.ta]+' '+p.name:'-')+'</td><td>'+b.von+'</td><td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+b.diag+'</td><td><button class="btn-p btn-out btn-sm" onclick="toast(\'Nur in der echten App verfugbar\',\'inf\')"><i class="bi bi-eye"></i></button></td></tr>';}).join('');}
+function rRech(){const bz=S.rechnungen.filter(r=>r.st==='bezahlt').reduce((s,r)=>s+r.bet,0);const au=S.rechnungen.filter(r=>r.st==='ausstehend').reduce((s,r)=>s+r.bet,0);const ue=S.rechnungen.filter(r=>r.st==='ueberfaellig').reduce((s,r)=>s+r.bet,0);document.getElementById('r-bez').textContent=mon(bz);document.getElementById('r-aus').textContent=mon(au);document.getElementById('r-ueb').textContent=mon(ue);document.getElementById('r-ges').textContent=S.rechnungen.length;const sl=[...S.rechnungen].sort((a,b)=>b.dat.localeCompare(a.dat));document.getElementById('rech-tbl').innerHTML=sl.map(r=>{const p=gP(r.pid);const b=p?gB(p.bid):null;return'<tr><td><strong>'+r.nr+'</strong></td><td>'+(p?ICONS[p.ta]+' '+p.name:'-')+(b?'<span style="color:var(--sa-muted);font-size:.75rem;"> / '+b.name+'</span>':'')+'</td><td><strong>'+mon(r.bet)+'</strong></td><td>'+fd(r.dat)+'</td><td>'+fd(r.fae)+'</td><td>'+bdg(r.st)+'</td><td style="display:flex;gap:.25rem;">'+(r.st!=='bezahlt'?'<button class="btn-p btn-suc btn-sm" onclick="markBez('+r.id+')"><i class="bi bi-check-lg"></i></button>':'')+'<button class="btn-p btn-dng btn-sm" onclick="delR('+r.id+')"><i class="bi bi-trash"></i></button></td></tr>';}).join('');}
+function markBez(id){const r=S.rechnungen.find(r=>r.id===id);if(r){r.st='bezahlt';saveS();rRech();toast('Als bezahlt markiert');}}
+function delR(id){if(!confirm('Rechnung loschen?'))return;S.rechnungen=S.rechnungen.filter(r=>r.id!==id);saveS();rRech();toast('Geloscht','inf');}
+function openMod(id){if(id==='mod-termin'){document.getElementById('t-eid').value='';document.getElementById('t-mod-ttl').textContent='Neuer Termin';document.getElementById('t-dat').value=td();document.getElementById('t-zeit').value='09:00';document.getElementById('t-not').value='';fillPS('t-pat');}if(id==='mod-patient'){document.getElementById('p-eid').value='';document.getElementById('p-mod-ttl').textContent='Neuer Patient';['p-name','p-rasse','p-diag'].forEach(i=>document.getElementById(i).value='');document.getElementById('p-geb').value='';document.getElementById('p-gew').value='';fillBS('p-bes');}if(id==='mod-rechnung'){document.getElementById('r-dat').value=td();document.getElementById('r-bet').value='';document.getElementById('r-lei').value='';fillPS('r-pat');}document.getElementById(id).classList.add('open');}
+function closeMod(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+function fillPS(sid,sv=null){document.getElementById(sid).innerHTML=S.patienten.map(p=>'<option value="'+p.id+'"'+(p.id==sv?' selected':'')+'>'+ICONS[p.ta]+' '+p.name+' ('+p.ta+')</option>').join('');}
+function fillBS(sid,sv=null){document.getElementById(sid).innerHTML=S.besitzer.map(b=>'<option value="'+b.id+'"'+(b.id==sv?' selected':'')+'>'+b.name+'</option>').join('');}
+function openTerminDate(d){document.getElementById('t-eid').value='';document.getElementById('t-mod-ttl').textContent='Neuer Termin';document.getElementById('t-dat').value=d;document.getElementById('t-zeit').value='09:00';document.getElementById('t-not').value='';fillPS('t-pat');document.getElementById('mod-termin').classList.add('open');}
+function editT(id){const t=S.termine.find(t=>t.id===id);if(!t)return;document.getElementById('t-eid').value=id;document.getElementById('t-mod-ttl').textContent='Termin bearbeiten';document.getElementById('t-dat').value=t.dat;document.getElementById('t-zeit').value=t.zeit;document.getElementById('t-not').value=t.not||'';fillPS('t-pat',t.pid);document.getElementById('t-beh').value=t.beh;document.getElementById('mod-termin').classList.add('open');}
+function saveTermin(){const eid=document.getElementById('t-eid').value;const dat=document.getElementById('t-dat').value;const zeit=document.getElementById('t-zeit').value;const pid=parseInt(document.getElementById('t-pat').value);const beh=document.getElementById('t-beh').value;const not=document.getElementById('t-not').value;if(!dat||!zeit){toast('Bitte Datum und Zeit eingeben','inf');return;}if(eid){Object.assign(S.termine.find(t=>t.id==eid),{dat,zeit,pid,beh,not});toast('Termin aktualisiert');}else{S.termine.push({id:S.nid.t++,dat,zeit,pid,beh,st:'aktiv',not});toast('Termin erstellt');}saveS();closeMod('mod-termin');const a=document.querySelector('.page.active');if(a)renderPage(a.id.replace('page-',''));}
+function delT(id){if(!confirm('Termin loschen?'))return;S.termine=S.termine.filter(t=>t.id!==id);saveS();rKal();toast('Geloscht','inf');}
+function editP(id){const p=S.patienten.find(p=>p.id===id);if(!p)return;document.getElementById('p-eid').value=id;document.getElementById('p-mod-ttl').textContent='Patient bearbeiten';document.getElementById('p-name').value=p.name;document.getElementById('p-rasse').value=p.rasse||'';document.getElementById('p-geb').value=p.geb||'';document.getElementById('p-gew').value=p.gew||'';document.getElementById('p-ges').value=p.ges||'Weiblich';document.getElementById('p-ta').value=p.ta||'Hund';document.getElementById('p-diag').value=p.diag||'';fillBS('p-bes',p.bid);document.getElementById('mod-patient').classList.add('open');}
+function savePatient(){const eid=document.getElementById('p-eid').value;const name=document.getElementById('p-name').value.trim();if(!name){toast('Bitte Name eingeben','inf');return;}const d={name,ta:document.getElementById('p-ta').value,rasse:document.getElementById('p-rasse').value,ges:document.getElementById('p-ges').value,geb:document.getElementById('p-geb').value,gew:parseFloat(document.getElementById('p-gew').value)||0,bid:parseInt(document.getElementById('p-bes').value),diag:document.getElementById('p-diag').value,lb:td(),st:'aktiv'};if(eid){Object.assign(S.patienten.find(p=>p.id==eid),d);toast('Patient aktualisiert');}else{S.patienten.push({id:S.nid.p++,...d});toast('Patient angelegt');}saveS();closeMod('mod-patient');rPat();}
+function delP(id){if(!confirm('Patient loschen?'))return;S.patienten=S.patienten.filter(p=>p.id!==id);saveS();rPat();toast('Geloscht','inf');}
+function saveRech(){const pid=parseInt(document.getElementById('r-pat').value);const bet=parseFloat(document.getElementById('r-bet').value);const dat=document.getElementById('r-dat').value||td();const lei=document.getElementById('r-lei').value;if(!bet||bet<=0){toast('Bitte Betrag eingeben','inf');return;}const nr='RE-'+new Date().getFullYear()+'-'+String(S.nid.r).padStart(3,'0');const fae=new Date(dat);fae.setDate(fae.getDate()+14);S.rechnungen.push({id:S.nid.r++,nr,pid,bet,dat,fae:fae.toISOString().slice(0,10),lei,st:'ausstehend'});saveS();closeMod('mod-rechnung');rRech();toast('Rechnung erstellt');}
+function toast(msg,type='suc'){const w=document.getElementById('twWrap');const t=document.createElement('div');t.className='tw-item '+type;t.innerHTML='<i class="bi bi-'+(type==='suc'?'check-circle-fill':'info-circle-fill')+'" style="color:'+(type==='suc'?'var(--sa-success)':'var(--sa-primary)')+';flex-shrink:0;"></i><span>'+msg+'</span>';w.appendChild(t);setTimeout(()=>t.remove(),3500);}
+loadS();rDash();
 </script>
 </body>
 </html>
