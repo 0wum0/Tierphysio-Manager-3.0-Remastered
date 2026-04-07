@@ -46,8 +46,51 @@ $router->get('/admin/legal',            [LegalController::class, 'index']);
 $router->get('/admin/legal/{id}/edit',  [LegalController::class, 'edit']);
 $router->post('/admin/legal/{id}/edit', [LegalController::class, 'update']);
 
-// ── Root redirect (only used on platform domain / fallback) ────────────────
+// ── Root redirect ──────────────────────────────────────────────────────────
 $router->get('/admin/dashboard', function (array $params): void {
     header('Location: /admin');
+    exit;
+});
+
+// ── Pending Migrations (run once after deploy, then remove) ─────────────────
+$router->get('/admin/migrate', function (array $params): void {
+    $app      = \Saas\Core\Application::getInstance();
+    $c        = $app->getContainer();
+    $session  = $c->get(\Saas\Core\Session::class);
+    if (!$session->has('saas_user_id')) {
+        header('Location: /admin/login'); exit;
+    }
+    $rootPath = $app->getRootPath();
+    $db       = $c->get(\Saas\Core\Database::class);
+    $pdo      = $db->getPdo();
+
+    $files   = glob($rootPath . '/migrations/*.sql') ?: [];
+    sort($files);
+    $results = [];
+    foreach ($files as $file) {
+        $name = basename($file);
+        $sql  = file_get_contents($file);
+        $stmts = array_filter(array_map('trim', explode(';', $sql)));
+        $errors = [];
+        foreach ($stmts as $stmt) {
+            if ($stmt === '') continue;
+            try { $pdo->exec($stmt); }
+            catch (\Throwable $e) { $errors[] = $e->getMessage(); }
+        }
+        $results[$name] = empty($errors) ? 'OK' : $errors;
+    }
+
+    header('Content-Type: text/plain; charset=utf-8');
+    foreach ($results as $file => $result) {
+        if ($result === 'OK') {
+            echo "[OK]   {$file}\n";
+        } else {
+            echo "[WARN] {$file}\n";
+            foreach ($result as $err) {
+                echo "       → {$err}\n";
+            }
+        }
+    }
+    echo "\nFertig. Diese Route kann jetzt aus web.php entfernt werden.\n";
     exit;
 });

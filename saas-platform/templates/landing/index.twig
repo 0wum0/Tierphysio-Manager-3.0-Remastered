@@ -311,7 +311,7 @@
                 <div class="price-card {% if loop.index == 2 %}featured{% endif %}">
                     <div class="price-name">{{ plan.name }}</div>
                     <div class="price-amount">
-                        {{ plan.price_monthly ?? plan.monthly_price ?? '29' }}€
+                        {{ plan.price_month ?? '29' }}€
                         <span>/ Monat</span>
                     </div>
                     <div class="price-desc">{{ plan.description ?? 'Ideal für Ihre Praxis' }}</div>

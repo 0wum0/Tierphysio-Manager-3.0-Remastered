@@ -79,20 +79,24 @@ class InstallerController extends Controller
             return;
         }
 
-        // Run migrations
+        // Run all migrations in order
         try {
-            $migrationPath = $this->config->getRootPath() . '/migrations/001_initial_schema.sql';
-            if (file_exists($migrationPath)) {
-                $sql = file_get_contents($migrationPath);
-                foreach (array_filter(array_map('trim', explode(';', $sql))) as $stmt) {
-                    if ($stmt !== '') {
-                        try { $pdo->exec($stmt); } catch (\Throwable) {}
+            $migrationsDir = $this->config->getRootPath() . '/migrations';
+            $files = glob($migrationsDir . '/*.sql');
+            if ($files) {
+                sort($files);
+                foreach ($files as $migrationPath) {
+                    $sql = file_get_contents($migrationPath);
+                    foreach (array_filter(array_map('trim', explode(';', $sql))) as $stmt) {
+                        if ($stmt !== '') {
+                            try { $pdo->exec($stmt); } catch (\Throwable) {}
+                        }
                     }
                 }
             }
         } catch (\Throwable $e) {
             $this->render('installer/index.twig', [
-                'page_title' => 'Tierphysio SaaS – Installation',
+                'page_title' => 'TheraPano SaaS – Installation',
                 'checks'     => $this->runChecks(),
                 'errors'     => ['Migration fehlgeschlagen: ' . $e->getMessage()],
                 'old'        => $_POST,
