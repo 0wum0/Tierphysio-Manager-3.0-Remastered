@@ -85,6 +85,33 @@ $router->get('/admin/updates/changelog',   [UpdateController::class, 'changelog'
 $router->get('/admin/updates/system-info', [UpdateController::class, 'systemInfo']);
 $router->post('/admin/updates/apply',      [UpdateController::class, 'applyUpdate']);
 
+// ── Temporärer Debug-Endpunkt (NACH DEBUGGING ENTFERNEN) ───────────────────
+$router->get('/admin/debug-notifications', function (array $params): void {
+    $app = \Saas\Core\Application::getInstance();
+    $c   = $app->getContainer();
+    header('Content-Type: text/plain; charset=utf-8');
+    try {
+        $ctrl = $c->make(\Saas\Controllers\NotificationController::class);
+        echo "Controller OK\n";
+        $repo = $c->make(\Saas\Repositories\NotificationRepository::class);
+        echo "Repo OK\n";
+        echo "Count: " . $repo->countUnread() . "\n";
+        $view = $c->get(\Saas\Core\View::class);
+        echo "View OK\n";
+        echo $view->render('admin/notifications/index.twig', [
+            'page_title'    => 'Test',
+            'notifications' => [],
+            'pagination'    => ['items'=>[],'total'=>0,'page'=>1,'last_page'=>1,'has_next'=>false,'has_prev'=>false],
+            'unread_count'  => 0,
+        ]);
+    } catch (\Throwable $e) {
+        echo "ERROR: " . $e->getMessage() . "\n";
+        echo "FILE: "  . $e->getFile() . ":" . $e->getLine() . "\n";
+        echo $e->getTraceAsString();
+    }
+    exit;
+});
+
 // ── Root redirect ──────────────────────────────────────────────────────────
 $router->get('/admin/dashboard', function (array $params): void {
     header('Location: /admin');

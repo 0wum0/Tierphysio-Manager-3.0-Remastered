@@ -34,9 +34,13 @@ class UpdateController extends Controller
 
         $current   = $this->settings->get('platform_version', self::CURRENT_VERSION);
         $channel   = $this->settings->get('update_channel', 'stable');
-        $updateLog = $this->db->fetchAll(
-            "SELECT * FROM saas_update_log ORDER BY performed_at DESC LIMIT 20"
-        );
+        try {
+            $updateLog = $this->db->fetchAll(
+                "SELECT * FROM saas_update_log ORDER BY performed_at DESC LIMIT 20"
+            );
+        } catch (\Throwable) {
+            $updateLog = [];
+        }
 
         // Verfügbares Release aus GitHub API laden
         $available = $this->fetchLatestRelease($channel);
@@ -99,17 +103,19 @@ class UpdateController extends Controller
         $actor = $this->session->get('saas_user') ?? 'admin';
 
         // Update-Log eintragen
-        $this->db->execute(
-            "INSERT INTO saas_update_log (from_version, to_version, channel, status, notes, performed_by, performed_at)
-             VALUES (?, ?, ?, 'success', ?, ?, NOW())",
-            [
-                $current,
-                $available['version'],
-                $channel,
-                $available['body'] ?? '',
-                $actor,
-            ]
-        );
+        try {
+            $this->db->execute(
+                "INSERT INTO saas_update_log (from_version, to_version, channel, status, notes, performed_by, performed_at)
+                 VALUES (?, ?, ?, 'success', ?, ?, NOW())",
+                [
+                    $current,
+                    $available['version'],
+                    $channel,
+                    $available['body'] ?? '',
+                    $actor,
+                ]
+            );
+        } catch (\Throwable) {}
 
         // Version in Settings aktualisieren
         $this->settings->set('platform_version', $available['version']);

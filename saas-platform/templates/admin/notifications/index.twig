@@ -93,8 +93,8 @@
             </div>
         </div>
         {% if notif.data %}
-        {% set data = notif.data|json_decode ?? {} %}
-        {% if data %}
+        {% set data = notif.data|json_decode %}
+        {% if data is not empty %}
         <div class="mt-1 d-flex gap-2 flex-wrap">
             {% for k, v in data %}
             <span style="font-size:.72rem;background:#0f172a;border:1px solid #334155;border-radius:.3rem;padding:.1rem .4rem;color:#64748b;">{{ k }}: {{ v }}</span>
