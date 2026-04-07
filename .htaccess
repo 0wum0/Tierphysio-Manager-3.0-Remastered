@@ -1,24 +1,53 @@
 Options -Indexes
 RewriteEngine On
 
-# Block direct access to sensitive files and directories
-RewriteRule ^(\.env|composer\.(json|lock)|\.git) - [F,L]
-RewriteRule ^(app|lang|migrations|templates|plugins|storage|vendor)/ - [F,L]
-
-# Block debug/test scripts in root directory
+# ── Block sensitive root files (beide Domains) ────────────────────────────────
+RewriteRule ^\.env$ - [F,L]
+RewriteRule ^composer\.(json|lock)$ - [F,L]
+RewriteRule ^\.git(/|$) - [F,L]
 RewriteRule ^(check_db|debug_homework|test_error_log|test_migration|debug|test)\.php$ - [F,L]
 
-# Serve storage/uploads/ and storage/patients/ directly (images, logos)
+# ── Für app.therapano.de: saas-platform/ komplett sperren ────────────────────
+RewriteCond %{HTTP_HOST} ^app\.therapano\.de$ [NC]
+RewriteRule ^saas-platform/ - [F,L]
+
+# ══════════════════════════════════════════════════════════════════════════════
+# therapano.de + www.therapano.de  →  saas-platform/public/
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Statische Dateien in saas-platform/public/ direkt ausliefern
+RewriteCond %{HTTP_HOST} ^(www\.)?therapano\.de$ [NC]
+RewriteCond %{DOCUMENT_ROOT}/saas-platform/public%{REQUEST_URI} -f
+RewriteRule ^(.*)$ saas-platform/public/$1 [L]
+
+# Verzeichnisse in saas-platform/public/ direkt ausliefern
+RewriteCond %{HTTP_HOST} ^(www\.)?therapano\.de$ [NC]
+RewriteCond %{DOCUMENT_ROOT}/saas-platform/public%{REQUEST_URI} -d
+RewriteRule ^(.*)$ saas-platform/public/$1 [L]
+
+# Alles andere → SaaS PHP-Router
+RewriteCond %{HTTP_HOST} ^(www\.)?therapano\.de$ [NC]
+RewriteRule ^(.*)$ saas-platform/public/index.php [QSA,L]
+
+# ══════════════════════════════════════════════════════════════════════════════
+# app.therapano.de  →  public/ (Tierphysio Praxis-App)
+# ══════════════════════════════════════════════════════════════════════════════
+
+# storage/uploads + storage/patients direkt ausliefern
+RewriteCond %{HTTP_HOST} ^app\.therapano\.de$ [NC]
 RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} -f
 RewriteRule ^storage/(uploads|patients)/.+ - [L]
 
-# Serve static files from public/ directly
+# Statische Dateien in public/ direkt ausliefern
+RewriteCond %{HTTP_HOST} ^app\.therapano\.de$ [NC]
 RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
 RewriteRule ^(.*)$ public/$1 [L]
 
-# Serve directories from public/ directly
+# Verzeichnisse in public/ direkt ausliefern
+RewriteCond %{HTTP_HOST} ^app\.therapano\.de$ [NC]
 RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -d
 RewriteRule ^(.*)$ public/$1 [L]
 
-# Everything else → public/index.php (PHP router)
+# Alles andere → Tierphysio PHP-Router
+RewriteCond %{HTTP_HOST} ^app\.therapano\.de$ [NC]
 RewriteRule ^(.*)$ public/index.php [QSA,L]
