@@ -1,0 +1,233 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'invoices' %}
+
+{% block styles %}
+<style>
+.pos-row td { vertical-align:middle; }
+.pos-row .form-control, .pos-row .form-select { background:#0f172a; border-color:#334155; color:#e2e8f0; }
+.pos-row .form-control:focus, .pos-row .form-select:focus { border-color:#2563eb; box-shadow:0 0 0 2px rgba(37,99,235,.15); }
+.totals-box { background:#0f172a; border:1px solid #334155; border-radius:.75rem; padding:1.25rem; }
+.totals-row { display:flex; justify-content:space-between; align-items:center; padding:.35rem 0; font-size:.9rem; }
+.totals-row.gross { border-top:2px solid #334155; margin-top:.5rem; padding-top:.75rem; font-size:1.05rem; font-weight:700; }
+.section-card { background:#1e293b; border:1px solid #334155; border-radius:.75rem; padding:1.5rem; margin-bottom:1.25rem; }
+.section-title { font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#64748b; margin-bottom:1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <a href="/admin/invoices/{{ invoice.id }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Zurück</a>
+</div>
+
+<form method="POST" action="/admin/invoices/{{ invoice.id }}/edit">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+
+    <div class="row g-4">
+
+        {# ── Linke Spalte ────────────────────────────────────────────── #}
+        <div class="col-lg-8">
+
+            {# Kundenauswahl #}
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-person-circle me-1"></i>Kunde</div>
+                <div>
+                    <label class="form-label">Kunde / Praxis <span class="text-danger">*</span></label>
+                    <select name="tenant_id" class="form-select" required>
+                        <option value="">— Kunden auswählen —</option>
+                        {% for tenant in tenants %}
+                        <option value="{{ tenant.id }}" {% if tenant.id == invoice.tenant_id %}selected{% endif %}>
+                            {% if tenant.company %}{{ tenant.company }} – {% endif %}{{ tenant.first_name }} {{ tenant.last_name }} ({{ tenant.email }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            {# Positionen #}
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-list-ul me-1"></i>Rechnungspositionen</div>
+                <div class="table-responsive">
+                    <table class="table mb-3" id="positionsTable">
+                        <thead>
+                            <tr>
+                                <th style="width:40%">Beschreibung</th>
+                                <th style="width:12%">Menge</th>
+                                <th style="width:17%">Einzelpreis (€)</th>
+                                <th style="width:13%">MwSt. (%)</th>
+                                <th style="width:14%" class="text-end">Gesamt</th>
+                                <th style="width:4%"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="positionsBody">
+                            {% for pos in positions %}
+                            <tr class="pos-row">
+                                <td><input type="text" name="position_description[]" class="form-control form-control-sm" value="{{ pos.description }}" required></td>
+                                <td><input type="number" name="position_quantity[]" class="form-control form-control-sm pos-qty" value="{{ pos.quantity }}" min="0.01" step="0.01"></td>
+                                <td><input type="number" name="position_price[]" class="form-control form-control-sm pos-price" value="{{ pos.unit_price }}" min="0" step="0.01"></td>
+                                <td>
+                                    <select name="position_tax_rate[]" class="form-select form-select-sm pos-tax">
+                                        <option value="0" {% if pos.tax_rate == 0 %}selected{% endif %}>0 % (stfr.)</option>
+                                        <option value="7" {% if pos.tax_rate == 7 %}selected{% endif %}>7 %</option>
+                                        <option value="19" {% if pos.tax_rate == 19 %}selected{% endif %}>19 %</option>
+                                    </select>
+                                </td>
+                                <td class="text-end pos-total" style="white-space:nowrap;color:#e2e8f0;font-weight:600;">{{ pos.total|number_format(2,',','.') }} €</td>
+                                <td><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 remove-pos" tabindex="-1"><i class="bi bi-trash3"></i></button></td>
+                            </tr>
+                            {% else %}
+                            <tr class="pos-row">
+                                <td><input type="text" name="position_description[]" class="form-control form-control-sm" placeholder="Leistungsbeschreibung…" required></td>
+                                <td><input type="number" name="position_quantity[]" class="form-control form-control-sm pos-qty" value="1" min="0.01" step="0.01"></td>
+                                <td><input type="number" name="position_price[]" class="form-control form-control-sm pos-price" value="0.00" min="0" step="0.01"></td>
+                                <td>
+                                    <select name="position_tax_rate[]" class="form-select form-select-sm pos-tax">
+                                        <option value="0">0 % (stfr.)</option>
+                                        <option value="7">7 %</option>
+                                        <option value="19" selected>19 %</option>
+                                    </select>
+                                </td>
+                                <td class="text-end pos-total" style="white-space:nowrap;color:#e2e8f0;font-weight:600;">0,00 €</td>
+                                <td><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 remove-pos" tabindex="-1"><i class="bi bi-trash3"></i></button></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="addPosition">
+                    <i class="bi bi-plus-lg me-1"></i>Position hinzufügen
+                </button>
+            </div>
+
+            {# Notizen #}
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-chat-text me-1"></i>Hinweise & Zahlungsbedingungen</div>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Hinweis</label>
+                        <textarea name="notes" class="form-control" rows="2">{{ invoice.notes }}</textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Zahlungsbedingungen</label>
+                        <input type="text" name="payment_terms" class="form-control" value="{{ invoice.payment_terms }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ── Rechte Spalte ───────────────────────────────────────────── #}
+        <div class="col-lg-4">
+
+            {# Rechnungsdetails #}
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-info-circle me-1"></i>Rechnungsdetails</div>
+                <div class="d-flex flex-column gap-3">
+                    <div>
+                        <label class="form-label">Rechnungsnummer</label>
+                        <input type="text" name="invoice_number" class="form-control" value="{{ invoice.invoice_number }}" required>
+                    </div>
+                    <div>
+                        <label class="form-label">Status</label>
+                        <select name="status" class="form-select">
+                            <option value="draft" {% if invoice.status == 'draft' %}selected{% endif %}>Entwurf</option>
+                            <option value="open"  {% if invoice.status == 'open'  %}selected{% endif %}>Offen</option>
+                            <option value="overdue" {% if invoice.status == 'overdue' %}selected{% endif %}>Überfällig</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Zahlungsart</label>
+                        <select name="payment_method" class="form-select">
+                            <option value="rechnung"    {% if invoice.payment_method == 'rechnung'    %}selected{% endif %}>Rechnung</option>
+                            <option value="ueberweisung"{% if invoice.payment_method == 'ueberweisung'%}selected{% endif %}>Überweisung</option>
+                            <option value="lastschrift" {% if invoice.payment_method == 'lastschrift' %}selected{% endif %}>Lastschrift</option>
+                            <option value="bar"         {% if invoice.payment_method == 'bar'         %}selected{% endif %}>Barzahlung</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Rechnungsdatum</label>
+                        <input type="date" name="issue_date" class="form-control" value="{{ invoice.issue_date }}">
+                    </div>
+                    <div>
+                        <label class="form-label">Fälligkeitsdatum</label>
+                        <input type="date" name="due_date" class="form-control" value="{{ invoice.due_date }}">
+                    </div>
+                </div>
+            </div>
+
+            {# Summen #}
+            <div class="totals-box mb-3">
+                <div class="totals-row">
+                    <span class="text-secondary">Nettobetrag</span>
+                    <span id="sumNet">{{ invoice.total_net|number_format(2,',','.') }} €</span>
+                </div>
+                <div class="totals-row">
+                    <span class="text-secondary">Mehrwertsteuer</span>
+                    <span id="sumTax">{{ invoice.total_tax|number_format(2,',','.') }} €</span>
+                </div>
+                <div class="totals-row gross">
+                    <span>Gesamtbetrag</span>
+                    <span id="sumGross" style="color:#34d399;">{{ invoice.total_gross|number_format(2,',','.') }} €</span>
+                </div>
+            </div>
+
+            {# Speichern #}
+            <div class="d-grid gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg me-1"></i>Änderungen speichern
+                </button>
+                <a href="/admin/invoices/{{ invoice.id }}" class="btn btn-outline-secondary">Abbrechen</a>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const fmt = v => new Intl.NumberFormat('de-DE',{minimumFractionDigits:2,maximumFractionDigits:2}).format(v) + ' €';
+
+function calcRow(row) {
+    const qty   = parseFloat(row.querySelector('.pos-qty').value.replace(',','.'))   || 0;
+    const price = parseFloat(row.querySelector('.pos-price').value.replace(',','.')) || 0;
+    const tax   = parseFloat(row.querySelector('.pos-tax').value)                    || 0;
+    const gross = qty * price * (1 + tax / 100);
+    row.querySelector('.pos-total').textContent = fmt(gross);
+    return { net: qty * price, tax: qty * price * tax / 100, gross };
+}
+
+function recalcAll() {
+    let net = 0, tax = 0, gross = 0;
+    document.querySelectorAll('#positionsBody .pos-row').forEach(row => {
+        const t = calcRow(row);
+        net   += t.net;
+        tax   += t.tax;
+        gross += t.gross;
+    });
+    document.getElementById('sumNet').textContent   = fmt(net);
+    document.getElementById('sumTax').textContent   = fmt(tax);
+    document.getElementById('sumGross').textContent = fmt(gross);
+}
+
+document.getElementById('positionsBody').addEventListener('input', recalcAll);
+
+document.getElementById('addPosition').addEventListener('click', () => {
+    const tmpl = document.querySelector('#positionsBody .pos-row').cloneNode(true);
+    tmpl.querySelectorAll('input[type="text"]').forEach(i => i.value = '');
+    tmpl.querySelector('.pos-qty').value   = '1';
+    tmpl.querySelector('.pos-price').value = '0.00';
+    tmpl.querySelector('.pos-total').textContent = '0,00 €';
+    document.getElementById('positionsBody').appendChild(tmpl);
+    tmpl.querySelector('input[type="text"]').focus();
+});
+
+document.getElementById('positionsBody').addEventListener('click', e => {
+    const btn = e.target.closest('.remove-pos');
+    if (!btn) return;
+    const rows = document.querySelectorAll('#positionsBody .pos-row');
+    if (rows.length <= 1) return;
+    btn.closest('.pos-row').remove();
+    recalcAll();
+});
+
+recalcAll();
+</script>
+{% endblock %}

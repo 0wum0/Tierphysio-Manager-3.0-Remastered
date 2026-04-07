@@ -1,0 +1,158 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'invoices' %}
+
+{% block styles %}
+<style>
+.section-card { background:#1e293b; border:1px solid #334155; border-radius:.75rem; padding:1.5rem; margin-bottom:1.25rem; }
+.section-title { font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#64748b; margin-bottom:1rem; }
+.tax-summary-card { background:#0f172a; border:1px solid #334155; border-radius:.75rem; padding:1.25rem; }
+.tax-row { display:flex; justify-content:space-between; align-items:center; padding:.5rem 0; border-bottom:1px solid #1e293b; font-size:.9rem; }
+.tax-row:last-child { border-bottom:none; }
+.badge-inv { font-size:.7rem; padding:.25rem .6rem; border-radius:1rem; font-weight:700; }
+.badge-paid     { background:#064e3b; color:#6ee7b7; }
+.badge-open     { background:#0c2a4a; color:#7dd3fc; }
+.badge-overdue  { background:#3b1a08; color:#fb923c; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Filter ────────────────────────────────────────────────────────── #}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <a href="/admin/invoices" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Zurück</a>
+</div>
+
+<div class="section-card">
+    <div class="section-title"><i class="bi bi-funnel me-1"></i>Zeitraum auswählen</div>
+    <form method="GET" action="/admin/invoices/tax-export" class="row g-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label">Von</label>
+            <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Bis</label>
+            <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-arrow-clockwise me-1"></i>Anzeigen
+            </button>
+            <a href="/admin/invoices/tax-export?date_from={{ date_from }}&date_to={{ date_to }}&format=csv"
+               class="btn btn-success">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i>CSV herunterladen
+            </a>
+        </div>
+        <div class="col-md-3 d-flex gap-2">
+            {# Schnellauswahl-Buttons #}
+            <a href="/admin/invoices/tax-export?date_from={{ 'now'|date('Y') }}-01-01&date_to={{ 'now'|date('Y-m-d') }}" class="btn btn-sm btn-outline-secondary">Dieses Jahr</a>
+            <a href="/admin/invoices/tax-export?date_from={{ 'now'|date('Y') }}-{{ 'now'|date('m') }}-01&date_to={{ 'now'|date('Y-m-d') }}" class="btn btn-sm btn-outline-secondary">Dieser Monat</a>
+        </div>
+    </form>
+</div>
+
+{# ── Steuer-Zusammenfassung ────────────────────────────────────────── #}
+{% if summary %}
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="section-card">
+            <div class="section-title"><i class="bi bi-calculator me-1"></i>Steuer-Zusammenfassung für {{ date_from|date('d.m.Y') }} – {{ date_to|date('d.m.Y') }}</div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Steuersatz</th>
+                            <th class="text-end">Anzahl Rechnungen</th>
+                            <th class="text-end">Nettobetrag</th>
+                            <th class="text-end">Steuerbetrag</th>
+                            <th class="text-end">Bruttobetrag</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in summary %}
+                        <tr>
+                            <td><strong>{{ row.tax_rate|number_format(0,',','.') }} %</strong></td>
+                            <td class="text-end">{{ row.invoice_count }}</td>
+                            <td class="text-end">{{ row.total_net|number_format(2,',','.') }} €</td>
+                            <td class="text-end" style="color:#fbbf24;">{{ row.total_tax|number_format(2,',','.') }} €</td>
+                            <td class="text-end"><strong>{{ row.total_gross|number_format(2,',','.') }} €</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr style="border-top:2px solid #334155;">
+                            <th>Gesamt</th>
+                            <th class="text-end">{{ summary|map(r => r.invoice_count)|reduce((carry, v) => carry + v, 0) }}</th>
+                            <th class="text-end">{{ summary|map(r => r.total_net)|reduce((carry, v) => carry + v, 0)|number_format(2,',','.') }} €</th>
+                            <th class="text-end" style="color:#fbbf24;">{{ summary|map(r => r.total_tax)|reduce((carry, v) => carry + v, 0)|number_format(2,',','.') }} €</th>
+                            <th class="text-end" style="color:#34d399;">{{ summary|map(r => r.total_gross)|reduce((carry, v) => carry + v, 0)|number_format(2,',','.') }} €</th>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{# ── Einzelne Rechnungen ───────────────────────────────────────────── #}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span style="font-size:.8rem;color:#64748b;">{{ invoices|length }} Rechnung(en) im Zeitraum</span>
+        <a href="/admin/invoices/tax-export?date_from={{ date_from }}&date_to={{ date_to }}&format=csv" class="btn btn-sm btn-success">
+            <i class="bi bi-download me-1"></i>CSV exportieren
+        </a>
+    </div>
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Rechnungsnr.</th>
+                    <th>Datum</th>
+                    <th>Kunde</th>
+                    <th>Status</th>
+                    <th class="text-end">Netto (€)</th>
+                    <th class="text-end">MwSt. (€)</th>
+                    <th class="text-end">Brutto (€)</th>
+                    <th>Bezahlt am</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in invoices %}
+                {% set statusLabels = {'draft':'Entwurf','open':'Offen','paid':'Bezahlt','overdue':'Überfällig','cancelled':'Storniert'} %}
+                <tr>
+                    <td><strong class="text-white">{{ inv.invoice_number }}</strong></td>
+                    <td>{{ inv.issue_date|date('d.m.Y') }}</td>
+                    <td>
+                        <div>{{ inv.tenant_display }}</div>
+                        <div style="font-size:.75rem;color:#64748b;">{{ inv.tenant_email }}</div>
+                    </td>
+                    <td><span class="badge-inv badge-{{ inv.status }}">{{ statusLabels[inv.status] ?? inv.status }}</span></td>
+                    <td class="text-end">{{ inv.total_net|number_format(2,',','.') }}</td>
+                    <td class="text-end" style="color:#fbbf24;">{{ inv.total_tax|number_format(2,',','.') }}</td>
+                    <td class="text-end"><strong>{{ inv.total_gross|number_format(2,',','.') }}</strong></td>
+                    <td>
+                        {% if inv.paid_at %}
+                            <span style="color:#34d399;">{{ inv.paid_at|date('d.m.Y') }}</span>
+                        {% else %}
+                            <span class="text-secondary">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="/admin/invoices/{{ inv.id }}" class="btn btn-sm btn-outline-secondary py-0 px-2"><i class="bi bi-eye"></i></a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="9" class="text-center py-5 text-secondary">
+                        <i class="bi bi-search" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
+                        Keine Rechnungen im gewählten Zeitraum.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

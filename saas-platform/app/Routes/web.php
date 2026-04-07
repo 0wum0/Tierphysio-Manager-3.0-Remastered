@@ -8,6 +8,7 @@ use Saas\Controllers\TenantController;
 use Saas\Controllers\PlansController;
 use Saas\Controllers\LegalController;
 use Saas\Controllers\LicenseApiController;
+use Saas\Controllers\SaasInvoiceController;
 
 // ── License API (called by Praxissoftware) ─────────────────────────────────
 $router->post('/api/license/verify',  [LicenseApiController::class, 'verify']);
@@ -45,6 +46,20 @@ $router->post('/admin/plans/{id}/edit', [PlansController::class, 'update']);
 $router->get('/admin/legal',            [LegalController::class, 'index']);
 $router->get('/admin/legal/{id}/edit',  [LegalController::class, 'edit']);
 $router->post('/admin/legal/{id}/edit', [LegalController::class, 'update']);
+
+// ── SaaS Rechnungsverwaltung ────────────────────────────────────────────────
+$router->get('/admin/invoices',                         [SaasInvoiceController::class, 'index']);
+$router->get('/admin/invoices/create',                  [SaasInvoiceController::class, 'create']);
+$router->post('/admin/invoices',                        [SaasInvoiceController::class, 'store']);
+$router->get('/admin/invoices/tax-export',              [SaasInvoiceController::class, 'taxExport']);
+$router->get('/admin/invoices/{id}',                    [SaasInvoiceController::class, 'show']);
+$router->get('/admin/invoices/{id}/edit',               [SaasInvoiceController::class, 'edit']);
+$router->post('/admin/invoices/{id}/edit',              [SaasInvoiceController::class, 'update']);
+$router->post('/admin/invoices/{id}/delete',            [SaasInvoiceController::class, 'delete']);
+$router->post('/admin/invoices/{id}/status',            [SaasInvoiceController::class, 'updateStatus']);
+$router->post('/admin/invoices/{id}/send-email',        [SaasInvoiceController::class, 'sendEmail']);
+$router->post('/admin/invoices/{id}/finalize',          [SaasInvoiceController::class, 'finalize']);
+$router->get('/admin/invoices/{id}/pdf',                [SaasInvoiceController::class, 'downloadPdf']);
 
 // ── Root redirect ──────────────────────────────────────────────────────────
 $router->get('/admin/dashboard', function (array $params): void {
