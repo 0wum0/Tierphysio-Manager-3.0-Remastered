@@ -87,6 +87,18 @@ $router->post('/admin/updates/apply',      [UpdateController::class, 'applyUpdat
 
 
 
+// ── Debug: static file path check (REMOVE AFTER) ───────────────────────────
+$router->get('/admin/debug-paths', function(array $p): void {
+    header('Content-Type: text/plain');
+    $pub = dirname(__DIR__, 2) . '/public';
+    echo "public dir: $pub\n";
+    echo "css/landing.css exists: " . (file_exists("$pub/css/landing.css") ? 'YES' : 'NO') . "\n";
+    echo "css/bootstrap.min.css exists: " . (file_exists("$pub/css/bootstrap.min.css") ? 'YES' : 'NO') . "\n";
+    echo "DOCUMENT_ROOT: " . ($_SERVER['DOCUMENT_ROOT'] ?? 'n/a') . "\n";
+    echo "SCRIPT_FILENAME: " . ($_SERVER['SCRIPT_FILENAME'] ?? 'n/a') . "\n";
+    exit;
+});
+
 // ── Root redirect ──────────────────────────────────────────────────────────
 $router->get('/admin/dashboard', function (array $params): void {
     header('Location: /admin');
