@@ -317,7 +317,7 @@
                     <div class="price-desc">{{ plan.description ?? 'Ideal für Ihre Praxis' }}</div>
 
                     <ul class="price-features">
-                        {% set features = plan.features is defined ? (plan.features|json_decode ?? []) : [] %}
+                        {% set features = plan.features ? plan.features|json_decode : [] %}
                         {% for feature in features %}
                         <li><i class="bi bi-check-circle-fill"></i> {{ feature }}</li>
                         {% else %}
