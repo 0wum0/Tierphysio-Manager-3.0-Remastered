@@ -127,7 +127,7 @@
             <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:1rem;">
                 <i class="bi bi-person-circle me-1"></i>Kunde
             </div>
-            {% set tenantName = invoice.tenant_name ?? (invoice.first_name ~ ' ' ~ invoice.last_name) %}
+            {% set tenantName = invoice.tenant_name ?? invoice.owner_name %}
             <div style="font-size:1.1rem;font-weight:700;color:#e2e8f0;margin-bottom:.5rem;">{{ tenantName }}</div>
             {% if invoice.tenant_email %}
             <div style="font-size:.875rem;color:#64748b;"><i class="bi bi-envelope me-1"></i>{{ invoice.tenant_email }}</div>

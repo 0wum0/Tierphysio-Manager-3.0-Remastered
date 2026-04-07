@@ -15,8 +15,8 @@ class SaasInvoiceRepository
     public function findById(int $id): array|false
     {
         return $this->db->fetch(
-            "SELECT i.*, t.company AS tenant_name, t.email AS tenant_email,
-                    t.first_name, t.last_name, t.address, t.city, t.zip, t.country
+            "SELECT i.*, t.practice_name AS tenant_name, t.email AS tenant_email,
+                    t.owner_name, t.address, t.city, t.zip, t.country
              FROM saas_invoices i
              JOIN tenants t ON t.id = i.tenant_id
              WHERE i.id = ?",
@@ -102,7 +102,7 @@ class SaasInvoiceRepository
         }
 
         if ($search !== '') {
-            $conditions[] = "(i.invoice_number LIKE ? OR t.company LIKE ? OR CONCAT(t.first_name,' ',t.last_name) LIKE ? OR t.email LIKE ?)";
+            $conditions[] = "(i.invoice_number LIKE ? OR t.practice_name LIKE ? OR t.owner_name LIKE ? OR t.email LIKE ?)";
             $params = array_merge($params, ["%{$search}%", "%{$search}%", "%{$search}%", "%{$search}%"]);
         }
 
@@ -116,7 +116,7 @@ class SaasInvoiceRepository
 
         $items = $this->db->fetchAll(
             "SELECT i.*,
-                    COALESCE(NULLIF(t.company,''), CONCAT(t.first_name,' ',t.last_name)) AS tenant_display,
+                    COALESCE(NULLIF(t.practice_name,''), t.owner_name) AS tenant_display,
                     t.email AS tenant_email,
                     CASE WHEN i.status IN ('open','overdue') AND i.due_date < CURDATE()
                          THEN DATEDIFF(CURDATE(), i.due_date) ELSE NULL END AS days_overdue
@@ -258,7 +258,7 @@ class SaasInvoiceRepository
     {
         return $this->db->fetchAll(
             "SELECT i.*,
-                    COALESCE(NULLIF(t.company,''), CONCAT(t.first_name,' ',t.last_name)) AS tenant_display,
+                    COALESCE(NULLIF(t.practice_name,''), t.owner_name) AS tenant_display,
                     t.email AS tenant_email, t.address, t.city, t.zip, t.country
              FROM saas_invoices i
              JOIN tenants t ON t.id = i.tenant_id

@@ -458,7 +458,7 @@ class SaasInvoiceController extends Controller
     {
         ob_start();
         $tenantDisplay = $tenant
-            ? (trim($tenant['company'] ?? '') ?: trim(($tenant['first_name'] ?? '') . ' ' . ($tenant['last_name'] ?? '')))
+            ? (trim($tenant['practice_name'] ?? '') ?: trim($tenant['owner_name'] ?? ''))
             : 'Unbekannter Kunde';
 
         $companyName = $settings['company_name'] ?? 'TheraPano SaaS';
@@ -668,7 +668,7 @@ class SaasInvoiceController extends Controller
     private function sendMail(array $tenant, array $invoice, string $pdfContent, array $settings): void
     {
         $toEmail = $tenant['email'];
-        $toName  = trim(($tenant['company'] ?? '') ?: trim(($tenant['first_name'] ?? '') . ' ' . ($tenant['last_name'] ?? '')));
+        $toName  = trim($tenant['practice_name'] ?? '') ?: trim($tenant['owner_name'] ?? '');
 
         $fromEmail = $settings['mail_from_address'] ?? ($settings['company_email'] ?? 'noreply@therapano.de');
         $fromName  = $settings['mail_from_name']    ?? ($settings['company_name']  ?? 'TheraPano SaaS');

@@ -37,7 +37,7 @@
                             <option value="">— Kunden auswählen —</option>
                             {% for tenant in tenants %}
                             <option value="{{ tenant.id }}" {% if preselected == tenant.id %}selected{% endif %}>
-                                {% if tenant.company %}{{ tenant.company }} – {% endif %}{{ tenant.first_name }} {{ tenant.last_name }} ({{ tenant.email }})
+                                {{ tenant.practice_name ?? tenant.owner_name }} ({{ tenant.email }})
                             </option>
                             {% endfor %}
                         </select>
