@@ -36,6 +36,13 @@ class Config
                 'password' => $_ENV['DB_PASSWORD'] ?? '',
                 'version'  => (int)($_ENV['DB_VERSION'] ?? 0),
             ],
+            'saas_db' => [
+                'host'     => $_ENV['SAAS_DB_HOST']     ?? $_ENV['DB_HOST']     ?? 'localhost',
+                'port'     => (int)($_ENV['SAAS_DB_PORT'] ?? $_ENV['DB_PORT']   ?? 3306),
+                'database' => $_ENV['SAAS_DB_DATABASE'] ?? '',
+                'username' => $_ENV['SAAS_DB_USERNAME'] ?? $_ENV['DB_USERNAME'] ?? 'root',
+                'password' => $_ENV['SAAS_DB_PASSWORD'] ?? $_ENV['DB_PASSWORD'] ?? '',
+            ],
             'session' => [
                 'lifetime' => (int)($_ENV['SESSION_LIFETIME'] ?? 10080),
                 'secure'   => filter_var($_ENV['SESSION_SECURE'] ?? false, FILTER_VALIDATE_BOOLEAN),

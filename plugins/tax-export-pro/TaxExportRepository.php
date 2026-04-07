@@ -10,6 +10,11 @@ class TaxExportRepository
 {
     public function __construct(private readonly Database $db) {}
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     /**
      * Load invoices for a given period with optional status filter.
      * Joins owners + patients for full context — read-only, no mutation.
@@ -55,9 +60,9 @@ class TaxExportRepository
                 o.city   AS owner_city,
                 p.name   AS patient_name,
                 p.species AS patient_species
-             FROM invoices i
-             LEFT JOIN owners o  ON i.owner_id  = o.id
-             LEFT JOIN patients p ON i.patient_id = p.id
+             FROM `{$this->t('invoices')}` i
+             LEFT JOIN `{$this->t('owners')}` o  ON i.owner_id  = o.id
+             LEFT JOIN `{$this->t('patients')}` p ON i.patient_id = p.id
              {$where}
              ORDER BY i.issue_date ASC, i.id ASC",
             $params
@@ -69,7 +74,7 @@ class TaxExportRepository
      */
     public function getStatsForPeriod(string $dateFrom, string $dateTo): array
     {
-        $base = "FROM invoices WHERE issue_date >= ? AND issue_date <= ?";
+        $base = "FROM `{$this->t('invoices')}` WHERE issue_date >= ? AND issue_date <= ?";
         $p    = [$dateFrom, $dateTo];
 
         $total     = (int)$this->db->fetchColumn("SELECT COUNT(*) {$base}", $p);
@@ -97,7 +102,7 @@ class TaxExportRepository
     public function getPositions(int $invoiceId): array
     {
         return $this->db->fetchAll(
-            "SELECT * FROM invoice_positions WHERE invoice_id = ? ORDER BY sort_order ASC",
+            "SELECT * FROM `{$this->t('invoice_positions')}` WHERE invoice_id = ? ORDER BY sort_order ASC",
             [$invoiceId]
         );
     }
@@ -109,7 +114,7 @@ class TaxExportRepository
     {
         try {
             $val = $this->db->fetchColumn(
-                "SELECT setting_value FROM tax_export_settings WHERE setting_key = ? LIMIT 1",
+                "SELECT setting_value FROM `{$this->t('tax_export_settings')}` WHERE setting_key = ? LIMIT 1",
                 [$key]
             );
             return ($val !== false && $val !== null) ? (string)$val : $default;
@@ -125,17 +130,17 @@ class TaxExportRepository
     {
         try {
             $exists = (int)$this->db->fetchColumn(
-                "SELECT COUNT(*) FROM tax_export_settings WHERE setting_key = ?",
+                "SELECT COUNT(*) FROM `{$this->t('tax_export_settings')}` WHERE setting_key = ?",
                 [$key]
             );
             if ($exists) {
                 $this->db->execute(
-                    "UPDATE tax_export_settings SET setting_value = ?, updated_at = NOW() WHERE setting_key = ?",
+                    "UPDATE `{$this->t('tax_export_settings')}` SET setting_value = ?, updated_at = NOW() WHERE setting_key = ?",
                     [$value, $key]
                 );
             } else {
                 $this->db->execute(
-                    "INSERT INTO tax_export_settings (setting_key, setting_value, created_at, updated_at)
+                    "INSERT INTO `{$this->t('tax_export_settings')}` (setting_key, setting_value, created_at, updated_at)
                      VALUES (?, ?, NOW(), NOW())",
                     [$key, $value]
                 );
@@ -150,7 +155,7 @@ class TaxExportRepository
     {
         try {
             $this->db->execute(
-                "INSERT INTO tax_export_logs (export_type, date_from, date_to, status_filter, row_count, exported_at)
+                "INSERT INTO `{$this->t('tax_export_logs')}` (export_type, date_from, date_to, status_filter, row_count, exported_at)
                  VALUES (?, ?, ?, ?, ?, NOW())",
                 [$type, $dateFrom, $dateTo, $statusFilter, $rowCount]
             );
@@ -164,7 +169,7 @@ class TaxExportRepository
     {
         try {
             return $this->db->fetchAll(
-                "SELECT * FROM tax_export_logs ORDER BY exported_at DESC LIMIT ?",
+                "SELECT * FROM `{$this->t('tax_export_logs')}` ORDER BY exported_at DESC LIMIT ?",
                 [$limit]
             );
         } catch (\Throwable) {
@@ -178,7 +183,7 @@ class TaxExportRepository
     public function getAllSettings(): array
     {
         try {
-            $rows = $this->db->fetchAll("SELECT setting_key, setting_value FROM tax_export_settings");
+            $rows = $this->db->fetchAll("SELECT setting_key, setting_value FROM `{$this->t('tax_export_settings')}`");
             $map  = [];
             foreach ($rows as $row) {
                 $map[$row['setting_key']] = $row['setting_value'];

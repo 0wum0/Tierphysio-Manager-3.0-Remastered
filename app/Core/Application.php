@@ -65,6 +65,18 @@ class Application
         if ($config->get('app.installed', false)) {
             try {
                 $db = new Database($config);
+
+                // Resolve tenant table prefix.
+                // The prefix is stored in the session after login.
+                // On first login it is looked up from the SaaS tenants table.
+                $prefix = $session->get('tenant_table_prefix', '');
+                if ($prefix === '') {
+                    $prefix = $this->resolveTenantPrefix($config, $session);
+                }
+                if ($prefix !== '') {
+                    $db->setPrefix($prefix);
+                }
+
                 $this->container->singleton(Database::class, fn() => $db);
             } catch (\Throwable $dbEx) {
                 /* Log and rethrow so handleException can render a proper error page */
@@ -141,6 +153,48 @@ class Application
     public function getContainer(): Container
     {
         return $this->container;
+    }
+
+    /**
+     * Look up the tenant table prefix from the SaaS tenants table.
+     * Uses the user_email stored in session to identify the tenant.
+     * The prefix is then cached in the session for subsequent requests.
+     */
+    private function resolveTenantPrefix(Config $config, Session $session): string
+    {
+        $saasDb   = $config->get('saas_db.database', '');
+        $email    = $session->get('user_email', '');
+
+        if ($saasDb === '' || $email === '') {
+            return '';
+        }
+
+        try {
+            $dsn = sprintf(
+                'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
+                $config->get('saas_db.host', 'localhost'),
+                $config->get('saas_db.port', 3306),
+                $saasDb
+            );
+            $pdo = new \PDO($dsn, $config->get('saas_db.username'), $config->get('saas_db.password'), [
+                \PDO::ATTR_ERRMODE            => \PDO::ERRMODE_EXCEPTION,
+                \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+            ]);
+
+            $stmt = $pdo->prepare("SELECT db_name FROM tenants WHERE email = ? AND status IN ('active','trial') LIMIT 1");
+            $stmt->execute([$email]);
+            $row = $stmt->fetch();
+
+            if ($row && !empty($row['db_name'])) {
+                $prefix = $row['db_name'];
+                $session->set('tenant_table_prefix', $prefix);
+                return $prefix;
+            }
+        } catch (\Throwable) {
+            // SaaS DB unreachable or tenant not found — fall through silently
+        }
+
+        return '';
     }
 
     public function getRootPath(): string

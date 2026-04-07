@@ -158,7 +158,7 @@ class InviteController extends Controller
 
         $db  = Application::getInstance()->getContainer()->get(Database::class);
         $pdo = $db->getPdo();
-        $pdo->prepare("UPDATE `patient_invite_tokens` SET phone = ?, note = ? WHERE id = ?")
+        $pdo->prepare("UPDATE `{$db->prefix('patient_invite_tokens')}` SET phone = ?, note = ? WHERE id = ?")
             ->execute([$phone, $note, (int)$params['id']]);
 
         $this->json(['ok' => true]);
@@ -174,7 +174,7 @@ class InviteController extends Controller
 
         $db  = Application::getInstance()->getContainer()->get(Database::class);
         $pdo = $db->getPdo();
-        $stmt = $pdo->prepare("UPDATE `patient_invite_tokens` SET status = 'abgelaufen' WHERE id = ?");
+        $stmt = $pdo->prepare("UPDATE `{$db->prefix('patient_invite_tokens')}` SET status = 'abgelaufen' WHERE id = ?");
         $stmt->execute([$params['id']]);
 
         $this->json(['ok' => true]);
@@ -196,7 +196,7 @@ class InviteController extends Controller
         $db  = Application::getInstance()->getContainer()->get(Database::class);
         $pdo = $db->getPdo();
         $pdo->prepare(
-            "UPDATE `patient_invite_tokens` SET status = 'angenommen', accepted_at = NOW() WHERE id = ?"
+            "UPDATE `{$db->prefix('patient_invite_tokens')}` SET status = 'angenommen', accepted_at = NOW() WHERE id = ?"
         )->execute([$params['id']]);
 
         $this->json(['ok' => true]);
@@ -218,7 +218,7 @@ class InviteController extends Controller
         $db  = Application::getInstance()->getContainer()->get(Database::class);
         $pdo = $db->getPdo();
         $pdo->prepare(
-            "UPDATE `patient_invite_tokens` SET status = 'abgelaufen' WHERE id = ?"
+            "UPDATE `{$db->prefix('patient_invite_tokens')}` SET status = 'abgelaufen' WHERE id = ?"
         )->execute([$params['id']]);
 
         $this->json(['ok' => true]);
@@ -310,7 +310,7 @@ class InviteController extends Controller
             $pdo->beginTransaction();
 
             /* 1. Find or create owner */
-            $stmt = $pdo->prepare("SELECT id FROM owners WHERE email = ? LIMIT 1");
+            $stmt = $pdo->prepare("SELECT id FROM `{$db->prefix('owners')}` WHERE email = ? LIMIT 1");
             $stmt->execute([$data['owner_email']]);
             $existingOwner = $stmt->fetch(\PDO::FETCH_ASSOC);
 
@@ -318,7 +318,7 @@ class InviteController extends Controller
                 $ownerId = (int)$existingOwner['id'];
             } else {
                 $ins = $pdo->prepare(
-                    "INSERT INTO owners (first_name, last_name, email, phone, street, zip, city, created_at, updated_at)
+                    "INSERT INTO `{$db->prefix('owners')}` (first_name, last_name, email, phone, street, zip, city, created_at, updated_at)
                      VALUES (?,?,?,?,?,?,?,NOW(),NOW())"
                 );
                 $ins->execute([
@@ -352,7 +352,7 @@ class InviteController extends Controller
 
             /* 3. Create patient — directly active */
             $ins2 = $pdo->prepare(
-                "INSERT INTO patients (name, species, breed, gender, birth_date, color, chip_number, owner_id, photo, status, created_at, updated_at)
+                "INSERT INTO `{$db->prefix('patients')}` (name, species, breed, gender, birth_date, color, chip_number, owner_id, photo, status, created_at, updated_at)
                  VALUES (?,?,?,?,?,?,?,?,?,'aktiv',NOW(),NOW())"
             );
             $allowedGenders = ['männlich', 'weiblich', 'kastriert', 'sterilisiert', 'unbekannt'];
@@ -382,7 +382,7 @@ class InviteController extends Controller
                 /* accept() failed (e.g. column missing) — try minimal status update */
                 error_log('[PatientInvite] accept() failed: ' . $e2->getMessage());
                 try {
-                    $pdo->prepare("UPDATE `patient_invite_tokens` SET status = 'angenommen' WHERE token = ?")
+                    $pdo->prepare("UPDATE `{$db->prefix('patient_invite_tokens')}` SET status = 'angenommen' WHERE token = ?")
                         ->execute([$token]);
                 } catch (\Throwable) {}
             }
@@ -435,12 +435,12 @@ class InviteController extends Controller
                 $result['db_connected'] = true;
 
                 /* Dry-run owner lookup */
-                $stmt = $pdo->prepare("SELECT id FROM owners WHERE email = ? LIMIT 1");
+                $stmt = $pdo->prepare("SELECT id FROM `{$db->prefix('owners')}` WHERE email = ? LIMIT 1");
                 $stmt->execute(['__dryrun_test@example.com']);
                 $result['owners_query_ok'] = true;
 
                 /* Check patients table columns */
-                $cols = array_column($pdo->query("SHOW COLUMNS FROM `patients`")->fetchAll(\PDO::FETCH_ASSOC), 'Field');
+                $cols = array_column($pdo->query("SHOW COLUMNS FROM `{$db->prefix('patients')}`")->fetchAll(\PDO::FETCH_ASSOC), 'Field');
                 $result['patients_columns'] = $cols;
 
             } catch (\Throwable $e) {
@@ -456,10 +456,10 @@ class InviteController extends Controller
         $db  = Application::getInstance()->getContainer()->get(Database::class);
         $pdo = $db->getPdo();
 
-        $cols = $pdo->query("SHOW COLUMNS FROM `patient_invite_tokens`")->fetchAll(\PDO::FETCH_ASSOC);
+        $cols = $pdo->query("SHOW COLUMNS FROM `{$db->prefix('patient_invite_tokens')}`")->fetchAll(\PDO::FETCH_ASSOC);
         $colNames = array_column($cols, 'Field');
 
-        $recent = $pdo->query("SELECT id, token, status, accepted_patient_id, accepted_owner_id, expires_at, accepted_at FROM `patient_invite_tokens` ORDER BY id DESC LIMIT 5")->fetchAll(\PDO::FETCH_ASSOC);
+        $recent = $pdo->query("SELECT id, token, status, accepted_patient_id, accepted_owner_id, expires_at, accepted_at FROM `{$db->prefix('patient_invite_tokens')}` ORDER BY id DESC LIMIT 5")->fetchAll(\PDO::FETCH_ASSOC);
 
         $this->json([
             'table_columns'     => $colNames,

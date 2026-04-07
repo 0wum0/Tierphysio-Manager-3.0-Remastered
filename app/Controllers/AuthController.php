@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Core\Controller;
 use App\Core\Config;
+use App\Core\Database;
 use App\Core\Session;
 use App\Core\Translator;
 use App\Core\View;
@@ -20,7 +21,8 @@ class AuthController extends Controller
         Config $config,
         Translator $translator,
         private readonly UserRepository $userRepository,
-        private readonly SettingsRepository $settingsRepository
+        private readonly SettingsRepository $settingsRepository,
+        private readonly Database $db
     ) {
         parent::__construct($view, $session, $config, $translator);
     }
@@ -48,6 +50,13 @@ class AuthController extends Controller
             return;
         }
 
+        // Resolve tenant table prefix from SaaS DB BEFORE querying the users table.
+        // Without the correct prefix the query would target a non-existent bare table.
+        $prefix = $this->resolvePrefixForEmail($email);
+        if ($prefix !== '') {
+            $this->db->setPrefix($prefix);
+        }
+
         $user = $this->userRepository->findByEmail($email);
 
         if (!$user || !password_verify($password, $user['password'])) {
@@ -64,6 +73,9 @@ class AuthController extends Controller
 
         $this->session->setUser($user);
         $this->session->set('user_last_login', $user['last_login'] ?? null);
+        if ($prefix !== '') {
+            $this->session->set('tenant_table_prefix', $prefix);
+        }
         $this->userRepository->updateLastLogin($user['id']);
         $this->session->flash('success', $this->translator->trans('auth.welcome', ['name' => $user['name']]));
         $this->redirect('/dashboard');
@@ -74,5 +86,32 @@ class AuthController extends Controller
         $this->validateCsrf();
         $this->session->destroy();
         $this->redirect('/login');
+    }
+
+    private function resolvePrefixForEmail(string $email): string
+    {
+        $saasDb = $this->config->get('saas_db.database', '');
+        if ($saasDb === '') {
+            return '';
+        }
+
+        try {
+            $dsn = sprintf(
+                'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
+                $this->config->get('saas_db.host', 'localhost'),
+                (int)$this->config->get('saas_db.port', 3306),
+                $saasDb
+            );
+            $pdo = new \PDO($dsn, $this->config->get('saas_db.username'), $this->config->get('saas_db.password'), [
+                \PDO::ATTR_ERRMODE            => \PDO::ERRMODE_EXCEPTION,
+                \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+            ]);
+            $stmt = $pdo->prepare("SELECT db_name FROM tenants WHERE email = ? AND status IN ('active','trial') LIMIT 1");
+            $stmt->execute([$email]);
+            $row = $stmt->fetch();
+            return ($row && !empty($row['db_name'])) ? (string)$row['db_name'] : '';
+        } catch (\Throwable) {
+            return '';
+        }
     }
 }

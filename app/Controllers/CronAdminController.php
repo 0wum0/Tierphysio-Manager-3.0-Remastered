@@ -25,6 +25,11 @@ class CronAdminController extends Controller
         parent::__construct($view, $session, $config, $translator);
     }
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     /* ─────────────────────────────────────────────────────────
        GET /admin/cronjobs
        Dashboard: show all jobs, last run, status, log
@@ -209,8 +214,8 @@ class CronAdminController extends Controller
     ): void {
         try {
             $db->query(
-                'INSERT INTO cron_job_log (job_key, status, message, duration_ms, triggered_by, created_at)
-                 VALUES (?, ?, ?, ?, ?, NOW())',
+                "INSERT INTO `{$db->prefix('cron_job_log')}` (job_key, status, message, duration_ms, triggered_by, created_at)
+                 VALUES (?, ?, ?, ?, ?, NOW())",
                 [$jobKey, $status, mb_substr($message, 0, 2000), $durationMs, $triggeredBy]
             );
         } catch (\Throwable) {
@@ -232,7 +237,7 @@ class CronAdminController extends Controller
     {
         try {
             $stmt = $this->db->query(
-                'SELECT * FROM cron_job_log WHERE job_key = ? ORDER BY created_at DESC LIMIT 1',
+                "SELECT * FROM `{$this->t('cron_job_log')}` WHERE job_key = ? ORDER BY created_at DESC LIMIT 1",
                 [$jobKey]
             );
             $row = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -246,7 +251,7 @@ class CronAdminController extends Controller
     {
         try {
             $stmt = $this->db->query(
-                'SELECT * FROM cron_job_log ORDER BY created_at DESC LIMIT ' . $limit
+                "SELECT * FROM `{$this->t('cron_job_log')}` ORDER BY created_at DESC LIMIT " . $limit
             );
             return $stmt->fetchAll(\PDO::FETCH_ASSOC);
         } catch (\Throwable) {

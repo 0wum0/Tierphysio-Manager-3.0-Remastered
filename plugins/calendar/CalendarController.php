@@ -36,6 +36,11 @@ class CalendarController extends Controller
         parent::__construct($view, $session, $config, $translator);
     }
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     /* ── Main calendar view ── */
     public function index(array $params = []): void
     {
@@ -129,11 +134,11 @@ class CalendarController extends Controller
     {
         try {
             $stmt = $this->db->query(
-                'SELECT * FROM google_calendar_imported_events
+                "SELECT * FROM `{$this->t('google_calendar_imported_events')}`
                  WHERE event_start < ? AND event_end > ?
-                   AND google_status != \'cancelled\'
+                   AND google_status != 'cancelled'
                    AND appointment_id IS NULL
-                 ORDER BY event_start ASC',
+                 ORDER BY event_start ASC",
                 [$end, $start]
             );
             return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -449,7 +454,7 @@ class CalendarController extends Controller
         $ms = (int)((hrtime(true) - $startHrtime) / 1_000_000);
         try {
             $this->db->query(
-                'INSERT INTO cron_job_log (job_key, status, message, duration_ms, triggered_by, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
+                "INSERT INTO `{$this->t('cron_job_log')}` (job_key, status, message, duration_ms, triggered_by, created_at) VALUES (?, ?, ?, ?, ?, NOW())",
                 [$jobKey, $status, mb_substr($message, 0, 2000), $ms, 'cron']
             );
         } catch (\Throwable) {}

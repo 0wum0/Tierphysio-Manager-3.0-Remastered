@@ -20,6 +20,11 @@ class GoogleSyncService
         private readonly Database $db
     ) {}
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     /* ─── Sync a newly created appointment ─── */
 
     public function syncCreated(int $appointmentId): void
@@ -150,12 +155,12 @@ class GoogleSyncService
         }
 
         $stmt = $this->db->query(
-            'SELECT a.id FROM appointments a
-             LEFT JOIN google_calendar_sync_map m ON m.appointment_id = a.id
+            "SELECT a.id FROM `{$this->t('appointments')}` a
+             LEFT JOIN `{$this->t('google_calendar_sync_map')}` m ON m.appointment_id = a.id
              WHERE m.id IS NULL
-               AND a.status NOT IN (\'cancelled\',\'noshow\')
+               AND a.status NOT IN ('cancelled','noshow')
                AND a.start_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-             LIMIT 100'
+             LIMIT 100"
         );
         $unsynced = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -258,7 +263,7 @@ class GoogleSyncService
 
                 // NEU: Dazugehörigen Appointment-Eintrag canceln
                 $this->db->execute(
-                    "UPDATE appointments SET status = 'cancelled', updated_at = NOW()
+                    "UPDATE `{$this->t('appointments')}` SET status = 'cancelled', updated_at = NOW()
                      WHERE google_event_id = ?",
                     [$googleEventId]
                 );
@@ -341,15 +346,15 @@ class GoogleSyncService
     {
         try {
             $stmt = $this->db->query(
-                'SELECT a.*,
+                "SELECT a.*,
                         p.name AS patient_name,
                         o.first_name, o.last_name,
                         tt.name AS treatment_type_name
-                 FROM appointments a
-                 LEFT JOIN patients p ON p.id = a.patient_id
-                 LEFT JOIN owners o ON o.id = a.owner_id
-                 LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
-                 WHERE a.id = ? LIMIT 1',
+                 FROM `{$this->t('appointments')}` a
+                 LEFT JOIN `{$this->t('patients')}` p ON p.id = a.patient_id
+                 LEFT JOIN `{$this->t('owners')}` o ON o.id = a.owner_id
+                 LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
+                 WHERE a.id = ? LIMIT 1",
                 [$id]
             );
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -380,7 +385,7 @@ class GoogleSyncService
     ): void {
         try {
             $existing = $this->db->fetch(
-                "SELECT id FROM appointments WHERE google_event_id = ? LIMIT 1",
+                "SELECT id FROM `{$this->t('appointments')}` WHERE google_event_id = ? LIMIT 1",
                 [$googleEventId]
             );
 
@@ -396,7 +401,7 @@ class GoogleSyncService
             if ($existing) {
                 // Vorhandenen Eintrag aktualisieren
                 $this->db->execute(
-                    "UPDATE appointments
+                    "UPDATE `{$this->t('appointments')}`
                      SET title       = ?,
                          description = ?,
                          start_at    = ?,
@@ -416,7 +421,7 @@ class GoogleSyncService
             } else {
                 // Neuen Eintrag anlegen
                 $this->db->execute(
-                    "INSERT INTO appointments
+                    "INSERT INTO `{$this->t('appointments')}`
                          (title, description, start_at, end_at, status,
                           google_event_id, color, all_day, created_at, updated_at)
                      VALUES (?, ?, ?, ?, 'scheduled', ?, '#4285F4', ?, NOW(), NOW())",
@@ -434,7 +439,7 @@ class GoogleSyncService
                 $newId = $this->db->lastInsertId();
                 if ($newId) {
                     $this->db->execute(
-                        "UPDATE google_calendar_imported_events
+                        "UPDATE `{$this->t('google_calendar_imported_events')}`
                          SET appointment_id = ?
                          WHERE google_event_id = ?",
                         [(int)$newId, $googleEventId]

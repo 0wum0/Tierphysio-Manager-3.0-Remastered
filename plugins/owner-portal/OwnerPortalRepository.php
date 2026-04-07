@@ -11,15 +11,20 @@ class OwnerPortalRepository
 {
     public function __construct(private readonly Database $db) {}
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     /* ─── Portal Users ─── */
 
     public function findUserByEmail(string $email): ?array
     {
         $stmt = $this->db->query(
-            'SELECT u.*, o.first_name, o.last_name, o.phone, o.street, o.zip, o.city
-             FROM owner_portal_users u
-             JOIN owners o ON o.id = u.owner_id
-             WHERE u.email = ? LIMIT 1',
+            "SELECT u.*, o.first_name, o.last_name, o.phone, o.street, o.zip, o.city
+             FROM `{$this->t('owner_portal_users')}` u
+             JOIN `{$this->t('owners')}` o ON o.id = u.owner_id
+             WHERE u.email = ? LIMIT 1",
             [$email]
         );
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -29,10 +34,10 @@ class OwnerPortalRepository
     public function findUserById(int $id): ?array
     {
         $stmt = $this->db->query(
-            'SELECT u.*, o.first_name, o.last_name, o.phone, o.street, o.zip, o.city
-             FROM owner_portal_users u
-             JOIN owners o ON o.id = u.owner_id
-             WHERE u.id = ? LIMIT 1',
+            "SELECT u.*, o.first_name, o.last_name, o.phone, o.street, o.zip, o.city
+             FROM `{$this->t('owner_portal_users')}` u
+             JOIN `{$this->t('owners')}` o ON o.id = u.owner_id
+             WHERE u.id = ? LIMIT 1",
             [$id]
         );
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -42,7 +47,7 @@ class OwnerPortalRepository
     public function findUserByInviteToken(string $token): ?array
     {
         $stmt = $this->db->query(
-            'SELECT * FROM owner_portal_users WHERE invite_token = ? LIMIT 1',
+            "SELECT * FROM `{$this->t('owner_portal_users')}` WHERE invite_token = ? LIMIT 1",
             [$token]
         );
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -52,7 +57,7 @@ class OwnerPortalRepository
     public function findUserByOwnerId(int $ownerId): ?array
     {
         $stmt = $this->db->query(
-            'SELECT * FROM owner_portal_users WHERE owner_id = ? LIMIT 1',
+            "SELECT * FROM `{$this->t('owner_portal_users')}` WHERE owner_id = ? LIMIT 1",
             [$ownerId]
         );
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -62,8 +67,8 @@ class OwnerPortalRepository
     public function createUser(array $data): int
     {
         $this->db->execute(
-            'INSERT INTO owner_portal_users (owner_id, email, password_hash, is_active, invite_token, invite_expires)
-             VALUES (?, ?, ?, ?, ?, ?)',
+            "INSERT INTO `{$this->t('owner_portal_users')}` (owner_id, email, password_hash, is_active, invite_token, invite_expires)
+             VALUES (?, ?, ?, ?, ?, ?)",
             [
                 $data['owner_id'],
                 $data['email'],
@@ -81,13 +86,13 @@ class OwnerPortalRepository
         $sets   = implode(', ', array_map(fn($k) => "`{$k}` = ?", array_keys($data)));
         $values = array_values($data);
         $values[] = $id;
-        $this->db->execute("UPDATE owner_portal_users SET {$sets} WHERE id = ?", $values);
+        $this->db->execute("UPDATE `{$this->t('owner_portal_users')}` SET {$sets} WHERE id = ?", $values);
     }
 
     public function updateLastLogin(int $id): void
     {
         $this->db->execute(
-            'UPDATE owner_portal_users SET last_login = NOW() WHERE id = ?',
+            "UPDATE `{$this->t('owner_portal_users')}` SET last_login = NOW() WHERE id = ?",
             [$id]
         );
     }
@@ -95,10 +100,10 @@ class OwnerPortalRepository
     public function getAllPortalUsers(): array
     {
         $stmt = $this->db->query(
-            'SELECT u.*, o.first_name, o.last_name
-             FROM owner_portal_users u
-             JOIN owners o ON o.id = u.owner_id
-             ORDER BY o.last_name ASC, o.first_name ASC'
+            "SELECT u.*, o.first_name, o.last_name
+             FROM `{$this->t('owner_portal_users')}` u
+             JOIN `{$this->t('owners')}` o ON o.id = u.owner_id
+             ORDER BY o.last_name ASC, o.first_name ASC"
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -106,9 +111,9 @@ class OwnerPortalRepository
     public function getAllOwners(): array
     {
         $stmt = $this->db->query(
-            'SELECT id, first_name, last_name, email
-             FROM owners
-             ORDER BY last_name ASC, first_name ASC'
+            "SELECT id, first_name, last_name, email
+             FROM `{$this->t('owners')}`
+             ORDER BY last_name ASC, first_name ASC"
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -118,8 +123,8 @@ class OwnerPortalRepository
     public function countRecentAttempts(string $email, string $ip, int $minutes = 15): int
     {
         $stmt = $this->db->query(
-            'SELECT COUNT(*) FROM owner_portal_login_attempts
-             WHERE (email = ? OR ip = ?) AND attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)',
+            "SELECT COUNT(*) FROM `{$this->t('owner_portal_login_attempts')}`
+             WHERE (email = ? OR ip = ?) AND attempted_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)",
             [$email, $ip, $minutes]
         );
         return (int)$stmt->fetchColumn();
@@ -128,7 +133,7 @@ class OwnerPortalRepository
     public function logLoginAttempt(string $email, string $ip): void
     {
         $this->db->execute(
-            'INSERT INTO owner_portal_login_attempts (email, ip) VALUES (?, ?)',
+            "INSERT INTO `{$this->t('owner_portal_login_attempts')}` (email, ip) VALUES (?, ?)",
             [$email, $ip]
         );
     }
@@ -136,7 +141,7 @@ class OwnerPortalRepository
     public function cleanOldAttempts(): void
     {
         $this->db->execute(
-            'DELETE FROM owner_portal_login_attempts WHERE attempted_at < DATE_SUB(NOW(), INTERVAL 1 HOUR)'
+            "DELETE FROM `{$this->t('owner_portal_login_attempts')}` WHERE attempted_at < DATE_SUB(NOW(), INTERVAL 1 HOUR)"
         );
     }
 
@@ -145,11 +150,11 @@ class OwnerPortalRepository
     public function getPetsByOwnerId(int $ownerId): array
     {
         $stmt = $this->db->query(
-            'SELECT p.*,
-                    (SELECT MAX(t.entry_date) FROM patient_timeline t WHERE t.patient_id = p.id) AS last_treatment
-             FROM patients p
+            "SELECT p.*,
+                    (SELECT MAX(t.entry_date) FROM `{$this->t('patient_timeline')}` t WHERE t.patient_id = p.id) AS last_treatment
+             FROM `{$this->t('patients')}` p
              WHERE p.owner_id = ?
-             ORDER BY p.name ASC',
+             ORDER BY p.name ASC",
             [$ownerId]
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -158,7 +163,7 @@ class OwnerPortalRepository
     public function getPetByIdAndOwner(int $patientId, int $ownerId): ?array
     {
         $stmt = $this->db->query(
-            'SELECT * FROM patients WHERE id = ? AND owner_id = ? LIMIT 1',
+            "SELECT * FROM `{$this->t('patients')}` WHERE id = ? AND owner_id = ? LIMIT 1",
             [$patientId, $ownerId]
         );
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -178,13 +183,13 @@ class OwnerPortalRepository
         }
         if (empty($sets)) return;
         $values[] = $patientId;
-        $this->db->execute('UPDATE patients SET ' . implode(', ', $sets) . ' WHERE id = ?', $values);
+        $this->db->execute('UPDATE `' . $this->t('patients') . '` SET ' . implode(', ', $sets) . ' WHERE id = ?', $values);
     }
 
     public function findOwnerPortalUserByOwnerId(int $ownerId): ?array
     {
         $stmt = $this->db->query(
-            'SELECT u.*, o.first_name, o.last_name FROM owner_portal_users u JOIN owners o ON o.id = u.owner_id WHERE u.owner_id = ? LIMIT 1',
+            "SELECT u.*, o.first_name, o.last_name FROM `{$this->t('owner_portal_users')}` u JOIN `{$this->t('owners')}` o ON o.id = u.owner_id WHERE u.owner_id = ? LIMIT 1",
             [$ownerId]
         );
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -195,24 +200,24 @@ class OwnerPortalRepository
     {
         try {
             $stmt = $this->db->query(
-                'SELECT t.*, u.name AS user_name,
+                "SELECT t.*, u.name AS user_name,
                         tt.name AS treatment_type_name, tt.color AS treatment_type_color
-                 FROM patient_timeline t
-                 LEFT JOIN users u ON u.id = t.user_id
-                 LEFT JOIN treatment_types tt ON tt.id = t.treatment_type_id
+                 FROM `{$this->t('patient_timeline')}` t
+                 LEFT JOIN `{$this->t('users')}` u ON u.id = t.user_id
+                 LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = t.treatment_type_id
                  WHERE t.patient_id = ?
-                 ORDER BY t.entry_date DESC',
+                 ORDER BY t.entry_date DESC",
                 [$patientId]
             );
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Throwable) {
             try {
                 $stmt = $this->db->query(
-                    'SELECT t.*, u.name AS user_name
-                     FROM patient_timeline t
-                     LEFT JOIN users u ON u.id = t.user_id
+                    "SELECT t.*, u.name AS user_name
+                     FROM `{$this->t('patient_timeline')}` t
+                     LEFT JOIN `{$this->t('users')}` u ON u.id = t.user_id
                      WHERE t.patient_id = ?
-                     ORDER BY t.entry_date DESC',
+                     ORDER BY t.entry_date DESC",
                     [$patientId]
                 );
                 return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -227,11 +232,11 @@ class OwnerPortalRepository
     public function getInvoicesByOwnerId(int $ownerId): array
     {
         $stmt = $this->db->query(
-            'SELECT i.*, p.name AS patient_name
-             FROM invoices i
-             LEFT JOIN patients p ON p.id = i.patient_id
+            "SELECT i.*, p.name AS patient_name
+             FROM `{$this->t('invoices')}` i
+             LEFT JOIN `{$this->t('patients')}` p ON p.id = i.patient_id
              WHERE i.owner_id = ?
-             ORDER BY i.issue_date DESC',
+             ORDER BY i.issue_date DESC",
             [$ownerId]
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -240,10 +245,10 @@ class OwnerPortalRepository
     public function getInvoiceByIdAndOwner(int $invoiceId, int $ownerId): ?array
     {
         $stmt = $this->db->query(
-            'SELECT i.*, p.name AS patient_name
-             FROM invoices i
-             LEFT JOIN patients p ON p.id = i.patient_id
-             WHERE i.id = ? AND i.owner_id = ? LIMIT 1',
+            "SELECT i.*, p.name AS patient_name
+             FROM `{$this->t('invoices')}` i
+             LEFT JOIN `{$this->t('patients')}` p ON p.id = i.patient_id
+             WHERE i.id = ? AND i.owner_id = ? LIMIT 1",
             [$invoiceId, $ownerId]
         );
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -256,13 +261,13 @@ class OwnerPortalRepository
     {
         try {
             $stmt = $this->db->query(
-                'SELECT a.*, p.name AS patient_name,
+                "SELECT a.*, p.name AS patient_name,
                         tt.name AS treatment_type_name, tt.color AS treatment_type_color
-                 FROM appointments a
-                 LEFT JOIN patients p ON p.id = a.patient_id
-                 LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+                 FROM `{$this->t('appointments')}` a
+                 LEFT JOIN `{$this->t('patients')}` p ON p.id = a.patient_id
+                 LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
                  WHERE a.owner_id = ?
-                 ORDER BY a.start_at DESC',
+                 ORDER BY a.start_at DESC",
                 [$ownerId]
             );
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -277,7 +282,7 @@ class OwnerPortalRepository
     {
         try {
             $stmt = $this->db->query(
-                'SELECT * FROM pet_exercises WHERE patient_id = ? AND is_active = 1 ORDER BY sort_order ASC, id ASC',
+                "SELECT * FROM `{$this->t('pet_exercises')}` WHERE patient_id = ? AND is_active = 1 ORDER BY sort_order ASC, id ASC",
                 [$patientId]
             );
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -289,7 +294,7 @@ class OwnerPortalRepository
     public function getExerciseById(int $id): ?array
     {
         $stmt = $this->db->query(
-            'SELECT * FROM pet_exercises WHERE id = ? LIMIT 1',
+            "SELECT * FROM `{$this->t('pet_exercises')}` WHERE id = ? LIMIT 1",
             [$id]
         );
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -299,8 +304,8 @@ class OwnerPortalRepository
     public function createExercise(array $data): int
     {
         $this->db->execute(
-            'INSERT INTO pet_exercises (patient_id, title, description, video_url, image, sort_order, created_by)
-             VALUES (?, ?, ?, ?, ?, ?, ?)',
+            "INSERT INTO `{$this->t('pet_exercises')}` (patient_id, title, description, video_url, image, sort_order, created_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?)",
             [
                 $data['patient_id'],
                 $data['title'],
@@ -319,12 +324,12 @@ class OwnerPortalRepository
         $sets   = implode(', ', array_map(fn($k) => "`{$k}` = ?", array_keys($data)));
         $values = array_values($data);
         $values[] = $id;
-        $this->db->execute("UPDATE pet_exercises SET {$sets} WHERE id = ?", $values);
+        $this->db->execute("UPDATE `{$this->t('pet_exercises')}` SET {$sets} WHERE id = ?", $values);
     }
 
     public function deleteExercise(int $id): void
     {
-        $this->db->execute('DELETE FROM pet_exercises WHERE id = ?', [$id]);
+        $this->db->execute("DELETE FROM `{$this->t('pet_exercises')}` WHERE id = ?", [$id]);
     }
 
     public function getAllExercisesForPatients(array $patientIds): array
@@ -334,8 +339,8 @@ class OwnerPortalRepository
             $placeholders = implode(',', array_fill(0, count($patientIds), '?'));
             $stmt = $this->db->query(
                 "SELECT e.*, p.name AS patient_name
-                 FROM pet_exercises e
-                 JOIN patients p ON p.id = e.patient_id
+                 FROM `{$this->t('pet_exercises')}` e
+                 JOIN `{$this->t('patients')}` p ON p.id = e.patient_id
                  WHERE e.patient_id IN ({$placeholders}) AND e.is_active = 1
                  ORDER BY p.name ASC, e.sort_order ASC",
                 $patientIds
@@ -352,11 +357,11 @@ class OwnerPortalRepository
     {
         try {
             $stmt = $this->db->query(
-                'SELECT hp.*, u.name AS created_by_name
-                 FROM portal_homework_plans hp
-                 LEFT JOIN users u ON u.id = hp.created_by
+                "SELECT hp.*, u.name AS created_by_name
+                 FROM `{$this->t('portal_homework_plans')}` hp
+                 LEFT JOIN `{$this->t('users')}` u ON u.id = hp.created_by
                  WHERE hp.patient_id = ?
-                 ORDER BY hp.plan_date DESC, hp.id DESC',
+                 ORDER BY hp.plan_date DESC, hp.id DESC",
                 [$patientId]
             );
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -368,10 +373,10 @@ class OwnerPortalRepository
     public function getHomeworkPlanById(int $id): ?array
     {
         $stmt = $this->db->query(
-            'SELECT hp.*, u.name AS created_by_name
-             FROM portal_homework_plans hp
-             LEFT JOIN users u ON u.id = hp.created_by
-             WHERE hp.id = ? LIMIT 1',
+            "SELECT hp.*, u.name AS created_by_name
+             FROM `{$this->t('portal_homework_plans')}` hp
+             LEFT JOIN `{$this->t('users')}` u ON u.id = hp.created_by
+             WHERE hp.id = ? LIMIT 1",
             [$id]
         );
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -382,11 +387,11 @@ class OwnerPortalRepository
     {
         try {
             $stmt = $this->db->query(
-                'SELECT hp.*, p.name AS patient_name
-                 FROM portal_homework_plans hp
-                 JOIN patients p ON p.id = hp.patient_id
-                 WHERE hp.owner_id = ? AND hp.status = \'active\'
-                 ORDER BY hp.plan_date DESC',
+                "SELECT hp.*, p.name AS patient_name
+                 FROM `{$this->t('portal_homework_plans')}` hp
+                 JOIN `{$this->t('patients')}` p ON p.id = hp.patient_id
+                 WHERE hp.owner_id = ? AND hp.status = 'active'
+                 ORDER BY hp.plan_date DESC",
                 [$ownerId]
             );
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -398,11 +403,11 @@ class OwnerPortalRepository
     public function createHomeworkPlan(array $data): int
     {
         $this->db->execute(
-            'INSERT INTO portal_homework_plans
+            "INSERT INTO `{$this->t('portal_homework_plans')}`
              (patient_id, owner_id, plan_date, physio_principles, short_term_goals,
               long_term_goals, therapy_means, general_notes, next_appointment, therapist_name,
               status, created_by)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 $data['patient_id'],
                 $data['owner_id'],
@@ -426,12 +431,12 @@ class OwnerPortalRepository
         $sets   = implode(', ', array_map(fn($k) => "`{$k}` = ?", array_keys($data)));
         $values = array_values($data);
         $values[] = $id;
-        $this->db->execute("UPDATE portal_homework_plans SET {$sets} WHERE id = ?", $values);
+        $this->db->execute("UPDATE `{$this->t('portal_homework_plans')}` SET {$sets} WHERE id = ?", $values);
     }
 
     public function deleteHomeworkPlan(int $id): void
     {
-        $this->db->execute('DELETE FROM portal_homework_plans WHERE id = ?', [$id]);
+        $this->db->execute("DELETE FROM `{$this->t('portal_homework_plans')}` WHERE id = ?", [$id]);
     }
 
     /* ─── Homework Plan Tasks ─── */
@@ -440,7 +445,7 @@ class OwnerPortalRepository
     {
         try {
             $stmt = $this->db->query(
-                'SELECT * FROM portal_homework_plan_tasks WHERE plan_id = ? ORDER BY sort_order ASC, id ASC',
+                "SELECT * FROM `{$this->t('portal_homework_plan_tasks')}` WHERE plan_id = ? ORDER BY sort_order ASC, id ASC",
                 [$planId]
             );
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -451,13 +456,13 @@ class OwnerPortalRepository
 
     public function saveTasksForPlan(int $planId, array $tasks): void
     {
-        $this->db->execute('DELETE FROM portal_homework_plan_tasks WHERE plan_id = ?', [$planId]);
+        $this->db->execute("DELETE FROM `{$this->t('portal_homework_plan_tasks')}` WHERE plan_id = ?", [$planId]);
         foreach ($tasks as $i => $task) {
             if (empty(trim($task['title'] ?? ''))) continue;
             $this->db->execute(
-                'INSERT INTO portal_homework_plan_tasks
+                "INSERT INTO `{$this->t('portal_homework_plan_tasks')}`
                  (plan_id, template_id, title, description, frequency, duration, therapist_notes, sort_order)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 [
                     $planId,
                     $task['template_id'] ?? null,
@@ -476,7 +481,7 @@ class OwnerPortalRepository
     {
         try {
             $stmt = $this->db->query(
-                'SELECT * FROM homework_templates WHERE is_active = 1 ORDER BY category ASC, title ASC'
+                "SELECT * FROM `{$this->t('homework_templates')}` WHERE is_active = 1 ORDER BY category ASC, title ASC"
             );
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Throwable) {
@@ -490,7 +495,7 @@ class OwnerPortalRepository
     {
         try {
             $stmt = $this->db->query(
-                'SELECT task_id, checked FROM portal_homework_task_checks WHERE plan_id = ? AND owner_id = ?',
+                "SELECT task_id, checked FROM `{$this->t('portal_homework_task_checks')}` WHERE plan_id = ? AND owner_id = ?",
                 [$planId, $ownerId]
             );
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -506,9 +511,9 @@ class OwnerPortalRepository
     {
         $checkedAt = $checked ? date('Y-m-d H:i:s') : null;
         $this->db->execute(
-            'INSERT INTO portal_homework_task_checks (task_id, plan_id, owner_id, checked, checked_at)
+            "INSERT INTO `{$this->t('portal_homework_task_checks')}` (task_id, plan_id, owner_id, checked, checked_at)
              VALUES (?, ?, ?, ?, ?)
-             ON DUPLICATE KEY UPDATE checked = VALUES(checked), checked_at = VALUES(checked_at), updated_at = NOW()',
+             ON DUPLICATE KEY UPDATE checked = VALUES(checked), checked_at = VALUES(checked_at), updated_at = NOW()",
             [$taskId, $planId, $ownerId, $checked ? 1 : 0, $checkedAt]
         );
     }
@@ -519,9 +524,9 @@ class OwnerPortalRepository
     {
         try {
             $this->db->execute(
-                'INSERT INTO portal_check_notifications
+                "INSERT INTO `{$this->t('portal_check_notifications')}`
                  (owner_id, patient_id, task_id, exercise_id, plan_id, task_title, owner_name, pet_name, type, checked)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 [
                     $data['owner_id'],
                     $data['patient_id'],
@@ -543,7 +548,7 @@ class OwnerPortalRepository
     {
         try {
             $stmt = $this->db->query(
-                'SELECT COUNT(*) FROM portal_check_notifications WHERE read_at IS NULL'
+                "SELECT COUNT(*) FROM `{$this->t('portal_check_notifications')}` WHERE read_at IS NULL"
             );
             return (int)$stmt->fetchColumn();
         } catch (\Throwable) {
@@ -556,12 +561,12 @@ class OwnerPortalRepository
     {
         try {
             $stmt = $this->db->query(
-                'SELECT n.*,
+                "SELECT n.*,
                         o.first_name, o.last_name
-                 FROM portal_check_notifications n
-                 LEFT JOIN owners o ON o.id = n.owner_id
+                 FROM `{$this->t('portal_check_notifications')}` n
+                 LEFT JOIN `{$this->t('owners')}` o ON o.id = n.owner_id
                  ORDER BY n.created_at DESC
-                 LIMIT ' . $limit
+                 LIMIT " . $limit
             );
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (\Throwable) {
@@ -574,13 +579,13 @@ class OwnerPortalRepository
     {
         try {
             $stmt = $this->db->query(
-                'SELECT n.*,
+                "SELECT n.*,
                         o.first_name, o.last_name
-                 FROM portal_check_notifications n
-                 LEFT JOIN owners o ON o.id = n.owner_id
+                 FROM `{$this->t('portal_check_notifications')}` n
+                 LEFT JOIN `{$this->t('owners')}` o ON o.id = n.owner_id
                  WHERE n.patient_id = ?
                  ORDER BY n.created_at DESC
-                 LIMIT ' . $limit,
+                 LIMIT " . $limit,
                 [$patientId]
             );
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -594,7 +599,7 @@ class OwnerPortalRepository
     {
         try {
             $this->db->execute(
-                'UPDATE portal_check_notifications SET read_at = NOW() WHERE read_at IS NULL'
+                "UPDATE `{$this->t('portal_check_notifications')}` SET read_at = NOW() WHERE read_at IS NULL"
             );
         } catch (\Throwable) {}
     }
@@ -604,7 +609,7 @@ class OwnerPortalRepository
     {
         try {
             $stmt = $this->db->query(
-                'SELECT COUNT(*) FROM portal_check_notifications WHERE created_at > ?',
+                "SELECT COUNT(*) FROM `{$this->t('portal_check_notifications')}` WHERE created_at > ?",
                 [$since]
             );
             return (int)$stmt->fetchColumn();
@@ -617,7 +622,7 @@ class OwnerPortalRepository
     {
         try {
             $stmt = $this->db->query(
-                'SELECT o.first_name, o.last_name FROM owners o WHERE o.id = ? LIMIT 1',
+                "SELECT o.first_name, o.last_name FROM `{$this->t('owners')}` o WHERE o.id = ? LIMIT 1",
                 [$ownerId]
             );
             return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
@@ -630,7 +635,7 @@ class OwnerPortalRepository
     {
         try {
             $stmt = $this->db->query(
-                'SELECT name FROM patients WHERE id = ? LIMIT 1',
+                "SELECT name FROM `{$this->t('patients')}` WHERE id = ? LIMIT 1",
                 [$patientId]
             );
             return (string)($stmt->fetchColumn() ?: '');

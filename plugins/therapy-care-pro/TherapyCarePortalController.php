@@ -37,6 +37,11 @@ class TherapyCarePortalController extends Controller
         $this->db           = $db;
     }
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     /* ── Auth guard (mirrors owner-portal plugin) ── */
     private function requirePortalAuth(): array
     {
@@ -48,10 +53,10 @@ class TherapyCarePortalController extends Controller
 
         try {
             $stmt = $this->db->query(
-                'SELECT u.*, o.first_name, o.last_name, o.email AS owner_email
-                 FROM owner_portal_users u
-                 JOIN owners o ON o.id = u.owner_id
-                 WHERE u.id = ? LIMIT 1',
+                "SELECT u.*, o.first_name, o.last_name, o.email AS owner_email
+                 FROM `{$this->t('owner_portal_users')}` u
+                 JOIN `{$this->t('owners')}` o ON o.id = u.owner_id
+                 WHERE u.id = ? LIMIT 1",
                 [(int)$userId]
             );
             $user = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -72,7 +77,7 @@ class TherapyCarePortalController extends Controller
     private function requirePatientOwnership(array $portalUser, int $patientId): array
     {
         $stmt = $this->db->query(
-            'SELECT * FROM patients WHERE id = ? AND owner_id = ? LIMIT 1',
+            "SELECT * FROM `{$this->t('patients')}` WHERE id = ? AND owner_id = ? LIMIT 1",
             [$patientId, (int)$portalUser['owner_id']]
         );
         $patient = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -167,7 +172,7 @@ class TherapyCarePortalController extends Controller
 
         // Verify this homework belongs to this patient
         $stmt = $this->db->query(
-            'SELECT id FROM patient_homework WHERE id = ? AND patient_id = ? LIMIT 1',
+            "SELECT id FROM `{$this->t('patient_homework')}` WHERE id = ? AND patient_id = ? LIMIT 1",
             [$homeworkId, $patientId]
         );
         if (!$stmt->fetch()) {
@@ -185,7 +190,7 @@ class TherapyCarePortalController extends Controller
 
         // Add timeline entry in practice system
         try {
-            $hw = $this->db->fetch('SELECT title FROM patient_homework WHERE id=? LIMIT 1', [$homeworkId]);
+            $hw = $this->db->fetch("SELECT title FROM `{$this->t('patient_homework')}` WHERE id=? LIMIT 1", [$homeworkId]);
             $statusLabel = match($status) {
                 'done'      => 'Durchgeführt',
                 'not_done'  => 'Nicht durchgeführt',
@@ -197,17 +202,17 @@ class TherapyCarePortalController extends Controller
             $content = $comment ?: '';
 
             $this->db->execute(
-                'INSERT INTO patient_timeline (patient_id, user_id, type, title, content, entry_date)
-                 VALUES (?, NULL, "note", ?, ?, CURDATE())',
+                "INSERT INTO `{$this->t('patient_timeline')}` (patient_id, user_id, type, title, content, entry_date)
+                 VALUES (?, NULL, 'note', ?, ?, CURDATE())",
                 [$patientId, $title, $content]
             );
             $timelineId = (int)$this->db->lastInsertId();
             if ($timelineId) {
                 $feedbackId = (int)$this->db->lastInsertId(); // approximate
                 $this->db->execute(
-                    'INSERT INTO tcp_timeline_meta (timeline_id, event_type, ref_table)
-                     VALUES (?, "feedback", "tcp_exercise_feedback")
-                     ON DUPLICATE KEY UPDATE event_type=VALUES(event_type)',
+                    "INSERT INTO `{$this->t('tcp_timeline_meta')}` (timeline_id, event_type, ref_table)
+                     VALUES (?, 'feedback', 'tcp_exercise_feedback')
+                     ON DUPLICATE KEY UPDATE event_type=VALUES(event_type)",
                     [$timelineId]
                 );
             }

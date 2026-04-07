@@ -28,6 +28,11 @@ class BulkMailController extends Controller
         $this->mailService = $mailService;
     }
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     /* GET /bulk-mail */
     public function index(array $params = []): void
     {
@@ -143,16 +148,16 @@ class BulkMailController extends Controller
                 CONCAT(o.first_name, ' ', o.last_name) AS name,
                 o.first_name,
                 o.email,
-                (SELECT COUNT(*) FROM owner_portal_users pu WHERE pu.owner_id = o.id AND pu.is_active = 1 LIMIT 1) AS has_portal
-            FROM owners o
+                (SELECT COUNT(*) FROM `{$this->t('owner_portal_users')}` pu WHERE pu.owner_id = o.id AND pu.is_active = 1 LIMIT 1) AS has_portal
+            FROM `{$this->t('owners')}` o
         ";
         $where = [];
         if ($group === 'with_portal') {
-            $where[] = "EXISTS (SELECT 1 FROM owner_portal_users pu WHERE pu.owner_id = o.id AND pu.is_active = 1)";
+            $where[] = "EXISTS (SELECT 1 FROM `{$this->t('owner_portal_users')}` pu WHERE pu.owner_id = o.id AND pu.is_active = 1)";
         } elseif ($group === 'with_email') {
             $where[] = "o.email IS NOT NULL AND o.email != ''";
         } elseif ($group === 'active') {
-            $where[] = "EXISTS (SELECT 1 FROM patients p WHERE p.owner_id = o.id AND p.status = 'aktiv')";
+            $where[] = "EXISTS (SELECT 1 FROM `{$this->t('patients')}` p WHERE p.owner_id = o.id AND p.status = 'aktiv')";
         }
         if ($where) $sql .= " WHERE " . implode(' AND ', $where);
         $sql .= " ORDER BY o.last_name, o.first_name";
@@ -212,7 +217,7 @@ class BulkMailController extends Controller
     private function createPortalThread(int $ownerId, string $subject, string $createdBy): int
     {
         $this->db->execute(
-            "INSERT INTO portal_message_threads (owner_id, subject, status, created_by, last_message_at, created_at)
+            "INSERT INTO `{$this->t('portal_message_threads')}` (owner_id, subject, status, created_by, last_message_at, created_at)
              VALUES (?, ?, 'open', ?, NOW(), NOW())",
             [$ownerId, $subject, $createdBy]
         );
@@ -222,12 +227,12 @@ class BulkMailController extends Controller
     private function addPortalMessage(int $threadId, string $senderType, ?int $senderId, string $body): void
     {
         $this->db->execute(
-            "INSERT INTO portal_messages (thread_id, sender_type, sender_id, body, is_read, created_at)
+            "INSERT INTO `{$this->t('portal_messages')}` (thread_id, sender_type, sender_id, body, is_read, created_at)
              VALUES (?, ?, ?, ?, 0, NOW())",
             [$threadId, $senderType, $senderId, trim($body)]
         );
         $this->db->execute(
-            "UPDATE portal_message_threads SET last_message_at = NOW() WHERE id = ?",
+            "UPDATE `{$this->t('portal_message_threads')}` SET last_message_at = NOW() WHERE id = ?",
             [$threadId]
         );
     }
@@ -236,7 +241,7 @@ class BulkMailController extends Controller
     {
         try {
             $this->db->execute(
-                "INSERT INTO bulk_mail_log (type, subject, recipient_group, sent_count, failed_count, sent_by, created_at)
+                "INSERT INTO `{$this->t('bulk_mail_log')}` (type, subject, recipient_group, sent_count, failed_count, sent_by, created_at)
                  VALUES (?, ?, ?, ?, ?, ?, NOW())",
                 [$type, $subject, $group, $sent, $failed, $this->session->getUser()['id'] ?? null]
             );

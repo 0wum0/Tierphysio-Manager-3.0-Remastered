@@ -183,7 +183,7 @@ class IntakeController extends Controller
             $pdo = $db->getPdo();
 
             /* 1. Find or create owner — use PDO directly to avoid any wrapper issues */
-            $stmt = $pdo->prepare("SELECT id FROM owners WHERE email = ? LIMIT 1");
+            $stmt = $pdo->prepare("SELECT id FROM `{$db->prefix('owners')}` WHERE email = ? LIMIT 1");
             $stmt->execute([$submission['owner_email']]);
             $existingOwner = $stmt->fetch(\PDO::FETCH_ASSOC);
 
@@ -191,7 +191,7 @@ class IntakeController extends Controller
                 $ownerId = (int)$existingOwner['id'];
             } else {
                 $ins = $pdo->prepare(
-                    "INSERT INTO owners (first_name, last_name, email, phone, street, zip, city, created_at, updated_at)
+                    "INSERT INTO `{$db->prefix('owners')}` (first_name, last_name, email, phone, street, zip, city, created_at, updated_at)
                      VALUES (?,?,?,?,?,?,?,NOW(),NOW())"
                 );
                 $ins->execute([
@@ -223,7 +223,7 @@ class IntakeController extends Controller
 
             /* 3. Create patient — use PDO directly */
             $ins2 = $pdo->prepare(
-                "INSERT INTO patients (name, species, breed, gender, birth_date, color, chip_number, owner_id, photo, status, created_at, updated_at)
+                "INSERT INTO `{$db->prefix('patients')}` (name, species, breed, gender, birth_date, color, chip_number, owner_id, photo, status, created_at, updated_at)
                  VALUES (?,?,?,?,?,?,?,?,?,'aktiv',NOW(),NOW())"
             );
             $allowedGenders = ['männlich', 'weiblich', 'kastriert', 'sterilisiert', 'unbekannt'];

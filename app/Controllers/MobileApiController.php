@@ -55,6 +55,11 @@ class MobileApiController
         $this->mail              = $mailService;
     }
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     /* ══════════════════════════════════════════════════════
        HELPERS
     ══════════════════════════════════════════════════════ */
@@ -107,8 +112,8 @@ class MobileApiController
         $token = trim($m[1]);
         $row   = $this->db->fetch(
             "SELECT t.*, u.id AS user_id, u.name, u.email, u.role, u.active
-             FROM mobile_api_tokens t
-             JOIN users u ON u.id = t.user_id
+             FROM `{$this->t('mobile_api_tokens')}` t
+             JOIN `{$this->t('users')}` u ON u.id = t.user_id
              WHERE t.token = ?
                AND (t.expires_at IS NULL OR t.expires_at > NOW())",
             [$token]
@@ -117,7 +122,7 @@ class MobileApiController
             $this->error('Ungültiger oder abgelaufener Token.', 401);
         }
         $this->db->execute(
-            "UPDATE mobile_api_tokens SET last_used = NOW() WHERE token = ?",
+            "UPDATE `{$this->t('mobile_api_tokens')}` SET last_used = NOW() WHERE token = ?",
             [$token]
         );
         $this->authUser = $row;
@@ -158,7 +163,7 @@ class MobileApiController
         $expiresAt = date('Y-m-d H:i:s', strtotime('+90 days'));
 
         $this->db->execute(
-            "INSERT INTO mobile_api_tokens (user_id, token, device_name, expires_at, created_at)
+            "INSERT INTO `{$this->t('mobile_api_tokens')}` (user_id, token, device_name, expires_at, created_at)
              VALUES (?, ?, ?, ?, NOW())",
             [$user['id'], $token, $deviceName, $expiresAt]
         );
@@ -182,7 +187,7 @@ class MobileApiController
         $this->requireAuth();
         $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
         preg_match('/^Bearer\s+(.+)$/i', $header, $m);
-        $this->db->execute("DELETE FROM mobile_api_tokens WHERE token = ?", [trim($m[1])]);
+        $this->db->execute("DELETE FROM `{$this->t('mobile_api_tokens')}` WHERE token = ?", [trim($m[1])]);
         $this->json(['success' => true]);
     }
 
@@ -210,11 +215,11 @@ class MobileApiController
         $stats    = $this->invoices->getStats();
         $settings = $this->settings->all();
 
-        $patientsTotal = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM patients");
+        $patientsTotal = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM `{$this->t('patients')}`");
         $patientsNew   = (int)$this->db->fetchColumn(
-            "SELECT COUNT(*) FROM patients WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"
+            "SELECT COUNT(*) FROM `{$this->t('patients')}` WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"
         );
-        $ownersTotal = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM owners");
+        $ownersTotal = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM `{$this->t('owners')}`");
 
         $todayApts       = 0;
         $upcomingApts    = 0;
@@ -225,21 +230,22 @@ class MobileApiController
         $upcomingBirthdays = [];
         try {
             $todayApts = (int)$this->db->fetchColumn(
-                "SELECT COUNT(*) FROM appointments WHERE DATE(start_at) = CURDATE() AND status != 'cancelled'"
+                "SELECT COUNT(*) FROM `{$this->t('appointments')}` WHERE DATE(start_at) = CURDATE() AND status != 'cancelled'"
             );
             $upcomingApts = (int)$this->db->fetchColumn(
-                "SELECT COUNT(*) FROM appointments WHERE start_at > NOW() AND status IN ('scheduled','confirmed')"
+                "SELECT COUNT(*) FROM `{$this->t('appointments')}` WHERE start_at > NOW() AND status IN ('scheduled','confirmed')"
             );
+            $apt = $this->t('appointments'); $pat = $this->t('patients'); $own = $this->t('owners'); $tt = $this->t('treatment_types');
             $todayAptsList = $this->db->fetchAll(
                 "SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.color,
                         a.patient_id,
                         p.name AS patient_name, p.species AS patient_species,
                         CONCAT(o.first_name,' ',o.last_name) AS owner_name,
                         tt.name AS treatment_type_name, tt.color AS treatment_color
-                 FROM appointments a
-                 LEFT JOIN patients p  ON p.id = a.patient_id
-                 LEFT JOIN owners o    ON o.id = a.owner_id
-                 LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+                 FROM `{$apt}` a
+                 LEFT JOIN `{$pat}` p  ON p.id = a.patient_id
+                 LEFT JOIN `{$own}` o    ON o.id = a.owner_id
+                 LEFT JOIN `{$tt}` tt ON tt.id = a.treatment_type_id
                  WHERE DATE(a.start_at) = CURDATE() AND a.status NOT IN ('cancelled','noshow')
                  ORDER BY a.start_at ASC"
             );
@@ -249,10 +255,10 @@ class MobileApiController
                         p.name AS patient_name, p.species AS patient_species,
                         CONCAT(o.first_name,' ',o.last_name) AS owner_name,
                         tt.name AS treatment_type_name, tt.color AS treatment_color
-                 FROM appointments a
-                 LEFT JOIN patients p  ON p.id = a.patient_id
-                 LEFT JOIN owners o    ON o.id = a.owner_id
-                 LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+                 FROM `{$apt}` a
+                 LEFT JOIN `{$pat}` p  ON p.id = a.patient_id
+                 LEFT JOIN `{$own}` o    ON o.id = a.owner_id
+                 LEFT JOIN `{$tt}` tt ON tt.id = a.treatment_type_id
                  WHERE DATE(a.start_at) > CURDATE() AND a.status NOT IN ('cancelled','noshow')
                  ORDER BY a.start_at ASC
                  LIMIT 3"
@@ -260,23 +266,24 @@ class MobileApiController
         } catch (\Throwable) {}
         try {
             $newIntakes = (int)$this->db->fetchColumn(
-                "SELECT COUNT(*) FROM patient_intake WHERE status = 'pending'"
+                "SELECT COUNT(*) FROM `{$this->t('patient_intake')}` WHERE status = 'pending'"
             );
         } catch (\Throwable) {
             try {
                 $newIntakes = (int)$this->db->fetchColumn(
-                    "SELECT COUNT(*) FROM patients WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
+                    "SELECT COUNT(*) FROM `{$this->t('patients')}` WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
                 );
             } catch (\Throwable) {}
         }
         try {
+            $pat2 = $this->t('patients'); $own2 = $this->t('owners');
             $birthdaysToday = $this->db->fetchAll(
                 "SELECT p.id, p.name, p.species,
                         CONCAT(o.first_name,' ',o.last_name) AS owner_name,
                         p.date_of_birth,
                         TIMESTAMPDIFF(YEAR, p.date_of_birth, CURDATE()) AS age
-                 FROM patients p
-                 LEFT JOIN owners o ON o.id = p.owner_id
+                 FROM `{$pat2}` p
+                 LEFT JOIN `{$own2}` o ON o.id = p.owner_id
                  WHERE p.date_of_birth IS NOT NULL
                    AND DATE_FORMAT(p.date_of_birth, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')
                  ORDER BY p.name ASC"
@@ -288,8 +295,8 @@ class MobileApiController
                         TIMESTAMPDIFF(YEAR, p.date_of_birth, CURDATE()) + 1 AS age,
                         DAYOFYEAR(DATE(CONCAT(YEAR(CURDATE()),'-',DATE_FORMAT(p.date_of_birth,'%m-%d'))))
                           - DAYOFYEAR(CURDATE()) AS days_until
-                 FROM patients p
-                 LEFT JOIN owners o ON o.id = p.owner_id
+                 FROM `{$pat2}` p
+                 LEFT JOIN `{$own2}` o ON o.id = p.owner_id
                  WHERE p.date_of_birth IS NOT NULL
                    AND DATE_FORMAT(p.date_of_birth, '%m-%d') != DATE_FORMAT(CURDATE(), '%m-%d')
                    AND (
@@ -308,7 +315,7 @@ class MobileApiController
                 "SELECT DATE_FORMAT(issue_date, '%Y-%m') AS ym,
                         DATE_FORMAT(issue_date, '%b')     AS month,
                         SUM(total_gross)                  AS revenue
-                 FROM invoices
+                 FROM `{$this->t('invoices')}`
                  WHERE status = 'paid'
                    AND issue_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
                  GROUP BY ym, month
@@ -406,8 +413,8 @@ class MobileApiController
             $patient['upcoming_appointments'] = $this->db->fetchAll(
                 "SELECT a.id, a.title, a.start_at, a.end_at, a.status,
                         tt.name AS treatment_type_name, tt.color AS treatment_color
-                 FROM appointments a
-                 LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+                 FROM `{$this->t('appointments')}` a
+                 LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
                  WHERE a.patient_id = ? AND a.start_at >= NOW() AND a.status NOT IN ('cancelled','noshow')
                  ORDER BY a.start_at ASC
                  LIMIT 1",
@@ -593,7 +600,7 @@ class MobileApiController
 
         try {
             $this->db->execute(
-                "DELETE FROM patient_timeline WHERE id = ? AND patient_id = ?",
+                "DELETE FROM `{$this->t('patient_timeline')}` WHERE id = ? AND patient_id = ?",
                 [$entryId, $patientId]
             );
         } catch (\Throwable $e) {
@@ -908,10 +915,10 @@ class MobileApiController
                             WHEN a.google_event_id IS NOT NULL THEN 'google'
                             ELSE 'internal'
                         END AS source
-                 FROM appointments a
-                 LEFT JOIN patients p  ON p.id  = a.patient_id
-                 LEFT JOIN owners o    ON o.id  = a.owner_id
-                 LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+                 FROM `{$this->t('appointments')}` a
+                 LEFT JOIN `{$this->t('patients')}` p  ON p.id  = a.patient_id
+                 LEFT JOIN `{$this->t('owners')}` o    ON o.id  = a.owner_id
+                 LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
                  WHERE a.start_at >= ? AND a.start_at <= ?
                    AND a.status != 'cancelled'
                  ORDER BY a.start_at ASC",
@@ -935,7 +942,7 @@ class MobileApiController
 
         try {
             $id = $this->db->insert(
-                "INSERT INTO appointments (title, start_at, end_at, patient_id, owner_id,
+                "INSERT INTO `{$this->t('appointments')}` (title, start_at, end_at, patient_id, owner_id,
                     treatment_type_id, status, color, description, notes, reminder_minutes, created_at)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())",
                 [
@@ -969,7 +976,7 @@ class MobileApiController
 
         try {
             $this->db->execute(
-                "UPDATE appointments SET
+                "UPDATE `{$this->t('appointments')}` SET
                     title = COALESCE(?, title),
                     start_at = COALESCE(?, start_at),
                     end_at = COALESCE(?, end_at),
@@ -1010,7 +1017,7 @@ class MobileApiController
         $id = (int)($params['id'] ?? 0);
         try {
             $this->googleSyncAppointment($id, 'delete');
-            $this->db->execute("DELETE FROM appointments WHERE id = ?", [$id]);
+            $this->db->execute("DELETE FROM `{$this->t('appointments')}` WHERE id = ?", [$id]);
             $this->json(['success' => true]);
         } catch (\Throwable $e) {
             $this->error('Fehler: ' . $e->getMessage(), 500);
@@ -1025,7 +1032,7 @@ class MobileApiController
     {
         $this->cors();
         $this->requireAuth();
-        $rows = $this->db->fetchAll("SELECT * FROM treatment_types ORDER BY name ASC");
+        $rows = $this->db->fetchAll("SELECT * FROM `{$this->t('treatment_types')}` ORDER BY name ASC");
         $this->json($rows);
     }
 
@@ -1067,14 +1074,14 @@ class MobileApiController
                         CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
                         o.id   AS owner_id,
                         o.email AS owner_email,
-                        (SELECT COUNT(*) FROM portal_messages m
+                        (SELECT COUNT(*) FROM `{$this->t('portal_messages')}` m
                          WHERE m.thread_id = t.id AND m.is_read = 0
                            AND m.sender_type = 'owner') AS unread_count,
-                        (SELECT m2.body FROM portal_messages m2
+                        (SELECT m2.body FROM `{$this->t('portal_messages')}` m2
                          WHERE m2.thread_id = t.id
                          ORDER BY m2.created_at DESC LIMIT 1) AS last_body
-                 FROM portal_message_threads t
-                 JOIN owners o ON o.id = t.owner_id
+                 FROM `{$this->t('portal_message_threads')}` t
+                 JOIN `{$this->t('owners')}` o ON o.id = t.owner_id
                  ORDER BY t.last_message_at DESC"
             );
         } catch (\Throwable) {
@@ -1107,7 +1114,7 @@ class MobileApiController
 
         try {
             $count = (int)$this->db->fetchColumn(
-                "SELECT COUNT(*) FROM portal_messages WHERE sender_type = 'owner' AND is_read = 0"
+                "SELECT COUNT(*) FROM `{$this->t('portal_messages')}` WHERE sender_type = 'owner' AND is_read = 0"
             );
         } catch (\Throwable) {
             $count = 0;
@@ -1126,8 +1133,8 @@ class MobileApiController
         try {
             $thread = $this->db->fetch(
                 "SELECT t.*, CONCAT(o.first_name,' ',o.last_name) AS owner_name, o.email AS owner_email
-                 FROM portal_message_threads t
-                 JOIN owners o ON o.id = t.owner_id
+                 FROM `{$this->t('portal_message_threads')}` t
+                 JOIN `{$this->t('owners')}` o ON o.id = t.owner_id
                  WHERE t.id = ? LIMIT 1",
                 [$id]
             );
@@ -1135,7 +1142,7 @@ class MobileApiController
 
             /* Mark owner messages as read */
             $this->db->execute(
-                "UPDATE portal_messages SET is_read = 1
+                "UPDATE `{$this->t('portal_messages')}` SET is_read = 1
                  WHERE thread_id = ? AND sender_type = 'owner' AND is_read = 0",
                 [$id]
             );
@@ -1146,10 +1153,10 @@ class MobileApiController
                              THEN COALESCE(u.name,'Team')
                              ELSE CONCAT(o.first_name,' ',o.last_name)
                         END AS sender_name
-                 FROM portal_messages m
-                 LEFT JOIN users u ON u.id = m.sender_id AND m.sender_type = 'admin'
-                 LEFT JOIN portal_message_threads t2 ON t2.id = m.thread_id
-                 LEFT JOIN owners o ON o.id = t2.owner_id AND m.sender_type = 'owner'
+                 FROM `{$this->t('portal_messages')}` m
+                 LEFT JOIN `{$this->t('users')}` u ON u.id = m.sender_id AND m.sender_type = 'admin'
+                 LEFT JOIN `{$this->t('portal_message_threads')}` t2 ON t2.id = m.thread_id
+                 LEFT JOIN `{$this->t('owners')}` o ON o.id = t2.owner_id AND m.sender_type = 'owner'
                  WHERE m.thread_id = ?
                  ORDER BY m.created_at ASC",
                 [$id]
@@ -1193,19 +1200,19 @@ class MobileApiController
 
         try {
             $thread = $this->db->fetch(
-                "SELECT * FROM portal_message_threads WHERE id = ? LIMIT 1", [$id]
+                "SELECT * FROM `{$this->t('portal_message_threads')}` WHERE id = ? LIMIT 1", [$id]
             );
             if (!$thread) $this->error('Thread nicht gefunden.', 404);
 
             $this->db->execute(
-                "INSERT INTO portal_messages (thread_id, sender_type, sender_id, body, is_read, created_at)
+                "INSERT INTO `{$this->t('portal_messages')}` (thread_id, sender_type, sender_id, body, is_read, created_at)
                  VALUES (?, 'admin', ?, ?, 0, NOW())",
                 [$id, (int)$user['user_id'], $body]
             );
             $msgId = (int)$this->db->lastInsertId();
 
             $this->db->execute(
-                "UPDATE portal_message_threads SET last_message_at = NOW(), status = 'open' WHERE id = ?",
+                "UPDATE `{$this->t('portal_message_threads')}` SET last_message_at = NOW(), status = 'open' WHERE id = ?",
                 [$id]
             );
         } catch (\Throwable $e) {
@@ -1242,14 +1249,14 @@ class MobileApiController
 
         try {
             $this->db->execute(
-                "INSERT INTO portal_message_threads (owner_id, subject, status, created_by, last_message_at, created_at)
+                "INSERT INTO `{$this->t('portal_message_threads')}` (owner_id, subject, status, created_by, last_message_at, created_at)
                  VALUES (?, ?, 'open', 'admin', NOW(), NOW())",
                 [$ownerId, $subject]
             );
             $threadId = (int)$this->db->lastInsertId();
 
             $this->db->execute(
-                "INSERT INTO portal_messages (thread_id, sender_type, sender_id, body, is_read, created_at)
+                "INSERT INTO `{$this->t('portal_messages')}` (thread_id, sender_type, sender_id, body, is_read, created_at)
                  VALUES (?, 'admin', ?, ?, 0, NOW())",
                 [$threadId, (int)$user['user_id'], $body]
             );
@@ -1272,7 +1279,7 @@ class MobileApiController
 
         try {
             $this->db->execute(
-                "UPDATE portal_message_threads SET status = ? WHERE id = ?", [$status, $id]
+                "UPDATE `{$this->t('portal_message_threads')}` SET status = ? WHERE id = ?", [$status, $id]
             );
         } catch (\Throwable $e) {
             $this->error('Fehler: ' . $e->getMessage(), 500);
@@ -1288,8 +1295,8 @@ class MobileApiController
 
         $id = (int)($params['id'] ?? 0);
         try {
-            $this->db->execute("DELETE FROM portal_messages WHERE thread_id = ?", [$id]);
-            $this->db->execute("DELETE FROM portal_message_threads WHERE id = ?", [$id]);
+            $this->db->execute("DELETE FROM `{$this->t('portal_messages')}` WHERE thread_id = ?", [$id]);
+            $this->db->execute("DELETE FROM `{$this->t('portal_message_threads')}` WHERE id = ?", [$id]);
         } catch (\Throwable $e) {
             $this->error('Fehler: ' . $e->getMessage(), 500);
         }
@@ -1336,11 +1343,11 @@ class MobileApiController
             $sets   = implode(', ', array_map(fn($k) => "`{$k}` = ?", array_keys($fields)));
             $values = array_values($fields);
             $values[] = $id;
-            $this->db->execute("UPDATE invoices SET {$sets}, updated_at = NOW() WHERE id = ?", $values);
+            $this->db->execute("UPDATE `{$this->t('invoices')}` SET {$sets}, updated_at = NOW() WHERE id = ?", $values);
         }
 
         if ($positions !== null) {
-            $this->db->execute("DELETE FROM invoice_positions WHERE invoice_id = ?", [$id]);
+            $this->db->execute("DELETE FROM `{$this->t('invoice_positions')}` WHERE invoice_id = ?", [$id]);
             foreach ($positions as $i => $pos) {
                 $qty   = (float)($pos['quantity']  ?? 1);
                 $price = (float)($pos['unit_price'] ?? 0);
@@ -1369,8 +1376,8 @@ class MobileApiController
         $invoice = $this->invoices->findById($id);
         if (!$invoice) $this->error('Rechnung nicht gefunden.', 404);
 
-        $this->db->execute("DELETE FROM invoice_positions WHERE invoice_id = ?", [$id]);
-        $this->db->execute("DELETE FROM invoices WHERE id = ?", [$id]);
+        $this->db->execute("DELETE FROM `{$this->t('invoice_positions')}` WHERE invoice_id = ?", [$id]);
+        $this->db->execute("DELETE FROM `{$this->t('invoices')}` WHERE id = ?", [$id]);
         $this->json(['success' => true]);
     }
 
@@ -1625,7 +1632,7 @@ class MobileApiController
         $id = (int)($params['id'] ?? 0);
         if (!$this->patients->findById($id)) $this->error('Patient nicht gefunden.', 404);
 
-        $this->db->execute("UPDATE patients SET status = 'archived' WHERE id = ?", [$id]);
+        $this->db->execute("UPDATE `{$this->t('patients')}` SET status = 'archived' WHERE id = ?", [$id]);
         $this->json(['success' => true]);
     }
 
@@ -1653,7 +1660,7 @@ class MobileApiController
         $filename = 'photo_' . bin2hex(random_bytes(8)) . '.' . $allowed[$mime];
         if (!move_uploaded_file($file['tmp_name'], $dir . $filename)) $this->error('Datei konnte nicht gespeichert werden.');
 
-        $this->db->execute("UPDATE patients SET photo = ?, updated_at = NOW() WHERE id = ?", [$filename, $id]);
+        $this->db->execute("UPDATE `{$this->t('patients')}` SET photo = ?, updated_at = NOW() WHERE id = ?", [$filename, $id]);
         $this->json(['success' => true, 'photo_url' => '/patient-photos/' . $id . '/' . $filename]);
     }
 
@@ -1690,7 +1697,7 @@ class MobileApiController
         $id = (int)($params['id'] ?? 0);
         if (!$this->owners->findById($id)) $this->error('Tierhalter nicht gefunden.', 404);
 
-        $this->db->execute("DELETE FROM owners WHERE id = ?", [$id]);
+        $this->db->execute("DELETE FROM `{$this->t('owners')}` WHERE id = ?", [$id]);
         $this->json(['success' => true]);
     }
 
@@ -1706,14 +1713,14 @@ class MobileApiController
 
         $rows = $this->db->fetchAll(
             "SELECT i.*, p.name AS patient_name
-             FROM invoices i
-             LEFT JOIN patients p ON p.id = i.patient_id
+             FROM `{$this->t('invoices')}` i
+             LEFT JOIN `{$this->t('patients')}` p ON p.id = i.patient_id
              WHERE i.owner_id = ?
              ORDER BY i.issue_date DESC
              LIMIT ? OFFSET ?",
             [$id, $per, ($page - 1) * $per]
         );
-        $total = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM invoices WHERE owner_id = ?", [$id]);
+        $total = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM `{$this->t('invoices')}` WHERE owner_id = ?", [$id]);
         $this->json(['items' => $rows, 'total' => $total, 'page' => $page, 'per_page' => $per]);
     }
 
@@ -1752,10 +1759,10 @@ class MobileApiController
                         p.name AS patient_name,
                         CONCAT(o.first_name,' ',o.last_name) AS owner_name,
                         tt.name AS treatment_type_name, tt.color AS treatment_type_color
-                 FROM appointments a
-                 LEFT JOIN patients p ON p.id = a.patient_id
-                 LEFT JOIN owners o   ON o.id = a.owner_id
-                 LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+                 FROM `{$this->t('appointments')}` a
+                 LEFT JOIN `{$this->t('patients')}` p ON p.id = a.patient_id
+                 LEFT JOIN `{$this->t('owners')}` o   ON o.id = a.owner_id
+                 LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
                  WHERE a.id = ? LIMIT 1",
                 [$id]
             );
@@ -1778,7 +1785,7 @@ class MobileApiController
         if (!in_array($status, $allowed, true)) $this->error('Ungültiger Status.');
 
         try {
-            $this->db->execute("UPDATE appointments SET status = ? WHERE id = ?", [$status, $id]);
+            $this->db->execute("UPDATE `{$this->t('appointments')}` SET status = ? WHERE id = ?", [$status, $id]);
         } catch (\Throwable $e) {
             $this->error('Fehler: ' . $e->getMessage(), 500);
         }
@@ -1796,10 +1803,10 @@ class MobileApiController
                         p.name AS patient_name,
                         CONCAT(o.first_name,' ',o.last_name) AS owner_name,
                         tt.name AS treatment_type_name, tt.color AS treatment_type_color
-                 FROM appointments a
-                 LEFT JOIN patients p ON p.id = a.patient_id
-                 LEFT JOIN owners o   ON o.id = a.owner_id
-                 LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+                 FROM `{$this->t('appointments')}` a
+                 LEFT JOIN `{$this->t('patients')}` p ON p.id = a.patient_id
+                 LEFT JOIN `{$this->t('owners')}` o   ON o.id = a.owner_id
+                 LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
                  WHERE DATE(a.start_at) = CURDATE()
                  ORDER BY a.start_at ASC"
             );
@@ -1820,10 +1827,10 @@ class MobileApiController
                         p.name AS patient_name,
                         CONCAT(o.first_name,' ',o.last_name) AS owner_name,
                         tt.name AS treatment_type_name
-                 FROM appointment_waitlist w
-                 LEFT JOIN patients p ON p.id = w.patient_id
-                 LEFT JOIN owners o   ON o.id = w.owner_id
-                 LEFT JOIN treatment_types tt ON tt.id = w.treatment_type_id
+                 FROM `{$this->t('appointment_waitlist')}` w
+                 LEFT JOIN `{$this->t('patients')}` p ON p.id = w.patient_id
+                 LEFT JOIN `{$this->t('owners')}` o   ON o.id = w.owner_id
+                 LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = w.treatment_type_id
                  ORDER BY w.created_at ASC"
             );
         } catch (\Throwable) { $rows = []; }
@@ -1838,7 +1845,7 @@ class MobileApiController
         $data = $this->body();
         try {
             $this->db->execute(
-                "INSERT INTO appointment_waitlist (patient_id, owner_id, treatment_type_id, preferred_date, notes, created_at)
+                "INSERT INTO `{$this->t('appointment_waitlist')}` (patient_id, owner_id, treatment_type_id, preferred_date, notes, created_at)
                  VALUES (?, ?, ?, ?, ?, NOW())",
                 [
                     isset($data['patient_id'])        ? (int)$data['patient_id']        : null,
@@ -1862,7 +1869,7 @@ class MobileApiController
 
         $id = (int)($params['id'] ?? 0);
         try {
-            $this->db->execute("DELETE FROM appointment_waitlist WHERE id = ?", [$id]);
+            $this->db->execute("DELETE FROM `{$this->t('appointment_waitlist')}` WHERE id = ?", [$id]);
         } catch (\Throwable $e) {
             $this->error('Fehler: ' . $e->getMessage(), 500);
         }
@@ -1879,11 +1886,11 @@ class MobileApiController
         if (empty($data['start_at'])) $this->error('start_at ist erforderlich.');
 
         try {
-            $entry = $this->db->fetch("SELECT * FROM appointment_waitlist WHERE id = ? LIMIT 1", [$waitId]);
+            $entry = $this->db->fetch("SELECT * FROM `{$this->t('appointment_waitlist')}` WHERE id = ? LIMIT 1", [$waitId]);
             if (!$entry) $this->error('Wartelisten-Eintrag nicht gefunden.', 404);
 
             $apptId = $this->db->insert(
-                "INSERT INTO appointments (title, start_at, end_at, patient_id, owner_id, treatment_type_id, status, description, notes, reminder_minutes, created_at)
+                "INSERT INTO `{$this->t('appointments')}` (title, start_at, end_at, patient_id, owner_id, treatment_type_id, status, description, notes, reminder_minutes, created_at)
                  VALUES (?, ?, ?, ?, ?, ?, 'scheduled', ?, ?, ?, NOW())",
                 [
                     $data['title'] ?? ('Termin für ' . ($entry['patient_id'] ? 'Patient' : 'Besitzer')),
@@ -1897,7 +1904,7 @@ class MobileApiController
                     (int)($data['reminder_minutes'] ?? 60),
                 ]
             );
-            $this->db->execute("DELETE FROM appointment_waitlist WHERE id = ?", [$waitId]);
+            $this->db->execute("DELETE FROM `{$this->t('appointment_waitlist')}` WHERE id = ?", [$waitId]);
         } catch (\Throwable $e) {
             $this->error('Fehler: ' . $e->getMessage(), 500);
         }
@@ -1914,7 +1921,7 @@ class MobileApiController
         $this->requireAuth();
 
         $id  = (int)($params['id'] ?? 0);
-        $row = $this->db->fetch("SELECT * FROM treatment_types WHERE id = ? LIMIT 1", [$id]);
+        $row = $this->db->fetch("SELECT * FROM `{$this->t('treatment_types')}` WHERE id = ? LIMIT 1", [$id]);
         if (!$row) $this->error('Behandlungsart nicht gefunden.', 404);
         $this->json($row);
     }
@@ -1928,7 +1935,7 @@ class MobileApiController
         if (empty($data['name'])) $this->error('Name ist erforderlich.');
 
         $id = $this->db->insert(
-            "INSERT INTO treatment_types (name, color, duration_minutes, price, description, created_at)
+            "INSERT INTO `{$this->t('treatment_types')}` (name, color, duration_minutes, price, description, created_at)
              VALUES (?, ?, ?, ?, ?, NOW())",
             [
                 trim($data['name']),
@@ -1938,7 +1945,7 @@ class MobileApiController
                 trim($data['description'] ?? ''),
             ]
         );
-        $this->json($this->db->fetch("SELECT * FROM treatment_types WHERE id = ?", [(int)$id]), 201);
+        $this->json($this->db->fetch("SELECT * FROM `{$this->t('treatment_types')}` WHERE id = ?", [(int)$id]), 201);
     }
 
     public function treatmentTypeUpdate(array $params = []): void
@@ -1947,7 +1954,7 @@ class MobileApiController
         $this->requireAuth();
 
         $id  = (int)($params['id'] ?? 0);
-        $row = $this->db->fetch("SELECT id FROM treatment_types WHERE id = ? LIMIT 1", [$id]);
+        $row = $this->db->fetch("SELECT id FROM `{$this->t('treatment_types')}` WHERE id = ? LIMIT 1", [$id]);
         if (!$row) $this->error('Behandlungsart nicht gefunden.', 404);
 
         $data   = $this->body();
@@ -1959,9 +1966,9 @@ class MobileApiController
             $sets   = implode(', ', array_map(fn($k) => "`{$k}` = ?", array_keys($fields)));
             $values = array_values($fields);
             $values[] = $id;
-            $this->db->execute("UPDATE treatment_types SET {$sets} WHERE id = ?", $values);
+            $this->db->execute("UPDATE `{$this->t('treatment_types')}` SET {$sets} WHERE id = ?", $values);
         }
-        $this->json($this->db->fetch("SELECT * FROM treatment_types WHERE id = ?", [$id]));
+        $this->json($this->db->fetch("SELECT * FROM `{$this->t('treatment_types')}` WHERE id = ?", [$id]));
     }
 
     public function treatmentTypeDelete(array $params = []): void
@@ -1970,7 +1977,7 @@ class MobileApiController
         $this->requireAuth();
 
         $id = (int)($params['id'] ?? 0);
-        $this->db->execute("DELETE FROM treatment_types WHERE id = ?", [$id]);
+        $this->db->execute("DELETE FROM `{$this->t('treatment_types')}` WHERE id = ?", [$id]);
         $this->json(['success' => true]);
     }
 
@@ -1985,7 +1992,7 @@ class MobileApiController
         $this->requireAdmin();
 
         $rows = $this->db->fetchAll(
-            "SELECT id, name, email, role, active, last_login, created_at FROM users ORDER BY name ASC"
+            "SELECT id, name, email, role, active, last_login, created_at FROM `{$this->t('users')}` ORDER BY name ASC"
         );
         $this->json($rows);
     }
@@ -1997,7 +2004,7 @@ class MobileApiController
         $this->requireAdmin();
 
         $id  = (int)($params['id'] ?? 0);
-        $row = $this->db->fetch("SELECT id, name, email, role, active, last_login, created_at FROM users WHERE id = ? LIMIT 1", [$id]);
+        $row = $this->db->fetch("SELECT id, name, email, role, active, last_login, created_at FROM `{$this->t('users')}` WHERE id = ? LIMIT 1", [$id]);
         if (!$row) $this->error('Benutzer nicht gefunden.', 404);
         $this->json($row);
     }
@@ -2012,12 +2019,12 @@ class MobileApiController
         if (empty($data['name']) || empty($data['email']) || empty($data['password'])) {
             $this->error('name, email und password sind erforderlich.');
         }
-        if ($this->db->fetch("SELECT id FROM users WHERE email = ? LIMIT 1", [trim($data['email'])])) {
+        if ($this->db->fetch("SELECT id FROM `{$this->t('users')}` WHERE email = ? LIMIT 1", [trim($data['email'])])) {
             $this->error('E-Mail bereits vergeben.', 409);
         }
 
         $id = $this->db->insert(
-            "INSERT INTO users (name, email, password, role, active, created_at) VALUES (?, ?, ?, ?, 1, NOW())",
+            "INSERT INTO `{$this->t('users')}` (name, email, password, role, active, created_at) VALUES (?, ?, ?, ?, 1, NOW())",
             [
                 trim($data['name']),
                 strtolower(trim($data['email'])),
@@ -2025,7 +2032,7 @@ class MobileApiController
                 $data['role'] ?? 'mitarbeiter',
             ]
         );
-        $this->json($this->db->fetch("SELECT id, name, email, role, active FROM users WHERE id = ?", [(int)$id]), 201);
+        $this->json($this->db->fetch("SELECT id, name, email, role, active FROM `{$this->t('users')}` WHERE id = ?", [(int)$id]), 201);
     }
 
     public function userUpdate(array $params = []): void
@@ -2035,7 +2042,7 @@ class MobileApiController
         $this->requireAdmin();
 
         $id  = (int)($params['id'] ?? 0);
-        $row = $this->db->fetch("SELECT id FROM users WHERE id = ? LIMIT 1", [$id]);
+        $row = $this->db->fetch("SELECT id FROM `{$this->t('users')}` WHERE id = ? LIMIT 1", [$id]);
         if (!$row) $this->error('Benutzer nicht gefunden.', 404);
 
         $data   = $this->body();
@@ -2050,9 +2057,9 @@ class MobileApiController
             $sets   = implode(', ', array_map(fn($k) => "`{$k}` = ?", array_keys($fields)));
             $values = array_values($fields);
             $values[] = $id;
-            $this->db->execute("UPDATE users SET {$sets} WHERE id = ?", $values);
+            $this->db->execute("UPDATE `{$this->t('users')}` SET {$sets} WHERE id = ?", $values);
         }
-        $this->json($this->db->fetch("SELECT id, name, email, role, active FROM users WHERE id = ?", [$id]));
+        $this->json($this->db->fetch("SELECT id, name, email, role, active FROM `{$this->t('users')}` WHERE id = ?", [$id]));
     }
 
     public function userDeactivate(array $params = []): void
@@ -2062,7 +2069,7 @@ class MobileApiController
         $this->requireAdmin();
 
         $id = (int)($params['id'] ?? 0);
-        $this->db->execute("UPDATE users SET active = 0 WHERE id = ?", [$id]);
+        $this->db->execute("UPDATE `{$this->t('users')}` SET active = 0 WHERE id = ?", [$id]);
         $this->json(['success' => true]);
     }
 
@@ -2074,7 +2081,7 @@ class MobileApiController
 
         $id   = (int)($params['id'] ?? 0);
         $rows = $this->db->fetchAll(
-            "SELECT id, device_name, created_at, last_used, expires_at FROM mobile_api_tokens WHERE user_id = ? ORDER BY last_used DESC",
+            "SELECT id, device_name, created_at, last_used, expires_at FROM `{$this->t('mobile_api_tokens')}` WHERE user_id = ? ORDER BY last_used DESC",
             [$id]
         );
         $this->json($rows);
@@ -2086,7 +2093,7 @@ class MobileApiController
         $this->requireAuth();
 
         $tokenId = (int)($params['tid'] ?? 0);
-        $this->db->execute("DELETE FROM mobile_api_tokens WHERE id = ?", [$tokenId]);
+        $this->db->execute("DELETE FROM `{$this->t('mobile_api_tokens')}` WHERE id = ?", [$tokenId]);
         $this->json(['success' => true]);
     }
 
@@ -2182,20 +2189,20 @@ class MobileApiController
         $like = "%{$q}%";
 
         $patients = $this->db->fetchAll(
-            "SELECT id, name, species, breed, status, 'patient' AS type FROM patients
+            "SELECT id, name, species, breed, status, 'patient' AS type FROM `{$this->t('patients')}`
              WHERE name LIKE ? OR chip_number LIKE ? LIMIT 10",
             [$like, $like]
         );
 
         $owners = $this->db->fetchAll(
             "SELECT id, CONCAT(first_name,' ',last_name) AS name, email, phone, 'owner' AS type
-             FROM owners WHERE first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR phone LIKE ? LIMIT 10",
+             FROM `{$this->t('owners')}` WHERE first_name LIKE ? OR last_name LIKE ? OR email LIKE ? OR phone LIKE ? LIMIT 10",
             [$like, $like, $like, $like]
         );
 
         $invoices = $this->db->fetchAll(
             "SELECT i.id, i.invoice_number AS name, i.status, i.total_gross, i.issue_date, 'invoice' AS type
-             FROM invoices i WHERE i.invoice_number LIKE ? LIMIT 10",
+             FROM `{$this->t('invoices')}` i WHERE i.invoice_number LIKE ? LIMIT 10",
             [$like]
         );
 
@@ -2203,7 +2210,7 @@ class MobileApiController
         try {
             $appointments = $this->db->fetchAll(
                 "SELECT a.id, a.title AS name, a.start_at, a.status, 'appointment' AS type
-                 FROM appointments a WHERE a.title LIKE ? OR a.description LIKE ? LIMIT 10",
+                 FROM `{$this->t('appointments')}` a WHERE a.title LIKE ? OR a.description LIKE ? LIMIT 10",
                 [$like, $like]
             );
         } catch (\Throwable) {}
@@ -2234,9 +2241,9 @@ class MobileApiController
             $sql = "SELECT hp.*,
                            p.name  AS patient_name,
                            u.name  AS therapist_name_resolved
-                    FROM portal_homework_plans hp
-                    LEFT JOIN patients p ON p.id = hp.patient_id
-                    LEFT JOIN users    u ON u.id = hp.created_by";
+                    FROM `{$this->t('portal_homework_plans')}` hp
+                    LEFT JOIN `{$this->t('patients')}` p ON p.id = hp.patient_id
+                    LEFT JOIN `{$this->t('users')}`    u ON u.id = hp.created_by";
             $args = [];
             if ($patientId) { $sql .= " WHERE hp.patient_id = ?"; $args[] = $patientId; }
             $sql .= " ORDER BY hp.plan_date DESC LIMIT 50";
@@ -2246,7 +2253,7 @@ class MobileApiController
             foreach ($plans as &$plan) {
                 try {
                     $plan['tasks'] = $this->db->fetchAll(
-                        "SELECT * FROM portal_homework_plan_tasks WHERE plan_id = ? ORDER BY sort_order ASC, id ASC",
+                        "SELECT * FROM `{$this->t('portal_homework_plan_tasks')}` WHERE plan_id = ? ORDER BY sort_order ASC, id ASC",
                         [(int)$plan['id']]
                     );
                 } catch (\Throwable) { $plan['tasks'] = []; }
@@ -2263,9 +2270,9 @@ class MobileApiController
 
         $id = (int)($params['id'] ?? 0);
         try {
-            $plan = $this->db->fetch("SELECT * FROM homework_plans WHERE id = ? LIMIT 1", [$id]);
+            $plan = $this->db->fetch("SELECT * FROM `{$this->t('homework_plans')}` WHERE id = ? LIMIT 1", [$id]);
             if (!$plan) $this->error('Hausaufgabenplan nicht gefunden.', 404);
-            $exercises = $this->db->fetchAll("SELECT * FROM homework_exercises WHERE plan_id = ? ORDER BY sort_order ASC", [$id]);
+            $exercises = $this->db->fetchAll("SELECT * FROM `{$this->t('homework_exercises')}` WHERE plan_id = ? ORDER BY sort_order ASC", [$id]);
             $plan['exercises'] = $exercises;
         } catch (\Throwable $e) {
             $this->error('Fehler: ' . $e->getMessage(), 500);
@@ -2299,25 +2306,25 @@ class MobileApiController
 
         try {
             $unreadMessages = (int)$this->db->fetchColumn(
-                "SELECT COUNT(*) FROM portal_messages WHERE sender_type = 'owner' AND is_read = 0"
+                "SELECT COUNT(*) FROM `{$this->t('portal_messages')}` WHERE sender_type = 'owner' AND is_read = 0"
             );
         } catch (\Throwable) {}
 
         try {
             $overdueCount = (int)$this->db->fetchColumn(
-                "SELECT COUNT(*) FROM invoices WHERE status = 'overdue'"
+                "SELECT COUNT(*) FROM `{$this->t('invoices')}` WHERE status = 'overdue'"
             );
         } catch (\Throwable) {}
 
         try {
             $todayApts = (int)$this->db->fetchColumn(
-                "SELECT COUNT(*) FROM appointments WHERE DATE(start_at) = CURDATE() AND status != 'cancelled'"
+                "SELECT COUNT(*) FROM `{$this->t('appointments')}` WHERE DATE(start_at) = CURDATE() AND status != 'cancelled'"
             );
         } catch (\Throwable) {}
 
         try {
             $waitlistCount = (int)$this->db->fetchColumn(
-                "SELECT COUNT(*) FROM appointment_waitlist WHERE status = 'waiting'"
+                "SELECT COUNT(*) FROM `{$this->t('appointment_waitlist')}` WHERE status = 'waiting'"
             );
         } catch (\Throwable) {}
 
@@ -2343,8 +2350,8 @@ class MobileApiController
         try {
             $rows = $this->db->fetchAll(
                 "SELECT u.*, o.first_name, o.last_name
-                 FROM owner_portal_users u
-                 JOIN owners o ON o.id = u.owner_id
+                 FROM `{$this->t('owner_portal_users')}` u
+                 JOIN `{$this->t('owners')}` o ON o.id = u.owner_id
                  ORDER BY o.last_name ASC, o.first_name ASC"
             );
         } catch (\Throwable) { $rows = []; }
@@ -2361,8 +2368,8 @@ class MobileApiController
         try {
             $row = $this->db->fetch(
                 "SELECT u.*, o.first_name, o.last_name, o.email AS owner_email, o.phone
-                 FROM owner_portal_users u
-                 JOIN owners o ON o.id = u.owner_id
+                 FROM `{$this->t('owner_portal_users')}` u
+                 JOIN `{$this->t('owners')}` o ON o.id = u.owner_id
                  WHERE u.id = ? LIMIT 1",
                 [$id]
             );
@@ -2385,7 +2392,7 @@ class MobileApiController
             $this->error('owner_id und gültige E-Mail sind erforderlich.');
         }
 
-        $existing = $this->db->fetch("SELECT id FROM owner_portal_users WHERE email = ? LIMIT 1", [$email]);
+        $existing = $this->db->fetch("SELECT id FROM `{$this->t('owner_portal_users')}` WHERE email = ? LIMIT 1", [$email]);
         if ($existing) $this->error('Diese E-Mail hat bereits einen Portal-Account.', 409);
 
         $token   = bin2hex(random_bytes(32));
@@ -2393,7 +2400,7 @@ class MobileApiController
 
         try {
             $this->db->execute(
-                "INSERT INTO owner_portal_users (owner_id, email, password_hash, is_active, invite_token, invite_expires)
+                "INSERT INTO `{$this->t('owner_portal_users')}` (owner_id, email, password_hash, is_active, invite_token, invite_expires)
                  VALUES (?, ?, NULL, 0, ?, ?)",
                 [$ownerId, $email, $token, $expires]
             );
@@ -2421,14 +2428,14 @@ class MobileApiController
         $this->requireAuth();
 
         $id  = (int)($params['id'] ?? 0);
-        $row = $this->db->fetch("SELECT * FROM owner_portal_users WHERE id = ? LIMIT 1", [$id]);
+        $row = $this->db->fetch("SELECT * FROM `{$this->t('owner_portal_users')}` WHERE id = ? LIMIT 1", [$id]);
         if (!$row) $this->error('Portal-Benutzer nicht gefunden.', 404);
 
         $token   = bin2hex(random_bytes(32));
         $expires = date('Y-m-d H:i:s', strtotime('+7 days'));
 
         $this->db->execute(
-            "UPDATE owner_portal_users SET invite_token = ?, invite_expires = ?, invite_used_at = NULL, is_active = 0 WHERE id = ?",
+            "UPDATE `{$this->t('owner_portal_users')}` SET invite_token = ?, invite_expires = ?, invite_used_at = NULL, is_active = 0 WHERE id = ?",
             [$token, $expires, $id]
         );
 
@@ -2446,7 +2453,7 @@ class MobileApiController
         $this->requireAuth();
 
         $id = (int)($params['id'] ?? 0);
-        $this->db->execute("UPDATE owner_portal_users SET is_active = 1 WHERE id = ?", [$id]);
+        $this->db->execute("UPDATE `{$this->t('owner_portal_users')}` SET is_active = 1 WHERE id = ?", [$id]);
         $this->json(['success' => true]);
     }
 
@@ -2457,7 +2464,7 @@ class MobileApiController
         $this->requireAuth();
 
         $id = (int)($params['id'] ?? 0);
-        $this->db->execute("UPDATE owner_portal_users SET is_active = 0 WHERE id = ?", [$id]);
+        $this->db->execute("UPDATE `{$this->t('owner_portal_users')}` SET is_active = 0 WHERE id = ?", [$id]);
         $this->json(['success' => true]);
     }
 
@@ -2468,7 +2475,7 @@ class MobileApiController
         $this->requireAuth();
 
         $id = (int)($params['id'] ?? 0);
-        $this->db->execute("DELETE FROM owner_portal_users WHERE id = ?", [$id]);
+        $this->db->execute("DELETE FROM `{$this->t('owner_portal_users')}` WHERE id = ?", [$id]);
         $this->json(['success' => true]);
     }
 
@@ -2479,10 +2486,10 @@ class MobileApiController
         $this->requireAuth();
 
         try {
-            $total    = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM owner_portal_users");
-            $active   = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM owner_portal_users WHERE is_active = 1");
-            $pending  = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM owner_portal_users WHERE is_active = 0 AND invite_token IS NOT NULL");
-            $unread   = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM portal_messages WHERE sender_type = 'owner' AND is_read = 0");
+            $total    = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM `{$this->t('owner_portal_users')}`");
+            $active   = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM `{$this->t('owner_portal_users')}` WHERE is_active = 1");
+            $pending  = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM `{$this->t('owner_portal_users')}` WHERE is_active = 0 AND invite_token IS NOT NULL");
+            $unread   = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM `{$this->t('portal_messages')}` WHERE sender_type = 'owner' AND is_read = 0");
         } catch (\Throwable) {
             $total = $active = $pending = $unread = 0;
         }
@@ -2508,7 +2515,7 @@ class MobileApiController
         $patientId = (int)($params['id'] ?? 0);
         try {
             $rows = $this->db->fetchAll(
-                "SELECT * FROM pet_exercises WHERE patient_id = ? ORDER BY sort_order ASC, id ASC",
+                "SELECT * FROM `{$this->t('pet_exercises')}` WHERE patient_id = ? ORDER BY sort_order ASC, id ASC",
                 [$patientId]
             );
         } catch (\Throwable) { $rows = []; }
@@ -2530,7 +2537,7 @@ class MobileApiController
         $this->requireAuth();
 
         $id  = (int)($params['id'] ?? 0);
-        $row = $this->db->fetch("SELECT * FROM pet_exercises WHERE id = ? LIMIT 1", [$id]);
+        $row = $this->db->fetch("SELECT * FROM `{$this->t('pet_exercises')}` WHERE id = ? LIMIT 1", [$id]);
         if (!$row) $this->error('Übung nicht gefunden.', 404);
         if (!empty($row['image'])) {
             $row['image_url'] = '/storage/uploads/exercises/' . basename($row['image']);
@@ -2565,7 +2572,7 @@ class MobileApiController
 
         try {
             $this->db->execute(
-                "INSERT INTO pet_exercises (patient_id, title, description, video_url, image, sort_order, is_active, created_by, created_at)
+                "INSERT INTO `{$this->t('pet_exercises')}` (patient_id, title, description, video_url, image, sort_order, is_active, created_by, created_at)
                  VALUES (?, ?, ?, ?, ?, ?, 1, ?, NOW())",
                 [
                     $patientId,
@@ -2582,7 +2589,7 @@ class MobileApiController
             $this->error('Fehler: ' . $e->getMessage(), 500);
         }
 
-        $row = $this->db->fetch("SELECT * FROM pet_exercises WHERE id = ?", [$id]);
+        $row = $this->db->fetch("SELECT * FROM `{$this->t('pet_exercises')}` WHERE id = ?", [$id]);
         if (!empty($row['image'])) $row['image_url'] = '/storage/uploads/exercises/' . basename($row['image']);
         $this->json($row, 201);
     }
@@ -2594,7 +2601,7 @@ class MobileApiController
         $this->requireAuth();
 
         $id  = (int)($params['id'] ?? 0);
-        $row = $this->db->fetch("SELECT id FROM pet_exercises WHERE id = ? LIMIT 1", [$id]);
+        $row = $this->db->fetch("SELECT id FROM `{$this->t('pet_exercises')}` WHERE id = ? LIMIT 1", [$id]);
         if (!$row) $this->error('Übung nicht gefunden.', 404);
 
         $data   = $this->body();
@@ -2621,10 +2628,10 @@ class MobileApiController
             $sets   = implode(', ', array_map(fn($k) => "`{$k}` = ?", array_keys($fields)));
             $values = array_values($fields);
             $values[] = $id;
-            $this->db->execute("UPDATE pet_exercises SET {$sets} WHERE id = ?", $values);
+            $this->db->execute("UPDATE `{$this->t('pet_exercises')}` SET {$sets} WHERE id = ?", $values);
         }
 
-        $updated = $this->db->fetch("SELECT * FROM pet_exercises WHERE id = ?", [$id]);
+        $updated = $this->db->fetch("SELECT * FROM `{$this->t('pet_exercises')}` WHERE id = ?", [$id]);
         if (!empty($updated['image'])) $updated['image_url'] = '/storage/uploads/exercises/' . basename($updated['image']);
         $this->json($updated);
     }
@@ -2636,7 +2643,7 @@ class MobileApiController
         $this->requireAuth();
 
         $id = (int)($params['id'] ?? 0);
-        $this->db->execute("DELETE FROM pet_exercises WHERE id = ?", [$id]);
+        $this->db->execute("DELETE FROM `{$this->t('pet_exercises')}` WHERE id = ?", [$id]);
         $this->json(['success' => true]);
     }
 
@@ -2657,10 +2664,10 @@ class MobileApiController
             $sql    = "SELECT hp.*, p.name AS patient_name,
                               CONCAT(o.first_name,' ',o.last_name) AS owner_name,
                               u.name AS created_by_name
-                       FROM portal_homework_plans hp
-                       JOIN patients p ON p.id = hp.patient_id
-                       JOIN owners o   ON o.id = hp.owner_id
-                       LEFT JOIN users u ON u.id = hp.created_by
+                       FROM `{$this->t('portal_homework_plans')}` hp
+                       JOIN `{$this->t('patients')}` p ON p.id = hp.patient_id
+                       JOIN `{$this->t('owners')}` o   ON o.id = hp.owner_id
+                       LEFT JOIN `{$this->t('users')}` u ON u.id = hp.created_by
                        WHERE 1=1";
             $binds  = [];
             if ($ownerId)   { $sql .= " AND hp.owner_id = ?";   $binds[] = $ownerId; }
@@ -2683,10 +2690,10 @@ class MobileApiController
                 "SELECT hp.*, p.name AS patient_name,
                         CONCAT(o.first_name,' ',o.last_name) AS owner_name,
                         u.name AS created_by_name
-                 FROM portal_homework_plans hp
-                 JOIN patients p ON p.id = hp.patient_id
-                 JOIN owners o   ON o.id = hp.owner_id
-                 LEFT JOIN users u ON u.id = hp.created_by
+                 FROM `{$this->t('portal_homework_plans')}` hp
+                 JOIN `{$this->t('patients')}` p ON p.id = hp.patient_id
+                 JOIN `{$this->t('owners')}` o   ON o.id = hp.owner_id
+                 LEFT JOIN `{$this->t('users')}` u ON u.id = hp.created_by
                  WHERE hp.id = ? LIMIT 1",
                 [$id]
             );
@@ -2695,7 +2702,7 @@ class MobileApiController
 
         try {
             $tasks = $this->db->fetchAll(
-                "SELECT * FROM portal_homework_plan_tasks WHERE plan_id = ? ORDER BY sort_order ASC, id ASC",
+                "SELECT * FROM `{$this->t('portal_homework_plan_tasks')}` WHERE plan_id = ? ORDER BY sort_order ASC, id ASC",
                 [$id]
             );
         } catch (\Throwable) { $tasks = []; }
@@ -2717,7 +2724,7 @@ class MobileApiController
 
         try {
             $this->db->execute(
-                "INSERT INTO portal_homework_plans
+                "INSERT INTO `{$this->t('portal_homework_plans')}`
                  (patient_id, owner_id, plan_date, physio_principles, short_term_goals,
                   long_term_goals, therapy_means, general_notes, next_appointment,
                   therapist_name, status, created_by)
@@ -2764,7 +2771,7 @@ class MobileApiController
         $this->requireAuth();
 
         $id   = (int)($params['id'] ?? 0);
-        $plan = $this->db->fetch("SELECT id FROM portal_homework_plans WHERE id = ? LIMIT 1", [$id]);
+        $plan = $this->db->fetch("SELECT id FROM `{$this->t('portal_homework_plans')}` WHERE id = ? LIMIT 1", [$id]);
         if (!$plan) $this->error('Hausaufgabenplan nicht gefunden.', 404);
 
         $data   = $this->body();
@@ -2777,7 +2784,7 @@ class MobileApiController
             $sets   = implode(', ', array_map(fn($k) => "`{$k}` = ?", array_keys($fields)));
             $values = array_values($fields);
             $values[] = $id;
-            $this->db->execute("UPDATE portal_homework_plans SET {$sets} WHERE id = ?", $values);
+            $this->db->execute("UPDATE `{$this->t('portal_homework_plans')}` SET {$sets} WHERE id = ?", $values);
         }
         if (array_key_exists('tasks', $data)) {
             $this->saveHomeworkTasks($id, $data['tasks']);
@@ -2792,8 +2799,8 @@ class MobileApiController
         $this->requireAuth();
 
         $id = (int)($params['id'] ?? 0);
-        $this->db->execute("DELETE FROM portal_homework_plan_tasks WHERE plan_id = ?", [$id]);
-        $this->db->execute("DELETE FROM portal_homework_plans WHERE id = ?", [$id]);
+        $this->db->execute("DELETE FROM `{$this->t('portal_homework_plan_tasks')}` WHERE plan_id = ?", [$id]);
+        $this->db->execute("DELETE FROM `{$this->t('portal_homework_plans')}` WHERE id = ?", [$id]);
         $this->json(['success' => true]);
     }
 
@@ -2804,7 +2811,7 @@ class MobileApiController
         $this->requireAuth();
 
         $id   = (int)($params['id'] ?? 0);
-        $plan = $this->db->fetch("SELECT id FROM portal_homework_plans WHERE id = ? LIMIT 1", [$id]);
+        $plan = $this->db->fetch("SELECT id FROM `{$this->t('portal_homework_plans')}` WHERE id = ? LIMIT 1", [$id]);
         if (!$plan) $this->error('Hausaufgabenplan nicht gefunden.', 404);
 
         $this->json(['pdf_url' => '/portal-admin/hausaufgaben/' . $id . '/pdf']);
@@ -2832,7 +2839,7 @@ class MobileApiController
 
         try {
             $rows = $this->db->fetchAll(
-                "SELECT * FROM homework_templates WHERE is_active = 1 ORDER BY category ASC, title ASC"
+                "SELECT * FROM `{$this->t('homework_templates')}` WHERE is_active = 1 ORDER BY category ASC, title ASC"
             );
         } catch (\Throwable) { $rows = []; }
         $this->json($rows);
@@ -2851,7 +2858,7 @@ class MobileApiController
         try {
             $portalUser = $this->db->fetch(
                 "SELECT id, email, is_active, invite_token, invite_expires, invite_used_at, last_login, created_at
-                 FROM owner_portal_users WHERE owner_id = ? LIMIT 1",
+                 FROM `{$this->t('owner_portal_users')}` WHERE owner_id = ? LIMIT 1",
                 [$ownerId]
             );
         } catch (\Throwable) { $portalUser = null; }
@@ -2863,7 +2870,7 @@ class MobileApiController
             }
             try {
                 $p['exercises'] = $this->db->fetchAll(
-                    "SELECT * FROM pet_exercises WHERE patient_id = ? AND is_active = 1 ORDER BY sort_order ASC",
+                    "SELECT * FROM `{$this->t('pet_exercises')}` WHERE patient_id = ? AND is_active = 1 ORDER BY sort_order ASC",
                     [(int)$p['id']]
                 );
                 $p['exercises'] = array_map(function (array $e): array {
@@ -2874,7 +2881,7 @@ class MobileApiController
 
             try {
                 $p['homework_plans'] = $this->db->fetchAll(
-                    "SELECT id, plan_date, status, therapist_name, pdf_sent_at FROM portal_homework_plans
+                    "SELECT id, plan_date, status, therapist_name, pdf_sent_at FROM `{$this->t('portal_homework_plans')}`
                      WHERE patient_id = ? ORDER BY plan_date DESC",
                     [(int)$p['id']]
                 );
@@ -2894,11 +2901,11 @@ class MobileApiController
 
     private function saveHomeworkTasks(int $planId, array $tasks): void
     {
-        $this->db->execute("DELETE FROM portal_homework_plan_tasks WHERE plan_id = ?", [$planId]);
+        $this->db->execute("DELETE FROM `{$this->t('portal_homework_plan_tasks')}` WHERE plan_id = ?", [$planId]);
         foreach ($tasks as $i => $task) {
             if (empty(trim((string)($task['title'] ?? '')))) continue;
             $this->db->execute(
-                "INSERT INTO portal_homework_plan_tasks
+                "INSERT INTO `{$this->t('portal_homework_plan_tasks')}`
                  (plan_id, template_id, title, description, frequency, duration, therapist_notes, sort_order)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 [
@@ -2945,7 +2952,7 @@ class MobileApiController
             $sets   = implode(', ', array_map(fn($k) => "`{$k}` = ?", array_keys($fields)));
             $values = array_values($fields);
             $values[] = (int)$auth['user_id'];
-            $this->db->execute("UPDATE users SET {$sets} WHERE id = ?", $values);
+            $this->db->execute("UPDATE `{$this->t('users')}` SET {$sets} WHERE id = ?", $values);
         }
 
         $user = $this->users->findById((int)$auth['user_id']);
@@ -2973,7 +2980,7 @@ class MobileApiController
         }
 
         $this->db->execute(
-            "UPDATE users SET password = ? WHERE id = ?",
+            "UPDATE `{$this->t('users')}` SET password = ? WHERE id = ?",
             [password_hash($new, PASSWORD_BCRYPT, ['cost' => 12]), (int)$auth['user_id']]
         );
         $this->json(['success' => true]);
@@ -2995,9 +3002,9 @@ class MobileApiController
         try {
             $sql    = "SELECT e.*, c.name AS category_name, c.color AS category_color,
                               c.scale_min, c.scale_max, u.name AS recorded_by_name
-                       FROM tcp_progress_entries e
-                       JOIN tcp_progress_categories c ON c.id = e.category_id
-                       LEFT JOIN users u ON u.id = e.recorded_by
+                       FROM `{$this->t('tcp_progress_entries')}` e
+                       JOIN `{$this->t('tcp_progress_categories')}` c ON c.id = e.category_id
+                       LEFT JOIN `{$this->t('users')}` u ON u.id = e.recorded_by
                        WHERE e.patient_id = ?";
             $params2 = [$patientId];
             if ($dateFrom) { $sql .= " AND e.entry_date >= ?"; $params2[] = $dateFrom; }
@@ -3008,7 +3015,7 @@ class MobileApiController
 
         try {
             $categories = $this->db->fetchAll(
-                "SELECT * FROM tcp_progress_categories WHERE is_active = 1 ORDER BY sort_order ASC"
+                "SELECT * FROM `{$this->t('tcp_progress_categories')}` WHERE is_active = 1 ORDER BY sort_order ASC"
             );
         } catch (\Throwable) { $categories = []; }
 
@@ -3029,7 +3036,7 @@ class MobileApiController
 
         try {
             $this->db->execute(
-                "INSERT INTO tcp_progress_entries (patient_id, category_id, appointment_id, score, notes, recorded_by, entry_date)
+                "INSERT INTO `{$this->t('tcp_progress_entries')}` (patient_id, category_id, appointment_id, score, notes, recorded_by, entry_date)
                  VALUES (?, ?, ?, ?, ?, ?, ?)",
                 [
                     $patientId,
@@ -3053,7 +3060,7 @@ class MobileApiController
     {
         $this->cors();
         $this->requireAuth();
-        $this->db->execute("DELETE FROM tcp_progress_entries WHERE id = ?", [(int)($params['entry_id'] ?? 0)]);
+        $this->db->execute("DELETE FROM `{$this->t('tcp_progress_entries')}` WHERE id = ?", [(int)($params['entry_id'] ?? 0)]);
         $this->json(['success' => true]);
     }
 
@@ -3063,7 +3070,7 @@ class MobileApiController
         $this->cors();
         $this->requireAuth();
         try {
-            $rows = $this->db->fetchAll("SELECT * FROM tcp_progress_categories ORDER BY sort_order ASC, name ASC");
+            $rows = $this->db->fetchAll("SELECT * FROM `{$this->t('tcp_progress_categories')}` ORDER BY sort_order ASC, name ASC");
         } catch (\Throwable) { $rows = []; }
         $this->json($rows);
     }
@@ -3082,9 +3089,9 @@ class MobileApiController
 
         try {
             $sql = "SELECT f.*, ph.title AS homework_title, o.first_name, o.last_name
-                    FROM tcp_exercise_feedback f
-                    LEFT JOIN portal_homework_plans ph ON ph.id = f.homework_id
-                    LEFT JOIN owners o ON o.id = f.owner_id
+                    FROM `{$this->t('tcp_exercise_feedback')}` f
+                    LEFT JOIN `{$this->t('portal_homework_plans')}` ph ON ph.id = f.homework_id
+                    LEFT JOIN `{$this->t('owners')}` o ON o.id = f.owner_id
                     WHERE f.patient_id = ?";
             $p = [$patientId];
             if ($days > 0) { $sql .= " AND f.feedback_date >= DATE_SUB(NOW(), INTERVAL ? DAY)"; $p[] = $days; }
@@ -3098,7 +3105,7 @@ class MobileApiController
                         SUM(status='good') AS good,
                         SUM(status='ok') AS ok_count,
                         SUM(status='bad') AS bad
-                 FROM tcp_exercise_feedback WHERE patient_id = ?",
+                 FROM `{$this->t('tcp_exercise_feedback')}` WHERE patient_id = ?",
                 [$patientId]
             );
         } catch (\Throwable) { $summary = []; }
@@ -3115,10 +3122,10 @@ class MobileApiController
             $rows = $this->db->fetchAll(
                 "SELECT f.*, ph.title AS homework_title, p.name AS patient_name,
                         o.first_name, o.last_name
-                 FROM tcp_exercise_feedback f
-                 LEFT JOIN portal_homework_plans ph ON ph.id = f.homework_id
-                 JOIN patients p ON p.id = f.patient_id
-                 LEFT JOIN owners o ON o.id = f.owner_id
+                 FROM `{$this->t('tcp_exercise_feedback')}` f
+                 LEFT JOIN `{$this->t('portal_homework_plans')}` ph ON ph.id = f.homework_id
+                 JOIN `{$this->t('patients')}` p ON p.id = f.patient_id
+                 LEFT JOIN `{$this->t('owners')}` o ON o.id = f.owner_id
                  WHERE f.status = 'bad' AND f.feedback_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)
                  ORDER BY f.feedback_date DESC"
             );
@@ -3139,8 +3146,8 @@ class MobileApiController
         try {
             $rows = $this->db->fetchAll(
                 "SELECT r.*, u.name AS created_by_name
-                 FROM tcp_therapy_reports r
-                 LEFT JOIN users u ON u.id = r.created_by
+                 FROM `{$this->t('tcp_therapy_reports')}` r
+                 LEFT JOIN `{$this->t('users')}` u ON u.id = r.created_by
                  WHERE r.patient_id = ?
                  ORDER BY r.report_date DESC",
                 [$patientId]
@@ -3156,7 +3163,7 @@ class MobileApiController
         $this->requireAuth();
         $id = (int)($params['id'] ?? 0);
         try {
-            $row = $this->db->fetch("SELECT * FROM tcp_therapy_reports WHERE id = ? LIMIT 1", [$id]);
+            $row = $this->db->fetch("SELECT * FROM `{$this->t('tcp_therapy_reports')}` WHERE id = ? LIMIT 1", [$id]);
         } catch (\Throwable) { $row = null; }
         if (!$row) $this->error('Bericht nicht gefunden.', 404);
         $this->json($row);
@@ -3174,7 +3181,7 @@ class MobileApiController
 
         try {
             $this->db->execute(
-                "INSERT INTO tcp_therapy_reports
+                "INSERT INTO `{$this->t('tcp_therapy_reports')}`
                  (patient_id, title, content, diagnosis, treatment_summary, recommendations,
                   next_appointment, report_date, created_by)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -3202,7 +3209,7 @@ class MobileApiController
     {
         $this->cors();
         $this->requireAuth();
-        $this->db->execute("DELETE FROM tcp_therapy_reports WHERE id = ?", [(int)($params['id'] ?? 0)]);
+        $this->db->execute("DELETE FROM `{$this->t('tcp_therapy_reports')}` WHERE id = ?", [(int)($params['id'] ?? 0)]);
         $this->json(['success' => true]);
     }
 
@@ -3212,7 +3219,7 @@ class MobileApiController
         $this->cors();
         $this->requireAuth();
         $id  = (int)($params['id'] ?? 0);
-        $row = $this->db->fetch("SELECT patient_id FROM tcp_therapy_reports WHERE id = ? LIMIT 1", [$id]);
+        $row = $this->db->fetch("SELECT patient_id FROM `{$this->t('tcp_therapy_reports')}` WHERE id = ? LIMIT 1", [$id]);
         if (!$row) $this->error('Bericht nicht gefunden.', 404);
         $this->json(['pdf_url' => '/patienten/' . $row['patient_id'] . '/berichte/' . $id . '/download']);
     }
@@ -3230,7 +3237,7 @@ class MobileApiController
         $search   = trim($_GET['search']   ?? '');
 
         try {
-            $sql  = "SELECT * FROM tcp_exercise_library WHERE 1=1";
+            $sql  = "SELECT * FROM `{$this->t('tcp_exercise_library')}` WHERE 1=1";
             $bind = [];
             if ($category) { $sql .= " AND category = ?"; $bind[] = $category; }
             if ($search)   { $sql .= " AND (title LIKE ? OR description LIKE ?)"; $bind[] = "%{$search}%"; $bind[] = "%{$search}%"; }
@@ -3254,7 +3261,7 @@ class MobileApiController
         $this->requireAuth();
         $id  = (int)($params['id'] ?? 0);
         try {
-            $row = $this->db->fetch("SELECT * FROM tcp_exercise_library WHERE id = ? LIMIT 1", [$id]);
+            $row = $this->db->fetch("SELECT * FROM `{$this->t('tcp_exercise_library')}` WHERE id = ? LIMIT 1", [$id]);
         } catch (\Throwable) { $row = null; }
         if (!$row) $this->error('Übung nicht gefunden.', 404);
         if (!empty($row['image']))      $row['image_url'] = '/storage/uploads/tcp/' . basename($row['image']);
@@ -3272,7 +3279,7 @@ class MobileApiController
 
         try {
             $this->db->execute(
-                "INSERT INTO tcp_exercise_library
+                "INSERT INTO `{$this->t('tcp_exercise_library')}`
                  (title, description, category, duration_minutes, repetitions, video_url, instructions,
                   contraindications, equipment, difficulty, is_active, created_by, created_at)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, NOW())",
@@ -3315,7 +3322,7 @@ class MobileApiController
             $sets   = implode(', ', array_map(fn($k) => "`{$k}` = ?", array_keys($fields)));
             $values = array_values($fields);
             $values[] = $id;
-            $this->db->execute("UPDATE tcp_exercise_library SET {$sets} WHERE id = ?", $values);
+            $this->db->execute("UPDATE `{$this->t('tcp_exercise_library')}` SET {$sets} WHERE id = ?", $values);
         }
         $this->json(['success' => true]);
     }
@@ -3325,7 +3332,7 @@ class MobileApiController
     {
         $this->cors();
         $this->requireAuth();
-        $this->db->execute("DELETE FROM tcp_exercise_library WHERE id = ?", [(int)($params['id'] ?? 0)]);
+        $this->db->execute("DELETE FROM `{$this->t('tcp_exercise_library')}` WHERE id = ?", [(int)($params['id'] ?? 0)]);
         $this->json(['success' => true]);
     }
 
@@ -3342,8 +3349,8 @@ class MobileApiController
         try {
             $rows = $this->db->fetchAll(
                 "SELECT n.*, u.name AS recorded_by_name
-                 FROM tcp_natural_therapy n
-                 LEFT JOIN users u ON u.id = n.recorded_by
+                 FROM `{$this->t('tcp_natural_therapy')}` n
+                 LEFT JOIN `{$this->t('users')}` u ON u.id = n.recorded_by
                  WHERE n.patient_id = ?
                  ORDER BY n.session_date DESC",
                 [$patientId]
@@ -3364,7 +3371,7 @@ class MobileApiController
 
         try {
             $this->db->execute(
-                "INSERT INTO tcp_natural_therapy
+                "INSERT INTO `{$this->t('tcp_natural_therapy')}`
                  (patient_id, therapy_type, products_used, dosage, application_method,
                   response, notes, session_date, recorded_by)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -3404,7 +3411,7 @@ class MobileApiController
             $sets   = implode(', ', array_map(fn($k) => "`{$k}` = ?", array_keys($fields)));
             $values = array_values($fields);
             $values[] = $id;
-            $this->db->execute("UPDATE tcp_natural_therapy SET {$sets} WHERE id = ?", $values);
+            $this->db->execute("UPDATE `{$this->t('tcp_natural_therapy')}` SET {$sets} WHERE id = ?", $values);
         }
         $this->json(['success' => true]);
     }
@@ -3414,7 +3421,7 @@ class MobileApiController
     {
         $this->cors();
         $this->requireAuth();
-        $this->db->execute("DELETE FROM tcp_natural_therapy WHERE id = ?", [(int)($params['id'] ?? 0)]);
+        $this->db->execute("DELETE FROM `{$this->t('tcp_natural_therapy')}` WHERE id = ?", [(int)($params['id'] ?? 0)]);
         $this->json(['success' => true]);
     }
 
@@ -3429,7 +3436,7 @@ class MobileApiController
         $this->requireAuth();
         try {
             $rows = $this->db->fetchAll(
-                "SELECT * FROM tcp_reminder_templates WHERE is_active = 1 ORDER BY type ASC, name ASC"
+                "SELECT * FROM `{$this->t('tcp_reminder_templates')}` WHERE is_active = 1 ORDER BY type ASC, name ASC"
             );
         } catch (\Throwable) { $rows = []; }
         $this->json($rows);
@@ -3444,8 +3451,8 @@ class MobileApiController
         try {
             $rows = $this->db->fetchAll(
                 "SELECT q.*, t.name AS template_name
-                 FROM tcp_reminder_queue q
-                 LEFT JOIN tcp_reminder_templates t ON t.id = q.template_id
+                 FROM `{$this->t('tcp_reminder_queue')}` q
+                 LEFT JOIN `{$this->t('tcp_reminder_templates')}` t ON t.id = q.template_id
                  WHERE q.patient_id = ?
                  ORDER BY q.send_at ASC",
                 [$patientId]
@@ -3468,7 +3475,7 @@ class MobileApiController
 
         try {
             $this->db->execute(
-                "INSERT INTO tcp_reminder_queue
+                "INSERT INTO `{$this->t('tcp_reminder_queue')}`
                  (template_id, type, patient_id, owner_id, appointment_id, subject, body, send_at, status)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')",
                 [
@@ -3508,9 +3515,9 @@ class MobileApiController
                             CONCAT(o.first_name,' ',o.last_name) AS owner_name,
                             o.email AS owner_email,
                             p.name AS patient_name
-                     FROM invoices i
-                     LEFT JOIN owners o ON o.id = i.owner_id
-                     LEFT JOIN patients p ON p.id = i.patient_id
+                     FROM `{$this->t('invoices')}` i
+                     LEFT JOIN `{$this->t('owners')}` o ON o.id = i.owner_id
+                     LEFT JOIN `{$this->t('patients')}` p ON p.id = i.patient_id
                      WHERE i.issue_date >= ? AND i.issue_date <= ?";
             $bind = [$from, $to];
             if ($status) { $sql .= " AND i.status = ?"; $bind[] = $status; }
@@ -3527,7 +3534,7 @@ class MobileApiController
                     SUM(total_net) AS sum_net,
                     SUM(total_tax) AS sum_tax,
                     SUM(total_gross) AS sum_gross
-                 FROM invoices
+                 FROM `{$this->t('invoices')}`
                  WHERE issue_date >= ? AND issue_date <= ?",
                 [$from, $to]
             );
@@ -3547,19 +3554,19 @@ class MobileApiController
 
         try {
             $existing = $this->db->fetchColumn(
-                "SELECT finalized_at FROM invoices WHERE id = ?", [$id]
+                "SELECT finalized_at FROM `{$this->t('invoices')}` WHERE id = ?", [$id]
             );
             if ($existing) $this->error('Rechnung ist bereits finalisiert.', 409);
 
             $hash = hash('sha256', json_encode($invoice));
             $this->db->execute(
-                "UPDATE invoices SET finalized_at = NOW(), gobd_hash = ? WHERE id = ?",
+                "UPDATE `{$this->t('invoices')}` SET finalized_at = NOW(), gobd_hash = ? WHERE id = ?",
                 [$hash, $id]
             );
 
             try {
                 $this->db->execute(
-                    "INSERT INTO gobd_audit_log (invoice_id, invoice_number, action, user_id, meta)
+                    "INSERT INTO `{$this->t('gobd_audit_log')}` (invoice_id, invoice_number, action, user_id, meta)
                      VALUES (?, ?, 'finalized', ?, ?)",
                     [$id, $invoice['invoice_number'] ?? '', null, json_encode(['hash' => $hash])]
                 );
@@ -3587,12 +3594,12 @@ class MobileApiController
 
         try {
             $this->db->execute(
-                "UPDATE invoices SET status = 'cancelled', cancelled_at = NOW(), cancel_reason = ? WHERE id = ?",
+                "UPDATE `{$this->t('invoices')}` SET status = 'cancelled', cancelled_at = NOW(), cancel_reason = ? WHERE id = ?",
                 [$reason, $id]
             );
             try {
                 $this->db->execute(
-                    "INSERT INTO gobd_audit_log (invoice_id, invoice_number, action, user_id, meta)
+                    "INSERT INTO `{$this->t('gobd_audit_log')}` (invoice_id, invoice_number, action, user_id, meta)
                      VALUES (?, ?, 'cancelled', ?, ?)",
                     [$id, $invoice['invoice_number'] ?? '', $auth['user_id'] ?? null, json_encode(['reason' => $reason])]
                 );
@@ -3613,9 +3620,9 @@ class MobileApiController
         try {
             $rows = $this->db->fetchAll(
                 "SELECT a.*, i.invoice_number, CONCAT(o.first_name,' ',o.last_name) AS owner_name
-                 FROM gobd_audit_log a
-                 LEFT JOIN invoices i ON i.id = a.invoice_id
-                 LEFT JOIN owners o ON o.id = i.owner_id
+                 FROM `{$this->t('gobd_audit_log')}` a
+                 LEFT JOIN `{$this->t('invoices')}` i ON i.id = a.invoice_id
+                 LEFT JOIN `{$this->t('owners')}` o ON o.id = i.owner_id
                  ORDER BY a.created_at DESC LIMIT ?",
                 [$limit]
             );
@@ -3935,7 +3942,7 @@ class MobileApiController
 
         /* Google Calendar */
         try {
-            $gc = $this->db->fetch("SELECT sync_enabled, last_sync_at FROM google_calendar_connections LIMIT 1");
+            $gc = $this->db->fetch("SELECT sync_enabled, last_sync_at FROM `{$this->t('google_calendar_connections')}` LIMIT 1");
             $status['checks']['google_calendar'] = $gc ? ['enabled' => (bool)$gc['sync_enabled'], 'last_sync' => $gc['last_sync_at']] : null;
         } catch (\Throwable) {
             $status['checks']['google_calendar'] = null;
@@ -3943,7 +3950,7 @@ class MobileApiController
 
         /* TCP reminder queue */
         try {
-            $pending = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM tcp_reminder_queue WHERE status = 'pending'");
+            $pending = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM `{$this->t('tcp_reminder_queue')}` WHERE status = 'pending'");
             $status['checks']['tcp_reminder_queue_pending'] = $pending;
         } catch (\Throwable) {
             $status['checks']['tcp_reminder_queue_pending'] = null;
@@ -3951,7 +3958,7 @@ class MobileApiController
 
         /* Overdue invoices */
         try {
-            $overdue = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM invoices WHERE status = 'overdue'");
+            $overdue = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM `{$this->t('invoices')}` WHERE status = 'overdue'");
             $status['checks']['overdue_invoices'] = $overdue;
         } catch (\Throwable) {
             $status['checks']['overdue_invoices'] = null;
@@ -3959,7 +3966,7 @@ class MobileApiController
 
         /* Portal */
         try {
-            $portalUsers = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM owner_portal_users WHERE is_active = 1");
+            $portalUsers = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM `{$this->t('owner_portal_users')}` WHERE is_active = 1");
             $status['checks']['portal_active_users'] = $portalUsers;
         } catch (\Throwable) {
             $status['checks']['portal_active_users'] = null;
@@ -3977,7 +3984,7 @@ class MobileApiController
 
         try {
             $rows = $this->db->fetchAll(
-                "SELECT * FROM cron_log ORDER BY started_at DESC LIMIT 50"
+                "SELECT * FROM `{$this->t('cron_log')}` ORDER BY started_at DESC LIMIT 50"
             );
         } catch (\Throwable) { $rows = []; }
 
@@ -4001,7 +4008,7 @@ class MobileApiController
 
         try {
             $user = $this->db->fetch(
-                "SELECT * FROM owner_portal_users WHERE email = ? LIMIT 1",
+                "SELECT * FROM `{$this->t('owner_portal_users')}` WHERE email = ? LIMIT 1",
                 [$email]
             );
         } catch (\Throwable $e) {
@@ -4019,11 +4026,11 @@ class MobileApiController
 
         try {
             $this->db->execute(
-                "UPDATE owner_portal_users SET last_login = NOW() WHERE id = ?",
+                "UPDATE `{$this->t('owner_portal_users')}` SET last_login = NOW() WHERE id = ?",
                 [(int)$user['id']]
             );
             $this->db->execute(
-                "INSERT INTO owner_portal_tokens (user_id, token, expires_at, created_at)
+                "INSERT INTO `{$this->t('owner_portal_tokens')}` (user_id, token, expires_at, created_at)
                  VALUES (?, ?, ?, NOW())",
                 [(int)$user['id'], hash('sha256', $token), $expires]
             );
@@ -4031,7 +4038,7 @@ class MobileApiController
             /* Fallback: store token in mobile_api_tokens table */
             try {
                 $this->db->execute(
-                    "INSERT INTO mobile_api_tokens (user_id, token, name, expires_at, created_at)
+                    "INSERT INTO `{$this->t('mobile_api_tokens')}` (user_id, token, name, expires_at, created_at)
                      VALUES (?, ?, 'portal_owner', ?, NOW())",
                     [(int)$user['id'], hash('sha256', $token), $expires]
                 );
@@ -4059,10 +4066,10 @@ class MobileApiController
         if ($token) {
             $hashed = hash('sha256', $token);
             try {
-                $this->db->execute("DELETE FROM owner_portal_tokens WHERE token = ?", [$hashed]);
+                $this->db->execute("DELETE FROM `{$this->t('owner_portal_tokens')}` WHERE token = ?", [$hashed]);
             } catch (\Throwable) {
                 try {
-                    $this->db->execute("DELETE FROM mobile_api_tokens WHERE token = ?", [$hashed]);
+                    $this->db->execute("DELETE FROM `{$this->t('mobile_api_tokens')}` WHERE token = ?", [$hashed]);
                 } catch (\Throwable) {}
             }
         }
@@ -4080,7 +4087,7 @@ class MobileApiController
 
         try {
             $user = $this->db->fetch(
-                "SELECT * FROM owner_portal_users WHERE invite_token = ? LIMIT 1",
+                "SELECT * FROM `{$this->t('owner_portal_users')}` WHERE invite_token = ? LIMIT 1",
                 [$inviteToken]
             );
         } catch (\Throwable $e) {
@@ -4100,7 +4107,7 @@ class MobileApiController
         if ($password !== $confirm) $this->error('Passwörter stimmen nicht überein.');
 
         $this->db->execute(
-            "UPDATE owner_portal_users SET
+            "UPDATE `{$this->t('owner_portal_users')}` SET
                 password_hash  = ?,
                 invite_used_at = NOW(),
                 invite_token   = NULL,
@@ -4128,8 +4135,8 @@ class MobileApiController
             $row = $this->db->fetch(
                 "SELECT t.*, u.owner_id, u.email, u.is_active,
                         u.first_name, u.last_name, u.id AS portal_user_id
-                 FROM owner_portal_tokens t
-                 JOIN owner_portal_users u ON u.id = t.user_id
+                 FROM `{$this->t('owner_portal_tokens')}` t
+                 JOIN `{$this->t('owner_portal_users')}` u ON u.id = t.user_id
                  WHERE t.token = ? AND (t.expires_at IS NULL OR t.expires_at > NOW()) LIMIT 1",
                 [$hashed]
             );
@@ -4139,13 +4146,13 @@ class MobileApiController
             /* Fallback: shared mobile_api_tokens (portal users stored there) */
             try {
                 $tok = $this->db->fetch(
-                    "SELECT * FROM mobile_api_tokens WHERE token = ?
+                    "SELECT * FROM `{$this->t('mobile_api_tokens')}` WHERE token = ?
                      AND (expires_at IS NULL OR expires_at > NOW()) LIMIT 1",
                     [$hashed]
                 );
                 if ($tok) {
                     $u = $this->db->fetch(
-                        "SELECT * FROM owner_portal_users WHERE id = ? LIMIT 1",
+                        "SELECT * FROM `{$this->t('owner_portal_users')}` WHERE id = ? LIMIT 1",
                         [(int)$tok['user_id']]
                     );
                     if ($u) $row = array_merge($tok, ['owner_id' => $u['owner_id'],
@@ -4173,8 +4180,8 @@ class MobileApiController
 
         try {
             $pets = $this->db->fetchAll(
-                "SELECT p.*, (SELECT filename FROM patient_timeline WHERE patient_id = p.id AND type = 'photo' ORDER BY created_at DESC LIMIT 1) AS latest_photo
-                 FROM patients p WHERE p.owner_id = ? AND p.status != 'archiviert' ORDER BY p.name ASC",
+                "SELECT p.*, (SELECT filename FROM `{$this->t('patient_timeline')}` WHERE patient_id = p.id AND type = 'photo' ORDER BY created_at DESC LIMIT 1) AS latest_photo
+                 FROM `{$this->t('patients')}` p WHERE p.owner_id = ? AND p.status != 'archiviert' ORDER BY p.name ASC",
                 [$ownerId]
             );
         } catch (\Throwable) { $pets = []; }
@@ -4187,7 +4194,7 @@ class MobileApiController
         try {
             $invoices = $this->db->fetchAll(
                 "SELECT id, invoice_number, issue_date, due_date, total_gross, status
-                 FROM invoices WHERE owner_id = ? ORDER BY issue_date DESC LIMIT 10",
+                 FROM `{$this->t('invoices')}` WHERE owner_id = ? ORDER BY issue_date DESC LIMIT 10",
                 [$ownerId]
             );
         } catch (\Throwable) { $invoices = []; }
@@ -4196,9 +4203,9 @@ class MobileApiController
             $appointments = $this->db->fetchAll(
                 "SELECT a.id, a.title, a.start_at, a.end_at, a.status,
                         p.name AS patient_name, tt.name AS treatment_name
-                 FROM appointments a
-                 LEFT JOIN patients p ON p.id = a.patient_id
-                 LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+                 FROM `{$this->t('appointments')}` a
+                 LEFT JOIN `{$this->t('patients')}` p ON p.id = a.patient_id
+                 LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
                  WHERE a.owner_id = ? AND a.start_at >= NOW()
                  ORDER BY a.start_at ASC LIMIT 5",
                 [$ownerId]
@@ -4207,7 +4214,7 @@ class MobileApiController
 
         try {
             $unread = (int)$this->db->fetchColumn(
-                "SELECT COUNT(*) FROM messaging_threads
+                "SELECT COUNT(*) FROM `{$this->t('messaging_threads')}`
                  WHERE owner_id = ? AND owner_read_at IS NULL AND last_message_by != 'owner'",
                 [$ownerId]
             );
@@ -4243,7 +4250,7 @@ class MobileApiController
 
         try {
             $pets = $this->db->fetchAll(
-                "SELECT * FROM patients WHERE owner_id = ? AND status != 'archiviert' ORDER BY name ASC",
+                "SELECT * FROM `{$this->t('patients')}` WHERE owner_id = ? AND status != 'archiviert' ORDER BY name ASC",
                 [$ownerId]
             );
         } catch (\Throwable) { $pets = []; }
@@ -4266,7 +4273,7 @@ class MobileApiController
 
         try {
             $pet = $this->db->fetch(
-                "SELECT * FROM patients WHERE id = ? AND owner_id = ? LIMIT 1",
+                "SELECT * FROM `{$this->t('patients')}` WHERE id = ? AND owner_id = ? LIMIT 1",
                 [$petId, $ownerId]
             );
         } catch (\Throwable) { $pet = null; }
@@ -4278,7 +4285,7 @@ class MobileApiController
         try {
             $timeline = $this->db->fetchAll(
                 "SELECT id, type, title, content, file_path, created_at
-                 FROM patient_timeline
+                 FROM `{$this->t('patient_timeline')}`
                  WHERE patient_id = ? AND (is_private IS NULL OR is_private = 0)
                  ORDER BY created_at DESC",
                 [$petId]
@@ -4296,7 +4303,7 @@ class MobileApiController
         /* Exercises */
         try {
             $exercises = $this->db->fetchAll(
-                "SELECT * FROM portal_exercises WHERE patient_id = ? AND is_active = 1 ORDER BY sort_order ASC",
+                "SELECT * FROM `{$this->t('portal_exercises')}` WHERE patient_id = ? AND is_active = 1 ORDER BY sort_order ASC",
                 [$petId]
             );
         } catch (\Throwable) { $exercises = []; }
@@ -4310,7 +4317,7 @@ class MobileApiController
             $homeworkEnabled = ($this->settings->get('portal_show_homework', '1') === '1');
             $plans = $homeworkEnabled ? $this->db->fetchAll(
                 "SELECT id, plan_date, therapist_name, status, pdf_sent_at
-                 FROM portal_homework_plans WHERE patient_id = ? AND owner_id = ?
+                 FROM `{$this->t('portal_homework_plans')}` WHERE patient_id = ? AND owner_id = ?
                  ORDER BY plan_date DESC",
                 [$petId, $ownerId]
             ) : [];
@@ -4323,33 +4330,33 @@ class MobileApiController
         $tcpFeedback = null;
         try {
             $vis = $this->db->fetch(
-                "SELECT * FROM tcp_portal_visibility WHERE patient_id = ? LIMIT 1", [$petId]
+                "SELECT * FROM `{$this->t('tcp_portal_visibility')}` WHERE patient_id = ? LIMIT 1", [$petId]
             );
             if ($vis) {
                 if (!empty($vis['show_progress'])) {
                     $tcpProgress = $this->db->fetchAll(
                         "SELECT e.*, c.name AS category_name, c.color AS category_color, c.scale_min, c.scale_max
-                         FROM tcp_progress_entries e
-                         JOIN tcp_progress_categories c ON c.id = e.category_id
+                         FROM `{$this->t('tcp_progress_entries')}` e
+                         JOIN `{$this->t('tcp_progress_categories')}` c ON c.id = e.category_id
                          WHERE e.patient_id = ? ORDER BY e.entry_date DESC LIMIT 20",
                         [$petId]
                     );
                 }
                 if (!empty($vis['show_natural'])) {
                     $tcpNatural = $this->db->fetchAll(
-                        "SELECT * FROM tcp_natural_therapy WHERE patient_id = ? AND is_public = 1 ORDER BY session_date DESC",
+                        "SELECT * FROM `{$this->t('tcp_natural_therapy')}` WHERE patient_id = ? AND is_public = 1 ORDER BY session_date DESC",
                         [$petId]
                     );
                 }
                 if (!empty($vis['show_reports'])) {
                     $tcpReports = $this->db->fetchAll(
-                        "SELECT id, title, report_date, filename FROM tcp_therapy_reports
+                        "SELECT id, title, report_date, filename FROM `{$this->t('tcp_therapy_reports')}`
                          WHERE patient_id = ? AND filename IS NOT NULL ORDER BY report_date DESC",
                         [$petId]
                     );
                 }
                 $tcpFeedback = $this->db->fetchAll(
-                    "SELECT * FROM tcp_exercise_feedback WHERE patient_id = ?
+                    "SELECT * FROM `{$this->t('tcp_exercise_feedback')}` WHERE patient_id = ?
                      AND feedback_date >= DATE_SUB(NOW(), INTERVAL 30 DAY) ORDER BY feedback_date DESC",
                     [$petId]
                 );
@@ -4377,7 +4384,7 @@ class MobileApiController
         $petId   = (int)($params['id'] ?? 0);
 
         $pet = $this->db->fetch(
-            "SELECT id FROM patients WHERE id = ? AND owner_id = ? LIMIT 1",
+            "SELECT id FROM `{$this->t('patients')}` WHERE id = ? AND owner_id = ? LIMIT 1",
             [$petId, $ownerId]
         );
         if (!$pet) $this->error('Tier nicht gefunden oder kein Zugriff.', 404);
@@ -4408,10 +4415,10 @@ class MobileApiController
             $sets   = implode(', ', array_map(fn($k) => "`{$k}` = ?", array_keys($fields)));
             $values = array_values($fields);
             $values[] = $petId;
-            $this->db->execute("UPDATE patients SET {$sets}, updated_at = NOW() WHERE id = ?", $values);
+            $this->db->execute("UPDATE `{$this->t('patients')}` SET {$sets}, updated_at = NOW() WHERE id = ?", $values);
         }
 
-        $updated = $this->db->fetch("SELECT * FROM patients WHERE id = ? LIMIT 1", [$petId]);
+        $updated = $this->db->fetch("SELECT * FROM `{$this->t('patients')}` WHERE id = ? LIMIT 1", [$petId]);
         $updated['photo_url'] = $this->resolvePatientPhotoUrl($updated);
         $this->json($updated);
     }
@@ -4430,8 +4437,8 @@ class MobileApiController
         try {
             $invoices = $this->db->fetchAll(
                 "SELECT i.*, p.name AS patient_name
-                 FROM invoices i
-                 LEFT JOIN patients p ON p.id = i.patient_id
+                 FROM `{$this->t('invoices')}` i
+                 LEFT JOIN `{$this->t('patients')}` p ON p.id = i.patient_id
                  WHERE i.owner_id = ?
                  ORDER BY i.issue_date DESC",
                 [$ownerId]
@@ -4456,7 +4463,7 @@ class MobileApiController
 
         try {
             $inv = $this->db->fetch(
-                "SELECT id FROM invoices WHERE id = ? AND owner_id = ? LIMIT 1",
+                "SELECT id FROM `{$this->t('invoices')}` WHERE id = ? AND owner_id = ? LIMIT 1",
                 [$invoiceId, $ownerId]
             );
         } catch (\Throwable) { $inv = null; }
@@ -4481,9 +4488,9 @@ class MobileApiController
                 "SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.description, a.notes,
                         p.name AS patient_name,
                         tt.name AS treatment_name
-                 FROM appointments a
-                 LEFT JOIN patients p ON p.id = a.patient_id
-                 LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+                 FROM `{$this->t('appointments')}` a
+                 LEFT JOIN `{$this->t('patients')}` p ON p.id = a.patient_id
+                 LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
                  WHERE a.owner_id = ?
                  ORDER BY a.start_at DESC",
                 [$ownerId]
@@ -4509,7 +4516,7 @@ class MobileApiController
 
         try {
             $count = (int)$this->db->fetchColumn(
-                "SELECT COUNT(*) FROM messaging_threads
+                "SELECT COUNT(*) FROM `{$this->t('messaging_threads')}`
                  WHERE owner_id = ? AND owner_read_at IS NULL AND last_message_by != 'owner'",
                 [$ownerId]
             );
@@ -4528,9 +4535,9 @@ class MobileApiController
         try {
             $threads = $this->db->fetchAll(
                 "SELECT t.*,
-                        (SELECT COUNT(*) FROM messaging_messages m
+                        (SELECT COUNT(*) FROM `{$this->t('messaging_messages')}` m
                          WHERE m.thread_id = t.id AND m.sender_type = 'admin' AND m.created_at > COALESCE(t.owner_read_at, '1970-01-01')) AS unread_count
-                 FROM messaging_threads t
+                 FROM `{$this->t('messaging_threads')}` t
                  WHERE t.owner_id = ?
                  ORDER BY t.updated_at DESC",
                 [$ownerId]
@@ -4550,7 +4557,7 @@ class MobileApiController
 
         try {
             $thread = $this->db->fetch(
-                "SELECT * FROM messaging_threads WHERE id = ? AND owner_id = ? LIMIT 1",
+                "SELECT * FROM `{$this->t('messaging_threads')}` WHERE id = ? AND owner_id = ? LIMIT 1",
                 [$threadId, $ownerId]
             );
         } catch (\Throwable) { $thread = null; }
@@ -4559,14 +4566,14 @@ class MobileApiController
         /* Mark as read by owner */
         try {
             $this->db->execute(
-                "UPDATE messaging_threads SET owner_read_at = NOW() WHERE id = ?",
+                "UPDATE `{$this->t('messaging_threads')}` SET owner_read_at = NOW() WHERE id = ?",
                 [$threadId]
             );
         } catch (\Throwable) {}
 
         try {
             $messages = $this->db->fetchAll(
-                "SELECT * FROM messaging_messages WHERE thread_id = ? ORDER BY created_at ASC",
+                "SELECT * FROM `{$this->t('messaging_messages')}` WHERE thread_id = ? ORDER BY created_at ASC",
                 [$threadId]
             );
         } catch (\Throwable) { $messages = []; }
@@ -4588,7 +4595,7 @@ class MobileApiController
 
         try {
             $thread = $this->db->fetch(
-                "SELECT * FROM messaging_threads WHERE id = ? AND owner_id = ? LIMIT 1",
+                "SELECT * FROM `{$this->t('messaging_threads')}` WHERE id = ? AND owner_id = ? LIMIT 1",
                 [$threadId, $ownerId]
             );
         } catch (\Throwable) { $thread = null; }
@@ -4596,14 +4603,14 @@ class MobileApiController
 
         try {
             $this->db->execute(
-                "INSERT INTO messaging_messages (thread_id, sender_type, sender_id, body, created_at)
+                "INSERT INTO `{$this->t('messaging_messages')}` (thread_id, sender_type, sender_id, body, created_at)
                  VALUES (?, 'owner', ?, ?, NOW())",
                 [$threadId, (int)$pUser['portal_user_id'], $body]
             );
             $msgId = (int)$this->db->lastInsertId();
 
             $this->db->execute(
-                "UPDATE messaging_threads SET status = 'open', last_message_by = 'owner', updated_at = NOW() WHERE id = ?",
+                "UPDATE `{$this->t('messaging_threads')}` SET status = 'open', last_message_by = 'owner', updated_at = NOW() WHERE id = ?",
                 [$threadId]
             );
         } catch (\Throwable $e) {
@@ -4634,14 +4641,14 @@ class MobileApiController
 
         try {
             $this->db->execute(
-                "INSERT INTO messaging_threads (owner_id, subject, status, last_message_by, created_at, updated_at)
+                "INSERT INTO `{$this->t('messaging_threads')}` (owner_id, subject, status, last_message_by, created_at, updated_at)
                  VALUES (?, ?, 'open', 'owner', NOW(), NOW())",
                 [$ownerId, $subject]
             );
             $threadId = (int)$this->db->lastInsertId();
 
             $this->db->execute(
-                "INSERT INTO messaging_messages (thread_id, sender_type, sender_id, body, created_at)
+                "INSERT INTO `{$this->t('messaging_messages')}` (thread_id, sender_type, sender_id, body, created_at)
                  VALUES (?, 'owner', ?, ?, NOW())",
                 [$threadId, (int)$pUser['portal_user_id'], $body]
             );
@@ -4664,12 +4671,12 @@ class MobileApiController
         $ownerId = (int)$pUser['owner_id'];
 
         try {
-            $owner = $this->db->fetch("SELECT * FROM owners WHERE id = ? LIMIT 1", [$ownerId]);
+            $owner = $this->db->fetch("SELECT * FROM `{$this->t('owners')}` WHERE id = ? LIMIT 1", [$ownerId]);
         } catch (\Throwable) { $owner = null; }
 
         try {
             $portalUser = $this->db->fetch(
-                "SELECT id, email, first_name, last_name, is_active, last_login FROM owner_portal_users WHERE id = ? LIMIT 1",
+                "SELECT id, email, first_name, last_name, is_active, last_login FROM `{$this->t('owner_portal_users')}` WHERE id = ? LIMIT 1",
                 [(int)$pUser['portal_user_id']]
             );
         } catch (\Throwable) { $portalUser = null; }
@@ -4693,7 +4700,7 @@ class MobileApiController
 
         try {
             $user = $this->db->fetch(
-                "SELECT password_hash FROM owner_portal_users WHERE id = ? LIMIT 1",
+                "SELECT password_hash FROM `{$this->t('owner_portal_users')}` WHERE id = ? LIMIT 1",
                 [(int)$pUser['portal_user_id']]
             );
         } catch (\Throwable) { $user = null; }
@@ -4703,7 +4710,7 @@ class MobileApiController
         }
 
         $this->db->execute(
-            "UPDATE owner_portal_users SET password_hash = ? WHERE id = ?",
+            "UPDATE `{$this->t('owner_portal_users')}` SET password_hash = ? WHERE id = ?",
             [password_hash($new, PASSWORD_BCRYPT, ['cost' => 12]), (int)$pUser['portal_user_id']]
         );
 
@@ -4769,7 +4776,7 @@ class MobileApiController
         try {
             $cols = implode(', ', array_map(fn($k) => "`{$k}`", array_keys($row)));
             $phld = implode(', ', array_fill(0, count($row), '?'));
-            $this->db->execute("INSERT INTO patient_intake_submissions ({$cols}) VALUES ({$phld})", array_values($row));
+            $this->db->execute("INSERT INTO `{$this->t('patient_intake_submissions')}` ({$cols}) VALUES ({$phld})", array_values($row));
             $id = (int)$this->db->lastInsertId();
         } catch (\Throwable $e) {
             $this->error('Fehler beim Speichern: ' . $e->getMessage(), 500);
@@ -4790,7 +4797,7 @@ class MobileApiController
         $offset = ($page - 1) * $limit;
 
         try {
-            $sql  = "SELECT * FROM patient_intake_submissions";
+            $sql  = "SELECT * FROM `{$this->t('patient_intake_submissions')}`";
             $bind = [];
             if ($status) { $sql .= " WHERE status = ?"; $bind[] = $status; }
             $sql .= " ORDER BY created_at DESC LIMIT ? OFFSET ?";
@@ -4801,10 +4808,10 @@ class MobileApiController
 
         try {
             $counts = [
-                'neu'            => (int)$this->db->fetchColumn("SELECT COUNT(*) FROM patient_intake_submissions WHERE status = 'neu'"),
-                'in_bearbeitung' => (int)$this->db->fetchColumn("SELECT COUNT(*) FROM patient_intake_submissions WHERE status = 'in_bearbeitung'"),
-                'uebernommen'    => (int)$this->db->fetchColumn("SELECT COUNT(*) FROM patient_intake_submissions WHERE status = 'uebernommen'"),
-                'abgelehnt'      => (int)$this->db->fetchColumn("SELECT COUNT(*) FROM patient_intake_submissions WHERE status = 'abgelehnt'"),
+                'neu'            => (int)$this->db->fetchColumn("SELECT COUNT(*) FROM `{$this->t('patient_intake_submissions')}` WHERE status = 'neu'"),
+                'in_bearbeitung' => (int)$this->db->fetchColumn("SELECT COUNT(*) FROM `{$this->t('patient_intake_submissions')}` WHERE status = 'in_bearbeitung'"),
+                'uebernommen'    => (int)$this->db->fetchColumn("SELECT COUNT(*) FROM `{$this->t('patient_intake_submissions')}` WHERE status = 'uebernommen'"),
+                'abgelehnt'      => (int)$this->db->fetchColumn("SELECT COUNT(*) FROM `{$this->t('patient_intake_submissions')}` WHERE status = 'abgelehnt'"),
             ];
         } catch (\Throwable) { $counts = []; }
 
@@ -4819,14 +4826,14 @@ class MobileApiController
         $id = (int)($params['id'] ?? 0);
 
         try {
-            $row = $this->db->fetch("SELECT * FROM patient_intake_submissions WHERE id = ? LIMIT 1", [$id]);
+            $row = $this->db->fetch("SELECT * FROM `{$this->t('patient_intake_submissions')}` WHERE id = ? LIMIT 1", [$id]);
         } catch (\Throwable) { $row = null; }
         if (!$row) $this->error('Anmeldung nicht gefunden.', 404);
 
         /* Auto-mark in_bearbeitung when opened */
         if ($row['status'] === 'neu') {
             try {
-                $this->db->execute("UPDATE patient_intake_submissions SET status = 'in_bearbeitung', updated_at = NOW() WHERE id = ?", [$id]);
+                $this->db->execute("UPDATE `{$this->t('patient_intake_submissions')}` SET status = 'in_bearbeitung', updated_at = NOW() WHERE id = ?", [$id]);
                 $row['status'] = 'in_bearbeitung';
             } catch (\Throwable) {}
         }
@@ -4842,19 +4849,19 @@ class MobileApiController
         $id = (int)($params['id'] ?? 0);
 
         try {
-            $sub = $this->db->fetch("SELECT * FROM patient_intake_submissions WHERE id = ? LIMIT 1", [$id]);
+            $sub = $this->db->fetch("SELECT * FROM `{$this->t('patient_intake_submissions')}` WHERE id = ? LIMIT 1", [$id]);
         } catch (\Throwable) { $sub = null; }
         if (!$sub) $this->error('Anmeldung nicht gefunden.', 404);
         if ($sub['status'] === 'uebernommen') $this->error('Bereits übernommen.', 409);
 
         try {
             /* Find or create owner */
-            $existing = $this->db->fetch("SELECT id FROM owners WHERE email = ? LIMIT 1", [$sub['owner_email']]);
+            $existing = $this->db->fetch("SELECT id FROM `{$this->t('owners')}` WHERE email = ? LIMIT 1", [$sub['owner_email']]);
             if ($existing) {
                 $ownerId = (int)$existing['id'];
             } else {
                 $this->db->execute(
-                    "INSERT INTO owners (first_name, last_name, email, phone, street, zip, city, created_at, updated_at)
+                    "INSERT INTO `{$this->t('owners')}` (first_name, last_name, email, phone, street, zip, city, created_at, updated_at)
                      VALUES (?,?,?,?,?,?,?,NOW(),NOW())",
                     [$sub['owner_first_name'], $sub['owner_last_name'], $sub['owner_email'],
                      $sub['owner_phone'], $sub['owner_street'], $sub['owner_zip'], $sub['owner_city']]
@@ -4866,7 +4873,7 @@ class MobileApiController
             $gender = in_array($sub['patient_gender'] ?? '', $allowedGenders, true) ? $sub['patient_gender'] : 'unbekannt';
 
             $this->db->execute(
-                "INSERT INTO patients (name, species, breed, gender, birth_date, color, chip_number, owner_id, status, created_at, updated_at)
+                "INSERT INTO `{$this->t('patients')}` (name, species, breed, gender, birth_date, color, chip_number, owner_id, status, created_at, updated_at)
                  VALUES (?,?,?,?,?,?,?,?,'aktiv',NOW(),NOW())",
                 [$sub['patient_name'], $sub['patient_species'], $sub['patient_breed'], $gender,
                  $sub['patient_birth_date'] ?: null, $sub['patient_color'], $sub['patient_chip'], $ownerId]
@@ -4874,7 +4881,7 @@ class MobileApiController
             $patientId = (int)$this->db->lastInsertId();
 
             $this->db->execute(
-                "UPDATE patient_intake_submissions SET status = 'uebernommen', accepted_patient_id = ?, accepted_owner_id = ?, updated_at = NOW() WHERE id = ?",
+                "UPDATE `{$this->t('patient_intake_submissions')}` SET status = 'uebernommen', accepted_patient_id = ?, accepted_owner_id = ?, updated_at = NOW() WHERE id = ?",
                 [$patientId, $ownerId, $id]
             );
         } catch (\Throwable $e) {
@@ -4892,7 +4899,7 @@ class MobileApiController
         $id = (int)($params['id'] ?? 0);
         try {
             $this->db->execute(
-                "UPDATE patient_intake_submissions SET status = 'abgelehnt', updated_at = NOW() WHERE id = ?", [$id]
+                "UPDATE `{$this->t('patient_intake_submissions')}` SET status = 'abgelehnt', updated_at = NOW() WHERE id = ?", [$id]
             );
         } catch (\Throwable $e) {
             $this->error($e->getMessage(), 500);
@@ -4906,10 +4913,10 @@ class MobileApiController
         $this->cors();
         $this->requireAuth();
         try {
-            $count  = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM patient_intake_submissions WHERE status = 'neu'");
+            $count  = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM `{$this->t('patient_intake_submissions')}` WHERE status = 'neu'");
             $latest = $this->db->fetchAll(
                 "SELECT id, patient_name, owner_first_name, owner_last_name, created_at
-                 FROM patient_intake_submissions WHERE status = 'neu' ORDER BY created_at DESC LIMIT 5"
+                 FROM `{$this->t('patient_intake_submissions')}` WHERE status = 'neu' ORDER BY created_at DESC LIMIT 5"
             );
         } catch (\Throwable) { $count = 0; $latest = []; }
         $this->json(['count' => $count, 'items' => $latest]);
@@ -4953,19 +4960,19 @@ class MobileApiController
                         p.name AS patient_name, p.species AS patient_species,
                         CONCAT(o.first_name,' ',o.last_name) AS owner_name,
                         u.name AS ersteller_name
-                 FROM befundboegen b
-                 LEFT JOIN patients p ON p.id = b.patient_id
-                 LEFT JOIN owners o ON o.id = b.owner_id
-                 LEFT JOIN users u ON u.id = b.created_by
+                 FROM `{$this->t('befundboegen')}` b
+                 LEFT JOIN `{$this->t('patients')}` p ON p.id = b.patient_id
+                 LEFT JOIN `{$this->t('owners')}` o ON o.id = b.owner_id
+                 LEFT JOIN `{$this->t('users')}` u ON u.id = b.created_by
                  {$where}
                  ORDER BY b.datum DESC, b.created_at DESC
                  LIMIT ? OFFSET ?",
                 [...$params2, $limit, $offset]
             );
             $total = (int)$this->db->fetchColumn(
-                "SELECT COUNT(*) FROM befundboegen b
-                 LEFT JOIN patients p ON p.id = b.patient_id
-                 LEFT JOIN owners o ON o.id = b.owner_id
+                "SELECT COUNT(*) FROM `{$this->t('befundboegen')}` b
+                 LEFT JOIN `{$this->t('patients')}` p ON p.id = b.patient_id
+                 LEFT JOIN `{$this->t('owners')}` o ON o.id = b.owner_id
                  {$where}",
                 $params2
             );
@@ -4988,8 +4995,8 @@ class MobileApiController
                 "SELECT b.id, b.patient_id, b.owner_id, b.status, b.datum, b.naechster_termin,
                         b.pdf_sent_at, b.pdf_sent_to, b.created_at, b.updated_at,
                         u.name AS ersteller_name
-                 FROM befundboegen b
-                 LEFT JOIN users u ON u.id = b.created_by
+                 FROM `{$this->t('befundboegen')}` b
+                 LEFT JOIN `{$this->t('users')}` u ON u.id = b.created_by
                  WHERE b.patient_id = ?
                  ORDER BY b.datum DESC, b.created_at DESC",
                 [$patientId]
@@ -5013,10 +5020,10 @@ class MobileApiController
                 "SELECT b.*, u.name AS ersteller_name,
                         p.name AS patient_name, p.species AS patient_species,
                         CONCAT(o.first_name,' ',o.last_name) AS owner_name
-                 FROM befundboegen b
-                 LEFT JOIN users u ON u.id = b.created_by
-                 LEFT JOIN patients p ON p.id = b.patient_id
-                 LEFT JOIN owners o ON o.id = b.owner_id
+                 FROM `{$this->t('befundboegen')}` b
+                 LEFT JOIN `{$this->t('users')}` u ON u.id = b.created_by
+                 LEFT JOIN `{$this->t('patients')}` p ON p.id = b.patient_id
+                 LEFT JOIN `{$this->t('owners')}` o ON o.id = b.owner_id
                  WHERE b.id = ? LIMIT 1",
                 [$id]
             );
@@ -5028,7 +5035,7 @@ class MobileApiController
 
         try {
             $feldRows = $this->db->fetchAll(
-                "SELECT feldname, feldwert FROM befundbogen_felder WHERE befundbogen_id = ?",
+                "SELECT feldname, feldwert FROM `{$this->t('befundbogen_felder')}` WHERE befundbogen_id = ?",
                 [$id]
             );
             $felder = [];
@@ -5069,8 +5076,8 @@ class MobileApiController
                 "SELECT b.id, b.patient_id, b.status, b.datum, b.naechster_termin,
                         b.pdf_sent_at, b.created_at,
                         p.name AS patient_name, p.species AS patient_species
-                 FROM befundboegen b
-                 LEFT JOIN patients p ON p.id = b.patient_id
+                 FROM `{$this->t('befundboegen')}` b
+                 LEFT JOIN `{$this->t('patients')}` p ON p.id = b.patient_id
                  WHERE b.owner_id = ? AND b.status != 'entwurf'
                  ORDER BY b.datum DESC, b.created_at DESC",
                 [$ownerId]
@@ -5092,7 +5099,7 @@ class MobileApiController
 
         try {
             $row = $this->db->fetch(
-                "SELECT id, owner_id, status FROM befundboegen WHERE id = ? LIMIT 1",
+                "SELECT id, owner_id, status FROM `{$this->t('befundboegen')}` WHERE id = ? LIMIT 1",
                 [$id]
             );
         } catch (\Throwable $e) {
@@ -5122,10 +5129,10 @@ class MobileApiController
 
         try {
             $rows = $this->db->fetchAll(
-                "SELECT * FROM patient_invite_tokens ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                "SELECT * FROM `{$this->t('patient_invite_tokens')}` ORDER BY created_at DESC LIMIT ? OFFSET ?",
                 [$limit, $offset]
             );
-            $total = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM patient_invite_tokens");
+            $total = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM `{$this->t('patient_invite_tokens')}`");
         } catch (\Throwable) { $rows = []; $total = 0; }
 
         $baseUrl = $this->settings->get('app_url', '');
@@ -5159,7 +5166,7 @@ class MobileApiController
 
         try {
             $this->db->execute(
-                "INSERT INTO patient_invite_tokens (token, email, phone, note, status, sent_via, expires_at, created_by, created_at)
+                "INSERT INTO `{$this->t('patient_invite_tokens')}` (token, email, phone, note, status, sent_via, expires_at, created_by, created_at)
                  VALUES (?, ?, ?, ?, 'offen', ?, ?, ?, NOW())",
                 [$token, $email ?: '', $phone ?: '', $note ?: '', $sentVia, $expires, (int)$auth['user_id']]
             );
@@ -5190,7 +5197,7 @@ class MobileApiController
         $id = (int)($params['id'] ?? 0);
         try {
             $this->db->execute(
-                "UPDATE patient_invite_tokens SET status = 'abgelaufen', expires_at = NOW() WHERE id = ?",
+                "UPDATE `{$this->t('patient_invite_tokens')}` SET status = 'abgelaufen', expires_at = NOW() WHERE id = ?",
                 [$id]
             );
         } catch (\Throwable $e) {
@@ -5206,7 +5213,7 @@ class MobileApiController
         $this->requireAuth();
         $id = (int)($params['id'] ?? 0);
         try {
-            $row = $this->db->fetch("SELECT * FROM patient_invite_tokens WHERE id = ? LIMIT 1", [$id]);
+            $row = $this->db->fetch("SELECT * FROM `{$this->t('patient_invite_tokens')}` WHERE id = ? LIMIT 1", [$id]);
         } catch (\Throwable) { $row = null; }
         if (!$row) $this->error('Einladung nicht gefunden.', 404);
 
@@ -5227,7 +5234,7 @@ class MobileApiController
         $id   = (int)($params['id'] ?? 0);
         $data = $this->body();
         try {
-            $row = $this->db->fetch("SELECT * FROM patient_invite_tokens WHERE id = ? LIMIT 1", [$id]);
+            $row = $this->db->fetch("SELECT * FROM `{$this->t('patient_invite_tokens')}` WHERE id = ? LIMIT 1", [$id]);
         } catch (\Throwable) { $row = null; }
         if (!$row) $this->error('Einladung nicht gefunden.', 404);
         if ($row['status'] !== 'offen') $this->error('Nur offene Einladungen können bearbeitet werden.', 422);
@@ -5237,7 +5244,7 @@ class MobileApiController
 
         try {
             $this->db->execute(
-                "UPDATE patient_invite_tokens SET phone = ?, note = ? WHERE id = ?",
+                "UPDATE `{$this->t('patient_invite_tokens')}` SET phone = ?, note = ? WHERE id = ?",
                 [$phone, $note, $id]
             );
         } catch (\Throwable $e) {
@@ -5258,7 +5265,7 @@ class MobileApiController
         $this->requireAuth();
         try {
             $count = (int)$this->db->fetchColumn(
-                "SELECT COUNT(*) FROM patient_invite_tokens WHERE status = 'offen' AND expires_at > NOW()"
+                "SELECT COUNT(*) FROM `{$this->t('patient_invite_tokens')}` WHERE status = 'offen' AND expires_at > NOW()"
             );
         } catch (\Throwable) { $count = 0; }
         $this->json(['pending' => $count]);
@@ -5275,7 +5282,7 @@ class MobileApiController
 
         try {
             $stmt  = $this->db->query(
-                'SELECT COUNT(*) FROM portal_check_notifications WHERE created_at > ?',
+                'SELECT COUNT(*) FROM `' . $this->t('portal_check_notifications') . '` WHERE created_at > ?',
                 [$since]
             );
             $count = (int)$stmt->fetchColumn();
@@ -5333,7 +5340,7 @@ class MobileApiController
                 $conn = $this->db->fetch(
                     'SELECT id, google_email, sync_enabled, auto_sync, calendar_id,
                             calendar_name, last_pull_at, created_at
-                     FROM google_calendar_connections ORDER BY id ASC LIMIT 1'
+                     FROM `' . $this->t('google_calendar_connections') . '` ORDER BY id ASC LIMIT 1'
                 );
             } catch (\Throwable $e) {
                 $this->json(['connected' => false, 'sync_enabled' => false, 'note' => 'plugin_not_installed']);
@@ -5348,43 +5355,43 @@ class MobileApiController
             $pullToday    = 0;    $syncedToday = 0; $recentLogs = [];
             try {
                 $lastSuccess = $this->db->fetchColumn(
-                    "SELECT created_at FROM google_calendar_sync_log
+                    "SELECT created_at FROM `{$this->t('google_calendar_sync_log')}`
                      WHERE success = 1 AND action IN ('create','update','delete','pull')
                      ORDER BY created_at DESC LIMIT 1"
                 );
                 $lastError = $this->db->fetch(
-                    'SELECT message, created_at FROM google_calendar_sync_log
+                    'SELECT message, created_at FROM `' . $this->t('google_calendar_sync_log') . '`
                      WHERE success = 0 ORDER BY created_at DESC LIMIT 1'
                 );
                 $lastPush = $this->db->fetchColumn(
-                    "SELECT created_at FROM google_calendar_sync_log
+                    "SELECT created_at FROM `{$this->t('google_calendar_sync_log')}`
                      WHERE success = 1 AND action IN ('create','update','delete')
                      ORDER BY created_at DESC LIMIT 1"
                 );
                 $pendingPush = (int)$this->db->fetchColumn(
-                    "SELECT COUNT(*) FROM google_calendar_sync_map WHERE sync_status = 'pending'"
+                    "SELECT COUNT(*) FROM `{$this->t('google_calendar_sync_map')}` WHERE sync_status = 'pending'"
                 );
                 $pushToday = (int)$this->db->fetchColumn(
-                    "SELECT COUNT(*) FROM google_calendar_sync_log
+                    "SELECT COUNT(*) FROM `{$this->t('google_calendar_sync_log')}`
                      WHERE success = 1 AND action IN ('create','update','delete')
                      AND DATE(created_at) = CURDATE()"
                 );
                 $lastPullLog = $this->db->fetchColumn(
-                    "SELECT created_at FROM google_calendar_sync_log
+                    "SELECT created_at FROM `{$this->t('google_calendar_sync_log')}`
                      WHERE success = 1 AND action = 'pull'
                      ORDER BY created_at DESC LIMIT 1"
                 );
                 $pullToday = (int)$this->db->fetchColumn(
-                    "SELECT COUNT(*) FROM google_calendar_sync_log
+                    "SELECT COUNT(*) FROM `{$this->t('google_calendar_sync_log')}`
                      WHERE success = 1 AND action = 'pull' AND DATE(created_at) = CURDATE()"
                 );
                 $syncedToday = (int)$this->db->fetchColumn(
-                    "SELECT COUNT(*) FROM google_calendar_sync_log
+                    "SELECT COUNT(*) FROM `{$this->t('google_calendar_sync_log')}`
                      WHERE success = 1 AND DATE(created_at) = CURDATE()"
                 );
                 $recentLogs = $this->db->fetchAll(
                     'SELECT action, success, message, created_at
-                     FROM google_calendar_sync_log ORDER BY created_at DESC LIMIT 10'
+                     FROM `' . $this->t('google_calendar_sync_log') . '` ORDER BY created_at DESC LIMIT 10'
                 );
             } catch (\Throwable $e) { /* log tables may not exist yet */ }
             $this->json([

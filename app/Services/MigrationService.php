@@ -12,11 +12,16 @@ class MigrationService
         private readonly Database $db
     ) {}
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     public function getCurrentVersion(): int
     {
         try {
             $result = $this->db->fetchColumn(
-                "SELECT value FROM settings WHERE `key` = 'db_version'"
+                "SELECT value FROM `{$this->t('settings')}` WHERE `key` = 'db_version'"
             );
             return $result !== false ? (int)$result : 0;
         } catch (\Throwable) {
@@ -82,7 +87,7 @@ class MigrationService
     private function setVersion(int $version): void
     {
         $this->db->execute(
-            "INSERT INTO settings (`key`, value) VALUES ('db_version', ?) ON DUPLICATE KEY UPDATE value = VALUES(value)",
+            "INSERT INTO `{$this->t('settings')}` (`key`, value) VALUES ('db_version', ?) ON DUPLICATE KEY UPDATE value = VALUES(value)",
             [(string)$version]
         );
     }

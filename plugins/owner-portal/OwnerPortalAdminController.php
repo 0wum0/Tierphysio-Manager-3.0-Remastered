@@ -42,6 +42,11 @@ class OwnerPortalAdminController extends Controller
         $this->settingsRepository = $settingsRepository;
     }
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     /* ── GET /portal-admin ── */
     public function index(array $params = []): void
     {
@@ -89,7 +94,7 @@ class OwnerPortalAdminController extends Controller
 
         $db    = \App\Core\Application::getInstance()->getContainer()->get(Database::class);
         $stmt  = $db->query(
-            'SELECT id, first_name, last_name, email FROM owners ORDER BY last_name ASC, first_name ASC'
+            "SELECT id, first_name, last_name, email FROM `{$this->t('owners')}` ORDER BY last_name ASC, first_name ASC"
         );
         $owners = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
@@ -208,7 +213,7 @@ class OwnerPortalAdminController extends Controller
         $db      = \App\Core\Application::getInstance()->getContainer()->get(Database::class);
 
         $ownerStmt = $db->query(
-            'SELECT o.*, u.email AS portal_email FROM owners o LEFT JOIN owner_portal_users u ON u.owner_id = o.id WHERE o.id = ? LIMIT 1',
+            "SELECT o.*, u.email AS portal_email FROM `{$this->t('owners')}` o LEFT JOIN `{$this->t('owner_portal_users')}` u ON u.owner_id = o.id WHERE o.id = ? LIMIT 1",
             [$ownerId]
         );
         $owner = $ownerStmt->fetch(\PDO::FETCH_ASSOC);
@@ -320,7 +325,7 @@ class OwnerPortalAdminController extends Controller
         $db      = \App\Core\Application::getInstance()->getContainer()->get(Database::class);
 
         $ownerStmt = $db->query(
-            'SELECT o.*, u.email AS portal_email FROM owners o LEFT JOIN owner_portal_users u ON u.owner_id = o.id WHERE o.id = ? LIMIT 1',
+            "SELECT o.*, u.email AS portal_email FROM `{$this->t('owners')}` o LEFT JOIN `{$this->t('owner_portal_users')}` u ON u.owner_id = o.id WHERE o.id = ? LIMIT 1",
             [$ownerId]
         );
         $owner = $ownerStmt->fetch(\PDO::FETCH_ASSOC);
@@ -340,10 +345,10 @@ class OwnerPortalAdminController extends Controller
         try {
             foreach ($patients as $p) {
                 $stmt = $db->query(
-                    'SELECT id, title, start_at FROM appointments
+                    "SELECT id, title, start_at FROM `{$this->t('appointments')}`
                      WHERE patient_id = ? AND start_at >= NOW()
-                     AND status NOT IN ("cancelled","noshow")
-                     ORDER BY start_at ASC LIMIT 1',
+                     AND status NOT IN ('cancelled','noshow')
+                     ORDER BY start_at ASC LIMIT 1",
                     [(int)$p['id']]
                 );
                 $appt = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -570,7 +575,7 @@ class OwnerPortalAdminController extends Controller
         $db      = \App\Core\Application::getInstance()->getContainer()->get(Database::class);
 
         $ownerStmt = $db->query(
-            'SELECT o.*, u.email AS portal_email FROM owners o LEFT JOIN owner_portal_users u ON u.owner_id = o.id WHERE o.id = ? LIMIT 1',
+            "SELECT o.*, u.email AS portal_email FROM `{$this->t('owners')}` o LEFT JOIN `{$this->t('owner_portal_users')}` u ON u.owner_id = o.id WHERE o.id = ? LIMIT 1",
             [$ownerId]
         );
         $owner = $ownerStmt->fetch(\PDO::FETCH_ASSOC);
@@ -582,8 +587,8 @@ class OwnerPortalAdminController extends Controller
         foreach ($patients as $p) {
             $stmt = $db->query(
                 "SELECT b.*, u2.name AS ersteller_name
-                 FROM befundboegen b
-                 LEFT JOIN users u2 ON u2.id = b.created_by
+                 FROM `{$this->t('befundboegen')}` b
+                 LEFT JOIN `{$this->t('users')}` u2 ON u2.id = b.created_by
                  WHERE b.patient_id = ?
                  ORDER BY b.datum DESC",
                 [(int)$p['id']]
@@ -662,7 +667,7 @@ class OwnerPortalAdminController extends Controller
     private function getOwnerById(int $id): ?array
     {
         $db   = \App\Core\Application::getInstance()->getContainer()->get(Database::class);
-        $stmt = $db->query('SELECT * FROM owners WHERE id = ? LIMIT 1', [$id]);
+        $stmt = $db->query('SELECT * FROM `' . $db->prefix('owners') . '` WHERE id = ? LIMIT 1', [$id]);
         $row  = $stmt->fetch(\PDO::FETCH_ASSOC);
         return $row ?: null;
     }
@@ -670,7 +675,7 @@ class OwnerPortalAdminController extends Controller
     private function getPatientById(int $id): ?array
     {
         $db   = \App\Core\Application::getInstance()->getContainer()->get(Database::class);
-        $stmt = $db->query('SELECT * FROM patients WHERE id = ? LIMIT 1', [$id]);
+        $stmt = $db->query('SELECT * FROM `' . $db->prefix('patients') . '` WHERE id = ? LIMIT 1', [$id]);
         $row  = $stmt->fetch(\PDO::FETCH_ASSOC);
         return $row ?: null;
     }

@@ -15,10 +15,15 @@ abstract class Repository
         $this->db = $db;
     }
 
+    protected function t(string $table = ''): string
+    {
+        return $this->db->prefix($table !== '' ? $table : $this->table);
+    }
+
     public function findById(int|string $id): array|false
     {
         return $this->db->fetch(
-            "SELECT * FROM `{$this->table}` WHERE `{$this->primaryKey}` = ? LIMIT 1",
+            "SELECT * FROM `{$this->t()}` WHERE `{$this->primaryKey}` = ? LIMIT 1",
             [$id]
         );
     }
@@ -26,13 +31,13 @@ abstract class Repository
     public function findAll(string $orderBy = '', string $direction = 'ASC'): array
     {
         $order = $orderBy ? "ORDER BY `{$orderBy}` {$direction}" : '';
-        return $this->db->fetchAll("SELECT * FROM `{$this->table}` {$order}");
+        return $this->db->fetchAll("SELECT * FROM `{$this->t()}` {$order}");
     }
 
     public function findBy(string $column, mixed $value): array
     {
         return $this->db->fetchAll(
-            "SELECT * FROM `{$this->table}` WHERE `{$column}` = ?",
+            "SELECT * FROM `{$this->t()}` WHERE `{$column}` = ?",
             [$value]
         );
     }
@@ -40,14 +45,14 @@ abstract class Repository
     public function findOneBy(string $column, mixed $value): array|false
     {
         return $this->db->fetch(
-            "SELECT * FROM `{$this->table}` WHERE `{$column}` = ? LIMIT 1",
+            "SELECT * FROM `{$this->t()}` WHERE `{$column}` = ? LIMIT 1",
             [$value]
         );
     }
 
     public function count(string $where = '', array $params = []): int
     {
-        $sql = "SELECT COUNT(*) FROM `{$this->table}`";
+        $sql = "SELECT COUNT(*) FROM `{$this->t()}`";
         if ($where) {
             $sql .= " WHERE {$where}";
         }
@@ -58,21 +63,21 @@ abstract class Repository
     {
         $columns = implode('`, `', array_keys($data));
         $placeholders = implode(', ', array_fill(0, count($data), '?'));
-        $sql = "INSERT INTO `{$this->table}` (`{$columns}`) VALUES ({$placeholders})";
+        $sql = "INSERT INTO `{$this->t()}` (`{$columns}`) VALUES ({$placeholders})";
         return $this->db->insert($sql, array_values($data));
     }
 
     public function update(int|string $id, array $data): int
     {
         $sets = implode(' = ?, ', array_map(fn($k) => "`{$k}`", array_keys($data))) . ' = ?';
-        $sql  = "UPDATE `{$this->table}` SET {$sets} WHERE `{$this->primaryKey}` = ?";
+        $sql  = "UPDATE `{$this->t()}` SET {$sets} WHERE `{$this->primaryKey}` = ?";
         return $this->db->execute($sql, [...array_values($data), $id]);
     }
 
     public function delete(int|string $id): int
     {
         return $this->db->execute(
-            "DELETE FROM `{$this->table}` WHERE `{$this->primaryKey}` = ?",
+            "DELETE FROM `{$this->t()}` WHERE `{$this->primaryKey}` = ?",
             [$id]
         );
     }
@@ -85,7 +90,7 @@ abstract class Repository
         $whereClause = $where ? "WHERE {$where}" : '';
 
         $items = $this->db->fetchAll(
-            "SELECT * FROM `{$this->table}` {$whereClause} {$order} LIMIT ? OFFSET ?",
+            "SELECT * FROM `{$this->t()}` {$whereClause} {$order} LIMIT ? OFFSET ?",
             [...$params, $perPage, $offset]
         );
 

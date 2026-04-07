@@ -291,7 +291,7 @@ class GoogleCalendarController extends Controller
         try {
             $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
             $db->query(
-                'INSERT INTO cron_job_log (job_key, status, message, duration_ms, triggered_by, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
+                "INSERT INTO `{$db->prefix('cron_job_log')}` (job_key, status, message, duration_ms, triggered_by, created_at) VALUES (?, ?, ?, ?, ?, NOW())",
                 [$jobKey, $status, mb_substr($message, 0, 2000), $ms, 'cron']
             );
         } catch (\Throwable) {}

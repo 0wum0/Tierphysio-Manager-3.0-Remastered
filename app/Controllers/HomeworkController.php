@@ -31,6 +31,11 @@ class HomeworkController
         $this->mailService        = $mailService;
     }
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     public function getTemplates(): void
     {
         header('Content-Type: application/json');
@@ -330,17 +335,17 @@ class HomeworkController
             $this->ensurePlansTablesExist();
 
             $plans = $this->db->query(
-                'SELECT hp.*, u.name AS created_by_name
-                 FROM portal_homework_plans hp
-                 LEFT JOIN users u ON u.id = hp.created_by
+                "SELECT hp.*, u.name AS created_by_name
+                 FROM `{$this->t('portal_homework_plans')}` hp
+                 LEFT JOIN `{$this->t('users')}` u ON u.id = hp.created_by
                  WHERE hp.patient_id = ?
-                 ORDER BY hp.plan_date DESC, hp.id DESC',
+                 ORDER BY hp.plan_date DESC, hp.id DESC",
                 [$patientId]
             )->fetchAll(\PDO::FETCH_ASSOC);
 
             foreach ($plans as &$plan) {
                 $plan['tasks'] = $this->db->query(
-                    'SELECT * FROM portal_homework_plan_tasks WHERE plan_id = ? ORDER BY sort_order ASC, id ASC',
+                    "SELECT * FROM `{$this->t('portal_homework_plan_tasks')}` WHERE plan_id = ? ORDER BY sort_order ASC, id ASC",
                     [(int)$plan['id']]
                 )->fetchAll(\PDO::FETCH_ASSOC);
             }
@@ -381,11 +386,11 @@ class HomeworkController
         $userId  = Auth::getCurrentUserId();
 
         $this->db->query(
-            'INSERT INTO portal_homework_plans
+            "INSERT INTO `{$this->t('portal_homework_plans')}`
              (patient_id, owner_id, plan_date, physio_principles, short_term_goals,
               long_term_goals, therapy_means, general_notes, next_appointment, therapist_name,
               status, created_by)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [
                 $patientId,
                 $ownerId,
@@ -412,9 +417,9 @@ class HomeworkController
         foreach ($titles as $i => $title) {
             if (empty(trim($title))) continue;
             $this->db->query(
-                'INSERT INTO portal_homework_plan_tasks
+                "INSERT INTO `{$this->t('portal_homework_plan_tasks')}`
                  (plan_id, title, description, frequency, duration, therapist_notes, sort_order)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)',
+                 VALUES (?, ?, ?, ?, ?, ?, ?)",
                 [
                     $planId,
                     trim($title),
@@ -433,13 +438,13 @@ class HomeworkController
         if ($ownerId > 0) {
             try {
                 $ownerRow = $this->db->query(
-                    'SELECT id, email, first_name, last_name FROM owners WHERE id = ? LIMIT 1',
+                    "SELECT id, email, first_name, last_name FROM `{$this->t('owners')}` WHERE id = ? LIMIT 1",
                     [$ownerId]
                 )->fetch(\PDO::FETCH_ASSOC);
 
                 if ($ownerRow && !empty($ownerRow['email'])) {
                     $existing = $this->db->query(
-                        'SELECT id FROM owner_portal_users WHERE owner_id = ? LIMIT 1',
+                        "SELECT id FROM `{$this->t('owner_portal_users')}` WHERE owner_id = ? LIMIT 1",
                         [$ownerId]
                     )->fetch(\PDO::FETCH_ASSOC);
 
@@ -447,8 +452,8 @@ class HomeworkController
                         $token   = bin2hex(random_bytes(32));
                         $expires = date('Y-m-d H:i:s', strtotime('+7 days'));
                         $this->db->execute(
-                            'INSERT INTO owner_portal_users (owner_id, email, password_hash, is_active, invite_token, invite_expires)
-                             VALUES (?, ?, NULL, 0, ?, ?)',
+                            "INSERT INTO `{$this->t('owner_portal_users')}` (owner_id, email, password_hash, is_active, invite_token, invite_expires)
+                             VALUES (?, ?, NULL, 0, ?, ?)",
                             [$ownerId, $ownerRow['email'], $token, $expires]
                         );
 
@@ -496,7 +501,7 @@ class HomeworkController
         try {
             $this->ensurePlansTablesExist();
             $row = $this->db->query(
-                'SELECT id FROM portal_homework_plans WHERE id = ? AND patient_id = ? LIMIT 1',
+                "SELECT id FROM `{$this->t('portal_homework_plans')}` WHERE id = ? AND patient_id = ? LIMIT 1",
                 [$planId, $patientId]
             )->fetch();
             if (!$row) {
@@ -504,7 +509,7 @@ class HomeworkController
                 echo json_encode(['error' => 'Plan nicht gefunden']);
                 exit;
             }
-            $this->db->query('DELETE FROM portal_homework_plans WHERE id = ?', [$planId]);
+            $this->db->query("DELETE FROM `{$this->t('portal_homework_plans')}` WHERE id = ?", [$planId]);
             echo json_encode(['success' => true]);
         } catch (\Throwable $e) {
             http_response_code(500);

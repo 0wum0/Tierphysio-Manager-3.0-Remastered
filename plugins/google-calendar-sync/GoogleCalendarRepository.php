@@ -11,13 +11,18 @@ class GoogleCalendarRepository
 {
     public function __construct(private readonly Database $db) {}
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     /* ─── App Settings bridge (reads from core settings table) ─── */
 
     public function getSetting(string $key): ?string
     {
         try {
             $stmt = $this->db->query(
-                "SELECT value FROM settings WHERE `key` = ? LIMIT 1",
+                "SELECT value FROM `{$this->t('settings')}` WHERE `key` = ? LIMIT 1",
                 [$key]
             );
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -32,7 +37,7 @@ class GoogleCalendarRepository
     public function getConnection(): ?array
     {
         $stmt = $this->db->query(
-            'SELECT * FROM google_calendar_connections ORDER BY id ASC LIMIT 1'
+            "SELECT * FROM `{$this->t('google_calendar_connections')}` ORDER BY id ASC LIMIT 1"
         );
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -41,7 +46,7 @@ class GoogleCalendarRepository
     public function getConnectionById(int $id): ?array
     {
         $stmt = $this->db->query(
-            'SELECT * FROM google_calendar_connections WHERE id = ? LIMIT 1',
+            "SELECT * FROM `{$this->t('google_calendar_connections')}` WHERE id = ? LIMIT 1",
             [$id]
         );
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -55,14 +60,14 @@ class GoogleCalendarRepository
             $sets   = implode(', ', array_map(fn($k) => "`{$k}` = ?", array_keys($data)));
             $values = array_values($data);
             $values[] = $existing['id'];
-            $this->db->query("UPDATE google_calendar_connections SET {$sets} WHERE id = ?", $values);
+            $this->db->query("UPDATE `{$this->t('google_calendar_connections')}` SET {$sets} WHERE id = ?", $values);
             return (int)$existing['id'];
         }
 
         $cols         = implode(', ', array_map(fn($k) => "`{$k}`", array_keys($data)));
         $placeholders = implode(', ', array_fill(0, count($data), '?'));
         $this->db->query(
-            "INSERT INTO google_calendar_connections ({$cols}) VALUES ({$placeholders})",
+            "INSERT INTO `{$this->t('google_calendar_connections')}` ({$cols}) VALUES ({$placeholders})",
             array_values($data)
         );
         return (int)$this->db->lastInsertId();
@@ -73,12 +78,12 @@ class GoogleCalendarRepository
         $sets   = implode(', ', array_map(fn($k) => "`{$k}` = ?", array_keys($data)));
         $values = array_values($data);
         $values[] = $id;
-        $this->db->query("UPDATE google_calendar_connections SET {$sets} WHERE id = ?", $values);
+        $this->db->query("UPDATE `{$this->t('google_calendar_connections')}` SET {$sets} WHERE id = ?", $values);
     }
 
     public function deleteConnection(int $id): void
     {
-        $this->db->query('DELETE FROM google_calendar_connections WHERE id = ?', [$id]);
+        $this->db->query("DELETE FROM `{$this->t('google_calendar_connections')}` WHERE id = ?", [$id]);
     }
 
     /* ─── Sync Map ─── */
@@ -86,7 +91,7 @@ class GoogleCalendarRepository
     public function getSyncEntry(int $appointmentId, int $connectionId): ?array
     {
         $stmt = $this->db->query(
-            'SELECT * FROM google_calendar_sync_map WHERE appointment_id = ? AND connection_id = ? LIMIT 1',
+            "SELECT * FROM `{$this->t('google_calendar_sync_map')}` WHERE appointment_id = ? AND connection_id = ? LIMIT 1",
             [$appointmentId, $connectionId]
         );
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -96,7 +101,7 @@ class GoogleCalendarRepository
     public function getSyncEntryByAppointment(int $appointmentId): ?array
     {
         $stmt = $this->db->query(
-            'SELECT * FROM google_calendar_sync_map WHERE appointment_id = ? LIMIT 1',
+            "SELECT * FROM `{$this->t('google_calendar_sync_map')}` WHERE appointment_id = ? LIMIT 1",
             [$appointmentId]
         );
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -106,9 +111,9 @@ class GoogleCalendarRepository
     public function createSyncEntry(array $data): int
     {
         $this->db->query(
-            'INSERT INTO google_calendar_sync_map
+            "INSERT INTO `{$this->t('google_calendar_sync_map')}`
              (appointment_id, connection_id, google_event_id, google_calendar_id, sync_status, last_synced_at)
-             VALUES (?, ?, ?, ?, ?, NOW())',
+             VALUES (?, ?, ?, ?, ?, NOW())",
             [
                 $data['appointment_id'],
                 $data['connection_id'],
@@ -125,13 +130,13 @@ class GoogleCalendarRepository
         $sets   = implode(', ', array_map(fn($k) => "`{$k}` = ?", array_keys($data)));
         $values = array_values($data);
         $values[] = $id;
-        $this->db->query("UPDATE google_calendar_sync_map SET {$sets} WHERE id = ?", $values);
+        $this->db->query("UPDATE `{$this->t('google_calendar_sync_map')}` SET {$sets} WHERE id = ?", $values);
     }
 
     public function markSyncFailed(int $syncMapId, string $error): void
     {
         $this->db->query(
-            'UPDATE google_calendar_sync_map SET sync_status = ?, last_error = ?, updated_at = NOW() WHERE id = ?',
+            "UPDATE `{$this->t('google_calendar_sync_map')}` SET sync_status = ?, last_error = ?, updated_at = NOW() WHERE id = ?",
             ['failed', $error, $syncMapId]
         );
     }
@@ -139,7 +144,7 @@ class GoogleCalendarRepository
     public function markSyncDeleted(int $appointmentId): void
     {
         $this->db->query(
-            'UPDATE google_calendar_sync_map SET sync_status = ?, updated_at = NOW() WHERE appointment_id = ?',
+            "UPDATE `{$this->t('google_calendar_sync_map')}` SET sync_status = ?, updated_at = NOW() WHERE appointment_id = ?",
             ['deleted', $appointmentId]
         );
     }
@@ -152,12 +157,12 @@ class GoogleCalendarRepository
                     p.name AS patient_name,
                     o.first_name, o.last_name,
                     tt.name AS treatment_type_name
-             FROM google_calendar_sync_map m
-             JOIN appointments a ON a.id = m.appointment_id
-             LEFT JOIN patients p ON p.id = a.patient_id
-             LEFT JOIN owners o ON o.id = a.owner_id
-             LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
-             WHERE m.sync_status = ?',
+             FROM `{$this->t('google_calendar_sync_map')}` m
+             JOIN `{$this->t('appointments')}` a ON a.id = m.appointment_id
+             LEFT JOIN `{$this->t('patients')}` p ON p.id = a.patient_id
+             LEFT JOIN `{$this->t('owners')}` o ON o.id = a.owner_id
+             LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
+             WHERE m.sync_status = ?",
             ['pending']
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -166,8 +171,8 @@ class GoogleCalendarRepository
     public function getRecentSyncedCount(int $hours = 24): int
     {
         $stmt = $this->db->query(
-            'SELECT COUNT(*) FROM google_calendar_sync_map
-             WHERE sync_status = ? AND last_synced_at > DATE_SUB(NOW(), INTERVAL ? HOUR)',
+            "SELECT COUNT(*) FROM `{$this->t('google_calendar_sync_map')}`
+             WHERE sync_status = ? AND last_synced_at > DATE_SUB(NOW(), INTERVAL ? HOUR)",
             ['synced', $hours]
         );
         return (int)$stmt->fetchColumn();
@@ -179,8 +184,8 @@ class GoogleCalendarRepository
     {
         try {
             $this->db->query(
-                'INSERT INTO google_calendar_sync_log (connection_id, action, appointment_id, google_event_id, message, success)
-                 VALUES (?, ?, ?, ?, ?, ?)',
+                "INSERT INTO `{$this->t('google_calendar_sync_log')}` (connection_id, action, appointment_id, google_event_id, message, success)
+                 VALUES (?, ?, ?, ?, ?, ?)",
                 [$connectionId, $action, $appointmentId, $googleEventId, $message, $success ? 1 : 0]
             );
         } catch (\Throwable) {
@@ -191,7 +196,7 @@ class GoogleCalendarRepository
     public function getRecentLogs(int $limit = 20): array
     {
         $stmt = $this->db->query(
-            'SELECT * FROM google_calendar_sync_log ORDER BY created_at DESC LIMIT ?',
+            "SELECT * FROM `{$this->t('google_calendar_sync_log')}` ORDER BY created_at DESC LIMIT ?",
             [$limit]
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -200,9 +205,9 @@ class GoogleCalendarRepository
     public function getLastSuccessfulSync(): ?string
     {
         $stmt = $this->db->query(
-            'SELECT created_at FROM google_calendar_sync_log
-             WHERE success = 1 AND action IN (\'create\',\'update\',\'delete\')
-             ORDER BY created_at DESC LIMIT 1'
+            "SELECT created_at FROM `{$this->t('google_calendar_sync_log')}`
+             WHERE success = 1 AND action IN ('create','update','delete')
+             ORDER BY created_at DESC LIMIT 1"
         );
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row['created_at'] ?? null;
@@ -211,7 +216,7 @@ class GoogleCalendarRepository
     public function getLastError(): ?array
     {
         $stmt = $this->db->query(
-            'SELECT * FROM google_calendar_sync_log WHERE success = 0 ORDER BY created_at DESC LIMIT 1'
+            "SELECT * FROM `{$this->t('google_calendar_sync_log')}` WHERE success = 0 ORDER BY created_at DESC LIMIT 1"
         );
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -222,7 +227,7 @@ class GoogleCalendarRepository
     public function saveSyncToken(int $connectionId, ?string $syncToken): void
     {
         $this->db->query(
-            'UPDATE google_calendar_connections SET sync_token = ?, last_pull_at = NOW() WHERE id = ?',
+            "UPDATE `{$this->t('google_calendar_connections')}` SET sync_token = ?, last_pull_at = NOW() WHERE id = ?",
             [$syncToken, $connectionId]
         );
     }
@@ -230,7 +235,7 @@ class GoogleCalendarRepository
     public function clearSyncToken(int $connectionId): void
     {
         $this->db->query(
-            'UPDATE google_calendar_connections SET sync_token = NULL WHERE id = ?',
+            "UPDATE `{$this->t('google_calendar_connections')}` SET sync_token = NULL WHERE id = ?",
             [$connectionId]
         );
     }
@@ -240,7 +245,7 @@ class GoogleCalendarRepository
     public function getImportedEventByGoogleId(string $googleEventId, int $connectionId): ?array
     {
         $stmt = $this->db->query(
-            'SELECT * FROM google_calendar_imported_events WHERE google_event_id = ? AND connection_id = ? LIMIT 1',
+            "SELECT * FROM `{$this->t('google_calendar_imported_events')}` WHERE google_event_id = ? AND connection_id = ? LIMIT 1",
             [$googleEventId, $connectionId]
         );
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -255,12 +260,12 @@ class GoogleCalendarRepository
             $sets   = implode(', ', array_map(fn($k) => "`{$k}` = ?", array_keys($data)));
             $values = array_values($data);
             $values[] = $existing['id'];
-            $this->db->query("UPDATE google_calendar_imported_events SET {$sets} WHERE id = ?", $values);
+            $this->db->query("UPDATE `{$this->t('google_calendar_imported_events')}` SET {$sets} WHERE id = ?", $values);
         } else {
             $cols         = implode(', ', array_map(fn($k) => "`{$k}`", array_keys($data)));
             $placeholders = implode(', ', array_fill(0, count($data), '?'));
             $this->db->query(
-                "INSERT INTO google_calendar_imported_events ({$cols}) VALUES ({$placeholders})",
+                "INSERT INTO `{$this->t('google_calendar_imported_events')}` ({$cols}) VALUES ({$placeholders})",
                 array_values($data)
             );
         }
@@ -269,7 +274,7 @@ class GoogleCalendarRepository
     public function deleteImportedEvent(string $googleEventId, int $connectionId): void
     {
         $this->db->query(
-            'DELETE FROM google_calendar_imported_events WHERE google_event_id = ? AND connection_id = ?',
+            "DELETE FROM `{$this->t('google_calendar_imported_events')}` WHERE google_event_id = ? AND connection_id = ?",
             [$googleEventId, $connectionId]
         );
     }
@@ -277,11 +282,11 @@ class GoogleCalendarRepository
     public function getImportedEventsInRange(string $start, string $end): array
     {
         $stmt = $this->db->query(
-            'SELECT * FROM google_calendar_imported_events
+            "SELECT * FROM `{$this->t('google_calendar_imported_events')}`
              WHERE event_start < ? AND event_end > ?
-               AND google_status != \'cancelled\'
+               AND google_status != 'cancelled'
                AND appointment_id IS NULL
-             ORDER BY event_start ASC',
+             ORDER BY event_start ASC",
             [$end, $start]
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -290,7 +295,7 @@ class GoogleCalendarRepository
     public function getImportedEventsByAppointment(int $appointmentId): array
     {
         $stmt = $this->db->query(
-            'SELECT * FROM google_calendar_imported_events WHERE appointment_id = ?',
+            "SELECT * FROM `{$this->t('google_calendar_imported_events')}` WHERE appointment_id = ?",
             [$appointmentId]
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

@@ -16,6 +16,11 @@ class BirthdayMailService
         private readonly MailService         $mailService
     ) {}
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     /* ═══════════════════════════════════════════════════════════
        PUBLIC: run daily birthday check & send
     ═══════════════════════════════════════════════════════════ */
@@ -45,8 +50,8 @@ class BirthdayMailService
                 o.first_name,
                 o.last_name,
                 o.email
-             FROM patients p
-             JOIN owners o ON o.id = p.owner_id
+             FROM `{$this->t('patients')}` p
+             JOIN `{$this->t('owners')}` o ON o.id = p.owner_id
              WHERE DATE_FORMAT(p.birth_date, '%m-%d') = ?
                AND p.birth_date IS NOT NULL
                AND o.email IS NOT NULL
@@ -293,7 +298,7 @@ HTML;
     private function alreadySentThisYear(int $patientId, int $year): bool
     {
         $count = $this->db->fetchColumn(
-            "SELECT COUNT(*) FROM birthday_emails_sent WHERE patient_id = ? AND year_sent = ?",
+            "SELECT COUNT(*) FROM `{$this->t('birthday_emails_sent')}` WHERE patient_id = ? AND year_sent = ?",
             [$patientId, $year]
         );
         return (int)$count > 0;
@@ -302,7 +307,7 @@ HTML;
     private function markSent(int $patientId, int $year): void
     {
         $this->db->execute(
-            "INSERT IGNORE INTO birthday_emails_sent (patient_id, year_sent, sent_at) VALUES (?, ?, NOW())",
+            "INSERT IGNORE INTO `{$this->t('birthday_emails_sent')}` (patient_id, year_sent, sent_at) VALUES (?, ?, NOW())",
             [$patientId, $year]
         );
     }

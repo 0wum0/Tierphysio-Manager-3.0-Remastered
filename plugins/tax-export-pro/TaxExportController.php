@@ -17,6 +17,7 @@ class TaxExportController extends Controller
 {
     private TaxExportService    $taxService;
     private TaxExportRepository $taxRepo;
+    private Database            $db;
 
     public function __construct(
         View       $view,
@@ -25,10 +26,15 @@ class TaxExportController extends Controller
         Translator $translator
     ) {
         parent::__construct($view, $session, $config, $translator);
-        $db               = Application::getInstance()->getContainer()->get(Database::class);
+        $this->db         = Application::getInstance()->getContainer()->get(Database::class);
         $settingsRepo     = Application::getInstance()->getContainer()->get(SettingsRepository::class);
-        $this->taxService = new TaxExportService($db, $settingsRepo);
-        $this->taxRepo    = new TaxExportRepository($db);
+        $this->taxService = new TaxExportService($this->db, $settingsRepo);
+        $this->taxRepo    = new TaxExportRepository($this->db);
+    }
+
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
     }
 
     /**
@@ -195,7 +201,7 @@ class TaxExportController extends Controller
         $invoiceId = (int)($params['id'] ?? 0);
 
         /* Load original invoice to get number */
-        $invoice = $db->fetch("SELECT id, invoice_number, status, finalized_at FROM invoices WHERE id = ? LIMIT 1", [$invoiceId]);
+        $invoice = $db->fetch("SELECT id, invoice_number, status, finalized_at FROM `{$this->t('invoices')}` WHERE id = ? LIMIT 1", [$invoiceId]);
         if (!$invoice) {
             $this->session->flash('error', 'Rechnung nicht gefunden.');
             $this->redirect('/steuerexport');
@@ -231,7 +237,7 @@ class TaxExportController extends Controller
         $userId    = (int)$this->session->get('user_id');
         $invoiceId = (int)($params['id'] ?? 0);
 
-        $invoice = $db->fetch("SELECT id, invoice_number, finalized_at FROM invoices WHERE id = ? LIMIT 1", [$invoiceId]);
+        $invoice = $db->fetch("SELECT id, invoice_number, finalized_at FROM `{$this->t('invoices')}` WHERE id = ? LIMIT 1", [$invoiceId]);
         if (!$invoice) {
             $this->session->flash('error', 'Rechnung nicht gefunden.');
             $this->redirect('/steuerexport');
@@ -274,7 +280,7 @@ class TaxExportController extends Controller
         $invoiceId = (int)($params['id'] ?? 0);
         $logs      = $audit->getLog($invoiceId);
 
-        $invoice = $db->fetch("SELECT id, invoice_number FROM invoices WHERE id = ? LIMIT 1", [$invoiceId]);
+        $invoice = $db->fetch("SELECT id, invoice_number FROM `{$this->t('invoices')}` WHERE id = ? LIMIT 1", [$invoiceId]);
 
         $this->render('@tax-export-pro/audit-log.twig', [
             'page_title'     => 'Audit-Protokoll: ' . ($invoice['invoice_number'] ?? $invoiceId),
@@ -367,7 +373,7 @@ class TaxExportController extends Controller
         try {
             $db   = Application::getInstance()->getContainer()->get(Database::class);
             $rows = $db->fetchAll(
-                "SELECT DISTINCT YEAR(issue_date) AS y FROM invoices WHERE issue_date IS NOT NULL ORDER BY y DESC"
+                "SELECT DISTINCT YEAR(issue_date) AS y FROM `{$this->t('invoices')}` WHERE issue_date IS NOT NULL ORDER BY y DESC"
             );
             return array_column($rows, 'y');
         } catch (\Throwable) {

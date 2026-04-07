@@ -19,6 +19,7 @@ class OwnerPortalController extends Controller
     private MessagingRepository    $msgRepo;
     private PdfService $pdfService;
     private SettingsRepository $settingsRepository;
+    private Database $db;
 
     public function __construct(
         View $view,
@@ -30,10 +31,16 @@ class OwnerPortalController extends Controller
         SettingsRepository $settingsRepository
     ) {
         parent::__construct($view, $session, $config, $translator);
+        $this->db                 = $db;
         $this->repo               = new OwnerPortalRepository($db);
         $this->msgRepo            = new MessagingRepository($db);
         $this->pdfService         = $pdfService;
         $this->settingsRepository = $settingsRepository;
+    }
+
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
     }
 
     private function portalUnread(int $ownerId): int
@@ -186,8 +193,8 @@ class OwnerPortalController extends Controller
             $db = \App\Core\Application::getInstance()->getContainer()->get(Database::class);
             $stmt = $db->query(
                 "SELECT b.*, u.name AS ersteller_name
-                 FROM befundboegen b
-                 LEFT JOIN users u ON u.id = b.created_by
+                 FROM `{$this->t('befundboegen')}` b
+                 LEFT JOIN `{$this->t('users')}` u ON u.id = b.created_by
                  WHERE b.patient_id = ? AND b.status != 'entwurf'
                  ORDER BY b.datum DESC",
                 [$petId]
@@ -243,15 +250,15 @@ class OwnerPortalController extends Controller
 
         /* Generate PDF directly — do NOT redirect to the admin route */
         $db        = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
-        $posStmt   = $db->query('SELECT * FROM invoice_positions WHERE invoice_id = ? ORDER BY sort_order ASC', [$invoiceId]);
+        $posStmt   = $db->query("SELECT * FROM `{$this->t('invoice_positions')}` WHERE invoice_id = ? ORDER BY sort_order ASC", [$invoiceId]);
         $positions = $posStmt->fetchAll(\PDO::FETCH_ASSOC);
 
-        $ownerStmt = $db->query('SELECT * FROM owners WHERE id = ? LIMIT 1', [$ownerId]);
+        $ownerStmt = $db->query("SELECT * FROM `{$this->t('owners')}` WHERE id = ? LIMIT 1", [$ownerId]);
         $owner     = $ownerStmt->fetch(\PDO::FETCH_ASSOC) ?: null;
 
         $patient = null;
         if (!empty($invoice['patient_id'])) {
-            $patStmt = $db->query('SELECT * FROM patients WHERE id = ? LIMIT 1', [(int)$invoice['patient_id']]);
+            $patStmt = $db->query("SELECT * FROM `{$this->t('patients')}` WHERE id = ? LIMIT 1", [(int)$invoice['patient_id']]);
             $patient = $patStmt->fetch(\PDO::FETCH_ASSOC) ?: null;
         }
 
@@ -427,7 +434,7 @@ class OwnerPortalController extends Controller
 
         $tasks   = $this->repo->getTasksByPlan($planId);
         $db      = \App\Core\Application::getInstance()->getContainer()->get(Database::class);
-        $ownerStmt = $db->query('SELECT * FROM owners WHERE id = ? LIMIT 1', [$ownerId]);
+        $ownerStmt = $db->query("SELECT * FROM `{$this->t('owners')}` WHERE id = ? LIMIT 1", [$ownerId]);
         $owner   = $ownerStmt->fetch(\PDO::FETCH_ASSOC) ?: null;
         $patient = $pet;
 

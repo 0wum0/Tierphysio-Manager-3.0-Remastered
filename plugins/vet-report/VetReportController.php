@@ -30,6 +30,11 @@ class VetReportController extends Controller
         $this->service = new VetReportService($settingsRepository);
     }
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     /* ── GET /patienten/{id}/tierarztbericht ── */
     public function generate(array $params = []): void
     {
@@ -67,8 +72,8 @@ class VetReportController extends Controller
         try {
             $rows = $this->db->query(
                 "SELECT vr.id, vr.created_at, u.name AS created_by_name
-                 FROM vet_reports vr
-                 LEFT JOIN users u ON u.id = vr.created_by
+                 FROM `{$this->t('vet_reports')}` vr
+                 LEFT JOIN `{$this->t('users')}` u ON u.id = vr.created_by
                  WHERE vr.patient_id = ?
                  ORDER BY vr.created_at DESC
                  LIMIT 20",
@@ -89,7 +94,7 @@ class VetReportController extends Controller
 
         try {
             $row = $this->db->query(
-                "SELECT filename FROM vet_reports WHERE id = ? AND patient_id = ? LIMIT 1",
+                "SELECT filename FROM `{$this->t('vet_reports')}` WHERE id = ? AND patient_id = ? LIMIT 1",
                 [$reportId, $patientId]
             )->fetch(\PDO::FETCH_ASSOC);
         } catch (\Throwable) {
@@ -133,7 +138,7 @@ class VetReportController extends Controller
 
         try {
             $row = $this->db->query(
-                "SELECT filename FROM vet_reports WHERE id = ? AND patient_id = ? LIMIT 1",
+                "SELECT filename FROM `{$this->t('vet_reports')}` WHERE id = ? AND patient_id = ? LIMIT 1",
                 [$reportId, $patientId]
             )->fetch(\PDO::FETCH_ASSOC);
 
@@ -152,7 +157,7 @@ class VetReportController extends Controller
                     unlink($realPath);
                 }
             }
-            $this->db->query("DELETE FROM vet_reports WHERE id = ? AND patient_id = ?", [$reportId, $patientId]);
+            $this->db->query("DELETE FROM `{$this->t('vet_reports')}` WHERE id = ? AND patient_id = ?", [$reportId, $patientId]);
         } catch (\Throwable) {
             $this->json(['ok' => false, 'error' => 'db_error'], 500);
             return;
@@ -166,11 +171,11 @@ class VetReportController extends Controller
     private function loadPatient(int $id): ?array
     {
         $row = $this->db->query(
-            'SELECT p.*, o.first_name, o.last_name, o.phone, o.email,
+            "SELECT p.*, o.first_name, o.last_name, o.phone, o.email,
                     o.street, o.zip, o.city, o.id AS owner_id_val
-             FROM patients p
-             LEFT JOIN owners o ON o.id = p.owner_id
-             WHERE p.id = ? LIMIT 1',
+             FROM `{$this->t('patients')}` p
+             LEFT JOIN `{$this->t('owners')}` o ON o.id = p.owner_id
+             WHERE p.id = ? LIMIT 1",
             [$id]
         )->fetch(\PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -194,8 +199,8 @@ class VetReportController extends Controller
     private function loadTimeline(int $patientId): array
     {
         return $this->db->query(
-            "SELECT t.*, u.name AS user_name FROM patient_timeline t
-             LEFT JOIN users u ON u.id = t.user_id
+            "SELECT t.*, u.name AS user_name FROM `{$this->t('patient_timeline')}` t
+             LEFT JOIN `{$this->t('users')}` u ON u.id = t.user_id
              WHERE t.patient_id = ? AND t.type IN ('treatment','note')
              ORDER BY t.entry_date DESC",
             [$patientId]
@@ -207,8 +212,8 @@ class VetReportController extends Controller
         try {
             return $this->db->query(
                 "SELECT a.*, tt.name AS treatment_type_name
-                 FROM appointments a
-                 LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+                 FROM `{$this->t('appointments')}` a
+                 LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
                  WHERE a.patient_id = ? AND a.start_at >= NOW()
                  ORDER BY a.start_at ASC LIMIT 10",
                 [$patientId]
@@ -235,7 +240,7 @@ class VetReportController extends Controller
 
             $userId = $this->session->get('user_id');
             $this->db->query(
-                "INSERT INTO vet_reports (patient_id, created_by, filename) VALUES (?, ?, ?)",
+                "INSERT INTO `{$this->t('vet_reports')}` (patient_id, created_by, filename) VALUES (?, ?, ?)",
                 [$patientId, $userId ?: null, $filename]
             );
         } catch (\Throwable) {

@@ -18,6 +18,11 @@ class DashboardService
         private readonly Database $db
     ) {}
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     public function getStats(): array
     {
         $invoiceStats = $this->invoiceRepository->getStats();
@@ -50,10 +55,10 @@ class DashboardService
                     p.name AS patient_name, p.species AS patient_species,
                     CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
                     tt.name AS treatment_type_name, tt.color AS treatment_color
-             FROM appointments a
-             LEFT JOIN patients p ON p.id = a.patient_id
-             LEFT JOIN owners o ON o.id = a.owner_id
-             LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+             FROM `{$this->t('appointments')}` a
+             LEFT JOIN `{$this->t('patients')}` p ON p.id = a.patient_id
+             LEFT JOIN `{$this->t('owners')}` o ON o.id = a.owner_id
+             LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
              WHERE a.start_at >= NOW() AND a.status NOT IN ('cancelled','noshow')
              ORDER BY a.start_at ASC
              LIMIT ?",
@@ -69,10 +74,10 @@ class DashboardService
                     p.name AS patient_name, p.species AS patient_species,
                     CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
                     tt.name AS treatment_type_name, tt.color AS treatment_color
-             FROM appointments a
-             LEFT JOIN patients p ON p.id = a.patient_id
-             LEFT JOIN owners o ON o.id = a.owner_id
-             LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+             FROM `{$this->t('appointments')}` a
+             LEFT JOIN `{$this->t('patients')}` p ON p.id = a.patient_id
+             LEFT JOIN `{$this->t('owners')}` o ON o.id = a.owner_id
+             LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
              WHERE DATE(a.start_at) = CURDATE() AND a.status NOT IN ('cancelled','noshow')
              ORDER BY a.start_at ASC"
         );
@@ -86,10 +91,10 @@ class DashboardService
                     p.name AS patient_name, p.species AS patient_species,
                     CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
                     tt.name AS treatment_type_name, tt.color AS treatment_color
-             FROM appointments a
-             LEFT JOIN patients p ON p.id = a.patient_id
-             LEFT JOIN owners o ON o.id = a.owner_id
-             LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+             FROM `{$this->t('appointments')}` a
+             LEFT JOIN `{$this->t('patients')}` p ON p.id = a.patient_id
+             LEFT JOIN `{$this->t('owners')}` o ON o.id = a.owner_id
+             LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
              WHERE DATE(a.start_at) > CURDATE() AND a.status NOT IN ('cancelled','noshow')
              ORDER BY a.start_at ASC
              LIMIT ?",
@@ -106,7 +111,7 @@ class DashboardService
 
         $rows = $this->db->fetchAll(
             "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, COUNT(*) AS count
-             FROM patients
+             FROM `{$this->t('patients')}`
              WHERE created_at >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
              GROUP BY month ORDER BY month ASC"
         );
@@ -133,8 +138,8 @@ class DashboardService
         $patients = $this->db->fetchAll(
             "SELECT p.id, p.name, p.birth_date, p.species, 'patient' AS type,
                     CONCAT(o.first_name, ' ', o.last_name) AS owner_name, o.id AS owner_id
-             FROM patients p
-             LEFT JOIN owners o ON p.owner_id = o.id
+             FROM `{$this->t('patients')}` p
+             LEFT JOIN `{$this->t('owners')}` o ON p.owner_id = o.id
              WHERE p.birth_date IS NOT NULL AND p.status != 'verstorben'"
         );
 
@@ -159,7 +164,7 @@ class DashboardService
 
         // Owners with birth_date
         $owners = $this->db->fetchAll(
-            "SELECT id, first_name, last_name, birth_date FROM owners WHERE birth_date IS NOT NULL"
+            "SELECT id, first_name, last_name, birth_date FROM `{$this->t('owners')}` WHERE birth_date IS NOT NULL"
         );
 
         foreach ($owners as $row) {
@@ -203,7 +208,7 @@ class DashboardService
     public function saveLayout(int $userId, array $layout): void
     {
         $this->db->execute(
-            "INSERT INTO user_preferences (user_id, pref_key, pref_value)
+            "INSERT INTO `{$this->t('user_preferences')}` (user_id, pref_key, pref_value)
              VALUES (?, 'dashboard_layout', ?)
              ON DUPLICATE KEY UPDATE pref_value = VALUES(pref_value), updated_at = NOW()",
             [$userId, json_encode($layout, JSON_UNESCAPED_UNICODE)]
@@ -213,7 +218,7 @@ class DashboardService
     public function loadLayout(int $userId): ?array
     {
         $row = $this->db->fetchColumn(
-            "SELECT pref_value FROM user_preferences WHERE user_id = ? AND pref_key = 'dashboard_layout'",
+            "SELECT pref_value FROM `{$this->t('user_preferences')}` WHERE user_id = ? AND pref_key = 'dashboard_layout'",
             [$userId]
         );
         if (!$row) return null;
@@ -224,7 +229,7 @@ class DashboardService
     public function deleteLayout(int $userId): void
     {
         $this->db->execute(
-            "DELETE FROM user_preferences WHERE user_id = ? AND pref_key = 'dashboard_layout'",
+            "DELETE FROM `{$this->t('user_preferences')}` WHERE user_id = ? AND pref_key = 'dashboard_layout'",
             [$userId]
         );
     }
@@ -236,7 +241,7 @@ class DashboardService
             $rows = $this->db->fetchAll(
                 "SELECT COALESCE(NULLIF(TRIM(species),''), 'Unbekannt') AS label,
                         COUNT(*) AS value
-                 FROM patients
+                 FROM `{$this->t('patients')}`
                  WHERE status != 'verstorben'
                  GROUP BY label
                  ORDER BY value DESC
@@ -259,8 +264,8 @@ class DashboardService
                 "SELECT COALESCE(tt.name, 'Sonstige') AS label,
                         COALESCE(tt.color, '#94a3b8') AS color,
                         COUNT(a.id) AS value
-                 FROM appointments a
-                 LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+                 FROM `{$this->t('appointments')}` a
+                 LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
                  WHERE a.start_at >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
                    AND a.status NOT IN ('cancelled','noshow')
                  GROUP BY tt.id, tt.name, tt.color
@@ -284,7 +289,7 @@ class DashboardService
             $rows = $this->db->fetchAll(
                 "SELECT COALESCE(NULLIF(payment_method,''), 'rechnung') AS method,
                         COALESCE(SUM(total_gross), 0) AS amount
-                 FROM invoices
+                 FROM `{$this->t('invoices')}`
                  WHERE status = 'paid'
                  GROUP BY method"
             );
@@ -306,7 +311,7 @@ class DashboardService
         try {
             $rows = $this->db->fetchAll(
                 "SELECT DAYOFWEEK(start_at) AS dow, COUNT(*) AS value
-                 FROM appointments
+                 FROM `{$this->t('appointments')}`
                  WHERE start_at >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
                    AND status NOT IN ('cancelled','noshow')
                  GROUP BY dow
@@ -334,8 +339,8 @@ class DashboardService
             $rows = $this->db->fetchAll(
                 "SELECT CONCAT(o.first_name, ' ', o.last_name) AS label,
                         COALESCE(SUM(i.total_gross), 0) AS amount
-                 FROM invoices i
-                 JOIN owners o ON o.id = i.owner_id
+                 FROM `{$this->t('invoices')}` i
+                 JOIN `{$this->t('owners')}` o ON o.id = i.owner_id
                  WHERE i.status = 'paid'
                  GROUP BY o.id, o.first_name, o.last_name
                  ORDER BY amount DESC
@@ -363,7 +368,7 @@ class DashboardService
             $rows = $this->db->fetchAll(
                 "SELECT DATE_FORMAT(issue_date, '%Y-%m') AS period,
                         COALESCE(SUM(total_gross), 0) AS amount
-                 FROM invoices
+                 FROM `{$this->t('invoices')}`
                  WHERE status = 'paid'
                    AND issue_date >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
                  GROUP BY period ORDER BY period ASC"
@@ -421,7 +426,7 @@ class DashboardService
             $rows = $this->db->fetchAll(
                 "SELECT DATE(issue_date) AS day, COUNT(*) AS count,
                         COALESCE(SUM(total_gross), 0) AS amount
-                 FROM invoices
+                 FROM `{$this->t('invoices')}`
                  WHERE issue_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
                  GROUP BY day ORDER BY day ASC"
             );

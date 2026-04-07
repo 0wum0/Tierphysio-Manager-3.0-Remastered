@@ -39,6 +39,11 @@ class PatientController extends Controller
         parent::__construct($view, $session, $config, $translator);
     }
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     public function index(array $params = []): void
     {
         $search  = $this->get('search', '');
@@ -116,9 +121,9 @@ class PatientController extends Controller
                 "SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.notes,
                         tt.name AS treatment_type_name, tt.color AS treatment_color,
                         CONCAT(o.first_name, ' ', o.last_name) AS owner_name
-                 FROM appointments a
-                 LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
-                 LEFT JOIN owners o ON o.id = a.owner_id
+                 FROM `{$db->prefix('appointments')}` a
+                 LEFT JOIN `{$db->prefix('treatment_types')}` tt ON tt.id = a.treatment_type_id
+                 LEFT JOIN `{$db->prefix('owners')}` o ON o.id = a.owner_id
                  WHERE a.patient_id = ? AND a.start_at >= NOW() AND a.status NOT IN ('cancelled','noshow')
                  ORDER BY a.start_at ASC
                  LIMIT 1",
@@ -164,26 +169,26 @@ class PatientController extends Controller
         try {
             $pid = (int)$params['id'];
             $stmt = $this->db->query(
-                'SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.color, a.all_day,
+                "SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.color, a.all_day,
                         tt.name AS treatment_type_name
-                 FROM appointments a
-                 LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+                 FROM `{$this->t('appointments')}` a
+                 LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
                  WHERE a.patient_id = ? AND a.start_at >= NOW()
-                   AND a.status NOT IN (\'cancelled\',\'noshow\')
+                   AND a.status NOT IN ('cancelled','noshow')
                  ORDER BY a.start_at ASC
-                 LIMIT 5',
+                 LIMIT 5",
                 [$pid]
             );
             $appointments = $stmt->fetchAll(\PDO::FETCH_ASSOC);
             if (empty($appointments)) {
                 $stmt2 = $this->db->query(
-                    'SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.color, a.all_day,
+                    "SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.color, a.all_day,
                             tt.name AS treatment_type_name
-                     FROM appointments a
-                     LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+                     FROM `{$this->t('appointments')}` a
+                     LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
                      WHERE a.patient_id = ?
                      ORDER BY a.start_at DESC
-                     LIMIT 5',
+                     LIMIT 5",
                     [$pid]
                 );
                 $appointments = $stmt2->fetchAll(\PDO::FETCH_ASSOC);

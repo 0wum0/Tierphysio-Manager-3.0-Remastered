@@ -344,9 +344,8 @@ class TherapyCareController extends Controller
 
         $ownerRow = null;
         try {
-            $ownerRow = \App\Core\Application::getInstance()->getContainer()
-                ->get(\App\Core\Database::class)
-                ->fetch('SELECT * FROM owners WHERE id=? LIMIT 1', [(int)$patient['owner_id']]);
+            $ownerDb  = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $ownerRow = $ownerDb->fetch('SELECT * FROM `' . $ownerDb->prefix('owners') . '` WHERE id=? LIMIT 1', [(int)$patient['owner_id']]);
             $ownerRow = $ownerRow ?: null;
         } catch (\Throwable) {}
 
@@ -977,7 +976,7 @@ class TherapyCareController extends Controller
         try {
             $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
             $db->query(
-                'INSERT INTO cron_job_log (job_key, status, message, duration_ms, triggered_by, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
+                'INSERT INTO `' . $db->prefix('cron_job_log') . '` (job_key, status, message, duration_ms, triggered_by, created_at) VALUES (?, ?, ?, ?, ?, NOW())',
                 [$jobKey, $status, mb_substr($message, 0, 2000), $ms, 'cron']
             );
         } catch (\Throwable) {}
@@ -1105,7 +1104,7 @@ class TherapyCareController extends Controller
         try {
             $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
             $db->execute(
-                'INSERT INTO patient_timeline (patient_id, user_id, type, title, content, entry_date)
+                'INSERT INTO `' . $db->prefix('patient_timeline') . '` (patient_id, user_id, type, title, content, entry_date)
                  VALUES (?, ?, ?, ?, ?, CURDATE())',
                 [$patientId, $userId ?: null, $type, $title, $content]
             );

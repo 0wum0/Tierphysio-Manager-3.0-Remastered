@@ -17,6 +17,11 @@ class GobdAuditService
 {
     public function __construct(private readonly Database $db) {}
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     public function log(
         int     $invoiceId,
         string  $invoiceNumber,
@@ -27,7 +32,7 @@ class GobdAuditService
     ): void {
         try {
             $this->db->execute(
-                "INSERT INTO invoice_audit_log
+                "INSERT INTO `{$this->t('invoice_audit_log')}`
                     (invoice_id, invoice_number, action, old_values, new_values, user_id, ip_address, user_agent, created_at)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())",
                 [
@@ -53,7 +58,7 @@ class GobdAuditService
     {
         try {
             $val = $this->db->fetchColumn(
-                "SELECT finalized_at FROM invoices WHERE id = ? LIMIT 1",
+                "SELECT finalized_at FROM `{$this->t('invoices')}` WHERE id = ? LIMIT 1",
                 [$invoiceId]
             );
             return !empty($val);
@@ -73,7 +78,7 @@ class GobdAuditService
             $hash = $this->computeHash($invoiceId);
 
             $this->db->execute(
-                "UPDATE invoices SET finalized_at = NOW(), gobd_hash = ? WHERE id = ? AND finalized_at IS NULL",
+                "UPDATE `{$this->t('invoices')}` SET finalized_at = NOW(), gobd_hash = ? WHERE id = ? AND finalized_at IS NULL",
                 [$hash, $invoiceId]
             );
 
@@ -92,9 +97,9 @@ class GobdAuditService
         ?int   $userId = null
     ): ?int {
         try {
-            $original   = $this->db->fetch("SELECT * FROM invoices WHERE id = ?", [$originalId]);
+            $original   = $this->db->fetch("SELECT * FROM `{$this->t('invoices')}` WHERE id = ?", [$originalId]);
             $positions  = $this->db->fetchAll(
-                "SELECT * FROM invoice_positions WHERE invoice_id = ? ORDER BY sort_order ASC",
+                "SELECT * FROM `{$this->t('invoice_positions')}` WHERE invoice_id = ? ORDER BY sort_order ASC",
                 [$originalId]
             );
 
@@ -102,7 +107,7 @@ class GobdAuditService
 
             /* Mark original as cancelled */
             $this->db->execute(
-                "UPDATE invoices SET cancelled_at = NOW(), status = 'cancelled' WHERE id = ?",
+                "UPDATE `{$this->t('invoices')}` SET cancelled_at = NOW(), status = 'cancelled' WHERE id = ?",
                 [$originalId]
             );
             $this->log($originalId, $originalNumber, 'cancelled', null, null, $userId);
@@ -110,7 +115,7 @@ class GobdAuditService
             /* Create reversal invoice with negative amounts */
             $cancelNumber = 'STORNO-' . $originalNumber;
             $this->db->execute(
-                "INSERT INTO invoices
+                "INSERT INTO `{$this->t('invoices')}`
                     (invoice_number, owner_id, patient_id, status, issue_date,
                      due_date, notes, payment_terms, payment_method,
                      total_net, total_tax, total_gross,
@@ -137,7 +142,7 @@ class GobdAuditService
             /* Copy positions with negated amounts */
             foreach ($positions as $i => $pos) {
                 $this->db->execute(
-                    "INSERT INTO invoice_positions
+                    "INSERT INTO `{$this->t('invoice_positions')}`
                         (invoice_id, description, quantity, unit_price, tax_rate, total, sort_order)
                      VALUES (?, ?, ?, ?, ?, ?, ?)",
                     [
@@ -168,7 +173,7 @@ class GobdAuditService
     {
         try {
             return $this->db->fetchAll(
-                "SELECT * FROM invoice_audit_log WHERE invoice_id = ? ORDER BY created_at ASC",
+                "SELECT * FROM `{$this->t('invoice_audit_log')}` WHERE invoice_id = ? ORDER BY created_at ASC",
                 [$invoiceId]
             );
         } catch (\Throwable) {
@@ -184,8 +189,8 @@ class GobdAuditService
         try {
             return $this->db->fetchAll(
                 "SELECT l.*, i.invoice_number
-                 FROM invoice_audit_log l
-                 LEFT JOIN invoices i ON l.invoice_id = i.id
+                 FROM `{$this->t('invoice_audit_log')}` l
+                 LEFT JOIN `{$this->t('invoices')}` i ON l.invoice_id = i.id
                  ORDER BY l.created_at DESC LIMIT ?",
                 [$limit]
             );
@@ -199,9 +204,9 @@ class GobdAuditService
     private function computeHash(int $invoiceId): string
     {
         try {
-            $invoice   = $this->db->fetch("SELECT * FROM invoices WHERE id = ?", [$invoiceId]);
+            $invoice   = $this->db->fetch("SELECT * FROM `{$this->t('invoices')}` WHERE id = ?", [$invoiceId]);
             $positions = $this->db->fetchAll(
-                "SELECT * FROM invoice_positions WHERE invoice_id = ? ORDER BY sort_order ASC",
+                "SELECT * FROM `{$this->t('invoice_positions')}` WHERE invoice_id = ? ORDER BY sort_order ASC",
                 [$invoiceId]
             );
             $canonical = json_encode(['invoice' => $invoice, 'positions' => $positions], JSON_UNESCAPED_UNICODE);

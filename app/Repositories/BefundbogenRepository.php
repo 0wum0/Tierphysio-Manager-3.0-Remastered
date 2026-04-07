@@ -18,10 +18,11 @@ class BefundbogenRepository extends Repository
 
     public function findByPatient(int $patientId): array
     {
+        $b = $this->t('befundboegen'); $u = $this->t('users');
         return $this->db->fetchAll(
             "SELECT b.*, u.name AS ersteller_name
-             FROM befundboegen b
-             LEFT JOIN users u ON u.id = b.created_by
+             FROM `{$b}` b
+             LEFT JOIN `{$u}` u ON u.id = b.created_by
              WHERE b.patient_id = ?
              ORDER BY b.datum DESC, b.created_at DESC",
             [$patientId]
@@ -30,12 +31,13 @@ class BefundbogenRepository extends Repository
 
     public function findByOwner(int $ownerId): array
     {
+        $b = $this->t('befundboegen'); $p = $this->t('patients'); $u = $this->t('users');
         return $this->db->fetchAll(
             "SELECT b.*, p.name AS patient_name, p.species AS patient_species,
                     u.name AS ersteller_name
-             FROM befundboegen b
-             LEFT JOIN patients p ON p.id = b.patient_id
-             LEFT JOIN users u ON u.id = b.created_by
+             FROM `{$b}` b
+             LEFT JOIN `{$p}` p ON p.id = b.patient_id
+             LEFT JOIN `{$u}` u ON u.id = b.created_by
              WHERE b.owner_id = ? AND b.status != 'entwurf'
              ORDER BY b.datum DESC, b.created_at DESC",
             [$ownerId]
@@ -60,14 +62,15 @@ class BefundbogenRepository extends Repository
 
         $where = $conditions ? 'WHERE ' . implode(' AND ', $conditions) : '';
 
+        $b = $this->t('befundboegen'); $p = $this->t('patients'); $o = $this->t('owners'); $u = $this->t('users');
         return $this->db->fetchAll(
             "SELECT b.*, p.name AS patient_name, p.species AS patient_species,
                     CONCAT(o.first_name,' ',o.last_name) AS owner_name,
                     u.name AS ersteller_name
-             FROM befundboegen b
-             LEFT JOIN patients p ON p.id = b.patient_id
-             LEFT JOIN owners o ON o.id = b.owner_id
-             LEFT JOIN users u ON u.id = b.created_by
+             FROM `{$b}` b
+             LEFT JOIN `{$p}` p ON p.id = b.patient_id
+             LEFT JOIN `{$o}` o ON o.id = b.owner_id
+             LEFT JOIN `{$u}` u ON u.id = b.created_by
              {$where}
              ORDER BY b.datum DESC, b.created_at DESC",
             $params
@@ -77,7 +80,7 @@ class BefundbogenRepository extends Repository
     public function createBefund(array $data): int
     {
         $this->db->execute(
-            "INSERT INTO befundboegen
+            "INSERT INTO `{$this->t('befundboegen')}`
                 (patient_id, owner_id, created_by, status, datum, naechster_termin, notizen)
              VALUES (?, ?, ?, ?, ?, ?, ?)",
             [
@@ -110,20 +113,20 @@ class BefundbogenRepository extends Repository
 
         $params[] = $id;
         $this->db->execute(
-            "UPDATE befundboegen SET " . implode(', ', $sets) . " WHERE id = ?",
+            "UPDATE `{$this->t('befundboegen')}` SET " . implode(', ', $sets) . " WHERE id = ?",
             $params
         );
     }
 
     public function deleteBefund(int $id): void
     {
-        $this->db->execute("DELETE FROM befundboegen WHERE id = ?", [$id]);
+        $this->db->execute("DELETE FROM `{$this->t('befundboegen')}` WHERE id = ?", [$id]);
     }
 
     public function saveFelder(int $befundbogenId, array $felder): void
     {
         $this->db->execute(
-            "DELETE FROM befundbogen_felder WHERE befundbogen_id = ?",
+            "DELETE FROM `{$this->t('befundbogen_felder')}` WHERE befundbogen_id = ?",
             [$befundbogenId]
         );
 
@@ -131,7 +134,7 @@ class BefundbogenRepository extends Repository
             $wert = is_array($feldwert) ? json_encode($feldwert, JSON_UNESCAPED_UNICODE) : (string)$feldwert;
             if ($wert === '' || $wert === '[]' || $wert === 'null') continue;
             $this->db->execute(
-                "INSERT INTO befundbogen_felder (befundbogen_id, feldname, feldwert) VALUES (?, ?, ?)",
+                "INSERT INTO `{$this->t('befundbogen_felder')}` (befundbogen_id, feldname, feldwert) VALUES (?, ?, ?)",
                 [$befundbogenId, $feldname, $wert]
             );
         }
@@ -140,7 +143,7 @@ class BefundbogenRepository extends Repository
     public function getFelder(int $befundbogenId): array
     {
         $rows   = $this->db->fetchAll(
-            "SELECT feldname, feldwert FROM befundbogen_felder WHERE befundbogen_id = ?",
+            "SELECT feldname, feldwert FROM `{$this->t('befundbogen_felder')}` WHERE befundbogen_id = ?",
             [$befundbogenId]
         );
         $result = [];
@@ -155,14 +158,15 @@ class BefundbogenRepository extends Repository
 
     public function findWithFelder(int $id): ?array
     {
+        $b = $this->t('befundboegen'); $u = $this->t('users'); $p = $this->t('patients'); $o = $this->t('owners');
         $row = $this->db->fetch(
             "SELECT b.*, u.name AS ersteller_name,
                     p.name AS patient_name, p.species AS patient_species,
                     CONCAT(o.first_name,' ',o.last_name) AS owner_name
-             FROM befundboegen b
-             LEFT JOIN users u ON u.id = b.created_by
-             LEFT JOIN patients p ON p.id = b.patient_id
-             LEFT JOIN owners o ON o.id = b.owner_id
+             FROM `{$b}` b
+             LEFT JOIN `{$u}` u ON u.id = b.created_by
+             LEFT JOIN `{$p}` p ON p.id = b.patient_id
+             LEFT JOIN `{$o}` o ON o.id = b.owner_id
              WHERE b.id = ? LIMIT 1",
             [$id]
         );
@@ -176,7 +180,7 @@ class BefundbogenRepository extends Repository
     public function markVersendet(int $id, string $email, string $pdfPath): void
     {
         $this->db->execute(
-            "UPDATE befundboegen
+            "UPDATE `{$this->t('befundboegen')}`
              SET status = 'versendet', pdf_path = ?, pdf_sent_at = NOW(), pdf_sent_to = ?
              WHERE id = ?",
             [$pdfPath, $email, $id]

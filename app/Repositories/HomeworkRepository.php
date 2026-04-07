@@ -13,11 +13,16 @@ class HomeworkRepository
         $this->db = $db;
     }
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     public function findAllTemplates(): array
     {
         try {
             return $this->db->fetchAll(
-                "SELECT * FROM homework_templates WHERE is_active = 1 ORDER BY category, title"
+                "SELECT * FROM `{$this->t('homework_templates')}` WHERE is_active = 1 ORDER BY category, title"
             );
         } catch (\Throwable) {
             return [];
@@ -28,7 +33,7 @@ class HomeworkRepository
     {
         try {
             $template = $this->db->fetch(
-                "SELECT * FROM homework_templates WHERE id = ? AND is_active = 1",
+                "SELECT * FROM `{$this->t('homework_templates')}` WHERE id = ? AND is_active = 1",
                 [$id]
             );
             return $template ?: null;
@@ -61,8 +66,8 @@ class HomeworkRepository
                                 ELSE ph.duration_unit
                             END
                         ) as duration_display
-                FROM patient_homework ph
-                LEFT JOIN users u ON ph.assigned_by = u.id
+                FROM `{$this->t('patient_homework')}` ph
+                LEFT JOIN `{$this->t('users')}` u ON ph.assigned_by = u.id
                 WHERE ph.patient_id = ? AND ph.status != 'cancelled'
                 ORDER BY ph.created_at DESC",
                 [$patientId]
@@ -82,7 +87,7 @@ class HomeworkRepository
     {
         error_log('HomeworkRepository::createPatientHomework - Data: ' . print_r($data, true));
         
-        $sql = "INSERT INTO patient_homework (
+        $sql = "INSERT INTO `{$this->t('patient_homework')}` (
             patient_id, homework_template_id, title, description, 
             category, category_emoji, frequency, duration_value, duration_unit,
             start_date, end_date, therapist_notes, status, assigned_by
@@ -133,7 +138,7 @@ class HomeworkRepository
         }
 
         $params[] = $id;
-        $sql = "UPDATE patient_homework SET " . implode(', ', $fields) . " WHERE id = ?";
+        $sql = "UPDATE `{$this->t('patient_homework')}` SET " . implode(', ', $fields) . " WHERE id = ?";
         
         $this->db->query($sql, $params);
         return $this->db->rowCount() > 0;
@@ -142,9 +147,9 @@ class HomeworkRepository
     public function deletePatientHomework(int $id, int $patientId = null): bool
     {
         if ($patientId) {
-            $this->db->query("DELETE FROM patient_homework WHERE id = ? AND patient_id = ?", [$id, $patientId]);
+            $this->db->query("DELETE FROM `{$this->t('patient_homework')}` WHERE id = ? AND patient_id = ?", [$id, $patientId]);
         } else {
-            $this->db->query("DELETE FROM patient_homework WHERE id = ?", [$id]);
+            $this->db->query("DELETE FROM `{$this->t('patient_homework')}` WHERE id = ?", [$id]);
         }
         return $this->db->rowCount() > 0;
     }
@@ -152,7 +157,7 @@ class HomeworkRepository
     public function updateStatus(int $id, string $status): bool
     {
         $this->db->query(
-            "UPDATE patient_homework SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            "UPDATE `{$this->t('patient_homework')}` SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
             [$status, $id]
         );
         return $this->db->rowCount() > 0;
@@ -161,7 +166,7 @@ class HomeworkRepository
     public function findHomeworkById(int $id): ?array
     {
         $homework = $this->db->fetch(
-            "SELECT * FROM patient_homework WHERE id = ?",
+            "SELECT * FROM `{$this->t('patient_homework')}` WHERE id = ?",
             [$id]
         );
         return $homework ?: null;
@@ -172,7 +177,7 @@ class HomeworkRepository
     public function getPatientPlanMeta(int $patientId): ?array
     {
         $row = $this->db->fetch(
-            "SELECT * FROM homework_plan_meta WHERE patient_id = ?",
+            "SELECT * FROM `{$this->t('homework_plan_meta')}` WHERE patient_id = ?",
             [$patientId]
         );
         return $row ?: null;
@@ -184,7 +189,7 @@ class HomeworkRepository
 
         if ($existing) {
             $this->db->query(
-                "UPDATE homework_plan_meta SET
+                "UPDATE `{$this->t('homework_plan_meta')}` SET
                     physiotherapeutische_grundsaetze = ?,
                     kurzfristige_ziele = ?,
                     langfristige_ziele = ?,
@@ -207,7 +212,7 @@ class HomeworkRepository
             );
         } else {
             $this->db->query(
-                "INSERT INTO homework_plan_meta
+                "INSERT INTO `{$this->t('homework_plan_meta')}`
                     (patient_id, physiotherapeutische_grundsaetze, kurzfristige_ziele,
                      langfristige_ziele, therapiemittel, beachte_hinweise,
                      wiedervorstellung_date, therapist_name)
@@ -231,14 +236,14 @@ class HomeworkRepository
     public function findAllTemplatesAdmin(): array
     {
         return $this->db->fetchAll(
-            "SELECT * FROM homework_templates ORDER BY category, title"
+            "SELECT * FROM `{$this->t('homework_templates')}` ORDER BY category, title"
         );
     }
 
     public function createTemplate(array $data): int
     {
         $this->db->query(
-            "INSERT INTO homework_templates
+            "INSERT INTO `{$this->t('homework_templates')}`
                 (title, description, category, category_emoji, frequency,
                  duration_value, duration_unit, therapist_notes, is_active)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)",
@@ -259,7 +264,7 @@ class HomeworkRepository
     public function updateTemplate(int $id, array $data): bool
     {
         $affected = $this->db->execute(
-            "UPDATE homework_templates SET
+            "UPDATE `{$this->t('homework_templates')}` SET
                 title = ?, description = ?, category = ?, category_emoji = ?,
                 frequency = ?, duration_value = ?, duration_unit = ?,
                 therapist_notes = ?, is_active = ?,
@@ -283,6 +288,6 @@ class HomeworkRepository
 
     public function deleteTemplate(int $id): bool
     {
-        return $this->db->execute("DELETE FROM homework_templates WHERE id = ?", [$id]) > 0;
+        return $this->db->execute("DELETE FROM `{$this->t('homework_templates')}` WHERE id = ?", [$id]) > 0;
     }
 }

@@ -13,11 +13,27 @@ class Database
 {
     private PDO $pdo;
     private Config $config;
+    private string $tablePrefix = '';
 
     public function __construct(Config $config)
     {
         $this->config = $config;
         $this->connect();
+    }
+
+    public function setPrefix(string $prefix): void
+    {
+        $this->tablePrefix = $prefix;
+    }
+
+    public function getPrefix(): string
+    {
+        return $this->tablePrefix;
+    }
+
+    public function prefix(string $table): string
+    {
+        return $this->tablePrefix . $table;
     }
 
     private function connect(): void

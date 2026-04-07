@@ -26,6 +26,11 @@ class LicenseSetupController extends Controller
         $this->db = $database;
     }
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     public function index(array $params = []): void
     {
         $this->requireRole('admin');
@@ -76,7 +81,7 @@ class LicenseSetupController extends Controller
     {
         try {
             $result = $this->db->fetchColumn(
-                "SELECT `value` FROM settings WHERE `key` = ?", [$key]
+                "SELECT `value` FROM `{$this->t('settings')}` WHERE `key` = ?", [$key]
             );
             return $result !== false ? (string)$result : '';
         } catch (\Throwable) {
@@ -88,7 +93,7 @@ class LicenseSetupController extends Controller
     {
         try {
             $this->db->execute(
-                "INSERT INTO settings (`key`, `value`) VALUES (?, ?)
+                "INSERT INTO `{$this->t('settings')}` (`key`, `value`) VALUES (?, ?)
                  ON DUPLICATE KEY UPDATE `value` = ?",
                 [$key, $value, $value]
             );

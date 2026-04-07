@@ -23,6 +23,11 @@ class NotificationController extends Controller
         parent::__construct($view, $session, $config, $translator);
     }
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     public function index(array $params = []): void
     {
         $notifications = [];
@@ -32,8 +37,8 @@ class NotificationController extends Controller
             $birthdays = $this->db->fetchAll(
                 "SELECT p.id, p.name, p.species, p.birth_date,
                         CONCAT(o.first_name, ' ', o.last_name) AS owner_name
-                 FROM patients p
-                 LEFT JOIN owners o ON o.id = p.owner_id
+                 FROM `{$this->t('patients')}` p
+                 LEFT JOIN `{$this->t('owners')}` o ON o.id = p.owner_id
                  WHERE DATE_FORMAT(p.birth_date, '%m-%d') = DATE_FORMAT(NOW(), '%m-%d')
                    AND p.birth_date IS NOT NULL
                    AND p.status NOT IN ('verstorben','inaktiv')
@@ -58,7 +63,7 @@ class NotificationController extends Controller
         try {
             $intakes = $this->db->fetchAll(
                 "SELECT id, patient_name, owner_first_name, owner_last_name, created_at
-                 FROM patient_intakes
+                 FROM `{$this->t('patient_intakes')}`
                  WHERE read_at IS NULL AND created_at >= NOW() - INTERVAL 24 HOUR
                  ORDER BY created_at DESC
                  LIMIT 5"
@@ -85,10 +90,10 @@ class NotificationController extends Controller
                         p.name AS patient_name,
                         CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
                         tt.name AS treatment_name
-                 FROM appointments a
-                 LEFT JOIN patients p ON p.id = a.patient_id
-                 LEFT JOIN owners o ON o.id = a.owner_id
-                 LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
+                 FROM `{$this->t('appointments')}` a
+                 LEFT JOIN `{$this->t('patients')}` p ON p.id = a.patient_id
+                 LEFT JOIN `{$this->t('owners')}` o ON o.id = a.owner_id
+                 LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
                  WHERE a.start_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 60 MINUTE)
                    AND a.status NOT IN ('cancelled','noshow')
                  ORDER BY a.start_at ASC

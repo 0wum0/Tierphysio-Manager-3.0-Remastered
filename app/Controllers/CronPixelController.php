@@ -78,9 +78,9 @@ class CronPixelController
     {
         try {
             $stmt = $db->query(
-                'SELECT created_at FROM cron_job_log
+                "SELECT created_at FROM `{$db->prefix('cron_job_log')}`
                  WHERE job_key = ? AND status != ?
-                 ORDER BY created_at DESC LIMIT 1',
+                 ORDER BY created_at DESC LIMIT 1",
                 [$jobKey, 'error']
             );
             $row = $stmt->fetch(\PDO::FETCH_ASSOC);

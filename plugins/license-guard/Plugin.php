@@ -37,6 +37,11 @@ class Plugin
         $this->checkLicense($container);
     }
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     private function checkLicense(Container $container): void
     {
         $token      = $this->getSetting(self::SETTINGS_TOKEN);
@@ -211,7 +216,7 @@ class Plugin
     {
         try {
             $result = $this->db->fetchColumn(
-                "SELECT `value` FROM settings WHERE `key` = ?",
+                "SELECT `value` FROM `{$this->t('settings')}` WHERE `key` = ?",
                 [$key]
             );
             return $result !== false ? (string)$result : '';
@@ -224,7 +229,7 @@ class Plugin
     {
         try {
             $this->db->execute(
-                "INSERT INTO settings (`key`, `value`) VALUES (?, ?)
+                "INSERT INTO `{$this->t('settings')}` (`key`, `value`) VALUES (?, ?)
                  ON DUPLICATE KEY UPDATE `value` = ?",
                 [$key, $value, $value]
             );

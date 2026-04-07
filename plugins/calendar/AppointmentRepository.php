@@ -11,18 +11,23 @@ class AppointmentRepository
 {
     public function __construct(private readonly Database $db) {}
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     public function findById(int $id): ?array
     {
         $stmt = $this->db->query(
-            'SELECT a.*, p.name AS patient_name, o.first_name, o.last_name,
+            "SELECT a.*, p.name AS patient_name, o.first_name, o.last_name,
                     tt.name AS treatment_type_name, tt.color AS treatment_type_color,
                     u.name AS user_name
-             FROM appointments a
-             LEFT JOIN patients p ON p.id = a.patient_id
-             LEFT JOIN owners o ON o.id = a.owner_id
-             LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
-             LEFT JOIN users u ON u.id = a.user_id
-             WHERE a.id = ?',
+             FROM `{$this->t('appointments')}` a
+             LEFT JOIN `{$this->t('patients')}` p ON p.id = a.patient_id
+             LEFT JOIN `{$this->t('owners')}` o ON o.id = a.owner_id
+             LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
+             LEFT JOIN `{$this->t('users')}` u ON u.id = a.user_id
+             WHERE a.id = ?",
             [$id]
         );
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -32,16 +37,16 @@ class AppointmentRepository
     public function findByRange(string $start, string $end): array
     {
         $stmt = $this->db->query(
-            'SELECT a.*, p.name AS patient_name, o.first_name, o.last_name,
+            "SELECT a.*, p.name AS patient_name, o.first_name, o.last_name,
                     tt.name AS treatment_type_name, tt.color AS treatment_type_color,
                     u.name AS user_name
-             FROM appointments a
-             LEFT JOIN patients p ON p.id = a.patient_id
-             LEFT JOIN owners o ON o.id = a.owner_id
-             LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
-             LEFT JOIN users u ON u.id = a.user_id
+             FROM `{$this->t('appointments')}` a
+             LEFT JOIN `{$this->t('patients')}` p ON p.id = a.patient_id
+             LEFT JOIN `{$this->t('owners')}` o ON o.id = a.owner_id
+             LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
+             LEFT JOIN `{$this->t('users')}` u ON u.id = a.user_id
              WHERE a.start_at < ? AND a.end_at > ?
-             ORDER BY a.start_at ASC',
+             ORDER BY a.start_at ASC",
             [$end, $start]
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -50,15 +55,15 @@ class AppointmentRepository
     public function findUpcoming(int $limit = 5): array
     {
         $stmt = $this->db->query(
-            'SELECT a.*, p.name AS patient_name, o.first_name, o.last_name,
+            "SELECT a.*, p.name AS patient_name, o.first_name, o.last_name,
                     tt.name AS treatment_type_name, tt.color AS treatment_type_color
-             FROM appointments a
-             LEFT JOIN patients p ON p.id = a.patient_id
-             LEFT JOIN owners o ON o.id = a.owner_id
-             LEFT JOIN treatment_types tt ON tt.id = a.treatment_type_id
-             WHERE a.start_at >= NOW() AND a.status NOT IN (\'cancelled\',\'noshow\')
+             FROM `{$this->t('appointments')}` a
+             LEFT JOIN `{$this->t('patients')}` p ON p.id = a.patient_id
+             LEFT JOIN `{$this->t('owners')}` o ON o.id = a.owner_id
+             LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
+             WHERE a.start_at >= NOW() AND a.status NOT IN ('cancelled','noshow')
              ORDER BY a.start_at ASC
-             LIMIT ?',
+             LIMIT ?",
             [$limit]
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -67,16 +72,16 @@ class AppointmentRepository
     public function findPendingReminders(): array
     {
         $stmt = $this->db->query(
-            'SELECT a.*, o.email AS owner_email, o.first_name, o.last_name,
+            "SELECT a.*, o.email AS owner_email, o.first_name, o.last_name,
                     p.name AS patient_name
-             FROM appointments a
-             LEFT JOIN owners o ON o.id = a.owner_id
-             LEFT JOIN patients p ON p.id = a.patient_id
+             FROM `{$this->t('appointments')}` a
+             LEFT JOIN `{$this->t('owners')}` o ON o.id = a.owner_id
+             LEFT JOIN `{$this->t('patients')}` p ON p.id = a.patient_id
              WHERE a.reminder_sent = 0
-               AND a.status IN (\'scheduled\',\'confirmed\')
+               AND a.status IN ('scheduled','confirmed')
                AND COALESCE(a.reminder_minutes, 0) > 0
                AND a.start_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL COALESCE(a.reminder_minutes, 60) MINUTE)
-               AND o.email IS NOT NULL AND o.email != \'\'',
+               AND o.email IS NOT NULL AND o.email != ''",
             []
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -85,11 +90,11 @@ class AppointmentRepository
     public function create(array $data): int
     {
         $this->db->query(
-            'INSERT INTO appointments
+            "INSERT INTO `{$this->t('appointments')}`
              (title, description, start_at, end_at, all_day, status, color,
               patient_id, owner_id, treatment_type_id, user_id,
               recurrence_rule, recurrence_parent, notes, reminder_minutes)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             [
                 $data['title'],
                 $data['description'] ?? null,
@@ -114,11 +119,11 @@ class AppointmentRepository
     public function update(int $id, array $data): void
     {
         $this->db->query(
-            'UPDATE appointments SET
+            "UPDATE `{$this->t('appointments')}` SET
              title=?, description=?, start_at=?, end_at=?, all_day=?, status=?, color=?,
              patient_id=?, owner_id=?, treatment_type_id=?, user_id=?,
              recurrence_rule=?, notes=?, reminder_minutes=?
-             WHERE id=?',
+             WHERE id=?",
             [
                 $data['title'],
                 $data['description'] ?? null,
@@ -141,34 +146,34 @@ class AppointmentRepository
 
     public function markReminderSent(int $id): void
     {
-        $this->db->query('UPDATE appointments SET reminder_sent=1 WHERE id=?', [$id]);
+        $this->db->query("UPDATE `{$this->t('appointments')}` SET reminder_sent=1 WHERE id=?", [$id]);
     }
 
     public function linkInvoice(int $id, int $invoiceId): void
     {
-        $this->db->query('UPDATE appointments SET invoice_id=? WHERE id=?', [$invoiceId, $id]);
+        $this->db->query("UPDATE `{$this->t('appointments')}` SET invoice_id=? WHERE id=?", [$invoiceId, $id]);
     }
 
     public function delete(int $id): void
     {
-        $this->db->query('DELETE FROM appointments WHERE id=? OR recurrence_parent=?', [$id, $id]);
+        $this->db->query("DELETE FROM `{$this->t('appointments')}` WHERE id=? OR recurrence_parent=?", [$id, $id]);
     }
 
     public function deleteSingle(int $id): void
     {
-        $this->db->query('DELETE FROM appointments WHERE id=?', [$id]);
+        $this->db->query("DELETE FROM `{$this->t('appointments')}` WHERE id=?", [$id]);
     }
 
     public function getStats(): array
     {
         $stmt = $this->db->query(
-            'SELECT
+            "SELECT
                COUNT(*) AS total,
-               SUM(CASE WHEN status="scheduled" OR status="confirmed" THEN 1 ELSE 0 END) AS upcoming,
-               SUM(CASE WHEN status="cancelled" THEN 1 ELSE 0 END) AS cancelled,
-               SUM(CASE WHEN status="completed" THEN 1 ELSE 0 END) AS completed,
+               SUM(CASE WHEN status='scheduled' OR status='confirmed' THEN 1 ELSE 0 END) AS upcoming,
+               SUM(CASE WHEN status='cancelled' THEN 1 ELSE 0 END) AS cancelled,
+               SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) AS completed,
                SUM(CASE WHEN DATE(start_at)=CURDATE() THEN 1 ELSE 0 END) AS today
-             FROM appointments',
+             FROM `{$this->t('appointments')}`",
             []
         );
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
@@ -178,14 +183,14 @@ class AppointmentRepository
     public function getWaitlist(): array
     {
         $stmt = $this->db->query(
-            'SELECT w.*, p.name AS patient_name, o.first_name, o.last_name,
+            "SELECT w.*, p.name AS patient_name, o.first_name, o.last_name,
                     tt.name AS treatment_type_name
-             FROM appointment_waitlist w
-             LEFT JOIN patients p ON p.id = w.patient_id
-             LEFT JOIN owners o ON o.id = w.owner_id
-             LEFT JOIN treatment_types tt ON tt.id = w.treatment_type_id
-             WHERE w.status="waiting"
-             ORDER BY w.created_at ASC',
+             FROM `{$this->t('appointment_waitlist')}` w
+             LEFT JOIN `{$this->t('patients')}` p ON p.id = w.patient_id
+             LEFT JOIN `{$this->t('owners')}` o ON o.id = w.owner_id
+             LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = w.treatment_type_id
+             WHERE w.status='waiting'
+             ORDER BY w.created_at ASC",
             []
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -194,8 +199,8 @@ class AppointmentRepository
     public function addToWaitlist(array $data): int
     {
         $this->db->query(
-            'INSERT INTO appointment_waitlist (patient_id, owner_id, treatment_type_id, preferred_date, notes)
-             VALUES (?,?,?,?,?)',
+            "INSERT INTO `{$this->t('appointment_waitlist')}` (patient_id, owner_id, treatment_type_id, preferred_date, notes)
+             VALUES (?,?,?,?,?)",
             [
                 $data['patient_id'] ?? null,
                 $data['owner_id'] ?? null,
@@ -209,11 +214,11 @@ class AppointmentRepository
 
     public function updateWaitlistStatus(int $id, string $status): void
     {
-        $this->db->query('UPDATE appointment_waitlist SET status=? WHERE id=?', [$status, $id]);
+        $this->db->query("UPDATE `{$this->t('appointment_waitlist')}` SET status=? WHERE id=?", [$status, $id]);
     }
 
     public function deleteWaitlist(int $id): void
     {
-        $this->db->query('DELETE FROM appointment_waitlist WHERE id=?', [$id]);
+        $this->db->query("DELETE FROM `{$this->t('appointment_waitlist')}` WHERE id=?", [$id]);
     }
 }

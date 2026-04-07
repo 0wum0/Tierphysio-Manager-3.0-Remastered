@@ -14,6 +14,11 @@ class HolidayMailService
         private readonly MailService        $mail
     ) {}
 
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
+
     public function getHolidays(int $year): array
     {
         $easter = $this->easterDate($year);
@@ -212,13 +217,13 @@ HTML;
                        CONCAT(o.first_name,' ',o.last_name) AS name,
                        o.first_name, o.last_name, o.email,
                        (SELECT GROUP_CONCAT(p2.name ORDER BY p2.name SEPARATOR ', ')
-                        FROM patients p2
+                        FROM `{$this->t('patients')}` p2
                         WHERE p2.owner_id = o.id
                         AND (p2.status IS NULL OR p2.status != 'archiviert')
                        ) AS patient_names
-                FROM owners o WHERE o.email IS NOT NULL AND o.email != ''";
+                FROM `{$this->t('owners')}` o WHERE o.email IS NOT NULL AND o.email != ''";
         if ($group === 'active') {
-            $sql .= " AND EXISTS (SELECT 1 FROM patients p WHERE p.owner_id=o.id AND p.status='aktiv')";
+            $sql .= " AND EXISTS (SELECT 1 FROM `{$this->t('patients')}` p WHERE p.owner_id=o.id AND p.status='aktiv')";
         }
         $sql .= " ORDER BY o.last_name, o.first_name";
         try { return $this->db->fetchAll($sql); } catch (\Throwable) { return []; }
