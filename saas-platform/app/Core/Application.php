@@ -119,7 +119,7 @@ class Application
     private function handleException(\Throwable $e): void
     {
         $config = $this->container->get(Config::class);
-        $debug  = $config->get('app.debug', false);
+        $debug  = true; // TEMP: force debug — remove after diagnosis
 
         $logDir  = $this->rootPath . '/storage/logs';
         $logFile = $logDir . '/error.log';
