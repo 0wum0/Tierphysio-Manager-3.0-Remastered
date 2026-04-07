@@ -1,0 +1,319 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'settings' %}
+
+{% block styles %}
+<style>
+.settings-nav .nav-link { color:#94a3b8; border-radius:.5rem; padding:.5rem 1rem; font-size:.875rem; transition:all .15s; }
+.settings-nav .nav-link:hover { color:#e2e8f0; background:rgba(255,255,255,.04); }
+.settings-nav .nav-link.active { color:#fff; background:rgba(37,99,235,.18); font-weight:600; }
+.settings-nav .nav-link i { width:1.2rem; text-align:center; }
+.section-card { background:#1e293b; border:1px solid #334155; border-radius:.75rem; padding:1.75rem; margin-bottom:1.25rem; }
+.section-title { font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#64748b; margin-bottom:1.25rem; padding-bottom:.75rem; border-bottom:1px solid #334155; }
+.form-switch .form-check-input { width:2.5rem; height:1.25rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+    {# ── Seitennavigation ─────────────────────────────────────────────── #}
+    <div class="col-lg-2 col-md-3">
+        <div class="settings-nav nav flex-column gap-1">
+            <a href="?tab=company"       class="nav-link {% if tab == 'company' %}active{% endif %}"><i class="bi bi-building me-2"></i>Firma</a>
+            <a href="?tab=billing"       class="nav-link {% if tab == 'billing' %}active{% endif %}"><i class="bi bi-credit-card me-2"></i>Abrechnung</a>
+            <a href="?tab=mail"          class="nav-link {% if tab == 'mail' %}active{% endif %}"><i class="bi bi-envelope me-2"></i>E-Mail / SMTP</a>
+            <a href="?tab=notifications" class="nav-link {% if tab == 'notifications' %}active{% endif %}"><i class="bi bi-bell me-2"></i>Benachrichtigungen</a>
+            <a href="?tab=system"        class="nav-link {% if tab == 'system' %}active{% endif %}"><i class="bi bi-gear me-2"></i>System</a>
+        </div>
+    </div>
+
+    {# ── Formular ─────────────────────────────────────────────────────── #}
+    <div class="col-lg-10 col-md-9">
+
+        {# ── Firma ──────────────────────────────────────────────────────── #}
+        {% if tab == 'company' %}
+        <form method="POST" action="/admin/settings">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <input type="hidden" name="_tab" value="company">
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-building me-2"></i>Firmendaten</div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Firmenname</label>
+                        <input type="text" name="company_name" class="form-control" value="{{ flat.company_name ?? '' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">E-Mail</label>
+                        <input type="email" name="company_email" class="form-control" value="{{ flat.company_email ?? '' }}">
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Adresse</label>
+                        <input type="text" name="company_address" class="form-control" value="{{ flat.company_address ?? '' }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">PLZ</label>
+                        <input type="text" name="company_zip" class="form-control" value="{{ flat.company_zip ?? '' }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Stadt</label>
+                        <input type="text" name="company_city" class="form-control" value="{{ flat.company_city ?? '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Land</label>
+                        <input type="text" name="company_country" class="form-control" value="{{ flat.company_country ?? 'Deutschland' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Telefon</label>
+                        <input type="text" name="company_phone" class="form-control" value="{{ flat.company_phone ?? '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Website</label>
+                        <input type="text" name="company_website" class="form-control" value="{{ flat.company_website ?? '' }}" placeholder="https://...">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Steuernummer</label>
+                        <input type="text" name="tax_id" class="form-control" value="{{ flat.tax_id ?? '' }}" placeholder="12/345/67890">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">USt-IdNr.</label>
+                        <input type="text" name="vat_id" class="form-control" value="{{ flat.vat_id ?? '' }}" placeholder="DE123456789">
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Speichern</button>
+        </form>
+
+        {# ── Abrechnung ─────────────────────────────────────────────────── #}
+        {% elseif tab == 'billing' %}
+        <form method="POST" action="/admin/settings">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <input type="hidden" name="_tab" value="billing">
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-bank me-2"></i>Bankverbindung</div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">IBAN</label>
+                        <input type="text" name="bank_iban" class="form-control" value="{{ flat.bank_iban ?? '' }}" placeholder="DE00 0000 0000 0000 0000 00">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">BIC</label>
+                        <input type="text" name="bank_bic" class="form-control" value="{{ flat.bank_bic ?? '' }}" placeholder="DEUTDEDB">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Bank</label>
+                        <input type="text" name="bank_name" class="form-control" value="{{ flat.bank_name ?? '' }}">
+                    </div>
+                </div>
+            </div>
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-receipt me-2"></i>Rechnungseinstellungen</div>
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Rechnungs-Präfix</label>
+                        <input type="text" name="invoice_prefix" class="form-control" value="{{ flat.invoice_prefix ?? 'TP' }}" placeholder="TP">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Startnummer</label>
+                        <input type="number" name="invoice_start_number" class="form-control" value="{{ flat.invoice_start_number ?? '1000' }}" min="1">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Zahlungsziel (Tage)</label>
+                        <input type="number" name="invoice_payment_days" class="form-control" value="{{ flat.invoice_payment_days ?? '14' }}" min="0">
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="kleinunternehmer" value="1" id="kleinCheck" {% if flat.kleinunternehmer == '1' %}checked{% endif %}>
+                            <label class="form-check-label" for="kleinCheck" style="font-size:.875rem;">Kleinunternehmer §19 UStG (kein MwSt.-Ausweis)</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Speichern</button>
+        </form>
+
+        {# ── E-Mail / SMTP ────────────────────────────────────────────────── #}
+        {% elseif tab == 'mail' %}
+        <form method="POST" action="/admin/settings">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <input type="hidden" name="_tab" value="mail">
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-envelope me-2"></i>Absender</div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Absendername</label>
+                        <input type="text" name="mail_from_name" class="form-control" value="{{ flat.mail_from_name ?? '' }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Absender-E-Mail</label>
+                        <input type="email" name="mail_from_address" class="form-control" value="{{ flat.mail_from_address ?? '' }}">
+                    </div>
+                </div>
+            </div>
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-hdd-network me-2"></i>SMTP-Server</div>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">SMTP Host</label>
+                        <input type="text" name="smtp_host" class="form-control" value="{{ flat.smtp_host ?? 'localhost' }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Port</label>
+                        <input type="number" name="smtp_port" class="form-control" value="{{ flat.smtp_port ?? '587' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Verschlüsselung</label>
+                        <select name="smtp_encryption" class="form-select">
+                            <option value="tls"  {% if flat.smtp_encryption == 'tls' %}selected{% endif %}>TLS (STARTTLS)</option>
+                            <option value="ssl"  {% if flat.smtp_encryption == 'ssl' %}selected{% endif %}>SSL</option>
+                            <option value=""     {% if flat.smtp_encryption == '' %}selected{% endif %}>Keine</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Benutzername</label>
+                        <input type="text" name="smtp_username" class="form-control" value="{{ flat.smtp_username ?? '' }}" autocomplete="off">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Passwort</label>
+                        <input type="password" name="smtp_password" class="form-control" value="{{ flat.smtp_password ?? '' }}" autocomplete="new-password" placeholder="Unverändert lassen falls leer">
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Speichern</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#testMailModal">
+                    <i class="bi bi-send me-1"></i>Test-E-Mail senden
+                </button>
+            </div>
+        </form>
+
+        {# Modal: Test-E-Mail #}
+        <div class="modal fade" id="testMailModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content" style="background:#1e293b;border:1px solid #334155;">
+                    <div class="modal-header" style="border-color:#334155;">
+                        <h5 class="modal-title">Test-E-Mail senden</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <form method="POST" action="/admin/settings/test-mail">
+                        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                        <div class="modal-body">
+                            <label class="form-label">Empfänger-E-Mail</label>
+                            <input type="email" name="test_email" class="form-control" value="{{ flat.company_email ?? '' }}" required>
+                        </div>
+                        <div class="modal-footer" style="border-color:#334155;">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                            <button type="submit" class="btn btn-primary">Senden</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {# ── Benachrichtigungen ───────────────────────────────────────────── #}
+        {% elseif tab == 'notifications' %}
+        <form method="POST" action="/admin/settings">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <input type="hidden" name="_tab" value="notifications">
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-bell me-2"></i>Benachrichtigungs-E-Mail</div>
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label">Benachrichtigungen senden an</label>
+                        <input type="email" name="notify_email" class="form-control" value="{{ flat.notify_email ?? '' }}" placeholder="admin@example.com">
+                        <div class="form-text text-secondary">Leer = kein E-Mail-Versand für Benachrichtigungen</div>
+                    </div>
+                </div>
+            </div>
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-toggles me-2"></i>Benachrichtigungstypen</div>
+                <div class="d-flex flex-column gap-3">
+                    {% set notifOptions = [
+                        ['key': 'notify_new_tenant',   'label': 'Neue Praxis registriert', 'desc': 'Wenn sich eine neue Praxis anmeldet', 'icon': 'bi-building-add'],
+                        ['key': 'notify_payment',      'label': 'Zahlung eingegangen',     'desc': 'Bei neuer Rechnungszahlung',           'icon': 'bi-credit-card-2-front'],
+                        ['key': 'notify_overdue',      'label': 'Rechnung überfällig',      'desc': 'Wenn eine Rechnung das Fälligkeitsdatum überschreitet', 'icon': 'bi-exclamation-triangle'],
+                        ['key': 'notify_trial_expiry', 'label': 'Trial läuft ab',          'desc': 'Wenn eine Praxis 3 Tage vor Trial-Ende ist', 'icon': 'bi-hourglass-split'],
+                    ] %}
+                    {% for opt in notifOptions %}
+                    <div class="d-flex align-items-center justify-content-between p-3" style="background:#0f172a;border:1px solid #334155;border-radius:.5rem;">
+                        <div class="d-flex align-items-center gap-3">
+                            <div style="width:2.5rem;height:2.5rem;background:rgba(37,99,235,.15);border-radius:.5rem;display:flex;align-items:center;justify-content:center;">
+                                <i class="bi {{ opt.icon }}" style="color:#60a5fa;"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight:600;color:#e2e8f0;font-size:.875rem;">{{ opt.label }}</div>
+                                <div style="font-size:.75rem;color:#64748b;">{{ opt.desc }}</div>
+                            </div>
+                        </div>
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" name="{{ opt.key }}" value="1" {% if flat[opt.key] == '1' %}checked{% endif %}>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Speichern</button>
+        </form>
+
+        {# ── System ────────────────────────────────────────────────────────── #}
+        {% elseif tab == 'system' %}
+        <form method="POST" action="/admin/settings">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <input type="hidden" name="_tab" value="system">
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-sliders me-2"></i>Plattform-Verhalten</div>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="d-flex align-items-center justify-content-between p-3" style="background:#0f172a;border:1px solid #334155;border-radius:.5rem;">
+                            <div>
+                                <div style="font-weight:600;color:#e2e8f0;font-size:.875rem;"><i class="bi bi-tools me-2 text-warning"></i>Wartungsmodus</div>
+                                <div style="font-size:.75rem;color:#64748b;">Blockiert den Zugang für Kunden (admins können sich weiterhin einloggen)</div>
+                            </div>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="maintenance_mode" value="1" {% if flat.maintenance_mode == '1' %}checked{% endif %}>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="d-flex align-items-center justify-content-between p-3" style="background:#0f172a;border:1px solid #334155;border-radius:.5rem;">
+                            <div>
+                                <div style="font-weight:600;color:#e2e8f0;font-size:.875rem;"><i class="bi bi-person-plus me-2 text-success"></i>Registrierung offen</div>
+                                <div style="font-size:.75rem;color:#64748b;">Erlaubt neuen Praxen, sich selbst zu registrieren</div>
+                            </div>
+                            <div class="form-check form-switch mb-0">
+                                <input class="form-check-input" type="checkbox" name="registration_open" value="1" {% if flat.registration_open == '1' or flat.registration_open is not defined %}checked{% endif %}>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Max. Praxen <span class="text-secondary">(0 = unbegrenzt)</span></label>
+                        <input type="number" name="max_tenants" class="form-control" value="{{ flat.max_tenants ?? '0' }}" min="0">
+                    </div>
+                </div>
+            </div>
+            <div class="section-card">
+                <div class="section-title"><i class="bi bi-arrow-repeat me-2"></i>Update-Einstellungen</div>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Update-Kanal</label>
+                        <select name="update_channel" class="form-select">
+                            <option value="stable" {% if flat.update_channel == 'stable' %}selected{% endif %}>Stabil (empfohlen)</option>
+                            <option value="beta"   {% if flat.update_channel == 'beta'   %}selected{% endif %}>Beta</option>
+                        </select>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label">Update-Check URL</label>
+                        <input type="url" name="update_check_url" class="form-control" value="{{ flat.update_check_url ?? '' }}">
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Speichern</button>
+                <a href="/admin/updates" class="btn btn-outline-secondary"><i class="bi bi-arrow-repeat me-1"></i>Update-Übersicht</a>
+                <a href="/admin/updates/system-info" class="btn btn-outline-secondary"><i class="bi bi-cpu me-1"></i>Systeminfo</a>
+            </div>
+        </form>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

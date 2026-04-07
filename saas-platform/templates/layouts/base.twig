@@ -182,14 +182,32 @@
         </a>
 
         <div class="sidebar-section">System</div>
-        <a href="/admin/logout" class="sidebar-link text-danger">
+        <a href="/admin/settings" class="sidebar-link {% if active_nav == 'settings' %}active{% endif %}">
+            <i class="bi bi-gear"></i> Einstellungen
+        </a>
+        <a href="/admin/notifications" class="sidebar-link {% if active_nav == 'notifications' %}active{% endif %}" id="sidebar-notif-link">
+            <i class="bi bi-bell"></i> Benachrichtigungen
+            <span class="ms-auto badge bg-primary" id="sidebar-notif-count" style="display:none;font-size:.65rem;"></span>
+        </a>
+        <a href="/admin/updates" class="sidebar-link {% if active_nav == 'updates' %}active{% endif %}" id="sidebar-update-link">
+            <i class="bi bi-arrow-repeat"></i> Updates
+            <span class="ms-auto badge" id="sidebar-update-badge" style="display:none;font-size:.65rem;background:#22c55e;color:#fff;">NEU</span>
+        </a>
+        <a href="/admin/logout" class="sidebar-link" style="color:#f87171;margin-top:auto;">
             <i class="bi bi-box-arrow-left"></i> Abmelden
         </a>
     </nav>
 
     <div class="sidebar-footer">
-        <div>{{ auth_user ?? 'Admin' }}</div>
-        <div style="color:#475569">{{ auth_role ?? '' }}</div>
+        <div style="display:flex;align-items:center;gap:.5rem;">
+            <div style="width:1.75rem;height:1.75rem;background:var(--saas-primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff;flex-shrink:0;">
+                {{ (auth_user ?? 'A')|slice(0,1)|upper }}
+            </div>
+            <div>
+                <div style="color:#e2e8f0;font-size:.8rem;font-weight:600;">{{ auth_user ?? 'Admin' }}</div>
+                <div style="color:#475569;font-size:.7rem;">{{ auth_role ?? '' }}</div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -202,7 +220,44 @@
             <h6 class="mb-0 fw-semibold">{{ page_title ?? '' }}</h6>
         </div>
         <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-primary">{{ auth_role ?? '' }}</span>
+
+            {# ── Update-Badge ───────────────────────────────────── #}
+            <a href="/admin/updates" id="topbar-update-btn" class="btn btn-sm btn-outline-secondary position-relative" style="display:none;" title="Update verfügbar">
+                <i class="bi bi-arrow-repeat"></i>
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill" style="background:#22c55e;font-size:.6rem;">NEU</span>
+            </a>
+
+            {# ── Benachrichtigungs-Glocke ────────────────────────── #}
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary position-relative" id="notifDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false" title="Benachrichtigungen">
+                    <i class="bi bi-bell"></i>
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notif-badge" style="font-size:.6rem;display:none;"></span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end p-0" style="width:340px;background:#1e293b;border:1px solid #334155;border-radius:.75rem;overflow:hidden;" id="notif-dropdown">
+                    <div style="padding:.75rem 1rem;border-bottom:1px solid #334155;display:flex;align-items:center;justify-content:space-between;">
+                        <span style="font-weight:600;font-size:.875rem;color:#e2e8f0;">Benachrichtigungen</span>
+                        <a href="/admin/notifications" style="font-size:.75rem;color:#60a5fa;">Alle anzeigen</a>
+                    </div>
+                    <div id="notif-list" style="max-height:320px;overflow-y:auto;">
+                        <div style="padding:2rem;text-align:center;color:#475569;font-size:.8rem;">
+                            <i class="bi bi-bell-slash" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>Keine neuen Benachrichtigungen
+                        </div>
+                    </div>
+                    <div style="padding:.5rem 1rem;border-top:1px solid #334155;" id="notif-footer" style="display:none;">
+                        <form method="POST" action="/admin/notifications/mark-all-read" style="margin:0;">
+                            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary w-100" style="font-size:.75rem;"><i class="bi bi-check2-all me-1"></i>Alle als gelesen markieren</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            {# ── Schnellzugriff Einstellungen ─────────────────────── #}
+            <a href="/admin/settings" class="btn btn-sm btn-outline-secondary" title="Einstellungen">
+                <i class="bi bi-gear"></i>
+            </a>
+
+            <span class="badge" style="background:rgba(37,99,235,.2);color:#60a5fa;border:1px solid rgba(37,99,235,.3);">{{ auth_role ?? '' }}</span>
         </div>
     </div>
 
@@ -233,5 +288,80 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 {% block scripts %}{% endblock %}
+
+<script>
+// ── Benachrichtigungs-Polling ─────────────────────────────────────────────
+const NOTIF_ICONS = {
+    new_tenant:   'bi-building-add',
+    payment:      'bi-credit-card-2-front',
+    overdue:      'bi-exclamation-triangle',
+    trial_expiry: 'bi-hourglass-split',
+    system_update:'bi-arrow-repeat',
+};
+
+async function loadNotifications() {
+    try {
+        const res  = await fetch('/admin/notifications/api/unread', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (!res.ok) return;
+        const data = await res.json();
+
+        const badge       = document.getElementById('notif-badge');
+        const sidebarCount= document.getElementById('sidebar-notif-count');
+        const list        = document.getElementById('notif-list');
+        const footer      = document.getElementById('notif-footer');
+
+        if (data.count > 0) {
+            badge.textContent  = data.count > 99 ? '99+' : data.count;
+            badge.style.display = '';
+            if (sidebarCount) { sidebarCount.textContent = data.count; sidebarCount.style.display = ''; }
+
+            if (list && data.items && data.items.length > 0) {
+                list.innerHTML = data.items.map(n => {
+                    const icon = NOTIF_ICONS[n.type] ?? 'bi-bell';
+                    const time = new Date(n.created_at).toLocaleString('de-DE', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+                    return `<div style="padding:.75rem 1rem;border-bottom:1px solid #0f172a;display:flex;gap:.75rem;align-items:flex-start;">
+                        <div style="width:2rem;height:2rem;border-radius:.4rem;background:rgba(37,99,235,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#60a5fa;font-size:.85rem;">
+                            <i class="bi ${icon}"></i>
+                        </div>
+                        <div style="flex:1;min-width:0;">
+                            <div style="font-size:.8rem;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${n.title}</div>
+                            <div style="font-size:.72rem;color:#64748b;margin-top:.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${n.message}</div>
+                            <div style="font-size:.68rem;color:#475569;margin-top:.2rem;">${time}</div>
+                        </div>
+                    </div>`;
+                }).join('');
+                if (footer) footer.style.display = '';
+            }
+        } else {
+            badge.style.display = 'none';
+            if (sidebarCount) sidebarCount.style.display = 'none';
+            if (list) list.innerHTML = '<div style="padding:2rem;text-align:center;color:#475569;font-size:.8rem;"><i class="bi bi-bell-slash" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>Keine neuen Benachrichtigungen</div>';
+            if (footer) footer.style.display = 'none';
+        }
+    } catch (e) {}
+}
+
+// ── Update-Check ──────────────────────────────────────────────────────────
+async function checkForUpdate() {
+    try {
+        const res  = await fetch('/admin/updates/check', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.has_update) {
+            const btn   = document.getElementById('topbar-update-btn');
+            const badge = document.getElementById('sidebar-update-badge');
+            if (btn)   btn.style.display = '';
+            if (badge) badge.style.display = '';
+        }
+    } catch (e) {}
+}
+
+// Sofort + alle 60s Benachrichtigungen laden
+loadNotifications();
+setInterval(loadNotifications, 60000);
+
+// Update-Check einmal beim Laden (mit Verzögerung)
+setTimeout(checkForUpdate, 4000);
+</script>
 </body>
 </html>

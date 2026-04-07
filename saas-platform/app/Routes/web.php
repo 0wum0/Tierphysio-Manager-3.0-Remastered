@@ -9,6 +9,9 @@ use Saas\Controllers\PlansController;
 use Saas\Controllers\LegalController;
 use Saas\Controllers\LicenseApiController;
 use Saas\Controllers\SaasInvoiceController;
+use Saas\Controllers\SettingsController;
+use Saas\Controllers\NotificationController;
+use Saas\Controllers\UpdateController;
 
 // ── License API (called by Praxissoftware) ─────────────────────────────────
 $router->post('/api/license/verify',  [LicenseApiController::class, 'verify']);
@@ -60,6 +63,27 @@ $router->post('/admin/invoices/{id}/status',            [SaasInvoiceController::
 $router->post('/admin/invoices/{id}/send-email',        [SaasInvoiceController::class, 'sendEmail']);
 $router->post('/admin/invoices/{id}/finalize',          [SaasInvoiceController::class, 'finalize']);
 $router->get('/admin/invoices/{id}/pdf',                [SaasInvoiceController::class, 'downloadPdf']);
+
+// ── Einstellungen ──────────────────────────────────────────────────────────
+$router->get('/admin/settings',            [SettingsController::class, 'index']);
+$router->post('/admin/settings',           [SettingsController::class, 'update']);
+$router->post('/admin/settings/test-mail', [SettingsController::class, 'testMail']);
+
+// ── Benachrichtigungen ─────────────────────────────────────────────────────
+$router->get('/admin/notifications',                          [NotificationController::class, 'index']);
+$router->get('/admin/notifications/api/unread',               [NotificationController::class, 'apiUnread']);
+$router->get('/admin/notifications/activity-log',             [NotificationController::class, 'activityLog']);
+$router->post('/admin/notifications/mark-all-read',           [NotificationController::class, 'markAllRead']);
+$router->post('/admin/notifications/delete-read',             [NotificationController::class, 'deleteRead']);
+$router->post('/admin/notifications/{id}/read',               [NotificationController::class, 'markRead']);
+$router->post('/admin/notifications/{id}/delete',             [NotificationController::class, 'delete']);
+
+// ── Updates & Versionsverwaltung ───────────────────────────────────────────
+$router->get('/admin/updates',             [UpdateController::class, 'index']);
+$router->get('/admin/updates/check',       [UpdateController::class, 'checkUpdate']);
+$router->get('/admin/updates/changelog',   [UpdateController::class, 'changelog']);
+$router->get('/admin/updates/system-info', [UpdateController::class, 'systemInfo']);
+$router->post('/admin/updates/apply',      [UpdateController::class, 'applyUpdate']);
 
 // ── Root redirect ──────────────────────────────────────────────────────────
 $router->get('/admin/dashboard', function (array $params): void {

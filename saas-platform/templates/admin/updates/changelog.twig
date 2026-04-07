@@ -1,0 +1,59 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'updates' %}
+
+{% block styles %}
+<style>
+.release-card { background:#1e293b; border:1px solid #334155; border-radius:.75rem; padding:1.5rem; margin-bottom:1rem; }
+.release-card.current-version { border-color:rgba(37,99,235,.4); background:linear-gradient(135deg,rgba(37,99,235,.05),#1e293b); }
+.release-body { background:#0f172a; border-radius:.5rem; padding:1rem; font-size:.825rem; color:#94a3b8; line-height:1.8; white-space:pre-wrap; margin-top:.75rem; }
+.version-tag { font-size:.75rem; font-weight:700; padding:.25rem .65rem; border-radius:1rem; }
+.version-tag.stable   { background:rgba(37,99,235,.15); color:#60a5fa; }
+.version-tag.beta     { background:rgba(245,158,11,.15); color:#fbbf24; }
+.version-tag.current  { background:rgba(16,185,129,.15); color:#34d399; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <a href="/admin/updates" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Zurück</a>
+    <span style="font-size:.8rem;color:#64748b;">Installiert: <strong class="text-white">v{{ current }}</strong></span>
+</div>
+
+{% if releases is empty %}
+<div class="text-center py-5 text-secondary">
+    <i class="bi bi-file-text" style="font-size:3rem;opacity:.3;display:block;margin-bottom:.75rem;"></i>
+    <div>Changelog nicht verfügbar – Update-Server nicht erreichbar.</div>
+</div>
+{% else %}
+{% for release in releases %}
+<div class="release-card {% if release.version == current %}current-version{% endif %}">
+    <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+        <div class="d-flex align-items-center gap-2">
+            <span style="font-size:1.3rem;font-weight:800;color:{% if release.version == current %}#60a5fa{% else %}#e2e8f0{% endif %};">v{{ release.version }}</span>
+            {% if release.version == current %}
+            <span class="version-tag current"><i class="bi bi-check-circle me-1"></i>Installiert</span>
+            {% elseif release.prerelease %}
+            <span class="version-tag beta">Beta</span>
+            {% else %}
+            <span class="version-tag stable">Stabil</span>
+            {% endif %}
+        </div>
+        <div style="font-size:.8rem;color:#64748b;">
+            {% if release.published_at %}
+            <i class="bi bi-calendar3 me-1"></i>{{ release.published_at|date('d.m.Y') }}
+            {% endif %}
+        </div>
+    </div>
+    {% if release.name and release.name != release.version %}
+    <div style="font-size:.9rem;color:#94a3b8;margin-top:.35rem;">{{ release.name }}</div>
+    {% endif %}
+    {% if release.body %}
+    <div class="release-body">{{ release.body }}</div>
+    {% else %}
+    <div style="font-size:.8rem;color:#475569;margin-top:.5rem;font-style:italic;">Keine Release Notes verfügbar.</div>
+    {% endif %}
+</div>
+{% endfor %}
+{% endif %}
+
+{% endblock %}

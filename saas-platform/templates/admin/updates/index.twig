@@ -1,0 +1,223 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'updates' %}
+
+{% block styles %}
+<style>
+.version-badge { display:inline-flex; align-items:center; gap:.4rem; padding:.35rem .9rem; border-radius:2rem; font-size:.8rem; font-weight:700; }
+.version-current  { background:rgba(37,99,235,.15); color:#60a5fa; border:1px solid rgba(37,99,235,.3); }
+.version-new      { background:rgba(16,185,129,.15); color:#34d399; border:1px solid rgba(16,185,129,.3); }
+.version-uptodate { background:rgba(100,116,139,.15);color:#94a3b8; border:1px solid rgba(100,116,139,.3); }
+.section-card { background:#1e293b; border:1px solid #334155; border-radius:.75rem; padding:1.5rem; margin-bottom:1.25rem; }
+.section-title { font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#64748b; margin-bottom:1rem; }
+.ext-ok   { color:#34d399; }
+.ext-fail { color:#f87171; }
+.disk-bar { height:8px; background:#1e293b; border-radius:4px; overflow:hidden; margin-top:.4rem; }
+.disk-fill { height:100%; border-radius:4px; transition:width .6s ease; }
+.changelog-body { background:#0f172a; border-radius:.5rem; padding:1rem; font-size:.825rem; color:#94a3b8; line-height:1.7; white-space:pre-wrap; max-height:200px; overflow-y:auto; }
+.update-log-row td { font-size:.8rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+    <span class="version-badge version-current"><i class="bi bi-tag"></i>v{{ current }}</span>
+    {% if available %}
+        {% if available.version > current %}
+        <span class="version-badge version-new"><i class="bi bi-stars"></i>v{{ available.version }} verfügbar</span>
+        {% else %}
+        <span class="version-badge version-uptodate"><i class="bi bi-check-circle"></i>Aktuell</span>
+        {% endif %}
+    {% else %}
+    <span class="version-badge version-uptodate"><i class="bi bi-wifi-off"></i>Update-Server nicht erreichbar</span>
+    {% endif %}
+    <div class="ms-auto d-flex gap-2">
+        <button class="btn btn-sm btn-outline-secondary" id="checkUpdateBtn" onclick="checkUpdate()">
+            <i class="bi bi-arrow-clockwise me-1"></i>Jetzt prüfen
+        </button>
+        <a href="/admin/updates/changelog" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-file-text me-1"></i>Changelog
+        </a>
+        <a href="/admin/updates/system-info" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-cpu me-1"></i>Systeminfo
+        </a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+
+        {# ── Update-Box ──────────────────────────────────────────────── #}
+        {% if available and available.version > current %}
+        <div class="section-card" style="border-color:rgba(16,185,129,.3);background:linear-gradient(135deg,rgba(16,185,129,.05),#1e293b);">
+            <div class="section-title" style="color:#34d399;"><i class="bi bi-stars me-2"></i>Neues Update verfügbar</div>
+            <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+                <div>
+                    <div style="font-size:1.5rem;font-weight:800;color:#34d399;">v{{ available.version }}</div>
+                    <div style="font-size:.8rem;color:#64748b;margin-top:.25rem;">
+                        {% if available.published_at %}
+                        Veröffentlicht: {{ available.published_at|date('d.m.Y') }}
+                        {% endif %}
+                        {% if available.prerelease %}
+                        <span class="badge ms-2" style="background:rgba(245,158,11,.2);color:#fbbf24;font-size:.7rem;">Beta</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div>
+                    <span style="font-size:.8rem;color:#64748b;">Kanal: <strong class="text-white">{{ channel }}</strong></span>
+                </div>
+            </div>
+            {% if available.body %}
+            <div class="mb-3">
+                <div style="font-size:.75rem;color:#64748b;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.06em;">Release Notes</div>
+                <div class="changelog-body">{{ available.body }}</div>
+            </div>
+            {% endif %}
+            <form method="POST" action="/admin/updates/apply" onsubmit="return confirm('Update auf v{{ available.version }} anwenden? Die Plattform wird kurz neu gestartet.')">
+                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-cloud-download me-1"></i>Update auf v{{ available.version }} anwenden
+                </button>
+                <a href="{{ available.html_url }}" target="_blank" class="btn btn-outline-secondary ms-2">
+                    <i class="bi bi-github me-1"></i>Release ansehen
+                </a>
+            </form>
+        </div>
+        {% else %}
+        <div class="section-card" style="border-color:rgba(100,116,139,.3);">
+            <div class="section-title"><i class="bi bi-check-circle me-2"></i>Kein Update verfügbar</div>
+            <p class="text-secondary mb-3" style="font-size:.875rem;">Die installierte Version <strong class="text-white">v{{ current }}</strong> ist aktuell.</p>
+            <button class="btn btn-sm btn-outline-secondary" onclick="checkUpdate()">
+                <i class="bi bi-arrow-clockwise me-1"></i>Erneut prüfen
+            </button>
+        </div>
+        {% endif %}
+
+        {# ── Update-Verlauf ─────────────────────────────────────────── #}
+        {% if update_log %}
+        <div class="section-card">
+            <div class="section-title"><i class="bi bi-clock-history me-2"></i>Update-Verlauf</div>
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th>Datum</th>
+                            <th>Von</th>
+                            <th>Nach</th>
+                            <th>Kanal</th>
+                            <th>Status</th>
+                            <th>Admin</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set statusMap = {'success':'Erfolgreich','failed':'Fehlgeschlagen','rolled_back':'Zurückgerollt'} %}
+                        {% set statusColor = {'success':'#34d399','failed':'#f87171','rolled_back':'#fbbf24'} %}
+                        {% for entry in update_log %}
+                        <tr class="update-log-row">
+                            <td style="color:#64748b;white-space:nowrap;">{{ entry.performed_at|date('d.m.Y H:i') }}</td>
+                            <td>v{{ entry.from_version }}</td>
+                            <td style="font-weight:600;color:#34d399;">v{{ entry.to_version }}</td>
+                            <td style="color:#64748b;">{{ entry.channel }}</td>
+                            <td>
+                                <span style="font-size:.75rem;font-weight:600;color:{{ statusColor[entry.status] ?? '#94a3b8' }};">
+                                    {{ statusMap[entry.status] ?? entry.status }}
+                                </span>
+                            </td>
+                            <td style="color:#64748b;">{{ entry.performed_by }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-5">
+
+        {# ── System-Übersicht ───────────────────────────────────────── #}
+        <div class="section-card">
+            <div class="section-title"><i class="bi bi-info-circle me-2"></i>Systemübersicht</div>
+            {% set rows = [
+                ['PHP-Version',      sysinfo.php_version],
+                ['Betriebssystem',   sysinfo.os],
+                ['Datenbank',        sysinfo.db_version],
+                ['Webserver',        sysinfo.server_software],
+                ['Zeitzone',         sysinfo.timezone],
+                ['Memory Limit',     sysinfo.memory_limit],
+                ['Max. Upload',      sysinfo.max_upload],
+            ] %}
+            {% for row in rows %}
+            <div class="d-flex justify-content-between py-1" style="border-bottom:1px solid #1e293b;font-size:.825rem;">
+                <span style="color:#64748b;">{{ row[0] }}</span>
+                <span style="color:#e2e8f0;font-weight:500;">{{ row[1] }}</span>
+            </div>
+            {% endfor %}
+            {% if sysinfo.uptime != 'n/a' %}
+            <div class="d-flex justify-content-between py-1" style="font-size:.825rem;">
+                <span style="color:#64748b;">Uptime</span>
+                <span style="color:#e2e8f0;font-weight:500;">{{ sysinfo.uptime }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        {# ── Festplattenspeicher ─────────────────────────────────────── #}
+        {% if disk_total > 0 %}
+        <div class="section-card">
+            <div class="section-title"><i class="bi bi-hdd me-2"></i>Festplattenspeicher</div>
+            {% set used = disk_total - disk_free %}
+            {% set pct  = (used / disk_total * 100)|round %}
+            <div class="d-flex justify-content-between mb-1" style="font-size:.825rem;">
+                <span style="color:#64748b;">Belegt: {{ (used / 1073741824)|round(1) }} GB</span>
+                <span style="color:#e2e8f0;">Frei: {{ (disk_free / 1073741824)|round(1) }} GB</span>
+            </div>
+            <div class="disk-bar">
+                <div class="disk-fill" style="width:{{ pct }}%;background:{% if pct > 85 %}#ef4444{% elseif pct > 65 %}#f59e0b{% else %}#22c55e{% endif %};"></div>
+            </div>
+            <div style="font-size:.72rem;color:#475569;margin-top:.35rem;">{{ pct }}% von {{ (disk_total / 1073741824)|round(1) }} GB belegt</div>
+        </div>
+        {% endif %}
+
+        {# ── PHP-Extensions ─────────────────────────────────────────── #}
+        <div class="section-card">
+            <div class="section-title"><i class="bi bi-puzzle me-2"></i>PHP-Extensions</div>
+            <div class="row g-1">
+                {% for ext, ok in extensions %}
+                <div class="col-6">
+                    <div style="font-size:.775rem;padding:.2rem 0;" class="{{ ok ? 'ext-ok' : 'ext-fail' }}">
+                        <i class="bi bi-{{ ok ? 'check-circle' : 'x-circle' }} me-1"></i>{{ ext }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function checkUpdate() {
+    const btn = document.getElementById('checkUpdateBtn');
+    btn.innerHTML = '<i class="bi bi-arrow-clockwise spin me-1"></i>Prüfe…';
+    btn.disabled = true;
+    try {
+        const res  = await fetch('/admin/updates/check');
+        const data = await res.json();
+        if (data.has_update) {
+            location.reload();
+        } else {
+            btn.innerHTML = '<i class="bi bi-check-circle me-1"></i>Aktuell';
+            setTimeout(() => {
+                btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Jetzt prüfen';
+                btn.disabled = false;
+            }, 3000);
+        }
+    } catch {
+        btn.innerHTML = '<i class="bi bi-wifi-off me-1"></i>Fehler';
+        btn.disabled = false;
+    }
+}
+</script>
+<style>.spin { animation: spin .8s linear infinite; } @keyframes spin { to { transform:rotate(360deg); } }</style>
+{% endblock %}

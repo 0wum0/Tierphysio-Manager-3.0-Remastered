@@ -1,0 +1,130 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'updates' %}
+
+{% block styles %}
+<style>
+.info-card { background:#1e293b; border:1px solid #334155; border-radius:.75rem; padding:1.5rem; margin-bottom:1.25rem; }
+.info-title { font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#64748b; margin-bottom:1rem; padding-bottom:.75rem; border-bottom:1px solid #334155; }
+.info-row { display:flex; justify-content:space-between; align-items:center; padding:.5rem 0; border-bottom:1px solid #0f172a; font-size:.85rem; }
+.info-row:last-child { border-bottom:none; }
+.info-label { color:#64748b; }
+.info-value { color:#e2e8f0; font-weight:500; font-family:monospace; font-size:.8rem; }
+.ext-pill { display:inline-flex; align-items:center; gap:.3rem; padding:.2rem .6rem; border-radius:1rem; font-size:.72rem; font-weight:600; margin:.15rem; }
+.ext-ok   { background:rgba(16,185,129,.12); color:#34d399; }
+.ext-fail { background:rgba(239,68,68,.12);  color:#f87171; }
+.disk-bar { height:10px; background:#0f172a; border-radius:5px; overflow:hidden; margin-top:.5rem; }
+.disk-fill { height:100%; border-radius:5px; transition:width .6s ease; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <a href="/admin/updates" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Zurück</a>
+    <button onclick="window.print()" class="btn btn-sm btn-outline-secondary"><i class="bi bi-printer me-1"></i>Drucken</button>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+
+        {# ── Plattform & PHP ──────────────────────────────────────────── #}
+        <div class="info-card">
+            <div class="info-title"><i class="bi bi-code-slash me-2"></i>Plattform & PHP</div>
+            {% set rows = [
+                ['Plattform-Version', sysinfo.platform_version],
+                ['PHP-Version',       sysinfo.php_version],
+                ['PHP SAPI',          sysinfo.php_sapi],
+                ['Betriebssystem',    sysinfo.os],
+                ['Webserver',         sysinfo.server_software],
+                ['Zeitzone',          sysinfo.timezone],
+            ] %}
+            {% for row in rows %}
+            <div class="info-row">
+                <span class="info-label">{{ row[0] }}</span>
+                <span class="info-value">{{ row[1] }}</span>
+            </div>
+            {% endfor %}
+        </div>
+
+        {# ── PHP.ini ────────────────────────────────────────────────── #}
+        <div class="info-card">
+            <div class="info-title"><i class="bi bi-sliders me-2"></i>PHP-Konfiguration</div>
+            {% for key, val in php_ini %}
+            <div class="info-row">
+                <span class="info-label">{{ key }}</span>
+                <span class="info-value">{{ val ?: 'n/a' }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+
+        {# ── Datenbank & Server ──────────────────────────────────────── #}
+        <div class="info-card">
+            <div class="info-title"><i class="bi bi-database me-2"></i>Datenbank & Server</div>
+            {% set rows2 = [
+                ['MySQL-Version', sysinfo.db_version],
+                ['Memory Limit',  sysinfo.memory_limit],
+                ['Max. Upload',   sysinfo.max_upload],
+                ['Composer Pkg',  sysinfo.composer_name],
+            ] %}
+            {% for row in rows2 %}
+            <div class="info-row">
+                <span class="info-label">{{ row[0] }}</span>
+                <span class="info-value">{{ row[1] }}</span>
+            </div>
+            {% endfor %}
+            {% if sysinfo.uptime != 'n/a' %}
+            <div class="info-row">
+                <span class="info-label">Server-Uptime</span>
+                <span class="info-value">{{ sysinfo.uptime }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        {# ── Festplatte ──────────────────────────────────────────────── #}
+        {% if disk_total > 0 %}
+        <div class="info-card">
+            <div class="info-title"><i class="bi bi-hdd me-2"></i>Festplattenspeicher</div>
+            {% set used = disk_total - disk_free %}
+            {% set pct  = (used / disk_total * 100)|round %}
+            <div class="d-flex justify-content-between mb-2" style="font-size:.85rem;">
+                <div>
+                    <div class="info-label">Belegt</div>
+                    <div class="info-value">{{ (used / 1073741824)|round(2) }} GB</div>
+                </div>
+                <div class="text-end">
+                    <div class="info-label">Frei</div>
+                    <div class="info-value" style="color:#34d399;">{{ (disk_free / 1073741824)|round(2) }} GB</div>
+                </div>
+                <div class="text-end">
+                    <div class="info-label">Gesamt</div>
+                    <div class="info-value">{{ (disk_total / 1073741824)|round(2) }} GB</div>
+                </div>
+            </div>
+            <div class="disk-bar">
+                <div class="disk-fill" style="width:{{ pct }}%;background:{% if pct > 85 %}#ef4444{% elseif pct > 65 %}#f59e0b{% else %}#22c55e{% endif %};"></div>
+            </div>
+            <div style="font-size:.72rem;color:#475569;margin-top:.4rem;text-align:right;">{{ pct }}% belegt</div>
+        </div>
+        {% endif %}
+
+        {# ── PHP Extensions ──────────────────────────────────────────── #}
+        <div class="info-card">
+            <div class="info-title"><i class="bi bi-puzzle me-2"></i>PHP-Extensions (Pflicht)</div>
+            <div>
+                {% for ext, ok in extensions %}
+                <span class="ext-pill {{ ok ? 'ext-ok' : 'ext-fail' }}">
+                    <i class="bi bi-{{ ok ? 'check-circle-fill' : 'x-circle-fill' }}"></i>{{ ext }}
+                </span>
+                {% endfor %}
+            </div>
+            {% if not extensions|filter(v => not v)|length %}
+            <div style="font-size:.8rem;color:#34d399;margin-top:.75rem;"><i class="bi bi-check-all me-1"></i>Alle erforderlichen Extensions vorhanden.</div>
+            {% else %}
+            <div style="font-size:.8rem;color:#f87171;margin-top:.75rem;"><i class="bi bi-exclamation-triangle me-1"></i>Fehlende Extensions müssen installiert werden.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -56,6 +56,10 @@ class View
             return $base . '/' . ltrim($path, '/');
         }));
 
+        $this->twig->addFunction(new TwigFunction('csrf_token', function (): string {
+            return $this->session->csrf();
+        }));
+
         $this->twig->addFunction(new TwigFunction('csrf_field', function (): string {
             $token = $this->session->csrf();
             return '<input type="hidden" name="_csrf" value="' . htmlspecialchars($token) . '">';
