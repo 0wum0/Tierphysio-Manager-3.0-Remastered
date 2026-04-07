@@ -25,7 +25,12 @@ class TenantProvisioningService
     ) {}
 
     /**
-     * Full provisioning: create tenant record → DB → admin user → subscription → license token → welcome mail
+     * Full provisioning: create tenant record → prefixed tables → admin user → subscription → license token → welcome mail
+     *
+     * On shared hosting (Hostinger etc.) CREATE DATABASE is not permitted.
+     * Instead we create all tenant tables in the *same* SaaS database using
+     * a per-tenant table prefix:  t_<tid>_users,  t_<tid>_patients, …
+     * The tenants.db_name column stores that prefix (not a database name).
      */
     public function provision(array $data): array
     {
@@ -38,9 +43,10 @@ class TenantProvisioningService
 
             // 1. Create tenant record
             $uuid         = Uuid::uuid4()->toString();
-            $dbName       = $this->config->get('tenant_db.prefix') . preg_replace('/[^a-z0-9_]/', '_', strtolower($data['email']));
-            $dbName       = substr($dbName, 0, 64);
             $tid          = $this->generateTid($data['practice_name']);
+            // db_name now stores the TABLE PREFIX used inside the shared DB
+            $tablePrefix  = 't_' . preg_replace('/[^a-z0-9]/', '_', $tid) . '_';
+            $tablePrefix  = substr($tablePrefix, 0, 48);
             $passwordHash = password_hash($data['admin_password'] ?? bin2hex(random_bytes(8)), PASSWORD_BCRYPT, ['cost' => 12]);
             $trialEndsAt  = date('Y-m-d H:i:s', strtotime('+14 days'));
 
@@ -61,16 +67,14 @@ class TenantProvisioningService
                 'trial_ends_at' => $trialEndsAt,
             ]);
 
-            // 2. Create tenant database
-            $tempPassword = bin2hex(random_bytes(12));
-            $dbResult = $this->createTenantDatabase($dbName, $uuid);
+            // 2. Create prefixed tables in the shared SaaS database
+            $this->createTenantTables($tablePrefix, $uuid);
+            $this->tenantRepo->setDbCreated($tenantId, $tablePrefix);
 
-            $this->tenantRepo->setDbCreated($tenantId, $dbName);
-
-            // 3. Create admin user in tenant DB
+            // 3. Create admin user in the prefixed tables
             $adminPassword = $data['admin_password'] ?? bin2hex(random_bytes(8));
             $this->createTenantAdmin(
-                $dbName,
+                $tablePrefix,
                 $data['practice_name'],
                 $data['owner_name'],
                 $data['email'],
@@ -124,7 +128,7 @@ class TenantProvisioningService
                 'tenant_id'      => $tenantId,
                 'tenant_uuid'    => $uuid,
                 'tenant_tid'     => $tid,
-                'db_name'        => $dbName,
+                'db_name'        => $tablePrefix,
                 'admin_email'    => $data['email'],
                 'admin_password' => $adminPassword,
                 'license_token'  => $licenseToken,
@@ -146,75 +150,78 @@ class TenantProvisioningService
     }
 
     /**
-     * Create a fresh tenant database with the Tierphysio schema.
+     * Create prefixed tenant tables inside the shared SaaS database.
+     * No CREATE DATABASE required — works on Hostinger shared hosting.
      */
-    private function createTenantDatabase(string $dbName, string $tenantUuid): void
+    private function createTenantTables(string $prefix, string $tenantUuid): void
     {
-        $host     = $this->config->get('tenant_db.host');
-        $port     = (int)$this->config->get('tenant_db.port');
-        $username = $this->config->get('tenant_db.username');
-        $password = $this->config->get('tenant_db.password');
-
-        $dsn = "mysql:host={$host};port={$port};charset=utf8mb4";
-        $pdo = new PDO($dsn, $username, $password, [
-            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        ]);
-
-        $safe = '`' . str_replace('`', '``', $dbName) . '`';
-        $pdo->exec("CREATE DATABASE IF NOT EXISTS {$safe} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-        $pdo->exec("USE {$safe}");
-
-        // Run Tierphysio schema
         $schemaPath = $this->config->getRootPath() . '/provisioning/tenant_schema.sql';
-        if (file_exists($schemaPath)) {
-            $sql = file_get_contents($schemaPath);
-            foreach (array_filter(array_map('trim', explode(';', $sql))) as $stmt) {
-                if ($stmt !== '') {
+        $sql = file_exists($schemaPath) ? (string)file_get_contents($schemaPath) : '';
+
+        // Replace every bare table name with the prefixed version.
+        // Matches: CREATE TABLE [IF NOT EXISTS] `name`  or  INSERT INTO `name`
+        // Also handles FK references like REFERENCES `name`
+        $sql = $this->applyPrefixToSchema($sql, $prefix);
+
+        $pdo = $this->db->getPdo();
+        foreach (array_filter(array_map('trim', explode(';', $sql))) as $stmt) {
+            if ($stmt !== '' && !preg_match('/^\s*(--.*)$/m', $stmt)) {
+                try {
                     $pdo->exec($stmt);
+                } catch (\PDOException $e) {
+                    // Skip duplicate-table errors (idempotent re-provisioning)
+                    if ($e->getCode() !== '42S01') {
+                        throw $e;
+                    }
                 }
             }
         }
 
-        // Write tenant identity
-        $pdo->exec("INSERT IGNORE INTO settings (`key`, `value`) VALUES ('tenant_uuid', " . $pdo->quote($tenantUuid) . ")");
+        // Write tenant identity into prefixed settings table
+        $st = $pdo->prepare("INSERT IGNORE INTO `{$prefix}settings` (`key`, `value`) VALUES ('tenant_uuid', ?)");
+        $st->execute([$tenantUuid]);
     }
 
     /**
-     * Create the initial admin user in the tenant database.
+     * Rewrite a schema SQL string to use the given table prefix.
+     */
+    private function applyPrefixToSchema(string $sql, string $prefix): string
+    {
+        // Known tenant table names from tenant_schema.sql
+        $tables = ['users','settings','owners','patients','appointments','invoices','invoice_items','waitlist','user_preferences','migrations'];
+
+        foreach ($tables as $table) {
+            // Table definitions and references with backticks
+            $sql = preg_replace('/`' . preg_quote($table, '/') . '`/', '`' . $prefix . $table . '`', $sql);
+        }
+
+        return $sql;
+    }
+
+    /**
+     * Create the initial admin user in the tenant's prefixed tables.
      */
     private function createTenantAdmin(
-        string $dbName,
+        string $prefix,
         string $practiceName,
         string $ownerName,
         string $email,
         string $password
     ): void {
-        $host     = $this->config->get('tenant_db.host');
-        $port     = (int)$this->config->get('tenant_db.port');
-        $username = $this->config->get('tenant_db.username');
-        $passwd   = $this->config->get('tenant_db.password');
-
-        $safe = '`' . str_replace('`', '``', $dbName) . '`';
-        $dsn  = "mysql:host={$host};port={$port};dbname={$dbName};charset=utf8mb4";
-        $pdo  = new PDO($dsn, $username, $passwd, [
-            PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        ]);
-
         $hash  = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
         $parts = explode(' ', trim($ownerName), 2);
         $first = $parts[0];
         $last  = $parts[1] ?? '';
 
+        $pdo = $this->db->getPdo();
+
         $stmt = $pdo->prepare(
-            "INSERT INTO users (first_name, last_name, email, password, role, is_active, created_at)
+            "INSERT INTO `{$prefix}users` (first_name, last_name, email, password, role, is_active, created_at)
              VALUES (?, ?, ?, ?, 'admin', 1, NOW())"
         );
         $stmt->execute([$first, $last, $email, $hash]);
 
-        // Set practice name in settings
-        $pdo->prepare("INSERT INTO settings (`key`, `value`) VALUES ('company_name', ?) ON DUPLICATE KEY UPDATE `value` = ?")
+        $pdo->prepare("INSERT INTO `{$prefix}settings` (`key`, `value`) VALUES ('company_name', ?) ON DUPLICATE KEY UPDATE `value` = ?")
             ->execute([$practiceName, $practiceName]);
     }
 
