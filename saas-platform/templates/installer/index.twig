@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Installation – Tierphysio SaaS</title>
+    <title>Installation – TheraPano SaaS</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -18,13 +18,14 @@
         .check-ok   { color:#10b981; }
         .check-fail { color:#ef4444; }
         h1 span { color:#2563eb; }
+        .brand-purple { color:#a78bfa; }
     </style>
 </head>
 <body>
 <div class="installer-wrap">
     <div class="text-center mb-4">
-        <h1 class="fw-bold text-white">Tierphysio <span>SaaS</span></h1>
-        <p class="text-secondary">Plattform-Installation</p>
+        <h1 class="fw-bold text-white">Thera<span>Pano</span></h1>
+        <p class="text-secondary"><span class="badge" style="background:#2e1065;color:#c4b5fd;">SaaS</span> &nbsp;Plattform-Installation</p>
     </div>
 
     {# System-Checks #}
@@ -74,7 +75,7 @@
                     </div>
                     <div class="col-sm-4">
                         <label class="form-label">Datenbankname</label>
-                        <input type="text" name="db_name" class="form-control" value="{{ old.db_name ?? 'tierphysio_saas' }}">
+                        <input type="text" name="db_name" class="form-control" value="{{ old.db_name ?? 'therapano_saas' }}">
                     </div>
                     <div class="col-sm-6">
                         <label class="form-label">Benutzer *</label>
@@ -91,7 +92,7 @@
                 <div class="row g-3 mb-4">
                     <div class="col-12">
                         <label class="form-label">App-URL (ohne abschließenden Slash)</label>
-                        <input type="url" name="app_url" class="form-control" value="{{ old.app_url ?? 'https://saas.meinedomain.de' }}">
+                        <input type="url" name="app_url" class="form-control" value="{{ old.app_url ?? 'https://therapano.de' }}">
                     </div>
                     <div class="col-12">
                         <label class="form-label">Lizenz-Geheimnis (min. 32 Zeichen, geheim halten!)</label>
