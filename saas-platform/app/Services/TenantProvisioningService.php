@@ -39,103 +39,107 @@ class TenantProvisioningService
             throw new \RuntimeException('Ungültiger Abo-Plan');
         }
 
-        return $this->db->transaction(function (Database $db) use ($data, $plan): array {
+        // Pre-compute identifiers
+        $uuid        = Uuid::uuid4()->toString();
+        $tid         = $this->generateTid($data['practice_name']);
+        $tablePrefix = substr('t_' . preg_replace('/[^a-z0-9]/', '_', $tid) . '_', 0, 48);
+        $adminPassword = $data['admin_password'] ?? bin2hex(random_bytes(8));
 
-            // 1. Create tenant record
-            $uuid         = Uuid::uuid4()->toString();
-            $tid          = $this->generateTid($data['practice_name']);
-            // db_name now stores the TABLE PREFIX used inside the shared DB
-            $tablePrefix  = 't_' . preg_replace('/[^a-z0-9]/', '_', $tid) . '_';
-            $tablePrefix  = substr($tablePrefix, 0, 48);
-            $passwordHash = password_hash($data['admin_password'] ?? bin2hex(random_bytes(8)), PASSWORD_BCRYPT, ['cost' => 12]);
-            $trialEndsAt  = date('Y-m-d H:i:s', strtotime('+14 days'));
+        // Step 1: DDL — create prefixed tables BEFORE opening a transaction.
+        // MySQL DDL causes an implicit commit which would break an open transaction.
+        $this->createTenantTables($tablePrefix, $uuid);
 
-            $tenantId = $this->tenantRepo->createWithAuth([
-                'uuid'          => $uuid,
-                'tid'           => $tid,
-                'practice_name' => $data['practice_name'],
-                'owner_name'    => $data['owner_name'],
-                'email'         => $data['email'],
-                'phone'         => $data['phone'] ?? null,
-                'address'       => $data['address'] ?? null,
-                'city'          => $data['city'] ?? null,
-                'zip'           => $data['zip'] ?? null,
-                'country'       => $data['country'] ?? 'DE',
-                'plan_id'       => (int)$plan['id'],
-                'status'        => 'trial',
-                'password_hash' => $passwordHash,
-                'trial_ends_at' => $trialEndsAt,
-            ]);
+        // Step 2: All DML inside a transaction (tenant record, admin user, subscription, license).
+        try {
+            return $this->db->transaction(function (Database $db) use ($data, $plan, $uuid, $tid, $tablePrefix, $adminPassword): array {
 
-            // 2. Create prefixed tables in the shared SaaS database
-            $this->createTenantTables($tablePrefix, $uuid);
-            $this->tenantRepo->setDbCreated($tenantId, $tablePrefix);
+                $passwordHash = password_hash($adminPassword, PASSWORD_BCRYPT, ['cost' => 12]);
+                $trialEndsAt  = date('Y-m-d H:i:s', strtotime('+14 days'));
 
-            // 3. Create admin user in the prefixed tables
-            $adminPassword = $data['admin_password'] ?? bin2hex(random_bytes(8));
-            $this->createTenantAdmin(
-                $tablePrefix,
-                $data['practice_name'],
-                $data['owner_name'],
-                $data['email'],
-                $adminPassword
-            );
-            $this->tenantRepo->setAdminCreated($tenantId);
+                $tenantId = $this->tenantRepo->createWithAuth([
+                    'uuid'          => $uuid,
+                    'tid'           => $tid,
+                    'practice_name' => $data['practice_name'],
+                    'owner_name'    => $data['owner_name'],
+                    'email'         => $data['email'],
+                    'phone'         => $data['phone'] ?? null,
+                    'address'       => $data['address'] ?? null,
+                    'city'          => $data['city'] ?? null,
+                    'zip'           => $data['zip'] ?? null,
+                    'country'       => $data['country'] ?? 'DE',
+                    'plan_id'       => (int)$plan['id'],
+                    'status'        => 'trial',
+                    'password_hash' => $passwordHash,
+                    'trial_ends_at' => $trialEndsAt,
+                ]);
 
-            // 4. Activate tenant (stays in trial until payment confirmed)
-            $this->tenantRepo->setStatus($tenantId, 'trial');
+                $this->tenantRepo->setDbCreated($tenantId, $tablePrefix);
 
-            // 5. Create subscription
-            $billingCycle = $data['billing_cycle'] ?? 'monthly';
-            $amount       = $billingCycle === 'yearly' ? $plan['price_year'] : $plan['price_month'];
-            $startedAt    = date('Y-m-d H:i:s');
-            $endsAt       = $billingCycle === 'yearly'
-                            ? date('Y-m-d H:i:s', strtotime('+1 year'))
-                            : date('Y-m-d H:i:s', strtotime('+1 month'));
-
-            $this->subRepo->create([
-                'tenant_id'      => $tenantId,
-                'plan_id'        => (int)$plan['id'],
-                'billing_cycle'  => $billingCycle,
-                'status'         => 'active',
-                'started_at'     => $startedAt,
-                'ends_at'        => $endsAt,
-                'next_billing'   => $endsAt,
-                'amount'         => $amount,
-                'currency'       => 'EUR',
-                'payment_method' => $data['payment_method'] ?? null,
-                'external_id'    => $data['payment_external_id'] ?? null,
-            ]);
-
-            // 6. Issue license token
-            $licenseToken = $this->licenseService->issueToken($tenantId);
-
-            // 7. Send welcome email
-            try {
-                $this->mailService->sendWelcome(
-                    $data['email'],
-                    $data['owner_name'],
+                // Create admin user in the prefixed tables
+                $this->createTenantAdmin(
+                    $tablePrefix,
                     $data['practice_name'],
+                    $data['owner_name'],
                     $data['email'],
-                    $adminPassword,
-                    $licenseToken
+                    $adminPassword
                 );
-            } catch (\Throwable) {
-                // Mail failure should not block provisioning
-            }
+                $this->tenantRepo->setAdminCreated($tenantId);
+                $this->tenantRepo->setStatus($tenantId, 'trial');
 
-            return [
-                'tenant_id'      => $tenantId,
-                'tenant_uuid'    => $uuid,
-                'tenant_tid'     => $tid,
-                'db_name'        => $tablePrefix,
-                'admin_email'    => $data['email'],
-                'admin_password' => $adminPassword,
-                'license_token'  => $licenseToken,
-                'plan'           => $plan['slug'],
-                'trial_ends_at'  => $trialEndsAt,
-            ];
-        });
+                // Create subscription
+                $billingCycle = $data['billing_cycle'] ?? 'monthly';
+                $amount       = $billingCycle === 'yearly' ? $plan['price_year'] : $plan['price_month'];
+                $startedAt    = date('Y-m-d H:i:s');
+                $endsAt       = $billingCycle === 'yearly'
+                                ? date('Y-m-d H:i:s', strtotime('+1 year'))
+                                : date('Y-m-d H:i:s', strtotime('+1 month'));
+
+                $this->subRepo->create([
+                    'tenant_id'      => $tenantId,
+                    'plan_id'        => (int)$plan['id'],
+                    'billing_cycle'  => $billingCycle,
+                    'status'         => 'active',
+                    'started_at'     => $startedAt,
+                    'ends_at'        => $endsAt,
+                    'next_billing'   => $endsAt,
+                    'amount'         => $amount,
+                    'currency'       => 'EUR',
+                    'payment_method' => $data['payment_method'] ?? null,
+                    'external_id'    => $data['payment_external_id'] ?? null,
+                ]);
+
+                // Issue license token
+                $licenseToken = $this->licenseService->issueToken($tenantId);
+
+                // Send welcome email (non-blocking)
+                try {
+                    $this->mailService->sendWelcome(
+                        $data['email'],
+                        $data['owner_name'],
+                        $data['practice_name'],
+                        $data['email'],
+                        $adminPassword,
+                        $licenseToken
+                    );
+                } catch (\Throwable) {}
+
+                return [
+                    'tenant_id'      => $tenantId,
+                    'tenant_uuid'    => $uuid,
+                    'tenant_tid'     => $tid,
+                    'db_name'        => $tablePrefix,
+                    'admin_email'    => $data['email'],
+                    'admin_password' => $adminPassword,
+                    'license_token'  => $licenseToken,
+                    'plan'           => $plan['slug'],
+                    'trial_ends_at'  => $trialEndsAt,
+                ];
+            });
+        } catch (\Throwable $e) {
+            // If the DML transaction fails, clean up the already-created DDL tables
+            $this->dropTenantTables($tablePrefix);
+            throw $e;
+        }
     }
 
     /**
@@ -223,6 +227,20 @@ class TenantProvisioningService
 
         $pdo->prepare("INSERT INTO `{$prefix}settings` (`key`, `value`) VALUES ('company_name', ?) ON DUPLICATE KEY UPDATE `value` = ?")
             ->execute([$practiceName, $practiceName]);
+    }
+
+    /**
+     * Drop all prefixed tenant tables (cleanup on failed provisioning).
+     */
+    private function dropTenantTables(string $prefix): void
+    {
+        $tables = ['invoice_items','invoices','appointments','patients','owners','waitlist','user_preferences','users','migrations','settings'];
+        $pdo = $this->db->getPdo();
+        foreach ($tables as $table) {
+            try {
+                $pdo->exec("DROP TABLE IF EXISTS `{$prefix}{$table}`");
+            } catch (\Throwable) {}
+        }
     }
 
     /**
