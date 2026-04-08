@@ -152,7 +152,7 @@ class GoogleCalendarRepository
     public function getPendingSyncs(): array
     {
         $stmt = $this->db->query(
-            'SELECT m.*, a.title, a.start_at, a.end_at, a.description, a.status,
+            "SELECT m.*, a.title, a.start_at, a.end_at, a.description, a.status,
                     a.patient_id, a.owner_id, a.treatment_type_id,
                     p.name AS patient_name,
                     o.first_name, o.last_name,
