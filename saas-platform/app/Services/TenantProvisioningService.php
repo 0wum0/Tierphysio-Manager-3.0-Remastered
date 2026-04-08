@@ -188,14 +188,22 @@ class TenantProvisioningService
 
     /**
      * Rewrite a schema SQL string to use the given table prefix.
+     * Prefixes both table names AND constraint names to avoid errno 121
+     * (duplicate foreign key name) when multiple tenants share one database.
      */
     private function applyPrefixToSchema(string $sql, string $prefix): string
     {
-        // Known tenant table names from tenant_schema.sql
+        // 1. Constraint-Namen prefixen: CONSTRAINT `fk_xyz` → CONSTRAINT `{prefix}fk_xyz`
+        $sql = preg_replace_callback(
+            '/\bCONSTRAINT\s+`([^`]+)`/i',
+            fn($m) => 'CONSTRAINT `' . $prefix . $m[1] . '`',
+            $sql
+        );
+
+        // 2. Tabellennamen prefixen (nur bekannte Tenant-Tabellen)
         $tables = ['users','settings','owners','patients','appointments','invoices','invoice_items','waitlist','user_preferences','migrations'];
 
         foreach ($tables as $table) {
-            // Table definitions and references with backticks
             $sql = preg_replace('/`' . preg_quote($table, '/') . '`/', '`' . $prefix . $table . '`', $sql);
         }
 
