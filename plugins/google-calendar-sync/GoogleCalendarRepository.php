@@ -36,11 +36,15 @@ class GoogleCalendarRepository
 
     public function getConnection(): ?array
     {
-        $stmt = $this->db->query(
-            "SELECT * FROM `{$this->t('google_calendar_connections')}` ORDER BY id ASC LIMIT 1"
-        );
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row ?: null;
+        try {
+            $stmt = $this->db->query(
+                "SELECT * FROM `{$this->t('google_calendar_connections')}` ORDER BY id ASC LIMIT 1"
+            );
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ?: null;
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function getConnectionById(int $id): ?array

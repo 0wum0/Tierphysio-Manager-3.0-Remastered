@@ -742,19 +742,27 @@ class CalendarController extends Controller
     private function fireAppointmentHookAsync(string $hookName, array $payload): void
     {
         try {
-            /* Flush response to client first so they don't wait */
+            /* Best-effort: flush response to client before running slow hooks.
+             * fastcgi_finish_request() is the only truly reliable method.
+             * For Apache mod_php we cannot guarantee it, but the hook errors
+             * are always caught so they never corrupt the already-sent response. */
             if (function_exists('fastcgi_finish_request')) {
                 fastcgi_finish_request();
-            } elseif (ob_get_level() > 0) {
-                ob_end_flush();
+            } else {
+                ignore_user_abort(true);
+                /* Flush all output buffers without destroying them */
+                $level = ob_get_level();
+                for ($i = 0; $i < $level; $i++) {
+                    ob_flush();
+                }
                 flush();
             }
 
-            /* Now run the (potentially slow) hook — client already got their response */
+            /* Run the (potentially slow) hook — response already on the wire */
             $pm = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\PluginManager::class);
             $pm->fireHook($hookName, $payload);
         } catch (\Throwable) {
-            /* Never let hook errors surface after response is sent */
+            /* Never let hook errors surface — response is already sent */
         }
     }
 
