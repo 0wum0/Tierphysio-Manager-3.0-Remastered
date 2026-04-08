@@ -63,6 +63,9 @@ class RegistrationController extends Controller
             $this->redirect('/register');
         }
 
+        $practiceType = in_array($this->post('practice_type'), ['therapeut', 'trainer'], true)
+            ? $this->post('practice_type') : 'therapeut';
+
         $data = [
             'practice_name' => trim($this->post('practice_name', '')),
             'owner_name'    => trim($this->post('owner_name', '')),
@@ -75,6 +78,7 @@ class RegistrationController extends Controller
             'plan_slug'     => $planSlug,
             'billing_cycle' => $this->post('billing_cycle', 'monthly'),
             'admin_password'=> $this->post('password', ''),
+            'practice_type' => $practiceType,
         ];
 
         $errors = $this->validate($data);

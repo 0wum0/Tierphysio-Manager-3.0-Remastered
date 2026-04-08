@@ -83,6 +83,10 @@ class TenantProvisioningService
                     $data['email'],
                     $adminPassword
                 );
+                // Save practice_type setting for this tenant
+                $practiceType = in_array($data['practice_type'] ?? '', ['therapeut', 'trainer'], true)
+                    ? $data['practice_type'] : 'therapeut';
+                $this->saveTenantSetting($tablePrefix, 'practice_type', $practiceType);
                 $this->tenantRepo->setAdminCreated($tenantId);
                 $this->tenantRepo->setStatus($tenantId, 'trial');
 
@@ -319,6 +323,13 @@ class TenantProvisioningService
 
         $pdo->prepare("INSERT INTO `{$prefix}settings` (`key`, `value`) VALUES ('company_name', ?) ON DUPLICATE KEY UPDATE `value` = ?")
             ->execute([$practiceName, $practiceName]);
+    }
+
+    private function saveTenantSetting(string $prefix, string $key, string $value): void
+    {
+        $this->db->getPdo()
+            ->prepare("INSERT INTO `{$prefix}settings` (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)")
+            ->execute([$key, $value]);
     }
 
     /**

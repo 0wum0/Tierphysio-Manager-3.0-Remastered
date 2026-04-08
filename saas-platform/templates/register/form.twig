@@ -18,11 +18,34 @@
                     {{ csrf_field()|raw }}
                     <input type="hidden" name="plan_slug" value="{{ plan.slug }}">
 
-                    <h6 class="text-secondary mb-3" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;">Ihre Praxis</h6>
+                    <h6 class="text-secondary mb-3" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;">Betriebsart</h6>
+                    <div class="row g-2 mb-4">
+                        <div class="col-sm-6">
+                            <label id="lbl-therapeut" style="cursor:pointer;border:2px solid #4f7cff;border-radius:10px;padding:.9rem 1rem;display:flex;align-items:center;gap:.65rem;background:rgba(79,124,255,0.08);width:100%;" onclick="selectRegType('therapeut')">
+                                <input type="radio" name="practice_type" value="therapeut" checked style="accent-color:#4f7cff;flex-shrink:0;">
+                                <div>
+                                    <div style="font-weight:600;font-size:.85rem;">&#x1F3E5; Tierphysiotherapie</div>
+                                    <div style="font-size:.72rem;color:#94a3b8;margin-top:2px;">Praxis &middot; Patienten &middot; Behandlungen</div>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="col-sm-6">
+                            <label id="lbl-trainer" style="cursor:pointer;border:2px solid rgba(255,255,255,0.15);border-radius:10px;padding:.9rem 1rem;display:flex;align-items:center;gap:.65rem;width:100%;" onclick="selectRegType('trainer')">
+                                <input type="radio" name="practice_type" value="trainer" style="accent-color:#4f7cff;flex-shrink:0;">
+                                <div>
+                                    <div style="font-weight:600;font-size:.85rem;">&#x1F415; Hundeschule / Training</div>
+                                    <div style="font-size:.72rem;color:#94a3b8;margin-top:2px;">Schule &middot; Hunde &middot; Halter &middot; Training</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <hr style="border-color:#334155;">
+                    <h6 class="text-secondary mb-3 mt-4" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;">Ihre Praxis / Schule</h6>
                     <div class="row g-3 mb-4">
                         <div class="col-sm-6">
-                            <label class="form-label">Praxisname *</label>
-                            <input type="text" name="practice_name" class="form-control" required placeholder="Tierphysiotherapie Muster">
+                            <label class="form-label" id="lbl-practice-name">Praxisname *</label>
+                            <input type="text" name="practice_name" class="form-control" required placeholder="Tierphysiotherapie Muster" id="inp-practice-name">
                         </div>
                         <div class="col-sm-6">
                             <label class="form-label">Ihr Name *</label>
@@ -98,6 +121,30 @@
                         Ihre Daten werden DSGVO-konform auf EU-Servern gespeichert.
                     </p>
                 </form>
+<script>
+function selectRegType(type) {
+    var lt = document.getElementById('lbl-therapeut');
+    var lr = document.getElementById('lbl-trainer');
+    var ln = document.getElementById('lbl-practice-name');
+    var ip = document.getElementById('inp-practice-name');
+    if (!lt || !lr) return;
+    if (type === 'therapeut') {
+        lt.style.border = '2px solid #4f7cff';
+        lt.style.background = 'rgba(79,124,255,0.08)';
+        lr.style.border = '2px solid rgba(255,255,255,0.15)';
+        lr.style.background = '';
+        if (ln) ln.textContent = 'Praxisname *';
+        if (ip) ip.placeholder = 'Tierphysiotherapie Muster';
+    } else {
+        lr.style.border = '2px solid #4f7cff';
+        lr.style.background = 'rgba(79,124,255,0.08)';
+        lt.style.border = '2px solid rgba(255,255,255,0.15)';
+        lt.style.background = '';
+        if (ln) ln.textContent = 'Name der Hundeschule *';
+        if (ip) ip.placeholder = 'Hundeschule Muster';
+    }
+}
+</script>
             </div>
         </div>
 
