@@ -220,18 +220,14 @@ class TenantProvisioningService
         string $email,
         string $password
     ): void {
-        $hash  = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
-        $parts = explode(' ', trim($ownerName), 2);
-        $first = $parts[0];
-        $last  = $parts[1] ?? '';
-
-        $pdo = $this->db->getPdo();
+        $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
+        $pdo  = $this->db->getPdo();
 
         $stmt = $pdo->prepare(
-            "INSERT INTO `{$prefix}users` (first_name, last_name, email, password, role, is_active, created_at)
-             VALUES (?, ?, ?, ?, 'admin', 1, NOW())"
+            "INSERT INTO `{$prefix}users` (name, email, password, role, active, created_at)
+             VALUES (?, ?, ?, 'admin', 1, NOW())"
         );
-        $stmt->execute([$first, $last, $email, $hash]);
+        $stmt->execute([$ownerName, $email, $hash]);
 
         $pdo->prepare("INSERT INTO `{$prefix}settings` (`key`, `value`) VALUES ('company_name', ?) ON DUPLICATE KEY UPDATE `value` = ?")
             ->execute([$practiceName, $practiceName]);
