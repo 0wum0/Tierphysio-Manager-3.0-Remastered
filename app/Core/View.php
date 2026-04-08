@@ -121,7 +121,8 @@ class View
             return mb_substr($value, 0, $length) . '…';
         }));
 
-        $this->twig->addFilter(new TwigFilter('initials', function (string $name) {
+        $this->twig->addFilter(new TwigFilter('initials', function (string|null $name) {
+            if ($name === null || $name === '') return '?';
             $parts = explode(' ', $name);
             $initials = '';
             foreach (array_slice($parts, 0, 2) as $part) {
