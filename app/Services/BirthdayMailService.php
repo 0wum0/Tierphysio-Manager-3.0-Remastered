@@ -325,24 +325,33 @@ HTML;
 
     private function createMailer(): PHPMailer
     {
-        $mailer = new PHPMailer(true);
-        $mailer->isSMTP();
-        $mailer->Host       = $this->settings->get('smtp_host', 'localhost');
-        $mailer->Port       = (int)$this->settings->get('smtp_port', '587');
-        $mailer->Username   = $this->settings->get('smtp_username', '');
-        $mailer->Password   = $this->settings->get('smtp_password', '');
-        $mailer->SMTPAuth   = !empty($mailer->Username);
-        $enc = $this->settings->get('smtp_encryption', 'tls');
-        if ($enc === 'ssl') {
-            $mailer->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-        } elseif ($enc === 'none') {
-            $mailer->SMTPSecure = '';
-            $mailer->SMTPAutoTLS = false;
-        } else {
-            $mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        }
+        $mailer      = new PHPMailer(true);
+        $smtpHost    = trim($this->settings->get('smtp_host', ''));
         $fromAddress = $this->settings->get('mail_from_address', 'noreply@tierphysio.local');
         $fromName    = $this->settings->get('mail_from_name', 'Tierphysio Manager');
+
+        if ($smtpHost !== '') {
+            /* ── SMTP mode ── */
+            $mailer->isSMTP();
+            $mailer->Host       = $smtpHost;
+            $mailer->Port       = (int)$this->settings->get('smtp_port', '587');
+            $mailer->Username   = $this->settings->get('smtp_username', '');
+            $mailer->Password   = $this->settings->get('smtp_password', '');
+            $mailer->SMTPAuth   = !empty($mailer->Username);
+            $enc = $this->settings->get('smtp_encryption', 'tls');
+            if ($enc === 'ssl') {
+                $mailer->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+            } elseif ($enc === 'none') {
+                $mailer->SMTPSecure = '';
+                $mailer->SMTPAutoTLS = false;
+            } else {
+                $mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            }
+        } else {
+            /* ── PHP mail() fallback (no SMTP configured) ── */
+            $mailer->isMail();
+        }
+
         $mailer->setFrom($fromAddress, $fromName);
         $mailer->CharSet = PHPMailer::CHARSET_UTF8;
         return $mailer;
