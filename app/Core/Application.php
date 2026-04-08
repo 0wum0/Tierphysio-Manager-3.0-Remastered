@@ -69,8 +69,22 @@ class Application
                 // Resolve tenant table prefix.
                 // Priority: 1) session cache (staff), 2) portal session (owner login), 3) SaaS-DB lookup, 4) INFORMATION_SCHEMA auto-detect
                 $prefix = $session->get('tenant_table_prefix', '');
+
+                /* Sanity-check: a valid prefix matches t_{slug}_ exactly once.
+                   A corrupted prefix (e.g. from old buggy regex) contains the pattern more than once.
+                   Detect by counting occurrences of 't_' — valid prefix has exactly one. */
+                if ($prefix !== '' && substr_count($prefix, 't_') !== 1) {
+                    $session->remove('tenant_table_prefix');
+                    $session->remove('portal_tenant_prefix');
+                    $prefix = '';
+                }
+
                 if ($prefix === '') {
                     $prefix = $session->get('portal_tenant_prefix', '');
+                    if ($prefix !== '' && substr_count($prefix, 't_') !== 1) {
+                        $session->remove('portal_tenant_prefix');
+                        $prefix = '';
+                    }
                 }
                 if ($prefix === '') {
                     $prefix = $this->resolveTenantPrefix($config, $session);
