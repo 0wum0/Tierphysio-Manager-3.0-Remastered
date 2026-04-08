@@ -329,27 +329,28 @@ class DataMigrationController extends Controller
     // ── Alle Tabellennamen in einem SQL-Statement mit Prefix versehen ────────
     private function prefixTableNames(string $sql, string $prefix): string
     {
-        // SQL-Funktionen die NIEMALS geprefixed werden dürfen
-        static $sqlFunctions = [
-            'current_timestamp', 'current_date', 'current_time', 'current_user',
-            'now', 'uuid', 'utc_timestamp', 'utc_date', 'utc_time',
-            'sysdate', 'localtime', 'localtimestamp', 'values',
-        ];
-        $fnPattern = implode('|', $sqlFunctions);
+        // Schritt 1: SQL-Funktionen temporär durch Platzhalter ersetzen
+        // damit sie beim Prefixing nicht angefasst werden
+        $placeholders = [];
+        $idx = 0;
+        $sql = preg_replace_callback(
+            '/\b(current_timestamp|current_date|current_time|current_user|'
+            . 'utc_timestamp|utc_date|utc_time|localtime|localtimestamp|sysdate|now|uuid)'
+            . '(\s*\(\s*\))?/i',
+            function ($m) use (&$placeholders, &$idx) {
+                $key = '__SQLFN_' . $idx++ . '__';
+                $placeholders[$key] = $m[0];
+                return $key;
+            },
+            $sql
+        );
 
-        $addPrefix = function (string $name) use ($prefix, $fnPattern): string {
-            // Nie SQL-Funktionen prefixen
-            if (preg_match('/^(' . $fnPattern . ')$/i', $name)) {
-                return $name;
-            }
-            // Nie wenn bereits geprefixed
-            if (str_starts_with($name, $prefix)) {
-                return $name;
-            }
-            return $prefix . $name;
+        // Schritt 2: Tabellennamen prefixen (nur Backtick-Namen)
+        $addPrefix = function (string $name) use ($prefix): string {
+            return str_starts_with($name, $prefix) ? $name : $prefix . $name;
         };
 
-        // CREATE TABLE [`name`] oder CREATE TABLE IF NOT EXISTS [`name`]
+        // CREATE TABLE [`name`]
         $sql = preg_replace_callback(
             '/\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`([^`]+)`/i',
             fn($m) => str_replace('`' . $m[1] . '`', '`' . $addPrefix($m[1]) . '`', $m[0]),
@@ -370,9 +371,9 @@ class DataMigrationController extends Controller
             $sql
         );
 
-        // UPDATE [`name`] SET — explizit NUR wenn nicht "ON UPDATE"
+        // UPDATE [`name`] — NUR standalone UPDATE, nicht ON UPDATE
         $sql = preg_replace_callback(
-            '/(?<!ON )\bUPDATE\s+`([^`]+)`/i',
+            '/(?<!\w)UPDATE\s+`([^`]+)`/i',
             fn($m) => str_replace('`' . $m[1] . '`', '`' . $addPrefix($m[1]) . '`', $m[0]),
             $sql
         );
@@ -384,14 +385,15 @@ class DataMigrationController extends Controller
             $sql
         );
 
-        // REFERENCES [`name`] — in FK-Definitionen
+        // REFERENCES [`name`]
         $sql = preg_replace_callback(
             '/\bREFERENCES\s+`([^`]+)`/i',
             fn($m) => str_replace('`' . $m[1] . '`', '`' . $addPrefix($m[1]) . '`', $m[0]),
             $sql
         );
 
-        return $sql;
+        // Schritt 3: Platzhalter wiederherstellen
+        return strtr($sql, $placeholders);
     }
 
     // ── SQL in einzelne Statements aufteilen (respektiert Strings + Backticks) ─
