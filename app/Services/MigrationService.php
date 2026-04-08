@@ -74,7 +74,9 @@ class MigrationService
 
     private function runMigration(string $file): void
     {
-        $sql        = file_get_contents($file);
+        $sql = file_get_contents($file);
+        $sql = $this->applyPrefixToSql($sql);
+
         $statements = array_filter(array_map('trim', explode(';', $sql)));
 
         foreach ($statements as $statement) {
@@ -82,6 +84,44 @@ class MigrationService
                 $this->db->execute($statement);
             }
         }
+    }
+
+    /**
+     * Ersetzt in einem SQL-String alle Tabellennamen in Backticks sowie alle
+     * CONSTRAINT-Namen mit dem Tenant-Prefix, damit bei Multi-Tenant keine
+     * doppelten Foreign-Key-Namen (errno 121) entstehen.
+     */
+    private function applyPrefixToSql(string $sql): string
+    {
+        $prefix = $this->db->prefix('');
+
+        if ($prefix === '') {
+            return $sql;
+        }
+
+        /* 1. Constraint-Namen prefixen: CONSTRAINT `fk_xyz` → CONSTRAINT `{prefix}fk_xyz` */
+        $sql = preg_replace_callback(
+            '/\bCONSTRAINT\s+`([^`]+)`/i',
+            fn($m) => 'CONSTRAINT `' . $prefix . $m[1] . '`',
+            $sql
+        );
+
+        /* 2. Tabellennamen in Backticks prefixen: `tablename` → `{prefix}tablename`
+         *    Nur wenn der Name noch kein Prefix trägt. */
+        $sql = preg_replace_callback(
+            '/`([a-z][a-z0-9_]*)`/i',
+            function ($m) use ($prefix) {
+                $name = $m[1];
+                /* Bereits geprefixed oder kein echter Tabellenname → überspringen */
+                if ($prefix !== '' && str_starts_with($name, $prefix)) {
+                    return '`' . $name . '`';
+                }
+                return '`' . $prefix . $name . '`';
+            },
+            $sql
+        );
+
+        return $sql;
     }
 
     private function setVersion(int $version): void
