@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS `portal_message_threads` (
+CREATE TABLE IF NOT EXISTS `{PREFIX}portal_message_threads` (
     `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `owner_id`     INT UNSIGNED NOT NULL,
     `subject`      VARCHAR(255)  NOT NULL DEFAULT '',
@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS `portal_message_threads` (
     KEY `idx_last_message_at` (`last_message_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `portal_messages` (
+CREATE TABLE IF NOT EXISTS `{PREFIX}portal_messages` (
     `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `thread_id`    INT UNSIGNED NOT NULL,
     `sender_type`  ENUM('admin','owner') NOT NULL,

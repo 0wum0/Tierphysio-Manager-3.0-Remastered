@@ -1,6 +1,6 @@
 -- Migration 001: Owner Portal tables
 
-CREATE TABLE IF NOT EXISTS `owner_portal_users` (
+CREATE TABLE IF NOT EXISTS `{PREFIX}owner_portal_users` (
     `id`              INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `owner_id`        INT UNSIGNED NOT NULL,
     `email`           VARCHAR(255) NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS `owner_portal_users` (
     INDEX `idx_owner_id` (`owner_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `owner_portal_login_attempts` (
+CREATE TABLE IF NOT EXISTS `{PREFIX}owner_portal_login_attempts` (
     `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `email`      VARCHAR(255) NOT NULL,
     `ip`         VARCHAR(45) NOT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS `owner_portal_login_attempts` (
     INDEX `idx_attempted_at` (`attempted_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `pet_exercises` (
+CREATE TABLE IF NOT EXISTS `{PREFIX}pet_exercises` (
     `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `patient_id`  INT UNSIGNED NOT NULL,
     `title`       VARCHAR(255) NOT NULL,

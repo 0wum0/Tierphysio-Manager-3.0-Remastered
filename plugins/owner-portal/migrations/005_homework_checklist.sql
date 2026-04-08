@@ -1,7 +1,7 @@
 -- Migration 005: Hausaufgaben-Checkliste für Besitzerportal
 -- Speichert pro Besitzer welche Aufgaben abgehakt wurden
 
-CREATE TABLE IF NOT EXISTS `portal_homework_task_checks` (
+CREATE TABLE IF NOT EXISTS `{PREFIX}portal_homework_task_checks` (
     `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `task_id`    INT UNSIGNED NOT NULL COMMENT 'Referenz auf portal_homework_plan_tasks.id',
     `plan_id`    INT UNSIGNED NOT NULL COMMENT 'Referenz auf portal_homework_plans.id',
@@ -15,5 +15,5 @@ CREATE TABLE IF NOT EXISTS `portal_homework_task_checks` (
     INDEX `idx_htc_plan_id`  (`plan_id`),
     INDEX `idx_htc_owner_id` (`owner_id`),
     CONSTRAINT `fk_htc_task` FOREIGN KEY (`task_id`)
-        REFERENCES `portal_homework_plan_tasks` (`id`) ON DELETE CASCADE
+        REFERENCES `{PREFIX}portal_homework_plan_tasks` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

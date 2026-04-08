@@ -1,6 +1,6 @@
 -- Migration 002: Hausaufgaben-Pläne für das Besitzerportal
 
-CREATE TABLE IF NOT EXISTS `portal_homework_plans` (
+CREATE TABLE IF NOT EXISTS `{PREFIX}portal_homework_plans` (
     `id`                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `patient_id`          INT UNSIGNED NOT NULL,
     `owner_id`            INT UNSIGNED NOT NULL,
@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS `portal_homework_plans` (
     INDEX `idx_owner_id` (`owner_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `portal_homework_plan_tasks` (
+CREATE TABLE IF NOT EXISTS `{PREFIX}portal_homework_plan_tasks` (
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `plan_id`           INT UNSIGNED NOT NULL,
     `template_id`       INT UNSIGNED NULL COMMENT 'Referenz auf homework_templates (optional)',
@@ -36,5 +36,5 @@ CREATE TABLE IF NOT EXISTS `portal_homework_plan_tasks` (
     `created_at`        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
     INDEX `idx_plan_id` (`plan_id`),
-    CONSTRAINT `fk_plan_tasks_plan` FOREIGN KEY (`plan_id`) REFERENCES `portal_homework_plans` (`id`) ON DELETE CASCADE
+    CONSTRAINT `fk_plan_tasks_plan` FOREIGN KEY (`plan_id`) REFERENCES `{PREFIX}portal_homework_plans` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

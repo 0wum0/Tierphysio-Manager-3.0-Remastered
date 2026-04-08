@@ -1,7 +1,7 @@
 -- Migration 006: Benachrichtigungen wenn Besitzer Aufgaben abhakt
 -- Wird von der Webseite und Flutter abgerufen
 
-CREATE TABLE IF NOT EXISTS `portal_check_notifications` (
+CREATE TABLE IF NOT EXISTS `{PREFIX}portal_check_notifications` (
     `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `owner_id`    INT UNSIGNED NOT NULL,
     `patient_id`  INT UNSIGNED NOT NULL,
