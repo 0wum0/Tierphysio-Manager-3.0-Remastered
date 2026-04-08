@@ -143,37 +143,49 @@ class DataMigrationController extends Controller
         }
 
         // ── SQL verarbeiten ─────────────────────────────────────────────────
-        if ($mode === 'smart') {
-            $result = $this->runSmart($sql, $prefix);
-        } else {
-            $result = $this->runRaw($sql, $prefix);
-        }
+        try {
+            if ($mode === 'smart') {
+                $result = $this->runSmart($sql, $prefix);
+            } else {
+                $result = $this->runRaw($sql, $prefix);
+            }
 
-        // ── Post-Import Setup: migrations-Tabelle + settings + Admin-User ────
-        $practiceData = [
-            'company_name'    => $companyName !== '' ? $companyName : ($provisionResult['practice_name'] ?? ''),
-            'company_email'   => $companyEmail !== '' ? $companyEmail : $adminEmail,
-            'company_phone'   => $companyPhone,
-            'company_address' => $companyAddress,
-            'company_city'    => $companyCity,
-            'company_zip'     => $companyZip,
-        ];
-        $result['setup'] = $this->postImportSetup($prefix, $practiceData);
-
-        if ($adminEmail !== '' && $adminPassword !== '') {
-            $result['admin'] = $this->setAdminUser($prefix, $adminEmail, $adminPassword, $adminName);
-        }
-
-        // ── Provisioning-Info anhängen ──────────────────────────────────────
-        if ($provisionResult !== null) {
-            $result['provisioning'] = [
-                'success'      => true,
-                'tenant_id'    => $provisionResult['tenant_id'],
-                'db_prefix'    => $provisionResult['db_name'],
-                'license_token'=> $provisionResult['license_token'] ?? null,
-                'trial_ends'   => $provisionResult['trial_ends_at'] ?? null,
-                'message'      => "Neuer Tenant angelegt: ID {$provisionResult['tenant_id']}, Prefix: {$provisionResult['db_name']}",
+            // ── Post-Import Setup: migrations-Tabelle + settings + Admin-User ────
+            $practiceData = [
+                'company_name'    => $companyName !== '' ? $companyName : ($provisionResult['practice_name'] ?? ''),
+                'company_email'   => $companyEmail !== '' ? $companyEmail : $adminEmail,
+                'company_phone'   => $companyPhone,
+                'company_address' => $companyAddress,
+                'company_city'    => $companyCity,
+                'company_zip'     => $companyZip,
             ];
+            $result['setup'] = $this->postImportSetup($prefix, $practiceData);
+
+            if ($adminEmail !== '' && $adminPassword !== '') {
+                $result['admin'] = $this->setAdminUser($prefix, $adminEmail, $adminPassword, $adminName);
+            }
+
+            // ── Provisioning-Info anhängen ──────────────────────────────────
+            if ($provisionResult !== null) {
+                $result['provisioning'] = [
+                    'success'      => true,
+                    'tenant_id'    => $provisionResult['tenant_id'],
+                    'db_prefix'    => $provisionResult['db_name'],
+                    'license_token'=> $provisionResult['license_token'] ?? null,
+                    'trial_ends'   => $provisionResult['trial_ends_at'] ?? null,
+                    'message'      => "Neuer Tenant angelegt: ID {$provisionResult['tenant_id']}, Prefix: {$provisionResult['db_name']}",
+                ];
+            }
+        } catch (\Throwable $e) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => false,
+                'ok'      => 0,
+                'skipped' => 0,
+                'errors'  => [['sql' => '', 'error' => $e->getMessage()]],
+                'message' => 'PHP-Fehler: ' . $e->getMessage() . ' in ' . basename($e->getFile()) . ':' . $e->getLine(),
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
         }
 
         header('Content-Type: application/json; charset=utf-8');
@@ -333,12 +345,23 @@ class DataMigrationController extends Controller
         // damit sie beim Prefixing nicht angefasst werden
         $placeholders = [];
         $idx = 0;
+        // Funktionen ohne Klammern (z.B. DEFAULT current_timestamp)
         $sql = preg_replace_callback(
             '/\b(current_timestamp|current_date|current_time|current_user|'
-            . 'utc_timestamp|utc_date|utc_time|localtime|localtimestamp|sysdate|now|uuid)'
+            . 'utc_timestamp|utc_date|utc_time|localtime|localtimestamp|sysdate)'
             . '(\s*\(\s*\))?/i',
             function ($m) use (&$placeholders, &$idx) {
-                $key = '__SQLFN_' . $idx++ . '__';
+                $key = '__SQLFN_' . ($idx++) . '__';
+                $placeholders[$key] = $m[0];
+                return $key;
+            },
+            $sql
+        );
+        // now() und uuid() nur mit Klammern (Wort allein zu generisch)
+        $sql = preg_replace_callback(
+            '/\b(now|uuid)\s*\(\s*\)/i',
+            function ($m) use (&$placeholders, &$idx) {
+                $key = '__SQLFN_' . ($idx++) . '__';
                 $placeholders[$key] = $m[0];
                 return $key;
             },
@@ -353,42 +376,54 @@ class DataMigrationController extends Controller
         // CREATE TABLE [`name`]
         $sql = preg_replace_callback(
             '/\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`([^`]+)`/i',
-            fn($m) => str_replace('`' . $m[1] . '`', '`' . $addPrefix($m[1]) . '`', $m[0]),
+            function ($m) use ($addPrefix) {
+                return str_replace('`' . $m[1] . '`', '`' . $addPrefix($m[1]) . '`', $m[0]);
+            },
             $sql
         );
 
         // DROP TABLE [IF EXISTS] [`name`]
         $sql = preg_replace_callback(
             '/\bDROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?`([^`]+)`/i',
-            fn($m) => str_replace('`' . $m[1] . '`', '`' . $addPrefix($m[1]) . '`', $m[0]),
+            function ($m) use ($addPrefix) {
+                return str_replace('`' . $m[1] . '`', '`' . $addPrefix($m[1]) . '`', $m[0]);
+            },
             $sql
         );
 
         // INSERT [IGNORE] INTO [`name`]
         $sql = preg_replace_callback(
             '/\bINSERT\s+(?:IGNORE\s+)?INTO\s+`([^`]+)`/i',
-            fn($m) => str_replace('`' . $m[1] . '`', '`' . $addPrefix($m[1]) . '`', $m[0]),
+            function ($m) use ($addPrefix) {
+                return str_replace('`' . $m[1] . '`', '`' . $addPrefix($m[1]) . '`', $m[0]);
+            },
             $sql
         );
 
         // UPDATE [`name`] — NUR standalone UPDATE, nicht ON UPDATE
         $sql = preg_replace_callback(
             '/(?<!\w)UPDATE\s+`([^`]+)`/i',
-            fn($m) => str_replace('`' . $m[1] . '`', '`' . $addPrefix($m[1]) . '`', $m[0]),
+            function ($m) use ($addPrefix) {
+                return str_replace('`' . $m[1] . '`', '`' . $addPrefix($m[1]) . '`', $m[0]);
+            },
             $sql
         );
 
         // ALTER TABLE [`name`]
         $sql = preg_replace_callback(
             '/\bALTER\s+TABLE\s+`([^`]+)`/i',
-            fn($m) => str_replace('`' . $m[1] . '`', '`' . $addPrefix($m[1]) . '`', $m[0]),
+            function ($m) use ($addPrefix) {
+                return str_replace('`' . $m[1] . '`', '`' . $addPrefix($m[1]) . '`', $m[0]);
+            },
             $sql
         );
 
         // REFERENCES [`name`]
         $sql = preg_replace_callback(
             '/\bREFERENCES\s+`([^`]+)`/i',
-            fn($m) => str_replace('`' . $m[1] . '`', '`' . $addPrefix($m[1]) . '`', $m[0]),
+            function ($m) use ($addPrefix) {
+                return str_replace('`' . $m[1] . '`', '`' . $addPrefix($m[1]) . '`', $m[0]);
+            },
             $sql
         );
 

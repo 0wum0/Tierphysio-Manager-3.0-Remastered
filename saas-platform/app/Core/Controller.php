@@ -33,6 +33,15 @@ abstract class Controller
     protected function requireAuth(): void
     {
         if (!$this->session->has('saas_user_id')) {
+            $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
+                || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')
+                || (isset($_SERVER['CONTENT_TYPE']) && str_contains($_SERVER['CONTENT_TYPE'], 'multipart'));
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                http_response_code(401);
+                echo json_encode(['success' => false, 'message' => 'Session abgelaufen. Bitte neu einloggen.']);
+                exit;
+            }
             $this->redirect('/admin/login');
         }
     }
@@ -52,6 +61,15 @@ abstract class Controller
     {
         $token = $_POST['_csrf'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
         if (!$this->session->verifyCsrf($token)) {
+            $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
+                || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')
+                || (isset($_SERVER['CONTENT_TYPE']) && str_contains($_SERVER['CONTENT_TYPE'], 'multipart'));
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=utf-8');
+                http_response_code(419);
+                echo json_encode(['success' => false, 'message' => 'CSRF-Token abgelaufen. Bitte Seite neu laden.']);
+                exit;
+            }
             http_response_code(419);
             $this->session->flash('error', 'Sicherheitstoken abgelaufen. Bitte erneut versuchen.');
             $this->redirect($_SERVER['HTTP_REFERER'] ?? '/admin');
