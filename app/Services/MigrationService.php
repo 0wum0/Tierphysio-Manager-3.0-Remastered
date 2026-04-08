@@ -87,9 +87,12 @@ class MigrationService
     }
 
     /**
-     * Ersetzt in einem SQL-String alle Tabellennamen in Backticks sowie alle
-     * CONSTRAINT-Namen mit dem Tenant-Prefix, damit bei Multi-Tenant keine
+     * Ersetzt in einem SQL-String nur bekannte Tabellennamen (Whitelist) mit dem
+     * Tenant-Prefix sowie CONSTRAINT-Namen, damit bei Multi-Tenant keine
      * doppelten Foreign-Key-Namen (errno 121) entstehen.
+     *
+     * WICHTIG: Niemals blind alle Backtick-Identifier prefixen — das würde auch
+     * Spaltennamen wie `key`, `value`, `name` usw. kaputt machen.
      */
     private function applyPrefixToSql(string $sql): string
     {
@@ -106,20 +109,23 @@ class MigrationService
             $sql
         );
 
-        /* 2. Tabellennamen in Backticks prefixen: `tablename` → `{prefix}tablename`
-         *    Nur wenn der Name noch kein Prefix trägt. */
-        $sql = preg_replace_callback(
-            '/`([a-z][a-z0-9_]*)`/i',
-            function ($m) use ($prefix) {
-                $name = $m[1];
-                /* Bereits geprefixed oder kein echter Tabellenname → überspringen */
-                if ($prefix !== '' && str_starts_with($name, $prefix)) {
-                    return '`' . $name . '`';
-                }
-                return '`' . $prefix . $name . '`';
-            },
-            $sql
-        );
+        /* 2. Nur bekannte Tabellennamen prefixen */
+        $tables = [
+            'users','settings','owners','patients','appointments','appointment_waitlist',
+            'invoices','invoice_items','invoice_positions','invoice_reminders','invoice_dunnings',
+            'waitlist','user_preferences','migrations',
+            'patient_timeline','treatment_types',
+            'mobile_api_tokens','cron_job_log',
+            'befundboegen','befundbogen_felder',
+        ];
+
+        foreach ($tables as $table) {
+            $sql = preg_replace(
+                '/`' . preg_quote($table, '/') . '`/',
+                '`' . $prefix . $table . '`',
+                $sql
+            );
+        }
 
         return $sql;
     }
