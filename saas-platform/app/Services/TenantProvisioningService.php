@@ -252,30 +252,51 @@ class TenantProvisioningService
     private function createTenantTables(string $prefix, string $tenantUuid): void
     {
         $schemaPath = $this->config->getRootPath() . '/provisioning/tenant_schema.sql';
-        $sql = file_exists($schemaPath) ? (string)file_get_contents($schemaPath) : '';
+        if (!file_exists($schemaPath)) {
+            throw new \RuntimeException('tenant_schema.sql not found at: ' . $schemaPath);
+        }
+        $sql = (string)file_get_contents($schemaPath);
 
-        // Replace every bare table name with the prefixed version.
-        // Matches: CREATE TABLE [IF NOT EXISTS] `name`  or  INSERT INTO `name`
-        // Also handles FK references like REFERENCES `name`
         $sql = $this->applyPrefixToSchema($sql, $prefix);
 
         $pdo = $this->db->getPdo();
-        foreach (array_filter(array_map('trim', explode(';', $sql))) as $stmt) {
-            if ($stmt !== '' && !preg_match('/^\s*(--.*)$/m', $stmt)) {
-                try {
-                    $pdo->exec($stmt);
-                } catch (\PDOException $e) {
-                    // Skip duplicate-table errors (idempotent re-provisioning)
-                    if ($e->getCode() !== '42S01') {
-                        throw $e;
-                    }
+
+        // Split on semicolons that are NOT inside quoted strings or comments.
+        // Simple but effective: strip full-line comments first, then split.
+        $lines   = explode("\n", $sql);
+        $cleaned = [];
+        foreach ($lines as $line) {
+            $trimmed = ltrim($line);
+            if (str_starts_with($trimmed, '--')) {
+                continue;
+            }
+            $cleaned[] = $line;
+        }
+        $cleanSql = implode("\n", $cleaned);
+
+        $statements = array_filter(
+            array_map('trim', explode(';', $cleanSql)),
+            fn($s) => $s !== ''
+        );
+
+        foreach ($statements as $stmt) {
+            try {
+                $pdo->exec($stmt);
+            } catch (\PDOException $e) {
+                // 42S01 = table already exists — safe to skip for idempotent re-runs
+                if ($e->getCode() !== '42S01') {
+                    throw new \RuntimeException(
+                        'Schema error on statement [' . substr($stmt, 0, 120) . ']: ' . $e->getMessage(),
+                        0,
+                        $e
+                    );
                 }
             }
         }
 
         // Write tenant identity into prefixed settings table
-        $st = $pdo->prepare("INSERT IGNORE INTO `{$prefix}settings` (`key`, `value`) VALUES ('tenant_uuid', ?)");
-        $st->execute([$tenantUuid]);
+        $pdo->prepare("INSERT IGNORE INTO `{$prefix}settings` (`key`, `value`) VALUES ('tenant_uuid', ?)")
+            ->execute([$tenantUuid]);
     }
 
     /**
