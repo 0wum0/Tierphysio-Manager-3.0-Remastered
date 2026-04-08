@@ -107,6 +107,57 @@ CREATE TABLE IF NOT EXISTS `treatment_types` (
     INDEX `idx_active` (`active`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ── appointments (Migration 001 + 006 + 009 + 011) ───────────
+CREATE TABLE IF NOT EXISTS `appointments` (
+    `id`                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `title`              VARCHAR(255) NOT NULL,
+    `description`        TEXT NULL,
+    `start_at`           DATETIME NOT NULL,
+    `end_at`             DATETIME NOT NULL,
+    `all_day`            TINYINT(1) NOT NULL DEFAULT 0,
+    `status`             ENUM('scheduled','confirmed','completed','cancelled','noshow') NOT NULL DEFAULT 'scheduled',
+    `color`              VARCHAR(7) NULL,
+    `patient_id`         INT UNSIGNED NULL,
+    `owner_id`           INT UNSIGNED NULL,
+    `treatment_type_id`  INT UNSIGNED NULL,
+    `user_id`            INT UNSIGNED NULL,
+    `invoice_id`         INT UNSIGNED NULL,
+    `recurrence_rule`    VARCHAR(500) NULL,
+    `recurrence_parent`  INT UNSIGNED NULL,
+    `notes`              TEXT NULL,
+    `reminder_minutes`   INT UNSIGNED NOT NULL DEFAULT 60,
+    `reminder_sent`      TINYINT(1) NOT NULL DEFAULT 0,
+    `created_at`         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    INDEX `idx_start_at`   (`start_at`),
+    INDEX `idx_patient_id` (`patient_id`),
+    INDEX `idx_owner_id`   (`owner_id`),
+    INDEX `idx_user_id`    (`user_id`),
+    INDEX `idx_status`     (`status`),
+    CONSTRAINT `fk_appt_patient`  FOREIGN KEY (`patient_id`)        REFERENCES `patients` (`id`) ON DELETE SET NULL,
+    CONSTRAINT `fk_appt_owner`    FOREIGN KEY (`owner_id`)          REFERENCES `owners` (`id`) ON DELETE SET NULL,
+    CONSTRAINT `fk_appt_user`     FOREIGN KEY (`user_id`)           REFERENCES `users` (`id`) ON DELETE SET NULL,
+    CONSTRAINT `fk_appt_tt`       FOREIGN KEY (`treatment_type_id`) REFERENCES `treatment_types` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── appointment_waitlist (Migration 006) ──────────────────────
+CREATE TABLE IF NOT EXISTS `appointment_waitlist` (
+    `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `patient_id`        INT UNSIGNED NULL,
+    `owner_id`          INT UNSIGNED NULL,
+    `treatment_type_id` INT UNSIGNED NULL,
+    `preferred_date`    DATE NULL,
+    `notes`             TEXT NULL,
+    `status`            ENUM('waiting','scheduled','cancelled') NOT NULL DEFAULT 'waiting',
+    `created_at`        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    INDEX `idx_aw_status` (`status`),
+    CONSTRAINT `fk_aw_patient` FOREIGN KEY (`patient_id`)        REFERENCES `patients` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_aw_owner`   FOREIGN KEY (`owner_id`)          REFERENCES `owners` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_aw_tt`      FOREIGN KEY (`treatment_type_id`) REFERENCES `treatment_types` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ── invoices (Migration 001 + 007 + 016) ─────────────────────
 CREATE TABLE IF NOT EXISTS `invoices` (
     `id`             INT UNSIGNED NOT NULL AUTO_INCREMENT,

@@ -315,10 +315,11 @@ class TenantProvisioningService
 
         // 2. Tabellennamen prefixen (alle Tenant-Tabellen)
         $tables = [
-            'users','settings','owners','patients','appointments','invoices','invoice_items',
+            'users','settings','owners','patients','appointments','appointment_waitlist',
+            'invoices','invoice_items','invoice_positions','invoice_reminders','invoice_dunnings',
             'waitlist','user_preferences','migrations',
-            'patient_timeline','treatment_types','invoice_positions','invoice_reminders',
-            'invoice_dunnings','mobile_api_tokens','cron_job_log',
+            'patient_timeline','treatment_types',
+            'mobile_api_tokens','cron_job_log',
             'befundboegen','befundbogen_felder',
         ];
 
@@ -366,11 +367,11 @@ class TenantProvisioningService
     {
         $tables = [
             'befundbogen_felder','befundboegen',
-            'invoice_reminders','invoice_dunnings','invoice_positions',
-            'invoice_items','invoices',
+            'invoice_reminders','invoice_dunnings','invoice_positions','invoice_items','invoices',
             'mobile_api_tokens','cron_job_log',
+            'appointment_waitlist','appointments',
             'patient_timeline','treatment_types',
-            'appointments','patients','owners',
+            'patients','owners',
             'waitlist','user_preferences','users','migrations','settings',
         ];
         $pdo = $this->db->getPdo();
