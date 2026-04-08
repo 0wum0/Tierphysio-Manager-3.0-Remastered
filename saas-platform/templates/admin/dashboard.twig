@@ -1,129 +1,540 @@
 {% extends 'layouts/base.twig' %}
 {% set active_nav = 'dashboard' %}
 
+{% block styles %}
+<style>
+.kpi-card {
+    border-radius: .875rem;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid #334155;
+    background: #1e293b;
+    position: relative;
+    overflow: hidden;
+    transition: transform .15s, box-shadow .15s;
+}
+.kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,.3); }
+.kpi-card .kpi-icon {
+    width: 2.75rem; height: 2.75rem; border-radius: .6rem;
+    display: flex; align-items: center; justify-content: center; font-size: 1.25rem;
+    flex-shrink: 0;
+}
+.kpi-card .kpi-value { font-size: 1.85rem; font-weight: 800; line-height: 1; }
+.kpi-card .kpi-label { font-size: .75rem; color: #64748b; margin-top: .2rem; }
+.kpi-card .kpi-badge { font-size: .65rem; padding: .15rem .45rem; border-radius: 999px; font-weight: 600; }
+.kpi-glow-blue  { background: rgba(37,99,235,.08); }
+.kpi-glow-green { background: rgba(16,185,129,.08); }
+.kpi-glow-amber { background: rgba(245,158,11,.08); }
+.kpi-glow-purple{ background: rgba(167,139,250,.08); }
+.kpi-glow-rose  { background: rgba(244,63,94,.08); }
+.kpi-glow-cyan  { background: rgba(6,182,212,.08); }
+.chart-card { border-radius: .875rem; border: 1px solid #334155; background: #1e293b; }
+.chart-card .chart-header {
+    padding: 1rem 1.25rem .75rem;
+    border-bottom: 1px solid #1f2d3d;
+    display: flex; align-items: center; justify-content: space-between;
+}
+.chart-card .chart-body { padding: 1rem 1.25rem 1.25rem; }
+.chart-title { font-size: .875rem; font-weight: 600; color: #e2e8f0; }
+.chart-sub   { font-size: .72rem; color: #64748b; margin-top: .1rem; }
+.flip-card-outer { perspective: 1000px; }
+.flip-card-inner {
+    position: relative; width: 100%; height: 120px;
+    transform-style: preserve-3d; transition: transform .6s ease;
+}
+.flip-card-outer:hover .flip-card-inner { transform: rotateY(180deg); }
+.flip-front, .flip-back {
+    position: absolute; width: 100%; height: 100%;
+    backface-visibility: hidden; border-radius: .875rem;
+    border: 1px solid #334155; background: #1e293b;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .25rem;
+}
+.flip-back { transform: rotateY(180deg); background: #0f1b2d; }
+.fb-value { font-size: 1.6rem; font-weight: 800; }
+.fb-label { font-size: .7rem; color: #64748b; }
+.feedback-item {
+    padding: .75rem 1rem; border-bottom: 1px solid #1f2d3d;
+    display: flex; gap: .75rem; align-items: flex-start;
+}
+.feedback-item:last-child { border-bottom: none; }
+.cat-badge { font-size: .65rem; padding: .15rem .45rem; border-radius: 999px; font-weight: 600; }
+.cat-bug     { background: rgba(239,68,68,.15);  color: #fca5a5; }
+.cat-feature { background: rgba(37,99,235,.15);  color: #93c5fd; }
+.cat-praise  { background: rgba(16,185,129,.15); color: #6ee7b7; }
+.cat-other   { background: rgba(100,116,139,.15);color: #94a3b8; }
+</style>
+{% endblock %}
+
 {% block content %}
+{# ── Row 1: KPI Flipcards (hover to flip) ── #}
 <div class="row g-3 mb-4">
-    <div class="col-sm-6 col-xl-3">
-        <div class="stat-card card">
-            <div class="d-flex align-items-center justify-content-between">
-                <div>
-                    <div class="stat-value text-white">{{ stats.total }}</div>
-                    <div class="stat-label">Praxen gesamt</div>
+    {# Flip: Gesamt / Neu diesen Monat #}
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="flip-card-outer">
+            <div class="flip-card-inner">
+                <div class="flip-front">
+                    <div class="fb-value text-white">{{ stats.total }}</div>
+                    <div class="fb-label">Praxen gesamt</div>
                 </div>
-                <div style="font-size:2rem;color:#2563eb;"><i class="bi bi-building"></i></div>
+                <div class="flip-back">
+                    <div class="fb-value" style="color:#6EA8FE;">+{{ stats.new_this_month }}</div>
+                    <div class="fb-label">Neu diesen Monat</div>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-sm-6 col-xl-3">
-        <div class="stat-card card">
-            <div class="d-flex align-items-center justify-content-between">
-                <div>
-                    <div class="stat-value text-success">{{ stats.active }}</div>
-                    <div class="stat-label">Aktive Praxen</div>
+    {# Flip: Aktiv / Trial #}
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="flip-card-outer">
+            <div class="flip-card-inner">
+                <div class="flip-front">
+                    <div class="fb-value" style="color:#6ee7b7;">{{ stats.active }}</div>
+                    <div class="fb-label">Aktive Praxen</div>
                 </div>
-                <div style="font-size:2rem;color:#10b981;"><i class="bi bi-check-circle"></i></div>
+                <div class="flip-back">
+                    <div class="fb-value" style="color:#c4b5fd;">{{ stats.trial }}</div>
+                    <div class="fb-label">In Testphase</div>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-sm-6 col-xl-3">
-        <div class="stat-card card">
-            <div class="d-flex align-items-center justify-content-between">
-                <div>
-                    <div class="stat-value text-primary">{{ stats.active_subscriptions }}</div>
-                    <div class="stat-label">Aktive Abos</div>
+    {# Flip: MRR / ARR #}
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="flip-card-outer">
+            <div class="flip-card-inner">
+                <div class="flip-front">
+                    <div class="fb-value" style="color:#fde68a;">{{ stats.monthly_revenue|number_format(0, ',', '.') }}€</div>
+                    <div class="fb-label">MRR</div>
                 </div>
-                <div style="font-size:2rem;color:#2563eb;"><i class="bi bi-credit-card"></i></div>
+                <div class="flip-back">
+                    <div class="fb-value" style="color:#f59e0b;">{{ stats.yearly_revenue|number_format(0, ',', '.') }}€</div>
+                    <div class="fb-label">ARR (Hochrechnung)</div>
+                </div>
             </div>
         </div>
     </div>
-    <div class="col-sm-6 col-xl-3">
-        <div class="stat-card card">
-            <div class="d-flex align-items-center justify-content-between">
-                <div>
-                    <div class="stat-value text-warning">{{ stats.monthly_revenue|number_format(2, ',', '.') }} €</div>
-                    <div class="stat-label">Monatl. Umsatz (aktiv)</div>
+    {# Flip: Aktive Abos / Abonnenten #}
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="flip-card-outer">
+            <div class="flip-card-inner">
+                <div class="flip-front">
+                    <div class="fb-value" style="color:#7dd3fc;">{{ stats.active_subscriptions }}</div>
+                    <div class="fb-label">Aktive Abos</div>
                 </div>
-                <div style="font-size:2rem;color:#f59e0b;"><i class="bi bi-currency-euro"></i></div>
+                <div class="flip-back">
+                    <div class="fb-value" style="color:#38bdf8;">{{ stats.churn_this_month }}</div>
+                    <div class="fb-label">Churn diesen Monat</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {# Flip: Trial läuft ab / Feedback ungelesen #}
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="flip-card-outer">
+            <div class="flip-card-inner">
+                <div class="flip-front">
+                    <div class="fb-value" style="color:#fdba74;">{{ stats.trial_expiring_soon }}</div>
+                    <div class="fb-label">Trial läuft ab (7 Tage)</div>
+                </div>
+                <div class="flip-back">
+                    <div class="fb-value" style="color:#f87171;">{{ stats.pending }}</div>
+                    <div class="fb-label">Ausstehend</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {# Flip: Feedback ungelesen / Suspended #}
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="flip-card-outer">
+            <div class="flip-card-inner">
+                <div class="flip-front">
+                    <div class="fb-value" style="color:#a78bfa;">{{ stats.unread_feedback }}</div>
+                    <div class="fb-label">Feedback ungelesen</div>
+                </div>
+                <div class="flip-back">
+                    <div class="fb-value" style="color:#94a3b8;">{{ stats.suspended }}</div>
+                    <div class="fb-label">Gesperrt</div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
+{# ── Row 2: Revenue Chart + Registrations Chart ── #}
 <div class="row g-3 mb-4">
-    <div class="col-sm-3">
-        <div class="card p-3 text-center">
-            <div class="fw-bold" style="color:#a78bfa;">{{ stats.trial }}</div>
-            <div class="stat-label">Testphase</div>
+    <div class="col-lg-7">
+        <div class="chart-card">
+            <div class="chart-header">
+                <div>
+                    <div class="chart-title"><i class="bi bi-graph-up-arrow me-2" style="color:#6EA8FE;"></i>Monatlicher Umsatz (MRR)</div>
+                    <div class="chart-sub">Letzte 12 Monate</div>
+                </div>
+                <span class="badge" style="background:rgba(110,168,254,.15);color:#6EA8FE;font-size:.7rem;">{{ stats.monthly_revenue|number_format(2,',','.') }} € aktuell</span>
+            </div>
+            <div class="chart-body">
+                <canvas id="revenueChart" height="90"></canvas>
+            </div>
         </div>
     </div>
-    <div class="col-sm-3">
-        <div class="card p-3 text-center">
-            <div class="fw-bold" style="color:#fdba74;">{{ stats.pending }}</div>
-            <div class="stat-label">Ausstehend</div>
-        </div>
-    </div>
-    <div class="col-sm-3">
-        <div class="card p-3 text-center">
-            <div class="fw-bold" style="color:#7dd3fc;">{{ stats.paused }}</div>
-            <div class="stat-label">Pausiert</div>
-        </div>
-    </div>
-    <div class="col-sm-3">
-        <div class="card p-3 text-center">
-            <div class="fw-bold" style="color:#94a3b8;">{{ stats.cancelled }}</div>
-            <div class="stat-label">Gekündigt</div>
+    <div class="col-lg-5">
+        <div class="chart-card">
+            <div class="chart-header">
+                <div>
+                    <div class="chart-title"><i class="bi bi-person-plus me-2" style="color:#6ee7b7;"></i>Neuregistrierungen</div>
+                    <div class="chart-sub">Letzte 12 Monate</div>
+                </div>
+                <span class="badge" style="background:rgba(110,231,183,.15);color:#6ee7b7;font-size:.7rem;">+{{ stats.new_this_month }} diesen Monat</span>
+            </div>
+            <div class="chart-body">
+                <canvas id="regChart" height="90"></canvas>
+            </div>
         </div>
     </div>
 </div>
 
-<div class="card">
-    <div class="card-header d-flex align-items-center justify-content-between py-3 px-4">
-        <span class="fw-semibold">Neueste Praxen</span>
-        <a href="/admin/tenants" class="btn btn-sm btn-outline-primary">Alle anzeigen</a>
+{# ── Row 3: Jahresprognose + Plan Donut + Status Donut ── #}
+<div class="row g-3 mb-4">
+    {# Jahresprognose #}
+    <div class="col-lg-4">
+        <div class="chart-card h-100">
+            <div class="chart-header">
+                <div>
+                    <div class="chart-title"><i class="bi bi-lightning-charge me-2" style="color:#fde68a;"></i>Jahresprognose {{ "now"|date("Y") }}</div>
+                    <div class="chart-sub">Basierend auf aktuellem MRR</div>
+                </div>
+            </div>
+            <div class="chart-body">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <div style="background:rgba(37,99,235,.08);border-radius:.6rem;padding:.75rem;text-align:center;">
+                            <div style="font-size:1.3rem;font-weight:800;color:#6EA8FE;">{{ forecast.ytd|number_format(0,',','.') }}€</div>
+                            <div style="font-size:.68rem;color:#64748b;">YTD Umsatz</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div style="background:rgba(16,185,129,.08);border-radius:.6rem;padding:.75rem;text-align:center;">
+                            <div style="font-size:1.3rem;font-weight:800;color:#6ee7b7;">{{ forecast.projected|number_format(0,',','.') }}€</div>
+                            <div style="font-size:.68rem;color:#64748b;">Prognose gesamt</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div style="background:rgba(245,158,11,.08);border-radius:.6rem;padding:.75rem;text-align:center;">
+                            <div style="font-size:1.3rem;font-weight:800;color:#fde68a;">{{ forecast.yearly_if_same|number_format(0,',','.') }}€</div>
+                            <div style="font-size:.68rem;color:#64748b;">ARR bei konst. MRR</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div style="background:{% if forecast.growth_pct >= 0 %}rgba(16,185,129,.08){% else %}rgba(239,68,68,.08){% endif %};border-radius:.6rem;padding:.75rem;text-align:center;">
+                            <div style="font-size:1.3rem;font-weight:800;color:{% if forecast.growth_pct >= 0 %}#6ee7b7{% else %}#fca5a5{% endif %};">{{ forecast.growth_pct > 0 ? '+' : '' }}{{ forecast.growth_pct }}%</div>
+                            <div style="font-size:.68rem;color:#64748b;">Wachstum vs. Vorjahr</div>
+                        </div>
+                    </div>
+                </div>
+                {# Progress bar: YTD vs projected #}
+                {% set pct = forecast.projected > 0 ? ((forecast.ytd / forecast.projected) * 100)|round : 0 %}
+                <div class="mt-3">
+                    <div style="display:flex;justify-content:space-between;font-size:.7rem;color:#64748b;margin-bottom:.3rem;">
+                        <span>Jahresfortschritt</span><span>{{ pct }}%</span>
+                    </div>
+                    <div style="height:6px;background:#1f2d3d;border-radius:3px;overflow:hidden;">
+                        <div style="height:100%;width:{{ pct }}%;background:linear-gradient(90deg,#6EA8FE,#a78bfa);border-radius:3px;transition:width .6s;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="table-responsive">
-        <table class="table mb-0">
-            <thead>
-                <tr>
-                    <th class="px-4">Praxis</th>
-                    <th>Therapeut</th>
-                    <th>Plan</th>
-                    <th>Status</th>
-                    <th>Erstellt</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for tenant in recent_tenants %}
-                <tr>
-                    <td class="px-4 fw-medium">{{ tenant.practice_name }}</td>
-                    <td class="text-secondary">{{ tenant.owner_name }}</td>
-                    <td>
-                        <span class="badge bg-secondary">{{ tenant.plan_name ?? 'N/A' }}</span>
-                    </td>
-                    <td>
-                        {% set statusMap = {
-                            'active':    'badge-active',
-                            'trial':     'bg-purple',
-                            'pending':   'badge-pending',
-                            'suspended': 'badge-suspended',
-                            'cancelled': 'badge-cancelled',
-                            'paused':    'badge-paused'
-                        } %}
-                        <span class="badge {{ statusMap[tenant.status] ?? 'bg-secondary' }}">{{ tenant.status }}</span>
-                    </td>
-                    <td class="text-secondary" style="font-size:.8rem;">{{ tenant.created_at|date('d.m.Y') }}</td>
-                    <td>
-                        <a href="/admin/tenants/{{ tenant.id }}" class="btn btn-xs btn-outline-secondary" style="font-size:.75rem;padding:.2rem .5rem;">
-                            <i class="bi bi-eye"></i>
-                        </a>
-                    </td>
-                </tr>
-                {% else %}
-                <tr><td colspan="6" class="text-center text-secondary px-4 py-4">Noch keine Praxen registriert.</td></tr>
+
+    {# Plan Donut #}
+    <div class="col-lg-4">
+        <div class="chart-card h-100">
+            <div class="chart-header">
+                <div>
+                    <div class="chart-title"><i class="bi bi-pie-chart me-2" style="color:#c4b5fd;"></i>Abo-Pläne Verteilung</div>
+                    <div class="chart-sub">Aktive & Testphase Praxen</div>
+                </div>
+            </div>
+            <div class="chart-body d-flex flex-column align-items-center">
+                <canvas id="planDonut" width="160" height="160" style="max-width:160px;"></canvas>
+                <div class="mt-3 w-100">
+                    {% for i, label in plan_distribution.labels %}
+                    <div class="d-flex align-items-center justify-content-between mb-1" style="font-size:.75rem;">
+                        <span><span class="donut-legend-dot" data-idx="{{ i }}">●</span> {{ label }}</span>
+                        <span class="fw-600" style="color:#e2e8f0;">{{ plan_distribution.data[i] ?? 0 }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Status Donut #}
+    <div class="col-lg-4">
+        <div class="chart-card h-100">
+            <div class="chart-header">
+                <div>
+                    <div class="chart-title"><i class="bi bi-circle-half me-2" style="color:#7dd3fc;"></i>Status-Verteilung</div>
+                    <div class="chart-sub">Alle Mandanten</div>
+                </div>
+            </div>
+            <div class="chart-body d-flex flex-column align-items-center">
+                <canvas id="statusDonut" width="160" height="160" style="max-width:160px;"></canvas>
+                <div class="mt-3 w-100">
+                    {% for i, label in status_distribution.labels %}
+                    {% set statusColors = {'active':'#6ee7b7','trial':'#c4b5fd','pending':'#fdba74','cancelled':'#94a3b8','paused':'#7dd3fc','suspended':'#fca5a5'} %}
+                    <div class="d-flex align-items-center justify-content-between mb-1" style="font-size:.75rem;">
+                        <span><span style="color:{{ statusColors[label] ?? '#94a3b8' }};">●</span> {{ label }}</span>
+                        <span class="fw-600" style="color:#e2e8f0;">{{ status_distribution.data[i] ?? 0 }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Row 4: Neueste Praxen + Letzte Zahlungen ── #}
+<div class="row g-3 mb-4">
+    <div class="col-lg-7">
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title"><i class="bi bi-building-add me-2" style="color:#6EA8FE;"></i>Neueste Registrierungen</div>
+                <a href="/admin/tenants" class="btn btn-sm btn-outline-primary" style="font-size:.75rem;">Alle →</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table mb-0" style="font-size:.82rem;">
+                    <thead>
+                        <tr>
+                            <th class="px-3">Praxis</th>
+                            <th>Plan</th>
+                            <th>Status</th>
+                            <th>Registriert</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set statusMap = {'active':'badge-active','trial':'badge-trial','pending':'badge-pending','suspended':'badge-suspended','cancelled':'badge-cancelled','paused':'badge-paused'} %}
+                        {% for tenant in recent_tenants %}
+                        <tr>
+                            <td class="px-3">
+                                <div class="fw-medium" style="color:#e2e8f0;">{{ tenant.practice_name }}</div>
+                                <div style="font-size:.72rem;color:#64748b;">{{ tenant.owner_name }}</div>
+                            </td>
+                            <td><span class="badge bg-secondary" style="font-size:.68rem;">{{ tenant.plan_name ?? 'N/A' }}</span></td>
+                            <td><span class="badge {{ statusMap[tenant.status] ?? 'bg-secondary' }}" style="font-size:.68rem;">{{ tenant.status }}</span></td>
+                            <td style="color:#64748b;white-space:nowrap;">{{ tenant.created_at|date('d.m.Y') }}</td>
+                            <td><a href="/admin/tenants/{{ tenant.id }}" class="btn btn-xs btn-outline-secondary" style="font-size:.7rem;padding:.15rem .4rem;"><i class="bi bi-eye"></i></a></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="5" class="text-center text-secondary py-4" style="font-size:.8rem;">Noch keine Praxen registriert.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title"><i class="bi bi-credit-card-2-front me-2" style="color:#6ee7b7;"></i>Letzte Zahlungen</div>
+                <a href="/admin/invoices" class="btn btn-sm btn-outline-secondary" style="font-size:.75rem;">Alle →</a>
+            </div>
+            {% if recent_payments %}
+            <div style="max-height:310px;overflow-y:auto;">
+                {% for pay in recent_payments %}
+                <div style="padding:.6rem 1rem;border-bottom:1px solid #1f2d3d;display:flex;align-items:center;justify-content:space-between;gap:.5rem;">
+                    <div style="min-width:0;flex:1;">
+                        <div style="font-size:.8rem;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ pay.practice_name ?? 'Unbekannt' }}</div>
+                        <div style="font-size:.7rem;color:#64748b;">{{ pay.created_at|date('d.m.Y H:i') }} · {{ pay.method ?? 'manuell' }}</div>
+                    </div>
+                    <div style="text-align:right;flex-shrink:0;">
+                        <div style="font-size:.875rem;font-weight:700;color:{% if pay.status == 'paid' %}#6ee7b7{% elseif pay.status == 'failed' %}#fca5a5{% else %}#fdba74{% endif %};">{{ pay.amount|number_format(2,',','.') }} €</div>
+                        <div style="font-size:.65rem;color:#64748b;">{{ pay.status }}</div>
+                    </div>
+                </div>
                 {% endfor %}
-            </tbody>
-        </table>
+            </div>
+            {% else %}
+            <div style="padding:2rem;text-align:center;color:#475569;font-size:.8rem;">
+                <i class="bi bi-credit-card" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>Noch keine Zahlungen
+            </div>
+            {% endif %}
+        </div>
     </div>
 </div>
+
+{# ── Row 5: Top Tenants + Feedback ── #}
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title"><i class="bi bi-trophy me-2" style="color:#fde68a;"></i>Top Kunden (nach MRR)</div>
+            </div>
+            {% for t in top_tenants %}
+            <div style="padding:.65rem 1rem;border-bottom:1px solid #1f2d3d;display:flex;align-items:center;gap:.75rem;">
+                <div style="width:1.75rem;height:1.75rem;border-radius:50%;background:linear-gradient(135deg,#6EA8FE,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff;flex-shrink:0;">
+                    {{ loop.index }}
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:.82rem;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ t.practice_name }}</div>
+                    <div style="font-size:.7rem;color:#64748b;">{{ t.plan_name ?? '–' }} · {{ t.billing_cycle ?? '' }}</div>
+                </div>
+                <div style="font-size:.9rem;font-weight:700;color:#fde68a;flex-shrink:0;">{{ t.amount ? t.amount|number_format(2,',','.') ~ ' €' : '–' }}</div>
+            </div>
+            {% else %}
+            <div style="padding:2rem;text-align:center;color:#475569;font-size:.8rem;">Keine aktiven Abonnenten.</div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title">
+                    <i class="bi bi-chat-square-text me-2" style="color:#a78bfa;"></i>Neuestes Feedback
+                    {% if stats.unread_feedback > 0 %}
+                    <span class="badge ms-1" style="background:rgba(167,139,250,.2);color:#c4b5fd;font-size:.65rem;">{{ stats.unread_feedback }} neu</span>
+                    {% endif %}
+                </div>
+                <a href="/admin/feedback" class="btn btn-sm btn-outline-secondary" style="font-size:.75rem;">Alle →</a>
+            </div>
+            {% if recent_feedback %}
+            {% for fb in recent_feedback %}
+            <div class="feedback-item {% if not fb.is_read %}border-start border-3{% endif %}" style="{% if not fb.is_read %}border-color:#a78bfa !important;{% endif %}">
+                <div style="flex-shrink:0;margin-top:.1rem;">
+                    {% set catClass = {'bug':'cat-bug','feature':'cat-feature','praise':'cat-praise','other':'cat-other'} %}
+                    {% set catIcon  = {'bug':'🐛','feature':'💡','praise':'⭐','other':'💬'} %}
+                    <span style="font-size:1.1rem;">{{ catIcon[fb.category] ?? '💬' }}</span>
+                </div>
+                <div style="flex:1;min-width:0;">
+                    <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">
+                        <span style="font-size:.78rem;font-weight:600;color:#e2e8f0;">{{ fb.practice_name ?? fb.tenant_name ?? 'Anonym' }}</span>
+                        <span class="cat-badge {{ catClass[fb.category] ?? 'cat-other' }}">{{ fb.category }}</span>
+                        {% if fb.rating %}<span style="font-size:.7rem;color:#fde68a;">{{ '★'|repeat(fb.rating) }}</span>{% endif %}
+                    </div>
+                    <div style="font-size:.78rem;color:#94a3b8;margin-top:.15rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ fb.message }}</div>
+                    <div style="font-size:.68rem;color:#475569;margin-top:.2rem;">{{ fb.created_at|date('d.m.Y H:i') }}{% if fb.platform %} · {{ fb.platform }}{% endif %}</div>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div style="padding:2rem;text-align:center;color:#475569;font-size:.8rem;">
+                <i class="bi bi-chat-square" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>Noch kein Feedback eingegangen.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+Chart.defaults.color = '#64748b';
+Chart.defaults.borderColor = '#1f2d3d';
+Chart.defaults.font.family = "'Inter', sans-serif";
+
+const CHART_COLORS = ['#6EA8FE','#a78bfa','#6ee7b7','#fde68a','#f87171','#7dd3fc','#fdba74','#c4b5fd'];
+
+// Revenue Line Chart
+(function() {
+    const labels = {{ revenue_chart.labels|json_encode|raw }};
+    const data   = {{ revenue_chart.data|json_encode|raw }};
+    new Chart(document.getElementById('revenueChart'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'MRR (€)',
+                data,
+                borderColor: '#6EA8FE',
+                backgroundColor: 'rgba(110,168,254,.12)',
+                borderWidth: 2.5,
+                fill: true,
+                tension: .35,
+                pointRadius: 3,
+                pointBackgroundColor: '#6EA8FE',
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + ctx.parsed.y.toLocaleString('de-DE',{minimumFractionDigits:2}) + ' €' } } },
+            scales: {
+                x: { grid: { color: '#1f2d3d' }, ticks: { font: { size: 10 } } },
+                y: { grid: { color: '#1f2d3d' }, ticks: { font: { size: 10 }, callback: v => v + ' €' } }
+            }
+        }
+    });
+})();
+
+// Registrations Bar Chart
+(function() {
+    const labels = {{ reg_chart.labels|json_encode|raw }};
+    const data   = {{ reg_chart.data|json_encode|raw }};
+    new Chart(document.getElementById('regChart'), {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Registrierungen',
+                data,
+                backgroundColor: 'rgba(110,231,183,.5)',
+                borderColor: '#6ee7b7',
+                borderWidth: 1.5,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+                y: { grid: { color: '#1f2d3d' }, ticks: { font: { size: 10 }, stepSize: 1 } }
+            }
+        }
+    });
+})();
+
+// Plan Distribution Donut
+(function() {
+    const labels = {{ plan_distribution.labels|json_encode|raw }};
+    const data   = {{ plan_distribution.data|json_encode|raw }};
+    if (!labels.length) return;
+    const chart = new Chart(document.getElementById('planDonut'), {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data, backgroundColor: CHART_COLORS, borderWidth: 0, hoverOffset: 6 }] },
+        options: {
+            cutout: '70%',
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => ' ' + ctx.label + ': ' + ctx.parsed } }
+            }
+        }
+    });
+    // Color legend dots
+    document.querySelectorAll('.donut-legend-dot').forEach(el => {
+        el.style.color = CHART_COLORS[+el.dataset.idx] ?? '#94a3b8';
+    });
+})();
+
+// Status Donut
+(function() {
+    const labels = {{ status_distribution.labels|json_encode|raw }};
+    const data   = {{ status_distribution.data|json_encode|raw }};
+    const colorMap = {active:'#6ee7b7',trial:'#c4b5fd',pending:'#fdba74',cancelled:'#94a3b8',paused:'#7dd3fc',suspended:'#fca5a5'};
+    if (!labels.length) return;
+    new Chart(document.getElementById('statusDonut'), {
+        type: 'doughnut',
+        data: {
+            labels,
+            datasets: [{ data, backgroundColor: labels.map(l => colorMap[l] ?? '#94a3b8'), borderWidth: 0, hoverOffset: 6 }]
+        },
+        options: {
+            cutout: '70%',
+            plugins: { legend: { display: false } }
+        }
+    });
+})();
+</script>
 {% endblock %}

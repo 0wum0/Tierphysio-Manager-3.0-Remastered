@@ -1,0 +1,32 @@
+{% extends 'layouts/base.twig' %}
+
+{% block content %}
+<div style="min-height:80vh;display:flex;align-items:center;justify-content:center;">
+    <div style="text-align:center;max-width:460px;padding:2rem;">
+        <div style="font-size:4rem;margin-bottom:1rem;">🎉</div>
+        <h2 style="font-size:1.8rem;font-weight:800;background:linear-gradient(90deg,#6EA8FE,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.75rem;">
+            Zahlung erfolgreich!
+        </h2>
+        <p style="color:#94a3b8;margin-bottom:2rem;line-height:1.6;">
+            Dein Abonnement wurde aktiviert. Du erhältst in Kürze eine Bestätigungs-E-Mail mit deinen Zugangsdaten.
+        </p>
+        <div style="background:#1e293b;border:1px solid #334155;border-radius:.875rem;padding:1.5rem;margin-bottom:2rem;text-align:left;">
+            <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem;">
+                <span style="color:#6ee7b7;font-size:1.25rem;">✓</span>
+                <span style="color:#e2e8f0;font-size:.9rem;">Konto wurde erstellt</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem;">
+                <span style="color:#6ee7b7;font-size:1.25rem;">✓</span>
+                <span style="color:#e2e8f0;font-size:.9rem;">Abonnement aktiv</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:.75rem;">
+                <span style="color:#6EA8FE;font-size:1.25rem;">→</span>
+                <span style="color:#94a3b8;font-size:.9rem;">Zugangsdaten per E-Mail</span>
+            </div>
+        </div>
+        <a href="/" style="display:inline-block;background:linear-gradient(135deg,#6EA8FE,#a78bfa);color:#fff;font-weight:700;padding:.75rem 2rem;border-radius:.6rem;text-decoration:none;font-size:.95rem;">
+            Zur Startseite
+        </a>
+    </div>
+</div>
+{% endblock %}

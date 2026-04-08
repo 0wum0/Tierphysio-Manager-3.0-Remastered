@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import '../services/auth_service.dart';
+import '../widgets/feedback_fab.dart';
 import '../services/api_service.dart';
 import '../services/notification_service.dart';
 import '../services/theme_service.dart';
@@ -402,6 +403,7 @@ class _ShellScreenState extends State<ShellScreen>
     ];
 
     return Scaffold(
+      floatingActionButton: const FeedbackFab(),
       body: Row(children: [
         AnimatedBuilder(
           animation: _sidebarAnim,
@@ -761,6 +763,7 @@ class _ShellScreenState extends State<ShellScreen>
     return Scaffold(
       key: _narrowScaffoldKey,
       appBar: _buildAppBar(context),
+      floatingActionButton: const FeedbackFab(),
       body: Column(children: [
         if (_isOffline)
           Material(

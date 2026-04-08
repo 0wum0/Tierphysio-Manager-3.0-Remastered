@@ -188,6 +188,10 @@
         <a href="/admin/settings" class="sidebar-link {% if active_nav == 'settings' %}active{% endif %}">
             <i class="bi bi-gear"></i> Einstellungen
         </a>
+        <a href="/admin/feedback" class="sidebar-link {% if active_nav == 'feedback' %}active{% endif %}">
+            <i class="bi bi-chat-square-text"></i> Feedback
+            {# badge injected by JS #}
+        </a>
         <a href="/admin/notifications" class="sidebar-link {% if active_nav == 'notifications' %}active{% endif %}" id="sidebar-notif-link">
             <i class="bi bi-bell"></i> Benachrichtigungen
             <span class="ms-auto badge bg-primary" id="sidebar-notif-count" style="display:none;font-size:.65rem;"></span>

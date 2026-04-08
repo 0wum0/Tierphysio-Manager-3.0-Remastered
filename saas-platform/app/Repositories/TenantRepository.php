@@ -196,4 +196,32 @@ class TenantRepository
             'suspended' => $this->countByStatus('suspended'),
         ];
     }
+
+    public function countTrialExpiringSoon(int $days): int
+    {
+        return (int)$this->db->fetchColumn(
+            "SELECT COUNT(*) FROM tenants
+             WHERE status = 'trial'
+               AND trial_ends_at IS NOT NULL
+               AND trial_ends_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL ? DAY)",
+            [$days]
+        );
+    }
+
+    public function countNewThisMonth(): int
+    {
+        return (int)$this->db->fetchColumn(
+            "SELECT COUNT(*) FROM tenants
+             WHERE YEAR(created_at) = YEAR(NOW()) AND MONTH(created_at) = MONTH(NOW())"
+        );
+    }
+
+    public function countChurnThisMonth(): int
+    {
+        return (int)$this->db->fetchColumn(
+            "SELECT COUNT(*) FROM tenants
+             WHERE status = 'cancelled'
+               AND YEAR(updated_at) = YEAR(NOW()) AND MONTH(updated_at) = MONTH(NOW())"
+        );
+    }
 }

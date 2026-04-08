@@ -13,6 +13,7 @@ use Saas\Controllers\SettingsController;
 use Saas\Controllers\NotificationController;
 use Saas\Controllers\UpdateController;
 use Saas\Controllers\DataMigrationController;
+use Saas\Controllers\FeedbackController;
 
 // ── License API (called by Praxissoftware) ─────────────────────────────────
 $router->post('/api/license/verify',  [LicenseApiController::class, 'verify']);
@@ -93,6 +94,46 @@ $router->post('/admin/updates/apply',      [UpdateController::class, 'applyUpdat
 // ── Daten-Import / Migration ─────────────────────────────────────────────
 $router->get('/admin/migration',      [DataMigrationController::class, 'index']);
 $router->post('/admin/migration/run', [DataMigrationController::class, 'run']);
+
+// ── Payment Webhooks + Callbacks ────────────────────────────────────────────
+$router->post('/webhooks/stripe', function (array $params): void {
+    $app     = \Saas\Core\Application::getInstance();
+    $payment = $app->getContainer()->get(\Saas\Services\PaymentService::class);
+    $payload = file_get_contents('php://input') ?: '';
+    $sig     = $_SERVER['HTTP_STRIPE_SIGNATURE'] ?? '';
+    $ok      = $payment->handleStripeWebhook($payload, $sig);
+    http_response_code($ok ? 200 : 400);
+    echo json_encode(['ok' => $ok]);
+});
+
+$router->get('/register/payment-success', function (array $params): void {
+    $app     = \Saas\Core\Application::getInstance();
+    $c       = $app->getContainer();
+    $payment = $c->get(\Saas\Services\PaymentService::class);
+    $view    = $c->get(\Saas\Core\View::class);
+
+    // Stripe session_id
+    $sessionId    = $_GET['session_id'] ?? null;
+    $tenantId     = (int)($_GET['tenant_id'] ?? 0);
+    $ppSubId      = $_GET['subscription_id'] ?? null;
+
+    if ($sessionId) {
+        $tenantId = $payment->handleStripeCheckoutSuccess($sessionId);
+    } elseif ($ppSubId && $tenantId) {
+        $payment->handlePayPalReturn($tenantId, $ppSubId);
+    }
+
+    $view->render('register/payment_success.twig', ['page_title' => 'Zahlung erfolgreich']);
+});
+
+// ── Feedback ────────────────────────────────────────────────────────────────
+$router->get('/admin/feedback',                    [FeedbackController::class, 'index']);
+$router->get('/admin/feedback/{id}',               [FeedbackController::class, 'show']);
+$router->post('/admin/feedback/{id}/delete',       [FeedbackController::class, 'delete']);
+$router->post('/admin/feedback/mark-all-read',     [FeedbackController::class, 'markAllRead']);
+
+// ── Public Feedback API (called by TierPhysio App) ──────────────────────────
+$router->post('/api/feedback',                     [FeedbackController::class, 'apiSubmit']);
 
 // ── Root redirect ──────────────────────────────────────────────────────────
 $router->get('/admin/dashboard', function (array $params): void {

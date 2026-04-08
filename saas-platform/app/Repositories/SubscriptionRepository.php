@@ -81,4 +81,15 @@ class SubscriptionRepository
         );
         return (float)($result ?? 0);
     }
+
+    public function revenueThisYear(): float
+    {
+        $monthly = (float)($this->db->fetchColumn(
+            "SELECT SUM(amount) FROM subscriptions WHERE status = 'active' AND billing_cycle = 'monthly'"
+        ) ?? 0);
+        $yearly = (float)($this->db->fetchColumn(
+            "SELECT SUM(amount) FROM subscriptions WHERE status = 'active' AND billing_cycle = 'yearly'"
+        ) ?? 0);
+        return round($monthly * 12 + $yearly, 2);
+    }
 }

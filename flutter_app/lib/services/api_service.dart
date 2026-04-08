@@ -582,6 +582,37 @@ class ApiService {
     final data = await get('/portal/befunde/$id/pdf-url');
     return (data as Map)['pdf_url'] as String? ?? '';
   }
+
+  /// Submit feedback to the SaaS platform (not the tenant backend).
+  /// Uses a separate base URL pointing to app.therapano.de.
+  static Future<bool> submitFeedback({
+    required String message,
+    required String category,
+    int? rating,
+    String platform = 'android',
+  }) async {
+    try {
+      final token = await getToken();
+      final saasUrl = 'https://app.therapano.de/api/feedback';
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+      final body = json.encode({
+        'message':  message,
+        'category': category,
+        if (rating != null) 'rating': rating,
+        'platform': platform,
+      });
+      final response = await http
+          .post(Uri.parse(saasUrl), headers: headers, body: body)
+          .timeout(const Duration(seconds: 15));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
 }
 
 class ApiException implements Exception {

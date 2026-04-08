@@ -1,0 +1,145 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'feedback' %}
+
+{% block styles %}
+<style>
+.cat-badge { font-size:.65rem;padding:.15rem .45rem;border-radius:999px;font-weight:600; }
+.cat-bug     { background:rgba(239,68,68,.15);color:#fca5a5; }
+.cat-feature { background:rgba(37,99,235,.15);color:#93c5fd; }
+.cat-praise  { background:rgba(16,185,129,.15);color:#6ee7b7; }
+.cat-other   { background:rgba(100,116,139,.15);color:#94a3b8; }
+.feedback-row { transition:background .12s; }
+.feedback-row:hover { background:rgba(255,255,255,.025); }
+.feedback-row.unread td:first-child { border-left:3px solid #a78bfa; }
+</style>
+{% endblock %}
+
+{% block content %}
+{# ── Stats row ── #}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card p-3 text-center">
+            <div style="font-size:1.6rem;font-weight:800;color:#e2e8f0;">{{ stats.total }}</div>
+            <div style="font-size:.72rem;color:#64748b;">Gesamt</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card p-3 text-center">
+            <div style="font-size:1.6rem;font-weight:800;color:#a78bfa;">{{ stats.unread }}</div>
+            <div style="font-size:.72rem;color:#64748b;">Ungelesen</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card p-3 text-center">
+            <div style="font-size:1.6rem;font-weight:800;color:#fca5a5;">{{ stats.bug }}</div>
+            <div style="font-size:.72rem;color:#64748b;">🐛 Bugs</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card p-3 text-center">
+            <div style="font-size:1.6rem;font-weight:800;color:#6ee7b7;">{{ stats.praise }}</div>
+            <div style="font-size:.72rem;color:#64748b;">⭐ Lob</div>
+        </div>
+    </div>
+</div>
+
+{# ── Filter bar ── #}
+<div class="card mb-3">
+    <div class="card-header d-flex align-items-center justify-content-between gap-2 flex-wrap py-2 px-3">
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="/admin/feedback" class="btn btn-sm {% if filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Alle</a>
+            <a href="/admin/feedback?filter=unread" class="btn btn-sm {% if filter == 'unread' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                Ungelesen {% if stats.unread > 0 %}<span class="badge ms-1" style="background:#a78bfa;color:#fff;font-size:.6rem;">{{ stats.unread }}</span>{% endif %}
+            </a>
+            <a href="/admin/feedback?category=bug" class="btn btn-sm {% if category == 'bug' %}btn-danger{% else %}btn-outline-secondary{% endif %}">🐛 Bug</a>
+            <a href="/admin/feedback?category=feature" class="btn btn-sm {% if category == 'feature' %}btn-primary{% else %}btn-outline-secondary{% endif %}">💡 Feature</a>
+            <a href="/admin/feedback?category=praise" class="btn btn-sm {% if category == 'praise' %}btn-success{% else %}btn-outline-secondary{% endif %}">⭐ Lob</a>
+            <a href="/admin/feedback?category=other" class="btn btn-sm {% if category == 'other' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">💬 Sonstiges</a>
+        </div>
+        {% if stats.unread > 0 %}
+        <form method="POST" action="/admin/feedback/mark-all-read" style="margin:0;">
+            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+            <button class="btn btn-sm btn-outline-secondary" style="font-size:.75rem;"><i class="bi bi-check2-all me-1"></i>Alle gelesen</button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+{# ── Table ── #}
+<div class="card">
+    <div class="table-responsive">
+        <table class="table mb-0" style="font-size:.83rem;">
+            <thead>
+                <tr>
+                    <th class="px-3" style="width:30%">Von</th>
+                    <th style="width:8%">Kat.</th>
+                    <th style="width:8%">Bewertung</th>
+                    <th>Nachricht</th>
+                    <th style="width:10%">Plattform</th>
+                    <th style="width:12%">Datum</th>
+                    <th style="width:5%"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr class="feedback-row {% if not item.is_read %}unread{% endif %}">
+                    <td class="px-3">
+                        <div class="fw-medium" style="color:#e2e8f0;">{{ item.practice_name ?? item.tenant_name ?? 'Anonym' }}</div>
+                        {% if item.email %}<div style="font-size:.7rem;color:#64748b;">{{ item.email }}</div>{% endif %}
+                    </td>
+                    <td>
+                        {% set catClass = {'bug':'cat-bug','feature':'cat-feature','praise':'cat-praise','other':'cat-other'} %}
+                        {% set catIcon  = {'bug':'🐛','feature':'💡','praise':'⭐','other':'💬'} %}
+                        <span class="cat-badge {{ catClass[item.category] ?? 'cat-other' }}">{{ catIcon[item.category] ?? '💬' }} {{ item.category }}</span>
+                    </td>
+                    <td>
+                        {% if item.rating %}
+                        <span style="color:#fde68a;font-size:.8rem;">{{ '★'|repeat(item.rating) }}<span style="color:#334155;">{{ '★'|repeat(5 - item.rating) }}</span></span>
+                        {% else %}
+                        <span style="color:#475569;">–</span>
+                        {% endif %}
+                    </td>
+                    <td style="max-width:280px;">
+                        <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#94a3b8;">{{ item.message }}</div>
+                    </td>
+                    <td>
+                        <span class="badge bg-secondary" style="font-size:.65rem;">{{ item.platform ?? 'web' }}</span>
+                        {% if item.app_version %}<div style="font-size:.65rem;color:#475569;">v{{ item.app_version }}</div>{% endif %}
+                    </td>
+                    <td style="color:#64748b;white-space:nowrap;">{{ item.created_at|date('d.m.Y') }}<br><span style="font-size:.7rem;">{{ item.created_at|date('H:i') }}</span></td>
+                    <td>
+                        <a href="/admin/feedback/{{ item.id }}" class="btn btn-xs btn-outline-secondary" style="font-size:.7rem;padding:.15rem .4rem;" title="Ansehen"><i class="bi bi-eye"></i></a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="7" class="text-center text-secondary py-5">
+                    <i class="bi bi-chat-square" style="font-size:2rem;display:block;margin-bottom:.5rem;opacity:.3;"></i>
+                    Noch kein Feedback eingegangen.
+                </td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="card-footer d-flex align-items-center justify-content-between py-2 px-3" style="font-size:.8rem;">
+        <span style="color:#64748b;">{{ total }} Einträge gesamt</span>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                {% if page > 1 %}
+                <li class="page-item"><a class="page-link" href="?page={{ page - 1 }}&filter={{ filter }}&category={{ category }}">‹</a></li>
+                {% endif %}
+                {% for p in 1..total_pages %}
+                <li class="page-item {% if p == page %}active{% endif %}">
+                    <a class="page-link" href="?page={{ p }}&filter={{ filter }}&category={{ category }}">{{ p }}</a>
+                </li>
+                {% endfor %}
+                {% if page < total_pages %}
+                <li class="page-item"><a class="page-link" href="?page={{ page + 1 }}&filter={{ filter }}&category={{ category }}">›</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

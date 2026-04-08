@@ -11,6 +11,7 @@ use Saas\Repositories\PlanRepository;
 use Saas\Repositories\TenantRepository;
 use Saas\Repositories\LegalRepository;
 use Saas\Services\TenantProvisioningService;
+use Saas\Services\PaymentService;
 
 class RegistrationController extends Controller
 {
@@ -20,7 +21,8 @@ class RegistrationController extends Controller
         private PlanRepository           $planRepo,
         private TenantRepository         $tenantRepo,
         private LegalRepository          $legalRepo,
-        private TenantProvisioningService $provisioning
+        private TenantProvisioningService $provisioning,
+        private PaymentService            $paymentService
     ) {
         parent::__construct($view, $session);
     }
@@ -29,8 +31,10 @@ class RegistrationController extends Controller
     {
         $plans = $this->planRepo->allActive();
         $this->render('register/plans.twig', [
-            'plans'      => $plans,
-            'page_title' => 'Tarif wählen',
+            'plans'           => $plans,
+            'stripe_enabled'  => $this->paymentService->isStripeEnabled(),
+            'paypal_enabled'  => $this->paymentService->isPayPalEnabled(),
+            'page_title'      => 'Tarif wählen',
         ]);
     }
 
@@ -46,9 +50,12 @@ class RegistrationController extends Controller
         $legalDocs = $this->legalRepo->allActive();
 
         $this->render('register/form.twig', [
-            'plan'       => $plan,
-            'legal_docs' => $legalDocs,
-            'page_title' => 'Registrierung – ' . $plan['name'],
+            'plan'            => $plan,
+            'legal_docs'      => $legalDocs,
+            'stripe_enabled'  => $this->paymentService->isStripeEnabled(),
+            'stripe_pub_key'  => $this->paymentService->getStripePublicKey(),
+            'paypal_enabled'  => $this->paymentService->isPayPalEnabled(),
+            'page_title'      => 'Registrierung – ' . $plan['name'],
         ]);
     }
 
@@ -96,26 +103,70 @@ class RegistrationController extends Controller
             $this->redirect('/register/' . $planSlug);
         }
 
+        $paymentMethod = $this->post('payment_method', 'manual');
+
         try {
             $result = $this->provisioning->provision($data);
+            $tenantId = $result['tenant_id'];
 
             // Record legal acceptances
             foreach ($legalDocs as $doc) {
                 $this->legalRepo->recordAcceptance(
-                    $result['tenant_id'],
+                    $tenantId,
                     (int)$doc['id'],
                     $doc['version'],
                     $_SERVER['REMOTE_ADDR'] ?? ''
                 );
             }
 
-            // Show success page
+            $baseUrl    = rtrim($_ENV['PLATFORM_URL'] ?? ('https://' . ($_SERVER['HTTP_HOST'] ?? 'localhost')), '/');
+            $successUrl = $baseUrl . '/register/payment-success';
+            $cancelUrl  = $baseUrl . '/register/' . $planSlug;
+
+            // ── Stripe ──────────────────────────────────────────────────────
+            if ($paymentMethod === 'stripe' && $this->paymentService->isStripeEnabled()) {
+                try {
+                    $checkoutUrl = $this->paymentService->createStripeCheckoutSession(
+                        tenantId:     $tenantId,
+                        email:        $data['email'],
+                        planName:     $plan['name'],
+                        amount:       (float)($plan['price_monthly'] ?? $plan['price'] ?? 0),
+                        billingCycle: $data['billing_cycle'],
+                        successUrl:   $successUrl,
+                        cancelUrl:    $cancelUrl
+                    );
+                    header('Location: ' . $checkoutUrl);
+                    exit;
+                } catch (\Throwable $e) {
+                    // Stripe failed → fall through to success page
+                }
+            }
+
+            // ── PayPal ──────────────────────────────────────────────────────
+            if ($paymentMethod === 'paypal' && $this->paymentService->isPayPalEnabled()) {
+                try {
+                    $approvalUrl = $this->paymentService->createPayPalSubscription(
+                        tenantId:     $tenantId,
+                        planName:     $plan['name'],
+                        amount:       (float)($plan['price_monthly'] ?? $plan['price'] ?? 0),
+                        billingCycle: $data['billing_cycle'],
+                        returnUrl:    $successUrl,
+                        cancelUrl:    $cancelUrl
+                    );
+                    header('Location: ' . $approvalUrl);
+                    exit;
+                } catch (\Throwable $e) {
+                    // PayPal failed → fall through to success page
+                }
+            }
+
+            // ── Manual / Fallback ───────────────────────────────────────────
             $this->render('register/success.twig', [
-                'owner_name'   => $data['owner_name'],
-                'email'        => $data['email'],
-                'practice_name'=> $data['practice_name'],
-                'plan_name'    => $plan['name'],
-                'page_title'   => 'Registrierung erfolgreich',
+                'owner_name'    => $data['owner_name'],
+                'email'         => $data['email'],
+                'practice_name' => $data['practice_name'],
+                'plan_name'     => $plan['name'],
+                'page_title'    => 'Registrierung erfolgreich',
             ]);
         } catch (\Throwable $e) {
             $this->session->flash('error', 'Registrierung fehlgeschlagen: ' . $e->getMessage());
