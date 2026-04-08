@@ -1,8 +1,14 @@
 {# TherapyCare Pro — Patient Tab: Fortschritt (embedded in patient detail) #}
-<link rel="stylesheet" href="/themes/smart-tierphysio/bridge.css?v=1">
+{# Supports both direct vars (latest/categories/visibility) and tcp_* prefixed vars #}
+{% set latest     = latest     ?? tcp_progress   ?? [] %}
+{% set categories = categories ?? tcp_categories ?? [] %}
+{% set visibility = visibility ?? tcp_visibility ?? {'show_progress':0,'show_natural':0,'show_reports':0} %}
+{% set natural    = natural    ?? tcp_natural    ?? [] %}
+{% set reports    = reports    ?? tcp_reports    ?? [] %}
+{% set feedback   = feedback   ?? tcp_feedback   ?? [] %}
 <link rel="stylesheet" href="/plugin-assets/therapy-care-pro/therapy-care-pro.css">
 
-<div class="p-3 tcp-anchor-target" id="tcp-fortschritt">
+<div class="p-3 tcp-anchor-target" id="tcp-fortschritt-content">
 
     {# Latest values summary #}
     {% if latest is not empty %}

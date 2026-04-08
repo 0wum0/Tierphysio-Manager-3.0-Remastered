@@ -220,6 +220,14 @@
                         Historie
                     </button>
                 </li>
+                {% if tcp_progress is defined or tcp_natural is defined or tcp_reports is defined or tcp_feedback is defined %}
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="tcp-fortschritt-tab" data-bs-toggle="tab" data-bs-target="#tcp-fortschritt" type="button" role="tab" aria-controls="tcp-fortschritt" aria-selected="false">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        Therapie
+                    </button>
+                </li>
+                {% endif %}
             </ul>
             
             <!-- Tab Content -->
@@ -359,6 +367,13 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- TherapyCare Pro Tab -->
+                {% if tcp_progress is defined or tcp_natural is defined or tcp_reports is defined or tcp_feedback is defined %}
+                <div class="tab-pane fade" id="tcp-fortschritt" role="tabpanel" aria-labelledby="tcp-fortschritt-tab">
+                    {% include '@therapy-care-pro/patient_tab_progress.twig' ignore missing %}
+                </div>
+                {% endif %}
 
                 <!-- Historie Tab -->
                 <div class="tab-pane fade" id="historie" role="tabpanel" aria-labelledby="historie-tab">

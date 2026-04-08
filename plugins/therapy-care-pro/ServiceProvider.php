@@ -28,6 +28,12 @@ class ServiceProvider
         // Register routes
         $pluginManager->hook('registerRoutes', [$this, 'registerRoutes']);
 
+        // Patient detail tabs (adds Fortschritt + Naturheilkunde tabs)
+        $pluginManager->hook('patientDetailTabs', [$this, 'addPatientDetailTabs']);
+
+        // Patient header action buttons
+        $pluginManager->hook('patientHeaderActions', [$this, 'patientHeaderActions']);
+
         // Dashboard widget
         $pluginManager->hook('dashboardWidgets', [$this, 'dashboardWidget']);
 
@@ -261,10 +267,11 @@ class ServiceProvider
     private function runMigrations(): void
     {
         try {
-            $db = Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $db     = Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $prefix = $db->getPrefix();
 
             /* Fast-path: if sentinel table already exists, migration has run */
-            if ($db->tableExists('tcp_progress_categories')) {
+            if ($db->tableExists($prefix . 'tcp_progress_categories')) {
                 return;
             }
 
@@ -276,13 +283,18 @@ class ServiceProvider
             sort($files);
 
             foreach ($files as $file) {
-                $sql        = file_get_contents($file);
+                $sql = file_get_contents($file);
+
+                /* Replace all bare table references with prefixed names.
+                   TCP-own tables (tcp_*) get prefixed.
+                   Core tables referenced in FK REFERENCES also get prefixed. */
+                $sql = $this->applyPrefixToSql($sql, $prefix);
+
                 $statements = $this->splitSql($sql);
                 foreach ($statements as $stmt) {
                     try {
                         $db->getPdo()->exec($stmt);
                     } catch (\Throwable $e) {
-                        /* Skip "already exists" errors; log anything else */
                         $msg = $e->getMessage();
                         if (stripos($msg, 'already exists') === false
                             && stripos($msg, 'Duplicate') === false) {
@@ -294,6 +306,36 @@ class ServiceProvider
         } catch (\Throwable $e) {
             error_log('[TherapyCare Pro runMigrations] ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Apply tenant prefix to table names in a SQL migration string.
+     * Only replaces table names that appear after known SQL keywords
+     * (CREATE TABLE, INSERT INTO, UPDATE, FROM, JOIN, REFERENCES).
+     * CONSTRAINT names, column names and other identifiers are NOT touched.
+     */
+    private function applyPrefixToSql(string $sql, string $prefix): string
+    {
+        if ($prefix === '') {
+            return $sql;
+        }
+
+        /* Keywords after which a bare table name (in backticks) follows */
+        $pattern = '/\b(CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS|CREATE\s+TABLE|INSERT\s+INTO|UPDATE|FROM|JOIN|REFERENCES)\s+`([^`]+)`/i';
+
+        return preg_replace_callback(
+            $pattern,
+            function (array $m) use ($prefix): string {
+                $keyword   = $m[1];
+                $tableName = $m[2];
+                /* Skip if already prefixed */
+                if (str_starts_with($tableName, $prefix)) {
+                    return $keyword . ' `' . $tableName . '`';
+                }
+                return $keyword . ' `' . $prefix . $tableName . '`';
+            },
+            $sql
+        );
     }
 
     /**

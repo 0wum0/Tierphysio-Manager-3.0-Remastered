@@ -162,4 +162,45 @@
 </div>
 {% endif %}
 
+
+{# ── TherapyCare Pro: Therapiefortschritt ── #}
+{% if tcp_dashboard is not null and tcp_dashboard|length > 0 %}
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 class="h5 mb-0">📈 Therapiefortschritt</h2>
+    </div>
+    {% for entry in tcp_dashboard %}
+    <div class="mb-3 pb-3" style="border-bottom:1px solid var(--bs-border-color);">
+        <div class="fw-600 small mb-2">🐾 {{ entry.pet.name }}</div>
+        {% if entry.latest is not empty %}
+            {% for val in entry.latest|slice(0,3) %}
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <div class="small text-secondary" style="min-width:90px;">{{ val.category_name }}</div>
+                <div style="flex:1;height:5px;background:rgba(128,128,128,0.15);border-radius:999px;overflow:hidden;">
+                    {% set pct = (((val.score - (val.scale_min ?? 1)) / ((val.scale_max ?? 10) - (val.scale_min ?? 1))) * 100)|round %}
+                    <div style="height:100%;width:{{ pct }}%;background:{{ val.category_color }};border-radius:999px;"></div>
+                </div>
+                <div class="small fw-600" style="min-width:32px;color:{{ val.category_color }};">{{ val.score }}/{{ val.scale_max ?? 10 }}</div>
+            </div>
+            {% endfor %}
+        {% endif %}
+        <div class="d-flex gap-2 mt-2 flex-wrap">
+            {% if entry.visibility.show_progress %}
+            <a href="/portal/tcp/tiere/{{ entry.pet.id }}/fortschritt" class="portal-btn portal-btn-secondary portal-btn-sm">Fortschritt →</a>
+            {% endif %}
+            {% if entry.visibility.show_reports %}
+            <a href="/portal/tcp/tiere/{{ entry.pet.id }}/berichte" class="portal-btn portal-btn-secondary portal-btn-sm">Berichte →</a>
+            {% endif %}
+            {% if entry.visibility.show_natural %}
+            <a href="/portal/tcp/tiere/{{ entry.pet.id }}/naturheilkunde" class="portal-btn portal-btn-secondary portal-btn-sm">Naturheilkunde →</a>
+            {% endif %}
+            <a href="/portal/tcp/tiere/{{ entry.pet.id }}/feedback" class="portal-btn portal-btn-secondary portal-btn-sm">Feedback geben →</a>
+        </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 {% endblock %}

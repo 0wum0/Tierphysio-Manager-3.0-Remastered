@@ -107,6 +107,31 @@ class OwnerPortalController extends Controller
             ? $this->repo->getHomeworkPlansByOwner($ownerId)
             : [];
 
+        /* ── TherapyCare Pro: collect TCP data across all pets ── */
+        $tcpDashboard = null;
+        try {
+            if (!empty($pets) && class_exists('\Plugins\TherapyCarePro\TherapyCareRepository')) {
+                $db      = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+                $tcpRepo = new \Plugins\TherapyCarePro\TherapyCareRepository($db);
+                $tcpPets = [];
+                foreach ($pets as $pet) {
+                    $petId      = (int)$pet['id'];
+                    $visibility = $tcpRepo->getPortalVisibility($petId);
+                    $hasAny     = $visibility['show_progress'] || $visibility['show_natural'] || $visibility['show_reports'];
+                    if ($hasAny) {
+                        $tcpPets[] = [
+                            'pet'        => $pet,
+                            'visibility' => $visibility,
+                            'latest'     => $visibility['show_progress'] ? $tcpRepo->getLatestProgressForPatient($petId) : [],
+                        ];
+                    }
+                }
+                if (!empty($tcpPets)) {
+                    $tcpDashboard = $tcpPets;
+                }
+            }
+        } catch (\Throwable) {}
+
         $this->render('@owner-portal/owner_dashboard.twig', array_merge($this->portalBase($user), [
             'page_title'            => 'Mein Tierportal',
             'pets'                  => $pets,
@@ -115,6 +140,7 @@ class OwnerPortalController extends Controller
             'exercises'             => $allExercises,
             'homework_plans'        => $homeworkPlans,
             'show_homework'         => $this->isHomeworkEnabled(),
+            'tcp_dashboard'         => $tcpDashboard,
         ]));
     }
 

@@ -131,6 +131,27 @@ class PatientController extends Controller
             ) ?: null;
         } catch (\Throwable) {}
 
+        /* ── TherapyCare Pro data for patient detail tabs ── */
+        $tcpProgress   = null;
+        $tcpNatural    = null;
+        $tcpReports    = null;
+        $tcpFeedback   = null;
+        $tcpCategories = null;
+        $tcpVisibility = null;
+        try {
+            if (class_exists('\Plugins\TherapyCarePro\TherapyCareRepository')) {
+                $db         = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+                $tcpRepo    = new \Plugins\TherapyCarePro\TherapyCareRepository($db);
+                $patId      = (int)$params['id'];
+                $tcpProgress   = $tcpRepo->getLatestProgressForPatient($patId);
+                $tcpCategories = $tcpRepo->getActiveProgressCategories();
+                $tcpNatural    = $tcpRepo->getNaturalEntriesForPatient($patId);
+                $tcpReports    = $tcpRepo->getTherapyReportsForPatient($patId);
+                $tcpFeedback   = $tcpRepo->getFeedbackForPatient($patId, 30);
+                $tcpVisibility = $tcpRepo->getPortalVisibility($patId);
+            }
+        } catch (\Throwable) {}
+
         $this->render('patients/show.twig', [
             'page_title'               => $patient['name'],
             'patient'                  => $patient,
@@ -145,6 +166,12 @@ class PatientController extends Controller
             'plugin_header_actions'    => $headerActions,
             'portal_check_notifications' => $portalCheckNotifications,
             'next_appointment'         => $nextAppointment,
+            'tcp_progress'             => $tcpProgress,
+            'tcp_categories'           => $tcpCategories,
+            'tcp_natural'              => $tcpNatural,
+            'tcp_reports'              => $tcpReports,
+            'tcp_feedback'             => $tcpFeedback,
+            'tcp_visibility'           => $tcpVisibility,
         ]);
     }
 
