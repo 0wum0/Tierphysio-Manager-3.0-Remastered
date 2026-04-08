@@ -119,6 +119,7 @@
                         <label class="form-label">Ende *</label>
                         <input type="datetime-local" id="apt-end" name="end_at" class="form-control" required>
                     </div>
+                    {% if not (is_trainer ?? false) %}
                     <div class="form-group">
                         <label class="form-label">Patient</label>
                         <select id="apt-patient" name="patient_id" class="form-control">
@@ -128,15 +129,19 @@
                             {% endfor %}
                         </select>
                     </div>
+                    {% else %}
+                    <input type="hidden" id="apt-patient" name="patient_id" value="">
+                    {% endif %}
                     <div class="form-group">
-                        <label class="form-label">Tierhalter</label>
+                        <label class="form-label">{% if is_trainer ?? false %}Halter{% else %}Tierhalter{% endif %}</label>
                         <select id="apt-owner" name="owner_id" class="form-control">
-                            <option value="">— kein Tierhalter —</option>
+                            <option value="">— {% if is_trainer ?? false %}kein Halter{% else %}kein Tierhalter{% endif %} —</option>
                             {% for o in owners %}
                             <option value="{{ o.id }}">{{ o.first_name }} {{ o.last_name }}</option>
                             {% endfor %}
                         </select>
                     </div>
+                    {% if not (is_trainer ?? false) %}
                     <div class="form-group">
                         <label class="form-label">Behandlungsart</label>
                         <select id="apt-treatment" name="treatment_type_id" class="form-control">
@@ -146,6 +151,9 @@
                             {% endfor %}
                         </select>
                     </div>
+                    {% else %}
+                    <input type="hidden" id="apt-treatment" name="treatment_type_id" value="">
+                    {% endif %}
                     <div class="form-group">
                         <label class="form-label">Status</label>
                         <select id="apt-status" name="status" class="form-control">
@@ -394,11 +402,14 @@
         else document.getElementById('apt-recurrence-custom').name = '';
     });
 
-    /* Treatment type → auto-fill color */
-    document.getElementById('apt-treatment').addEventListener('change', function() {
-        const opt = this.options[this.selectedIndex];
-        if (opt?.dataset.color) document.getElementById('apt-color').value = opt.dataset.color;
-    });
+    /* Treatment type → auto-fill color (only if it's a real <select>) */
+    const aptTreatmentEl = document.getElementById('apt-treatment');
+    if (aptTreatmentEl && aptTreatmentEl.tagName === 'SELECT') {
+        aptTreatmentEl.addEventListener('change', function() {
+            const opt = this.options[this.selectedIndex];
+            if (opt?.dataset.color) document.getElementById('apt-color').value = opt.dataset.color;
+        });
+    }
 
     /* Auto-end 1h after start */
     document.getElementById('apt-start').addEventListener('change', function() {
@@ -417,13 +428,15 @@
     function initAptSearchableSelects() {
         const ownerEl   = document.getElementById('apt-owner');
         const patientEl = document.getElementById('apt-patient');
-        if (!ownerEl || !patientEl || typeof SearchableSelect === 'undefined') return;
+        if (!ownerEl || typeof SearchableSelect === 'undefined') return;
 
-        ssAptPatient = new SearchableSelect({ target: patientEl, placeholder: '— kein Patient —' });
+        if (patientEl && patientEl.tagName === 'SELECT') {
+            ssAptPatient = new SearchableSelect({ target: patientEl, placeholder: '— kein Patient —' });
+        }
 
         ssAptOwner = new SearchableSelect({
             target: ownerEl,
-            placeholder: '— kein Tierhalter —',
+            placeholder: '— {% if is_trainer ?? false %}kein Halter{% else %}kein Tierhalter{% endif %} —',
             onSelect: function(ownerId) {
                 /* Trigger the existing owner-change handler on the raw select */
                 ownerEl.dispatchEvent(new Event('change', { bubbles: true }));
@@ -438,10 +451,11 @@
         }
     })(0);
 
-    /* Owner change → filter patients */
+    /* Owner change → filter patients (only in therapeut mode where patient is a real select) */
     document.getElementById('apt-owner').addEventListener('change', async function() {
         const ownerSelect = this;
         const patientSelect = document.getElementById('apt-patient');
+        if (!patientSelect || patientSelect.tagName !== 'SELECT') { updateAutoTitle(); return; }
         const ownerId = ownerSelect.value;
         
         // Store current patient value
@@ -498,8 +512,9 @@
         }
     });
 
-    /* Patient change → auto-select owner */
-    document.getElementById('apt-patient').addEventListener('change', async function() {
+    /* Patient change → auto-select owner (therapeut mode only) */
+    const _patientChangeSel = document.getElementById('apt-patient');
+    if (_patientChangeSel && _patientChangeSel.tagName === 'SELECT') _patientChangeSel.addEventListener('change', async function() {
         const patientSelect = this;
         const ownerSelect = document.getElementById('apt-owner');
         const patientId = patientSelect.value;
@@ -549,19 +564,22 @@
     });
 
     /* Auto-generate title from owner, patient, and treatment type */
+    /* (closing brace for the conditional addEventListener above) */
     function updateAutoTitle() {
         const titleField = document.getElementById('apt-title');
         const ownerSelect = document.getElementById('apt-owner');
         const patientSelect = document.getElementById('apt-patient');
         const treatmentSelect = document.getElementById('apt-treatment');
-        
-        const ownerOption = ownerSelect.options[ownerSelect.selectedIndex];
-        const patientOption = patientSelect.options[patientSelect.selectedIndex];
-        const treatmentOption = treatmentSelect.options[treatmentSelect.selectedIndex];
-        
-        const ownerName = ownerSelect.value ? (ownerOption.textContent || '') : '';
-        const patientName = patientSelect.value ? (patientOption.textContent || '') : '';
-        const treatmentName = treatmentSelect.value ? (treatmentOption.textContent || '') : '';
+
+        const isRealSelect = el => el && el.tagName === 'SELECT';
+
+        const ownerOption    = isRealSelect(ownerSelect)    ? ownerSelect.options[ownerSelect.selectedIndex]       : null;
+        const patientOption  = isRealSelect(patientSelect)  ? patientSelect.options[patientSelect.selectedIndex]   : null;
+        const treatmentOption = isRealSelect(treatmentSelect) ? treatmentSelect.options[treatmentSelect.selectedIndex] : null;
+
+        const ownerName     = (isRealSelect(ownerSelect)    && ownerSelect.value)    ? (ownerOption?.textContent    || '') : '';
+        const patientName   = (isRealSelect(patientSelect)  && patientSelect.value)  ? (patientOption?.textContent  || '') : '';
+        const treatmentName = (isRealSelect(treatmentSelect) && treatmentSelect.value) ? (treatmentOption?.textContent || '') : '';
         
         // Only auto-generate if user hasn't manually changed the title
         if (!titleField.hasAttribute('data-manual')) {
@@ -606,8 +624,10 @@
 
     // Add event listeners for auto-title generation
     document.getElementById('apt-owner').addEventListener('change', updateAutoTitle);
-    document.getElementById('apt-patient').addEventListener('change', updateAutoTitle);
-    document.getElementById('apt-treatment').addEventListener('change', updateAutoTitle);
+    const _aptPatientEl = document.getElementById('apt-patient');
+    if (_aptPatientEl && _aptPatientEl.tagName === 'SELECT') _aptPatientEl.addEventListener('change', updateAutoTitle);
+    const _aptTreatEl = document.getElementById('apt-treatment');
+    if (_aptTreatEl && _aptTreatEl.tagName === 'SELECT') _aptTreatEl.addEventListener('change', updateAutoTitle);
 
     /* ── Form submit ── */
     form.addEventListener('submit', async function(e) {
