@@ -19,6 +19,12 @@
         <a href="/admin/tenants/{{ tenant.id }}/edit" class="btn btn-sm btn-outline-primary">
             <i class="bi bi-pencil me-1"></i>Bearbeiten
         </a>
+        {% if tenant.status == 'pending' %}
+        <form method="POST" action="/admin/tenants/{{ tenant.id }}/activate" class="d-inline">
+            {{ csrf_field()|raw }}
+            <button class="btn btn-sm btn-success"><i class="bi bi-check-circle me-1"></i>Aktivieren</button>
+        </form>
+        {% endif %}
         {% if tenant.status == 'active' or tenant.status == 'trial' or tenant.status == 'paused' %}
         <form method="POST" action="/admin/tenants/{{ tenant.id }}/suspend" class="d-inline" onsubmit="return confirm('Praxis wirklich sperren?')">
             {{ csrf_field()|raw }}
@@ -179,7 +185,50 @@
             </div>
         </div>
 
-        {# License Tokens #}
+        {# Lizenz & Nutzungsdauer #}
+        <div class="card mb-3">
+            <div class="card-header px-4 py-3"><span class="fw-semibold">Lizenz & Nutzungsdauer</span></div>
+            <div class="card-body px-4 py-3">
+                {# Aktueller Trial-Status #}
+                {% if tenant.trial_ends_at %}
+                <div class="mb-3">
+                    <div class="text-secondary mb-1" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;">Kostenlos bis</div>
+                    {% if tenant.trial_ends_at starts with '2099' %}
+                        <span class="badge" style="background:#7c3aed;font-size:.85rem;"><i class="bi bi-infinity me-1"></i>Lifetime-Lizenz</span>
+                    {% else %}
+                        <span class="fw-medium">{{ tenant.trial_ends_at|date('d.m.Y') }}</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {# Lifetime vergeben #}
+                <form method="POST" action="/admin/tenants/{{ tenant.id }}/set-trial" class="mb-3">
+                    {{ csrf_field()|raw }}
+                    <input type="hidden" name="trial_type" value="lifetime">
+                    <button type="submit" class="btn btn-sm w-100" style="background:#7c3aed;color:#fff;border:none;">
+                        <i class="bi bi-infinity me-1"></i>Lifetime-Lizenz vergeben
+                    </button>
+                </form>
+
+                {# Custom Trial-Dauer #}
+                <form method="POST" action="/admin/tenants/{{ tenant.id }}/set-trial">
+                    {{ csrf_field()|raw }}
+                    <input type="hidden" name="trial_type" value="days">
+                    <div class="mb-2">
+                        <label class="form-label" style="font-size:.75rem;color:#94a3b8;">Kostenlose Nutzung (Tage)</label>
+                        <div class="input-group input-group-sm">
+                            <input type="number" name="trial_days" class="form-control form-control-sm"
+                                   style="background:#0f172a;border-color:#334155;color:#f1f5f9;"
+                                   value="30" min="1" max="3650">
+                            <button type="submit" class="btn btn-sm btn-outline-success">Vergeben</button>
+                        </div>
+                        <div class="mt-1" style="font-size:.7rem;color:#64748b;">z.B. 30 = 1 Monat, 365 = 1 Jahr</div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {# Lizenz-Tokens #}
         <div class="card mb-3">
             <div class="card-header px-4 py-3 d-flex align-items-center justify-content-between">
                 <span class="fw-semibold">Lizenz-Tokens</span>
@@ -195,7 +244,13 @@
                 {% for lic in licenses %}
                 <div class="d-flex justify-content-between mb-1" style="font-size:.75rem;">
                     <span class="text-secondary">Ausgestellt {{ lic.issued_at|date('d.m.Y H:i') }}</span>
-                    <span class="text-secondary">Läuft ab {{ lic.expires_at|date('d.m.Y') }}</span>
+                    <span class="text-secondary">Läuft ab
+                        {% if lic.expires_at starts with '2099' %}
+                            <span style="color:#a78bfa;"><i class="bi bi-infinity"></i> Lifetime</span>
+                        {% else %}
+                            {{ lic.expires_at|date('d.m.Y') }}
+                        {% endif %}
+                    </span>
                 </div>
                 {% endfor %}
                 {% else %}

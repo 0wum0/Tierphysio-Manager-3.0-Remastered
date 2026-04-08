@@ -73,7 +73,7 @@ class AuthController extends Controller
             return;
         }
 
-        if ((int)$user['active'] !== 1) {
+        if ((int)($user['is_active'] ?? $user['active'] ?? 0) !== 1) {
             $this->session->flash('error', $this->translator->trans('auth.account_inactive'));
             $this->redirect('/login');
             return;

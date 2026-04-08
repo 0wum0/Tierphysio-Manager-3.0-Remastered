@@ -194,6 +194,17 @@ class TenantController extends Controller
         $this->redirect('/admin/tenants/' . $id);
     }
 
+    public function activate(array $params = []): void
+    {
+        $this->requireRole('superadmin', 'admin');
+        $this->verifyCsrf();
+
+        $id = (int)($params['id'] ?? 0);
+        $this->tenantRepo->setStatus($id, 'active');
+        $this->session->flash('success', 'Praxis aktiviert.');
+        $this->redirect('/admin/tenants/' . $id);
+    }
+
     public function reactivate(array $params = []): void
     {
         $this->requireRole('superadmin', 'admin');
@@ -202,6 +213,52 @@ class TenantController extends Controller
         $id = (int)($params['id'] ?? 0);
         $this->provisioningService->reactivate($id);
         $this->session->flash('success', 'Praxis reaktiviert.');
+        $this->redirect('/admin/tenants/' . $id);
+    }
+
+    public function setTrial(array $params = []): void
+    {
+        $this->requireRole('superadmin', 'admin');
+        $this->verifyCsrf();
+
+        $id   = (int)($params['id'] ?? 0);
+        $days = (int)$this->post('trial_days', 14);
+        $type = $this->post('trial_type', 'days'); // 'days' or 'lifetime'
+
+        if ($type === 'lifetime') {
+            // Lifetime: set trial_ends_at far in the future + status active
+            $this->tenantRepo->update($id, [
+                'trial_ends_at' => '2099-12-31 23:59:59',
+                'status'        => 'active',
+            ]);
+            // Update subscription ends_at
+            $sub = $this->subRepo->findByTenant($id);
+            if ($sub) {
+                $this->subRepo->update((int)$sub['id'], [
+                    'ends_at'      => '2099-12-31 23:59:59',
+                    'next_billing' => '2099-12-31 23:59:59',
+                    'status'       => 'active',
+                ]);
+            }
+            $this->session->flash('success', 'Lifetime-Lizenz vergeben.');
+        } else {
+            $days = max(1, min(3650, $days));
+            $endsAt = date('Y-m-d H:i:s', strtotime("+{$days} days"));
+            $this->tenantRepo->update($id, [
+                'trial_ends_at' => $endsAt,
+                'status'        => 'trial',
+            ]);
+            $sub = $this->subRepo->findByTenant($id);
+            if ($sub) {
+                $this->subRepo->update((int)$sub['id'], [
+                    'ends_at'      => $endsAt,
+                    'next_billing' => $endsAt,
+                    'status'       => 'active',
+                ]);
+            }
+            $this->session->flash('success', "Kostenlose Nutzung für {$days} Tage vergeben (bis " . date('d.m.Y', strtotime("+{$days} days")) . ").");
+        }
+
         $this->redirect('/admin/tenants/' . $id);
     }
 

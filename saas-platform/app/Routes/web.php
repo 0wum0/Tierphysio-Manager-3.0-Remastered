@@ -35,9 +35,11 @@ $router->get('/admin/tenants/{id}',             [TenantController::class, 'show'
 $router->get('/admin/tenants/{id}/edit',        [TenantController::class, 'editForm']);
 $router->post('/admin/tenants/{id}/edit',       [TenantController::class, 'edit']);
 $router->post('/admin/tenants/{id}/suspend',    [TenantController::class, 'suspend']);
+$router->post('/admin/tenants/{id}/activate',   [TenantController::class, 'activate']);
 $router->post('/admin/tenants/{id}/reactivate', [TenantController::class, 'reactivate']);
 $router->post('/admin/tenants/{id}/cancel',     [TenantController::class, 'cancel']);
 $router->post('/admin/tenants/{id}/license',    [TenantController::class, 'issueLicense']);
+$router->post('/admin/tenants/{id}/set-trial',  [TenantController::class, 'setTrial']);
 $router->post('/admin/tenants/{id}/delete',     [TenantController::class, 'delete']);
 
 // ── Plans Management ───────────────────────────────────────────────────────
