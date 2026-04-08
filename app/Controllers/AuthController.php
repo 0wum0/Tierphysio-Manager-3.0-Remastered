@@ -29,7 +29,11 @@ class AuthController extends Controller
 
     public function showLogin(array $params = []): void
     {
-        $settings = $this->settingsRepository->all();
+        try {
+            $settings = $this->settingsRepository->all();
+        } catch (\Throwable) {
+            $settings = [];
+        }
         $this->render('auth/login.twig', [
             'page_title'   => $this->translator->trans('auth.login_title'),
             'company_name' => $settings['company_name'] ?? '',

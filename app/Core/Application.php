@@ -67,11 +67,13 @@ class Application
                 $db = new Database($config);
 
                 // Resolve tenant table prefix.
-                // The prefix is stored in the session after login.
-                // On first login it is looked up from the SaaS tenants table.
+                // Priority: 1) session cache, 2) SaaS-DB lookup, 3) DB_PREFIX env fallback
                 $prefix = $session->get('tenant_table_prefix', '');
                 if ($prefix === '') {
                     $prefix = $this->resolveTenantPrefix($config, $session);
+                }
+                if ($prefix === '') {
+                    $prefix = $_ENV['DB_PREFIX'] ?? '';
                 }
                 if ($prefix !== '') {
                     $db->setPrefix($prefix);
@@ -100,24 +102,32 @@ class Application
         if ($config->get('app.installed', false)) {
             $pluginManager->loadPlugins();
 
-            // Override app_name with company_name from DB settings
-            try {
-                $settingsRepo = new \App\Repositories\SettingsRepository($this->container->get(Database::class));
-                $companyName  = $settingsRepo->get('company_name', '');
-                if ($companyName !== '') {
-                    $view->addGlobal('app_name', $companyName);
-                }
-                // Also expose settings globally for layout templates
-                $view->addGlobal('global_settings', $settingsRepo->all());
-            } catch (\Throwable) {}
+            // Only query DB globals when a prefix is resolved (i.e. tenant is known)
+            $db     = $this->container->has(Database::class) ? $this->container->get(Database::class) : null;
+            $hasPrefix = $db && $db->getPrefix() !== '';
 
-            // Load per-user UI layout settings (theme, fixed header, etc.)
-            try {
-                $prefsRepo    = new \App\Repositories\UserPreferencesRepository($this->container->get(Database::class));
-                $userId       = (int)($session->get('user_id') ?? 0);
-                $uiRaw        = $userId ? $prefsRepo->get($userId, 'ui_layout_settings') : null;
-                $view->addGlobal('server_ui_settings', $uiRaw ?? 'null');
-            } catch (\Throwable) {
+            if ($hasPrefix) {
+                // Override app_name with company_name from DB settings
+                try {
+                    $settingsRepo = new \App\Repositories\SettingsRepository($db);
+                    $companyName  = $settingsRepo->get('company_name', '');
+                    if ($companyName !== '') {
+                        $view->addGlobal('app_name', $companyName);
+                    }
+                    // Also expose settings globally for layout templates
+                    $view->addGlobal('global_settings', $settingsRepo->all());
+                } catch (\Throwable) {}
+
+                // Load per-user UI layout settings (theme, fixed header, etc.)
+                try {
+                    $prefsRepo = new \App\Repositories\UserPreferencesRepository($db);
+                    $userId    = (int)($session->get('user_id') ?? 0);
+                    $uiRaw     = $userId ? $prefsRepo->get($userId, 'ui_layout_settings') : null;
+                    $view->addGlobal('server_ui_settings', $uiRaw ?? 'null');
+                } catch (\Throwable) {
+                    $view->addGlobal('server_ui_settings', 'null');
+                }
+            } else {
                 $view->addGlobal('server_ui_settings', 'null');
             }
         }
