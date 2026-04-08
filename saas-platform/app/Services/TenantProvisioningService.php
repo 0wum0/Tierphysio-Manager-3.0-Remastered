@@ -292,8 +292,14 @@ class TenantProvisioningService
             $sql
         );
 
-        // 2. Tabellennamen prefixen (nur bekannte Tenant-Tabellen)
-        $tables = ['users','settings','owners','patients','appointments','invoices','invoice_items','waitlist','user_preferences','migrations'];
+        // 2. Tabellennamen prefixen (alle Tenant-Tabellen)
+        $tables = [
+            'users','settings','owners','patients','appointments','invoices','invoice_items',
+            'waitlist','user_preferences','migrations',
+            'patient_timeline','treatment_types','invoice_positions','invoice_reminders',
+            'invoice_dunnings','mobile_api_tokens','cron_job_log',
+            'befundboegen','befundbogen_felder',
+        ];
 
         foreach ($tables as $table) {
             $sql = preg_replace('/`' . preg_quote($table, '/') . '`/', '`' . $prefix . $table . '`', $sql);
@@ -337,7 +343,15 @@ class TenantProvisioningService
      */
     private function dropTenantTables(string $prefix): void
     {
-        $tables = ['invoice_items','invoices','appointments','patients','owners','waitlist','user_preferences','users','migrations','settings'];
+        $tables = [
+            'befundbogen_felder','befundboegen',
+            'invoice_reminders','invoice_dunnings','invoice_positions',
+            'invoice_items','invoices',
+            'mobile_api_tokens','cron_job_log',
+            'patient_timeline','treatment_types',
+            'appointments','patients','owners',
+            'waitlist','user_preferences','users','migrations','settings',
+        ];
         $pdo = $this->db->getPdo();
         foreach ($tables as $table) {
             try {
