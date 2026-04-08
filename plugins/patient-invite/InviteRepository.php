@@ -8,16 +8,19 @@ use App\Core\Database;
 
 class InviteRepository
 {
-    private const TABLE = 'patient_invite_tokens';
-
     public function __construct(private readonly Database $db) {}
+
+    private function t(string $table): string
+    {
+        return $this->db->prefix($table);
+    }
 
     public function create(array $data): int
     {
         $cols         = implode(', ', array_map(fn($k) => "`$k`", array_keys($data)));
         $placeholders = implode(', ', array_fill(0, count($data), '?'));
         $this->db->execute(
-            "INSERT INTO `" . self::TABLE . "` ($cols) VALUES ($placeholders)",
+            "INSERT INTO `{$this->t('patient_invite_tokens')}` ($cols) VALUES ($placeholders)",
             array_values($data)
         );
         return (int)$this->db->lastInsertId();
@@ -26,7 +29,7 @@ class InviteRepository
     public function findByToken(string $token): array|false
     {
         return $this->db->fetch(
-            "SELECT * FROM `" . self::TABLE . "` WHERE token = ? LIMIT 1",
+            "SELECT * FROM `{$this->t('patient_invite_tokens')}` WHERE token = ? LIMIT 1",
             [$token]
         );
     }
@@ -34,7 +37,7 @@ class InviteRepository
     public function findById(int $id): array|false
     {
         return $this->db->fetch(
-            "SELECT * FROM `" . self::TABLE . "` WHERE id = ? LIMIT 1",
+            "SELECT * FROM `{$this->t('patient_invite_tokens')}` WHERE id = ? LIMIT 1",
             [$id]
         );
     }
@@ -43,12 +46,12 @@ class InviteRepository
     {
         $offset = ($page - 1) * $perPage;
         $total  = (int)$this->db->fetchColumn(
-            "SELECT COUNT(*) FROM `" . self::TABLE . "`"
+            "SELECT COUNT(*) FROM `{$this->t('patient_invite_tokens')}`"
         );
         $items = $this->db->fetchAll(
             "SELECT t.*, u.name AS created_by_name
-             FROM `" . self::TABLE . "` t
-             LEFT JOIN users u ON t.created_by = u.id
+             FROM `{$this->t('patient_invite_tokens')}` t
+             LEFT JOIN `{$this->t('users')}` u ON t.created_by = u.id
              ORDER BY t.created_at DESC
              LIMIT ? OFFSET ?",
             [$perPage, $offset]
@@ -64,7 +67,7 @@ class InviteRepository
     public function accept(string $token, int $patientId, int $ownerId): void
     {
         $this->db->execute(
-            "UPDATE `" . self::TABLE . "`
+            "UPDATE `{$this->t('patient_invite_tokens')}`
              SET status = 'angenommen',
                  accepted_at = NOW(),
                  accepted_patient_id = ?,
@@ -77,7 +80,7 @@ class InviteRepository
     public function expireOld(): void
     {
         $this->db->execute(
-            "UPDATE `" . self::TABLE . "`
+            "UPDATE `{$this->t('patient_invite_tokens')}`
              SET status = 'abgelaufen'
              WHERE status = 'offen' AND expires_at < NOW()"
         );
@@ -86,7 +89,7 @@ class InviteRepository
     public function countByStatus(string $status): int
     {
         return (int)$this->db->fetchColumn(
-            "SELECT COUNT(*) FROM `" . self::TABLE . "` WHERE status = ?",
+            "SELECT COUNT(*) FROM `{$this->t('patient_invite_tokens')}` WHERE status = ?",
             [$status]
         );
     }
