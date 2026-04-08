@@ -44,11 +44,17 @@ class DataMigrationController extends Controller
         $this->requireAuth();
         $this->verifyCsrf();
 
-        $tenantId      = (int)($this->post('tenant_id') ?? 0);
-        $mode          = $this->post('mode') ?? 'smart';
-        $adminEmail    = trim((string)($this->post('admin_email') ?? ''));
-        $adminPassword = trim((string)($this->post('admin_password') ?? ''));
-        $adminName     = trim((string)($this->post('admin_name') ?? ''));
+        $tenantId        = (int)($this->post('tenant_id') ?? 0);
+        $mode            = $this->post('mode') ?? 'smart';
+        $adminEmail      = trim((string)($this->post('admin_email') ?? ''));
+        $adminPassword   = trim((string)($this->post('admin_password') ?? ''));
+        $adminName       = trim((string)($this->post('admin_name') ?? ''));
+        $companyName     = trim((string)($this->post('company_name') ?? ''));
+        $companyEmail    = trim((string)($this->post('company_email') ?? ''));
+        $companyPhone    = trim((string)($this->post('company_phone') ?? ''));
+        $companyAddress  = trim((string)($this->post('company_address') ?? ''));
+        $companyCity     = trim((string)($this->post('company_city') ?? ''));
+        $companyZip      = trim((string)($this->post('company_zip') ?? ''));
 
         // ── Neuen Tenant anlegen falls tenant_id = 0 ────────────────────────
         $provisionResult = null;
@@ -143,9 +149,17 @@ class DataMigrationController extends Controller
             $result = $this->runRaw($sql, $prefix);
         }
 
-        // ── Neuer Tenant: Admin-User wurde bereits beim Provisioning gesetzt ──
-        // Beim Import aus einer alten DB überschreiben wir den vom Provisioning
-        // angelegten Platzhalter-Admin mit den echten importierten Daten.
+        // ── Post-Import Setup: migrations-Tabelle + settings + Admin-User ────
+        $practiceData = [
+            'company_name'    => $companyName !== '' ? $companyName : ($provisionResult['practice_name'] ?? ''),
+            'company_email'   => $companyEmail !== '' ? $companyEmail : $adminEmail,
+            'company_phone'   => $companyPhone,
+            'company_address' => $companyAddress,
+            'company_city'    => $companyCity,
+            'company_zip'     => $companyZip,
+        ];
+        $result['setup'] = $this->postImportSetup($prefix, $practiceData);
+
         if ($adminEmail !== '' && $adminPassword !== '') {
             $result['admin'] = $this->setAdminUser($prefix, $adminEmail, $adminPassword, $adminName);
         }
@@ -414,6 +428,75 @@ class DataMigrationController extends Controller
         }
 
         return $statements;
+    }
+
+    // ── Post-Import: migrations-Tabelle anlegen + settings befüllen ─────────
+    private function postImportSetup(string $prefix, array $practiceData): array
+    {
+        $pdo      = $this->db->getPdo();
+        $migTbl   = $prefix . 'migrations';
+        $setTbl   = $prefix . 'settings';
+        $messages = [];
+
+        // 1. migrations-Tabelle anlegen (falls nicht vorhanden)
+        try {
+            $pdo->exec(
+                "CREATE TABLE IF NOT EXISTS `{$migTbl}` (
+                    `id`         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    `version`    INT NOT NULL UNIQUE,
+                    `applied_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+            );
+            // Alle bekannten Versionen als angewendet markieren (DB-Version aus Import übernehmen)
+            $latestVersion = 23;
+            $values = implode(',', array_map(fn($v) => "({$v})", range(1, $latestVersion)));
+            $pdo->exec("INSERT IGNORE INTO `{$migTbl}` (`version`) VALUES {$values}");
+            $messages[] = "migrations-Tabelle angelegt und auf Version {$latestVersion} gesetzt.";
+        } catch (\Throwable $e) {
+            $messages[] = 'migrations-Tabelle: ' . $e->getMessage();
+        }
+
+        // 2. settings-Tabelle anlegen (falls nicht vorhanden — Fallback)
+        try {
+            $pdo->exec(
+                "CREATE TABLE IF NOT EXISTS `{$setTbl}` (
+                    `key`        VARCHAR(100) NOT NULL,
+                    `value`      TEXT NULL,
+                    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    PRIMARY KEY (`key`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+            );
+        } catch (\Throwable) {}
+
+        // 3. Praxisdaten in settings schreiben
+        $settingsToSet = array_filter([
+            'company_name'    => $practiceData['company_name']    ?? '',
+            'company_email'   => $practiceData['company_email']   ?? '',
+            'company_phone'   => $practiceData['company_phone']   ?? '',
+            'company_address' => $practiceData['company_address'] ?? '',
+            'company_city'    => $practiceData['company_city']    ?? '',
+            'company_zip'     => $practiceData['company_zip']     ?? '',
+        ], fn($v) => $v !== '');
+
+        $written = 0;
+        foreach ($settingsToSet as $key => $value) {
+            try {
+                $st = $pdo->prepare(
+                    "INSERT INTO `{$setTbl}` (`key`, `value`) VALUES (?, ?)
+                     ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)"
+                );
+                $st->execute([$key, $value]);
+                $written++;
+            } catch (\Throwable $e) {
+                $messages[] = "settings[{$key}]: " . $e->getMessage();
+            }
+        }
+
+        if ($written > 0) {
+            $messages[] = "{$written} Praxisdaten in settings geschrieben.";
+        }
+
+        return ['success' => true, 'messages' => $messages];
     }
 
     // ── Admin-User in Tenant-Tabellen setzen / aktualisieren ────────────────

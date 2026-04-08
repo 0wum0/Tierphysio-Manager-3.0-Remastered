@@ -85,6 +85,42 @@
                     </div>
 
                     <hr class="my-3">
+                    <h6 class="small fw-semibold text-muted mb-3"><i class="bi bi-building me-1"></i>PRAXISDATEN (SETTINGS)</h6>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Praxisname <span class="text-danger">*</span></label>
+                        <input type="text" name="company_name" class="form-control" placeholder="z. B. Tierphysio Wenzel" required>
+                        <div class="form-text">Wird als company_name in den Einstellungen gesetzt</div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">E-Mail</label>
+                            <input type="email" name="company_email" class="form-control" placeholder="info@tierphysio-wenzel.de">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Telefon</label>
+                            <input type="text" name="company_phone" class="form-control" placeholder="+49 ...">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Straße &amp; Hausnummer</label>
+                        <input type="text" name="company_address" class="form-control" placeholder="Musterstraße 1">
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-4">
+                            <label class="form-label fw-semibold">PLZ</label>
+                            <input type="text" name="company_zip" class="form-control" placeholder="12345">
+                        </div>
+                        <div class="col-8">
+                            <label class="form-label fw-semibold">Stadt</label>
+                            <input type="text" name="company_city" class="form-control" placeholder="Berlin">
+                        </div>
+                    </div>
+
+                    <hr class="my-3">
                     <h6 class="small fw-semibold text-muted mb-3"><i class="bi bi-person-lock me-1"></i>LOGIN-ZUGANGSDATEN SETZEN</h6>
 
                     <div class="mb-3">
@@ -192,6 +228,12 @@
                 <div id="errorsSection" class="d-none">
                     <h6 class="small fw-semibold text-muted mb-2">FEHLER-DETAILS</h6>
                     <div id="errorsList" class="small" style="max-height:300px;overflow-y:auto;"></div>
+                </div>
+
+                <!-- Setup-Ergebnis (migrations + settings) -->
+                <div id="setupSection" class="d-none border-top pt-3 mt-3">
+                    <h6 class="small fw-semibold text-muted mb-2"><i class="bi bi-gear-fill me-1"></i>SYSTEM-SETUP</h6>
+                    <div id="setupResult"></div>
                 </div>
 
                 <!-- Admin-User-Ergebnis -->
@@ -352,6 +394,19 @@
                     list.appendChild(div);
                 });
                 sec.classList.remove('d-none');
+            }
+
+            // Setup-Ergebnis (migrations + settings)
+            if (data.setup) {
+                const sec = document.getElementById('setupSection');
+                const res = document.getElementById('setupResult');
+                const msgs = data.setup.messages ?? [];
+                if (msgs.length > 0) {
+                    res.innerHTML = msgs.map(m =>
+                        `<div class="small text-success-emphasis"><i class="bi bi-check2 me-1"></i>${escHtml(m)}</div>`
+                    ).join('');
+                    sec.classList.remove('d-none');
+                }
             }
 
             // Provisioning-Ergebnis (neuer Tenant)
