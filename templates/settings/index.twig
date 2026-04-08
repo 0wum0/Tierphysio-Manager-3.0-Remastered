@@ -122,6 +122,30 @@
                 </div>
             </div>
         </div>
+        <div class="glass-card mt-4">
+            <h3 class="section-title">
+                <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                Betriebsart
+            </h3>
+            <p class="text-muted" style="font-size:0.82rem;margin-bottom:1rem;">Wähle ob du eine Tierphysio-Praxis oder eine Hundeschule betreibst. Die gesamte App passt Begriffe und Ansichten entsprechend an.</p>
+            <div class="form-grid form-grid-2">
+                <label class="glass-card" style="cursor:pointer;padding:1rem 1.25rem;display:flex;align-items:center;gap:0.75rem;border:2px solid {% if (settings.practice_type ?? 'therapeut') == 'therapeut' %}var(--primary){% else %}var(--glass-border){% endif %};" onclick="selectPracticeType('therapeut')">
+                    <input type="radio" name="practice_type" value="therapeut" {% if (settings.practice_type ?? 'therapeut') == 'therapeut' %}checked{% endif %} style="accent-color:var(--primary);">
+                    <div>
+                        <div style="font-weight:600;font-size:0.9rem;">🏥 Tierphysiotherapie</div>
+                        <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">Praxis · Patienten · Besitzer · Behandlungen</div>
+                    </div>
+                </label>
+                <label class="glass-card" style="cursor:pointer;padding:1rem 1.25rem;display:flex;align-items:center;gap:0.75rem;border:2px solid {% if (settings.practice_type ?? 'therapeut') == 'trainer' %}var(--primary){% else %}var(--glass-border){% endif %};" onclick="selectPracticeType('trainer')">
+                    <input type="radio" name="practice_type" value="trainer" {% if (settings.practice_type ?? 'therapeut') == 'trainer' %}checked{% endif %} style="accent-color:var(--primary);">
+                    <div>
+                        <div style="font-weight:600;font-size:0.9rem;">🐕 Hundeschule / Training</div>
+                        <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">Schule · Hunde · Halter · Trainingseinheiten</div>
+                    </div>
+                </label>
+            </div>
+            <p class="text-muted" style="font-size:0.75rem;margin-top:0.75rem;">⚠️ Nach dem Speichern wird die Seite neu geladen damit alle Bezeichnungen aktualisiert werden.</p>
+        </div>
         <div class="flex justify-end mt-3">
             <button type="submit" class="btn btn-primary">
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="17 21 17 13 7 13 7 21"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 3 7 8 15 8"/></svg>
@@ -2488,4 +2512,18 @@ function openEditTT(tt) {
 
 </div>
 
+<script>
+function selectPracticeType(type) {
+    document.querySelectorAll('input[name="practice_type"]').forEach(function(r) {
+        var card = r.closest('label');
+        if (r.value === type) {
+            r.checked = true;
+            card.style.borderColor = 'var(--primary)';
+        } else {
+            r.checked = false;
+            card.style.borderColor = 'var(--glass-border)';
+        }
+    });
+}
+</script>
 {% endblock %}

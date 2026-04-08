@@ -8,12 +8,12 @@
 {% block content %}
 <div class="page-header">
     <div>
-        <h1 class="page-title">{{ t('patients.title') }}</h1>
+        <h1 class="page-title">{% if is_trainer ?? false %}Hunde{% else %}{{ t('patients.title') }}{% endif %}</h1>
         <p class="page-subtitle">{{ pagination.total }} {{ t('common.entries') }}</p>
     </div>
     <a href="/patienten/neu" class="btn btn-primary">
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        {{ t('patients.new_patient') }}
+        {% if is_trainer ?? false %}Neuen Hund anlegen{% else %}{{ t('patients.new_patient') }}{% endif %}
     </a>
 </div>
 

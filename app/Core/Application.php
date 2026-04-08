@@ -133,7 +133,14 @@ class Application
                     }
                     // Also expose settings globally for layout templates
                     $view->addGlobal('global_settings', $settingsRepo->all());
-                } catch (\Throwable) {}
+                    // Practice type: 'therapeut' or 'trainer'
+                    $practiceType = $settingsRepo->get('practice_type', 'therapeut');
+                    $view->addGlobal('practice_type', $practiceType);
+                    $view->addGlobal('is_trainer', $practiceType === 'trainer');
+                } catch (\Throwable) {
+                    $view->addGlobal('practice_type', 'therapeut');
+                    $view->addGlobal('is_trainer', false);
+                }
 
                 // Load per-user UI layout settings (theme, fixed header, etc.)
                 try {

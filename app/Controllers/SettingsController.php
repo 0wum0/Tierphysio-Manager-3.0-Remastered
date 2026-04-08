@@ -142,6 +142,7 @@ class SettingsController extends Controller
             'birthday_mail_enabled',
             'google_client_id', 'google_client_secret', 'google_redirect_uri',
             'portal_show_homework',
+            'practice_type',
         ];
 
         $data = [];

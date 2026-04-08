@@ -5,12 +5,12 @@
 {# ── Page Header (page-header class is visible in bridge.css) ── #}
 <div class="page-header">
     <div>
-        <h1 class="page-title">{{ t('owners.title') }}</h1>
+        <h1 class="page-title">{% if is_trainer ?? false %}Halter{% else %}{{ t('owners.title') }}{% endif %}</h1>
         <p class="page-subtitle">{{ pagination.total }} {{ t('common.entries') }}</p>
     </div>
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal-new-owner">
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        {{ t('owners.new_owner') }}
+        {% if is_trainer ?? false %}Neuen Halter anlegen{% else %}{{ t('owners.new_owner') }}{% endif %}
     </button>
 </div>
 
@@ -19,7 +19,7 @@
 
     {# Panel Header mit Suche #}
     <div class="panel-hdr">
-        <h2>{{ t('owners.title') }} <span class="fw-300"><i>{{ pagination.total }} Einträge</i></span></h2>
+        <h2>{% if is_trainer ?? false %}Halter{% else %}{{ t('owners.title') }}{% endif %} <span class="fw-300"><i>{{ pagination.total }} Einträge</i></span></h2>
         <div class="panel-toolbar">
             <form method="GET" action="/tierhalter" class="d-flex align-items-center gap-2 mb-0">
                 <div class="input-group input-group-sm" style="width:240px;">
