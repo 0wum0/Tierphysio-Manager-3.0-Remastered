@@ -59,6 +59,13 @@ class AuthController extends Controller
         $prefix = $this->resolvePrefixForEmail($email);
         if ($prefix !== '') {
             $this->db->setPrefix($prefix);
+        } elseif ($this->db->getPrefix() === '') {
+            // No SaaS DB configured and no session prefix — cannot resolve tenant.
+            // Fall back to DB_PREFIX env value if set.
+            $envPrefix = $_ENV['DB_PREFIX'] ?? '';
+            if ($envPrefix !== '') {
+                $this->db->setPrefix($envPrefix);
+            }
         }
 
         $user = $this->userRepository->findByEmail($email);
