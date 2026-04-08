@@ -12,6 +12,7 @@ use Saas\Controllers\SaasInvoiceController;
 use Saas\Controllers\SettingsController;
 use Saas\Controllers\NotificationController;
 use Saas\Controllers\UpdateController;
+use Saas\Controllers\DataMigrationController;
 
 // ── License API (called by Praxissoftware) ─────────────────────────────────
 $router->post('/api/license/verify',  [LicenseApiController::class, 'verify']);
@@ -88,6 +89,10 @@ $router->get('/admin/updates/system-info', [UpdateController::class, 'systemInfo
 $router->post('/admin/updates/apply',      [UpdateController::class, 'applyUpdate']);
 
 
+
+// ── Daten-Import / Migration ─────────────────────────────────────────────
+$router->get('/admin/migration',      [DataMigrationController::class, 'index']);
+$router->post('/admin/migration/run', [DataMigrationController::class, 'run']);
 
 // ── Root redirect ──────────────────────────────────────────────────────────
 $router->get('/admin/dashboard', function (array $params): void {

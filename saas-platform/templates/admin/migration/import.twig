@@ -1,0 +1,430 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'migration' %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h4 class="mb-1"><i class="bi bi-database-up me-2 text-primary"></i>Daten-Import / Migration</h4>
+        <p class="text-muted small mb-0">SQL-Datei einer bestehenden Praxis hochladen und in einen Tenant importieren</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Upload-Formular -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-bottom">
+                <h6 class="mb-0 fw-semibold"><i class="bi bi-upload me-2"></i>Import-Einstellungen</h6>
+            </div>
+            <div class="card-body">
+                <form id="importForm" enctype="multipart/form-data">
+                    {{ csrf_field()|raw }}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Ziel-Tenant <span class="text-danger">*</span></label>
+                        <select name="tenant_id" id="tenantSelect" class="form-select" required>
+                            <option value="">— Tenant auswählen —</option>
+                            <option value="0" data-new="1">➕ Neuer Tenant anlegen</option>
+                            {% for t in tenants %}
+                            <option value="{{ t.id }}" data-prefix="{{ t.db_name }}">
+                                {{ t.practice_name }} ({{ t.db_name }})
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Wähle einen vorhandenen Tenant oder lege einen neuen an</div>
+                    </div>
+
+                    <div id="prefixInfo" class="alert alert-info d-none py-2 small mb-3">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Prefix: <strong id="prefixDisplay"></strong>
+                    </div>
+
+                    <!-- Neuer Tenant: zusätzliche Felder -->
+                    <div id="newTenantFields" class="d-none">
+                        <div class="alert alert-success py-2 small mb-3">
+                            <i class="bi bi-plus-circle me-1"></i>
+                            Ein neuer Tenant wird automatisch angelegt und dann die SQL-Daten importiert.
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Praxisname <span class="text-danger">*</span></label>
+                            <input type="text" name="practice_name" id="practiceName" class="form-control" placeholder="z. B. Tierphysio Wenzel">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Abo-Plan</label>
+                            <select name="plan_id" class="form-select">
+                                <option value="0">— Automatisch (erster aktiver Plan) —</option>
+                                {% for p in plans %}
+                                <option value="{{ p.id }}">{{ p.name }} ({{ p.price_month }}€/Monat)</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">SQL-Datei <span class="text-danger">*</span></label>
+                        <input type="file" name="sql_file" id="sqlFile" class="form-control" accept=".sql" required>
+                        <div class="form-text">Max. 50 MB · Nur .sql Dateien · phpMyAdmin-Export</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Import-Modus</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="mode" id="modeSmart" value="smart" checked>
+                            <label class="btn btn-outline-primary" for="modeSmart">
+                                <i class="bi bi-magic me-1"></i>Smart
+                            </label>
+                            <input type="radio" class="btn-check" name="mode" id="modeRaw" value="raw">
+                            <label class="btn btn-outline-secondary" for="modeRaw">
+                                <i class="bi bi-code-slash me-1"></i>Raw
+                            </label>
+                        </div>
+                        <div class="form-text mt-1">
+                            <strong>Smart:</strong> Filtert FK-Constraints, Kommentare, AUTO_INCREMENT-Anpassungen — empfohlen.<br>
+                            <strong>Raw:</strong> Nur minimale Filterung, alle Statements werden ausgeführt.
+                        </div>
+                    </div>
+
+                    <hr class="my-3">
+                    <h6 class="small fw-semibold text-muted mb-3"><i class="bi bi-person-lock me-1"></i>LOGIN-ZUGANGSDATEN SETZEN</h6>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Vollständiger Name</label>
+                        <input type="text" name="admin_name" class="form-control" placeholder="z. B. Eileen Wenzel" value="">
+                        <div class="form-text">Optional — wird nur gesetzt wenn ausgefüllt</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Login-E-Mail <span class="text-danger">*</span></label>
+                        <input type="email" name="admin_email" id="adminEmail" class="form-control" placeholder="info@tierphysio-wenzel.de" required>
+                        <div class="form-text">Diese E-Mail wird für den Login auf app.therapano.de verwendet</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Login-Passwort <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="password" name="admin_password" id="adminPassword" class="form-control" placeholder="Mindestens 8 Zeichen" required minlength="6">
+                            <button type="button" class="btn btn-outline-secondary" id="togglePw" tabindex="-1">
+                                <i class="bi bi-eye" id="togglePwIcon"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">Wird als bcrypt-Hash gespeichert — sicher</div>
+                    </div>
+
+                    <div class="alert alert-info py-2 small mb-3">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Der erste <strong>Admin-User</strong> in der importierten Datenbank wird automatisch mit diesen Zugangsdaten aktualisiert. Falls kein Admin existiert, wird ein neuer angelegt.
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="confirmCheck" required>
+                            <label class="form-check-label" for="confirmCheck">
+                                Ich bestätige, dass ich den richtigen Tenant ausgewählt habe und die Daten importiert werden sollen.
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="importBtn" class="btn btn-primary w-100" disabled>
+                        <i class="bi bi-database-up me-2"></i>Import starten
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Hinweise -->
+        <div class="card border-0 shadow-sm mt-3 border-start border-warning border-4">
+            <div class="card-body py-3">
+                <h6 class="fw-semibold text-warning mb-2"><i class="bi bi-exclamation-triangle me-1"></i>Hinweise</h6>
+                <ul class="small text-muted mb-0 ps-3">
+                    <li>Die SQL-Datei muss ein <strong>phpMyAdmin-Export ohne Datenbank-Erstellen</strong> sein</li>
+                    <li>Tabellennamen werden automatisch mit dem Tenant-Prefix versehen</li>
+                    <li>Foreign-Key-Constraints werden beim Import deaktiviert</li>
+                    <li>Bestehende Daten werden bei Duplikaten <strong>nicht überschrieben</strong></li>
+                    <li>Führe danach den <strong>Schema-Patch</strong> aus um fehlende Spalten zu ergänzen</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ergebnis-Bereich -->
+    <div class="col-lg-7">
+        <!-- Fortschritt -->
+        <div id="progressCard" class="card border-0 shadow-sm d-none">
+            <div class="card-body text-center py-5">
+                <div class="spinner-border text-primary mb-3" role="status" style="width:3rem;height:3rem;"></div>
+                <h6 class="mb-1">Import läuft...</h6>
+                <p class="text-muted small mb-0">Bitte warten, die SQL-Datei wird verarbeitet</p>
+            </div>
+        </div>
+
+        <!-- Ergebnis -->
+        <div id="resultCard" class="card border-0 shadow-sm d-none">
+            <div class="card-header bg-transparent border-bottom d-flex align-items-center justify-content-between">
+                <h6 class="mb-0 fw-semibold"><i class="bi bi-clipboard-check me-2"></i>Import-Ergebnis</h6>
+                <span id="resultBadge" class="badge"></span>
+            </div>
+            <div class="card-body">
+                <div id="resultMessage" class="alert mb-3"></div>
+
+                <!-- Statistiken -->
+                <div class="row g-3 mb-3" id="statsRow">
+                    <div class="col-4 text-center">
+                        <div class="fs-3 fw-bold text-success" id="statOk">—</div>
+                        <div class="small text-muted">Erfolgreich</div>
+                    </div>
+                    <div class="col-4 text-center">
+                        <div class="fs-3 fw-bold text-secondary" id="statSkipped">—</div>
+                        <div class="small text-muted">Übersprungen</div>
+                    </div>
+                    <div class="col-4 text-center">
+                        <div class="fs-3 fw-bold text-danger" id="statErrors">—</div>
+                        <div class="small text-muted">Fehler</div>
+                    </div>
+                </div>
+
+                <!-- Importierte Tabellen -->
+                <div id="tablesSection" class="d-none mb-3">
+                    <h6 class="small fw-semibold text-muted mb-2">IMPORTIERTE TABELLEN</h6>
+                    <div id="tablesList" class="d-flex flex-wrap gap-1"></div>
+                </div>
+
+                <!-- Fehler-Details -->
+                <div id="errorsSection" class="d-none">
+                    <h6 class="small fw-semibold text-muted mb-2">FEHLER-DETAILS</h6>
+                    <div id="errorsList" class="small" style="max-height:300px;overflow-y:auto;"></div>
+                </div>
+
+                <!-- Admin-User-Ergebnis -->
+                <div id="adminSection" class="d-none border-top pt-3 mt-3">
+                    <h6 class="small fw-semibold text-muted mb-2"><i class="bi bi-person-check me-1"></i>LOGIN-ZUGANGSDATEN</h6>
+                    <div id="adminResult"></div>
+                </div>
+
+                <!-- Provisioning-Ergebnis -->
+                <div id="provisionSection" class="d-none border-top pt-3 mt-3">
+                    <h6 class="small fw-semibold text-muted mb-2"><i class="bi bi-building-add me-1"></i>NEUER TENANT</h6>
+                    <div id="provisionResult"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Anleitung (initial) -->
+        <div id="guideCard" class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-bottom">
+                <h6 class="mb-0 fw-semibold"><i class="bi bi-book me-2"></i>So funktioniert der Import</h6>
+            </div>
+            <div class="card-body">
+                <ol class="small text-muted">
+                    <li class="mb-2">
+                        <strong>SQL-Export erstellen:</strong> In phpMyAdmin der Quell-Datenbank → Exportieren → Format: SQL → Ohne "CREATE DATABASE" → Exportieren
+                    </li>
+                    <li class="mb-2">
+                        <strong>Tenant auswählen:</strong> Den Ziel-Tenant in der Liste auswählen (z.B. Eileen Wenzel → <code>t_eileen_wenzel_...</code>)
+                    </li>
+                    <li class="mb-2">
+                        <strong>Modus wählen:</strong> "Smart" filtert automatisch FK-Constraints und phpMyAdmin-Metadaten. Empfohlen für phpMyAdmin-Exports.
+                    </li>
+                    <li class="mb-2">
+                        <strong>Import starten:</strong> Das Tool prefixiert alle Tabellennamen und führt die Statements der Reihe nach aus.
+                    </li>
+                    <li class="mb-2">
+                        <strong>Schema-Patch ausführen:</strong> Nach dem Import die <code>tenant_patch_existing.sql</code> auf dem Server ausführen um alle fehlenden Spalten zu ergänzen.
+                    </li>
+                </ol>
+
+                <div class="alert alert-success py-2 small mb-0">
+                    <i class="bi bi-lightbulb me-1"></i>
+                    <strong>Tipp:</strong> Du kannst den Import mehrfach ausführen — bestehende Datensätze werden nicht doppelt importiert.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const tenantSelect    = document.getElementById('tenantSelect');
+    const prefixInfo      = document.getElementById('prefixInfo');
+    const prefixDisplay   = document.getElementById('prefixDisplay');
+    const newTenantFields = document.getElementById('newTenantFields');
+    const confirmCheck    = document.getElementById('confirmCheck');
+    const importBtn       = document.getElementById('importBtn');
+    const importForm      = document.getElementById('importForm');
+    const progressCard    = document.getElementById('progressCard');
+    const resultCard      = document.getElementById('resultCard');
+    const guideCard       = document.getElementById('guideCard');
+
+    function updateBtn() {
+        importBtn.disabled = !(tenantSelect.value !== '' && confirmCheck.checked);
+    }
+
+    tenantSelect.addEventListener('change', function () {
+        const opt  = this.options[this.selectedIndex];
+        const pfx  = opt.dataset.prefix;
+        const isNew = opt.dataset.new === '1';
+
+        if (isNew) {
+            prefixInfo.classList.add('d-none');
+            newTenantFields.classList.remove('d-none');
+        } else if (pfx) {
+            prefixDisplay.textContent = pfx + '_';
+            prefixInfo.classList.remove('d-none');
+            newTenantFields.classList.add('d-none');
+        } else {
+            prefixInfo.classList.add('d-none');
+            newTenantFields.classList.add('d-none');
+        }
+        updateBtn();
+    });
+
+    confirmCheck.addEventListener('change', updateBtn);
+
+    importForm.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(importForm);
+
+        // UI: zeige Fortschritt
+        guideCard.classList.add('d-none');
+        resultCard.classList.add('d-none');
+        progressCard.classList.remove('d-none');
+        importBtn.disabled = true;
+        importBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Läuft…';
+
+        try {
+            const resp = await fetch('/admin/migration/run', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await resp.json();
+
+            progressCard.classList.add('d-none');
+            resultCard.classList.remove('d-none');
+
+            // Badge + Message
+            const badge = document.getElementById('resultBadge');
+            const msg   = document.getElementById('resultMessage');
+
+            if (data.success) {
+                badge.className = 'badge bg-success';
+                badge.textContent = 'Erfolgreich';
+                msg.className = 'alert alert-success mb-3';
+            } else {
+                badge.className = 'badge bg-warning text-dark';
+                badge.textContent = 'Mit Warnungen';
+                msg.className = 'alert alert-warning mb-3';
+            }
+            msg.textContent = data.message ?? 'Import abgeschlossen.';
+
+            // Statistiken
+            document.getElementById('statOk').textContent      = data.ok      ?? '—';
+            document.getElementById('statSkipped').textContent = data.skipped ?? '—';
+            document.getElementById('statErrors').textContent  = (data.errors ?? []).length;
+
+            // Tabellen
+            if (data.tables && data.tables.length > 0) {
+                const sec  = document.getElementById('tablesSection');
+                const list = document.getElementById('tablesList');
+                list.innerHTML = '';
+                data.tables.forEach(t => {
+                    const b = document.createElement('span');
+                    b.className = 'badge bg-primary-subtle text-primary';
+                    b.textContent = t;
+                    list.appendChild(b);
+                });
+                sec.classList.remove('d-none');
+            }
+
+            // Fehler
+            if (data.errors && data.errors.length > 0) {
+                const sec  = document.getElementById('errorsSection');
+                const list = document.getElementById('errorsList');
+                list.innerHTML = '';
+                data.errors.forEach((err, i) => {
+                    const div = document.createElement('div');
+                    div.className = 'border rounded p-2 mb-2 bg-danger-subtle';
+                    div.innerHTML = `<div class="text-danger fw-semibold mb-1">Fehler ${i + 1}</div>
+                        <div class="text-muted" style="font-family:monospace;font-size:.75rem;word-break:break-all;">${escHtml(err.sql)}</div>
+                        <div class="text-danger mt-1" style="font-size:.8rem;">${escHtml(err.error)}</div>`;
+                    list.appendChild(div);
+                });
+                sec.classList.remove('d-none');
+            }
+
+            // Provisioning-Ergebnis (neuer Tenant)
+            if (data.provisioning) {
+                const sec = document.getElementById('provisionSection');
+                const res = document.getElementById('provisionResult');
+                const p   = data.provisioning;
+                res.innerHTML = `<div class="alert alert-success py-2 small mb-1">
+                    <i class="bi bi-building-add me-1"></i>${escHtml(p.message)}
+                </div>
+                <div class="row g-2 small mt-1">
+                    <div class="col-6"><span class="text-muted">Tenant-ID:</span> <strong>${p.tenant_id}</strong></div>
+                    <div class="col-6"><span class="text-muted">DB-Prefix:</span> <code>${escHtml(p.db_prefix)}</code></div>
+                    ${p.trial_ends ? `<div class="col-12"><span class="text-muted">Trial bis:</span> ${escHtml(p.trial_ends)}</div>` : ''}
+                    ${p.license_token ? `<div class="col-12"><span class="text-muted">Lizenz-Token:</span> <code style="word-break:break-all;">${escHtml(p.license_token)}</code></div>` : ''}
+                </div>`;
+                sec.classList.remove('d-none');
+            }
+
+            // Admin-User Ergebnis
+            if (data.admin) {
+                const sec = document.getElementById('adminSection');
+                const res = document.getElementById('adminResult');
+                const a   = data.admin;
+                if (a.success) {
+                    const icon   = a.action === 'created' ? 'bi-person-plus-fill' : 'bi-person-check-fill';
+                    const color  = a.action === 'created' ? 'success' : 'primary';
+                    res.innerHTML = `<div class="alert alert-${color} py-2 small mb-0">
+                        <i class="bi ${icon} me-1"></i>${escHtml(a.message)}
+                    </div>`;
+                } else {
+                    res.innerHTML = `<div class="alert alert-danger py-2 small mb-0">
+                        <i class="bi bi-exclamation-triangle me-1"></i>${escHtml(a.message)}
+                    </div>`;
+                }
+                sec.classList.remove('d-none');
+            }
+
+        } catch (err) {
+            progressCard.classList.add('d-none');
+            resultCard.classList.remove('d-none');
+            document.getElementById('resultBadge').className = 'badge bg-danger';
+            document.getElementById('resultBadge').textContent = 'Fehler';
+            const msg = document.getElementById('resultMessage');
+            msg.className = 'alert alert-danger mb-3';
+            msg.textContent = 'Netzwerkfehler: ' + err.message;
+        } finally {
+            importBtn.disabled = false;
+            importBtn.innerHTML = '<i class="bi bi-database-up me-2"></i>Import starten';
+            updateBtn();
+        }
+    });
+
+    // Passwort-Toggle
+    document.getElementById('togglePw').addEventListener('click', function () {
+        const pw   = document.getElementById('adminPassword');
+        const icon = document.getElementById('togglePwIcon');
+        if (pw.type === 'password') {
+            pw.type = 'text';
+            icon.className = 'bi bi-eye-slash';
+        } else {
+            pw.type = 'password';
+            icon.className = 'bi bi-eye';
+        }
+    });
+
+    function escHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+})();
+</script>
+{% endblock %}
