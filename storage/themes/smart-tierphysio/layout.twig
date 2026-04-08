@@ -366,7 +366,7 @@
                 <button class="btn btn-xs btn-outline-secondary" id="btn-mark-checks-read" style="font-size:.7rem;">
                     Alle als gelesen
                 </button>
-                <a href="/patienten" class="fs-xs fw-500">Patienten öffnen →</a>
+                <a href="/patienten" class="fs-xs fw-500">{% if is_trainer ?? false %}Hunde öffnen{% else %}Patienten öffnen{% endif %} →</a>
             </div>
         </div>
 
@@ -483,7 +483,7 @@
         <nav id="js-primary-nav" class="primary-nav flex-grow-1 custom-scroll">
             <ul id="js-nav-menu" class="nav-menu">
 
-                <li class="nav-title"><span>Tierphysio</span></li>
+                <li class="nav-title"><span>{% if is_trainer ?? false %}Hundeschule{% else %}Tierphysio{% endif %}</span></li>
 
                 <li class="{{ is_active('/dashboard') == 'active' ? 'active' : '' }}">
                     <a href="/dashboard" data-filter-tags="dashboard übersicht">
@@ -495,16 +495,16 @@
                 <li class="nav-title"><span>Verwaltung</span></li>
 
                 <li class="{{ is_active('/patienten') == 'active' ? 'active' : '' }}">
-                    <a href="/patienten" data-filter-tags="patienten tiere">
+                    <a href="/patienten" data-filter-tags="{% if is_trainer ?? false %}hunde tiere{% else %}patienten tiere{% endif %}">
                         <svg class="sa-icon"><use href="/themes/smart-tierphysio/icons/sprite.svg#heart"></use></svg>
-                        <span class="nav-link-text">Patienten</span>
+                        <span class="nav-link-text">{% if is_trainer ?? false %}Hunde{% else %}Patienten{% endif %}</span>
                     </a>
                 </li>
 
                 <li class="{{ is_active('/tierhalter') == 'active' ? 'active' : '' }}">
-                    <a href="/tierhalter" data-filter-tags="tierhalter besitzer kunden">
+                    <a href="/tierhalter" data-filter-tags="{% if is_trainer ?? false %}halter besitzer kunden{% else %}tierhalter besitzer kunden{% endif %}">
                         <svg class="sa-icon"><use href="/themes/smart-tierphysio/icons/sprite.svg#users"></use></svg>
-                        <span class="nav-link-text">Tierhalter</span>
+                        <span class="nav-link-text">{% if is_trainer ?? false %}Halter{% else %}Tierhalter{% endif %}</span>
                     </a>
                 </li>
 
