@@ -194,14 +194,16 @@ class Application
                 "SELECT table_name FROM information_schema.tables
                   WHERE table_schema = DATABASE()
                     AND table_name LIKE 't\_%\_users'
-                  ORDER BY table_name ASC
-                  LIMIT 1"
+                  ORDER BY table_name ASC"
             );
-            if (!empty($rows)) {
-                $tableName = $rows[0]['table_name'] ?? $rows[0]['TABLE_NAME'] ?? '';
-                if (str_ends_with($tableName, '_users')) {
-                    return substr($tableName, 0, -strlen('users'));
+            foreach ($rows as $row) {
+                $tableName = $row['table_name'] ?? $row['TABLE_NAME'] ?? '';
+                /* Exclude portal/owner tables — the real staff users table never
+                   contains 'portal' in its name. */
+                if (str_contains($tableName, 'portal') || str_contains($tableName, 'attempt')) {
+                    continue;
                 }
+                return substr($tableName, 0, -strlen('users'));
             }
         } catch (\Throwable) {}
         return '';
