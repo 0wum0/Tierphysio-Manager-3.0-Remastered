@@ -29,6 +29,24 @@ ALTER TABLE `t_demo_praxis_tierphys_6771f0_users`
 -- active aus is_active befüllen
 UPDATE `t_demo_praxis_tierphys_6771f0_users` SET `active` = `is_active` WHERE 1;
 
+-- ── patients: fehlende Spalten ────────────────────────────────────────────────
+ALTER TABLE `t_demo_praxis_tierphys_6771f0_patients`
+    ADD COLUMN IF NOT EXISTS `status`        VARCHAR(50) NOT NULL DEFAULT 'active' AFTER `notes`,
+    ADD COLUMN IF NOT EXISTS `deceased_date` DATE NULL DEFAULT NULL AFTER `status`,
+    ADD COLUMN IF NOT EXISTS `weight`        DECIMAL(6,2) NULL DEFAULT NULL AFTER `chip_number`,
+    ADD COLUMN IF NOT EXISTS `color`         VARCHAR(100) NULL AFTER `breed`,
+    ADD COLUMN IF NOT EXISTS `photo`         VARCHAR(255) NULL AFTER `color`;
+
+-- photo aus photo_path befüllen falls vorhanden
+UPDATE `t_demo_praxis_tierphys_6771f0_patients`
+    SET `photo` = `photo_path`
+    WHERE `photo` IS NULL AND `photo_path` IS NOT NULL;
+
+-- ── owners: fehlende Spalten ─────────────────────────────────────────────────
+ALTER TABLE `t_demo_praxis_tierphys_6771f0_owners`
+    ADD COLUMN IF NOT EXISTS `birth_date` DATE NULL DEFAULT NULL AFTER `phone`,
+    ADD COLUMN IF NOT EXISTS `street`     VARCHAR(255) NULL AFTER `birth_date`;
+
 -- ── invoices: fehlende Spalten ───────────────────────────────────────────────
 ALTER TABLE `t_demo_praxis_tierphys_6771f0_invoices`
     ADD COLUMN IF NOT EXISTS `invoice_number` VARCHAR(50) NULL AFTER `id`,

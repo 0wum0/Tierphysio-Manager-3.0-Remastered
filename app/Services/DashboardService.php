@@ -140,7 +140,7 @@ class DashboardService
                     CONCAT(o.first_name, ' ', o.last_name) AS owner_name, o.id AS owner_id
              FROM `{$this->t('patients')}` p
              LEFT JOIN `{$this->t('owners')}` o ON p.owner_id = o.id
-             WHERE p.birth_date IS NOT NULL AND p.status != 'verstorben'"
+             WHERE p.birth_date IS NOT NULL"
         );
 
         foreach ($patients as $row) {
