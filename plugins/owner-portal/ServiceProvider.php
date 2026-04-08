@@ -170,6 +170,7 @@ class ServiceProvider
     {
         try {
             $db           = Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $prefix       = $db->getPrefix();
             $migrationDir = __DIR__ . '/migrations';
             if (!is_dir($migrationDir)) return;
 
@@ -178,14 +179,44 @@ class ServiceProvider
             sort($files);
 
             foreach ($files as $file) {
-                $sql        = file_get_contents($file);
+                $sql = file_get_contents($file);
+
+                /* Replace bare table names with prefixed ones when a prefix is set.
+                   Pattern: backtick-quoted identifier that does NOT already start with the prefix. */
+                if ($prefix !== '') {
+                    $sql = preg_replace_callback(
+                        '/`([^`]+)`/',
+                        function (array $m) use ($prefix): string {
+                            $name = $m[1];
+                            /* Skip if already prefixed or looks like a column/constraint name
+                               (column names never contain underscored prefix pattern) */
+                            if (str_starts_with($name, $prefix)) {
+                                return "`{$name}`";
+                            }
+                            /* Only prefix known table-like names (contain underscore or are known tables) */
+                            $knownTables = [
+                                'owner_portal_users', 'owner_portal_login_attempts',
+                                'pet_exercises', 'portal_homework_plans',
+                                'portal_homework_plan_tasks', 'portal_homework_checklist',
+                                'portal_message_threads', 'portal_messages',
+                                'portal_check_notifications',
+                            ];
+                            if (in_array($name, $knownTables, true)) {
+                                return "`{$prefix}{$name}`";
+                            }
+                            return "`{$name}`";
+                        },
+                        $sql
+                    );
+                }
+
                 $statements = array_filter(array_map('trim', explode(';', $sql)));
                 foreach ($statements as $stmt) {
                     if (!empty($stmt)) {
                         try {
                             $db->execute($stmt);
                         } catch (\Throwable) {
-                            /* Table already exists — skip */
+                            /* Table already exists or constraint duplicate — skip */
                         }
                     }
                 }
