@@ -328,6 +328,16 @@
 
         const formData = new FormData(importForm);
 
+        // Alle Ergebnis-Sektionen vom letzten Run zurücksetzen
+        ['tablesSection','errorsSection','setupSection','adminSection','provisionSection'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.add('d-none');
+        });
+        ['tablesList','errorsList','setupResult','adminResult','provisionResult'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.innerHTML = '';
+        });
+
         // UI: zeige Fortschritt
         guideCard.classList.add('d-none');
         resultCard.classList.add('d-none');

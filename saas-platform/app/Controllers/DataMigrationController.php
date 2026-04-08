@@ -394,58 +394,71 @@ class DataMigrationController extends Controller
         return $sql;
     }
 
-    // ── SQL in einzelne Statements aufteilen (respektiert Strings) ──────────
+    // ── SQL in einzelne Statements aufteilen (respektiert Strings + Backticks) ─
     private function splitStatements(string $sql): array
     {
         $statements = [];
         $current    = '';
         $inString   = false;
+        $inBacktick = false;
         $stringChar = '';
         $len        = strlen($sql);
 
         for ($i = 0; $i < $len; $i++) {
             $c = $sql[$i];
 
+            if ($inBacktick) {
+                $current .= $c;
+                if ($c === '`') {
+                    $inBacktick = false;
+                }
+                continue;
+            }
+
             if ($inString) {
                 $current .= $c;
                 if ($c === '\\') {
-                    // Escaped char
                     if ($i + 1 < $len) {
                         $current .= $sql[++$i];
                     }
                 } elseif ($c === $stringChar) {
                     $inString = false;
                 }
-            } else {
-                if ($c === '"' || $c === "'") {
-                    $inString   = true;
-                    $stringChar = $c;
-                    $current   .= $c;
-                } elseif ($c === '-' && $i + 1 < $len && $sql[$i + 1] === '-') {
-                    // Zeilen-Kommentar überspringen bis \n
-                    while ($i < $len && $sql[$i] !== "\n") {
-                        $i++;
-                    }
-                } elseif ($c === '#') {
-                    while ($i < $len && $sql[$i] !== "\n") {
-                        $i++;
-                    }
-                } elseif ($c === '/' && $i + 1 < $len && $sql[$i + 1] === '*') {
-                    // Block-Kommentar überspringen
-                    $i += 2;
-                    while ($i + 1 < $len && !($sql[$i] === '*' && $sql[$i + 1] === '/')) {
-                        $i++;
-                    }
-                    $i += 2;
-                } elseif ($c === ';') {
-                    $stmt = trim($current);
-                    if ($stmt !== '') {
-                        $statements[] = $stmt;
-                    }
-                    $current = '';
-                } else {
-                    $current .= $c;
+                continue;
+            }
+
+            // Außerhalb von Strings und Backticks
+            if ($c === '`') {
+                $inBacktick = true;
+                $current   .= $c;
+            } elseif ($c === '"' || $c === "'") {
+                $inString   = true;
+                $stringChar = $c;
+                $current   .= $c;
+            } elseif ($c === '-' && $i + 1 < $len && $sql[$i + 1] === '-') {
+                // Zeilen-Kommentar bis \n überspringen
+                while ($i < $len && $sql[$i] !== "\n") {
+                    $i++;
                 }
+            } elseif ($c === '#') {
+                while ($i < $len && $sql[$i] !== "\n") {
+                    $i++;
+                }
+            } elseif ($c === '/' && $i + 1 < $len && $sql[$i + 1] === '*') {
+                // Block-Kommentar überspringen
+                $i += 2;
+                while ($i + 1 < $len && !($sql[$i] === '*' && $sql[$i + 1] === '/')) {
+                    $i++;
+                }
+                $i += 2;
+            } elseif ($c === ';') {
+                $stmt = trim($current);
+                if ($stmt !== '') {
+                    $statements[] = $stmt;
+                }
+                $current = '';
+            } else {
+                $current .= $c;
             }
         }
 
