@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Saas\Controllers\TenantAuthController;
+use Saas\Controllers\TenantAccountController;
 use Saas\Controllers\RegistrationController;
 use Saas\Controllers\LegalController;
 use Saas\Controllers\DemoController;
@@ -27,6 +28,12 @@ $router->post('/reset-password',  [TenantAuthController::class, 'resetSubmit']);
 // ── TID Availability Check (AJAX) ────────────────────────────────────────────
 $router->get('/check-tid',  [TenantAuthController::class, 'checkTid']);
 $router->post('/check-tid', [TenantAuthController::class, 'checkTid']);
+
+// ── Tenant Account (eingeloggte Praxis-Besitzer) ─────────────────────────────
+$router->get('/account',           [TenantAccountController::class, 'index']);
+$router->post('/account/update',   [TenantAccountController::class, 'update']);
+$router->post('/account/password', [TenantAccountController::class, 'changePassword']);
+$router->post('/account/plan',     [TenantAccountController::class, 'changePlan']);
 
 // ── Public Registration ──────────────────────────────────────────────────────
 $router->get('/register',        [RegistrationController::class, 'index']);

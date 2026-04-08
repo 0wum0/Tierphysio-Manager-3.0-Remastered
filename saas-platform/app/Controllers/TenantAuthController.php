@@ -30,10 +30,7 @@ class TenantAuthController extends Controller
     public function landing(array $params = []): void
     {
         if ($this->session->has('platform_tid')) {
-            $appUrl = $this->config->get('platform.app_url', '');
-            if ($appUrl) {
-                $this->redirect($appUrl);
-            }
+            $this->redirect('/account');
         }
 
         $plans = $this->planRepo->allActive();
@@ -48,8 +45,7 @@ class TenantAuthController extends Controller
     public function loginForm(array $params = []): void
     {
         if ($this->session->has('platform_tid')) {
-            $appUrl = $this->config->get('platform.app_url', '');
-            $this->redirect($appUrl ?: '/');
+            $this->redirect('/account');
         }
 
         $this->render('auth/tenant-login.twig', [
@@ -91,8 +87,7 @@ class TenantAuthController extends Controller
 
         $this->tenantRepo->updateLastLogin((int)$tenant['id']);
 
-        $appUrl = $this->config->get('platform.app_url', '');
-        $this->redirect($appUrl ?: '/');
+        $this->redirect('/account');
     }
 
     public function logout(array $params = []): void

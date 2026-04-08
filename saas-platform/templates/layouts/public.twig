@@ -45,10 +45,17 @@
 
 <nav class="navbar navbar-expand-lg sticky-top">
     <div class="container">
-        <a class="navbar-brand" href="/">Tierphysio <span>SaaS</span></a>
+        <a class="navbar-brand" href="/">Thera<span>Pano</span></a>
         <div class="ms-auto d-flex gap-2">
-            <a href="/admin/login" class="btn btn-sm btn-outline-secondary">Admin-Login</a>
-            <a href="/register" class="btn btn-sm btn-primary">Kostenlos testen</a>
+            {% if tenant_name %}
+                <a href="/account" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-person-circle me-1"></i>{{ tenant_name }}
+                </a>
+                <a href="/logout" class="btn btn-sm btn-outline-secondary">Abmelden</a>
+            {% else %}
+                <a href="/login" class="btn btn-sm btn-outline-secondary">Anmelden</a>
+                <a href="/register" class="btn btn-sm btn-primary">Kostenlos testen</a>
+            {% endif %}
         </div>
     </div>
 </nav>
