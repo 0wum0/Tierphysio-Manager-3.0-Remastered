@@ -46,7 +46,7 @@ class TherapyCareReportService
 
         $logoFile = null;
         if (!empty($settings['company_logo'])) {
-            $uploadsDir    = realpath(STORAGE_PATH . '/uploads');
+            $uploadsDir    = realpath(tenant_storage_path('uploads'));
             $logoCandidate = $uploadsDir . '/' . basename($settings['company_logo']);
             $logoReal      = realpath($logoCandidate);
             if ($uploadsDir && $logoReal && str_starts_with($logoReal, $uploadsDir)) {

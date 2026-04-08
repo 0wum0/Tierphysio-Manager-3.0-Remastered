@@ -198,7 +198,7 @@ class BefundbogenController extends Controller
         $pdfContent = $this->pdfService->generate($befundbogen, $befundbogen['felder'], $patient, $owner, $settings);
 
         // Save PDF to storage
-        $storagePath = STORAGE_PATH . '/befunde';
+        $storagePath = tenant_storage_path('befunde');
         if (!is_dir($storagePath)) {
             mkdir($storagePath, 0755, true);
         }
@@ -300,7 +300,7 @@ class BefundbogenController extends Controller
         $settings   = $this->settings->all();
         $pdfContent = $this->pdfService->generate($befundbogen, $befundbogen['felder'], $patient, $owner, $settings);
 
-        $storagePath = STORAGE_PATH . '/befunde';
+        $storagePath = tenant_storage_path('befunde');
         if (!is_dir($storagePath)) {
             mkdir($storagePath, 0755, true);
         }

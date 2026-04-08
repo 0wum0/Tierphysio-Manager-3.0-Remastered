@@ -175,7 +175,7 @@ class SettingsController extends Controller
     {
         $this->validateCsrf();
 
-        $destination = STORAGE_PATH . '/uploads';
+        $destination = tenant_storage_path('uploads');
         $filename    = $this->uploadFile('logo', $destination, ['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 
         if ($filename === false) {

@@ -43,7 +43,7 @@ class VetReportService
         // Path containment: only allow logo files within uploads dir
         $logoFile = null;
         if (!empty($settings['company_logo'])) {
-            $uploadsDir    = realpath(STORAGE_PATH . '/uploads');
+            $uploadsDir    = realpath(tenant_storage_path('uploads'));
             $logoCandidate = $uploadsDir . '/' . basename($settings['company_logo']);
             $logoReal      = realpath($logoCandidate);
             if ($uploadsDir && $logoReal && strpos($logoReal, $uploadsDir) === 0) {
@@ -188,7 +188,7 @@ class VetReportService
         $hasPhoto = false;
         $patPhoto = null;
         if (!empty($patient['photo'])) {
-            $patientsDir    = realpath(STORAGE_PATH . '/patients/' . (int)$patient['id']);
+            $patientsDir    = realpath(tenant_storage_path('patients/' . (int)$patient['id']));
             if ($patientsDir) {
                 $photoCandidate = $patientsDir . '/' . basename($patient['photo']);
                 $photoReal      = realpath($photoCandidate);

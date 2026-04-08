@@ -329,8 +329,8 @@ class OwnerPortalController extends Controller
         if (!$file) { $this->abort(404); return; }
 
         $candidates = [
-            STORAGE_PATH . '/patients/' . $petId . '/' . $file,
-            STORAGE_PATH . '/patients/' . $file,
+            tenant_storage_path('patients/' . $petId . '/' . $file),
+            tenant_storage_path('patients/' . $file),
         ];
 
         $path = null;
@@ -401,7 +401,7 @@ class OwnerPortalController extends Controller
 
         /* Photo upload */
         if (!empty($_FILES['photo']['name']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
-            $destination = STORAGE_PATH . '/patients/' . $petId;
+            $destination = tenant_storage_path('patients/' . $petId);
             if (!is_dir($destination)) {
                 mkdir($destination, 0755, true);
             }

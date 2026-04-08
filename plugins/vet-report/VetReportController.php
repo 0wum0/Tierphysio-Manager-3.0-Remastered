@@ -105,7 +105,7 @@ class VetReportController extends Controller
 
         // Path traversal prevention: basename() + containment check
         $safeFilename = basename($row['filename']);
-        $storageDir   = realpath(STORAGE_PATH . '/vet-reports');
+        $storageDir   = realpath(tenant_storage_path('vet-reports'));
         $path         = $storageDir . '/' . $safeFilename;
         $realPath     = realpath($path);
 
@@ -149,7 +149,7 @@ class VetReportController extends Controller
 
             // Path traversal prevention: basename() + containment check
             $safeFilename = basename($row['filename']);
-            $storageDir   = realpath(STORAGE_PATH . '/vet-reports');
+            $storageDir   = realpath(tenant_storage_path('vet-reports'));
             if ($storageDir) {
                 $path     = $storageDir . '/' . $safeFilename;
                 $realPath = realpath($path);
@@ -232,7 +232,7 @@ class VetReportController extends Controller
     private function saveReport(int $patientId, string $filename, string $pdfContent): void
     {
         try {
-            $dir = STORAGE_PATH . '/vet-reports';
+            $dir = tenant_storage_path('vet-reports');
             if (!is_dir($dir)) {
                 mkdir($dir, 0755, true);
             }

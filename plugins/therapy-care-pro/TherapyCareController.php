@@ -353,9 +353,9 @@ class TherapyCareController extends Controller
             $data['include_timeline'] ? $timeline : []);
 
         $filename = 'therapiebericht-' . $patientId . '-' . date('Ymd-His') . '.pdf';
-        $storageDir = defined('STORAGE_PATH') ? STORAGE_PATH . '/patients/' . $patientId : '';
-        if ($storageDir && !is_dir($storageDir)) { @mkdir($storageDir, 0755, true); }
-        if ($storageDir) { file_put_contents($storageDir . '/' . $filename, $pdf); }
+        $storageDir = tenant_storage_path('patients/' . $patientId);
+        if (!is_dir($storageDir)) { @mkdir($storageDir, 0755, true); }
+        file_put_contents($storageDir . '/' . $filename, $pdf);
 
         $this->repo->updateTherapyReportFilename($reportId, $filename);
 
@@ -378,7 +378,7 @@ class TherapyCareController extends Controller
         if (!$report || $report['patient_id'] !== $patientId) { $this->abort(404); }
         if (!$report['filename']) { $this->abort(404); }
 
-        $file = (defined('STORAGE_PATH') ? STORAGE_PATH : '') . '/patients/' . $patientId . '/' . $report['filename'];
+        $file = tenant_storage_path('patients/' . $patientId . '/' . $report['filename']);
         if (!file_exists($file)) {
             $this->session->flash('error', 'Datei nicht gefunden. Bitte erneut generieren.');
             $this->redirect("/patienten/{$patientId}/berichte");
@@ -409,7 +409,7 @@ class TherapyCareController extends Controller
             return;
         }
 
-        $file = (defined('STORAGE_PATH') ? STORAGE_PATH : '') . '/patients/' . $patientId . '/' . ($report['filename'] ?? '');
+        $file = tenant_storage_path('patients/' . $patientId . '/' . ($report['filename'] ?? ''));
         if (!file_exists($file)) {
             $this->session->flash('error', 'PDF nicht gefunden.');
             $this->redirect("/patienten/{$patientId}/berichte");
@@ -447,7 +447,7 @@ class TherapyCareController extends Controller
 
         if ($report && $report['patient_id'] === $patientId) {
             if ($report['filename']) {
-                $file = (defined('STORAGE_PATH') ? STORAGE_PATH : '') . '/patients/' . $patientId . '/' . $report['filename'];
+                $file = tenant_storage_path('patients/' . $patientId . '/' . $report['filename']);
                 if (file_exists($file)) { @unlink($file); }
             }
             $this->repo->deleteTherapyReport($reportId);

@@ -544,8 +544,7 @@ class MobileApiController
         $date    = $_POST['entry_date'] ?? date('Y-m-d');
 
         // Determine upload directory (same path as web PatientController)
-        $storageBase = defined('STORAGE_PATH') ? rtrim(STORAGE_PATH, '/') : rtrim(dirname(__DIR__, 2) . '/storage', '/');
-        $uploadDir   = $storageBase . '/patients/' . $patientId . '/timeline/';
+        $uploadDir = tenant_storage_path('patients/' . $patientId . '/timeline/');
         if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
 
         // Validate by real MIME type
@@ -623,11 +622,10 @@ class MobileApiController
         $file = basename($params['file'] ?? '');
         if ($file === '') { http_response_code(404); exit; }
 
-        $storageBase = defined('STORAGE_PATH') ? rtrim(STORAGE_PATH, '/') : rtrim(dirname(__DIR__, 2) . '/storage', '/');
         $candidates  = [
-            $storageBase . '/patients/' . $id . '/' . $file,
-            $storageBase . '/patients/' . $file,
-            $storageBase . '/intake/' . $file,
+            tenant_storage_path('patients/' . $id . '/' . $file),
+            tenant_storage_path('patients/' . $file),
+            tenant_storage_path('intake/' . $file),
         ];
 
         $path = null;
@@ -652,10 +650,9 @@ class MobileApiController
         $file = basename($params['file'] ?? '');
         if ($file === '') { http_response_code(404); exit; }
 
-        $storageBase = defined('STORAGE_PATH') ? rtrim(STORAGE_PATH, '/') : rtrim(dirname(__DIR__, 2) . '/storage', '/');
         $candidates  = [
-            $storageBase . '/patients/' . $id . '/timeline/' . $file,
-            $storageBase . '/patients/' . $id . '/' . $file,
+            tenant_storage_path('patients/' . $id . '/timeline/' . $file),
+            tenant_storage_path('patients/' . $id . '/' . $file),
         ];
 
         $path = null;
@@ -1653,8 +1650,7 @@ class MobileApiController
         $allowed  = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'image/gif' => 'gif'];
         if (!isset($allowed[$mime])) $this->error('Nur Bilder erlaubt (jpg, png, webp, gif).');
 
-        $storageBase = defined('STORAGE_PATH') ? rtrim(STORAGE_PATH, '/') : rtrim(dirname(__DIR__, 2) . '/storage', '/');
-        $dir = $storageBase . '/patients/' . $id . '/';
+        $dir = tenant_storage_path('patients/' . $id . '/');
         if (!is_dir($dir)) mkdir($dir, 0755, true);
 
         $filename = 'photo_' . bin2hex(random_bytes(8)) . '.' . $allowed[$mime];
@@ -2561,7 +2557,7 @@ class MobileApiController
             $mime    = $finfo->file($_FILES['image']['tmp_name']);
             $allowed = ['image/jpeg' => 'jpg','image/png' => 'png','image/webp' => 'webp','image/gif' => 'gif'];
             if (isset($allowed[$mime])) {
-                $dir = defined('STORAGE_PATH') ? rtrim(STORAGE_PATH, '/') . '/uploads/exercises/' : rtrim(dirname(__DIR__, 2) . '/storage', '/') . '/uploads/exercises/';
+                $dir = tenant_storage_path('uploads/exercises/');
                 if (!is_dir($dir)) mkdir($dir, 0755, true);
                 $filename = bin2hex(random_bytes(12)) . '.' . $allowed[$mime];
                 if (move_uploaded_file($_FILES['image']['tmp_name'], $dir . $filename)) {
@@ -2615,7 +2611,7 @@ class MobileApiController
             $mime    = $finfo->file($_FILES['image']['tmp_name']);
             $allowed = ['image/jpeg' => 'jpg','image/png' => 'png','image/webp' => 'webp','image/gif' => 'gif'];
             if (isset($allowed[$mime])) {
-                $dir = defined('STORAGE_PATH') ? rtrim(STORAGE_PATH, '/') . '/uploads/exercises/' : rtrim(dirname(__DIR__, 2) . '/storage', '/') . '/uploads/exercises/';
+                $dir = tenant_storage_path('uploads/exercises/');
                 if (!is_dir($dir)) mkdir($dir, 0755, true);
                 $filename = bin2hex(random_bytes(12)) . '.' . $allowed[$mime];
                 if (move_uploaded_file($_FILES['image']['tmp_name'], $dir . $filename)) {
@@ -4402,7 +4398,7 @@ class MobileApiController
 
         /* Photo upload */
         if (!empty($_FILES['photo']['name']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
-            $dir = STORAGE_PATH . '/patients/' . $petId;
+            $dir = tenant_storage_path('patients/' . $petId);
             if (!is_dir($dir)) mkdir($dir, 0755, true);
             $ext   = pathinfo($_FILES['photo']['name'], PATHINFO_EXTENSION);
             $fname = 'photo_' . bin2hex(random_bytes(8)) . '.' . strtolower($ext);

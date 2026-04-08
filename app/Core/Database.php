@@ -36,6 +36,29 @@ class Database
         return $this->tablePrefix . $table;
     }
 
+    /**
+     * Returns the tenant-specific storage base path.
+     * If a table prefix is set (e.g. "t_abc123_"), the storage is isolated under
+     * STORAGE_PATH/tenants/{prefix_without_trailing_underscore}/
+     * Falls back to plain STORAGE_PATH when no prefix is set (single-tenant / dev).
+     */
+    public function storagePath(string $subPath = ''): string
+    {
+        $base = defined('STORAGE_PATH') ? STORAGE_PATH : (dirname(__DIR__, 2) . '/storage');
+
+        if ($this->tablePrefix !== '') {
+            /* Strip trailing underscore: "t_abc123_" → "t_abc123" */
+            $slug = rtrim($this->tablePrefix, '_');
+            $base = $base . '/tenants/' . $slug;
+        }
+
+        if ($subPath !== '') {
+            return $base . '/' . ltrim($subPath, '/');
+        }
+
+        return $base;
+    }
+
     private function connect(): void
     {
         $host     = $this->config->get('db.host');

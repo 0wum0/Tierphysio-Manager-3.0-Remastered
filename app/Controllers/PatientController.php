@@ -321,7 +321,7 @@ class PatientController extends Controller
         $wantsJson = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
             || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json');
 
-        $destination = STORAGE_PATH . '/patients/' . $params['id'];
+        $destination = tenant_storage_path('patients/' . $params['id']);
         if (!is_dir($destination)) {
             mkdir($destination, 0755, true);
         }
@@ -371,7 +371,7 @@ class PatientController extends Controller
 
         $file = null;
         if (!empty($_FILES['attachment']['name'])) {
-            $destination = STORAGE_PATH . '/patients/' . $params['id'] . '/timeline';
+            $destination = tenant_storage_path('patients/' . $params['id'] . '/timeline');
             if (!is_dir($destination)) {
                 mkdir($destination, 0755, true);
             }
@@ -446,13 +446,13 @@ class PatientController extends Controller
         if ($preUploaded !== '') {
             // Sicherheitscheck: nur Dateiname, kein Pfad-Traversal
             $safeFilename = basename($preUploaded);
-            $uploadedPath = STORAGE_PATH . '/patients/' . (int)$params['id'] . '/timeline/' . $safeFilename;
+            $uploadedPath = tenant_storage_path('patients/' . (int)$params['id'] . '/timeline/' . $safeFilename);
             if (file_exists($uploadedPath)) {
                 $data['attachment'] = $safeFilename;
             }
         } elseif (!empty($_FILES['attachment']['name']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
             // Fallback: direkter Upload (kleine Dateien / Bilder)
-            $destination = STORAGE_PATH . '/patients/' . $params['id'] . '/timeline';
+            $destination = tenant_storage_path('patients/' . $params['id'] . '/timeline');
             if (!is_dir($destination)) {
                 mkdir($destination, 0755, true);
             }
@@ -504,7 +504,7 @@ class PatientController extends Controller
             exit;
         }
 
-        $destination = STORAGE_PATH . '/patients/' . (int)$params['id'] . '/timeline';
+        $destination = tenant_storage_path('patients/' . (int)$params['id'] . '/timeline');
         if (!is_dir($destination)) {
             mkdir($destination, 0755, true);
         }
@@ -787,7 +787,7 @@ class PatientController extends Controller
             $this->abort(404);
         }
 
-        $destination = STORAGE_PATH . '/patients/' . $params['id'] . '/docs';
+        $destination = tenant_storage_path('patients/' . $params['id'] . '/docs');
         $filename = $this->uploadFile('document', $destination);
 
         if ($filename === false) {
@@ -806,7 +806,7 @@ class PatientController extends Controller
         }
 
         $file = basename($this->sanitize($params['file']));
-        $path = STORAGE_PATH . '/patients/' . (int)$params['id'] . '/timeline/' . $file;
+        $path = tenant_storage_path('patients/' . (int)$params['id'] . '/timeline/' . $file);
 
         if (!file_exists($path) || !is_file($path)) {
             $this->abort(404);
@@ -833,9 +833,9 @@ class PatientController extends Controller
 
         /* Check multiple locations: per-patient folder, flat patients dir, intake dir */
         $candidates = [
-            STORAGE_PATH . '/patients/' . (int)$params['id'] . '/' . $file,
-            STORAGE_PATH . '/patients/' . $file,
-            STORAGE_PATH . '/intake/' . $file,
+            tenant_storage_path('patients/' . (int)$params['id'] . '/' . $file),
+            tenant_storage_path('patients/' . $file),
+            tenant_storage_path('intake/' . $file),
         ];
 
         $path = null;

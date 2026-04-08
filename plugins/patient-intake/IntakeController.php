@@ -209,8 +209,8 @@ class IntakeController extends Controller
             /* 2. Copy photo from intake storage to patients storage */
             $photoFilename = '';
             if (!empty($submission['patient_photo'])) {
-                $src    = STORAGE_PATH . '/intake/' . $submission['patient_photo'];
-                $dstDir = STORAGE_PATH . '/patients';
+                $src    = tenant_storage_path('intake/' . $submission['patient_photo']);
+                $dstDir = tenant_storage_path('patients');
                 if (!is_dir($dstDir)) {
                     mkdir($dstDir, 0755, true);
                 }
@@ -413,7 +413,7 @@ class IntakeController extends Controller
             default      => 'gif',
         };
 
-        $dir = STORAGE_PATH . '/intake';
+        $dir = tenant_storage_path('intake');
         if (!is_dir($dir)) {
             mkdir($dir, 0755, true);
         }
@@ -431,7 +431,7 @@ class IntakeController extends Controller
     public function servePhoto(array $params = []): void
     {
         $file = basename($this->sanitize($params['file']));
-        $path = STORAGE_PATH . '/intake/' . $file;
+        $path = tenant_storage_path('intake/' . $file);
 
         if (!file_exists($path) || !is_file($path)) {
             $this->abort(404);

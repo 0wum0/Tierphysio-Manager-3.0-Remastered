@@ -337,8 +337,8 @@ class InviteController extends Controller
             $patientPhoto = '';
             if (!empty($photoFilename)) {
                 try {
-                    $src    = STORAGE_PATH . '/intake/' . $photoFilename;
-                    $dstDir = STORAGE_PATH . '/patients';
+                    $src    = tenant_storage_path('intake/' . $photoFilename);
+                    $dstDir = tenant_storage_path('patients');
                     if (!is_dir($dstDir)) mkdir($dstDir, 0755, true);
                     $dst = $dstDir . '/' . $photoFilename;
                     if (file_exists($src)) {
@@ -544,7 +544,7 @@ class InviteController extends Controller
             default      => 'gif',
         };
 
-        $dir = STORAGE_PATH . '/intake';
+        $dir = tenant_storage_path('intake');
         if (!is_dir($dir)) mkdir($dir, 0755, true);
 
         $filename = 'invite_' . uniqid() . '.' . $ext;

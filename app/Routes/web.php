@@ -465,7 +465,7 @@ $router->get('/admin/cronjobs/log',                      [CronAdminController::c
 
 // Serve storage files via index.php — storage/ is outside DocumentRoot when public/ is the root
 function serveStorageFile(string $dir, string $file): void {
-    $base = realpath(STORAGE_PATH . '/' . $dir);
+    $base = realpath(tenant_storage_path($dir));
     if ($base === false || $file === '') { http_response_code(403); exit; }
     $path = realpath($base . '/' . $file);
     if ($path === false || !str_starts_with($path, $base . DIRECTORY_SEPARATOR)) {

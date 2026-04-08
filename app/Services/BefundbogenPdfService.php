@@ -40,7 +40,7 @@ class BefundbogenPdfService
         $companyPhone   = $settings['company_phone']   ?? '';
         $companyEmail   = $settings['company_email']   ?? '';
         $logoFile       = !empty($settings['company_logo'])
-            ? STORAGE_PATH . '/uploads/' . $settings['company_logo']
+            ? tenant_storage_path('uploads/' . $settings['company_logo'])
             : null;
 
         // ── Layout constants (identical to PdfService) ───────────────────

@@ -293,7 +293,7 @@ class TherapyCarePortalController extends Controller
             $this->abort(404);
         }
 
-        $file = (defined('STORAGE_PATH') ? STORAGE_PATH : '') . '/patients/' . $patientId . '/' . $report['filename'];
+        $file = tenant_storage_path('patients/' . $patientId . '/' . $report['filename']);
         if (!file_exists($file)) { $this->abort(404); }
 
         header('Content-Type: application/pdf');

@@ -62,7 +62,7 @@ class PdfService
         $bankBic        = $settings['bank_bic']        ?? '';
         $taxNumber      = $settings['tax_number']      ?? '';
         $logoFile       = !empty($settings['company_logo'])
-            ? STORAGE_PATH . '/uploads/' . $settings['company_logo']
+            ? tenant_storage_path('uploads/' . $settings['company_logo'])
             : null;
 
         // ── Layout constants ─────────────────────────────────────────────
@@ -570,7 +570,7 @@ class PdfService
         $bankBic        = $settings['bank_bic']        ?? '';
         $taxNumber      = $settings['tax_number']      ?? '';
         $logoFile       = !empty($settings['company_logo'])
-            ? STORAGE_PATH . '/uploads/' . $settings['company_logo']
+            ? tenant_storage_path('uploads/' . $settings['company_logo'])
             : null;
 
         $sidebarW  = 42;
@@ -1010,7 +1010,7 @@ class PdfService
         $companyEmail = $settings['company_email']  ?? '';
         $companyPhone = $settings['company_phone']  ?? '';
         $logoFile     = !empty($settings['company_logo'])
-            ? STORAGE_PATH . '/uploads/' . $settings['company_logo']
+            ? tenant_storage_path('uploads/' . $settings['company_logo'])
             : null;
 
         $darkColor = $this->hexToRgb($settings['pdf_color_company_name'] ?? '#1E1E1E');
@@ -1374,7 +1374,7 @@ class PdfService
         $showWebsite    = ($settings['pdf_show_website']    ?? '0') === '1';
 
         $logoFile = !empty($settings['company_logo'])
-            ? STORAGE_PATH . '/uploads/' . $settings['company_logo']
+            ? tenant_storage_path('uploads/' . $settings['company_logo'])
             : null;
 
         $sidebarW  = 42;
@@ -1891,7 +1891,7 @@ class PdfService
         $bankBic        = $settings['bank_bic']        ?? '';
         $taxNumber      = $settings['tax_number']      ?? '';
         $logoFile       = !empty($settings['company_logo'])
-            ? STORAGE_PATH . '/uploads/' . $settings['company_logo']
+            ? tenant_storage_path('uploads/' . $settings['company_logo'])
             : null;
         $showIban    = ($settings['pdf_show_iban']       ?? '1') === '1';
         $showWebsite = ($settings['pdf_show_website']    ?? '0') === '1';

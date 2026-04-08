@@ -254,7 +254,7 @@ class OwnerPortalAdminController extends Controller
 
         $image = null;
         if (!empty($_FILES['image']['name'])) {
-            $image = $this->uploadFile('image', STORAGE_PATH . '/uploads/exercises', [
+            $image = $this->uploadFile('image', tenant_storage_path('uploads/exercises'), [
                 'image/jpeg', 'image/png', 'image/webp', 'image/gif',
             ]);
         }
@@ -303,7 +303,7 @@ class OwnerPortalAdminController extends Controller
         ];
 
         if (!empty($_FILES['image']['name'])) {
-            $image = $this->uploadFile('image', STORAGE_PATH . '/uploads/exercises', [
+            $image = $this->uploadFile('image', tenant_storage_path('uploads/exercises'), [
                 'image/jpeg', 'image/png', 'image/webp', 'image/gif',
             ]);
             if ($image) $data['image'] = $image;
