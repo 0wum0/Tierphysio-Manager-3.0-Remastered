@@ -57,18 +57,28 @@ class OwnerAuthController extends Controller
         $password = $this->post('password', '');
         $ip       = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 
-        $this->repo->cleanOldAttempts();
+        /* ── Multi-tenant login: find user first, THEN use tenant-prefixed tables ── */
+        [$user, $tenantPrefix] = $this->findUserAcrossAllTenants($email);
 
-        if ($this->repo->countRecentAttempts($email, $ip, 15) >= 5) {
-            $this->session->flash('error', 'Zu viele Anmeldeversuche. Bitte warte 15 Minuten.');
-            $this->redirect('/portal/login');
-            return;
+        /* Apply prefix to repo BEFORE rate-limit checks so table names are correct */
+        if ($tenantPrefix !== '') {
+            $this->session->set('portal_tenant_prefix', $tenantPrefix);
+            $this->session->set('tenant_table_prefix', $tenantPrefix);
+            $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $db->setPrefix($tenantPrefix);
         }
 
-        $this->repo->logLoginAttempt($email, $ip);
+        try { $this->repo->cleanOldAttempts(); } catch (\Throwable) {}
 
-        /* ── Multi-tenant login: search all tenant portal-user tables ── */
-        [$user, $tenantPrefix] = $this->findUserAcrossAllTenants($email);
+        try {
+            if ($this->repo->countRecentAttempts($email, $ip, 15) >= 5) {
+                $this->session->flash('error', 'Zu viele Anmeldeversuche. Bitte warte 15 Minuten.');
+                $this->redirect('/portal/login');
+                return;
+            }
+        } catch (\Throwable) {}
+
+        try { $this->repo->logLoginAttempt($email, $ip); } catch (\Throwable) {}
 
         if (!$user || !$user['is_active'] || !$user['password_hash'] || !password_verify($password, $user['password_hash'])) {
             $this->session->flash('error', 'E-Mail oder Passwort ist falsch.');
@@ -79,13 +89,6 @@ class OwnerAuthController extends Controller
         $this->repo->updateLastLogin((int)$user['id']);
         $this->session->set('owner_portal_user_id', (int)$user['id']);
         $this->session->set('owner_portal_owner_id', (int)$user['owner_id']);
-
-        /* Store the tenant prefix so Application bootstrap uses the correct tables */
-        if ($tenantPrefix !== '') {
-            $this->session->set('portal_tenant_prefix', $tenantPrefix);
-            $this->session->set('tenant_table_prefix', $tenantPrefix);
-        }
-
         $this->redirect('/portal/dashboard');
     }
 
