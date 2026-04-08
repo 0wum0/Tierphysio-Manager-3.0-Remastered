@@ -208,9 +208,9 @@ class DashboardService
     public function saveLayout(int $userId, array $layout): void
     {
         $this->db->execute(
-            "INSERT INTO `{$this->t('user_preferences')}` (user_id, pref_key, pref_value)
+            "INSERT INTO `{$this->t('user_preferences')}` (user_id, `key`, `value`)
              VALUES (?, 'dashboard_layout', ?)
-             ON DUPLICATE KEY UPDATE pref_value = VALUES(pref_value), updated_at = NOW()",
+             ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)",
             [$userId, json_encode($layout, JSON_UNESCAPED_UNICODE)]
         );
     }
@@ -218,7 +218,7 @@ class DashboardService
     public function loadLayout(int $userId): ?array
     {
         $row = $this->db->fetchColumn(
-            "SELECT pref_value FROM `{$this->t('user_preferences')}` WHERE user_id = ? AND pref_key = 'dashboard_layout'",
+            "SELECT `value` FROM `{$this->t('user_preferences')}` WHERE user_id = ? AND `key` = 'dashboard_layout'",
             [$userId]
         );
         if (!$row) return null;
@@ -229,7 +229,7 @@ class DashboardService
     public function deleteLayout(int $userId): void
     {
         $this->db->execute(
-            "DELETE FROM `{$this->t('user_preferences')}` WHERE user_id = ? AND pref_key = 'dashboard_layout'",
+            "DELETE FROM `{$this->t('user_preferences')}` WHERE user_id = ? AND `key` = 'dashboard_layout'",
             [$userId]
         );
     }
