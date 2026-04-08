@@ -16,12 +16,7 @@ class OwnerPortalMailService
 
     public function sendInvite(string $email, string $token): void
     {
-        $configured  = $this->settings->get('portal_base_url', '');
-        $baseUrl     = $configured !== ''
-            ? rtrim($configured, '/')
-            : ((isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
-               . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost'));
-        $inviteUrl   = $baseUrl . '/portal/einladung/' . $token;
+        $inviteUrl   = $this->getBaseUrl() . '/portal/einladung/' . $token;
         $companyName = $this->settings->get('company_name', 'Tierphysio Praxis');
 
         $subject   = 'Ihr Zugang zum Besitzerportal — ' . $companyName;
@@ -142,7 +137,15 @@ class OwnerPortalMailService
     {
         $configured = $this->settings->get('portal_base_url', '');
         if ($configured !== '') return rtrim($configured, '/');
-        return (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
-               . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+
+        $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
+        $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+
+        /* If running on app.* subdomain, derive portal.* automatically */
+        if (str_starts_with($host, 'app.')) {
+            $host = 'portal.' . substr($host, 4);
+        }
+
+        return $scheme . '://' . $host;
     }
 }
