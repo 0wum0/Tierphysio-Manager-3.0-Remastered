@@ -292,7 +292,7 @@
                                 <div class="d-flex align-items-center gap-3">
                                     <div class="stat-card-icon" style="--stat-color:#f59e0b;"><svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
                                     <div>
-                                        <span class="stat-card-label d-block">{{ t('dashboard.new_patients') }}</span>
+                                        <span class="stat-card-label d-block">{% if is_trainer ?? false %}Neue Hunde{% else %}{{ t('dashboard.new_patients') }}{% endif %}</span>
                                         <span class="fs-nano text-muted">letzte 30 Tage</span>
                                     </div>
                                 </div>
@@ -301,7 +301,7 @@
                             <div class="list-group-item d-flex align-items-center justify-content-between px-3 py-3">
                                 <div class="d-flex align-items-center gap-3">
                                     <div class="stat-card-icon" style="--stat-color:#4f7cff;"><svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>
-                                    <span class="stat-card-label">{{ t('dashboard.total_patients') }}</span>
+                                    <span class="stat-card-label">{% if is_trainer ?? false %}Hunde gesamt{% else %}{{ t('dashboard.total_patients') }}{% endif %}</span>
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="fw-800 fs-4" style="color:#4f7cff;">{{ stats.total_patients }}</span>
@@ -311,7 +311,7 @@
                             <div class="list-group-item d-flex align-items-center justify-content-between px-3 py-3">
                                 <div class="d-flex align-items-center gap-3">
                                     <div class="stat-card-icon" style="--stat-color:#a855f7;"><svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="2"/></svg></div>
-                                    <span class="stat-card-label">{{ t('dashboard.total_owners') }}</span>
+                                    <span class="stat-card-label">{% if is_trainer ?? false %}Halter gesamt{% else %}{{ t('dashboard.total_owners') }}{% endif %}</span>
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
                                     <span class="fw-800 fs-4" style="color:#a855f7;">{{ stats.total_owners }}</span>
