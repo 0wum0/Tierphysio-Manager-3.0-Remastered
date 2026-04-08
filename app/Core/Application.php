@@ -67,13 +67,13 @@ class Application
                 $db = new Database($config);
 
                 // Resolve tenant table prefix.
-                // Priority: 1) session cache, 2) SaaS-DB lookup, 3) DB_PREFIX env fallback
+                // Priority: 1) session cache, 2) SaaS-DB lookup, 3) INFORMATION_SCHEMA auto-detect
                 $prefix = $session->get('tenant_table_prefix', '');
                 if ($prefix === '') {
                     $prefix = $this->resolveTenantPrefix($config, $session);
                 }
                 if ($prefix === '') {
-                    $prefix = $_ENV['DB_PREFIX'] ?? '';
+                    $prefix = $this->detectPrefixFromSchema($db);
                 }
                 if ($prefix !== '') {
                     $db->setPrefix($prefix);
@@ -163,6 +163,31 @@ class Application
     public function getContainer(): Container
     {
         return $this->container;
+    }
+
+    /**
+     * Auto-detect the tenant table prefix from INFORMATION_SCHEMA.
+     * Looks for a table matching t_*_users in the current database.
+     * Fallback when SAAS_DB is not configured and no session prefix exists.
+     */
+    private function detectPrefixFromSchema(Database $db): string
+    {
+        try {
+            $rows = $db->fetchAll(
+                "SELECT table_name FROM information_schema.tables
+                  WHERE table_schema = DATABASE()
+                    AND table_name LIKE 't\_%\_users'
+                  ORDER BY table_name ASC
+                  LIMIT 1"
+            );
+            if (!empty($rows)) {
+                $tableName = $rows[0]['table_name'] ?? $rows[0]['TABLE_NAME'] ?? '';
+                if (str_ends_with($tableName, '_users')) {
+                    return substr($tableName, 0, -strlen('users'));
+                }
+            }
+        } catch (\Throwable) {}
+        return '';
     }
 
     /**

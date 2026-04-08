@@ -57,15 +57,12 @@ class AuthController extends Controller
         // Resolve tenant table prefix from SaaS DB BEFORE querying the users table.
         // Without the correct prefix the query would target a non-existent bare table.
         $prefix = $this->resolvePrefixForEmail($email);
+        if ($prefix === '') {
+            // SaaS DB not configured — auto-detect prefix from INFORMATION_SCHEMA.
+            $prefix = $this->detectPrefixFromSchema();
+        }
         if ($prefix !== '') {
             $this->db->setPrefix($prefix);
-        } elseif ($this->db->getPrefix() === '') {
-            // No SaaS DB configured and no session prefix — cannot resolve tenant.
-            // Fall back to DB_PREFIX env value if set.
-            $envPrefix = $_ENV['DB_PREFIX'] ?? '';
-            if ($envPrefix !== '') {
-                $this->db->setPrefix($envPrefix);
-            }
         }
 
         $user = $this->userRepository->findByEmail($email);
@@ -97,6 +94,31 @@ class AuthController extends Controller
         $this->validateCsrf();
         $this->session->destroy();
         $this->redirect('/login');
+    }
+
+    /**
+     * Auto-detect the tenant table prefix by looking for a prefixed `users` table
+     * in INFORMATION_SCHEMA. Works when only one tenant exists in the database.
+     */
+    private function detectPrefixFromSchema(): string
+    {
+        try {
+            $rows = $this->db->fetchAll(
+                "SELECT table_name FROM information_schema.tables
+                  WHERE table_schema = DATABASE()
+                    AND table_name LIKE 't\_%\_users'
+                  ORDER BY table_name ASC
+                  LIMIT 1"
+            );
+            if (!empty($rows)) {
+                $tableName = $rows[0]['table_name'] ?? $rows[0]['TABLE_NAME'] ?? '';
+                // Strip the trailing 'users' to get the prefix
+                if (str_ends_with($tableName, '_users')) {
+                    return substr($tableName, 0, -strlen('users'));
+                }
+            }
+        } catch (\Throwable) {}
+        return '';
     }
 
     private function resolvePrefixForEmail(string $email): string
