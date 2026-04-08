@@ -67,7 +67,8 @@ class OwnerAuthController extends Controller
 
         $this->repo->logLoginAttempt($email, $ip);
 
-        $user = $this->repo->findUserByEmail($email);
+        /* ── Multi-tenant login: search all tenant portal-user tables ── */
+        [$user, $tenantPrefix] = $this->findUserAcrossAllTenants($email);
 
         if (!$user || !$user['is_active'] || !$user['password_hash'] || !password_verify($password, $user['password_hash'])) {
             $this->session->flash('error', 'E-Mail oder Passwort ist falsch.');
@@ -78,7 +79,54 @@ class OwnerAuthController extends Controller
         $this->repo->updateLastLogin((int)$user['id']);
         $this->session->set('owner_portal_user_id', (int)$user['id']);
         $this->session->set('owner_portal_owner_id', (int)$user['owner_id']);
+
+        /* Store the tenant prefix so Application bootstrap uses the correct tables */
+        if ($tenantPrefix !== '') {
+            $this->session->set('portal_tenant_prefix', $tenantPrefix);
+            $this->session->set('tenant_table_prefix', $tenantPrefix);
+        }
+
         $this->redirect('/portal/dashboard');
+    }
+
+    /**
+     * Search every tenant's owner_portal_users table for the given e-mail.
+     * Returns [userRow, tenantPrefix] or [null, ''] if not found.
+     */
+    private function findUserAcrossAllTenants(string $email): array
+    {
+        try {
+            $db  = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $pdo = $db->getPdo();
+
+            /* Find all owner_portal_users tables in this database */
+            $stmt = $pdo->prepare(
+                "SELECT table_name FROM information_schema.tables
+                  WHERE table_schema = DATABASE()
+                    AND table_name LIKE '%_owner_portal_users'
+                  ORDER BY table_name ASC"
+            );
+            $stmt->execute();
+            $tables = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+
+            foreach ($tables as $table) {
+                /* Derive prefix: strip trailing "owner_portal_users" */
+                $prefix = substr($table, 0, -strlen('owner_portal_users'));
+
+                $s = $pdo->prepare("SELECT * FROM `{$table}` WHERE email = ? LIMIT 1");
+                $s->execute([$email]);
+                $row = $s->fetch(\PDO::FETCH_ASSOC);
+
+                if ($row) {
+                    return [$row, $prefix];
+                }
+            }
+        } catch (\Throwable) {
+            /* Fall through to single-tenant lookup */
+        }
+
+        /* Fallback: use the already-configured repo (single-tenant / dev) */
+        return [$this->repo->findUserByEmail($email), ''];
     }
 
     /* ── POST /portal/logout ── */
@@ -91,6 +139,8 @@ class OwnerAuthController extends Controller
         }
         $this->session->remove('owner_portal_user_id');
         $this->session->remove('owner_portal_owner_id');
+        $this->session->remove('portal_tenant_prefix');
+        $this->session->remove('tenant_table_prefix');
         $this->redirect('/portal/login');
     }
 

@@ -67,8 +67,11 @@ class Application
                 $db = new Database($config);
 
                 // Resolve tenant table prefix.
-                // Priority: 1) session cache, 2) SaaS-DB lookup, 3) INFORMATION_SCHEMA auto-detect
+                // Priority: 1) session cache (staff), 2) portal session (owner login), 3) SaaS-DB lookup, 4) INFORMATION_SCHEMA auto-detect
                 $prefix = $session->get('tenant_table_prefix', '');
+                if ($prefix === '') {
+                    $prefix = $session->get('portal_tenant_prefix', '');
+                }
                 if ($prefix === '') {
                     $prefix = $this->resolveTenantPrefix($config, $session);
                 }
