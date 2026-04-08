@@ -93,6 +93,40 @@ class OwnerAuthController extends Controller
     }
 
     /**
+     * Search every tenant's owner_portal_users table for the given invite token.
+     * Returns [userRow, tenantPrefix] or [null, ''] if not found.
+     */
+    private function findTokenAcrossAllTenants(string $token): array
+    {
+        try {
+            $db  = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $pdo = $db->getPdo();
+
+            $stmt = $pdo->prepare(
+                "SELECT table_name FROM information_schema.tables
+                  WHERE table_schema = DATABASE()
+                    AND table_name LIKE '%_owner_portal_users'
+                    AND table_name NOT LIKE '%owner_portal_owner_portal%'
+                  ORDER BY table_name ASC"
+            );
+            $stmt->execute();
+            $tables = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+
+            foreach ($tables as $table) {
+                $prefix = substr($table, 0, -strlen('owner_portal_users'));
+                $s = $pdo->prepare("SELECT * FROM `{$table}` WHERE invite_token = ? LIMIT 1");
+                $s->execute([$token]);
+                $row = $s->fetch(\PDO::FETCH_ASSOC);
+                if ($row) {
+                    return [$row, $prefix];
+                }
+            }
+        } catch (\Throwable) {}
+
+        return [$this->repo->findUserByInviteToken($token), ''];
+    }
+
+    /**
      * Search every tenant's owner_portal_users table for the given e-mail.
      * Returns [userRow, tenantPrefix] or [null, ''] if not found.
      */
@@ -151,7 +185,12 @@ class OwnerAuthController extends Controller
     public function showSetPassword(array $params = []): void
     {
         $token = $params['token'] ?? '';
-        $user  = $this->repo->findUserByInviteToken($token);
+        [$user, $tenantPrefix] = $this->findTokenAcrossAllTenants($token);
+
+        if ($tenantPrefix !== '') {
+            $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $db->setPrefix($tenantPrefix);
+        }
 
         if (!$user || $user['invite_used_at'] || ($user['invite_expires'] && strtotime($user['invite_expires']) < time())) {
             $this->render('@owner-portal/owner_invite_invalid.twig', [
@@ -180,7 +219,14 @@ class OwnerAuthController extends Controller
             return;
         }
 
-        $user = $this->repo->findUserByInviteToken($token);
+        [$user, $tenantPrefix] = $this->findTokenAcrossAllTenants($token);
+        if ($tenantPrefix !== '') {
+            $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $db->setPrefix($tenantPrefix);
+            $this->session->set('portal_tenant_prefix', $tenantPrefix);
+            $this->session->set('tenant_table_prefix', $tenantPrefix);
+        }
+
         if (!$user || $user['invite_used_at'] || ($user['invite_expires'] && strtotime($user['invite_expires']) < time())) {
             $this->session->flash('error', 'Dieser Einladungslink ist abgelaufen oder bereits verwendet.');
             $this->redirect('/portal/login');
