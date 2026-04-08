@@ -14,6 +14,7 @@ use Saas\Controllers\NotificationController;
 use Saas\Controllers\UpdateController;
 use Saas\Controllers\DataMigrationController;
 use Saas\Controllers\FeedbackController;
+use Saas\Controllers\PaymentSettingsController;
 
 // ── License API (called by Praxissoftware) ─────────────────────────────────
 $router->post('/api/license/verify',  [LicenseApiController::class, 'verify']);
@@ -94,6 +95,13 @@ $router->post('/admin/updates/apply',      [UpdateController::class, 'applyUpdat
 // ── Daten-Import / Migration ─────────────────────────────────────────────
 $router->get('/admin/migration',      [DataMigrationController::class, 'index']);
 $router->post('/admin/migration/run', [DataMigrationController::class, 'run']);
+
+// ── Payment Settings (Admin) ────────────────────────────────────────────────
+$router->get('/admin/payment-settings',              [PaymentSettingsController::class, 'index']);
+$router->post('/admin/payment-settings/update',      [PaymentSettingsController::class, 'update']);
+$router->get('/admin/payment-settings/test/stripe',  [PaymentSettingsController::class, 'testStripe']);
+$router->get('/admin/payment-settings/test/paypal',  [PaymentSettingsController::class, 'testPayPal']);
+$router->post('/admin/payment-settings/cron/run',    [PaymentSettingsController::class, 'runCron']);
 
 // ── Payment Webhooks + Callbacks ────────────────────────────────────────────
 $router->post('/webhooks/stripe', function (array $params): void {
