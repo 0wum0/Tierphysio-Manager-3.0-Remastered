@@ -52,9 +52,9 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">{{ t('invoices.patient') }}</label>
+                        <label class="form-label">{% if is_trainer ?? false %}Hund{% else %}{{ t('invoices.patient') }}{% endif %}</label>
                         <select name="patient_id" class="form-control">
-                            <option value="">— Kein Patient —</option>
+                            <option value="">— {% if is_trainer ?? false %}Kein Hund{% else %}Kein Patient{% endif %} —</option>
                             {% for patient in patients %}
                                 <option value="{{ patient.id }}" {{ invoice.patient_id == patient.id ? 'selected' : '' }}>
                                     {{ patient.name }} ({{ patient.species }})
@@ -102,7 +102,7 @@
             <div class="glass-card">
                 <div class="form-group">
                     <label class="form-label">Diagnose</label>
-                    <textarea name="diagnosis" class="form-control" rows="2" placeholder="Diagnose des Patienten (erscheint auf der Rechnung/Quittung)...">{{ invoice.diagnosis }}</textarea>
+                    <textarea name="diagnosis" class="form-control" rows="2" placeholder="{% if is_trainer ?? false %}Notiz zum Hund (erscheint auf der Rechnung/Quittung){% else %}Diagnose des Patienten (erscheint auf der Rechnung/Quittung){% endif %}...">{{ invoice.diagnosis }}</textarea>
                 </div>
                 <div class="form-group mt-3">
                     <label class="form-label">{{ t('invoices.notes') }}</label>

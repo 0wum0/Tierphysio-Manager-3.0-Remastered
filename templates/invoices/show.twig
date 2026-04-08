@@ -74,7 +74,7 @@
                 {% endif %}
                 {% if patient %}
                 <div>
-                    <div class="text-xs text-muted mb-1">{{ t('invoices.patient') }}</div>
+                    <div class="text-xs text-muted mb-1">{% if is_trainer ?? false %}Hund{% else %}{{ t('invoices.patient') }}{% endif %}</div>
                     <a href="/patienten/{{ patient.id }}" class="font-semibold" style="color:var(--accent);">{{ patient.name }}</a>
                     <div class="text-xs text-muted">
                         {{ patient.species }}{% if patient.breed %} · {{ patient.breed }}{% endif %}

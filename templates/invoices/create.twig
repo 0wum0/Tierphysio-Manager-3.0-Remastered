@@ -64,7 +64,7 @@
                     <div class="form-group">
                         <label class="form-label">{{ t('invoices.owner') }} *</label>
                         <select name="owner_id" id="owner-select" class="form-control" required>
-                            <option value="">— Tierhalter wählen —</option>
+                            <option value="">— {% if is_trainer ?? false %}Halter{% else %}Tierhalter{% endif %} wählen —</option>
                             {% for owner in owners %}
                                 <option value="{{ owner.id }}" {{ preselected_owner == owner.id ? 'selected' : '' }}>
                                     {{ owner.last_name }}, {{ owner.first_name }}
@@ -73,9 +73,9 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">{{ t('invoices.patient') }}</label>
+                        <label class="form-label">{% if is_trainer ?? false %}Hund{% else %}{{ t('invoices.patient') }}{% endif %}</label>
                         <select name="patient_id" id="patient-select" class="form-control">
-                            <option value="">— Kein Patient —</option>
+                            <option value="">— {% if is_trainer ?? false %}Kein Hund{% else %}Kein Patient{% endif %} —</option>
                             {% for patient in patients %}
                                 <option value="{{ patient.id }}" data-owner="{{ patient.owner_id }}" {{ preselected_patient == patient.id ? 'selected' : '' }}>
                                     {{ patient.name }} ({{ patient.species }})

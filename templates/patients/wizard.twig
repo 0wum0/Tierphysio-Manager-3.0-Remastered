@@ -8,8 +8,8 @@
             Zurück
         </a>
         <div>
-            <h1 class="page-title">Neuer Patient</h1>
-            <p class="page-subtitle">Tierhalter zuordnen und Tier anlegen</p>
+            <h1 class="page-title">{% if is_trainer ?? false %}Neuer Hund{% else %}Neuer Patient{% endif %}</h1>
+            <p class="page-subtitle">{% if is_trainer ?? false %}Halter zuordnen und Hund anlegen{% else %}Tierhalter zuordnen und Tier anlegen{% endif %}</p>
         </div>
     </div>
 </div>
