@@ -85,21 +85,29 @@ class DashboardController extends Controller
             $month  = (int)date('n', $ts);
             $labels[] = date('M Y', $ts);
 
-            $snapshot = $this->db->fetch(
-                "SELECT amount FROM revenue_snapshots WHERE year = ? AND month = ?",
-                [$year, $month]
-            );
+            try {
+                $snapshot = $this->db->fetch(
+                    "SELECT amount FROM revenue_snapshots WHERE year = ? AND month = ?",
+                    [$year, $month]
+                );
+            } catch (\Throwable) {
+                $snapshot = null;
+            }
+
             if ($snapshot) {
                 $data[] = (float)$snapshot['amount'];
             } else {
-                // Fallback: sum active subscriptions for that month
-                $sum = $this->db->fetchColumn(
-                    "SELECT COALESCE(SUM(s.amount),0) FROM subscriptions s
-                     WHERE s.status = 'active'
-                       AND YEAR(s.started_at) <= ? AND MONTH(s.started_at) <= ?
-                       AND (s.ends_at IS NULL OR (YEAR(s.ends_at) >= ? AND MONTH(s.ends_at) >= ?))",
-                    [$year, $month, $year, $month]
-                );
+                try {
+                    $sum = $this->db->fetchColumn(
+                        "SELECT COALESCE(SUM(s.amount),0) FROM subscriptions s
+                         WHERE s.status = 'active'
+                           AND YEAR(s.started_at) <= ? AND MONTH(s.started_at) <= ?
+                           AND (s.ends_at IS NULL OR (YEAR(s.ends_at) >= ? AND MONTH(s.ends_at) >= ?))",
+                        [$year, $month, $year, $month]
+                    );
+                } catch (\Throwable) {
+                    $sum = 0;
+                }
                 $data[] = (float)($sum ?? 0);
             }
         }
@@ -151,24 +159,32 @@ class DashboardController extends Controller
 
     private function buildForecast(float $currentMonthlyRevenue): array
     {
-        $yearlyIfSame   = round($currentMonthlyRevenue * 12, 2);
-        $currentMonth   = (int)date('n');
+        $yearlyIfSame    = round($currentMonthlyRevenue * 12, 2);
+        $currentMonth    = (int)date('n');
         $remainingMonths = 12 - $currentMonth;
 
-        // YTD revenue
-        $ytd = (float)($this->db->fetchColumn(
-            "SELECT COALESCE(SUM(amount),0) FROM revenue_snapshots WHERE year = YEAR(NOW())"
-        ) ?? 0);
+        try {
+            $ytd = (float)($this->db->fetchColumn(
+                "SELECT COALESCE(SUM(amount),0) FROM revenue_snapshots WHERE year = YEAR(NOW())"
+            ) ?? 0);
+        } catch (\Throwable) {
+            $ytd = 0;
+        }
         if ($ytd == 0) {
             $ytd = $currentMonthlyRevenue * $currentMonth;
         }
 
         $projected = round($ytd + ($currentMonthlyRevenue * $remainingMonths), 2);
         $growth    = 0;
-        $lastYear  = (float)($this->db->fetchColumn(
-            "SELECT COALESCE(SUM(amount),0) FROM revenue_snapshots WHERE year = YEAR(NOW()) - 1"
-        ) ?? 0);
-        if ($lastYear > 0) {
+
+        try {
+            $lastYear = (float)($this->db->fetchColumn(
+                "SELECT COALESCE(SUM(amount),0) FROM revenue_snapshots WHERE year = YEAR(NOW()) - 1"
+            ) ?? 0);
+        } catch (\Throwable) {
+            $lastYear = 0;
+        }
+        if ($lastYear > 0 && $currentMonth > 0) {
             $growth = round((($ytd / ($currentMonth / 12 * $lastYear)) - 1) * 100, 1);
         }
 
