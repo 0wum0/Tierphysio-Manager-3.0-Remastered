@@ -40,6 +40,7 @@ define('MIGRATIONS_PATH', ROOT_PATH . '/migrations');
 })();
 
 require_once ROOT_PATH . '/vendor/autoload.php';
+require_once ROOT_PATH . '/app/helpers.php';
 
 use App\Core\Application;
 
