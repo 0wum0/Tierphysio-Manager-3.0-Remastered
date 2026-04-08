@@ -69,6 +69,17 @@ UPDATE `t_demo_praxis_tierphys_6771f0_invoices`
     SET `total_gross` = `total`, `total_net` = `subtotal`, `total_tax` = `tax_amount`
     WHERE `total_gross` = 0 AND `total` > 0;
 
+-- ── appointments: fehlende Spalten ──────────────────────────────────────────
+ALTER TABLE `t_demo_praxis_tierphys_6771f0_appointments`
+    ADD COLUMN IF NOT EXISTS `owner_id`          INT UNSIGNED NULL AFTER `patient_id`,
+    ADD COLUMN IF NOT EXISTS `treatment_type_id` INT UNSIGNED NULL AFTER `owner_id`,
+    ADD COLUMN IF NOT EXISTS `description`       TEXT NULL AFTER `title`,
+    ADD COLUMN IF NOT EXISTS `notes`             TEXT NULL AFTER `description`,
+    ADD COLUMN IF NOT EXISTS `color`             VARCHAR(20) NULL DEFAULT '#2563eb' AFTER `status`,
+    ADD COLUMN IF NOT EXISTS `all_day`           TINYINT(1) NOT NULL DEFAULT 0 AFTER `color`,
+    ADD COLUMN IF NOT EXISTS `google_event_id`   VARCHAR(255) NULL AFTER `all_day`,
+    ADD COLUMN IF NOT EXISTS `updated_at`        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER `created_at`;
+
 -- ── fehlende Tabellen erstellen ──────────────────────────────────────────────
 
 -- treatment_types
