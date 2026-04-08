@@ -489,7 +489,7 @@ class InviteController extends Controller
     {
         $this->view->render($template, array_merge([
             'csrf_token' => $this->session->generateCsrfToken(),
-            'app_name'   => $this->settingsRepository->get('company_name', 'Tierphysio Manager'),
+            'tenant_name' => $this->settingsRepository->get('company_name', ''),
         ], $data));
     }
 

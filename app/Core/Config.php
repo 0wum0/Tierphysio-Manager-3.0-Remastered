@@ -19,7 +19,7 @@ class Config
     {
         $this->config = [
             'app' => [
-                'name'      => $_ENV['APP_NAME'] ?? 'Tierphysio Manager',
+                'name'      => 'TheraPano',
                 'version'   => $_ENV['APP_VERSION'] ?? '3.0.0',
                 'env'       => $_ENV['APP_ENV'] ?? 'production',
                 'debug'     => filter_var($_ENV['APP_DEBUG'] ?? false, FILTER_VALIDATE_BOOLEAN),
