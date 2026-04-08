@@ -84,7 +84,7 @@ class DataMigrationController extends Controller
             }
 
             try {
-                $provisioned = $this->provisioningService->provision([
+                $provisioned = $this->provisioningService->provisionTenantOnly([
                     'practice_name'  => $practiceName,
                     'owner_name'     => $adminName !== '' ? $adminName : $practiceName,
                     'email'          => $adminEmail,

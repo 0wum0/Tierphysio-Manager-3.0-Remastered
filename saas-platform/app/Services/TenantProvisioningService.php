@@ -143,6 +143,94 @@ class TenantProvisioningService
     }
 
     /**
+     * Provision only the SaaS meta-data (tenant row, subscription, license).
+     * Does NOT call createTenantTables() — use this when the schema will be
+     * provided by an external SQL import (DataMigrationController).
+     */
+    public function provisionTenantOnly(array $data): array
+    {
+        $plan = null;
+        if (!empty($data['plan_slug'])) {
+            $plan = $this->planRepo->findBySlug($data['plan_slug']);
+        }
+        if (!$plan) {
+            $plans = $this->planRepo->allActive();
+            $plan  = $plans[0] ?? null;
+        }
+        if (!$plan) {
+            throw new \RuntimeException('Kein aktiver Abo-Plan gefunden.');
+        }
+
+        $uuid          = Uuid::uuid4()->toString();
+        $tid           = $this->generateTid($data['practice_name']);
+        $tablePrefix   = substr('t_' . preg_replace('/[^a-z0-9]/', '_', $tid) . '_', 0, 48);
+        $adminPassword = $data['admin_password'] ?? bin2hex(random_bytes(8));
+        $passwordHash  = password_hash($adminPassword, PASSWORD_BCRYPT, ['cost' => 12]);
+        $trialEndsAt   = date('Y-m-d H:i:s', strtotime('+14 days'));
+
+        return $this->db->transaction(function (Database $db) use (
+            $data, $plan, $uuid, $tid, $tablePrefix, $passwordHash, $adminPassword, $trialEndsAt
+        ): array {
+            $tenantId = $this->tenantRepo->createWithAuth([
+                'uuid'          => $uuid,
+                'tid'           => $tid,
+                'practice_name' => $data['practice_name'],
+                'owner_name'    => $data['owner_name'] ?? $data['practice_name'],
+                'email'         => $data['email'],
+                'phone'         => $data['phone'] ?? null,
+                'address'       => $data['address'] ?? null,
+                'city'          => $data['city'] ?? null,
+                'zip'           => $data['zip'] ?? null,
+                'country'       => $data['country'] ?? 'DE',
+                'plan_id'       => (int)$plan['id'],
+                'status'        => 'trial',
+                'password_hash' => $passwordHash,
+                'trial_ends_at' => $trialEndsAt,
+            ]);
+
+            // Prefix in tenants.db_name speichern (db_created=0 — Tabellen noch nicht da)
+            $this->tenantRepo->setDbCreated($tenantId, $tablePrefix);
+
+            // Subscription anlegen
+            $billingCycle = $data['billing_cycle'] ?? 'monthly';
+            $amount       = $billingCycle === 'yearly' ? $plan['price_year'] : $plan['price_month'];
+            $startedAt    = date('Y-m-d H:i:s');
+            $endsAt       = $billingCycle === 'yearly'
+                            ? date('Y-m-d H:i:s', strtotime('+1 year'))
+                            : date('Y-m-d H:i:s', strtotime('+1 month'));
+
+            $this->subRepo->create([
+                'tenant_id'      => $tenantId,
+                'plan_id'        => (int)$plan['id'],
+                'billing_cycle'  => $billingCycle,
+                'status'         => 'active',
+                'started_at'     => $startedAt,
+                'ends_at'        => $endsAt,
+                'next_billing'   => $endsAt,
+                'amount'         => $amount,
+                'currency'       => 'EUR',
+                'payment_method' => $data['payment_method'] ?? null,
+                'external_id'    => null,
+            ]);
+
+            $licenseToken = $this->licenseService->issueToken($tenantId);
+            $this->tenantRepo->setStatus($tenantId, 'trial');
+
+            return [
+                'tenant_id'      => $tenantId,
+                'tenant_uuid'    => $uuid,
+                'tenant_tid'     => $tid,
+                'db_name'        => $tablePrefix,
+                'admin_email'    => $data['email'],
+                'admin_password' => $adminPassword,
+                'license_token'  => $licenseToken,
+                'plan'           => $plan['slug'],
+                'trial_ends_at'  => $trialEndsAt,
+            ];
+        });
+    }
+
+    /**
      * Generate a short, URL-safe tenant identifier from the practice name.
      */
     private function generateTid(string $practiceName): string
