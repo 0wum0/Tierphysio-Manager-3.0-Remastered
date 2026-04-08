@@ -94,7 +94,7 @@
                     </td>
                     <td>
                         {% if item.rating %}
-                        <span style="color:#fde68a;font-size:.8rem;">{{ '★'|repeat(item.rating) }}<span style="color:#334155;">{{ '★'|repeat(5 - item.rating) }}</span></span>
+                        <span style="color:#fde68a;font-size:.8rem;">{% for s in 1..item.rating %}★{% endfor %}<span style="color:#334155;">{% for s in 1..(5 - item.rating) %}★{% endfor %}</span></span>
                         {% else %}
                         <span style="color:#475569;">–</span>
                         {% endif %}

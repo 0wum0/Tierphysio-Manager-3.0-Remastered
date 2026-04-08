@@ -19,7 +19,7 @@
                             {{ catIcon[item.category] ?? '💬' }} {{ item.category|capitalize }}
                         </span>
                         {% if item.rating %}
-                        <span style="color:#fde68a;">{{ '★'|repeat(item.rating) }}<span style="color:#334155;font-size:.85rem;">{{ '★'|repeat(5 - item.rating) }}</span></span>
+                        <span style="color:#fde68a;">{% for s in 1..item.rating %}★{% endfor %}<span style="color:#334155;font-size:.85rem;">{% for s in 1..(5 - item.rating) %}★{% endfor %}</span></span>
                         {% endif %}
                     </div>
                     <span style="font-size:.78rem;color:#64748b;">{{ item.created_at|date('d.m.Y H:i') }}</span>
