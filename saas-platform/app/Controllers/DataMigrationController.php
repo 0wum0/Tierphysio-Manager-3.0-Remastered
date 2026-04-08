@@ -242,7 +242,7 @@ class DataMigrationController extends Controller
             $stats['total']++;
 
             // Tabelle merken
-            if (preg_match('/^CREATE\s+TABLE.*?`?(\w+)`?\s*\(/i', $prefixed, $m)) {
+            if (preg_match('/^CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`([^`]+)`/i', $prefixed, $m)) {
                 $tbl = $m[1] ?? '';
                 if ($tbl && !in_array($tbl, $stats['tables'])) {
                     $stats['tables'][] = $tbl;
@@ -253,10 +253,17 @@ class DataMigrationController extends Controller
                 $pdo->exec($prefixed);
                 $stats['ok']++;
             } catch (\Throwable $e) {
-                $msg = $e->getMessage();
-                // Duplikat-Fehler sind OK (Daten bereits vorhanden)
+                $msg  = $e->getMessage();
+                $code = $e->getCode();
+                // Duplikat-Einträge → OK
                 if (str_contains($msg, 'Duplicate entry') || str_contains($msg, '1062')) {
                     $stats['ok']++;
+                // Tabelle existiert bereits (42S01 / 1050) → überspringen
+                } elseif ($code === '42S01' || str_contains($msg, '1050')) {
+                    $stats['skipped']++;
+                // Mehrfacher Primary Key (1068) → überspringen
+                } elseif (str_contains($msg, '1068') || str_contains($msg, 'Multiple primary key')) {
+                    $stats['skipped']++;
                 } else {
                     $short = mb_substr($prefixed, 0, 120);
                     $stats['errors'][] = ['sql' => $short . '…', 'error' => $msg];
@@ -322,45 +329,65 @@ class DataMigrationController extends Controller
     // ── Alle Tabellennamen in einem SQL-Statement mit Prefix versehen ────────
     private function prefixTableNames(string $sql, string $prefix): string
     {
-        // CREATE TABLE `name` oder CREATE TABLE IF NOT EXISTS `name`
+        // SQL-Funktionen die NIEMALS geprefixed werden dürfen
+        static $sqlFunctions = [
+            'current_timestamp', 'current_date', 'current_time', 'current_user',
+            'now', 'uuid', 'utc_timestamp', 'utc_date', 'utc_time',
+            'sysdate', 'localtime', 'localtimestamp', 'values',
+        ];
+        $fnPattern = implode('|', $sqlFunctions);
+
+        $addPrefix = function (string $name) use ($prefix, $fnPattern): string {
+            // Nie SQL-Funktionen prefixen
+            if (preg_match('/^(' . $fnPattern . ')$/i', $name)) {
+                return $name;
+            }
+            // Nie wenn bereits geprefixed
+            if (str_starts_with($name, $prefix)) {
+                return $name;
+            }
+            return $prefix . $name;
+        };
+
+        // CREATE TABLE [`name`] oder CREATE TABLE IF NOT EXISTS [`name`]
         $sql = preg_replace_callback(
-            '/\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`?(\w+)`?/i',
-            fn($m) => str_ireplace($m[1], $prefix . $m[1], $m[0]),
+            '/\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`([^`]+)`/i',
+            fn($m) => str_replace('`' . $m[1] . '`', '`' . $addPrefix($m[1]) . '`', $m[0]),
             $sql
         );
 
-        // DROP TABLE [IF EXISTS] `name`
+        // DROP TABLE [IF EXISTS] [`name`]
         $sql = preg_replace_callback(
-            '/\bDROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?`?(\w+)`?/i',
-            fn($m) => str_ireplace($m[1], $prefix . $m[1], $m[0]),
+            '/\bDROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?`([^`]+)`/i',
+            fn($m) => str_replace('`' . $m[1] . '`', '`' . $addPrefix($m[1]) . '`', $m[0]),
             $sql
         );
 
-        // INSERT INTO `name`
+        // INSERT [IGNORE] INTO [`name`]
         $sql = preg_replace_callback(
-            '/\bINSERT\s+(?:IGNORE\s+)?INTO\s+`?(\w+)`?/i',
-            fn($m) => str_ireplace($m[1], $prefix . $m[1], $m[0]),
+            '/\bINSERT\s+(?:IGNORE\s+)?INTO\s+`([^`]+)`/i',
+            fn($m) => str_replace('`' . $m[1] . '`', '`' . $addPrefix($m[1]) . '`', $m[0]),
             $sql
         );
 
-        // UPDATE `name`
+        // UPDATE [`name`] SET — explizit NUR wenn nicht "ON UPDATE"
         $sql = preg_replace_callback(
-            '/\bUPDATE\s+`?(\w+)`?/i',
-            fn($m) => str_ireplace($m[1], $prefix . $m[1], $m[0]),
+            '/(?<!ON )\bUPDATE\s+`([^`]+)`/i',
+            fn($m) => str_replace('`' . $m[1] . '`', '`' . $addPrefix($m[1]) . '`', $m[0]),
             $sql
         );
 
-        // ALTER TABLE `name`
+        // ALTER TABLE [`name`]
         $sql = preg_replace_callback(
-            '/\bALTER\s+TABLE\s+`?(\w+)`?/i',
-            fn($m) => str_ireplace($m[1], $prefix . $m[1], $m[0]),
+            '/\bALTER\s+TABLE\s+`([^`]+)`/i',
+            fn($m) => str_replace('`' . $m[1] . '`', '`' . $addPrefix($m[1]) . '`', $m[0]),
             $sql
         );
 
-        // REFERENCES `name` — in FK-Definitionen (werden ohnehin übersprungen im Smart-Modus)
+        // REFERENCES [`name`] — in FK-Definitionen
         $sql = preg_replace_callback(
-            '/\bREFERENCES\s+`?(\w+)`?/i',
-            fn($m) => str_ireplace($m[1], $prefix . $m[1], $m[0]),
+            '/\bREFERENCES\s+`([^`]+)`/i',
+            fn($m) => str_replace('`' . $m[1] . '`', '`' . $addPrefix($m[1]) . '`', $m[0]),
             $sql
         );
 
