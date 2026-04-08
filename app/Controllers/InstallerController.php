@@ -105,6 +105,7 @@ class InstallerController extends Controller
         $adminConfirm  = $this->post('admin_password_confirm', '');
         $appUrl        = rtrim($this->sanitize($this->post('app_url', 'http://localhost')), '/');
         $appLocale     = in_array($this->post('app_locale'), ['de', 'en'], true) ? $this->post('app_locale') : 'de';
+        $practiceType  = in_array($this->post('practice_type'), ['therapeut', 'trainer'], true) ? $this->post('practice_type') : 'therapeut';
 
         if (empty($adminEmail) || empty($adminPassword)) {
             $this->session->flash('error', 'Bitte alle Felder ausfüllen.');
@@ -127,6 +128,7 @@ class InstallerController extends Controller
         try {
             $pdo = Database::createFromCredentials($db['host'], $db['port'], $db['database'], $db['username'], $db['password']);
             $this->createAdminUser($pdo, $adminName, $adminEmail, $adminPassword);
+            $this->saveSetting($pdo, 'practice_type', $practiceType);
             $this->writeEnvFile($db['host'], $db['port'], $db['database'], $db['username'], $db['password'], $appUrl, $appLocale);
             $this->session->delete('install_db');
             $this->redirect('/install/fertig');
@@ -218,6 +220,12 @@ class InstallerController extends Controller
         $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
         $stmt = $pdo->prepare("INSERT INTO users (name, email, password, role, active, created_at) VALUES (?, ?, ?, 'admin', 1, NOW()) ON DUPLICATE KEY UPDATE name = VALUES(name)");
         $stmt->execute([$name, $email, $hash]);
+    }
+
+    private function saveSetting(PDO $pdo, string $key, string $value): void
+    {
+        $stmt = $pdo->prepare("INSERT INTO settings (`key`, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)");
+        $stmt->execute([$key, $value]);
     }
 
     private function writeEnvFile(string $host, int $port, string $database, string $username, string $password, string $appUrl = 'http://localhost', string $locale = 'de'): void
