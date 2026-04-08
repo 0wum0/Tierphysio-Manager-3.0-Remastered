@@ -1,0 +1,82 @@
+name: therapano_desktop
+description: TheraPano – Desktop-App für Windows, Linux und macOS.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # HTTP
+  http: ^1.2.0
+
+  # Secure storage for token (needs libsecret-dev on Linux)
+  flutter_secure_storage: ^10.0.0
+
+  # Shared preferences
+  shared_preferences: ^2.2.2
+
+  # Navigation
+  go_router: ^14.0.0
+
+  # State management
+  provider: ^6.1.1
+
+  # Date/Time formatting
+  intl: ^0.20.2
+
+  # Icons
+  cupertino_icons: ^1.0.6
+
+  # URL launcher (for links)
+  url_launcher: ^6.2.4
+
+  # Calendar
+  table_calendar: ^3.1.0
+
+  # Image/cache
+  cached_network_image: ^3.3.1
+
+  # Pull-to-refresh
+  easy_refresh: ^3.3.3
+
+  # Charts
+  fl_chart: ^1.0.0
+
+  # SVG
+  flutter_svg: ^2.0.9
+
+  # Shimmer loading
+  shimmer: ^3.0.0
+
+  # Animations
+  animations: ^2.0.11
+
+  # File picker (desktop-compatible; replaces image_picker)
+  file_picker: ^10.0.0
+
+  # HTML rendering
+  flutter_html: ^3.0.0-beta.2
+
+  # App version info + temp dir
+  package_info_plus: ^9.0.0
+  path_provider: ^2.1.3
+
+  # Window management (desktop only)
+  window_manager: ^0.3.9
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/

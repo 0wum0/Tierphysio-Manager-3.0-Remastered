@@ -1,0 +1,13 @@
+// Microsoft Visual C++ generated resource script.
+#pragma code_page(65001)
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// Accelerator
+#undef APSTUDIO_READONLY_SYMBOLS
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_APP_ICON ICON "resources\\app_icon.ico"
