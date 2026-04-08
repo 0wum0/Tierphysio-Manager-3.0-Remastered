@@ -18,6 +18,7 @@ use App\Repositories\TreatmentTypeRepository;
 use App\Repositories\SettingsRepository;
 use App\Repositories\HomeworkRepository;
 use App\Core\Database;
+use App\Core\PerformanceLogger;
 
 class PatientController extends Controller
 {
@@ -236,7 +237,9 @@ class PatientController extends Controller
 
     public function store(array $params = []): void
     {
+        PerformanceLogger::startRequest('patient.store');
         $this->validateCsrf();
+        PerformanceLogger::mark('csrf_ok');
 
         $data = [
             'name'          => $this->sanitize($this->post('name', '')),
@@ -254,21 +257,30 @@ class PatientController extends Controller
 
         if (empty($data['name']) || empty($data['owner_id'])) {
             $this->session->flash('error', $this->translator->trans('patients.fill_required'));
+            PerformanceLogger::finish('validation_failed');
             $this->redirect('/patienten');
             return;
         }
+        PerformanceLogger::mark('validation_ok');
 
+        PerformanceLogger::startTimer('db_save');
         $id = $this->patientService->create($data);
+        PerformanceLogger::stopTimer('db_save');
+
         $this->session->flash('success', $this->translator->trans('patients.created'));
+        PerformanceLogger::finish();
         $this->redirect("/patienten/{$id}");
     }
 
     public function update(array $params = []): void
     {
+        PerformanceLogger::startRequest('patient.update');
         $this->validateCsrf();
+        PerformanceLogger::mark('csrf_ok');
 
         $patient = $this->patientService->findById((int)$params['id']);
         if (!$patient) {
+            PerformanceLogger::finish('not_found');
             $this->abort(404);
         }
 
@@ -286,14 +298,18 @@ class PatientController extends Controller
             'deceased_date' => $this->post('deceased_date', null) ?: null,
         ];
 
+        PerformanceLogger::startTimer('db_save');
         $this->patientService->update((int)$params['id'], $data);
+        PerformanceLogger::stopTimer('db_save');
 
         if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json')) {
+            PerformanceLogger::finish();
             $this->json(['ok' => true, 'patient' => $this->patientService->findById((int)$params['id'])]);
             return;
         }
 
         $this->session->flash('success', $this->translator->trans('patients.updated'));
+        PerformanceLogger::finish();
         $this->redirect('/patienten');
     }
 
@@ -387,34 +403,46 @@ class PatientController extends Controller
             }
         }
 
+        PerformanceLogger::startRequest('patient.addTimeline');
+        PerformanceLogger::startTimer('db_save');
         $this->patientService->addTimelineEntry($data);
-
-        /* ── Email an Besitzer bei neuem Behandlungseintrag ── */
-        if (($data['type'] === 'treatment') && !empty($patient['owner_id'])) {
-            try {
-                $db         = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
-                $owner      = $this->ownerService->findById((int)$patient['owner_id']);
-                $portalUser = (new \Plugins\OwnerPortal\OwnerPortalRepository($db))
-                    ->findUserByOwnerId((int)$patient['owner_id']);
-                if ($owner && $portalUser && !empty($owner['email'])) {
-                    $settings = \App\Core\Application::getInstance()->getContainer()
-                        ->get(\App\Repositories\SettingsRepository::class);
-                    $mailer   = \App\Core\Application::getInstance()->getContainer()
-                        ->get(\App\Services\MailService::class);
-                    $svc = new \Plugins\OwnerPortal\OwnerPortalMailService($settings, $mailer);
-                    $svc->sendNewTreatment(
-                        $owner['email'],
-                        trim(($owner['first_name'] ?? '') . ' ' . ($owner['last_name'] ?? '')),
-                        $patient['name'] ?? 'Ihr Tier',
-                        $data['title'] ?: 'Behandlung',
-                        date('d.m.Y', strtotime($data['entry_date'])),
-                        (int)$params['id']
-                    );
-                }
-            } catch (\Throwable) { /* optional */ }
-        }
+        PerformanceLogger::stopTimer('db_save');
 
         $this->session->flash('success', $this->translator->trans('patients.timeline_added'));
+        PerformanceLogger::finish();
+
+        /* ── Portal-Mail nach dem Redirect — blockiert NICHT das Speichern ── */
+        if (($data['type'] === 'treatment') && !empty($patient['owner_id'])) {
+            $ownerId   = (int)$patient['owner_id'];
+            $patientId = (int)$params['id'];
+            $patName   = $patient['name'] ?? 'Ihr Tier';
+            $title     = $data['title'] ?: 'Behandlung';
+            $entryDate = $data['entry_date'];
+            register_shutdown_function(function () use ($ownerId, $patientId, $patName, $title, $entryDate) {
+                try {
+                    $app        = \App\Core\Application::getInstance();
+                    $db         = $app->getContainer()->get(\App\Core\Database::class);
+                    $ownerSvc   = $app->getContainer()->get(\App\Services\OwnerService::class);
+                    $owner      = $ownerSvc->findById($ownerId);
+                    $portalUser = (new \Plugins\OwnerPortal\OwnerPortalRepository($db))
+                        ->findUserByOwnerId($ownerId);
+                    if ($owner && $portalUser && !empty($owner['email'])) {
+                        $settings = $app->getContainer()->get(\App\Repositories\SettingsRepository::class);
+                        $mailer   = $app->getContainer()->get(\App\Services\MailService::class);
+                        $svc = new \Plugins\OwnerPortal\OwnerPortalMailService($settings, $mailer);
+                        $svc->sendNewTreatment(
+                            $owner['email'],
+                            trim(($owner['first_name'] ?? '') . ' ' . ($owner['last_name'] ?? '')),
+                            $patName,
+                            $title,
+                            date('d.m.Y', strtotime($entryDate)),
+                            $patientId
+                        );
+                    }
+                } catch (\Throwable) { /* optional portal mail */ }
+            });
+        }
+
         $this->redirect("/patienten/{$params['id']}");
     }
 

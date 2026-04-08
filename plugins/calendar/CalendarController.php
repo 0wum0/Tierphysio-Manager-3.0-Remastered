@@ -16,6 +16,7 @@ use App\Repositories\SettingsRepository;
 use App\Repositories\TreatmentTypeRepository;
 use App\Repositories\UserRepository;
 use App\Services\MailService;
+use App\Core\PerformanceLogger;
 
 class CalendarController extends Controller
 {
@@ -216,15 +217,21 @@ class CalendarController extends Controller
     /* ── API: create ── */
     public function apiStore(array $params = []): void
     {
+        PerformanceLogger::startRequest('calendar.apiStore');
         $this->validateCsrf();
+        PerformanceLogger::mark('csrf_ok');
+
         $data = $this->parseAppointmentData();
 
         if (empty($data['title']) || empty($data['start_at']) || empty($data['end_at'])) {
             http_response_code(422);
+            header('Content-Type: application/json');
             echo json_encode(['error' => 'Titel, Start und Ende sind Pflichtfelder.']);
+            PerformanceLogger::finish('validation_failed');
             exit;
         }
 
+        PerformanceLogger::startTimer('db_save');
         /* Handle recurrence expansion */
         $ids = [];
         if (!empty($data['recurrence_rule'])) {
@@ -232,42 +239,81 @@ class CalendarController extends Controller
         } else {
             $ids[] = $this->appointmentRepository->create($data);
         }
+        PerformanceLogger::stopTimer('db_save');
 
+        $firstId = $ids[0];
+        $event   = $this->appointmentRepository->findById($firstId);
+
+        /* ── Send JSON response immediately before any async work ── */
         header('Content-Type: application/json');
-        $event = $this->appointmentRepository->findById($ids[0]);
-        echo json_encode(['success' => true, 'id' => $ids[0], 'event' => $this->toCalendarEvent($event)]);
+        $responsePayload = json_encode(['success' => true, 'id' => $firstId, 'event' => $this->toCalendarEvent($event)]);
+        echo $responsePayload;
+
+        PerformanceLogger::finish();
+
+        /* ── Fire hooks after response (non-blocking for caller) ── */
+        $this->fireAppointmentHookAsync('appointmentCreated', ['id' => $firstId]);
+
         exit;
     }
 
     /* ── API: update ── */
     public function apiUpdate(array $params = []): void
     {
+        PerformanceLogger::startRequest('calendar.apiUpdate');
         $this->validateCsrf();
         $id = (int)$params['id'];
         $a  = $this->appointmentRepository->findById($id);
-        if (!$a) { http_response_code(404); echo json_encode(['error' => 'not found']); exit; }
+        if (!$a) {
+            http_response_code(404);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'not found']);
+            PerformanceLogger::finish('not_found');
+            exit;
+        }
 
         $data = $this->parseAppointmentData();
+        PerformanceLogger::startTimer('db_save');
         $this->appointmentRepository->update($id, $data);
+        PerformanceLogger::stopTimer('db_save');
 
         $updated = $this->appointmentRepository->findById($id);
         header('Content-Type: application/json');
         echo json_encode(['success' => true, 'event' => $this->toCalendarEvent($updated)]);
+
+        PerformanceLogger::finish();
+
+        /* ── Fire hook after response ── */
+        $this->fireAppointmentHookAsync('appointmentUpdated', ['id' => $id]);
+
         exit;
     }
 
     /* ── API: quick drag&drop reschedule ── */
     public function apiReschedule(array $params = []): void
     {
+        PerformanceLogger::startRequest('calendar.apiReschedule');
         $this->validateCsrf();
         $id = (int)$params['id'];
         $a  = $this->appointmentRepository->findById($id);
-        if (!$a) { http_response_code(404); echo json_encode(['error' => 'not found']); exit; }
+        if (!$a) {
+            http_response_code(404);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'not found']);
+            PerformanceLogger::finish('not_found');
+            exit;
+        }
 
         $body    = json_decode(file_get_contents('php://input'), true) ?? [];
         $startAt = $body['start_at'] ?? null;
         $endAt   = $body['end_at']   ?? null;
-        if (!$startAt || !$endAt) { http_response_code(422); echo json_encode(['error' => 'Missing dates']); exit; }
+        if (!$startAt || !$endAt) {
+            http_response_code(422);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Missing dates']);
+            PerformanceLogger::finish('missing_dates');
+            exit;
+        }
 
         /* Validate that values are actual datetime strings */
         try {
@@ -275,22 +321,34 @@ class CalendarController extends Controller
             $endDt   = new \DateTime($endAt);
         } catch (\Throwable) {
             http_response_code(422);
+            header('Content-Type: application/json');
             echo json_encode(['error' => 'Ungültige Datumswerte.']);
+            PerformanceLogger::finish('invalid_dates');
             exit;
         }
         if ($endDt <= $startDt) {
             http_response_code(422);
+            header('Content-Type: application/json');
             echo json_encode(['error' => 'Endzeit muss nach Startzeit liegen.']);
+            PerformanceLogger::finish('end_before_start');
             exit;
         }
 
+        PerformanceLogger::startTimer('db_save');
         $this->appointmentRepository->update($id, array_merge($a, [
             'start_at' => $startDt->format('Y-m-d H:i:s'),
             'end_at'   => $endDt->format('Y-m-d H:i:s'),
         ]));
+        PerformanceLogger::stopTimer('db_save');
 
         header('Content-Type: application/json');
         echo json_encode(['success' => true]);
+
+        PerformanceLogger::finish();
+
+        /* ── Fire hook after response ── */
+        $this->fireAppointmentHookAsync('appointmentUpdated', ['id' => $id]);
+
         exit;
     }
 
@@ -309,6 +367,10 @@ class CalendarController extends Controller
 
         header('Content-Type: application/json');
         echo json_encode(['success' => true]);
+
+        /* ── Fire hook after response ── */
+        $this->fireAppointmentHookAsync('appointmentDeleted', ['id' => $id]);
+
         exit;
     }
 
@@ -670,6 +732,30 @@ class CalendarController extends Controller
         }
 
         return $count;
+    }
+
+    /**
+     * Fire a plugin hook without blocking the current response.
+     * The Google Sync or any other hook listener runs here — if it times out
+     * or throws, it never affects the already-sent HTTP response.
+     */
+    private function fireAppointmentHookAsync(string $hookName, array $payload): void
+    {
+        try {
+            /* Flush response to client first so they don't wait */
+            if (function_exists('fastcgi_finish_request')) {
+                fastcgi_finish_request();
+            } elseif (ob_get_level() > 0) {
+                ob_end_flush();
+                flush();
+            }
+
+            /* Now run the (potentially slow) hook — client already got their response */
+            $pm = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\PluginManager::class);
+            $pm->fireHook($hookName, $payload);
+        } catch (\Throwable) {
+            /* Never let hook errors surface after response is sent */
+        }
     }
 
     private function renderPlugin(string $template, array $data = []): void

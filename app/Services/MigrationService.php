@@ -81,7 +81,23 @@ class MigrationService
 
         foreach ($statements as $statement) {
             if (!empty($statement)) {
-                $this->db->execute($statement);
+                try {
+                    $this->db->execute($statement);
+                } catch (\Throwable $e) {
+                    /* Silently ignore duplicate key / already-exists errors so
+                     * migrations that add indexes or columns are idempotent.
+                     * MySQL errno 1061 = Duplicate key name
+                     * MySQL errno 1060 = Duplicate column name
+                     * MySQL errno 1050 = Table already exists
+                     */
+                    $errno = 0;
+                    if ($e instanceof \PDOException && isset($e->errorInfo[1])) {
+                        $errno = (int)$e->errorInfo[1];
+                    }
+                    if (!in_array($errno, [1050, 1060, 1061], true)) {
+                        throw $e;
+                    }
+                }
             }
         }
     }

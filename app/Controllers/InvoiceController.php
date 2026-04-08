@@ -16,6 +16,7 @@ use App\Services\PdfService;
 use App\Services\MailService;
 use App\Repositories\TreatmentTypeRepository;
 use App\Repositories\SettingsRepository;
+use App\Core\PerformanceLogger;
 
 class InvoiceController extends Controller
 {
@@ -37,7 +38,12 @@ class InvoiceController extends Controller
 
     public function index(array $params = []): void
     {
-        $this->invoiceService->markOverdueAutomatic();
+        /* Throttle: only run overdue check once per 15 minutes via session timestamp */
+        $lastOverdueCheck = (int)($this->session->get('_overdue_check_ts') ?? 0);
+        if ((time() - $lastOverdueCheck) > 900) {
+            try { $this->invoiceService->markOverdueAutomatic(); } catch (\Throwable) {}
+            $this->session->set('_overdue_check_ts', time());
+        }
 
         $status = $this->get('status', '');
         $search = $this->get('search', '');
@@ -84,7 +90,9 @@ class InvoiceController extends Controller
 
     public function store(array $params = []): void
     {
+        PerformanceLogger::startRequest('invoice.store');
         $this->validateCsrf();
+        PerformanceLogger::mark('csrf_ok');
 
         $paymentMethod = $this->sanitize($this->post('payment_method', 'rechnung'));
         if (!in_array($paymentMethod, ['rechnung', 'bar'], true)) {
@@ -107,17 +115,22 @@ class InvoiceController extends Controller
             'paid_at'        => $isCash ? date('Y-m-d H:i:s') : null,
         ];
 
+        PerformanceLogger::mark('validation_start');
         $positions = $this->parsePositions();
 
         if (empty($data['owner_id']) || empty($positions)) {
             $this->session->flash('error', $this->translator->trans('invoices.fill_required'));
+            PerformanceLogger::finish('validation_failed: missing owner or positions');
             $this->redirect('/rechnungen/erstellen');
             return;
         }
+        PerformanceLogger::mark('validation_ok');
 
+        PerformanceLogger::startTimer('db_save');
         $id = $this->invoiceService->create($data, $positions);
+        PerformanceLogger::stopTimer('db_save');
 
-        /* ── Automatischer Timeline-Eintrag bei Barzahlung ── */
+        /* ── Automatischer Timeline-Eintrag bei Barzahlung (schnell, nur 1 INSERT) ── */
         if ($isCash && !empty($data['patient_id'])) {
             $paidAtFormatted = date('d.m.Y \u\m H:i \U\h\r');
             try {
@@ -140,33 +153,51 @@ class InvoiceController extends Controller
             : $this->translator->trans('invoices.created');
         $this->session->flash('success', $msg);
 
-        /* ── Direkt E-Mail versenden wenn gewünscht ── */
+        PerformanceLogger::finish();
+
+        /* ── PDF + Mail nach dem Redirect — blockiert den Speichervorgang NICHT ──
+         * register_shutdown_function runs after output is sent and session is closed,
+         * so the redirect completes immediately for the user.
+         */
         if ($sendEmail && !$isCash) {
-            $owner = !empty($data['owner_id'])
-                ? $this->ownerService->findById((int)$data['owner_id'])
-                : null;
-            if ($owner && !empty($owner['email'])) {
+            $invoiceId      = (int)$id;
+            $ownerId        = (int)$data['owner_id'];
+            $patientId      = !empty($data['patient_id']) ? (int)$data['patient_id'] : null;
+            $invoiceService = $this->invoiceService;
+            $ownerService   = $this->ownerService;
+            $patientService = $this->patientService;
+            $pdfService     = $this->pdfService;
+            $mailService    = $this->mailService;
+
+            register_shutdown_function(function () use (
+                $invoiceId, $ownerId, $patientId,
+                $invoiceService, $ownerService, $patientService,
+                $pdfService, $mailService
+            ) {
                 try {
-                    $invoice   = $this->invoiceService->findById((int)$id);
-                    $positions = $this->invoiceService->getPositions((int)$id);
-                    $patient   = !empty($data['patient_id'])
-                        ? $this->patientService->findById((int)$data['patient_id'])
-                        : null;
-                    $pdf  = $this->pdfService->generateInvoicePdf($invoice, $positions, $owner, $patient);
-                    $sent = $this->mailService->sendInvoice($invoice, $owner, $pdf);
+                    $owner = $ownerService->findById($ownerId);
+                    if (!$owner || empty($owner['email'])) return;
+
+                    PerformanceLogger::startRequest('invoice.store.async_mail');
+                    PerformanceLogger::startTimer('pdf_generate');
+                    $inv  = $invoiceService->findById($invoiceId);
+                    $pos  = $invoiceService->getPositions($invoiceId);
+                    $pat  = $patientId ? $patientService->findById($patientId) : null;
+                    $pdf  = $pdfService->generateInvoicePdf($inv, $pos, $owner, $pat);
+                    PerformanceLogger::stopTimer('pdf_generate');
+
+                    PerformanceLogger::startTimer('mail_send');
+                    $sent = $mailService->sendInvoice($inv, $owner, $pdf);
+                    PerformanceLogger::stopTimer('mail_send');
+
                     if ($sent) {
-                        $this->invoiceService->markEmailSent((int)$id);
-                        $this->session->flash('success', $this->translator->trans('invoices.email_sent'));
-                    } else {
-                        $err = $this->mailService->getLastError();
-                        $this->session->flash('error', $this->translator->trans('invoices.email_failed') . ($err ? ': ' . $err : ''));
+                        $invoiceService->markEmailSent($invoiceId);
                     }
+                    PerformanceLogger::finish($sent ? null : 'mail_failed');
                 } catch (\Throwable $e) {
-                    $this->session->flash('error', 'E-Mail konnte nicht gesendet werden: ' . $e->getMessage());
+                    PerformanceLogger::finish('async_mail_exception: ' . $e->getMessage());
                 }
-            } else {
-                $this->session->flash('warning', 'Rechnung gespeichert – kein E-Mail-Adresse beim Tierhalter hinterlegt.');
-            }
+            });
         }
 
         $this->redirect("/rechnungen/{$id}");
