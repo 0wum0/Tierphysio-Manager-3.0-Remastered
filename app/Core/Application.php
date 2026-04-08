@@ -124,13 +124,12 @@ class Application
             $hasPrefix = $db && $db->getPrefix() !== '';
 
             if ($hasPrefix) {
-                // Override app_name with company_name from DB settings
+                // app_name is always the product name (TheraPano) — never overwritten by tenant data.
+                // company_name is exposed separately as tenant_name for display in the UI.
                 try {
                     $settingsRepo = new \App\Repositories\SettingsRepository($db);
                     $companyName  = $settingsRepo->get('company_name', '');
-                    if ($companyName !== '') {
-                        $view->addGlobal('app_name', $companyName);
-                    }
+                    $view->addGlobal('tenant_name', $companyName);
                     // Also expose settings globally for layout templates
                     $view->addGlobal('global_settings', $settingsRepo->all());
                     // Practice type: 'therapeut' or 'trainer'
@@ -138,6 +137,7 @@ class Application
                     $view->addGlobal('practice_type', $practiceType);
                     $view->addGlobal('is_trainer', $practiceType === 'trainer');
                 } catch (\Throwable) {
+                    $view->addGlobal('tenant_name', '');
                     $view->addGlobal('practice_type', 'therapeut');
                     $view->addGlobal('is_trainer', false);
                 }

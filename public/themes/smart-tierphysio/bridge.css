@@ -996,3 +996,23 @@ html.set-fullscreen .app-content {
 .ss-option.selected { background: rgba(79,124,255,.2); font-weight: 600; }
 .ss-option.ss-empty { opacity: .5; cursor: default; font-style: italic; padding: .55rem .75rem; }
 .ss-option mark { background: transparent; color: var(--accent, #4f7cff); font-weight: 700; }
+
+/* ═══════════════════════════════════════════
+   THERAPANO PULSING PAW LOGO
+   ═══════════════════════════════════════════ */
+@keyframes tp-paw-pulse {
+    0%   { transform: scale(1);    filter: drop-shadow(0 0 0px #6EA8FE); }
+    50%  { transform: scale(1.18); filter: drop-shadow(0 0 8px #a78bfa); }
+    100% { transform: scale(1);    filter: drop-shadow(0 0 0px #6EA8FE); }
+}
+.tp-paw-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+}
+.tp-paw-logo svg {
+    animation: tp-paw-pulse 2s ease-in-out infinite;
+}

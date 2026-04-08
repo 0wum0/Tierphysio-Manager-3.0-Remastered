@@ -59,36 +59,22 @@
                 </div>
             {%- endset %}
             <a href="/dashboard" class="app-logo flex-shrink-0">
-                {% if global_settings is defined and global_settings.company_logo is defined and global_settings.company_logo %}
-                    <img src="/uploads/{{ global_settings.company_logo }}" alt="{{ app_name }}" class="custom-logo">
-                {% else %}
-                    <svg class="custom-logo" viewBox="-2 -2 36 36" width="32" height="32" preserveAspectRatio="xMidYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <g transform="translate(16,16)">
-                            <ellipse cx="0" cy="0" rx="14" ry="5.5" fill="url(#sg0)" opacity="0.9">
-                                <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="3s" repeatCount="indefinite"/>
-                            </ellipse>
-                            <ellipse cx="0" cy="0" rx="14" ry="5.5" fill="url(#sg1)" opacity="0.9">
-                                <animateTransform attributeName="transform" type="rotate" from="60" to="420" dur="3s" repeatCount="indefinite"/>
-                            </ellipse>
-                            <ellipse cx="0" cy="0" rx="14" ry="5.5" fill="url(#sg2)" opacity="0.9">
-                                <animateTransform attributeName="transform" type="rotate" from="120" to="480" dur="3s" repeatCount="indefinite"/>
-                            </ellipse>
-                            <circle cx="0" cy="0" r="4.5" fill="white" opacity="0.95"/>
-                        </g>
+                {# Pulsing paw logo #}
+                <span class="tp-paw-logo flex-shrink-0">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <defs>
-                            <linearGradient id="sg0" x1="-14" y1="0" x2="14" y2="0" gradientUnits="userSpaceOnUse">
-                                <stop stop-color="#A8ECF9"/><stop offset="1" stop-color="#6EA8FE"/>
-                            </linearGradient>
-                            <linearGradient id="sg1" x1="-14" y1="0" x2="14" y2="0" gradientUnits="userSpaceOnUse">
-                                <stop stop-color="#6EA8FE"/><stop offset="1" stop-color="#a78bfa"/>
-                            </linearGradient>
-                            <linearGradient id="sg2" x1="-14" y1="0" x2="14" y2="0" gradientUnits="userSpaceOnUse">
-                                <stop stop-color="#a78bfa"/><stop offset="1" stop-color="#A8ECF9"/>
+                            <linearGradient id="pawGrad" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="#6EA8FE"/>
+                                <stop offset="100%" stop-color="#a78bfa"/>
                             </linearGradient>
                         </defs>
+                        <path fill="url(#pawGrad)" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                     </svg>
-                {% endif %}
-                <span class="app-logo-text ms-2 fw-700 fs-md text-truncate" style="position:relative;z-index:2;">{{ app_name }}</span>
+                </span>
+                <span class="ms-2" style="position:relative;z-index:2;line-height:1.1;">
+                    <span class="fw-700 fs-md d-block" style="background:linear-gradient(90deg,#6EA8FE,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">{{ app_name }}</span>
+                    <span class="d-block" style="font-size:0.6rem;color:var(--bs-secondary-color);white-space:nowrap;">Software für Therapeuten &amp; Trainer</span>
+                </span>
                 {{ _logo_blobs|raw }}
             </a>
 
@@ -424,36 +410,25 @@
 
         {# Logo in Sidebar — SmartAdmin CSS shows/hides based on layout class #}
         <a href="/dashboard" class="app-logo flex-shrink-0">
-            {% if global_settings is defined and global_settings.company_logo is defined and global_settings.company_logo %}
-                <img src="/uploads/{{ global_settings.company_logo }}" alt="{{ app_name }}" class="custom-logo">
-            {% else %}
-                <svg class="custom-logo" viewBox="-2 -2 36 36" width="32" height="32" preserveAspectRatio="xMidYMid meet" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <g transform="translate(16,16)">
-                        <ellipse cx="0" cy="0" rx="14" ry="5.5" fill="url(#sg0b)" opacity="0.9">
-                            <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="3s" repeatCount="indefinite"/>
-                        </ellipse>
-                        <ellipse cx="0" cy="0" rx="14" ry="5.5" fill="url(#sg1b)" opacity="0.9">
-                            <animateTransform attributeName="transform" type="rotate" from="60" to="420" dur="3s" repeatCount="indefinite"/>
-                        </ellipse>
-                        <ellipse cx="0" cy="0" rx="14" ry="5.5" fill="url(#sg2b)" opacity="0.9">
-                            <animateTransform attributeName="transform" type="rotate" from="120" to="480" dur="3s" repeatCount="indefinite"/>
-                        </ellipse>
-                        <circle cx="0" cy="0" r="4.5" fill="white" opacity="0.95"/>
-                    </g>
+            {# Pulsing paw logo #}
+            <span class="tp-paw-logo flex-shrink-0">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <defs>
-                        <linearGradient id="sg0b" x1="-14" y1="0" x2="14" y2="0" gradientUnits="userSpaceOnUse">
-                            <stop stop-color="#A8ECF9"/><stop offset="1" stop-color="#6EA8FE"/>
-                        </linearGradient>
-                        <linearGradient id="sg1b" x1="-14" y1="0" x2="14" y2="0" gradientUnits="userSpaceOnUse">
-                            <stop stop-color="#6EA8FE"/><stop offset="1" stop-color="#a78bfa"/>
-                        </linearGradient>
-                        <linearGradient id="sg2b" x1="-14" y1="0" x2="14" y2="0" gradientUnits="userSpaceOnUse">
-                            <stop stop-color="#a78bfa"/><stop offset="1" stop-color="#A8ECF9"/>
+                        <linearGradient id="pawGradB" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#6EA8FE"/>
+                            <stop offset="100%" stop-color="#a78bfa"/>
                         </linearGradient>
                     </defs>
+                    <path fill="url(#pawGradB)" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                 </svg>
-            {% endif %}
-            <span class="app-logo-text ms-2 fw-700 fs-md text-truncate" style="position:relative;z-index:2;">{{ app_name }}</span>
+            </span>
+            <span class="ms-2" style="position:relative;z-index:2;line-height:1.15;">
+                <span class="fw-700 fs-md d-block" style="background:linear-gradient(90deg,#6EA8FE,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">{{ app_name }}</span>
+                <span class="d-block" style="font-size:0.6rem;color:var(--bs-secondary-color);white-space:nowrap;">Software für Therapeuten &amp; Trainer</span>
+                {% if tenant_name is defined and tenant_name %}
+                <span class="d-block text-truncate" style="font-size:0.58rem;color:var(--bs-secondary-color);opacity:.7;max-width:130px;">{{ tenant_name }}</span>
+                {% endif %}
+            </span>
             <div class="logo-backdrop">
                 <div class="blobs">
                     <svg viewBox="0 0 1200 1200">

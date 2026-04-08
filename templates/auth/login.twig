@@ -111,6 +111,11 @@
             font-size: .78rem;
             color: var(--bs-secondary-color);
         }
+        @keyframes tp-paw-pulse {
+            0%   { transform: scale(1);    filter: drop-shadow(0 0 0px #6EA8FE); }
+            50%  { transform: scale(1.18); filter: drop-shadow(0 0 12px #a78bfa); }
+            100% { transform: scale(1);    filter: drop-shadow(0 0 0px #6EA8FE); }
+        }
     </style>
 </head>
 <body>
@@ -119,42 +124,21 @@
 
     {# Brand #}
     <div class="login-brand">
-        {% if company_logo %}
-            <img src="/uploads/{{ company_logo }}" alt="Logo" class="login-brand-logo d-block mx-auto">
-        {% else %}
-            <div class="login-brand-icon mx-auto">
-                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <g transform="translate(24,24)">
-                        <ellipse cx="0" cy="0" rx="18" ry="7" fill="url(#lg0)" opacity="0.9">
-                            <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="3s" repeatCount="indefinite"/>
-                        </ellipse>
-                        <ellipse cx="0" cy="0" rx="18" ry="7" fill="url(#lg1)" opacity="0.9">
-                            <animateTransform attributeName="transform" type="rotate" from="60" to="420" dur="3s" repeatCount="indefinite"/>
-                        </ellipse>
-                        <ellipse cx="0" cy="0" rx="18" ry="7" fill="url(#lg2)" opacity="0.9">
-                            <animateTransform attributeName="transform" type="rotate" from="120" to="480" dur="3s" repeatCount="indefinite"/>
-                        </ellipse>
-                        <circle cx="0" cy="0" r="6" fill="white" opacity="0.95"/>
-                    </g>
-                    <defs>
-                        <linearGradient id="lg0" x1="-18" y1="0" x2="18" y2="0" gradientUnits="userSpaceOnUse">
-                            <stop stop-color="#A8ECF9"/>
-                            <stop offset="1" stop-color="#6EA8FE"/>
-                        </linearGradient>
-                        <linearGradient id="lg1" x1="-18" y1="0" x2="18" y2="0" gradientUnits="userSpaceOnUse">
-                            <stop stop-color="#6EA8FE"/>
-                            <stop offset="1" stop-color="#a78bfa"/>
-                        </linearGradient>
-                        <linearGradient id="lg2" x1="-18" y1="0" x2="18" y2="0" gradientUnits="userSpaceOnUse">
-                            <stop stop-color="#a78bfa"/>
-                            <stop offset="1" stop-color="#A8ECF9"/>
-                        </linearGradient>
-                    </defs>
-                </svg>
-            </div>
-        {% endif %}
-        <div class="login-brand-name">{{ company_name ?: app_name }}</div>
-        <div class="login-brand-sub">{{ t('app.tagline') }}</div>
+        {# Pulsing paw logo — always shown, regardless of custom logo #}
+        <div class="login-brand-icon mx-auto" style="animation:tp-paw-pulse 2s ease-in-out infinite;">
+            <svg width="52" height="52" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="lgPaw" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stop-color="#6EA8FE"/>
+                        <stop offset="100%" stop-color="#a78bfa"/>
+                    </linearGradient>
+                </defs>
+                <path fill="url(#lgPaw)" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+        </div>
+        <div class="login-brand-name" style="background:linear-gradient(90deg,#6EA8FE,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:1.8rem;">{{ app_name }}</div>
+        <div class="login-brand-sub" style="margin-bottom:.25rem;">Software für Therapeuten &amp; Trainer</div>
+        {% if company_name %}<div style="font-size:.78rem;color:var(--bs-secondary-color);opacity:.8;">{{ company_name }}</div>{% endif %}
     </div>
 
     {# Card #}
@@ -198,7 +182,7 @@
     </div>
 
     <div class="login-footer">
-        &copy; {{ "now"|date("Y") }} {{ company_name ?: app_name }}
+        &copy; {{ "now"|date("Y") }} {{ app_name }}{% if company_name %} &mdash; {{ company_name }}{% endif %}
     </div>
 
 </div>
