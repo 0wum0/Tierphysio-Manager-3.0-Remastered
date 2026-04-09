@@ -315,7 +315,6 @@ $router->get('/api/dashboard/layout', [DashboardController::class, 'loadLayout']
 $router->get('/datenschutz', function() use ($router) {
     $app = \App\Core\Application::getInstance();
     $settingsService = $app->getContainer()->get(\App\Services\SettingsService::class);
-    $view = $app->getContainer()->get(\App\Core\View::class);
     $settings = $settingsService->all();
 
     // Get GDPR text from settings
@@ -349,7 +348,27 @@ $router->get('/datenschutz', function() use ($router) {
     $gdprHtml = preg_replace('/<p style="margin:0\.5rem 0;"><ul>/', '<ul>', $gdprHtml);
     $gdprHtml = preg_replace('/<\/ul><\/p>/', '</ul>', $gdprHtml);
 
-    echo $view->render('pages/datenschutz', ['gdpr_content' => $gdprHtml]);
+    // Output HTML directly without template (SaaS-compatible)
+    echo '<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Datenschutzerklärung</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #2c3e50; }
+        ul { padding-left: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Datenschutzerklärung</h1>
+    <div style="line-height:1.8;font-size:0.95rem;">
+        ' . $gdprHtml . '
+    </div>
+</body>
+</html>';
+    exit;
 }, []);
 
 $router->get('/login', [AuthController::class, 'showLogin'], ['guest']);
