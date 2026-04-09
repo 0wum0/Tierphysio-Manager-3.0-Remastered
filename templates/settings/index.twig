@@ -64,6 +64,10 @@
         <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         Integrationen
     </button>
+    <button class="settings-tab" data-tab="datenschutz">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4"/></svg>
+        Datenschutz
+    </button>
 </div>
 
 {# ════════════════════════════════════════════════════
@@ -2509,6 +2513,38 @@ function openEditTT(tt) {
             </button>
         </form>
     </div>
+
+{# ════════════════════════════════════════════════════
+   TAB: DATENSCHUTZ
+═════════════════════════════════════════════════════ #}
+<div class="settings-tab-content" id="tab-datenschutz">
+    <form action="/einstellungen" method="POST">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+        <div class="glass-card">
+            <h3 class="section-title">Datenschutzerklärung</h3>
+            <p class="text-muted" style="font-size:0.82rem;margin-bottom:1rem;">
+                Hier kannst du die Datenschutzerklärung anpassen. Sie wird unter <code>/datenschutz</code> angezeigt.
+                Verwende die Platzhalter <code>{{company_name}}</code>, <code>{{company_street}}</code>, <code>{{company_zip}}</code>, <code>{{company_city}}</code>, <code>{{company_email}}</code>, <code>{{company_phone}}</code> um deine Firmendaten automatisch einzufügen.
+            </p>
+            <div class="form-group">
+                <label class="form-label">Datenschutzerklärung (Markdown-Format)</label>
+                <textarea name="gdpr_text" class="form-control" rows="20" style="font-family:monospace;font-size:0.85rem;line-height:1.6;">{{ settings.gdpr_text ?? '' }}</textarea>
+            </div>
+            <div style="margin-top:1rem;">
+                <a href="/datenschutz" target="_blank" class="btn btn-secondary btn-sm">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    Vorschau in neuem Tab öffnen
+                </a>
+            </div>
+        </div>
+        <div class="flex justify-end mt-3">
+            <button type="submit" class="btn btn-primary">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="17 21 17 13 7 13 7 21"/></svg>
+                Datenschutzerklärung speichern
+            </button>
+        </div>
+    </form>
+</div>
 
 </div>
 

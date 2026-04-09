@@ -312,8 +312,43 @@ $router->get('/dashboard/chart-data', [DashboardController::class, 'chartData'],
 $router->post('/api/dashboard/layout', [DashboardController::class, 'saveLayout'], ['auth']);
 $router->get('/api/dashboard/layout', [DashboardController::class, 'loadLayout'], ['auth']);
 
-$router->get('/datenschutz', function() {
-    echo (new \App\Core\View())->render('pages/datenschutz');
+$router->get('/datenschutz', function() use ($router) {
+    $app = \App\Core\Application::getInstance();
+    $settingsService = $app->getContainer()->get(\App\Services\SettingsService::class);
+    $settings = $settingsService->all();
+
+    // Get GDPR text from settings
+    $gdprText = $settings['gdpr_text'] ?? '';
+
+    // Replace placeholders with actual values
+    $placeholders = [
+        '{{company_name}}' => $settings['company_name'] ?? '',
+        '{{company_street}}' => $settings['company_street'] ?? '',
+        '{{company_zip}}' => $settings['company_zip'] ?? '',
+        '{{company_city}}' => $settings['company_city'] ?? '',
+        '{{company_email}}' => $settings['company_email'] ?? '',
+        '{{company_phone}}' => $settings['company_phone'] ?? '',
+    ];
+
+    $gdprText = str_replace(array_keys($placeholders), array_values($placeholders), $gdprText);
+
+    // Convert Markdown to HTML (simple implementation)
+    $gdprHtml = preg_replace('/^### (.*$)/m', '<h3 style="font-size:1rem;font-weight:600;margin:1.5rem 0 0.75rem;">$1</h3>', $gdprText);
+    $gdprHtml = preg_replace('/^## (.*$)/m', '<h2 style="font-size:1.1rem;font-weight:700;margin:0 0 1.5rem;">$1</h2>', $gdprHtml);
+    $gdprHtml = preg_replace('/^# (.*$)/m', '<h1 style="font-size:1.3rem;font-weight:800;margin:0 0 1.5rem;">$1</h1>', $gdprHtml);
+    $gdprHtml = preg_replace('/^- (.*$)/m', '<li>$1</li>', $gdprHtml);
+    $gdprHtml = preg_replace('/^(\d+)\. (.*$)/m', '<li>$2</li>', $gdprHtml);
+    $gdprHtml = preg_replace('/(<li>.*<\/li>\n?)/', '<ul>$1</ul>', $gdprHtml);
+    $gdprHtml = preg_replace('/<\/ul>\n<ul>/', '', $gdprHtml);
+    $gdprHtml = preg_replace('/\*\*(.*?)\*\*/', '<strong>$1</strong>', $gdprHtml);
+    $gdprHtml = preg_replace('/\n\n/', '</p><p style="margin:0.5rem 0;">', $gdprHtml);
+    $gdprHtml = '<p style="margin:0.5rem 0;">' . $gdprHtml . '</p>';
+    $gdprHtml = preg_replace('/<p style="margin:0\.5rem 0;"><h/', '<h', $gdprHtml);
+    $gdprHtml = preg_replace('/<\/h([1-6])><\/p>/', '</h$1>', $gdprHtml);
+    $gdprHtml = preg_replace('/<p style="margin:0\.5rem 0;"><ul>/', '<ul>', $gdprHtml);
+    $gdprHtml = preg_replace('/<\/ul><\/p>/', '</ul>', $gdprHtml);
+
+    echo (new \App\Core\View())->render('pages/datenschutz', ['gdpr_content' => $gdprHtml]);
 }, []);
 
 $router->get('/login', [AuthController::class, 'showLogin'], ['guest']);
