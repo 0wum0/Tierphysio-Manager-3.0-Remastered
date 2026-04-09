@@ -19,37 +19,80 @@
                 </div>
                 <div id="pd-species" style="font-size:0.72rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;"></div>
             </div>
-            <div style="display:flex;gap:0.35rem;align-items:center;overflow-x:auto;flex-shrink:0;-webkit-overflow-scrolling:touch;margin-left:auto;">
-                <button id="pd-new-apt-btn" type="button" class="btn btn-secondary btn-sm" style="flex-shrink:0;padding:0.3rem 0.6rem;" title="Neuen Termin erstellen">
-                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/><line x1="12" y1="14" x2="12" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="16" x2="14" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                    <span class="d-none d-sm-inline">Termin</span>
-                </button>
-                <button id="pd-invoice-btn" type="button" class="btn btn-secondary btn-sm" style="flex-shrink:0;padding:0.3rem 0.6rem;">
-                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
-                    <span class="d-none d-sm-inline">Rechnung</span>
-                </button>
-                <button id="pd-pdf-btn" type="button" class="btn btn-secondary btn-sm" onclick="exportPatientPDF()" style="flex-shrink:0;padding:0.3rem 0.6rem;">
-                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                    <span class="d-none d-sm-inline">Akte als PDF</span>
-                </button>
-                <a id="pd-vet-report-btn" href="#" target="_blank" class="btn btn-secondary btn-sm" style="flex-shrink:0;padding:0.3rem 0.6rem;" title="Tierarztbericht erstellen">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;">
-                        <ellipse cx="6"   cy="5.5" rx="2"   ry="2.5"/>
-                        <ellipse cx="12"  cy="4"   rx="2"   ry="2.5"/>
-                        <ellipse cx="18"  cy="5.5" rx="2"   ry="2.5"/>
-                        <ellipse cx="3.5" cy="11"  rx="1.7" ry="2.2"/>
-                        <path d="M12 9c-3.5 0-7 2.5-7 5.5 0 2 1.2 3.5 3 4 .8.2 1.6.5 2.5.5h3c.9 0 1.7-.3 2.5-.5 1.8-.5 3-2 3-4C19 11.5 15.5 9 12 9z"/>
-                    </svg>
-                    <span class="d-none d-sm-inline">Tierarztbericht</span>
-                </a>
-                <button id="pd-edit-btn" type="button" class="btn btn-primary btn-sm" style="flex-shrink:0;padding:0.3rem 0.6rem;">
-                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    <span class="d-none d-sm-inline">Bearbeiten</span>
-                </button>
-                <button id="pd-delete-btn" type="button" class="btn btn-danger btn-sm" style="flex-shrink:0;padding:0.3rem 0.6rem;" onclick="deletePatient()">
-                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="3 6 5 6 21 6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M10 11v6M14 11v6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 6V4h6v2"/></svg>
-                    <span class="d-none d-sm-inline">Löschen</span>
-                </button>
+            <div style="display:flex;gap:0.35rem;align-items:center;flex-shrink:0;margin-left:auto;">
+                {# Desktop: Buttons direkt anzeigen #}
+                <div class="pd-header-buttons-desktop" style="display:flex;gap:0.35rem;align-items:center;">
+                    <button id="pd-new-apt-btn" type="button" class="btn btn-secondary btn-sm" style="flex-shrink:0;padding:0.3rem 0.6rem;" title="Neuen Termin erstellen">
+                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/><line x1="12" y1="14" x2="12" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="16" x2="14" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        <span class="d-none d-sm-inline">Termin</span>
+                    </button>
+                    <button id="pd-invoice-btn" type="button" class="btn btn-secondary btn-sm" style="flex-shrink:0;padding:0.3rem 0.6rem;">
+                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
+                        <span class="d-none d-sm-inline">Rechnung</span>
+                    </button>
+                    <button id="pd-pdf-btn" type="button" class="btn btn-secondary btn-sm" onclick="exportPatientPDF()" style="flex-shrink:0;padding:0.3rem 0.6rem;">
+                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        <span class="d-none d-sm-inline">Akte als PDF</span>
+                    </button>
+                    <a id="pd-vet-report-btn" href="#" target="_blank" class="btn btn-secondary btn-sm" style="flex-shrink:0;padding:0.3rem 0.6rem;" title="Tierarztbericht erstellen">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0;">
+                            <ellipse cx="6"   cy="5.5" rx="2"   ry="2.5"/>
+                            <ellipse cx="12"  cy="4"   rx="2"   ry="2.5"/>
+                            <ellipse cx="18"  cy="5.5" rx="2"   ry="2.5"/>
+                            <ellipse cx="3.5" cy="11"  rx="1.7" ry="2.2"/>
+                            <path d="M12 9c-3.5 0-7 2.5-7 5.5 0 2 1.2 3.5 3 4 .8.2 1.6.5 2.5.5h3c.9 0 1.7-.3 2.5-.5 1.8-.5 3-2 3-4C19 11.5 15.5 9 12 9z"/>
+                        </svg>
+                        <span class="d-none d-sm-inline">Tierarztbericht</span>
+                    </a>
+                    <button id="pd-edit-btn" type="button" class="btn btn-primary btn-sm" style="flex-shrink:0;padding:0.3rem 0.6rem;">
+                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        <span class="d-none d-sm-inline">Bearbeiten</span>
+                    </button>
+                    <button id="pd-delete-btn" type="button" class="btn btn-danger btn-sm" style="flex-shrink:0;padding:0.3rem 0.6rem;" onclick="deletePatient()">
+                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="3 6 5 6 21 6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M10 11v6M14 11v6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 6V4h6v2"/></svg>
+                        <span class="d-none d-sm-inline">Löschen</span>
+                    </button>
+                </div>
+
+                {# Mobile: Dropdown-Menü #}
+                <div class="pd-header-buttons-mobile" style="display:none;position:relative;">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="dropdown" style="padding:0.3rem 0.6rem;">
+                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="3" y1="18" x2="21" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" style="min-width:160px;">
+                        <li><button id="pd-new-apt-btn-mobile" type="button" class="dropdown-item" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;font-size:0.85rem;">
+                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="2"/><line x1="12" y1="14" x2="12" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="10" y1="16" x2="14" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            Termin
+                        </button></li>
+                        <li><button id="pd-invoice-btn-mobile" type="button" class="dropdown-item" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;font-size:0.85rem;">
+                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
+                            Rechnung
+                        </button></li>
+                        <li><button id="pd-pdf-btn-mobile" type="button" class="dropdown-item" onclick="exportPatientPDF()" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;font-size:0.85rem;">
+                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            Akte als PDF
+                        </button></li>
+                        <li><a id="pd-vet-report-btn-mobile" href="#" target="_blank" class="dropdown-item" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;font-size:0.85rem;">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                                <ellipse cx="6"   cy="5.5" rx="2"   ry="2.5"/>
+                                <ellipse cx="12"  cy="4"   rx="2"   ry="2.5"/>
+                                <ellipse cx="18"  cy="5.5" rx="2"   ry="2.5"/>
+                                <ellipse cx="3.5" cy="11"  rx="1.7" ry="2.2"/>
+                                <path d="M12 9c-3.5 0-7 2.5-7 5.5 0 2 1.2 3.5 3 4 .8.2 1.6.5 2.5.5h3c.9 0 1.7-.3 2.5-.5 1.8-.5 3-2 3-4C19 11.5 15.5 9 12 9z"/>
+                            </svg>
+                            Tierarztbericht
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><button id="pd-edit-btn-mobile" type="button" class="dropdown-item" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;font-size:0.85rem;">
+                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            Bearbeiten
+                        </button></li>
+                        <li><button id="pd-delete-btn-mobile" type="button" class="dropdown-item text-danger" onclick="deletePatient()" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;font-size:0.85rem;">
+                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="3 6 5 6 21 6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M10 11v6M14 11v6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 6V4h6v2"/></svg>
+                            Löschen
+                        </button></li>
+                    </ul>
+                </div>
             </div>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen" style="flex-shrink:0;"></button>
         </div>
@@ -2023,6 +2066,64 @@ function loadTcpData(patientId) {
         })
         .catch(function() { /* TCP-Plugin nicht aktiv oder Tabellen noch nicht migriert – ignorieren */ });
 }
+
+/* ── Responsive Patient Modal Header ─────────────────────────── */
+(function() {
+    /* CSS für responsive Header */
+    var style = document.createElement('style');
+    style.textContent = `
+        @media (max-width: 768px) {
+            .pd-header-buttons-desktop {
+                display: none !important;
+            }
+            .pd-header-buttons-mobile {
+                display: block !important;
+            }
+        }
+        @media (min-width: 769px) {
+            .pd-header-buttons-desktop {
+                display: flex !important;
+            }
+            .pd-header-buttons-mobile {
+                display: none !important;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    /* Mobile Buttons mit Desktop-Buttons verknüpfen */
+    function wireMobileButton(mobileId, desktopId) {
+        var mobileBtn = document.getElementById(mobileId);
+        var desktopBtn = document.getElementById(desktopId);
+        if (mobileBtn && desktopBtn) {
+            mobileBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                desktopBtn.click();
+            });
+        }
+    }
+
+    /* Event-Listener für mobile Buttons */
+    document.addEventListener('DOMContentLoaded', function() {
+        wireMobileButton('pd-new-apt-btn-mobile', 'pd-new-apt-btn');
+        wireMobileButton('pd-invoice-btn-mobile', 'pd-invoice-btn');
+        wireMobileButton('pd-pdf-btn-mobile', 'pd-pdf-btn');
+        wireMobileButton('pd-edit-btn-mobile', 'pd-edit-btn');
+        wireMobileButton('pd-delete-btn-mobile', 'pd-delete-btn');
+
+        /* Für den Link (Tierarztbericht) href kopieren */
+        var mobileLink = document.getElementById('pd-vet-report-btn-mobile');
+        var desktopLink = document.getElementById('pd-vet-report-btn');
+        if (mobileLink && desktopLink) {
+            mobileLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (desktopLink.href) {
+                    window.open(desktopLink.href, '_blank');
+                }
+            });
+        }
+    });
+})();
 
 /* Export globally */
 window._gsOpenPatient   = openPatientModal;
