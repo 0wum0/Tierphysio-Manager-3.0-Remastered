@@ -315,6 +315,7 @@ $router->get('/api/dashboard/layout', [DashboardController::class, 'loadLayout']
 $router->get('/datenschutz', function() use ($router) {
     $app = \App\Core\Application::getInstance();
     $settingsService = $app->getContainer()->get(\App\Services\SettingsService::class);
+    $view = $app->getContainer()->get(\App\Core\View::class);
     $settings = $settingsService->all();
 
     // Get GDPR text from settings
@@ -348,7 +349,7 @@ $router->get('/datenschutz', function() use ($router) {
     $gdprHtml = preg_replace('/<p style="margin:0\.5rem 0;"><ul>/', '<ul>', $gdprHtml);
     $gdprHtml = preg_replace('/<\/ul><\/p>/', '</ul>', $gdprHtml);
 
-    echo (new \App\Core\View())->render('pages/datenschutz', ['gdpr_content' => $gdprHtml]);
+    echo $view->render('pages/datenschutz', ['gdpr_content' => $gdprHtml]);
 }, []);
 
 $router->get('/login', [AuthController::class, 'showLogin'], ['guest']);
