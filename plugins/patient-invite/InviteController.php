@@ -318,8 +318,8 @@ class InviteController extends Controller
                 $ownerId = (int)$existingOwner['id'];
             } else {
                 $ins = $pdo->prepare(
-                    "INSERT INTO `{$db->prefix('owners')}` (first_name, last_name, email, phone, street, zip, city, created_at, updated_at)
-                     VALUES (?,?,?,?,?,?,?,NOW(),NOW())"
+                    "INSERT INTO `{$db->prefix('owners')}` (first_name, last_name, email, phone, street, zip, city, gdpr_consent, gdpr_consent_at, created_at, updated_at)
+                     VALUES (?,?,?,?,?,?,?,?,1,NOW(),NOW(),NOW())"
                 );
                 $ins->execute([
                     $data['owner_first_name'],

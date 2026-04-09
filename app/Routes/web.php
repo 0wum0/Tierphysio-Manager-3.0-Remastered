@@ -312,6 +312,10 @@ $router->get('/dashboard/chart-data', [DashboardController::class, 'chartData'],
 $router->post('/api/dashboard/layout', [DashboardController::class, 'saveLayout'], ['auth']);
 $router->get('/api/dashboard/layout', [DashboardController::class, 'loadLayout'], ['auth']);
 
+$router->get('/datenschutz', function() {
+    echo (new \App\Core\View())->render('pages/datenschutz');
+}, []);
+
 $router->get('/login', [AuthController::class, 'showLogin'], ['guest']);
 $router->post('/login', [AuthController::class, 'login'], ['guest']);
 $router->post('/logout', [AuthController::class, 'logout'], ['auth']);
