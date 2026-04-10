@@ -59,6 +59,9 @@ dependencies:
   # Animations
   animations: ^2.0.11
 
+  # Google Fonts for premium typography
+  google_fonts: ^6.2.1
+
   # File picker + video
   file_picker: ^10.0.0
   video_player: ^2.8.6

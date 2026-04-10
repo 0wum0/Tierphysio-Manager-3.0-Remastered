@@ -9,13 +9,12 @@ class ApiService {
   static SharedPreferences? _prefs;
 
   // Feste Domain für Windows App
-  static String _baseUrl = 'https://app.therapano.de';
+  static final String _baseUrl = 'https://app.therapano.de';
 
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
-    final saved = _prefs?.getString(_baseKey);
-    // Für Windows App: immer feste Domain verwenden
-    // if (saved != null && saved.isNotEmpty) _baseUrl = saved;
+    // Fixed domain for Windows app – saved URL is intentionally ignored.
+    await _prefs?.remove(_baseKey);
   }
 
   static Future<void> setBaseUrl(String url) async {

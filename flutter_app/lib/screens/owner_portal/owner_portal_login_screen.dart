@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
-import '../../services/auth_service.dart';
-import 'package:provider/provider.dart';
 
 class OwnerPortalLoginScreen extends StatefulWidget {
   const OwnerPortalLoginScreen({super.key});
@@ -78,15 +76,14 @@ class _OwnerPortalLoginScreenState extends State<OwnerPortalLoginScreen> {
     setState(() => _loading = true);
     
     try {
-      final result = await _api.portalLogin(
+      await _api.portalLogin(
         _emailController.text,
         _passwordController.text,
       );
       
       if (!mounted) return;
       
-      // Store portal token (separate from admin token)
-      // For now, navigate to portal dashboard
+      // Navigate to portal dashboard
       Navigator.pushReplacementNamed(context, '/owner-portal/dashboard');
     } catch (_) {
       if (!mounted) return;
@@ -94,7 +91,7 @@ class _OwnerPortalLoginScreenState extends State<OwnerPortalLoginScreen> {
         const SnackBar(content: Text('Login fehlgeschlagen')),
       );
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 }

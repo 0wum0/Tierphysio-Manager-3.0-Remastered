@@ -177,14 +177,80 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color.lerp(const Color(0xFF0B0E1A), const Color(0xFF1A0B2E), t)!,
-                Color.lerp(const Color(0xFF0D1B3E), const Color(0xFF2D1B69), t)!,
-                Color.lerp(const Color(0xFF1A0B2E), const Color(0xFF0B0E1A), t)!,
+                Color.lerp(const Color(0xFF050710), const Color(0xFF160B2A), t)!,
+                Color.lerp(const Color(0xFF0A1530), const Color(0xFF231560), t)!,
+                Color.lerp(const Color(0xFF14082A), const Color(0xFF06060F), t)!,
               ],
               stops: const [0.0, 0.5, 1.0],
             ),
           ),
           child: Stack(children: [
+            // Aurora orb 1 (top-left)
+            Positioned(
+              top: -120,
+              left: -80,
+              child: AnimatedBuilder(
+                animation: _bgCtrl,
+                builder: (_, __) => Opacity(
+                  opacity: 0.18 + t * 0.12,
+                  child: Container(
+                    width: 400,
+                    height: 400,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(colors: [
+                        AppTheme.secondary.withValues(alpha: 0.6),
+                        Colors.transparent,
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Aurora orb 2 (bottom-right)
+            Positioned(
+              bottom: -100,
+              right: -60,
+              child: AnimatedBuilder(
+                animation: _bgCtrl,
+                builder: (_, __) => Opacity(
+                  opacity: 0.14 + (1 - t) * 0.10,
+                  child: Container(
+                    width: 320,
+                    height: 320,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(colors: [
+                        AppTheme.primary.withValues(alpha: 0.5),
+                        Colors.transparent,
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            // Aurora orb 3 (center subtle)
+            Positioned(
+              top: MediaQuery.sizeOf(context).height * 0.3,
+              right: -100,
+              child: AnimatedBuilder(
+                animation: _bgCtrl,
+                builder: (_, __) => Opacity(
+                  opacity: 0.08 + t * 0.08,
+                  child: Container(
+                    width: 280,
+                    height: 280,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(colors: [
+                        const Color(0xFF06B6D4).withValues(alpha: 0.5),
+                        Colors.transparent,
+                      ]),
+                    ),
+                  ),
+                ),
+              ),
+            ),
             // Floating particles
             AnimatedBuilder(
               animation: _particleCtrl,

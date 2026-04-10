@@ -1,6 +1,28 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
+
+enum LoginError {
+  none,
+  network,
+  invalidCredentials,
+  serverError,
+  unknown,
+}
+
+class LoginResult {
+  final bool success;
+  final LoginError error;
+  final String? message;
+
+  const LoginResult.ok()
+      : success = true,
+        error = LoginError.none,
+        message = null;
+
+  const LoginResult.fail(this.error, [this.message]) : success = false;
+}
 
 class AuthService extends ChangeNotifier {
   static const _userNameKey  = 'user_name';
@@ -38,11 +60,12 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> login(String email, String password, String serverUrl) async {
+  /// Returns a [LoginResult] with a precise error type so the UI can show the
+  /// right message (network vs. wrong credentials vs. server error).
+  Future<LoginResult> loginWithResult(String email, String password) async {
     try {
-      await ApiService.setBaseUrl(serverUrl);
       final api  = ApiService();
-      final data = await api.login(email.trim(), password, 'Flutter App');
+      final data = await api.login(email.trim(), password, 'TheraPano Windows');
       final token = data['token'] as String;
       final user  = data['user']  as Map<String, dynamic>;
 
@@ -55,10 +78,43 @@ class AuthService extends ChangeNotifier {
       _user = user;
       _loggedIn = true;
       notifyListeners();
-      return true;
-    } catch (_) {
-      return false;
+      return const LoginResult.ok();
+    } on SocketException catch (e) {
+      return LoginResult.fail(
+        LoginError.network,
+        'Netzwerkfehler: Verbindung zu app.therapano.de nicht möglich. '
+        'Bitte Internetverbindung prüfen. (${e.message})',
+      );
+    } on ApiException catch (e) {
+      if (e.statusCode == 401 || e.statusCode == 422) {
+        return const LoginResult.fail(
+          LoginError.invalidCredentials,
+          'E-Mail oder Passwort ist falsch. Bitte erneut versuchen.',
+        );
+      }
+      return LoginResult.fail(
+        LoginError.serverError,
+        'Serverfehler (${e.statusCode}): ${e.message}',
+      );
+    } catch (e) {
+      // Covers HandshakeException, TlsException, timeout, etc.
+      final msg = e.toString();
+      if (msg.contains('HandshakeException') ||
+          msg.contains('tls') ||
+          msg.contains('certificate')) {
+        return LoginResult.fail(
+          LoginError.network,
+          'SSL-Fehler: Verbindung konnte nicht gesichert werden.',
+        );
+      }
+      return LoginResult.fail(LoginError.unknown, msg);
     }
+  }
+
+  /// Legacy bool-returning wrapper, still used in some places.
+  Future<bool> login(String email, String password, String serverUrl) async {
+    final result = await loginWithResult(email, password);
+    return result.success;
   }
 
   Future<void> logout() async {

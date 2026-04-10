@@ -178,9 +178,9 @@ class _ShellScreenState extends State<ShellScreen>
         _api.dashboard(),
         _api.intakeInbox().catchError((_) => <String, dynamic>{}),
       ]);
-      final d = results[0] as Map<String, dynamic>;
-      final intakeData = results[1] as Map<String, dynamic>;
-      final allIntakes = (intakeData['items'] as List? ?? []);
+      final d          = results[0] as Map<String, dynamic>;
+      final intakeData  = results[1] as Map<String, dynamic>;
+      final allIntakes  = (intakeData['items'] as List? ?? []);
       final pending = allIntakes.where((e) {
         final s = (e as Map)['status'] as String? ?? 'neu';
         return s == 'neu' || s == 'in_bearbeitung' || s == 'pending';
