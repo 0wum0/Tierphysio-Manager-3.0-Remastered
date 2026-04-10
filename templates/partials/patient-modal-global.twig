@@ -262,15 +262,6 @@
 
             <div style="margin-top:0.25rem;">
                 <div style="font-size:0.7rem;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.75rem;">Akte</div>
-                
-                <!-- Hausaufgaben Button -->
-                <div style="margin-bottom:0.75rem;">
-                    <button id="pd-homework-btn" type="button" class="btn btn-primary btn-sm" onclick="openHomeworkModal()" style="padding:0.4rem 0.8rem;font-size:0.75rem;">
-                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M9 11l3 3L22 4"/><path stroke="currentColor" stroke-width="2" d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-                        Hausaufgaben verwalten
-                    </button>
-                </div>
-                
                 <div id="pd-timeline" class="timeline"></div>
             </div>
 
@@ -2149,6 +2140,271 @@ function loadTcpData(patientId) {
     });
 })();
 
+/* ── Hausaufgaben & Therapieplan AJAX ────────────────────────────── */
+/* Hausaufgaben-Templates laden */
+async function loadHomeworkTemplates() {
+    if (!currentPatientData) return;
+    try {
+        const response = await fetch('/api/homework/templates');
+        const homeworkTemplates = await response.json();
+        
+        const select = document.getElementById('homework-template-select');
+        if (select) {
+            select.innerHTML = '<option value="">— Vordefinierte Hausaufgabe —</option><option value="custom">— Eigene Hausaufgabe —</option>';
+            
+            homeworkTemplates.forEach(template => {
+                const option = document.createElement('option');
+                option.value = template.id;
+                option.textContent = `${template.category_emoji} ${template.title}`;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Fehler beim Laden der Hausaufgaben-Templates:', error);
+    }
+}
+
+/* Template-Auswahl-Handler */
+document.getElementById('homework-template-select')?.addEventListener('change', function() {
+    const customDiv = document.getElementById('custom-homework');
+    if (this.value === 'custom') {
+        customDiv.style.display = 'block';
+    } else if (this.value) {
+        customDiv.style.display = 'none';
+    } else {
+        customDiv.style.display = 'none';
+    }
+});
+
+/* Hausaufgaben-Formular-Handler */
+document.getElementById('homework-form')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    if (!currentPatientData) return;
+    
+    const patientId = currentPatientData.patient.id;
+    const homeworkForm = document.getElementById('homework-form');
+    homeworkForm.action = '/api/patients/' + patientId + '/homework';
+    
+    const formData = new FormData(this);
+    
+    try {
+        const response = await fetch(this.action, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('modal-add-homework')).hide();
+            this.reset();
+            alert('Hausaufgabe erfolgreich zugewiesen!');
+        } else {
+            throw new Error('Fehler beim Speichern');
+        }
+    } catch (error) {
+        console.error('Fehler:', error);
+        alert('Fehler beim Speichern der Hausaufgabe');
+    }
+});
+
+/* ── Plan-Meta laden und speichern ────────────────────────────────────── */
+async function loadPlanMeta() {
+    if (!currentPatientData) return;
+    const patientId = currentPatientData.patient.id;
+    try {
+        const res = await fetch(`/api/patients/${patientId}/homework/plan-meta`);
+        const meta = await res.json();
+        if (meta && typeof meta === 'object' && meta.id) {
+            document.getElementById('pm-grundsaetze').value    = meta.physiotherapeutische_grundsaetze || '';
+            document.getElementById('pm-kurzziele').value      = meta.kurzfristige_ziele || '';
+            document.getElementById('pm-langziele').value      = meta.langfristige_ziele || '';
+            document.getElementById('pm-therapiemittel').value = meta.therapiemittel || '';
+            document.getElementById('pm-beachte').value        = meta.beachte_hinweise || '';
+            document.getElementById('pm-wiedervorstellung').value = meta.wiedervorstellung_date || '';
+            document.getElementById('pm-therapeut').value      = meta.therapist_name || '';
+        }
+    } catch (e) { console.error('Plan-Meta Ladefehler:', e); }
+}
+
+document.getElementById('modal-plan-meta')?.addEventListener('show.bs.modal', loadPlanMeta);
+
+document.getElementById('btn-save-plan-meta')?.addEventListener('click', async function() {
+    if (!currentPatientData) return;
+    const patientId = currentPatientData.patient.id;
+    const btn = this;
+    btn.disabled = true;
+    btn.textContent = 'Speichern…';
+    try {
+        const body = new FormData();
+        body.append('_csrf_token', document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '');
+        body.append('physiotherapeutische_grundsaetze', document.getElementById('pm-grundsaetze').value);
+        body.append('kurzfristige_ziele', document.getElementById('pm-kurzziele').value);
+        body.append('langfristige_ziele', document.getElementById('pm-langziele').value);
+        body.append('therapiemittel', document.getElementById('pm-therapiemittel').value);
+        body.append('beachte_hinweise', document.getElementById('pm-beachte').value);
+        body.append('wiedervorstellung_date', document.getElementById('pm-wiedervorstellung').value);
+        body.append('therapist_name', document.getElementById('pm-therapeut').value);
+
+        const res = await fetch(`/api/patients/${patientId}/homework/plan-meta`, { method: 'POST', body });
+        const data = await res.json();
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('modal-plan-meta'))?.hide();
+            alert('Therapieplan gespeichert!');
+        } else {
+            alert('Fehler beim Speichern: ' + (data.error || 'Unbekannter Fehler'));
+        }
+    } catch (e) {
+        alert('Fehler: ' + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Speichern';
+    }
+});
+
+/* ── Fortschritt AJAX ────────────────────────────────────────────────── */
+async function loadProgressData() {
+    if (!currentPatientData) return;
+    const patientId = currentPatientData.patient.id;
+    
+    const loading = document.getElementById('progress-loading');
+    const content = document.getElementById('progress-content');
+    
+    loading.style.display = 'block';
+    content.style.display = 'none';
+    
+    try {
+        const catRes = await fetch('/api/mobile/tcp/fortschritt/kategorien');
+        const categories = await catRes.json();
+        
+        const progRes = await fetch(`/api/mobile/tcp/patienten/${patientId}/fortschritt`);
+        const progress = await progRes.json();
+        
+        loading.style.display = 'none';
+        content.style.display = 'block';
+        
+        const latestContainer = document.getElementById('latest-values-container');
+        if (progress && progress.length > 0) {
+            let html = '';
+            progress.forEach(entry => {
+                const cat = categories.find(c => c.id === entry.category_id);
+                if (!cat) return;
+                const pct = ((entry.score - cat.scale_min) / Math.max(1, cat.scale_max - cat.scale_min)) * 100;
+                html += `
+                    <div class="col-6 col-md-4">
+                        <div class="d-flex align-items-center gap-2 p-2 rounded" style="background:var(--bs-tertiary-bg)">
+                            <span class="tcp-cat-dot" style="background:${cat.color};"></span>
+                            <div class="flex-fill overflow-hidden">
+                                <div class="fw-600 fs-sm text-truncate">${cat.name}</div>
+                                <div class="d-flex align-items-center gap-1 mt-1">
+                                    <div class="tcp-progress-bar-track">
+                                        <div class="tcp-progress-bar-fill" style="width:${pct}%;background:${cat.color};"></div>
+                                    </div>
+                                    <span class="fs-nano fw-700" style="min-width:28px;text-align:right;">${entry.score}/${cat.scale_max}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            latestContainer.innerHTML = html;
+        } else {
+            latestContainer.innerHTML = '<div class="text-muted fs-sm mb-3">Noch keine Fortschrittswerte erfasst.</div>';
+        }
+        
+        const quickEntryContainer = document.getElementById('quick-entry-container');
+        const categoriesContainer = document.getElementById('progress-categories-container');
+        if (categories && categories.length > 0) {
+            quickEntryContainer.style.display = 'block';
+            let html = '';
+            categories.forEach(cat => {
+                const mid = Math.round((cat.scale_max - cat.scale_min) / 2 + cat.scale_min);
+                html += `
+                    <div class="col-12 col-sm-6">
+                        <label class="form-label fs-nano fw-600 mb-1 d-flex align-items-center gap-1">
+                            <span class="tcp-cat-dot" style="background:${cat.color};"></span>
+                            ${cat.name}
+                            <span class="text-muted fw-400">(${cat.scale_min}–${cat.scale_max})</span>
+                        </label>
+                        <input type="range" class="form-range"
+                            name="entries[${cat.id}]"
+                            min="${cat.scale_min}" max="${cat.scale_max}"
+                            value="${mid}"
+                            oninput="this.nextElementSibling.textContent=this.value">
+                        <span class="fs-nano text-muted">${mid}</span>
+                    </div>
+                `;
+            });
+            categoriesContainer.innerHTML = html;
+        } else {
+            quickEntryContainer.style.display = 'none';
+        }
+        
+        const detailLink = document.getElementById('progress-detail-link');
+        if (detailLink) {
+            detailLink.href = `/patienten/${patientId}/fortschritt`;
+        }
+        
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('progress-entry-date').value = today;
+        
+    } catch (e) {
+        console.error('Fortschritt Ladefehler:', e);
+        loading.innerHTML = '<div class="text-danger">Fehler beim Laden der Fortschrittsdaten</div>';
+    }
+}
+
+/* Fortschritt-Formular-Handler */
+document.getElementById('progress-form')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    if (!currentPatientData) return;
+    const patientId = currentPatientData.patient.id;
+    
+    const formData = new FormData(this);
+    
+    try {
+        const response = await fetch(`/api/mobile/tcp/patienten/${patientId}/fortschritt`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            alert('Werte erfolgreich gespeichert!');
+            loadProgressData();
+        } else {
+            throw new Error('Fehler beim Speichern');
+        }
+    } catch (error) {
+        console.error('Fehler:', error);
+        alert('Fehler beim Speichern der Werte');
+    }
+});
+
+/* Buttons mit Modals verknüpfen */
+document.getElementById('pd-plan-btn')?.addEventListener('click', function() {
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-plan-meta')).show();
+});
+document.getElementById('pd-homework-btn')?.addEventListener('click', function() {
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-add-homework')).show();
+});
+document.getElementById('pd-progress-btn')?.addEventListener('click', function() {
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-progress')).show();
+    loadProgressData();
+});
+
+/* Mobile Buttons verknüpfen */
+document.getElementById('pd-plan-btn-mobile')?.addEventListener('click', function() {
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-plan-meta')).show();
+});
+document.getElementById('pd-homework-btn-mobile')?.addEventListener('click', function() {
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-add-homework')).show();
+});
+document.getElementById('pd-progress-btn-mobile')?.addEventListener('click', function() {
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-progress')).show();
+    loadProgressData();
+});
+
+/* Initialisierung */
+loadHomeworkTemplates();
+
 /* Export globally */
 window._gsOpenPatient   = openPatientModal;
 window.showPatientModal = openPatientModal;
@@ -2331,286 +2587,4 @@ window.showPatientModal = openPatientModal;
         </div>
     </div>
 </div>
-
-<script>
-/* ── Hausaufgaben & Therapieplan AJAX ────────────────────────────── */
-(function() {
-    let currentPatientId = null;
-    
-    // Patient-ID aktualisieren wenn Modal geöffnet wird
-    document.getElementById('modal-patient-detail')?.addEventListener('show.bs.modal', function() {
-        const patientIdEl = document.getElementById('pd-patient-id');
-        if (patientIdEl) {
-            currentPatientId = patientIdEl.textContent;
-            // Form-Action aktualisieren
-            const homeworkForm = document.getElementById('homework-form');
-            if (homeworkForm) {
-                homeworkForm.action = '/api/patients/' + currentPatientId + '/homework';
-            }
-        }
-    });
-    
-    // Hausaufgaben-Templates laden
-    async function loadHomeworkTemplates() {
-        try {
-            const response = await fetch('/api/homework/templates');
-            const homeworkTemplates = await response.json();
-            
-            const select = document.getElementById('homework-template-select');
-            if (select) {
-                select.innerHTML = '<option value="">— Vordefinierte Hausaufgabe —</option><option value="custom">— Eigene Hausaufgabe —</option>';
-                
-                homeworkTemplates.forEach(template => {
-                    const option = document.createElement('option');
-                    option.value = template.id;
-                    option.textContent = `${template.category_emoji} ${template.title}`;
-                    select.appendChild(option);
-                });
-            }
-        } catch (error) {
-            console.error('Fehler beim Laden der Hausaufgaben-Templates:', error);
-        }
-    }
-    
-    // Template-Auswahl-Handler
-    document.getElementById('homework-template-select')?.addEventListener('change', function() {
-        const customDiv = document.getElementById('custom-homework');
-        if (this.value === 'custom') {
-            customDiv.style.display = 'block';
-        } else if (this.value) {
-            customDiv.style.display = 'none';
-        } else {
-            customDiv.style.display = 'none';
-        }
-    });
-    
-    // Hausaufgaben-Formular-Handler
-    document.getElementById('homework-form')?.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(this);
-        
-        try {
-            const response = await fetch(this.action, {
-                method: 'POST',
-                body: formData
-            });
-            
-            if (response.ok) {
-                bootstrap.Modal.getInstance(document.getElementById('modal-add-homework')).hide();
-                this.reset();
-                // Erfolgsmeldung
-                alert('Hausaufgabe erfolgreich zugewiesen!');
-            } else {
-                throw new Error('Fehler beim Speichern');
-            }
-        } catch (error) {
-            console.error('Fehler:', error);
-            alert('Fehler beim Speichern der Hausaufgabe');
-        }
-    });
-    
-    // ── Plan-Meta laden und speichern ──────────────────────────────────────
-    async function loadPlanMeta() {
-        if (!currentPatientId) return;
-        try {
-            const res = await fetch(`/api/patients/${currentPatientId}/homework/plan-meta`);
-            const meta = await res.json();
-            if (meta && typeof meta === 'object' && meta.id) {
-                document.getElementById('pm-grundsaetze').value    = meta.physiotherapeutische_grundsaetze || '';
-                document.getElementById('pm-kurzziele').value      = meta.kurzfristige_ziele || '';
-                document.getElementById('pm-langziele').value      = meta.langfristige_ziele || '';
-                document.getElementById('pm-therapiemittel').value = meta.therapiemittel || '';
-                document.getElementById('pm-beachte').value        = meta.beachte_hinweise || '';
-                document.getElementById('pm-wiedervorstellung').value = meta.wiedervorstellung_date || '';
-                document.getElementById('pm-therapeut').value      = meta.therapist_name || '';
-            }
-        } catch (e) { console.error('Plan-Meta Ladefehler:', e); }
-    }
-
-    document.getElementById('modal-plan-meta')?.addEventListener('show.bs.modal', loadPlanMeta);
-
-    document.getElementById('btn-save-plan-meta')?.addEventListener('click', async function() {
-        if (!currentPatientId) return;
-        const btn = this;
-        btn.disabled = true;
-        btn.textContent = 'Speichern…';
-        try {
-            const body = new FormData();
-            body.append('_csrf_token', document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '');
-            body.append('physiotherapeutische_grundsaetze', document.getElementById('pm-grundsaetze').value);
-            body.append('kurzfristige_ziele', document.getElementById('pm-kurzziele').value);
-            body.append('langfristige_ziele', document.getElementById('pm-langziele').value);
-            body.append('therapiemittel', document.getElementById('pm-therapiemittel').value);
-            body.append('beachte_hinweise', document.getElementById('pm-beachte').value);
-            body.append('wiedervorstellung_date', document.getElementById('pm-wiedervorstellung').value);
-            body.append('therapist_name', document.getElementById('pm-therapeut').value);
-
-            const res = await fetch(`/api/patients/${currentPatientId}/homework/plan-meta`, { method: 'POST', body });
-            const data = await res.json();
-            if (data.success) {
-                bootstrap.Modal.getInstance(document.getElementById('modal-plan-meta'))?.hide();
-                alert('Therapieplan gespeichert!');
-            } else {
-                alert('Fehler beim Speichern: ' + (data.error || 'Unbekannter Fehler'));
-            }
-        } catch (e) {
-            alert('Fehler: ' + e.message);
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Speichern';
-        }
-    });
-    
-    // Initialisierung
-    loadHomeworkTemplates();
-    
-    // ── Fortschritt AJAX ──────────────────────────────────────────────────
-    async function loadProgressData() {
-        if (!currentPatientId) return;
-        
-        const loading = document.getElementById('progress-loading');
-        const content = document.getElementById('progress-content');
-        
-        loading.style.display = 'block';
-        content.style.display = 'none';
-        
-        try {
-            // Kategorien laden
-            const catRes = await fetch('/api/mobile/tcp/fortschritt/kategorien');
-            const categories = await catRes.json();
-            
-            // Fortschrittswerte laden
-            const progRes = await fetch(`/api/mobile/tcp/patienten/${currentPatientId}/fortschritt`);
-            const progress = await progRes.json();
-            
-            loading.style.display = 'none';
-            content.style.display = 'block';
-            
-            // Latest values rendern
-            const latestContainer = document.getElementById('latest-values-container');
-            if (progress && progress.length > 0) {
-                let html = '';
-                progress.forEach(entry => {
-                    const cat = categories.find(c => c.id === entry.category_id);
-                    if (!cat) return;
-                    const pct = ((entry.score - cat.scale_min) / Math.max(1, cat.scale_max - cat.scale_min)) * 100;
-                    html += `
-                        <div class="col-6 col-md-4">
-                            <div class="d-flex align-items-center gap-2 p-2 rounded" style="background:var(--bs-tertiary-bg)">
-                                <span class="tcp-cat-dot" style="background:${cat.color};"></span>
-                                <div class="flex-fill overflow-hidden">
-                                    <div class="fw-600 fs-sm text-truncate">${cat.name}</div>
-                                    <div class="d-flex align-items-center gap-1 mt-1">
-                                        <div class="tcp-progress-bar-track">
-                                            <div class="tcp-progress-bar-fill" style="width:${pct}%;background:${cat.color};"></div>
-                                        </div>
-                                        <span class="fs-nano fw-700" style="min-width:28px;text-align:right;">${entry.score}/${cat.scale_max}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-                latestContainer.innerHTML = html;
-            } else {
-                latestContainer.innerHTML = '<div class="text-muted fs-sm mb-3">Noch keine Fortschrittswerte erfasst.</div>';
-            }
-            
-            // Kategorien für Quick Entry rendern
-            const quickEntryContainer = document.getElementById('quick-entry-container');
-            const categoriesContainer = document.getElementById('progress-categories-container');
-            if (categories && categories.length > 0) {
-                quickEntryContainer.style.display = 'block';
-                let html = '';
-                categories.forEach(cat => {
-                    const mid = Math.round((cat.scale_max - cat.scale_min) / 2 + cat.scale_min);
-                    html += `
-                        <div class="col-12 col-sm-6">
-                            <label class="form-label fs-nano fw-600 mb-1 d-flex align-items-center gap-1">
-                                <span class="tcp-cat-dot" style="background:${cat.color};"></span>
-                                ${cat.name}
-                                <span class="text-muted fw-400">(${cat.scale_min}–${cat.scale_max})</span>
-                            </label>
-                            <input type="range" class="form-range"
-                                name="entries[${cat.id}]"
-                                min="${cat.scale_min}" max="${cat.scale_max}"
-                                value="${mid}"
-                                oninput="this.nextElementSibling.textContent=this.value">
-                            <span class="fs-nano text-muted">${mid}</span>
-                        </div>
-                    `;
-                });
-                categoriesContainer.innerHTML = html;
-            } else {
-                quickEntryContainer.style.display = 'none';
-            }
-            
-            // Detail-Link setzen
-            const detailLink = document.getElementById('progress-detail-link');
-            if (detailLink) {
-                detailLink.href = `/patienten/${currentPatientId}/fortschritt`;
-            }
-            
-            // Entry-Date setzen
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('progress-entry-date').value = today;
-            
-        } catch (e) {
-            console.error('Fortschritt Ladefehler:', e);
-            loading.innerHTML = '<div class="text-danger">Fehler beim Laden der Fortschrittsdaten</div>';
-        }
-    }
-    
-    // Fortschritt-Formular-Handler
-    document.getElementById('progress-form')?.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        
-        if (!currentPatientId) return;
-        
-        const formData = new FormData(this);
-        
-        try {
-            const response = await fetch(`/api/mobile/tcp/patienten/${currentPatientId}/fortschritt`, {
-                method: 'POST',
-                body: formData
-            });
-            
-            if (response.ok) {
-                alert('Werte erfolgreich gespeichert!');
-                loadProgressData(); // Daten neu laden
-            } else {
-                throw new Error('Fehler beim Speichern');
-            }
-        } catch (error) {
-            console.error('Fehler:', error);
-            alert('Fehler beim Speichern der Werte');
-        }
-    });
-    
-    // Buttons mit Modals verknüpfen
-    document.getElementById('pd-plan-btn')?.addEventListener('click', function() {
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-plan-meta')).show();
-    });
-    document.getElementById('pd-homework-btn')?.addEventListener('click', function() {
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-add-homework')).show();
-    });
-    document.getElementById('pd-progress-btn')?.addEventListener('click', function() {
-        // Vorübergehend deaktiviert, um Patientenmodal zu testen
-        alert('Fortschritt wird noch implementiert');
-    });
-    
-    // Mobile Buttons verknüpfen
-    document.getElementById('pd-plan-btn-mobile')?.addEventListener('click', function() {
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-plan-meta')).show();
-    });
-    document.getElementById('pd-homework-btn-mobile')?.addEventListener('click', function() {
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-add-homework')).show();
-    });
-    document.getElementById('pd-progress-btn-mobile')?.addEventListener('click', function() {
-        // Vorübergehend deaktiviert, um Patientenmodal zu testen
-        alert('Fortschritt wird noch implementiert');
-    });
-})();
-</script>
 
