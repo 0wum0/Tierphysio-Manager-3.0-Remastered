@@ -182,11 +182,11 @@ class MobileApiController
         }
         $token = trim($m[1]);
 
-        // First fetch the token row WITHOUT tenant prefix so we can read the stored prefix.
-        // We temporarily clear the prefix for this lookup (the tokens table is shared).
-        $savedPrefix = $this->db->getPrefix();
-        $this->db->setPrefix('');
         $tokenRow = false;
+        $savedPrefix = $this->db->getPrefix();
+        
+        // 1. Check if there is a global (unprefixed) table first
+        $this->db->setPrefix('');
         try {
             $tokenRow = $this->db->fetch(
                 "SELECT t.*, u.id AS user_id, u.name, u.email, u.role,
@@ -202,43 +202,81 @@ class MobileApiController
             $tokenRow = false;
         }
 
-        // If no unprefixed table exists, fall back to prefixed lookup
+        // 2. If not found globally, search across all prefixed tenant tables
         if ($tokenRow === false) {
+            try {
+                $tables = $this->db->fetchAll(
+                    "SELECT table_name FROM information_schema.tables
+                     WHERE table_schema = DATABASE()
+                       AND table_name LIKE 't\_%\_mobile\_api\_tokens'"
+                );
+                foreach ($tables as $row) {
+                    $tableName = $row['table_name'] ?? $row['TABLE_NAME'] ?? '';
+                    $prefix = substr($tableName, 0, -strlen('mobile_api_tokens'));
+                    
+                    $this->db->setPrefix($prefix);
+                    try {
+                        $testRow = $this->db->fetch(
+                            "SELECT t.*, u.id AS user_id, u.name, u.email, u.role,
+                                    COALESCE(u.active, u.is_active, 1) AS active,
+                                    t.tenant_prefix
+                             FROM `{$this->t('mobile_api_tokens')}` t
+                             JOIN `{$this->t('users')}` u ON u.id = t.user_id
+                             WHERE t.token = ?
+                               AND (t.expires_at IS NULL OR t.expires_at > NOW())",
+                            [$token]
+                        );
+                        if ($testRow) {
+                            $tokenRow = $testRow;
+                            // Ensure the prefix is right
+                            if (empty($tokenRow['tenant_prefix'])) {
+                                $tokenRow['tenant_prefix'] = $prefix;
+                            }
+                            break; // found it
+                        }
+                    } catch (\Throwable) {
+                        continue;
+                    }
+                }
+            } catch (\Throwable) {}
+        }
+
+        // 3. Still nothing? Fallback to whatever current active prefix is (if randomly resolved)
+        if ($tokenRow === false && $savedPrefix !== '') {
             $this->db->setPrefix($savedPrefix);
-            $tokenRow = $this->db->fetch(
-                "SELECT t.*, u.id AS user_id, u.name, u.email, u.role,
-                        COALESCE(u.active, u.is_active, 1) AS active,
-                        t.tenant_prefix
-                 FROM `{$this->t('mobile_api_tokens')}` t
-                 JOIN `{$this->t('users')}` u ON u.id = t.user_id
-                 WHERE t.token = ?
-                   AND (t.expires_at IS NULL OR t.expires_at > NOW())",
-                [$token]
-            );
+            try {
+                $tokenRow = $this->db->fetch(
+                    "SELECT t.*, u.id AS user_id, u.name, u.email, u.role,
+                            COALESCE(u.active, u.is_active, 1) AS active,
+                            t.tenant_prefix
+                     FROM `{$this->t('mobile_api_tokens')}` t
+                     JOIN `{$this->t('users')}` u ON u.id = t.user_id
+                     WHERE t.token = ?
+                       AND (t.expires_at IS NULL OR t.expires_at > NOW())",
+                    [$token]
+                );
+            } catch (\Throwable) { }
         }
 
         if (!$tokenRow || (int)($tokenRow['active'] ?? 1) !== 1) {
             $this->error('Ungültiger oder abgelaufener Token.', 401);
         }
 
-        // Restore or apply the tenant prefix stored in the token
+        // Apply discovered prefix permanently for this request
         $storedPrefix = $tokenRow['tenant_prefix'] ?? '';
         if ($storedPrefix !== '') {
             $this->db->setPrefix($storedPrefix);
         } else {
-            // Old token without prefix – auto-detect from email
             $this->resolveTenantPrefixForEmail($tokenRow['email'] ?? '');
         }
 
-        // Update last_used with the now-correct prefix
+        // Update last_used
         try {
             $this->db->execute(
                 "UPDATE `{$this->t('mobile_api_tokens')}` SET last_used = NOW() WHERE token = ?",
                 [$token]
             );
-        } catch (\Throwable) {
-            // Might fail if table is prefixed differently – non-fatal
-        }
+        } catch (\Throwable) {}
 
         $this->authUser = $tokenRow;
         return $tokenRow;
