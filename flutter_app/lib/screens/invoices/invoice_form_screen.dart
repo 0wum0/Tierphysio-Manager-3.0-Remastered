@@ -579,7 +579,6 @@ class _PositionRowState extends State<_PositionRow> {
 
   @override
   Widget build(BuildContext context) {
-    final hasTT = widget.treatmentTypes.isNotEmpty;
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: Padding(
@@ -604,45 +603,43 @@ class _PositionRowState extends State<_PositionRow> {
                   onPressed: widget.onRemove, padding: EdgeInsets.zero),
             ]),
 
-            // Behandlungsart dropdown (if treatment types are loaded)
-            if (hasTT) ...[  
-              const SizedBox(height: 10),
-              InputDecorator(
-                decoration: InputDecoration(
-                  labelText: 'Behandlungsart',
-                  prefixIcon: const Icon(Icons.category_rounded),
-                  isDense: true,
-                  suffixIcon: _selectedTreatmentTypeId != null
-                      ? IconButton(
-                          icon: const Icon(Icons.close_rounded, size: 16),
-                          onPressed: () => _applyTreatmentType(null),
-                          padding: EdgeInsets.zero,
-                        )
-                      : null,
-                ),
-                child: DropdownButton<int?>(
-                  value: _selectedTreatmentTypeId,
-                  isExpanded: true,
-                  isDense: true,
-                  underline: const SizedBox.shrink(),
-                  hint: const Text('— Manuell eingeben —', style: TextStyle(fontSize: 13)),
-                  items: [
-                    const DropdownMenuItem<int?>(value: null, child: Text('— Manuell eingeben —', style: TextStyle(fontSize: 13))),
-                    ...widget.treatmentTypes.map((t) {
-                      final price = double.tryParse(t['price']?.toString().replaceAll(',', '.') ?? '') ?? 0.0;
-                      final priceStr = price > 0 ? '  (${NumberFormat.currency(locale: 'de_DE', symbol: '€').format(price)})' : '';
-                      return DropdownMenuItem<int?>(
-                        value: int.tryParse(t['id'].toString()),
-                        child: Text('${t['name']}$priceStr',
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 13)),
-                      );
-                    }),
-                  ],
-                  onChanged: (v) => _applyTreatmentType(v),
-                ),
+            // Behandlungsart dropdown (always shown)
+            const SizedBox(height: 10),
+            InputDecorator(
+              decoration: InputDecoration(
+                labelText: 'Behandlungsart',
+                prefixIcon: const Icon(Icons.category_rounded),
+                isDense: true,
+                suffixIcon: _selectedTreatmentTypeId != null
+                    ? IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 16),
+                        onPressed: () => _applyTreatmentType(null),
+                        padding: EdgeInsets.zero,
+                      )
+                    : null,
               ),
-            ],
+              child: DropdownButton<int?>(
+                value: _selectedTreatmentTypeId,
+                isExpanded: true,
+                isDense: true,
+                underline: const SizedBox.shrink(),
+                hint: const Text('— Manuell eingeben —', style: TextStyle(fontSize: 13)),
+                items: [
+                  const DropdownMenuItem<int?>(value: null, child: Text('— Manuell eingeben —', style: TextStyle(fontSize: 13))),
+                  ...widget.treatmentTypes.map((t) {
+                    final price = double.tryParse(t['price']?.toString().replaceAll(',', '.') ?? '') ?? 0.0;
+                    final priceStr = price > 0 ? '  (${NumberFormat.currency(locale: 'de_DE', symbol: '€').format(price)})' : '';
+                    return DropdownMenuItem<int?>(
+                      value: int.tryParse(t['id'].toString()),
+                      child: Text('${t['name']}$priceStr',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 13)),
+                    );
+                  }),
+                ],
+                onChanged: (v) => _applyTreatmentType(v),
+              ),
+            ),
 
             const SizedBox(height: 8),
             TextFormField(
