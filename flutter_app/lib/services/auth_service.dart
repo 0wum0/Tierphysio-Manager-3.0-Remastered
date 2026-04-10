@@ -66,14 +66,24 @@ class AuthService extends ChangeNotifier {
     try {
       final api  = ApiService();
       final data = await api.login(email.trim(), password, 'TheraPano Windows');
-      final token = data['token'] as String;
-      final user  = data['user']  as Map<String, dynamic>;
+
+      // Guard: server must return a token
+      final token = data['token'] as String?;
+      if (token == null || token.isEmpty) {
+        return const LoginResult.fail(
+          LoginError.invalidCredentials,
+          'Anmeldung fehlgeschlagen: Server hat kein Token zurückgegeben. '
+          'Bitte Zugangsdaten prüfen.',
+        );
+      }
+
+      final user = data['user'] as Map<String, dynamic>? ?? {};
 
       await ApiService.saveToken(token);
       await _prefs?.setString(_userNameKey,  user['name']  as String? ?? '');
       await _prefs?.setString(_userEmailKey, user['email'] as String? ?? '');
       await _prefs?.setString(_userRoleKey,  user['role']  as String? ?? '');
-      await _prefs?.setString(_userIdKey,    user['id'].toString());
+      await _prefs?.setString(_userIdKey,    user['id']?.toString() ?? '');
 
       _user = user;
       _loggedIn = true;
@@ -86,10 +96,18 @@ class AuthService extends ChangeNotifier {
         'Bitte Internetverbindung prüfen. (${e.message})',
       );
     } on ApiException catch (e) {
-      if (e.statusCode == 401 || e.statusCode == 422) {
-        return const LoginResult.fail(
+      // 401, 403, 422 = wrong credentials or access denied
+      if (e.statusCode == 401 || e.statusCode == 403 || e.statusCode == 422) {
+        // Show the backend message if meaningful, otherwise generic text
+        final backendMsg = e.message;
+        final isGeneric = backendMsg.contains('403') ||
+            backendMsg.contains('Zugang verweigert') ||
+            backendMsg.isEmpty;
+        return LoginResult.fail(
           LoginError.invalidCredentials,
-          'E-Mail oder Passwort ist falsch. Bitte erneut versuchen.',
+          isGeneric
+              ? 'E-Mail oder Passwort ist falsch. Bitte erneut versuchen.'
+              : backendMsg,
         );
       }
       return LoginResult.fail(

@@ -86,21 +86,48 @@ class ApiService {
 
   dynamic _parse(http.Response res) {
     final body = utf8.decode(res.bodyBytes);
+
+    // Try JSON first
     dynamic data;
+    bool isJson = false;
     try {
-      data = jsonDecode(body);
+      data  = jsonDecode(body);
+      isJson = true;
     } catch (_) {
+      // Not JSON – server returned HTML or plain text.
+      // Still honour the HTTP status code so callers get the right error type.
+    }
+
+    if (res.statusCode >= 400) {
+      String msg;
+      if (isJson && data is Map) {
+        // Prefer backend's own error/message field
+        msg = (data['error'] ?? data['message'] ?? 'Fehler ${res.statusCode}').toString();
+      } else if (!isJson && body.isNotEmpty) {
+        // Strip HTML tags and truncate so the message is readable
+        final stripped = body
+            .replaceAll(RegExp(r'<[^>]*>'), ' ')
+            .replaceAll(RegExp(r'\s+'), ' ')
+            .trim();
+        msg = stripped.length > 120 ? '${stripped.substring(0, 120)}…' : stripped;
+        // If the stripped text is still HTML-garbage, fall back to a clean message
+        if (msg.isEmpty || msg.startsWith('<!') || msg.startsWith('<?')) {
+          msg = 'Server ${res.statusCode}: Zugang verweigert.';
+        }
+      } else {
+        msg = 'Fehler ${res.statusCode}';
+      }
+      throw ApiException(msg, res.statusCode);
+    }
+
+    if (!isJson) {
+      // 2xx but not JSON – unexpected, surface a clean error
       throw ApiException(
         'Server-Fehler ${res.statusCode}: Ungültige Antwort vom Server.',
         res.statusCode,
       );
     }
-    if (res.statusCode >= 400) {
-      throw ApiException(
-        data is Map ? (data['error'] ?? 'Fehler ${res.statusCode}') : 'Fehler ${res.statusCode}',
-        res.statusCode,
-      );
-    }
+
     return data;
   }
 
