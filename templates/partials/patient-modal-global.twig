@@ -44,6 +44,18 @@
                         </svg>
                         <span class="d-none d-sm-inline">Tierarztbericht</span>
                     </a>
+                    <button id="pd-plan-btn" type="button" class="btn btn-secondary btn-sm" style="flex-shrink:0;padding:0.3rem 0.6rem;" title="Therapieplan">
+                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="10 9 9 9 8 9"/></svg>
+                        <span class="d-none d-sm-inline">Therapieplan</span>
+                    </button>
+                    <button id="pd-homework-btn" type="button" class="btn btn-secondary btn-sm" style="flex-shrink:0;padding:0.3rem 0.6rem;" title="Hausaufgabe hinzufügen">
+                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/><line x1="12" y1="19" x2="12" y2="21" stroke="currentColor" stroke-width="2"/><line x1="8" y1="19" x2="16" y2="19" stroke="currentColor" stroke-width="2"/></svg>
+                        <span class="d-none d-sm-inline">Hausaufgabe</span>
+                    </button>
+                    <button id="pd-progress-btn" type="button" class="btn btn-secondary btn-sm" style="flex-shrink:0;padding:0.3rem 0.6rem;" title="Fortschritt">
+                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M18 20V10"/><path stroke="currentColor" stroke-width="2" d="M12 20V4"/><path stroke="currentColor" stroke-width="2" d="M6 20v-6"/></svg>
+                        <span class="d-none d-sm-inline">Fortschritt</span>
+                    </button>
                     <button id="pd-edit-btn" type="button" class="btn btn-primary btn-sm" style="flex-shrink:0;padding:0.3rem 0.6rem;">
                         <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         <span class="d-none d-sm-inline">Bearbeiten</span>
@@ -82,6 +94,18 @@
                             </svg>
                             Tierarztbericht
                         </a></li>
+                        <li><button id="pd-plan-btn-mobile" type="button" class="dropdown-item" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;font-size:0.85rem;">
+                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2"/><line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="10 9 9 9 8 9"/></svg>
+                            Therapieplan
+                        </button></li>
+                        <li><button id="pd-homework-btn-mobile" type="button" class="dropdown-item" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;font-size:0.85rem;">
+                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/><line x1="12" y1="19" x2="12" y2="21" stroke="currentColor" stroke-width="2"/><line x1="8" y1="19" x2="16" y2="19" stroke="currentColor" stroke-width="2"/></svg>
+                            Hausaufgabe hinzufügen
+                        </button></li>
+                        <li><button id="pd-progress-btn-mobile" type="button" class="dropdown-item" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;font-size:0.85rem;">
+                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M18 20V10"/><path stroke="currentColor" stroke-width="2" d="M12 20V4"/><path stroke="currentColor" stroke-width="2" d="M6 20v-6"/></svg>
+                            Fortschritt
+                        </button></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><button id="pd-edit-btn-mobile" type="button" class="dropdown-item" style="display:flex;align-items:center;gap:0.5rem;padding:0.5rem 0.75rem;font-size:0.85rem;">
                             <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -2130,4 +2154,299 @@ window._gsOpenPatient   = openPatientModal;
 window.showPatientModal = openPatientModal;
 
 })();
+
+{# ── Hausaufgaben Modal ─────────────────────────────────────────── #}
+<div class="modal fade" id="modal-add-homework" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Hausaufgabe hinzufügen</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            </div>
+            <form id="homework-form" action="/api/patients/HOMEPATIENTID/homework" method="POST">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <div class="modal-body">
+                    <div class="form-group mb-3">
+                        <label class="form-label">Hausaufgabe auswählen</label>
+                        <select name="homework_template_id" id="homework-template-select" class="form-control">
+                            <option value="">— Vordefinierte Hausaufgabe —</option>
+                            <option value="custom">— Eigene Hausaufgabe —</option>
+                        </select>
+                    </div>
+                    
+                    <div id="custom-homework" style="display:none;">
+                        <div class="form-group mb-3">
+                            <label class="form-label">Titel der Hausaufgabe</label>
+                            <input type="text" name="title" class="form-control" placeholder="z.B. tägliche Spaziergänge">
+                        </div>
+                        <div class="form-group mb-3">
+                            <label class="form-label">Beschreibung</label>
+                            <textarea name="description" class="form-control" rows="3" placeholder="Detaillierte Anweisungen für den Besitzer..."></textarea>
+                        </div>
+                        <div class="form-group mb-3">
+                            <label class="form-label">Kategorie</label>
+                            <select name="category" class="form-control">
+                                <option value="bewegung">🏃 Bewegung</option>
+                                <option value="dehnung">🤸 Dehnung</option>
+                                <option value="massage">💆 Massage</option>
+                                <option value="kalt_warm">🌡️ Kalt/Warm-Anwendungen</option>
+                                <option value="medikamente">💊 Medikamente</option>
+                                <option value="fuetterung">🍽️ Fütterung</option>
+                                <option value="beobachtung">👁️ Beobachtung</option>
+                                <option value="sonstiges">📌 Sonstiges</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label class="form-label">Häufigkeit</label>
+                        <select name="frequency" class="form-control">
+                            <option value="daily">Täglich</option>
+                            <option value="twice_daily">2x täglich</option>
+                            <option value="three_times_daily">3x täglich</option>
+                            <option value="weekly">Wöchentlich</option>
+                            <option value="as_needed">Bei Bedarf</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label class="form-label">Dauer</label>
+                        <div class="input-group">
+                            <input type="number" name="duration_value" class="form-control" min="1" value="10">
+                            <select name="duration_unit" class="form-control">
+                                <option value="minutes">Minuten</option>
+                                <option value="hours">Stunden</option>
+                                <option value="days">Tage</option>
+                                <option value="weeks">Wochen</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label class="form-label">Startdatum</label>
+                        <input type="date" name="start_date" class="form-control" value="">
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label class="form-label">Enddatum (optional)</label>
+                        <input type="date" name="end_date" class="form-control" placeholder="Kein Ende">
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label class="form-label">Notizen für den Therapeuten</label>
+                        <textarea name="therapist_notes" class="form-control" rows="2" placeholder="Interne Notizen..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Hausaufgabe zuweisen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# ── Plan-Meta Modal (Therapieplan-Details für PDF) ──────────────────── #}
+<div class="modal fade" id="modal-plan-meta" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Therapieplan – Details für PDF</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem;">Diese Angaben erscheinen im Hausaufgaben-PDF und werden pro Patient gespeichert.</p>
+                <div class="form-group mb-3">
+                    <label class="form-label">Physiotherapeutische Grundsätze</label>
+                    <textarea id="pm-grundsaetze" class="form-control" rows="2" placeholder="z.B. Schmerzfreiheit, Stabilisierung/Mobilisierung der Bewegungsabläufe..."></textarea>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Kurzfristige Ziele (innerhalb 3 Behandlungen)</label>
+                    <textarea id="pm-kurzziele" class="form-control" rows="2" placeholder="z.B. Schmerzfreiheit, Mobilisierung"></textarea>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Langfristige Ziele (Endziele)</label>
+                    <textarea id="pm-langziele" class="form-control" rows="2" placeholder="z.B. Mobilisierung/Stabilisierung der Rückenmuskulatur..."></textarea>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Therapiemittel</label>
+                    <input type="text" id="pm-therapiemittel" class="form-control" placeholder="z.B. Wärme, Massage, PNF">
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Beachte / Wichtige Hinweise</label>
+                    <textarea id="pm-beachte" class="form-control" rows="3" placeholder="z.B. WICHTIG! Aufwärmphasen sind bei älteren Patienten..."></textarea>
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Wiedervorstellung</label>
+                    <input type="date" id="pm-wiedervorstellung" class="form-control">
+                </div>
+                <div class="form-group mb-3">
+                    <label class="form-label">Therapeut/in (erscheint im PDF)</label>
+                    <input type="text" id="pm-therapeut" class="form-control" placeholder="z.B. Eileen Wenzel (Physiotherapeutin / TFA)">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                <button type="button" class="btn btn-primary" id="btn-save-plan-meta">Speichern</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ── Hausaufgaben & Therapieplan AJAX ────────────────────────────── */
+(function() {
+    let currentPatientId = null;
+    
+    // Patient-ID aktualisieren wenn Modal geöffnet wird
+    document.getElementById('modal-patient-detail')?.addEventListener('show.bs.modal', function() {
+        const patientIdEl = document.getElementById('pd-patient-id');
+        if (patientIdEl) {
+            currentPatientId = patientIdEl.textContent;
+            // Form-Action aktualisieren
+            const homeworkForm = document.getElementById('homework-form');
+            if (homeworkForm) {
+                homeworkForm.action = '/api/patients/' + currentPatientId + '/homework';
+            }
+        }
+    });
+    
+    // Hausaufgaben-Templates laden
+    async function loadHomeworkTemplates() {
+        try {
+            const response = await fetch('/api/homework/templates');
+            const homeworkTemplates = await response.json();
+            
+            const select = document.getElementById('homework-template-select');
+            if (select) {
+                select.innerHTML = '<option value="">— Vordefinierte Hausaufgabe —</option><option value="custom">— Eigene Hausaufgabe —</option>';
+                
+                homeworkTemplates.forEach(template => {
+                    const option = document.createElement('option');
+                    option.value = template.id;
+                    option.textContent = `${template.category_emoji} ${template.title}`;
+                    select.appendChild(option);
+                });
+            }
+        } catch (error) {
+            console.error('Fehler beim Laden der Hausaufgaben-Templates:', error);
+        }
+    }
+    
+    // Template-Auswahl-Handler
+    document.getElementById('homework-template-select')?.addEventListener('change', function() {
+        const customDiv = document.getElementById('custom-homework');
+        if (this.value === 'custom') {
+            customDiv.style.display = 'block';
+        } else if (this.value) {
+            customDiv.style.display = 'none';
+        } else {
+            customDiv.style.display = 'none';
+        }
+    });
+    
+    // Hausaufgaben-Formular-Handler
+    document.getElementById('homework-form')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        
+        try {
+            const response = await fetch(this.action, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('modal-add-homework')).hide();
+                this.reset();
+                // Erfolgsmeldung
+                alert('Hausaufgabe erfolgreich zugewiesen!');
+            } else {
+                throw new Error('Fehler beim Speichern');
+            }
+        } catch (error) {
+            console.error('Fehler:', error);
+            alert('Fehler beim Speichern der Hausaufgabe');
+        }
+    });
+    
+    // ── Plan-Meta laden und speichern ──────────────────────────────────────
+    async function loadPlanMeta() {
+        if (!currentPatientId) return;
+        try {
+            const res = await fetch(`/api/patients/${currentPatientId}/homework/plan-meta`);
+            const meta = await res.json();
+            if (meta && typeof meta === 'object' && meta.id) {
+                document.getElementById('pm-grundsaetze').value    = meta.physiotherapeutische_grundsaetze || '';
+                document.getElementById('pm-kurzziele').value      = meta.kurzfristige_ziele || '';
+                document.getElementById('pm-langziele').value      = meta.langfristige_ziele || '';
+                document.getElementById('pm-therapiemittel').value = meta.therapiemittel || '';
+                document.getElementById('pm-beachte').value        = meta.beachte_hinweise || '';
+                document.getElementById('pm-wiedervorstellung').value = meta.wiedervorstellung_date || '';
+                document.getElementById('pm-therapeut').value      = meta.therapist_name || '';
+            }
+        } catch (e) { console.error('Plan-Meta Ladefehler:', e); }
+    }
+
+    document.getElementById('modal-plan-meta')?.addEventListener('show.bs.modal', loadPlanMeta);
+
+    document.getElementById('btn-save-plan-meta')?.addEventListener('click', async function() {
+        if (!currentPatientId) return;
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Speichern…';
+        try {
+            const body = new FormData();
+            body.append('_csrf_token', document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '');
+            body.append('physiotherapeutische_grundsaetze', document.getElementById('pm-grundsaetze').value);
+            body.append('kurzfristige_ziele', document.getElementById('pm-kurzziele').value);
+            body.append('langfristige_ziele', document.getElementById('pm-langziele').value);
+            body.append('therapiemittel', document.getElementById('pm-therapiemittel').value);
+            body.append('beachte_hinweise', document.getElementById('pm-beachte').value);
+            body.append('wiedervorstellung_date', document.getElementById('pm-wiedervorstellung').value);
+            body.append('therapist_name', document.getElementById('pm-therapeut').value);
+
+            const res = await fetch(`/api/patients/${currentPatientId}/homework/plan-meta`, { method: 'POST', body });
+            const data = await res.json();
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('modal-plan-meta'))?.hide();
+                alert('Therapieplan gespeichert!');
+            } else {
+                alert('Fehler beim Speichern: ' + (data.error || 'Unbekannter Fehler'));
+            }
+        } catch (e) {
+            alert('Fehler: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Speichern';
+        }
+    });
+    
+    // Initialisierung
+    loadHomeworkTemplates();
+    
+    // Buttons mit Modals verknüpfen
+    document.getElementById('pd-plan-btn')?.addEventListener('click', function() {
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-plan-meta')).show();
+    });
+    document.getElementById('pd-homework-btn')?.addEventListener('click', function() {
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-add-homework')).show();
+    });
+    document.getElementById('pd-progress-btn')?.addEventListener('click', function() {
+        alert('Fortschritt-Funktion wird noch implementiert');
+    });
+    
+    // Mobile Buttons verknüpfen
+    document.getElementById('pd-plan-btn-mobile')?.addEventListener('click', function() {
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-plan-meta')).show();
+    });
+    document.getElementById('pd-homework-btn-mobile')?.addEventListener('click', function() {
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-add-homework')).show();
+    });
+    document.getElementById('pd-progress-btn-mobile')?.addEventListener('click', function() {
+        alert('Fortschritt-Funktion wird noch implementiert');
+    });
+})();
 </script>
+
