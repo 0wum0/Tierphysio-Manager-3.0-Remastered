@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -97,6 +98,11 @@ class NotificationService {
   static Future<void> init() async {
     if (_initialized) return;
     _initialized = true;
+
+    // Only initialize Android-specific features on Android
+    if (!Platform.isAndroid) {
+      return;
+    }
 
     tz.initializeTimeZones();
     try { tz.setLocalLocation(tz.getLocation('Europe/Berlin')); } catch (_) {}
