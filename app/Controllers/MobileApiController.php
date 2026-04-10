@@ -343,13 +343,50 @@ class MobileApiController
                  VALUES (?, ?, ?, ?, ?, NOW())",
                 [$user['id'], $token, $deviceName, $prefix, $expiresAt]
             );
-        } catch (\Throwable) {
-            // Fallback: table may not have tenant_prefix column yet
-            $this->db->execute(
-                "INSERT INTO `{$this->t('mobile_api_tokens')}` (user_id, token, device_name, expires_at, created_at)
-                 VALUES (?, ?, ?, ?, NOW())",
-                [$user['id'], $token, $deviceName, $expiresAt]
-            );
+        } catch (\Throwable $e) {
+            $errorStr = $e->getMessage();
+            // If the table is missing entirely (Base table or view not found), auto-create it!
+            if (str_contains($errorStr, "doesn't exist") || str_contains($errorStr, 'not found') || str_contains($errorStr, '1146')) {
+                try {
+                    $this->db->execute("
+                        CREATE TABLE IF NOT EXISTS `{$this->t('mobile_api_tokens')}` (
+                            id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                            user_id     INT UNSIGNED NOT NULL,
+                            token       VARCHAR(64)  NOT NULL UNIQUE,
+                            device_name VARCHAR(100) NOT NULL DEFAULT '',
+                            tenant_prefix VARCHAR(64) NOT NULL DEFAULT '',
+                            last_used   DATETIME     NULL,
+                            created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            expires_at  DATETIME     NULL,
+                            INDEX idx_token (token),
+                            INDEX idx_user  (user_id)
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                    ");
+                    // Retry the insert!
+                    $this->db->execute(
+                        "INSERT INTO `{$this->t('mobile_api_tokens')}` (user_id, token, device_name, tenant_prefix, expires_at, created_at)
+                         VALUES (?, ?, ?, ?, ?, NOW())",
+                        [$user['id'], $token, $deviceName, $prefix, $expiresAt]
+                    );
+                } catch (\Throwable $innerEx) {
+                    error_log('[MobileApi] Could not create tokens table: ' . $innerEx->getMessage());
+                    error_reporting($prev);
+                    $this->error('Datenbank-Fehler (Tabelle fehlt). Bitte an Admin wenden.', 500);
+                }
+            } else {
+                // Otherwise (e.g. table exists but column missing), try fallback
+                try {
+                    $this->db->execute(
+                        "INSERT INTO `{$this->t('mobile_api_tokens')}` (user_id, token, device_name, expires_at, created_at)
+                         VALUES (?, ?, ?, ?, NOW())",
+                        [$user['id'], $token, $deviceName, $expiresAt]
+                    );
+                } catch (\Throwable $fallbackEx) {
+                    error_log('[MobileApi] Insert fallback failed: ' . $fallbackEx->getMessage());
+                    error_reporting($prev);
+                    $this->error('Interner Datenbankfehler beim Login.', 500);
+                }
+            }
         }
 
         $this->users->updateLastLogin($user['id']);
