@@ -189,7 +189,7 @@ class MobileApiController
         $this->db->setPrefix('');
         try {
             $tokenRow = $this->db->fetch(
-                "SELECT t.*, u.id AS user_id, u.name, u.email, u.role, u.active, u.is_active,
+                "SELECT t.*, u.*, u.id AS user_id,
                         t.tenant_prefix
                  FROM mobile_api_tokens t
                  JOIN users u ON u.id = t.user_id
@@ -216,7 +216,7 @@ class MobileApiController
                     $this->db->setPrefix($prefix);
                     try {
                         $testRow = $this->db->fetch(
-                            "SELECT t.*, u.id AS user_id, u.name, u.email, u.role, u.active, u.is_active,
+                            "SELECT t.*, u.*, u.id AS user_id,
                                     t.tenant_prefix
                              FROM `{$this->t('mobile_api_tokens')}` t
                              JOIN `{$this->t('users')}` u ON u.id = t.user_id
@@ -244,7 +244,7 @@ class MobileApiController
             $this->db->setPrefix($savedPrefix);
             try {
                 $tokenRow = $this->db->fetch(
-                    "SELECT t.*, u.id AS user_id, u.name, u.email, u.role, u.active, u.is_active,
+                    "SELECT t.*, u.*, u.id AS user_id,
                             t.tenant_prefix
                      FROM `{$this->t('mobile_api_tokens')}` t
                      JOIN `{$this->t('users')}` u ON u.id = t.user_id
