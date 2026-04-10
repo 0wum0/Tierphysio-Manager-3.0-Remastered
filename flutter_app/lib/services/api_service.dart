@@ -8,17 +8,20 @@ class ApiService {
   static const _tokenKey = 'api_token';
   static SharedPreferences? _prefs;
 
-  static String _baseUrl = 'https://ew.makeit.uno';
+  // Feste Domain für Windows App
+  static String _baseUrl = 'https://app.therapano.de';
 
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
     final saved = _prefs?.getString(_baseKey);
-    if (saved != null && saved.isNotEmpty) _baseUrl = saved;
+    // Für Windows App: immer feste Domain verwenden
+    // if (saved != null && saved.isNotEmpty) _baseUrl = saved;
   }
 
   static Future<void> setBaseUrl(String url) async {
-    _baseUrl = url.trimRight().replaceAll(RegExp(r'/$'), '');
-    await _prefs?.setString(_baseKey, _baseUrl);
+    // Für Windows App: feste Domain nicht ändern lassen
+    // _baseUrl = url.trimRight().replaceAll(RegExp(r'/$'), '');
+    // await _prefs?.setString(_baseKey, _baseUrl);
   }
 
   static String get baseUrl => _baseUrl;

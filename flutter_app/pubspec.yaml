@@ -18,6 +18,10 @@ dependencies:
   # Shared preferences (used for token storage on desktop)
   shared_preferences: ^2.2.2
 
+  # SQLite for offline database
+  sqflite: ^2.3.0
+  path: ^1.8.3
+
   # Navigation
   go_router: ^14.0.0
 

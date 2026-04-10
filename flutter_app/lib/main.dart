@@ -8,6 +8,7 @@ import 'services/auth_service.dart';
 import 'services/api_service.dart';
 import 'services/notification_service.dart';
 import 'services/theme_service.dart';
+import 'services/offline_service.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
@@ -16,18 +17,21 @@ void main() async {
   await NotificationService.init();
   final themeService = ThemeService();
   await themeService.init();
+  final offlineService = OfflineService();
+  await offlineService.init();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
-  runApp(TheraPanoApp(themeService: themeService));
+  runApp(TheraPanoApp(themeService: themeService, offlineService: offlineService));
 }
 
 class TheraPanoApp extends StatefulWidget {
   final ThemeService themeService;
-  const TheraPanoApp({super.key, required this.themeService});
+  final OfflineService offlineService;
+  const TheraPanoApp({super.key, required this.themeService, required this.offlineService});
 
   @override
   State<TheraPanoApp> createState() => _TheraPanoAppState();
@@ -42,6 +46,7 @@ class _TheraPanoAppState extends State<TheraPanoApp> {
       providers: [
         ChangeNotifierProvider.value(value: _authService),
         ChangeNotifierProvider.value(value: widget.themeService),
+        ChangeNotifierProvider.value(value: widget.offlineService),
         Provider(create: (_) => ApiService()),
       ],
       child: Builder(builder: (context) {
