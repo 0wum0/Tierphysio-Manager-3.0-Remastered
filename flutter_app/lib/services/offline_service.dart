@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
@@ -31,13 +32,19 @@ class OfflineService extends ChangeNotifier {
 
   Future<void> init() async {
     if (_isInitialized) return;
-    
+
+    // Initialize FFI for Windows/Desktop
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+    }
+
     await _initDatabase();
     await _loadLastSync();
     await _checkConnectivity();
     _isInitialized = true;
     notifyListeners();
-    
+
     // Periodic connectivity check
     Timer.periodic(const Duration(minutes: 1), (_) async {
       await _checkConnectivity();
