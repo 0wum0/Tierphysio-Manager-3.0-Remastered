@@ -343,55 +343,51 @@ class OfflineService extends ChangeNotifier {
   }
 
   Future<void> _syncItem(String tableName, int recordId, String action, Map<String, dynamic> data) async {
-    final api = ApiService();
     final token = await ApiService.getToken();
-    
     if (token == null) return;
-    
+
     final headers = {
       'Authorization': 'Bearer $token',
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
     };
-    
+    final base = ApiService.baseUrl;
+    final body = jsonEncode(data);
+    const timeout = Duration(seconds: 30);
+
     switch (tableName) {
       case 'patients':
         if (action == 'update') {
-          await http.patch(
-            Uri.parse('${ApiService.baseUrl}/api/mobile/patients/$recordId'),
-            headers: headers,
-            body: jsonEncode(data),
-          );
+          await http
+              .put(Uri.parse('$base/api/mobile/patients/$recordId'), headers: headers, body: body)
+              .timeout(timeout);
         }
         break;
       case 'owners':
         if (action == 'update') {
-          await http.patch(
-            Uri.parse('${ApiService.baseUrl}/api/mobile/owners/$recordId'),
-            headers: headers,
-            body: jsonEncode(data),
-          );
+          await http
+              .put(Uri.parse('$base/api/mobile/owners/$recordId'), headers: headers, body: body)
+              .timeout(timeout);
         }
         break;
       case 'invoices':
         if (action == 'update') {
-          await http.patch(
-            Uri.parse('${ApiService.baseUrl}/api/mobile/invoices/$recordId/update'),
-            headers: headers,
-            body: jsonEncode(data),
-          );
+          await http
+              .put(Uri.parse('$base/api/mobile/invoices/$recordId'), headers: headers, body: body)
+              .timeout(timeout);
         }
         break;
       case 'appointments':
         if (action == 'update') {
-          await http.post(
-            Uri.parse('${ApiService.baseUrl}/api/mobile/appointments/$recordId'),
-            headers: headers,
-            body: jsonEncode(data),
-          );
+          await http
+              .put(Uri.parse('$base/api/mobile/appointments/$recordId'), headers: headers, body: body)
+              .timeout(timeout);
         }
         break;
     }
   }
+
 
   Future<void> _syncFromServer() async {
     final api = ApiService();

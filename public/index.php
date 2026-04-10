@@ -1,9 +1,12 @@
 <?php
 declare(strict_types=1);
 
-ini_set('display_errors', '1');
-ini_set('display_startup_errors', '1');
-error_reporting(E_ALL);
+// PRODUCTION: never output errors to the HTTP response – they corrupt JSON/HTML.
+// Errors are always written to storage/logs/error.log below.
+ini_set('display_errors', '0');
+ini_set('display_startup_errors', '0');
+// Keep logging to catch real issues – suppress only E_NOTICE/E_DEPRECATED noise.
+error_reporting(E_ALL & ~E_NOTICE & ~E_DEPRECATED & ~E_STRICT);
 
 define('ROOT_PATH', dirname(__DIR__));
 define('APP_PATH', ROOT_PATH . '/app');

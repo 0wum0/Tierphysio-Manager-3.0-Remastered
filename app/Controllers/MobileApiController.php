@@ -66,6 +66,67 @@ class MobileApiController
         return $this->db->prefix($table);
     }
 
+    /**
+     * Resolve the tenant table-prefix for a given user email.
+     *
+     * The Mobile API is stateless (no PHP session), so we cannot rely on the
+     * session-based prefix that the web controllers use.  Instead we:
+     *   1. Look up the prefix stored in the token row (set at login time).
+     *   2. If not stored yet, auto-detect via INFORMATION_SCHEMA: find the
+     *      t_*_users table whose rows contain the given e-mail address.
+     *   3. Fallback: take the first t_*_users table found (single-tenant case).
+     *
+     * The detected prefix is written into the token row on the first call so
+     * subsequent requests skip the expensive schema lookup.
+     */
+    private function resolveTenantPrefixForEmail(string $email): string
+    {
+        // 1. Already set on the DB object by requireAuth() from the token row?
+        $current = $this->db->getPrefix();
+        if ($current !== '') {
+            return $current;
+        }
+
+        // 2. Auto-detect by looking for the tenant whose users table has this email.
+        try {
+            $rows = $this->db->fetchAll(
+                "SELECT table_name FROM information_schema.tables
+                  WHERE table_schema = DATABASE()
+                    AND table_name LIKE 't\_%\_users'
+                  ORDER BY table_name ASC"
+            );
+            foreach ($rows as $row) {
+                $tableName = $row['table_name'] ?? $row['TABLE_NAME'] ?? '';
+                if (str_contains($tableName, 'portal') || str_contains($tableName, 'attempt')) {
+                    continue;
+                }
+                $prefix = substr($tableName, 0, -strlen('users'));
+                // Verify: does this tenant actually have this user?
+                $found = $this->db->fetchColumn(
+                    "SELECT COUNT(*) FROM `{$tableName}` WHERE email = ? LIMIT 1",
+                    [$email]
+                );
+                if ((int)$found > 0) {
+                    $this->db->setPrefix($prefix);
+                    return $prefix;
+                }
+            }
+            // Fallback: single-tenant – use the first matching table
+            foreach ($rows as $row) {
+                $tableName = $row['table_name'] ?? $row['TABLE_NAME'] ?? '';
+                if (str_contains($tableName, 'portal') || str_contains($tableName, 'attempt')) {
+                    continue;
+                }
+                $prefix = substr($tableName, 0, -strlen('users'));
+                $this->db->setPrefix($prefix);
+                return $prefix;
+            }
+        } catch (\Throwable $e) {
+            // Schema lookup failed – log silently
+        }
+        return '';
+    }
+
     /* ══════════════════════════════════════════════════════
        HELPERS
     ══════════════════════════════════════════════════════ */
@@ -120,24 +181,62 @@ class MobileApiController
             $this->error('Kein Token angegeben.', 401);
         }
         $token = trim($m[1]);
-        $row   = $this->db->fetch(
+
+        // First fetch the token row WITHOUT tenant prefix so we can read the stored prefix.
+        // We temporarily clear the prefix for this lookup (the tokens table is shared).
+        $savedPrefix = $this->db->getPrefix();
+        $this->db->setPrefix('');
+        $tokenRow = $this->db->fetch(
             "SELECT t.*, u.id AS user_id, u.name, u.email, u.role,
-                    COALESCE(u.active, u.is_active, 1) AS active
-             FROM `{$this->t('mobile_api_tokens')}` t
-             JOIN `{$this->t('users')}` u ON u.id = t.user_id
+                    COALESCE(u.active, u.is_active, 1) AS active,
+                    t.tenant_prefix
+             FROM mobile_api_tokens t
+             JOIN users u ON u.id = t.user_id
              WHERE t.token = ?
                AND (t.expires_at IS NULL OR t.expires_at > NOW())",
             [$token]
         );
-        if (!$row || (int)($row['active'] ?? 1) !== 1) {
+
+        // If no unprefixed table exists, fall back to prefixed lookup
+        if ($tokenRow === false) {
+            $this->db->setPrefix($savedPrefix);
+            $tokenRow = $this->db->fetch(
+                "SELECT t.*, u.id AS user_id, u.name, u.email, u.role,
+                        COALESCE(u.active, u.is_active, 1) AS active,
+                        t.tenant_prefix
+                 FROM `{$this->t('mobile_api_tokens')}` t
+                 JOIN `{$this->t('users')}` u ON u.id = t.user_id
+                 WHERE t.token = ?
+                   AND (t.expires_at IS NULL OR t.expires_at > NOW())",
+                [$token]
+            );
+        }
+
+        if (!$tokenRow || (int)($tokenRow['active'] ?? 1) !== 1) {
             $this->error('Ungültiger oder abgelaufener Token.', 401);
         }
-        $this->db->execute(
-            "UPDATE `{$this->t('mobile_api_tokens')}` SET last_used = NOW() WHERE token = ?",
-            [$token]
-        );
-        $this->authUser = $row;
-        return $row;
+
+        // Restore or apply the tenant prefix stored in the token
+        $storedPrefix = $tokenRow['tenant_prefix'] ?? '';
+        if ($storedPrefix !== '') {
+            $this->db->setPrefix($storedPrefix);
+        } else {
+            // Old token without prefix – auto-detect from email
+            $this->resolveTenantPrefixForEmail($tokenRow['email'] ?? '');
+        }
+
+        // Update last_used with the now-correct prefix
+        try {
+            $this->db->execute(
+                "UPDATE `{$this->t('mobile_api_tokens')}` SET last_used = NOW() WHERE token = ?",
+                [$token]
+            );
+        } catch (\Throwable) {
+            // Might fail if table is prefixed differently – non-fatal
+        }
+
+        $this->authUser = $tokenRow;
+        return $tokenRow;
     }
 
     private function requireAdmin(): void
@@ -165,6 +264,18 @@ class MobileApiController
             $this->error('E-Mail und Passwort erforderlich.');
         }
 
+        // ── Tenant-Prefix-Auflösung ────────────────────────────────────────────
+        // The Mobile API is stateless – no PHP session. We must find the correct
+        // tenant prefix from the database schema before querying the users table.
+        $prefix = $this->resolveTenantPrefixForEmail($email);
+
+        if ($prefix === '') {
+            // Log this for diagnostics
+            error_log('[MobileApi] Could not resolve tenant prefix for: ' . $email);
+            error_reporting($prev);
+            $this->error('Tenant nicht gefunden. Bitte Support kontaktieren.', 503);
+        }
+
         $user = $this->users->findByEmail($email);
         if (!$user || !password_verify($password, $user['password'] ?? $user['password_hash'] ?? '')) {
             error_reporting($prev);
@@ -181,11 +292,23 @@ class MobileApiController
         $token     = bin2hex(random_bytes(32));
         $expiresAt = date('Y-m-d H:i:s', strtotime('+90 days'));
 
-        $this->db->execute(
-            "INSERT INTO `{$this->t('mobile_api_tokens')}` (user_id, token, device_name, expires_at, created_at)
-             VALUES (?, ?, ?, ?, NOW())",
-            [$user['id'], $token, $deviceName, $expiresAt]
-        );
+        // Store the tenant prefix IN the token row so requireAuth() can restore it
+        // on every subsequent stateless API request (no session needed).
+        try {
+            $this->db->execute(
+                "INSERT INTO `{$this->t('mobile_api_tokens')}` (user_id, token, device_name, tenant_prefix, expires_at, created_at)
+                 VALUES (?, ?, ?, ?, ?, NOW())",
+                [$user['id'], $token, $deviceName, $prefix, $expiresAt]
+            );
+        } catch (\Throwable) {
+            // Fallback: table may not have tenant_prefix column yet
+            $this->db->execute(
+                "INSERT INTO `{$this->t('mobile_api_tokens')}` (user_id, token, device_name, expires_at, created_at)
+                 VALUES (?, ?, ?, ?, NOW())",
+                [$user['id'], $token, $deviceName, $expiresAt]
+            );
+        }
+
         $this->users->updateLastLogin($user['id']);
 
         error_reporting($prev);
