@@ -1,4 +1,19 @@
-﻿{% extends 'layouts/base.twig' %}
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+
+{% block head %}
+<style>
+/* ── Patient Show Page — SmartAdmin compatible styles ── */
+.patient-layout { display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; align-items: flex-start; width: 100%; }
+@media (max-width: 992px) { .patient-layout { grid-template-columns: 1fr; } }
+.avatar-md { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.875rem; font-weight: 700; flex-shrink: 0; }
+.font-medium { font-weight: 500; }
+.min-width-0 { min-width: 0; }
+.opacity-40 { opacity: 0.4; }
+.homework-item { border: 1px solid var(--bs-border-color); border-radius: var(--bs-border-radius); padding: 1rem; margin-bottom: 0.75rem; background: var(--bs-tertiary-bg); }
+@keyframes badgePulse { 0% { box-shadow: 0 0 0 0 rgba(220,53,69,0.7); } 70% { box-shadow: 0 0 0 7px rgba(220,53,69,0); } 100% { box-shadow: 0 0 0 0 rgba(220,53,69,0); } }
+.pulse-ring { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 100%; height: 100%; border-radius: 6px; border: 2px solid #dc3545; animation: badgePulse 1.4s ease-out infinite; pointer-events: none; }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="page-header">
@@ -40,18 +55,18 @@
     </div>
 </div>
 
-<div class="flex gap-4" style="align-items:flex-start;flex-wrap:wrap;max-width:100%;overflow:hidden;">
+<div class="patient-layout">
 
     {# Left: Patient Info #}
-    <div style="width:280px;flex-shrink:0;display:flex;flex-direction:column;gap:1rem;">
+    <div style="display:flex;flex-direction:column;gap:1rem;min-width:0;">
 
         {# Photo Card #}
-        <div class="glass-card" style="padding:0;overflow:hidden;">
-            <div style="height:200px;background:linear-gradient(135deg,var(--bg-elevated),var(--bg-surface));display:flex;align-items:center;justify-content:center;position:relative;">
+        <div class="card" style="overflow:hidden;padding:0;">
+            <div style="height:200px;background:linear-gradient(135deg,var(--bs-tertiary-bg),var(--bs-body-bg));display:flex;align-items:center;justify-content:center;position:relative;">
                 {% if patient.photo %}
                     <img src="/patienten/{{ patient.id }}/foto/{{ patient.photo }}" alt="{{ patient.name }}" style="width:100%;height:100%;object-fit:cover;">
                 {% else %}
-                    <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="color:var(--text-muted);opacity:0.4;"><path stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="color:var(--bs-secondary-color);opacity:0.4;"><path stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                 {% endif %}
             </div>
             <div style="padding:1rem;">
@@ -69,62 +84,64 @@
         </div>
 
         {# Patient Details #}
-        <div class="glass-card">
-            <h3 class="font-semibold mb-3" style="font-size:0.9rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">Details</h3>
+        <div class="card"><div class="card-body">
+            <h3 class="fw-semibold mb-3" style="font-size:0.9rem;color:var(--bs-secondary-color);text-transform:uppercase;letter-spacing:0.05em;">Details</h3>
             <div style="display:flex;flex-direction:column;gap:0.75rem;">
                 <div>
-                    <div class="text-xs text-muted mb-1">{{ t('patients.species') }}</div>
-                    <div class="text-sm font-medium">{{ patient.species ?: '—' }}</div>
+                    <div style="font-size:0.72rem;text-muted mb-1">{{ t('patients.species') }}</div>
+                    <div class="small font-medium">{{ patient.species ?: '—' }}</div>
                 </div>
                 <div>
-                    <div class="text-xs text-muted mb-1">{{ t('patients.breed') }}</div>
-                    <div class="text-sm font-medium">{{ patient.breed ?: '—' }}</div>
+                    <div style="font-size:0.72rem;text-muted mb-1">{{ t('patients.breed') }}</div>
+                    <div class="small font-medium">{{ patient.breed ?: '—' }}</div>
                 </div>
                 <div>
-                    <div class="text-xs text-muted mb-1">{{ t('patients.gender') }}</div>
-                    <div class="text-sm font-medium">{{ patient.gender ?: '—' }}</div>
+                    <div style="font-size:0.72rem;text-muted mb-1">{{ t('patients.gender') }}</div>
+                    <div class="small font-medium">{{ patient.gender ?: '—' }}</div>
                 </div>
                 <div>
-                    <div class="text-xs text-muted mb-1">{{ t('patients.birth_date') }}</div>
-                    <div class="text-sm font-medium">{{ patient.birth_date ? patient.birth_date|date_de : '—' }}</div>
+                    <div style="font-size:0.72rem;text-muted mb-1">{{ t('patients.birth_date') }}</div>
+                    <div class="small font-medium">{{ patient.birth_date ? patient.birth_date|date_de : '—' }}</div>
                 </div>
                 <div>
-                    <div class="text-xs text-muted mb-1">{{ t('patients.color') }}</div>
-                    <div class="text-sm font-medium">{{ patient.color ?: '—' }}</div>
+                    <div style="font-size:0.72rem;text-muted mb-1">{{ t('patients.color') }}</div>
+                    <div class="small font-medium">{{ patient.color ?: '—' }}</div>
                 </div>
                 <div>
-                    <div class="text-xs text-muted mb-1">{{ t('patients.chip_number') }}</div>
-                    <div class="text-sm font-medium" style="font-family:monospace;">{{ patient.chip_number ?: '—' }}</div>
+                    <div style="font-size:0.72rem;text-muted mb-1">{{ t('patients.chip_number') }}</div>
+                    <div class="small font-medium" style="font-family:monospace;">{{ patient.chip_number ?: '—' }}</div>
                 </div>
                 {% if patient.notes %}
-                <div style="border-top:1px solid var(--glass-border);padding-top:0.75rem;">
-                    <div class="text-xs text-muted mb-1">{{ t('patients.notes') }}</div>
-                    <div class="text-sm" style="line-height:1.5;color:var(--text-secondary);">{{ patient.notes }}</div>
+                <div style="border-top:1px solid var(--bs-border-color);padding-top:0.75rem;">
+                    <div style="font-size:0.72rem;text-muted mb-1">{{ t('patients.notes') }}</div>
+                    <div class="small" style="line-height:1.5;color:var(--bs-secondary-color);">{{ patient.notes }}</div>
                 </div>
                 {% endif %}
             </div>
         </div>
+        </div>
 
         {# Owner Card #}
         {% if owner %}
-        <div class="glass-card">
-            <h3 class="font-semibold mb-3" style="font-size:0.9rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">{{ t('patients.owner') }}</h3>
+        <div class="card"><div class="card-body">
+            <h3 class="fw-semibold mb-3" style="font-size:0.9rem;color:var(--bs-secondary-color);text-transform:uppercase;letter-spacing:0.05em;">{{ t('patients.owner') }}</h3>
             <a href="/tierhalter/{{ owner.id }}" style="text-decoration:none;">
                 <div class="flex items-center gap-3">
                     <div class="avatar-placeholder avatar-md" style="font-size:0.875rem;">{{ owner.first_name|first ~ owner.last_name|first }}</div>
                     <div>
-                        <div class="font-semibold text-sm">{{ owner.first_name }} {{ owner.last_name }}</div>
-                        {% if owner.phone %}<div class="text-xs text-muted">{{ owner.phone }}</div>{% endif %}
-                        {% if owner.email %}<div class="text-xs text-muted">{{ owner.email }}</div>{% endif %}
+                        <div class="fw-semibold text-sm">{{ owner.first_name }} {{ owner.last_name }}</div>
+                        {% if owner.phone %}<div style="font-size:0.72rem;text-muted">{{ owner.phone }}</div>{% endif %}
+                        {% if owner.email %}<div style="font-size:0.72rem;text-muted">{{ owner.email }}</div>{% endif %}
                     </div>
                 </div>
             </a>
         </div>
+        </div>
         {% endif %}
 
         {# Next Appointment Card #}
-        <div class="glass-card" style="padding:1rem;">
-            <h3 class="font-semibold mb-2" style="font-size:0.9rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.05em;">
+        <div class="card"><div class="card-body">
+            <h3 class="fw-semibold mb-2" style="font-size:0.9rem;color:var(--bs-secondary-color);text-transform:uppercase;letter-spacing:0.05em;">
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="1.5"/></svg>
                 Nächster Termin
             </h3>
@@ -164,11 +181,12 @@
                 </a>
             {% endif %}
         </div>
+        </div>
 
         {# Delete #}
         <form action="/patienten/{{ patient.id }}/loeschen" method="POST">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-            <button type="submit" class="btn btn-danger w-full" data-confirm="{% if is_trainer ?? false %}Hund wirklich löschen? Alle Daten werden entfernt.{% else %}Patient wirklich löschen? Alle Daten werden entfernt.{% endif %}">
+            <button type="submit" class="btn btn-danger w-100" data-confirm="{% if is_trainer ?? false %}Hund wirklich löschen? Alle Daten werden entfernt.{% else %}Patient wirklich löschen? Alle Daten werden entfernt.{% endif %}">
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="3 6 5 6 21 6"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m5 0V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2"/></svg>
                 {{ t('common.delete') }}
             </button>
@@ -176,16 +194,16 @@
     </div>
 
     {# Right: Akte #}
-    <div style="flex:1;min-width:0;max-width:100%;overflow:hidden;display:flex;flex-direction:column;gap:1rem;">
+    <div style="display:flex;flex-direction:column;gap:1rem;min-width:0;">
 
         {# Akte mit Tabs #}
-        <div class="glass-card">
-            <h3 class="font-semibold mb-4" style="font-size:0.95rem;">{% if is_trainer ?? false %}Trainingsakte{% else %}Akte{% endif %}</h3>
+        <div class="card"><div class="card-body">
+            <h3 class="fw-semibold mb-4" style="font-size:0.95rem;">{% if is_trainer ?? false %}Trainingsakte{% else %}Akte{% endif %}</h3>
             
             <!-- Tabs Navigation -->
-            <ul class="nav nav-tabs" id="akteTabs" role="tablist" style="border-bottom:1px solid var(--glass-border);margin-bottom:1rem;">
+            <ul class="nav nav-tabs" id="akteTabs" role="tablist" style="border-bottom:1px solid var(--bs-border-color);margin-bottom:1rem;">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="neuer-eintrag-tab" data-bs-toggle="tab" data-bs-target="#neuer-eintrag" type="button" role="tab" aria-controls="neuer-eintrag" aria-selected="true">
+                    <button class="nav-link" id="neuer-eintrag-tab" data-bs-toggle="tab" data-bs-target="#neuer-eintrag" type="button" role="tab" aria-controls="neuer-eintrag" aria-selected="false">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                         {% if is_trainer ?? false %}Neuer Trainingseintrag{% else %}Neuer Akteneintrag{% endif %}
                     </button>
@@ -215,7 +233,7 @@
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="historie-tab" data-bs-toggle="tab" data-bs-target="#historie" type="button" role="tab" aria-controls="historie" aria-selected="false">
+                    <button class="nav-link active" id="historie-tab" data-bs-toggle="tab" data-bs-target="#historie" type="button" role="tab" aria-controls="historie" aria-selected="false">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><path stroke="currentColor" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         Historie
                     </button>
@@ -233,7 +251,7 @@
             <!-- Tab Content -->
             <div class="tab-content" id="akteTabsContent">
                 <!-- Neuer Eintrag Tab -->
-                <div class="tab-pane fade show active" id="neuer-eintrag" role="tabpanel" aria-labelledby="neuer-eintrag-tab">
+                <div class="tab-pane fade" id="neuer-eintrag" role="tabpanel" aria-labelledby="neuer-eintrag-tab">
                     <form id="show-timeline-form" action="/patienten/{{ patient.id }}/timeline-json" method="POST" enctype="multipart/form-data" data-patient-id="{{ patient.id }}">
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                         <div class="form-grid form-grid-2" style="margin-bottom:0.75rem;">
@@ -274,7 +292,7 @@
                 <!-- Hausaufgaben Tab -->
                 <div class="tab-pane fade" id="hausaufgaben" role="tabpanel" aria-labelledby="hausaufgaben-tab">
                     <div class="d-flex justify-content-between align-items-center mb-3" style="flex-wrap:wrap;gap:0.5rem;">
-                        <h5 style="font-size:0.9rem;color:var(--text-muted);margin:0;">Hausaufgaben für {{ patient.name }}</h5>
+                        <h5 style="font-size:0.9rem;color:var(--bs-secondary-color);margin:0;">Hausaufgaben für {{ patient.name }}</h5>
                         <div class="flex gap-2" style="flex-wrap:wrap;">
                             <button class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-plan-meta" id="btn-plan-meta">
                                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -301,7 +319,7 @@
                     </div>
 
                     <div id="homework-list">
-                        <div class="text-center py-4" style="color:var(--text-muted);">
+                        <div class="text-center py-4" style="color:var(--bs-secondary-color);">
                             <div class="spinner-border spinner-border-sm me-2"></div>
                             Lade Hausaufgaben...
                         </div>
@@ -312,7 +330,7 @@
                 <div class="tab-pane fade" id="portal-checks" role="tabpanel" aria-labelledby="portal-checks-tab">
                     {% if portal_check_notifications is defined and portal_check_notifications|length > 0 %}
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <p class="small mb-0" style="color:var(--text-muted);">
+                        <p class="small mb-0" style="color:var(--bs-secondary-color);">
                             Aufgaben und Übungen, die der Besitzer im Portal abgehakt hat. Diese Einträge erscheinen <strong>nicht</strong> in der Timeline.
                         </p>
                         <span class="badge" style="background:rgba(34,197,94,0.12);color:#22c55e;border:1px solid rgba(34,197,94,0.25);font-size:0.7rem;">
@@ -321,7 +339,7 @@
                     </div>
                     <div style="display:flex;flex-direction:column;gap:0.5rem;">
                         {% for n in portal_check_notifications %}
-                        <div style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.9rem;border-radius:10px;background:var(--glass-bg, rgba(255,255,255,0.04));border:1px solid var(--glass-border, rgba(255,255,255,0.08));">
+                        <div style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0.9rem;border-radius:10px;background:var(--bs-tertiary-bg);border:1px solid var(--glass-border, rgba(255,255,255,0.08));">
                             <div style="width:28px;height:28px;border-radius:8px;background:{% if n.type == 'homework' %}rgba(34,197,94,0.12){% else %}rgba(79,124,255,0.12){% endif %};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                                 {% if n.type == 'homework' %}
                                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -331,7 +349,7 @@
                             </div>
                             <div style="flex:1;min-width:0;">
                                 <div style="font-size:0.85rem;font-weight:600;">{{ n.task_title }}</div>
-                                <div style="font-size:0.75rem;color:var(--text-muted);">
+                                <div style="font-size:0.75rem;color:var(--bs-secondary-color);">
                                     {{ n.owner_name }}
                                     · {{ n.type == 'homework' ? 'Hausaufgabe' : 'Übung' }}
                                     · <span title="{{ n.created_at }}">{{ n.created_at|date('d.m.Y H:i') }}</span>
@@ -344,7 +362,7 @@
                         {% endfor %}
                     </div>
                     {% else %}
-                    <div class="text-center py-5" style="color:var(--text-muted);">
+                    <div class="text-center py-5" style="color:var(--bs-secondary-color);">
                         <svg width="40" height="40" fill="none" viewBox="0 0 24 24" style="opacity:0.2;margin-bottom:12px;"><path stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         <p style="font-size:0.9rem;">Noch keine abgehakten Aufgaben im Besitzerportal.</p>
                         <p style="font-size:0.8rem;opacity:0.6;">Sobald der Besitzer eine Aufgabe oder Übung abhakt, erscheint sie hier.</p>
@@ -355,14 +373,14 @@
                 <!-- Befundbögen Tab -->
                 <div class="tab-pane fade" id="befunde" role="tabpanel" aria-labelledby="befunde-tab">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 style="font-size:0.9rem;color:var(--text-muted);margin:0;">Befundbögen für {{ patient.name }}</h5>
+                        <h5 style="font-size:0.9rem;color:var(--bs-secondary-color);margin:0;">Befundbögen für {{ patient.name }}</h5>
                         <a href="/patienten/{{ patient.id }}/befunde/neu" class="btn btn-sm btn-primary">
                             <svg width="13" height="13" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                             Neuer Befundbogen
                         </a>
                     </div>
                     <div id="befunde-list-container">
-                        <div class="text-center py-3" style="color:var(--text-muted);font-size:.85rem;">
+                        <div class="text-center py-3" style="color:var(--bs-secondary-color);font-size:.85rem;">
                             <span class="spinner-border spinner-border-sm me-2"></span> Lade Befundbögen...
                         </div>
                     </div>
@@ -376,7 +394,7 @@
                 {% endif %}
 
                 <!-- Historie Tab -->
-                <div class="tab-pane fade" id="historie" role="tabpanel" aria-labelledby="historie-tab">
+                <div class="tab-pane fade show active" id="historie" role="tabpanel" aria-labelledby="historie-tab">
                     {% if timeline %}
                         <div class="timeline">
                             {% for entry in timeline %}
@@ -385,7 +403,7 @@
                                     <div class="timeline-card">
                                         <div class="timeline-meta">
                                             <div class="flex items-center gap-2">
-                                                <span class="text-xs" style="color:{% if entry.type == 'payment' %}#22c55e{% else %}var(--text-muted){% endif %};">
+                                                <span class="text-xs" style="color:{% if entry.type == 'payment' %}#22c55e{% else %}var(--bs-secondary-color){% endif %};">
                                                     {% if entry.type == 'note' %}📝
                                                     {% elseif entry.type == 'treatment' %}💊
                                                     {% elseif entry.type == 'photo' %}📷
@@ -442,6 +460,10 @@
                 </div>
             </div>
         </div>
+
+        </div>{# end card #}
+    </div>{# end right column #}
+</div>{# end patient-layout #}
 
 {# Hausaufgaben Modal #}
 <div class="modal fade" id="modal-add-homework" tabindex="-1" aria-hidden="true">
@@ -543,7 +565,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
             </div>
             <div class="modal-body">
-                <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:1rem;">Diese Angaben erscheinen im Hausaufgaben-PDF und werden pro Patient gespeichert.</p>
+                <p style="font-size:0.82rem;color:var(--bs-secondary-color);margin-bottom:1rem;">Diese Angaben erscheinen im Hausaufgaben-PDF und werden pro Patient gespeichert.</p>
                 <div class="form-group mb-3">
                     <label class="form-label">Physiotherapeutische Grundsätze</label>
                     <textarea id="pm-grundsaetze" class="form-control" rows="2" placeholder="z.B. Schmerzfreiheit, Stabilisierung/Mobilisierung der Bewegungsabläufe..."></textarea>
@@ -618,7 +640,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (container) {
                 if (homework.length === 0) {
                     container.innerHTML = `
-                        <div class="text-center py-4" style="color:var(--text-muted);">
+                        <div class="text-center py-4" style="color:var(--bs-secondary-color);">
                             <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="margin:0 auto 1rem;opacity:0.4;"><path stroke="currentColor" stroke-width="1.5" d="M9 11l3 3L22 4"/><path stroke="currentColor" stroke-width="1.5" d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
                             <div style="font-size:0.9rem;margin-bottom:0.5rem;">Noch keine Hausaufgaben zugewiesen</div>
                             <div style="font-size:0.8rem;opacity:0.7;">Klicke auf "Hausaufgabe hinzufügen" um zu beginnen</div>
@@ -628,13 +650,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 container.innerHTML = homework.map(hw => `
-                    <div class="homework-item" data-id="${hw.id}" style="border:1px solid var(--glass-border);border-radius:8px;padding:1rem;margin-bottom:0.75rem;background:var(--glass-bg);">
+                    <div class="homework-item" data-id="${hw.id}" style="border:1px solid var(--bs-border-color);border-radius:8px;padding:1rem;margin-bottom:0.75rem;background:var(--bs-tertiary-bg);">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div>
                                 <h6 style="margin:0;font-size:0.9rem;font-weight:600;">
                                     ${hw.category_emoji} ${hw.title}
                                 </h6>
-                                <div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.25rem;">
+                                <div style="font-size:0.8rem;color:var(--bs-secondary-color);margin-top:0.25rem;">
                                     ${hw.frequency_display} • ${hw.duration_display}
                                 </div>
                             </div>
@@ -647,10 +669,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </button>
                             </div>
                         </div>
-                        <div style="font-size:0.85rem;line-height:1.4;color:var(--text-secondary);margin-bottom:0.5rem;">
+                        <div style="font-size:0.85rem;line-height:1.4;color:var(--bs-secondary-color);margin-bottom:0.5rem;">
                             ${hw.description}
                         </div>
-                        <div style="font-size:0.8rem;color:var(--text-muted);">
+                        <div style="font-size:0.8rem;color:var(--bs-secondary-color);">
                             <div>📅 ${hw.start_date} ${hw.end_date ? 'bis ' + hw.end_date : ''}</div>
                             ${hw.therapist_notes ? '<div>📝 ' + hw.therapist_notes + '</div>' : ''}
                         </div>
@@ -664,7 +686,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const container = document.getElementById('homework-list');
             if (container) {
                 container.innerHTML = `
-                    <div class="text-center py-4" style="color:var(--text-danger);">
+                    <div class="text-center py-4" style="color:var(--bs-danger);">
                         <div style="font-size:0.9rem;">Fehler beim Laden der Hausaufgaben</div>
                     </div>
                 `;
@@ -711,7 +733,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     Hausaufgabe erfolgreich zugewiesen!
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 `;
-                document.querySelector('.glass-card').prepend(alert);
+                document.querySelector('.card').prepend(alert);
                 
                 setTimeout(() => alert.remove(), 5000);
             } else {
@@ -823,7 +845,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const items = data.items ?? [];
             if (items.length === 0) {
                 container.innerHTML = `
-                    <div style="text-align:center;padding:2rem 1rem;color:var(--text-muted);">
+                    <div style="text-align:center;padding:2rem 1rem;color:var(--bs-secondary-color);">
                         <svg width="36" height="36" fill="none" viewBox="0 0 24 24" style="opacity:.2;margin-bottom:10px;display:block;margin-inline:auto;"><path stroke="currentColor" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"/></svg>
                         <p style="font-size:.85rem;">Noch keine Befundbögen vorhanden.</p>
                     </div>`;
@@ -834,11 +856,11 @@ document.addEventListener('DOMContentLoaded', function() {
             items.forEach(b => {
                 const color = statusColor[b.status] ?? '#6c757d';
                 const label = { versendet:'Versendet', abgeschlossen:'Abgeschlossen', entwurf:'Entwurf' }[b.status] ?? b.status;
-                html += `<div style="display:flex;align-items:center;gap:.75rem;padding:.6rem .9rem;border-radius:10px;background:var(--glass-bg,rgba(255,255,255,.04));border:1px solid var(--glass-border,rgba(255,255,255,.08));">
+                html += `<div style="display:flex;align-items:center;gap:.75rem;padding:.6rem .9rem;border-radius:10px;background:var(--bs-tertiary-bg);border:1px solid var(--glass-border,rgba(255,255,255,.08));">
                     <div style="flex:1;min-width:0;">
-                        <div style="font-size:.82rem;font-weight:700;font-family:monospace;color:var(--text-muted);">BF-${String(b.id).padStart(4,'0')}</div>
+                        <div style="font-size:.82rem;font-weight:700;font-family:monospace;color:var(--bs-secondary-color);">BF-${String(b.id).padStart(4,'0')}</div>
                         <div style="font-size:.88rem;font-weight:600;">${b.datum ? new Date(b.datum).toLocaleDateString('de-DE') : '—'}</div>
-                        ${b.ersteller_name ? `<div style="font-size:.75rem;color:var(--text-muted);">${b.ersteller_name}</div>` : ''}
+                        ${b.ersteller_name ? `<div style="font-size:.75rem;color:var(--bs-secondary-color);">${b.ersteller_name}</div>` : ''}
                     </div>
                     <span style="font-size:.65rem;padding:2px 8px;border-radius:6px;background:${color}22;color:${color};border:1px solid ${color}44;white-space:nowrap;">${label}</span>
                     <a href="/patienten/{{ patient.id }}/befunde/${b.id}" class="btn btn-xs btn-outline-secondary" style="font-size:.75rem;padding:3px 8px;white-space:nowrap;">Ansehen</a>
@@ -942,7 +964,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="modal-header" style="flex-shrink:0;">
             <div class="flex items-center gap-3">
                 <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
-                <span class="font-bold" style="font-size:1rem;">Rechnung erstellen</span>
+                <span class="fw-bold" style="font-size:1rem;">Rechnung erstellen</span>
             </div>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
         </div>
@@ -995,7 +1017,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div style="flex:1.4;min-width:300px;display:flex;flex-direction:column;gap:0.75rem;">
 
                     {% if kleinunternehmer %}
-                    <div class="flex items-center gap-2" style="background:rgba(255,193,7,0.12);border:1px solid rgba(255,193,7,0.3);border-radius:var(--radius-sm);padding:0.5rem 0.75rem;">
+                    <div class="flex items-center gap-2" style="background:rgba(255,193,7,0.12);border:1px solid rgba(255,193,7,0.3);border-radius:0.375rem;padding:0.5rem 0.75rem;">
                         <svg width="13" height="13" fill="none" viewBox="0 0 24 24" style="color:#f59e0b;flex-shrink:0;"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                         <span class="text-xs"><strong>Kleinunternehmer §19 UStG</strong> — MwSt. 0%</span>
                     </div>
@@ -1003,10 +1025,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     {# Column headers #}
                     <div style="display:grid;grid-template-columns:1fr 70px 100px {{ kleinunternehmer ? '0px' : '65px' }} auto;gap:0.4rem;">
-                        <span class="text-xs text-muted">Beschreibung</span>
-                        <span class="text-xs text-muted" style="text-align:right;">Menge</span>
-                        <span class="text-xs text-muted" style="text-align:right;">Einzelpreis</span>
-                        {% if not kleinunternehmer %}<span class="text-xs text-muted" style="text-align:right;">MwSt.%</span>{% endif %}
+                        <span style="font-size:0.72rem;text-muted">Beschreibung</span>
+                        <span style="font-size:0.72rem;text-muted" style="text-align:right;">Menge</span>
+                        <span style="font-size:0.72rem;text-muted" style="text-align:right;">Einzelpreis</span>
+                        {% if not kleinunternehmer %}<span style="font-size:0.72rem;text-muted" style="text-align:right;">MwSt.%</span>{% endif %}
                         <span></span>
                     </div>
 
@@ -1028,10 +1050,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     </button>
 
                     {# Running total #}
-                    <div style="border-top:1px solid var(--glass-border);padding-top:0.75rem;margin-top:0.25rem;">
+                    <div style="border-top:1px solid var(--bs-border-color);padding-top:0.75rem;margin-top:0.25rem;">
                         <div class="flex justify-between text-sm">
                             <span class="text-muted">Gesamt (brutto)</span>
-                            <span id="modal-total-gross" class="font-bold" style="color:var(--accent);font-size:1rem;">0,00 €</span>
+                            <span id="modal-total-gross" class="fw-bold" style="color:var(--bs-primary);font-size:1rem;">0,00 €</span>
                         </div>
                     </div>
 
@@ -1065,7 +1087,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 {# Datei-Viewer (Bilder + PDFs) #}
 <div id="fileviewer-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.88);align-items:center;justify-content:center;padding:1rem;box-sizing:border-box;">
-    <div style="position:relative;width:100%;max-width:960px;height:min(88vh,100%);display:flex;flex-direction:column;background:var(--bg-surface,#1a1a2e);border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.7);">
+    <div style="position:relative;width:100%;max-width:960px;height:min(88vh,100%);display:flex;flex-direction:column;background:var(--bs-body-bg,#1a1a2e);border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.7);">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;gap:0.5rem;">
             <span id="fv-filename" style="font-size:0.875rem;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;"></span>
             <div style="display:flex;gap:0.5rem;align-items:center;flex-shrink:0;">
@@ -1183,7 +1205,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (homework.length === 0) {
                 container.innerHTML = `
-                    <div class="text-center py-4" style="color:var(--text-muted);">
+                    <div class="text-center py-4" style="color:var(--bs-secondary-color);">
                         <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="margin:0 auto 1rem;opacity:0.4;"><path stroke="currentColor" stroke-width="1.5" d="M9 11l3 3L22 4"/><path stroke="currentColor" stroke-width="1.5" d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
                         <div style="font-size:0.9rem;margin-bottom:0.5rem;">Noch keine Hausaufgaben zugewiesen</div>
                         <div style="font-size:0.8rem;opacity:0.7;">Klicke auf "Hausaufgabe hinzufügen" um zu beginnen</div>
@@ -1193,13 +1215,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             container.innerHTML = homework.map(hw => `
-                <div class="homework-item" data-id="${hw.id}" style="border:1px solid var(--glass-border);border-radius:8px;padding:1rem;margin-bottom:0.75rem;background:var(--glass-bg);">
+                <div class="homework-item" data-id="${hw.id}" style="border:1px solid var(--bs-border-color);border-radius:8px;padding:1rem;margin-bottom:0.75rem;background:var(--bs-tertiary-bg);">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div>
                             <h6 style="margin:0;font-size:0.9rem;font-weight:600;">
                                 ${hw.category_emoji} ${hw.title}
                             </h6>
-                            <div style="font-size:0.8rem;color:var(--text-muted);margin-top:0.25rem;">
+                            <div style="font-size:0.8rem;color:var(--bs-secondary-color);margin-top:0.25rem;">
                                 ${hw.frequency_display} • ${hw.duration_display}
                             </div>
                         </div>
@@ -1212,10 +1234,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             </button>
                         </div>
                     </div>
-                    <div style="font-size:0.85rem;line-height:1.4;color:var(--text-secondary);margin-bottom:0.5rem;">
+                    <div style="font-size:0.85rem;line-height:1.4;color:var(--bs-secondary-color);margin-bottom:0.5rem;">
                         ${hw.description}
                     </div>
-                    <div style="font-size:0.8rem;color:var(--text-muted);">
+                    <div style="font-size:0.8rem;color:var(--bs-secondary-color);">
                         <div>📅 ${hw.start_date} ${hw.end_date ? 'bis ' + hw.end_date : ''}</div>
                         ${hw.therapist_notes ? '<div>📝 ' + hw.therapist_notes + '</div>' : ''}
                     </div>
@@ -1226,7 +1248,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Fehler beim Laden der Hausaufgaben:', error);
             document.getElementById('homework-list').innerHTML = `
-                <div class="text-center py-4" style="color:var(--text-danger);">
+                <div class="text-center py-4" style="color:var(--bs-danger);">
                     <div style="font-size:0.9rem;">Fehler beim Laden der Hausaufgaben</div>
                 </div>
             `;
@@ -1274,7 +1296,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     Hausaufgabe erfolgreich zugewiesen!
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 `;
-                document.querySelector('.glass-card').prepend(alert);
+                document.querySelector('.card').prepend(alert);
                 
                 setTimeout(() => alert.remove(), 5000);
             } else {
