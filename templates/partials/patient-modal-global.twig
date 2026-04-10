@@ -2293,6 +2293,45 @@ window.showPatientModal = openPatientModal;
     </div>
 </div>
 
+{# ── Fortschritt Modal ─────────────────────────────────────────────────── #}
+<div class="modal fade" id="modal-progress" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Fortschritt</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            </div>
+            <div class="modal-body">
+                <link rel="stylesheet" href="/plugin-assets/therapy-care-pro/therapy-care-pro.css">
+                
+                <div id="progress-loading" class="text-center py-4">
+                    <div class="spinner-border spinner-border-sm"></div>
+                    Lade Fortschrittsdaten...
+                </div>
+                
+                <div id="progress-content" style="display:none;">
+                    {# Latest values summary #}
+                    <div id="latest-values-container" class="row g-2 mb-3"></div>
+                    
+                    {# Quick entry form #}
+                    <div id="quick-entry-container" class="border rounded p-3 mb-3" style="display:none;">
+                        <div class="fw-700 fs-sm mb-2">Werte schnell erfassen</div>
+                        <form id="progress-form">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                            <input type="hidden" name="entry_date" id="progress-entry-date">
+                            <div id="progress-categories-container" class="row g-2"></div>
+                            <div class="mt-3 d-flex gap-2 align-items-center flex-wrap">
+                                <button type="submit" class="btn btn-primary btn-sm">Werte speichern</button>
+                                <a id="progress-detail-link" href="#" target="_blank" class="btn btn-outline-secondary btn-sm">Verlauf & Grafik</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 /* ── Hausaufgaben & Therapieplan AJAX ────────────────────────────── */
 (function() {
@@ -2426,6 +2465,129 @@ window.showPatientModal = openPatientModal;
     // Initialisierung
     loadHomeworkTemplates();
     
+    // ── Fortschritt AJAX ──────────────────────────────────────────────────
+    async function loadProgressData() {
+        if (!currentPatientId) return;
+        
+        const loading = document.getElementById('progress-loading');
+        const content = document.getElementById('progress-content');
+        
+        loading.style.display = 'block';
+        content.style.display = 'none';
+        
+        try {
+            // Kategorien laden
+            const catRes = await fetch('/api/mobile/tcp/fortschritt/kategorien');
+            const categories = await catRes.json();
+            
+            // Fortschrittswerte laden
+            const progRes = await fetch(`/api/mobile/tcp/patienten/${currentPatientId}/fortschritt`);
+            const progress = await progRes.json();
+            
+            loading.style.display = 'none';
+            content.style.display = 'block';
+            
+            // Latest values rendern
+            const latestContainer = document.getElementById('latest-values-container');
+            if (progress && progress.length > 0) {
+                let html = '';
+                progress.forEach(entry => {
+                    const cat = categories.find(c => c.id === entry.category_id);
+                    if (!cat) return;
+                    const pct = ((entry.score - cat.scale_min) / Math.max(1, cat.scale_max - cat.scale_min)) * 100;
+                    html += `
+                        <div class="col-6 col-md-4">
+                            <div class="d-flex align-items-center gap-2 p-2 rounded" style="background:var(--bs-tertiary-bg)">
+                                <span class="tcp-cat-dot" style="background:${cat.color};"></span>
+                                <div class="flex-fill overflow-hidden">
+                                    <div class="fw-600 fs-sm text-truncate">${cat.name}</div>
+                                    <div class="d-flex align-items-center gap-1 mt-1">
+                                        <div class="tcp-progress-bar-track">
+                                            <div class="tcp-progress-bar-fill" style="width:${pct}%;background:${cat.color};"></div>
+                                        </div>
+                                        <span class="fs-nano fw-700" style="min-width:28px;text-align:right;">${entry.score}/${cat.scale_max}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                latestContainer.innerHTML = html;
+            } else {
+                latestContainer.innerHTML = '<div class="text-muted fs-sm mb-3">Noch keine Fortschrittswerte erfasst.</div>';
+            }
+            
+            // Kategorien für Quick Entry rendern
+            const quickEntryContainer = document.getElementById('quick-entry-container');
+            const categoriesContainer = document.getElementById('progress-categories-container');
+            if (categories && categories.length > 0) {
+                quickEntryContainer.style.display = 'block';
+                let html = '';
+                categories.forEach(cat => {
+                    const mid = Math.round((cat.scale_max - cat.scale_min) / 2 + cat.scale_min);
+                    html += `
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label fs-nano fw-600 mb-1 d-flex align-items-center gap-1">
+                                <span class="tcp-cat-dot" style="background:${cat.color};"></span>
+                                ${cat.name}
+                                <span class="text-muted fw-400">(${cat.scale_min}–${cat.scale_max})</span>
+                            </label>
+                            <input type="range" class="form-range"
+                                name="entries[${cat.id}]"
+                                min="${cat.scale_min}" max="${cat.scale_max}"
+                                value="${mid}"
+                                oninput="this.nextElementSibling.textContent=this.value">
+                            <span class="fs-nano text-muted">${mid}</span>
+                        </div>
+                    `;
+                });
+                categoriesContainer.innerHTML = html;
+            } else {
+                quickEntryContainer.style.display = 'none';
+            }
+            
+            // Detail-Link setzen
+            const detailLink = document.getElementById('progress-detail-link');
+            if (detailLink) {
+                detailLink.href = `/patienten/${currentPatientId}/fortschritt`;
+            }
+            
+            // Entry-Date setzen
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('progress-entry-date').value = today;
+            
+        } catch (e) {
+            console.error('Fortschritt Ladefehler:', e);
+            loading.innerHTML = '<div class="text-danger">Fehler beim Laden der Fortschrittsdaten</div>';
+        }
+    }
+    
+    // Fortschritt-Formular-Handler
+    document.getElementById('progress-form')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        if (!currentPatientId) return;
+        
+        const formData = new FormData(this);
+        
+        try {
+            const response = await fetch(`/api/mobile/tcp/patienten/${currentPatientId}/fortschritt`, {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                alert('Werte erfolgreich gespeichert!');
+                loadProgressData(); // Daten neu laden
+            } else {
+                throw new Error('Fehler beim Speichern');
+            }
+        } catch (error) {
+            console.error('Fehler:', error);
+            alert('Fehler beim Speichern der Werte');
+        }
+    });
+    
     // Buttons mit Modals verknüpfen
     document.getElementById('pd-plan-btn')?.addEventListener('click', function() {
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-plan-meta')).show();
@@ -2434,7 +2596,8 @@ window.showPatientModal = openPatientModal;
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-add-homework')).show();
     });
     document.getElementById('pd-progress-btn')?.addEventListener('click', function() {
-        alert('Fortschritt-Funktion wird noch implementiert');
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-progress')).show();
+        loadProgressData();
     });
     
     // Mobile Buttons verknüpfen
@@ -2445,7 +2608,8 @@ window.showPatientModal = openPatientModal;
         bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-add-homework')).show();
     });
     document.getElementById('pd-progress-btn-mobile')?.addEventListener('click', function() {
-        alert('Fortschritt-Funktion wird noch implementiert');
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-progress')).show();
+        loadProgressData();
     });
 })();
 </script>
