@@ -866,6 +866,11 @@ class PatientController extends Controller
             tenant_storage_path('intake/' . $file),
         ];
 
+        /* Check intake dir first for invite_ and intake_ prefixed files */
+        if (str_starts_with($file, 'invite_') || str_starts_with($file, 'intake_')) {
+            array_unshift($candidates, tenant_storage_path('intake/' . $file));
+        }
+
         $path = null;
         foreach ($candidates as $candidate) {
             if (file_exists($candidate) && is_file($candidate)) {
