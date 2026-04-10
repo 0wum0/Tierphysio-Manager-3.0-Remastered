@@ -44,6 +44,12 @@ class MobileApiController
         TreatmentTypeRepository   $treatmentTypeRepository,
         MailService               $mailService
     ) {
+        // Start output buffering immediately so any PHP notices/warnings don't
+        // corrupt the JSON response body.
+        if (!ob_get_level()) {
+            ob_start();
+        }
+
         $this->db                = $db;
         $this->users             = $userRepository;
         $this->patients          = $patientRepository;
@@ -77,6 +83,10 @@ class MobileApiController
 
     private function json(mixed $data, int $status = 200): never
     {
+        // Discard any accidentally output PHP warnings/notices
+        if (ob_get_level() > 0) {
+            ob_end_clean();
+        }
         http_response_code($status);
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -111,14 +121,15 @@ class MobileApiController
         }
         $token = trim($m[1]);
         $row   = $this->db->fetch(
-            "SELECT t.*, u.id AS user_id, u.name, u.email, u.role, u.active
+            "SELECT t.*, u.id AS user_id, u.name, u.email, u.role,
+                    COALESCE(u.active, u.is_active, 1) AS active
              FROM `{$this->t('mobile_api_tokens')}` t
              JOIN `{$this->t('users')}` u ON u.id = t.user_id
              WHERE t.token = ?
                AND (t.expires_at IS NULL OR t.expires_at > NOW())",
             [$token]
         );
-        if (!$row || (int)$row['active'] !== 1) {
+        if (!$row || (int)($row['active'] ?? 1) !== 1) {
             $this->error('Ungültiger oder abgelaufener Token.', 401);
         }
         $this->db->execute(
@@ -142,20 +153,28 @@ class MobileApiController
 
     public function login(array $params = []): void
     {
+        // Suppress PHP warnings to ensure clean JSON output
+        $prev = error_reporting(0);
         $this->cors();
         $email      = trim((string)$this->input('email', ''));
         $password   = (string)$this->input('password', '');
         $deviceName = trim((string)$this->input('device_name', 'Flutter App'));
 
         if (!$email || !$password) {
+            error_reporting($prev);
             $this->error('E-Mail und Passwort erforderlich.');
         }
 
         $user = $this->users->findByEmail($email);
-        if (!$user || !password_verify($password, $user['password'])) {
+        if (!$user || !password_verify($password, $user['password'] ?? $user['password_hash'] ?? '')) {
+            error_reporting($prev);
             $this->error('Ungültige Anmeldedaten.', 401);
         }
-        if ((int)$user['active'] !== 1) {
+
+        // Support both 'active' and 'is_active' column names
+        $isActive = (int)($user['active'] ?? $user['is_active'] ?? 1);
+        if ($isActive !== 1) {
+            error_reporting($prev);
             $this->error('Konto ist deaktiviert.', 403);
         }
 
@@ -169,6 +188,7 @@ class MobileApiController
         );
         $this->users->updateLastLogin($user['id']);
 
+        error_reporting($prev);
         $this->json([
             'token'      => $token,
             'expires_at' => $expiresAt,
