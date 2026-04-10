@@ -589,6 +589,202 @@ class ApiService {
     return (data as Map)['pdf_url'] as String? ?? '';
   }
 
+  /* ── Therapy Care Pro (tcp) ── */
+
+  // Progress tracking
+  Future<List<dynamic>> tcpProgressCategories() async =>
+      List<dynamic>.from(await get('/tcp/fortschritt/kategorien'));
+
+  Future<List<dynamic>> tcpProgressList(int patientId) async =>
+      List<dynamic>.from(await get('/tcp/patienten/$patientId/fortschritt'));
+
+  Future<Map<String, dynamic>> tcpProgressStore(int patientId, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/tcp/patienten/$patientId/fortschritt', data));
+
+  Future<void> tcpProgressDelete(int entryId) async =>
+      await post('/tcp/fortschritt/$entryId/loeschen', {});
+
+  // Exercise feedback
+  Future<List<dynamic>> tcpFeedbackList(int patientId) async =>
+      List<dynamic>.from(await get('/tcp/patienten/$patientId/feedback'));
+
+  Future<List<dynamic>> tcpFeedbackProblematic() async =>
+      List<dynamic>.from(await get('/tcp/feedback/problematisch'));
+
+  // Therapy reports
+  Future<List<dynamic>> tcpReportList(int patientId) async =>
+      List<dynamic>.from(await get('/tcp/patienten/$patientId/berichte'));
+
+  Future<Map<String, dynamic>> tcpReportCreate(int patientId, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/tcp/patienten/$patientId/berichte', data));
+
+  Future<Map<String, dynamic>> tcpReportShow(int id) async =>
+      Map<String, dynamic>.from(await get('/tcp/berichte/$id'));
+
+  Future<String> tcpReportPdfUrl(int id) async {
+    final data = await get('/tcp/berichte/$id/pdf');
+    return (data as Map)['pdf_url'] as String? ?? '';
+  }
+
+  Future<void> tcpReportDelete(int id) async =>
+      await post('/tcp/berichte/$id/loeschen', {});
+
+  // Exercise library
+  Future<List<dynamic>> tcpLibraryList() async =>
+      List<dynamic>.from(await get('/tcp/bibliothek'));
+
+  Future<Map<String, dynamic>> tcpLibraryCreate(Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/tcp/bibliothek', data));
+
+  Future<Map<String, dynamic>> tcpLibraryShow(int id) async =>
+      Map<String, dynamic>.from(await get('/tcp/bibliothek/$id'));
+
+  Future<Map<String, dynamic>> tcpLibraryUpdate(int id, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/tcp/bibliothek/$id/update', data));
+
+  Future<void> tcpLibraryDelete(int id) async =>
+      await post('/tcp/bibliothek/$id/loeschen', {});
+
+  // Natural therapy
+  Future<List<dynamic>> tcpNaturalList(int patientId) async =>
+      List<dynamic>.from(await get('/tcp/patienten/$patientId/naturheilkunde'));
+
+  Future<Map<String, dynamic>> tcpNaturalCreate(int patientId, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/tcp/patienten/$patientId/naturheilkunde', data));
+
+  Future<Map<String, dynamic>> tcpNaturalUpdate(int id, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/tcp/naturheilkunde/$id/update', data));
+
+  Future<void> tcpNaturalDelete(int id) async =>
+      await post('/tcp/naturheilkunde/$id/loeschen', {});
+
+  // Reminder queue (TCP)
+  Future<List<dynamic>> tcpReminderTemplates() async =>
+      List<dynamic>.from(await get('/tcp/erinnerungen/vorlagen'));
+
+  Future<List<dynamic>> tcpReminderQueue(int patientId) async =>
+      List<dynamic>.from(await get('/tcp/patienten/$patientId/erinnerungen'));
+
+  Future<Map<String, dynamic>> tcpReminderQueueStore(int patientId, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/tcp/patienten/$patientId/erinnerungen', data));
+
+  /* ── Tax Export Pro (Steuerexport) ── */
+
+  Future<Map<String, dynamic>> taxExportList() async =>
+      Map<String, dynamic>.from(await get('/steuerexport'));
+
+  Future<Map<String, dynamic>> taxExportUrls() async =>
+      Map<String, dynamic>.from(await get('/steuerexport/export-url'));
+
+  Future<Map<String, dynamic>> taxExportAuditLog() async =>
+      Map<String, dynamic>.from(await get('/steuerexport/audit-log'));
+
+  Future<Map<String, dynamic>> taxExportFinalize(int id) async =>
+      Map<String, dynamic>.from(await post('/steuerexport/$id/finalisieren', {}));
+
+  Future<Map<String, dynamic>> taxExportCancel(int id) async =>
+      Map<String, dynamic>.from(await post('/steuerexport/$id/stornieren', {}));
+
+  /* ── Mailbox (IMAP/SMTP) ── */
+
+  Future<Map<String, dynamic>> mailboxStatus() async =>
+      Map<String, dynamic>.from(await get('/mailbox/status'));
+
+  Future<Map<String, dynamic>> mailboxList() async =>
+      Map<String, dynamic>.from(await get('/mailbox/nachrichten'));
+
+  Future<Map<String, dynamic>> mailboxShow(String uid) async =>
+      Map<String, dynamic>.from(await get('/mailbox/nachrichten/$uid'));
+
+  Future<Map<String, dynamic>> mailboxSend(Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/mailbox/senden', data));
+
+  Future<void> mailboxDelete(String uid) async =>
+      await post('/mailbox/nachrichten/$uid/loeschen', {});
+
+  /* ── Owner Portal (Besitzerportal) ── */
+
+  // Auth
+  Future<Map<String, dynamic>> portalLogin(String email, String password) async =>
+      Map<String, dynamic>.from(await postPublic('/portal/login', {
+        'email': email,
+        'password': password,
+      }));
+
+  Future<void> portalLogout() async =>
+      await post('/portal/logout', {});
+
+  Future<Map<String, dynamic>> portalSetPassword(String token, String password) async =>
+      Map<String, dynamic>.from(await postPublic('/portal/passwort-setzen/$token', {
+        'password': password,
+        'password_confirmation': password,
+      }));
+
+  // Dashboard
+  Future<Map<String, dynamic>> ownerPortalDashboard() async =>
+      Map<String, dynamic>.from(await get('/portal/dashboard'));
+
+  // Meine Tiere
+  Future<List<dynamic>> ownerPortalPetList() async =>
+      List<dynamic>.from(await get('/portal/tiere'));
+
+  Future<Map<String, dynamic>> ownerPortalPetDetail(int id) async =>
+      Map<String, dynamic>.from(await get('/portal/tiere/$id'));
+
+  Future<Map<String, dynamic>> ownerPortalPetEdit(int id, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/portal/tiere/$id/bearbeiten', data));
+
+  // Rechnungen
+  Future<List<dynamic>> ownerPortalInvoices() async =>
+      List<dynamic>.from(await get('/portal/rechnungen'));
+
+  Future<String> ownerPortalInvoicePdfUrl(int id) async {
+    final data = await get('/portal/rechnungen/$id/pdf-url');
+    return (data as Map)['pdf_url'] as String? ?? '';
+  }
+
+  // Termine
+  Future<List<dynamic>> ownerPortalAppointments() async =>
+      List<dynamic>.from(await get('/portal/termine'));
+
+  // Nachrichten
+  Future<int> ownerPortalUnread() async {
+    final data = await get('/portal/nachrichten/ungelesen');
+    return (data as Map)['unread'] as int? ?? 0;
+  }
+
+  Future<List<dynamic>> ownerPortalThreadList() async =>
+      List<dynamic>.from(await get('/portal/nachrichten'));
+
+  Future<Map<String, dynamic>> ownerPortalNewThread(Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/portal/nachrichten/neu', data));
+
+  Future<Map<String, dynamic>> ownerPortalThreadShow(int id) async =>
+      Map<String, dynamic>.from(await get('/portal/nachrichten/$id'));
+
+  Future<Map<String, dynamic>> ownerPortalReply(int id, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/portal/nachrichten/$id/antworten', data));
+
+  // Befundbögen
+  Future<List<dynamic>> ownerPortalBefunde() async =>
+      List<dynamic>.from(await get('/portal/befunde'));
+
+  Future<String> ownerPortalBefundPdfUrl(int id) async {
+    final data = await get('/portal/befunde/$id/pdf-url');
+    return (data as Map)['pdf_url'] as String? ?? '';
+  }
+
+  // Profil
+  Future<Map<String, dynamic>> ownerPortalProfile() async =>
+      Map<String, dynamic>.from(await get('/portal/profil'));
+
+  Future<Map<String, dynamic>> ownerPortalChangePassword(String currentPassword, String newPassword) async =>
+      Map<String, dynamic>.from(await post('/portal/profil/passwort', {
+        'current_password': currentPassword,
+        'new_password': newPassword,
+        'new_password_confirmation': newPassword,
+      }));
+
   /// Submit feedback to the SaaS platform (not the tenant backend).
   /// Uses a separate base URL pointing to app.therapano.de.
   static Future<bool> submitFeedback({

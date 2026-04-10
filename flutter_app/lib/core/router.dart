@@ -30,6 +30,22 @@ import '../screens/homework/homework_screen.dart';
 import '../screens/settings/settings_screen.dart';
 import '../screens/befunde/befunde_screen.dart';
 import '../screens/befunde/befund_detail_screen.dart';
+import '../screens/tcp/tcp_screen.dart';
+import '../screens/tcp/tcp_progress_screen.dart';
+import '../screens/tcp/tcp_reports_screen.dart';
+import '../screens/tcp/tcp_library_screen.dart';
+import '../screens/tcp/tcp_natural_screen.dart';
+import '../screens/tcp/tcp_reminders_screen.dart';
+import '../screens/tcp/tcp_feedback_screen.dart';
+import '../screens/tax_export/tax_export_screen.dart';
+import '../screens/mailbox/mailbox_screen.dart';
+import '../screens/owner_portal/owner_portal_login_screen.dart';
+import '../screens/owner_portal/owner_portal_dashboard_screen.dart';
+import '../screens/owner_portal/owner_portal_pets_screen.dart';
+import '../screens/owner_portal/owner_portal_invoices_screen.dart';
+import '../screens/owner_portal/owner_portal_appointments_screen.dart';
+import '../screens/owner_portal/owner_portal_messages_screen.dart';
+import '../screens/owner_portal/owner_portal_befunde_screen.dart';
 
 class AppRouter {
   final AuthService authService;
@@ -126,6 +142,26 @@ class AppRouter {
           GoRoute(path: '/profil',           builder: (_, __) => const ProfileScreen()),
           GoRoute(path: '/einstellungen',    builder: (_, __) => const SettingsScreen()),
           GoRoute(path: '/suche',            builder: (_, __) => const SearchScreen()),
+          GoRoute(path: '/tcp',              builder: (_, __) => const TcpScreen()),
+          GoRoute(path: '/steuerexport',     builder: (_, __) => const TaxExportScreen()),
+          GoRoute(path: '/mailbox',          builder: (_, __) => const MailboxScreen()),
+
+          GoRoute(
+            path: '/owner-portal/login',
+            builder: (_, __) => const OwnerPortalLoginScreen(),
+          ),
+          GoRoute(
+            path: '/owner-portal',
+            builder: (_, __) => const OwnerPortalDashboardScreen(),
+            routes: [
+              GoRoute(path: 'dashboard', builder: (_, __) => const OwnerPortalDashboardScreen()),
+              GoRoute(path: 'pets', builder: (_, __) => const OwnerPortalPetsScreen()),
+              GoRoute(path: 'invoices', builder: (_, __) => const OwnerPortalInvoicesScreen()),
+              GoRoute(path: 'appointments', builder: (_, __) => const OwnerPortalAppointmentsScreen()),
+              GoRoute(path: 'messages', builder: (_, __) => const OwnerPortalMessagesScreen()),
+              GoRoute(path: 'befunde', builder: (_, __) => const OwnerPortalBefundeScreen()),
+            ],
+          ),
 
           GoRoute(
             path: '/portal-admin',
