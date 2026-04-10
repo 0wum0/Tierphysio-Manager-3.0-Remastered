@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
 
 class AuthService extends ChangeNotifier {
-  static const _storage = FlutterSecureStorage();
   static const _userNameKey  = 'user_name';
   static const _userEmailKey = 'user_email';
   static const _userRoleKey  = 'user_role';
   static const _userIdKey    = 'user_id';
+
+  SharedPreferences? _prefs;
 
   bool _loggedIn = false;
   Map<String, dynamic> _user = {};
@@ -22,13 +23,14 @@ class AuthService extends ChangeNotifier {
   bool   get isAdmin   => userRole == 'admin';
 
   Future<void> init() async {
+    _prefs = await SharedPreferences.getInstance();
     await ApiService.init();
     final token = await ApiService.getToken();
     if (token != null) {
-      final name  = await _storage.read(key: _userNameKey)  ?? '';
-      final email = await _storage.read(key: _userEmailKey) ?? '';
-      final role  = await _storage.read(key: _userRoleKey)  ?? '';
-      final id    = await _storage.read(key: _userIdKey)    ?? '';
+      final name  = _prefs?.getString(_userNameKey)  ?? '';
+      final email = _prefs?.getString(_userEmailKey) ?? '';
+      final role  = _prefs?.getString(_userRoleKey)  ?? '';
+      final id    = _prefs?.getString(_userIdKey)    ?? '';
       _user = {'name': name, 'email': email, 'role': role, 'id': id};
       _loggedIn = true;
     }
@@ -45,10 +47,10 @@ class AuthService extends ChangeNotifier {
       final user  = data['user']  as Map<String, dynamic>;
 
       await ApiService.saveToken(token);
-      await _storage.write(key: _userNameKey,  value: user['name']  as String? ?? '');
-      await _storage.write(key: _userEmailKey, value: user['email'] as String? ?? '');
-      await _storage.write(key: _userRoleKey,  value: user['role']  as String? ?? '');
-      await _storage.write(key: _userIdKey,    value: user['id'].toString());
+      await _prefs?.setString(_userNameKey,  user['name']  as String? ?? '');
+      await _prefs?.setString(_userEmailKey, user['email'] as String? ?? '');
+      await _prefs?.setString(_userRoleKey,  user['role']  as String? ?? '');
+      await _prefs?.setString(_userIdKey,    user['id'].toString());
 
       _user = user;
       _loggedIn = true;
@@ -65,7 +67,7 @@ class AuthService extends ChangeNotifier {
       await api.logout();
     } catch (_) {}
     await ApiService.clearToken();
-    await _storage.deleteAll();
+    await _prefs?.clear();
     _user = {};
     _loggedIn = false;
     notifyListeners();

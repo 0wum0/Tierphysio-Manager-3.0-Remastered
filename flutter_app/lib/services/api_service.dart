@@ -1,23 +1,24 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   static const _baseKey = 'api_base_url';
   static const _tokenKey = 'api_token';
-  static const _storage = FlutterSecureStorage();
+  static SharedPreferences? _prefs;
 
   static String _baseUrl = 'https://ew.makeit.uno';
 
   static Future<void> init() async {
-    final saved = await _storage.read(key: _baseKey);
+    _prefs = await SharedPreferences.getInstance();
+    final saved = _prefs?.getString(_baseKey);
     if (saved != null && saved.isNotEmpty) _baseUrl = saved;
   }
 
   static Future<void> setBaseUrl(String url) async {
     _baseUrl = url.trimRight().replaceAll(RegExp(r'/$'), '');
-    await _storage.write(key: _baseKey, value: _baseUrl);
+    await _prefs?.setString(_baseKey, _baseUrl);
   }
 
   static String get baseUrl => _baseUrl;
@@ -34,12 +35,17 @@ class ApiService {
     return '$base$path';
   }
 
-  static Future<void> saveToken(String token) =>
-      _storage.write(key: _tokenKey, value: token);
+  static Future<void> saveToken(String token) async {
+    await _prefs?.setString(_tokenKey, token);
+  }
 
-  static Future<String?> getToken() => _storage.read(key: _tokenKey);
+  static Future<String?> getToken() async {
+    return _prefs?.getString(_tokenKey);
+  }
 
-  static Future<void> clearToken() => _storage.delete(key: _tokenKey);
+  static Future<void> clearToken() async {
+    await _prefs?.remove(_tokenKey);
+  }
 
   Map<String, String> _headers([String? token]) => {
     'Content-Type': 'application/json',

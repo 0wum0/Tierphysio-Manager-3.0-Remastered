@@ -15,10 +15,7 @@ dependencies:
   # HTTP
   http: ^1.2.0
 
-  # Secure storage for token
-  flutter_secure_storage: ^10.0.0
-
-  # Shared preferences
+  # Shared preferences (used for token storage on desktop)
   shared_preferences: ^2.2.2
 
   # Navigation
