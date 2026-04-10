@@ -620,10 +620,22 @@ class _ErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isNetwork = errorType == LoginError.network;
-    final icon = isNetwork ? Icons.wifi_off_rounded : Icons.lock_person_rounded;
-    final title = isNetwork ? 'Netzwerkfehler' : 'Anmeldung fehlgeschlagen';
-
+    IconData icon;
+    String title;
+    switch (errorType) {
+      case LoginError.network:
+        icon  = Icons.wifi_off_rounded;
+        title = 'Netzwerkfehler';
+      case LoginError.timeout:
+        icon  = Icons.timer_off_rounded;
+        title = 'Zeitüberschreitung';
+      case LoginError.serverError:
+        icon  = Icons.dns_rounded;
+        title = 'Serverfehler';
+      default:
+        icon  = Icons.lock_person_rounded;
+        title = 'Anmeldung fehlgeschlagen';
+    }
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(

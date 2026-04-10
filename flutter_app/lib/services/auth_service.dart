@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:developer' as dev;
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -6,6 +8,7 @@ import 'api_service.dart';
 enum LoginError {
   none,
   network,
+  timeout,
   invalidCredentials,
   serverError,
   unknown,
@@ -60,16 +63,22 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Returns a [LoginResult] with a precise error type so the UI can show the
-  /// right message (network vs. wrong credentials vs. server error).
+  /// Returns a [LoginResult] with a precise error type.
   Future<LoginResult> loginWithResult(String email, String password) async {
+    dev.log('[Auth] Login attempt → ${ApiService.baseUrl}/api/mobile/login',
+        name: 'AuthService');
     try {
       final api  = ApiService();
       final data = await api.login(email.trim(), password, 'TheraPano Windows');
 
+      dev.log('[Auth] Login response keys: ${data.keys.toList()}',
+          name: 'AuthService');
+
       // Guard: server must return a token
       final token = data['token'] as String?;
       if (token == null || token.isEmpty) {
+        dev.log('[Auth] No token in response! Full response: $data',
+            name: 'AuthService');
         return const LoginResult.fail(
           LoginError.invalidCredentials,
           'Anmeldung fehlgeschlagen: Server hat kein Token zurückgegeben. '
@@ -88,44 +97,60 @@ class AuthService extends ChangeNotifier {
       _user = user;
       _loggedIn = true;
       notifyListeners();
+      dev.log('[Auth] Login successful for ${user['email']}', name: 'AuthService');
       return const LoginResult.ok();
+
     } on SocketException catch (e) {
+      dev.log('[Auth] SocketException: ${e.message}', name: 'AuthService');
       return LoginResult.fail(
         LoginError.network,
-        'Netzwerkfehler: Verbindung zu app.therapano.de nicht möglich. '
-        'Bitte Internetverbindung prüfen. (${e.message})',
+        'Netzwerkfehler: Server app.therapano.de nicht erreichbar. '
+        'Bitte Internetverbindung prüfen.',
+      );
+    } on TimeoutException {
+      dev.log('[Auth] Request timed out after 30s', name: 'AuthService');
+      return const LoginResult.fail(
+        LoginError.timeout,
+        'Zeitüberschreitung: Server antwortet nicht. '
+        'Bitte später erneut versuchen.',
       );
     } on ApiException catch (e) {
-      // 401, 403, 422 = wrong credentials or access denied
+      dev.log('[Auth] ApiException ${e.statusCode}: ${e.message}',
+          name: 'AuthService');
+
+      // 401, 403, 422 = wrong credentials or access denied by server
       if (e.statusCode == 401 || e.statusCode == 403 || e.statusCode == 422) {
-        // Show the backend message if meaningful, otherwise generic text
-        final backendMsg = e.message;
-        final isGeneric = backendMsg.contains('403') ||
-            backendMsg.contains('Zugang verweigert') ||
-            backendMsg.isEmpty;
+        final backendMsg = e.message.trim();
+        // Only show backend message if it's meaningful (not generic HTML text)
+        final hasUsefulMsg = backendMsg.isNotEmpty &&
+            !backendMsg.contains('403') &&
+            !backendMsg.contains('Zugang verweigert') &&
+            !backendMsg.contains('<!') &&
+            backendMsg.length < 200;
         return LoginResult.fail(
           LoginError.invalidCredentials,
-          isGeneric
-              ? 'E-Mail oder Passwort ist falsch. Bitte erneut versuchen.'
-              : backendMsg,
+          hasUsefulMsg
+              ? backendMsg
+              : 'E-Mail oder Passwort ist falsch. Bitte erneut versuchen.',
         );
       }
       return LoginResult.fail(
         LoginError.serverError,
         'Serverfehler (${e.statusCode}): ${e.message}',
       );
-    } catch (e) {
-      // Covers HandshakeException, TlsException, timeout, etc.
+    } catch (e, st) {
+      dev.log('[Auth] Unexpected error: $e', name: 'AuthService', stackTrace: st);
       final msg = e.toString();
       if (msg.contains('HandshakeException') ||
-          msg.contains('tls') ||
+          msg.toLowerCase().contains('tls') ||
           msg.contains('certificate')) {
         return LoginResult.fail(
           LoginError.network,
-          'SSL-Fehler: Verbindung konnte nicht gesichert werden.',
+          'SSL-Fehler: Sichere Verbindung konnte nicht aufgebaut werden.',
         );
       }
-      return LoginResult.fail(LoginError.unknown, msg);
+      return LoginResult.fail(LoginError.unknown,
+          'Unbekannter Fehler: $msg');
     }
   }
 

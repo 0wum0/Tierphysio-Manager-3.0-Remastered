@@ -52,6 +52,9 @@ class ApiService {
   Map<String, String> _headers([String? token]) => {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    // Required by many Laravel installations to accept JSON responses
+    // and avoid being treated as a browser (which causes HTML redirect/403).
+    'X-Requested-With': 'XMLHttpRequest',
     if (token != null) 'Authorization': 'Bearer $token',
   };
 
@@ -65,22 +68,26 @@ class ApiService {
     return Uri.parse('$_baseUrl/api/mobile$path').replace(queryParameters: q);
   }
 
+  static const _timeout = Duration(seconds: 30);
+
   /* ── Generic HTTP ── */
 
   Future<dynamic> get(String path, {Map<String, dynamic>? query}) async {
     final h = await _authHeaders();
-    final res = await http.get(_uri(path, query), headers: h);
+    final res = await http.get(_uri(path, query), headers: h).timeout(_timeout);
     return _parse(res);
   }
 
   Future<dynamic> post(String path, Map<String, dynamic> body) async {
     final h = await _authHeaders();
-    final res = await http.post(_uri(path), headers: h, body: jsonEncode(body));
+    final res = await http.post(_uri(path), headers: h, body: jsonEncode(body)).timeout(_timeout);
     return _parse(res);
   }
 
   Future<dynamic> postPublic(String path, Map<String, dynamic> body) async {
-    final res = await http.post(_uri(path), headers: _headers(), body: jsonEncode(body));
+    final res = await http
+        .post(_uri(path), headers: _headers(), body: jsonEncode(body))
+        .timeout(_timeout);
     return _parse(res);
   }
 
@@ -367,15 +374,16 @@ class ApiService {
       await post('/invoices/$invoiceId/mahnungen/$dunningId/loeschen', {});
 
   /* ── Google Calendar Sync ── */
+  // Endpoints corrected to match API docs: /google-kalender/*
 
   Future<Map<String, dynamic>> googleSyncStatus() async =>
-      Map<String, dynamic>.from(await get('/google-sync/status'));
+      Map<String, dynamic>.from(await get('/google-kalender/status'));
 
   Future<Map<String, dynamic>> googleSyncPull() async =>
-      Map<String, dynamic>.from(await post('/google-sync/pull', {}));
+      Map<String, dynamic>.from(await post('/google-kalender/sync', {}));
 
   Future<Map<String, dynamic>> googleSyncPush() async =>
-      Map<String, dynamic>.from(await post('/google-sync/push', {}));
+      Map<String, dynamic>.from(await post('/google-kalender/sync', {}));
 
   /* ── Appointments extended ── */
 
