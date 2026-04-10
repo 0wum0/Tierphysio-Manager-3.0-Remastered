@@ -186,16 +186,21 @@ class MobileApiController
         // We temporarily clear the prefix for this lookup (the tokens table is shared).
         $savedPrefix = $this->db->getPrefix();
         $this->db->setPrefix('');
-        $tokenRow = $this->db->fetch(
-            "SELECT t.*, u.id AS user_id, u.name, u.email, u.role,
-                    COALESCE(u.active, u.is_active, 1) AS active,
-                    t.tenant_prefix
-             FROM mobile_api_tokens t
-             JOIN users u ON u.id = t.user_id
-             WHERE t.token = ?
-               AND (t.expires_at IS NULL OR t.expires_at > NOW())",
-            [$token]
-        );
+        $tokenRow = false;
+        try {
+            $tokenRow = $this->db->fetch(
+                "SELECT t.*, u.id AS user_id, u.name, u.email, u.role,
+                        COALESCE(u.active, u.is_active, 1) AS active,
+                        t.tenant_prefix
+                 FROM mobile_api_tokens t
+                 JOIN users u ON u.id = t.user_id
+                 WHERE t.token = ?
+                   AND (t.expires_at IS NULL OR t.expires_at > NOW())",
+                [$token]
+            );
+        } catch (\Throwable) {
+            $tokenRow = false;
+        }
 
         // If no unprefixed table exists, fall back to prefixed lookup
         if ($tokenRow === false) {
