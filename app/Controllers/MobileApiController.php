@@ -44,6 +44,9 @@ class MobileApiController
         TreatmentTypeRepository   $treatmentTypeRepository,
         MailService               $mailService
     ) {
+        // Intercept all exceptions for the mobile API and return them as JSON
+        set_exception_handler([$this, 'exceptionHandler']);
+
         // Start output buffering immediately so any PHP notices/warnings don't
         // corrupt the JSON response body.
         if (!ob_get_level()) {
@@ -157,6 +160,12 @@ class MobileApiController
     private function error(string $message, int $status = 400): never
     {
         $this->json(['error' => $message], $status);
+    }
+
+    private function exceptionHandler(\Throwable $e): never
+    {
+        $msg = $e->getMessage() . ' in ' . basename($e->getFile()) . ':' . $e->getLine();
+        $this->error('500 Internal Error: ' . $msg, 500);
     }
 
     private function body(): array
