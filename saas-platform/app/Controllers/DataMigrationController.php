@@ -683,6 +683,8 @@ class DataMigrationController extends Controller
                             $ok++;
                         } elseif (str_contains($msg, 'Duplicate column name') || str_contains($msg, '1060')) {
                             $skipped++;
+                        } elseif (str_contains($msg, 'Unknown column') || str_contains($msg, '1054')) {
+                            $skipped++;
                         } else {
                             $errors[] = $msg;
                         }
