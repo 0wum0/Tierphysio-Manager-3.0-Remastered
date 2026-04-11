@@ -447,6 +447,8 @@ $router->post('/rechnungen/{id}/senden', [InvoiceController::class, 'sendEmail']
 $router->get('/rechnungen/{id}/quittung', [InvoiceController::class, 'downloadReceipt'], ['auth']);
 $router->post('/rechnungen/{id}/quittung-senden', [InvoiceController::class, 'sendReceiptEmail'], ['auth']);
 $router->post('/rechnungen/{id}/status-inline', [InvoiceController::class, 'updateStatusInline'], ['auth']);
+$router->post('/rechnungen/{id}/stornieren',    [InvoiceController::class, 'cancel'],             ['auth']);
+$router->get('/rechnungen/{id}/storno-pdf',     [InvoiceController::class, 'downloadCancellationPdf'], ['auth']);
 $router->get('/api/rechnungen/analytics',        [InvoiceController::class, 'analyticsJson'],      ['auth']);
 
 // ── Mahnwesen: Erinnerungen ──────────────────────────────────────────
