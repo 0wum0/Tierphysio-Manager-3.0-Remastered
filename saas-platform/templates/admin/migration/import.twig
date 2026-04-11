@@ -180,6 +180,17 @@
                 </ul>
             </div>
         </div>
+
+        <!-- Massen-Patch -->
+        <div class="card border-0 shadow-sm mt-3 border-start border-primary border-4">
+            <div class="card-body py-3">
+                <h6 class="fw-semibold text-primary mb-2"><i class="bi bi-tools me-1"></i>Globaler Datenbank-Patch</h6>
+                <p class="small text-muted mb-3">Fehlende Spalten, Tabellen und Updates (z.B. neue Storno-Stati) automatisch auf <strong>alle</strong> Tenants anwenden (führt <code>tenant_patch_existing.sql</code> aus).</p>
+                <button type="button" id="patchAllBtn" class="btn btn-outline-primary btn-sm w-100">
+                    <i class="bi bi-magic me-1"></i>Alle praxen patchen
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Ergebnis-Bereich -->
@@ -469,6 +480,76 @@
             updateBtn();
         }
     });
+
+    // Patch All Event Listener
+    const patchAllBtn = document.getElementById('patchAllBtn');
+    if(patchAllBtn) {
+        patchAllBtn.addEventListener('click', async function() {
+            if (!confirm('Bist du sicher? Dies führt die Schema-Updates über ALLE aktiven Praxen-Datenbanken aus. Dies kann einige Sekunden dauern.')) {
+                return;
+            }
+
+            guideCard.classList.add('d-none');
+            resultCard.classList.add('d-none');
+            progressCard.classList.remove('d-none');
+            
+            patchAllBtn.disabled = true;
+            patchAllBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Patching...';
+
+            try {
+                const formData = new FormData();
+                formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+
+                const resp = await fetch('/admin/migration/patch-all', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await resp.json();
+                
+                progressCard.classList.add('d-none');
+                resultCard.classList.remove('d-none');
+
+                const badge = document.getElementById('resultBadge');
+                const msg   = document.getElementById('resultMessage');
+                
+                badge.className = data.success ? 'badge bg-success' : 'badge bg-danger';
+                badge.textContent = data.success ? 'Erfolgreich' : 'Fehler';
+                msg.className = data.success ? 'alert alert-success mb-3' : 'alert alert-danger mb-3';
+                msg.textContent = data.message;
+
+                // Verstecke die Importbereiche
+                document.getElementById('statsRow').classList.add('d-none');
+                
+                // Mache den Fehlerbereich sauber und benutze ihn für Ergebnisse
+                const resSec = document.getElementById('errorsSection');
+                const resList = document.getElementById('errorsList');
+                resList.innerHTML = '';
+                
+                if (data.results && data.results.length > 0) {
+                    data.results.forEach(r => {
+                        const div = document.createElement('div');
+                        const isOk = r.status === 'success';
+                        div.className = 'border rounded p-2 mb-2 ' + (isOk ? 'bg-success-subtle' : 'bg-danger-subtle');
+                        div.innerHTML = `<div class="fw-semibold mb-1 ${isOk ? 'text-success' : 'text-danger'}">${escHtml(r.tenant)} (${r.prefix})</div>
+                            <div class="text-muted" style="font-size:.8rem;">${escHtml(r.message)}</div>
+                            ${(!isOk && r.errors) ? `<div class="text-danger mt-1" style="font-size:.75rem;">${r.errors.map(escHtml).join('<br>')}</div>` : ''}`;
+                        resList.appendChild(div);
+                    });
+                    
+                    document.getElementById('errorsSection').querySelector('h6').textContent = 'TENANT PATCH ERGEBNISSE';
+                    resSec.classList.remove('d-none');
+                }
+
+            } catch (err) {
+                progressCard.classList.add('d-none');
+                alert('Netzwerkfehler beim Patching: ' + err.message);
+            } finally {
+                patchAllBtn.disabled = false;
+                patchAllBtn.innerHTML = '<i class="bi bi-magic me-1"></i>Alle praxen patchen';
+            }
+        });
+    }
 
     // Passwort-Toggle
     document.getElementById('togglePw').addEventListener('click', function () {

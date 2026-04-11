@@ -632,6 +632,95 @@ class DataMigrationController extends Controller
         }
     }
 
+    public function patchAll(array $params = []): void
+    {
+        $this->requireAuth();
+        $this->verifyCsrf();
+
+        try {
+            $patchFile = dirname(__DIR__, 2) . '/provisioning/tenant_patch_existing.sql';
+            if (!file_exists($patchFile)) {
+                $this->jsonError('Patch-Datei nicht gefunden (tenant_patch_existing.sql).');
+            }
+
+            $rawSql = file_get_contents($patchFile);
+            if ($rawSql === false) {
+                $this->jsonError('Patch-Datei konnte nicht gelesen werden.');
+            }
+
+            $tenants = $this->tenantRepo->all(1000, 0);
+            $results = [];
+
+            foreach ($tenants as $tenant) {
+                $prefix = rtrim((string)($tenant['db_name'] ?? ''), '_') . '_';
+                if ($prefix === '_') continue;
+
+                // Ersetze den Platzhalter im original SQL mit dem neuen Prefix
+                $tenantSql = str_replace('t_demo_praxis_tierphys_6771f0_', $prefix, $rawSql);
+
+                // Den @prefix Set-Befehl entfernen, um Verwirrung zu vermeiden
+                $tenantSql = preg_replace("/SET @prefix = '[^']+';/", '', $tenantSql);
+                
+                $pdo = $this->db->getPdo();
+                $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+                
+                $statements = $this->splitStatements($tenantSql);
+                $ok = $skipped = 0;
+                $errors = [];
+
+                foreach ($statements as $stmt) {
+                    $stmt = trim($stmt);
+                    if ($stmt === '' || $stmt === ';') continue;
+                    if (preg_match('/^(\/\*|--|#)/', $stmt)) continue;
+                    
+                    try {
+                        $pdo->exec($stmt);
+                        $ok++;
+                    } catch (\Throwable $e) {
+                         $msg = $e->getMessage();
+                        // Ignoriere typische Fehler, die passieren wenn der Patch schon teilweise angewandt wurde
+                        if (str_contains($msg, 'Duplicate entry') || str_contains($msg, '1062')) {
+                            $ok++;
+                        } elseif (str_contains($msg, 'Duplicate column name') || str_contains($msg, '1060')) {
+                            $skipped++;
+                        } else {
+                            $errors[] = $msg;
+                        }
+                    }
+                }
+                $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+                
+                if (count($errors) === 0) {
+                    $results[] = [
+                        'tenant' => $tenant['practice_name'],
+                        'prefix' => $prefix,
+                        'status' => 'success',
+                        'message' => "OK: {$ok} ausgeführt, {$skipped} übersprungen."
+                    ];
+                } else {
+                    $results[] = [
+                        'tenant' => $tenant['practice_name'],
+                        'prefix' => $prefix,
+                        'status' => 'error',
+                        'message' => count($errors) . " Fehler",
+                        'errors' => $errors
+                    ];
+                }
+            }
+
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => true,
+                'message' => 'Patch-Skript über alle Tenants ausgerollt.',
+                'results' => $results
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+
+        } catch (\Throwable $e) {
+            $this->jsonError('Ein unerwarteter Fehler ist aufgetreten: ' . $e->getMessage());
+        }
+    }
+
     private function jsonError(string $message): never
     {
         http_response_code(400);
