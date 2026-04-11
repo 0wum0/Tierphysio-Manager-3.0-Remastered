@@ -509,7 +509,7 @@
 
             try {
                 const formData = new FormData();
-                formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+                formData.append('_csrf', document.querySelector('input[name="_csrf"]').value);
 
                 const resp = await fetch('/admin/migration/patch-all', {
                     method: 'POST',
@@ -579,7 +579,7 @@
 
             try {
                 const formData = new FormData();
-                formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+                formData.append('_csrf', document.querySelector('input[name="_csrf"]').value);
 
                 const resp = await fetch('/admin/migration/migrate-all', {
                     method: 'POST',
