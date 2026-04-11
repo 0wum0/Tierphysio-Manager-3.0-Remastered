@@ -96,6 +96,7 @@ $router->post('/admin/updates/apply',      [UpdateController::class, 'applyUpdat
 $router->get('/admin/migration',      [DataMigrationController::class, 'index']);
 $router->post('/admin/migration/run', [DataMigrationController::class, 'run']);
 $router->post('/admin/migration/patch-all', [DataMigrationController::class, 'patchAll']);
+$router->post('/admin/migration/migrate-all', [DataMigrationController::class, 'migrateAll']);
 
 // ── Payment Settings (Admin) ────────────────────────────────────────────────
 $router->get('/admin/payment-settings',              [PaymentSettingsController::class, 'index']);

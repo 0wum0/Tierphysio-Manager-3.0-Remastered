@@ -721,6 +721,155 @@ class DataMigrationController extends Controller
         }
     }
 
+    public function migrateAll(array $params = []): void
+    {
+        $this->requireAuth();
+        $this->verifyCsrf();
+
+        try {
+            $migrationsDir = dirname(__DIR__, 3) . '/migrations';
+            $files = glob($migrationsDir . '/*.sql');
+            if (!$files) {
+                $this->jsonError('Keine Migrations-Dateien gefunden im Ordner: ' . $migrationsDir);
+            }
+            sort($files);
+
+            $tenants = $this->tenantRepo->all(1000, 0);
+            $results = [];
+
+            foreach ($tenants as $tenant) {
+                $prefix = rtrim((string)($tenant['db_name'] ?? ''), '_') . '_';
+                if ($prefix === '_') continue;
+
+                $migTbl = $prefix . 'migrations';
+                $setTbl = $prefix . 'settings';
+                $pdo = $this->db->getPdo();
+                
+                // Aktuelle Version abfragen
+                $currentVersion = 0;
+                try {
+                    $stmt = $pdo->query("SELECT MAX(version) FROM `{$migTbl}`");
+                    if ($stmt) {
+                        $currentVersion = (int)$stmt->fetchColumn() ?: 0;
+                    }
+                } catch (\Throwable) {
+                   try {
+                       $stmt = $pdo->query("SELECT value FROM `{$setTbl}` WHERE `key` = 'db_version'");
+                       if ($stmt) {
+                           $currentVersion = (int)$stmt->fetchColumn() ?: 0;
+                       }
+                   } catch (\Throwable) {}
+                }
+
+                $ranFiles = 0;
+                $ok = 0;
+                $skipped = 0;
+                $errors = [];
+
+                foreach ($files as $file) {
+                    preg_match('/^(\d+)/', basename($file), $m);
+                    $version = isset($m[1]) ? (int)$m[1] : 0;
+                    
+                    if ($version > $currentVersion) {
+                        $sql = file_get_contents($file);
+                        $sql = $this->applyPrefixToSqlLocally($sql, $prefix);
+                        
+                        $statements = $this->splitStatements($sql);
+                        
+                        $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+                        foreach ($statements as $stmt) {
+                            $stmt = trim($stmt);
+                            if ($stmt === '' || $stmt === ';') continue;
+                            if (preg_match('/^(\/\*|--|#)/', $stmt)) continue;
+                            
+                            try {
+                                $pdo->exec($stmt);
+                                $ok++;
+                            } catch (\Throwable $e) {
+                                $msg = $e->getMessage();
+                                $errno = 0;
+                                if ($e instanceof \PDOException && isset($e->errorInfo[1])) {
+                                    $errno = (int)$e->errorInfo[1];
+                                }
+                                if (in_array($errno, [1050, 1060, 1061], true) || str_contains($msg, 'Duplicate')) {
+                                    $skipped++;
+                                } else {
+                                    $errors[] = basename($file) . ': ' . $msg;
+                                }
+                            }
+                        }
+                        $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+                        
+                        // DB Version nach Update erhöhen
+                        try {
+                            $pdo->exec("INSERT IGNORE INTO `{$migTbl}` (version) VALUES ($version)");
+                            $pdo->exec("INSERT INTO `{$setTbl}` (`key`, value) VALUES ('db_version', '$version') ON DUPLICATE KEY UPDATE value = VALUES(value)");
+                            $currentVersion = $version;
+                        } catch (\Throwable) {}
+                        
+                        $ranFiles++;
+                    }
+                }
+
+                if (count($errors) === 0) {
+                    $results[] = [
+                        'tenant' => $tenant['practice_name'],
+                        'prefix' => $prefix,
+                        'status' => 'success',
+                        'message' => $ranFiles > 0 ? "OK: {$ranFiles} Dateien, {$ok} Statements ausgeführt." : "Bereits aktuell (Version {$currentVersion})."
+                    ];
+                } else {
+                    $results[] = [
+                        'tenant' => $tenant['practice_name'],
+                        'prefix' => $prefix,
+                        'status' => 'error',
+                        'message' => count($errors) . " Fehler",
+                        'errors' => $errors
+                    ];
+                }
+            }
+
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => true,
+                'message' => 'Standard-Migrations über alle Tenants ausgerollt.',
+                'results' => $results
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+
+        } catch (\Throwable $e) {
+            $this->jsonError('Ein unerwarteter Fehler ist aufgetreten: ' . $e->getMessage());
+        }
+    }
+
+    private function applyPrefixToSqlLocally(string $sql, string $prefix): string
+    {
+        $sql = preg_replace_callback(
+            '/\bCONSTRAINT\s+`([^`]+)`/i',
+            fn($m) => 'CONSTRAINT `' . $prefix . $m[1] . '`',
+            $sql
+        );
+
+        $tables = [
+            'users','settings','owners','patients','appointments','appointment_waitlist',
+            'invoices','invoice_items','invoice_positions','invoice_reminders','invoice_dunnings',
+            'waitlist','user_preferences','migrations',
+            'patient_timeline','treatment_types',
+            'mobile_api_tokens','cron_job_log',
+            'befundboegen','befundbogen_felder',
+        ];
+
+        foreach ($tables as $table) {
+            $sql = preg_replace(
+                '/`' . preg_quote($table, '/') . '`/',
+                '`' . $prefix . $table . '`',
+                $sql
+            );
+        }
+
+        return $sql;
+    }
+
     private function jsonError(string $message): never
     {
         http_response_code(400);
