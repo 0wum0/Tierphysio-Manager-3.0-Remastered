@@ -1120,7 +1120,9 @@ class MobileApiController
         if (!in_array($status, $allowed, true)) $this->error('Ungültiger Status.');
 
         $paidAt = ($status === 'paid') ? ($data['paid_at'] ?? date('Y-m-d H:i:s')) : null;
-        $this->invoices->updateStatus($id, $status, $paidAt);
+        $cancellationReason = ($status === 'cancelled') ? ($data['cancellation_reason'] ?? null) : null;
+        
+        $this->invoices->updateStatus($id, $status, $paidAt, $cancellationReason);
         $this->json(['success' => true, 'status' => $status]);
     }
 

@@ -490,17 +490,25 @@ class InvoiceRepository extends Repository
         );
     }
 
-    public function updateStatus(int $id, string $status, ?string $paidAt = null): void
+    public function updateStatus(int $id, string $status, ?string $paidAt = null, ?string $cancellationReason = null): void
     {
+        $sqlReason = ($status === 'cancelled') 
+            ? "COALESCE(?, cancellation_reason)"
+            : "NULL";
+            
+        $params = $paidAt !== null
+            ? ($status === 'cancelled' ? [$status, $paidAt, $cancellationReason, $id] : [$status, $paidAt, $id])
+            : ($status === 'cancelled' ? [$status, $cancellationReason, $id] : [$status, $id]);
+
         if ($paidAt !== null) {
             $this->db->execute(
-                "UPDATE `{$this->t('invoices')}` SET status = ?, paid_at = ?, updated_at = NOW() WHERE id = ?",
-                [$status, $paidAt, $id]
+                "UPDATE `{$this->t('invoices')}` SET status = ?, paid_at = ?, cancellation_reason = {$sqlReason}, updated_at = NOW() WHERE id = ?",
+                $params
             );
         } else {
             $this->db->execute(
-                "UPDATE `{$this->t('invoices')}` SET status = ?, paid_at = NULL, updated_at = NOW() WHERE id = ?",
-                [$status, $id]
+                "UPDATE `{$this->t('invoices')}` SET status = ?, paid_at = NULL, cancellation_reason = {$sqlReason}, updated_at = NOW() WHERE id = ?",
+                $params
             );
         }
     }

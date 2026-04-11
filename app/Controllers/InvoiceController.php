@@ -346,7 +346,7 @@ class InvoiceController extends Controller
         }
 
         $status = $this->sanitize($this->post('status', ''));
-        $allowed = ['draft', 'open', 'paid', 'overdue', 'mahnung'];
+        $allowed = ['draft', 'open', 'paid', 'overdue', 'mahnung', 'cancelled'];
 
         if (!in_array($status, $allowed, true)) {
             $this->session->flash('error', $this->translator->trans('invoices.invalid_status'));
@@ -355,7 +355,9 @@ class InvoiceController extends Controller
         }
 
         $paidAt = ($status === 'paid') ? date('Y-m-d H:i:s') : null;
-        $this->invoiceService->updateStatus((int)$params['id'], $status, $paidAt);
+        $cancellationReason = ($status === 'cancelled') ? $this->sanitize($this->post('cancellation_reason', '')) : null;
+        
+        $this->invoiceService->updateStatus((int)$params['id'], $status, $paidAt, $cancellationReason);
 
         /* ── Automatischer Timeline-Eintrag bei Bezahlung ── */
         if ($status === 'paid' && $invoice['patient_id']) {
@@ -374,12 +376,13 @@ class InvoiceController extends Controller
         }
 
         $msg = match($status) {
-            'paid'    => '✅ Rechnung als bezahlt markiert.',
-            'open'    => 'Rechnung auf "Offen" gesetzt.',
-            'draft'   => 'Rechnung als Entwurf gespeichert.',
-            'overdue' => '⚠️ Rechnung als überfällig markiert.',
-            'mahnung' => '📬 Rechnung als Mahnung markiert.',
-            default   => $this->translator->trans('invoices.status_updated'),
+            'paid'      => '✅ Rechnung als bezahlt markiert.',
+            'open'      => 'Rechnung auf "Offen" gesetzt.',
+            'draft'     => 'Rechnung als Entwurf gespeichert.',
+            'overdue'   => '⚠️ Rechnung als überfällig markiert.',
+            'mahnung'   => '📬 Rechnung als Mahnung markiert.',
+            'cancelled' => '❌ Rechnung wurde storniert.',
+            default     => $this->translator->trans('invoices.status_updated'),
         };
         $this->session->flash($status === 'paid' ? 'paid' : 'success', $msg);
         $this->redirect("/rechnungen/{$params['id']}");
@@ -395,14 +398,16 @@ class InvoiceController extends Controller
         }
 
         $status  = $this->sanitize($this->post('status', ''));
-        $allowed = ['draft', 'open', 'paid', 'overdue', 'mahnung'];
+        $allowed = ['draft', 'open', 'paid', 'overdue', 'mahnung', 'cancelled'];
 
         if (!in_array($status, $allowed, true)) {
             $this->json(['ok' => false, 'error' => 'Ungültiger Status'], 422);
         }
 
         $paidAt = ($status === 'paid') ? date('Y-m-d H:i:s') : null;
-        $this->invoiceService->updateStatus((int)$params['id'], $status, $paidAt);
+        $cancellationReason = ($status === 'cancelled') ? $this->sanitize($this->post('cancellation_reason', '')) : null;
+        
+        $this->invoiceService->updateStatus((int)$params['id'], $status, $paidAt, $cancellationReason);
 
         if ($status === 'paid' && $invoice['patient_id']) {
             try {

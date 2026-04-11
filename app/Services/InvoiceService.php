@@ -128,12 +128,22 @@ class InvoiceService
         $this->invoiceRepository->delete($id);
     }
 
-    public function updateStatus(int $id, string $status, ?string $paidAt = null): void
+    public function updateStatus(int $id, string $status, ?string $paidAt = null, ?string $cancellationReason = null): void
     {
-        $this->invoiceRepository->update($id, [
+        $data = [
             'status'     => $status,
             'updated_at' => date('Y-m-d H:i:s'),
-        ]);
+        ];
+        
+        if ($status === 'cancelled') {
+            if ($cancellationReason !== null) {
+                $data['cancellation_reason'] = $cancellationReason;
+            }
+        } else {
+            $data['cancellation_reason'] = null;
+        }
+
+        $this->invoiceRepository->update($id, $data);
 
         try {
             if ($status === 'paid') {

@@ -164,7 +164,8 @@ CREATE TABLE IF NOT EXISTS `invoices` (
     `invoice_number` VARCHAR(50) NOT NULL UNIQUE,
     `owner_id`       INT UNSIGNED NOT NULL,
     `patient_id`     INT UNSIGNED NULL,
-    `status`         ENUM('draft','open','paid','overdue') NOT NULL DEFAULT 'draft',
+    `status`         ENUM('draft','open','paid','overdue','cancelled') NOT NULL DEFAULT 'draft',
+    `cancellation_reason` TEXT NULL,
     `issue_date`     DATE NOT NULL,
     `due_date`       DATE NULL,
     `total_net`      DECIMAL(10,2) NOT NULL DEFAULT 0.00,
@@ -353,7 +354,7 @@ INSERT IGNORE INTO `settings` (`key`, `value`) VALUES
 ('email_dunning_body',              ''),
 ('dunning_default_fee',             '5.00'),
 ('reminder_default_days',           '7'),
-('db_version',                      '23');
+('db_version',                      '28');
 
 -- ── treatment_types seed data ─────────────────────────────────
 INSERT IGNORE INTO `treatment_types` (`name`, `color`, `price`, `sort_order`) VALUES
@@ -369,6 +370,6 @@ INSERT IGNORE INTO `treatment_types` (`name`, `color`, `price`, `sort_order`) VA
 INSERT IGNORE INTO `migrations` (`version`) VALUES
 (1),(2),(3),(4),(5),(6),(7),(8),(9),(10),
 (11),(12),(13),(14),(15),(16),(17),(18),(19),(20),
-(21),(22),(23);
+(21),(22),(23),(24),(25),(26),(27),(28);
 
 SET FOREIGN_KEY_CHECKS = 1;

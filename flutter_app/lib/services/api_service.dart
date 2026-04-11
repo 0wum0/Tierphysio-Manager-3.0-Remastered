@@ -237,8 +237,11 @@ class ApiService {
   Future<Map<String, dynamic>> invoiceCreate(Map<String, dynamic> data) async =>
       Map<String, dynamic>.from(await post('/invoices', data));
 
-  Future<void> invoiceUpdateStatus(int id, String status) async =>
-      await post('/invoices/$id/status', {'status': status});
+  Future<void> invoiceUpdateStatus(int id, String status, {String? reason}) async =>
+      await post('/invoices/$id/status', {
+        'status': status,
+        if (reason != null && reason.isNotEmpty) 'cancellation_reason': reason,
+      });
 
   /* ── Appointments ── */
 

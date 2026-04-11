@@ -57,7 +57,9 @@ ALTER TABLE `t_demo_praxis_tierphys_6771f0_invoices`
     ADD COLUMN IF NOT EXISTS `payment_terms`  TEXT NULL AFTER `diagnosis`,
     ADD COLUMN IF NOT EXISTS `payment_method` ENUM('rechnung','bar') NOT NULL DEFAULT 'rechnung' AFTER `payment_terms`,
     ADD COLUMN IF NOT EXISTS `paid_at`        DATETIME NULL AFTER `payment_method`,
-    ADD COLUMN IF NOT EXISTS `email_sent_at`  DATETIME NULL AFTER `paid_at`;
+    ADD COLUMN IF NOT EXISTS `email_sent_at`  DATETIME NULL AFTER `paid_at`,
+    MODIFY COLUMN `status` ENUM('draft','open','paid','overdue','cancelled') NOT NULL DEFAULT 'draft',
+    ADD COLUMN IF NOT EXISTS `cancellation_reason` TEXT NULL AFTER `status`;
 
 -- invoice_number aus invoice_nr befüllen falls vorhanden
 UPDATE `t_demo_praxis_tierphys_6771f0_invoices`
@@ -235,7 +237,7 @@ CREATE TABLE IF NOT EXISTS `t_demo_praxis_tierphys_6771f0_migrations` (
 INSERT IGNORE INTO `t_demo_praxis_tierphys_6771f0_migrations` (`version`) VALUES
 (1),(2),(3),(4),(5),(6),(7),(8),(9),(10),
 (11),(12),(13),(14),(15),(16),(17),(18),(19),(20),
-(21),(22),(23);
+(21),(22),(23),(24),(25),(26),(27),(28);
 
 -- settings aktualisieren
 INSERT IGNORE INTO `t_demo_praxis_tierphys_6771f0_settings` (`key`, `value`) VALUES
@@ -269,6 +271,6 @@ INSERT IGNORE INTO `t_demo_praxis_tierphys_6771f0_settings` (`key`, `value`) VAL
 ('dunning_default_fee',             '5.00'),
 ('reminder_default_days',           '7');
 
-UPDATE `t_demo_praxis_tierphys_6771f0_settings` SET `value` = '23' WHERE `key` = 'db_version';
+UPDATE `t_demo_praxis_tierphys_6771f0_settings` SET `value` = '28' WHERE `key` = 'db_version';
 
 SET FOREIGN_KEY_CHECKS = 1;

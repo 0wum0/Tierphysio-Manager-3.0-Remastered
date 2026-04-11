@@ -65,7 +65,7 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen>
   Future<void> _changeStatus() async {
     final current = _invoice!['status'] as String? ?? '';
     final options = <String, String>{
-      'draft': 'Entwurf', 'open': 'Offen', 'paid': 'Bezahlt', 'overdue': 'Überfällig',
+      'draft': 'Entwurf', 'open': 'Offen', 'paid': 'Bezahlt', 'overdue': 'Überfällig', 'cancelled': 'Storniert',
     };
     final selected = await showDialog<String>(
       context: context,
@@ -90,9 +90,33 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen>
       ),
     );
     if (selected == null || selected == current) return;
+    
+    String? reason;
+    if (selected == 'cancelled') {
+        final reasonCtrl = TextEditingController();
+        final bool? confirmReason = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+                title: const Text('Stornierungsgrund'),
+                content: TextField(
+                    controller: reasonCtrl,
+                    decoration: const InputDecoration(labelText: 'Welcher Grund?', border: OutlineInputBorder()),
+                    maxLines: 2,
+                    autofocus: true,
+                ),
+                actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Abbrechen')),
+                    FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Speichern')),
+                ]
+            )
+        );
+        if (confirmReason != true) return;
+        reason = reasonCtrl.text.trim();
+    }
+
     try {
       setState(() => _loading = true);
-      await _api.invoiceUpdateStatus(widget.id, selected);
+      await _api.invoiceUpdateStatus(widget.id, selected, reason: reason);
       await _load();
       _showSnack('Status auf "${options[selected]}" geändert ✓');
     } catch (e) { _showSnack(e.toString(), error: true); }
@@ -442,6 +466,26 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen>
             ]),
           ),
         ],
+        if (inv['status'] == 'cancelled' && (inv['cancellation_reason'] as String? ?? '').isNotEmpty) ...[const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardTheme.color,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.danger.withValues(alpha: 0.3)),
+            ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Row(children: [
+                Icon(Icons.cancel_rounded, size: 16, color: AppTheme.danger),
+                SizedBox(width: 8),
+                Text('Stornierungsgrund', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.danger)),
+              ]),
+              const SizedBox(height: 8),
+              Text(inv['cancellation_reason'] as String, style: Theme.of(context).textTheme.bodyMedium),
+            ]),
+          ),
+        ],
       ]),
     );
   }
@@ -638,11 +682,12 @@ class _InvoiceDetailScreenState extends State<InvoiceDetailScreen>
   );
 
   Color _statusColor(String s) => switch (s) {
-    'paid'    => AppTheme.success,
-    'open'    => AppTheme.primary,
-    'overdue' => AppTheme.danger,
-    'draft'   => Colors.grey,
-    _         => AppTheme.primary,
+    'paid'      => AppTheme.success,
+    'open'      => AppTheme.primary,
+    'overdue'   => AppTheme.danger,
+    'cancelled' => AppTheme.danger,
+    'draft'     => Colors.grey,
+    _           => AppTheme.primary,
   };
 }
 
@@ -653,11 +698,12 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
-      'paid'    => ('Bezahlt',    Colors.green),
-      'open'    => ('Offen',      Colors.blue),
-      'overdue' => ('Überfällig', Colors.red),
-      'draft'   => ('Entwurf',    Colors.grey),
-      _         => (status,       Colors.grey),
+      'paid'      => ('Bezahlt',    Colors.green),
+      'open'      => ('Offen',      Colors.blue),
+      'overdue'   => ('Überfällig', Colors.red),
+      'cancelled' => ('Storniert',  Colors.red),
+      'draft'     => ('Entwurf',    Colors.grey),
+      _           => (status,       Colors.grey),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
