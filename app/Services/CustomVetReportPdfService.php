@@ -61,66 +61,148 @@ class CustomVetReportPdfService
         $createdDate = date('d.m.Y', strtotime($reportData['created_at'] ?? 'now'));
 
         // ── TCPDF setup ───────────────────────────────────────────────────
-        $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+        // Create custom TCPDF subclass to override Header() and Footer() methods
+        $pdf = new class('P', 'mm', 'A4', true, 'UTF-8', false) extends TCPDF {
+            private $footerData = null;
+            private $sidebarData = null;
+
+            public function setFooterData($data) {
+                $this->footerData = $data;
+            }
+
+            public function setSidebarData($data) {
+                $this->sidebarData = $data;
+            }
+
+            public function Header() {
+                // Redraw sidebar on each new page
+                if ($this->sidebarData === null) return;
+                $s = $this->sidebarData;
+                $this->SetFillColor(...$s['sidebarColor']);
+                $this->Rect(0, 0, $s['sidebarW'], $s['pageH'], 'F');
+
+                $logoY = 14;
+                if ($s['logoFile'] && file_exists($s['logoFile'])) {
+                    $this->Image($s['logoFile'], 3, $logoY, $s['sidebarW'] - 6, 0, '', '', '', true, 300, '', false, false, 0, false, false, false);
+                    $logoY += 18;
+                }
+
+                $sideY = $logoY + 12;
+                $this->SetFont($s['font'], '', $s['fontSize'] - 2);
+                $this->SetTextColor(220, 235, 220);
+                $this->SetXY(3, $sideY);
+                $this->Cell($s['sidebarW'] - 6, 4, 'Dokument', 0, 1, 'C');
+                $this->SetFont($s['font'], 'B', $s['fontSize'] - 1);
+                $this->SetTextColor(255, 255, 255);
+                $this->SetXY(3, $sideY + 4);
+                $this->Cell($s['sidebarW'] - 6, 5, 'Tierarztbericht', 0, 1, 'C');
+
+                $sideY += 22;
+                $this->SetFont($s['font'], '', $s['fontSize'] - 2);
+                $this->SetTextColor(220, 235, 220);
+                $this->SetXY(3, $sideY);
+                $this->Cell($s['sidebarW'] - 6, 4, 'Erstellt am', 0, 1, 'C');
+                $this->SetFont($s['font'], 'B', $s['fontSize'] - 1);
+                $this->SetTextColor(255, 255, 255);
+                $this->SetXY(3, $sideY + 4);
+                $this->Cell($s['sidebarW'] - 6, 5, $s['createdDate'], 0, 1, 'C');
+            }
+
+            public function Footer() {
+                if ($this->footerData === null) return;
+                $d = $this->footerData;
+                // Calculate footer position dynamically from bottom of page
+                $footerTopY = $this->GetPageHeight() - 20; // 20mm from bottom
+
+                $this->SetDrawColor(...$d['colorLine']);
+                $this->SetLineWidth(0.3);
+                $this->Line($d['contentX'], $footerTopY, $d['rightEdge'], $footerTopY);
+
+                $this->SetFont($d['font'], '', $d['fontSize'] - 1.5);
+                $this->SetTextColor(...$d['colorFooter']);
+                $footerParts = array_filter([
+                    $d['companyName'],
+                    $d['companyEmail'],
+                    $d['companyPhone'] ? 'Tel: ' . $d['companyPhone'] : '',
+                    ($d['showWebsite'] && $d['companyWebsite']) ? $d['companyWebsite'] : '',
+                ]);
+                $this->SetXY($d['contentX'], $footerTopY + 3);
+                $this->Cell($d['rightEdge'] - $d['contentX'], 4, implode('   ·   ', $footerParts), 0, 1, 'C');
+
+                $this->SetFont($d['font'], 'I', $d['fontSize'] - 2);
+                $this->SetXY($d['contentX'], $footerTopY + 8);
+                $this->Cell($d['rightEdge'] - $d['contentX'], 4,
+                    'Dieser Bericht wurde erstellt am ' . $d['createdDate'] . ' · Nur zur tierärztlichen Information',
+                    0, 1, 'C');
+            }
+        };
+
         $pdf->SetCreator('Tierphysio Manager');
         $pdf->SetAuthor($companyName);
         $pdf->SetTitle('Tierarztbericht – ' . ($patient['name'] ?? ''));
-        $pdf->setPrintHeader(false);
-        $pdf->setPrintFooter(false);
+        $pdf->setPrintHeader(false); // Disable header - draw sidebar manually
+        $pdf->setPrintFooter(true); // Enable footer for auto page breaks
         $pdf->SetMargins(0, 0, 0);
-        $pdf->SetAutoPageBreak(true, 25); // Enable auto page break for writeHTML, 25mm bottom margin
+        $pdf->SetAutoPageBreak(true, 50); // Enable auto page break for writeHTML, 50mm bottom margin
 
-        // ── Sidebar closure (reused on each new page) ─────────────────────
-        $drawSidebar = function () use (
-            $pdf, $sidebarColor, $sidebarW, $pageH, $logoFile,
-            $font, $fontSize, $createdDate
-        ) {
-            $pdf->SetFillColor(...$sidebarColor);
-            $pdf->Rect(0, 0, $sidebarW, $pageH, 'F');
+        // Set sidebar data for the custom Header() method
+        $pdf->setSidebarData([
+            'sidebarColor' => $sidebarColor,
+            'sidebarW' => $sidebarW,
+            'pageH' => $pageH,
+            'logoFile' => $logoFile,
+            'font' => $font,
+            'fontSize' => $fontSize,
+            'createdDate' => $createdDate,
+        ]);
 
-            $logoY = 14;
-            if ($logoFile && file_exists($logoFile)) {
-                $pdf->Image($logoFile, 5, $logoY, $sidebarW - 10, 0, '', '', '', false, 300);
-                $logoY += 26;
-            } else {
-                $cx = $sidebarW / 2; $cy = $logoY + 12;
-                $pdf->SetDrawColor(255, 255, 255);
-                $pdf->SetLineWidth(0.5);
-                $pdf->Circle($cx, $cy, 11, 0, 360, 'D');
-                $pdf->SetFont($font, 'B', 7);
-                $pdf->SetTextColor(255, 255, 255);
-                $pdf->SetXY(3, $cy - 4);
-                $pdf->Cell($sidebarW - 6, 8, 'LOGO', 0, 0, 'C');
-                $logoY += 28;
-            }
+        // Set footer data for the custom Footer() method
+        $pdf->setFooterData([
+            'contentX' => $contentX,
+            'rightEdge' => $rightEdge,
+            'font' => $font,
+            'fontSize' => $fontSize,
+            'colorLine' => $colorLine,
+            'colorFooter' => $colorFooter,
+            'companyName' => $companyName,
+            'companyEmail' => $companyEmail,
+            'companyPhone' => $companyPhone,
+            'companyWebsite' => $companyWebsite,
+            'showWebsite' => $showWebsite,
+            'createdDate' => $createdDate,
+        ]);
 
-            $sideY = $logoY + 8;
-            $pdf->SetFont($font, '', $fontSize - 2);
-            $pdf->SetTextColor(220, 235, 220);
-            $pdf->SetXY(3, $sideY);
-            $pdf->Cell($sidebarW - 6, 4, 'Dokument', 0, 1, 'C');
-            $pdf->SetFont($font, 'B', $fontSize - 1);
-            $pdf->SetTextColor(255, 255, 255);
-            $pdf->SetXY(3, $sideY + 4);
-            $pdf->Cell($sidebarW - 6, 5, 'Tierarztbericht', 0, 1, 'C');
+        $pdf->AddPage();
 
-            $sideY += 22;
-            $pdf->SetFont($font, '', $fontSize - 2);
-            $pdf->SetTextColor(220, 235, 220);
-            $pdf->SetXY(3, $sideY);
-            $pdf->Cell($sidebarW - 6, 4, 'Erstellt am', 0, 1, 'C');
-            $pdf->SetFont($font, 'B', $fontSize - 1);
-            $pdf->SetTextColor(255, 255, 255);
-            $pdf->SetXY(3, $sideY + 4);
-            $pdf->Cell($sidebarW - 6, 5, $createdDate, 0, 1, 'C');
-        };
+        // ── Manually draw sidebar on first page (header disabled) ─────────────
+        $pdf->SetFillColor(...$sidebarColor);
+        $pdf->Rect(0, 0, $sidebarW, $pageH, 'F');
 
-        // Page break callback to redraw sidebar on new pages (for writeHTML auto-breaks)
-        $pdf->setPageMarkCallback(function($page) use ($drawSidebar) {
-            $drawSidebar();
-        });
+        $logoY = 14;
+        if ($logoFile && file_exists($logoFile)) {
+            $pdf->Image($logoFile, 3, $logoY, $sidebarW - 6, 0, '', '', '', true, 300, '', false, false, 0, false, false, false);
+            $logoY += 18;
+        }
 
-        $drawSidebar();
+        $sideY = $logoY + 12;
+        $pdf->SetFont($font, '', $fontSize - 2);
+        $pdf->SetTextColor(220, 235, 220);
+        $pdf->SetXY(3, $sideY);
+        $pdf->Cell($sidebarW - 6, 4, 'Dokument', 0, 1, 'C');
+        $pdf->SetFont($font, 'B', $fontSize - 1);
+        $pdf->SetTextColor(255, 255, 255);
+        $pdf->SetXY(3, $sideY + 4);
+        $pdf->Cell($sidebarW - 6, 5, 'Tierarztbericht', 0, 1, 'C');
+
+        $sideY += 22;
+        $pdf->SetFont($font, '', $fontSize - 2);
+        $pdf->SetTextColor(220, 235, 220);
+        $pdf->SetXY(3, $sideY);
+        $pdf->Cell($sidebarW - 6, 4, 'Erstellt am', 0, 1, 'C');
+        $pdf->SetFont($font, 'B', $fontSize - 1);
+        $pdf->SetTextColor(255, 255, 255);
+        $pdf->SetXY(3, $sideY + 4);
+        $pdf->Cell($sidebarW - 6, 5, $createdDate, 0, 1, 'C');
 
         // ── Company info top right ────────────────────────────────────────
         $pdf->SetFont($font, 'B', $fontSize + 1);
@@ -253,17 +335,14 @@ class CustomVetReportPdfService
             $pdf->SetFont($font, '', $fontSize - 0.5);
             $pdf->SetTextColor(30, 30, 30);
             $pdf->SetXY($contentX, $curY);
-            // Use writeHTML to preserve formatting (bullet points, italic, etc.)
-            $pdf->writeHTML($recipient, true, false, true, false, 'L');
+            // Use MultiCell with ishtml=true to preserve formatting (bullet points, italic, etc.)
+            $pdf->MultiCell($contentW, 5, $recipient, 0, 'L', false, 1, $contentX, $curY, true, 0, false, true, 0, 'T');
             $curY = $pdf->GetY() + 5;
         }
 
         // ── REPORT CONTENT ────────────────────────────────────────────────
         $content = trim($reportData['content'] ?? '');
         if ($content !== '') {
-            $this->checkPageBreak($pdf, $curY, 16, $pageH, $drawSidebar, $contentX, $font, $fontSize);
-            $curY = $pdf->GetY();
-
             $pdf->SetFont($font, 'B', $fontSize - 1);
             $pdf->SetTextColor(...$colorHdrText);
             $pdf->SetFillColor(...$colorHdrBg);
@@ -275,40 +354,13 @@ class CustomVetReportPdfService
             $pdf->SetTextColor(30, 30, 30);
             $pdf->SetXY($contentX, $curY);
 
-            // Use writeHTML to preserve formatting (italic, bullet points, etc.)
-            // Auto page breaks are enabled via SetAutoPageBreak with margins
-            $pdf->writeHTML($content, true, false, true, false, 'L');
+            // Use MultiCell with ishtml=true to preserve formatting (italic, bullet points, etc.)
+            // Auto page breaks are enabled via SetAutoPageBreak(true, 50)
+            $pdf->MultiCell($contentW, 5, $content, 0, 'L', false, 1, $contentX, $curY, true, 0, false, true, 0, 'T');
             $curY = $pdf->GetY();
         }
 
-        // ── Footer (all pages — identical to VetReportService) ────────────
-        $footerTopY = 275;
-        if ($pdf->GetY() > $footerTopY - 10) {
-            $pdf->AddPage();
-            $drawSidebar();
-        }
-
-        $pdf->SetDrawColor(...$colorLine);
-        $pdf->SetLineWidth(0.3);
-        $pdf->Line($contentX, $footerTopY, $rightEdge, $footerTopY);
-
-        $pdf->SetFont($font, '', $fontSize - 1.5);
-        $pdf->SetTextColor(...$colorFooter);
-        $footerParts = array_filter([
-            $companyName,
-            $companyEmail,
-            $companyPhone ? 'Tel: ' . $companyPhone : '',
-            ($showWebsite && $companyWebsite) ? $companyWebsite : '',
-        ]);
-        $pdf->SetXY($contentX, $footerTopY + 3);
-        $pdf->Cell($contentW, 4, implode('   ·   ', $footerParts), 0, 1, 'C');
-
-        $pdf->SetFont($font, 'I', $fontSize - 2);
-        $pdf->SetXY($contentX, $footerTopY + 8);
-        $pdf->Cell($contentW, 4,
-            'Dieser Bericht wurde erstellt am ' . $createdDate . ' · Nur zur tierärztlichen Information',
-            0, 1, 'C');
-
+        // ── Output ─────────────────────────────────────────────────────────
         return $pdf->Output('', 'S');
     }
 
