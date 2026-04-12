@@ -47,9 +47,8 @@ CREATE TABLE IF NOT EXISTS `gobd_audit_log` (
 
 -- 3. invoices.finalized_at + invoices.gobd_hash ──────────────
 --    Werden von taxExportFinalize() gesetzt.
-ALTER TABLE `invoices`
-    ADD COLUMN IF NOT EXISTS `finalized_at` DATETIME   NULL DEFAULT NULL,
-    ADD COLUMN IF NOT EXISTS `gobd_hash`    VARCHAR(64) NULL DEFAULT NULL;
+ALTER TABLE `invoices` ADD COLUMN `finalized_at` DATETIME    NULL DEFAULT NULL;
+ALTER TABLE `invoices` ADD COLUMN `gobd_hash`    VARCHAR(64) NULL DEFAULT NULL;
 
 -- 4. Sicherheitsindex gegen doppelten Storno ──────────────────
 --    Verhindert via DB-Unique, dass zwei Storno-Belege
@@ -57,4 +56,4 @@ ALTER TABLE `invoices`
 --    (UNIQUE auf cancels_invoice_id, nur für Nicht-NULL-Werte
 --     — MySQL ignoriert NULL bei UNIQUE automatisch.)
 ALTER TABLE `invoices`
-    ADD UNIQUE INDEX IF NOT EXISTS `uq_cancels_invoice_id` (`cancels_invoice_id`);
+    ADD UNIQUE INDEX `uq_cancels_invoice_id` (`cancels_invoice_id`);
