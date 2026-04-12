@@ -629,6 +629,41 @@
     </div>
 </div>
 
+{# ── Vet Report Choice Modal ──────────────────────────── #}
+<div class="modal fade" id="modal-vet-report-choice" tabindex="-1" aria-hidden="true" style="z-index: 1065;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border:none; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
+            <div class="modal-header" style="border-bottom:none; padding:1.5rem 1.5rem 0.5rem;">
+                <h3 class="modal-title" style="font-size:1.25rem; font-weight:700;">Art des Berichts wählen</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding:1.5rem;">
+                <div class="d-grid gap-3">
+                    <button type="button" class="btn btn-outline-primary p-3 text-start d-flex align-items-center gap-3" onclick="handleVetReportChoice('auto')" style="border-width:2px; border-radius:12px; transition:all 0.2s;">
+                        <div style="background:rgba(79,124,255,0.1); width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>
+                        </div>
+                        <div>
+                            <div style="font-weight:700; font-size:1rem;">Aus Patientenakte erstellen</div>
+                            <div style="font-size:0.75rem; opacity:0.8;">Automatischer Bericht mit tabellarischer Übersicht des Verlaufs.</div>
+                        </div>
+                    </button>
+                    
+                    <button type="button" class="btn btn-outline-primary p-3 text-start d-flex align-items-center gap-3" onclick="handleVetReportChoice('custom')" style="border-width:2px; border-radius:12px; transition:all 0.2s;">
+                        <div style="background:rgba(79,124,255,0.1); width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path stroke="currentColor" stroke-width="2" d="M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        </div>
+                        <div>
+                            <div style="font-weight:700; font-size:1rem;">Eigenen Bericht schreiben</div>
+                            <div style="font-size:0.75rem; opacity:0.8;">Freitext-Bericht ohne Tabellen (Befund/Rücküberweisung).</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     let patientId = {{ patient.id }};
@@ -1473,32 +1508,26 @@ function _showTlToast(msg, type) {
     });
     });
 
-    document.getElementById('custom-vet-report-form-standalone')?.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        var btn = document.getElementById('btn-save-custom-vet-report-standalone');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generiere...';
-        
-        var fd = new FormData(this);
-        try {
-            var res = await fetch('/patienten/' + patientId + '/tierarztbericht/custom', {
-                method: 'POST',
-                body: fd
-            });
-            if (res.ok) {
-                bootstrap.Modal.getInstance(document.getElementById('modal-custom-vet-report'))?.hide();
-                location.reload();
-            } else {
-                alert('Fehler beim Generieren des Berichts.');
-            }
-        } catch (err) {
-            console.error(err);
-            alert('Fehler: ' + err.message);
-        } finally {
-            btn.disabled = false;
-            btn.textContent = 'Tierarztbericht generieren';
-        }
     });
+
+    window._vrChoicePatientId = null;
+    window.openVetReportChoiceModal = function(pid) {
+        window._vrChoicePatientId = pid || (typeof patientId !== 'undefined' ? patientId : null);
+        if (!window._vrChoicePatientId) return;
+        var m = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-vet-report-choice'));
+        m.show();
+    };
+
+    window.handleVetReportChoice = function(type) {
+        var pid = window._vrChoicePatientId;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-vet-report-choice')).hide();
+        if (type === 'auto') {
+            window.open('/patienten/' + pid + '/tierarztbericht', '_blank');
+        } else {
+            var m = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-custom-vet-report'));
+            m.show();
+        }
+    };
 
 })();
 </script>

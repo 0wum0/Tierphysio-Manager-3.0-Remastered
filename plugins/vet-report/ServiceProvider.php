@@ -41,17 +41,9 @@ class ServiceProvider
              . '<path d="M12 9c-3.5 0-7 2.5-7 5.5 0 2 1.2 3.5 3 4 .8.2 1.6.5 2.5.5h3c.9 0 1.7-.3 2.5-.5 1.8-.5 3-2 3-4C19 11.5 15.5 9 12 9z"/>'
              . '</svg>';
 
-        return '<div class="btn-group">'
-             . '<a href="/patienten/' . $patientId . '/tierarztbericht" target="_blank" class="btn btn-secondary btn-sm">'
+        return '<button type="button" class="btn btn-secondary btn-sm" onclick="openVetReportChoiceModal(' . $patientId . ')">'
              . $paw
-             . '<span class="d-none d-md-inline ms-1" style="margin-right: -4px;">Tierarztbericht</span>'
-             . '</a>'
-             . '<button type="button" class="btn btn-secondary btn-sm dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false"></button>'
-             . '<ul class="dropdown-menu dropdown-menu-end">'
-             . '<li><a class="dropdown-item" href="/patienten/' . $patientId . '/tierarztbericht" target="_blank">Aus Verlauf generieren</a></li>'
-             . '<li><hr class="dropdown-divider"></li>'
-             . '<li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modal-custom-vet-report">Manuell schreiben (ohne Tabellen)</a></li>'
-             . '</ul>'
-             . '</div>';
+             . '<span class="d-none d-md-inline ms-1">Tierarztbericht</span>'
+             . '</button>';
     }
 }
