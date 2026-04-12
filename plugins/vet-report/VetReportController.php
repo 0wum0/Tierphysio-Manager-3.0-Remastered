@@ -71,17 +71,19 @@ class VetReportController extends Controller
         $patient   = $this->loadPatient($patientId);
         if (!$patient) { $this->abort(404); return; }
 
-        $content = $this->post('content', '');
-        
+        $content   = $this->post('content', '');
+        $recipient = $this->post('recipient', '');
+
         $owner    = $this->extractOwner($patient);
         $settingsRepo = \App\Core\Application::getInstance()->getContainer()->get(SettingsRepository::class);
-        
+
         $customService = new CustomVetReportPdfService($settingsRepo);
         $settings = $settingsRepo->all();
-        
+
         $reportData = [
             'created_at' => date('Y-m-d H:i:s'),
-            'content'    => $content
+            'content'    => $content,
+            'recipient'  => $recipient,
         ];
 
         $pdfContent = $customService->generate($reportData, $patient, $owner ?? [], $settings);

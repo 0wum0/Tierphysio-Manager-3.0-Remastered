@@ -186,9 +186,27 @@ class CustomVetReportPdfService
         $pdf->SetLineWidth(0.3);
         $pdf->Line($contentX, $sepY, $rightEdge, $sepY);
 
+        // ── RECIPIENT (An:) ───────────────────────────────────────────────
+        $curY = $sepY + 6;
+        $recipient = trim($reportData['recipient'] ?? '');
+        if (!empty($recipient)) {
+            $pdf->SetFont($font, 'B', $fontSize - 0.5);
+            $pdf->SetTextColor(...$grayColor);
+            $pdf->SetXY($contentX, $curY);
+            $pdf->Cell(16, 5, 'An:', 0, 0, 'L');
+            $pdf->SetFont($font, '', $fontSize - 0.5);
+            $pdf->SetXY($contentX + 16, $curY);
+            $pdf->Cell($contentW - 16, 5, $recipient, 0, 1, 'L');
+            $curY += 7;
+            $pdf->SetDrawColor(...$lineColor);
+            $pdf->SetLineWidth(0.15);
+            $pdf->Line($contentX, $curY, $rightEdge, $curY);
+            $curY += 6;
+        } else {
+            $curY += 2;
+        }
+
         // ── REPORT CONTENT ────────────────────────────────────────────────
-        $curY = $sepY + 8;
-        
         $content = $reportData['content'] ?? '';
         
         if (!empty(trim($content))) {
