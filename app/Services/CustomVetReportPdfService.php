@@ -146,7 +146,12 @@ class CustomVetReportPdfService
         $pdf->SetTextColor(30, 30, 30);
         $pdf->SetXY($contentX, $titleY);
         $pdf->Cell($contentW, 14, 'Tierarztbericht', 0, 0, 'R');
-        $titleBottomY = $titleY + 16;
+
+        $pdf->SetFont('freeserif', 'I', 14);
+        $pdf->SetTextColor(100, 100, 100);
+        $pdf->SetXY($contentX, $titleY + 13);
+        $pdf->Cell($contentW, 8, 'Befund/Rücküberweisung', 0, 0, 'R');
+        $titleBottomY = $titleY + 22;
 
         // ── Info block: owner LEFT, patient fields + photo RIGHT ──────────
         $blockTopY = max($titleBottomY + 4, 58);
