@@ -133,6 +133,9 @@ class MigrationService
             'patient_timeline','treatment_types',
             'mobile_api_tokens','cron_job_log',
             'befundboegen','befundbogen_felder',
+            'vet_reports',
+            'gdpr_consents',
+            'invoice_cancellations',
         ];
 
         foreach ($tables as $table) {
