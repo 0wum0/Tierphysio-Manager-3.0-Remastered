@@ -29,9 +29,7 @@ class ServiceProvider
             $stmts = [
                 /* Ensure id column has AUTO_INCREMENT (fixes tables created without it) */
                 "ALTER TABLE `{$table}` MODIFY COLUMN `id` INT UNSIGNED NOT NULL AUTO_INCREMENT",
-                /* Remove phantom id=0 row if it exists (artifact of missing AUTO_INCREMENT) */
-                "DELETE FROM `{$table}` WHERE `id` = 0",
-                /* Reset AUTO_INCREMENT to max(id)+1 so sequences are correct */
+                /* Reset AUTO_INCREMENT to at least 1 so next insert never gets id=0 */
                 "ALTER TABLE `{$table}` AUTO_INCREMENT = 1",
                 /* Plugin-specific columns */
                 "ALTER TABLE `{$table}` ADD COLUMN `type`      ENUM('auto','custom') NOT NULL DEFAULT 'auto' AFTER `created_by`",

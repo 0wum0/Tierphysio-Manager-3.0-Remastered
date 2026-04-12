@@ -177,7 +177,7 @@ class VetReportController extends Controller
         $patientId = (int)($params['id']       ?? 0);
         $reportId  = (int)($params['reportId'] ?? 0);
 
-        if (!$patientId || !$reportId) {
+        if ($patientId < 1 || $reportId < 0) {
             $this->json(['ok' => false, 'error' => 'invalid_params'], 400);
             return;
         }
