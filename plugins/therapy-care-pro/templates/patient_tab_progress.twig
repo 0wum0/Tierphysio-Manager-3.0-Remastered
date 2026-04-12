@@ -10,6 +10,59 @@
 
 <div class="p-3 tcp-anchor-target" id="tcp-fortschritt-content">
 
+    {# Verlaufsgrafik — loaded via AJAX #}
+    <div id="tcp-tab-chart-wrap-{{ patient.id }}" class="border rounded p-3 mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="fw-700 fs-sm">Verlaufsgrafik</div>
+            <a href="/patienten/{{ patient.id }}/fortschritt" class="btn btn-outline-secondary btn-sm" style="font-size:0.7rem;">Vollansicht →</a>
+        </div>
+        <div style="position:relative;height:180px;">
+            <canvas id="tcp-tab-chart-{{ patient.id }}"></canvas>
+        </div>
+        <div id="tcp-tab-chart-loading-{{ patient.id }}" class="text-muted fs-sm text-center" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">Lade Verlaufsdaten…</div>
+    </div>
+    <script>
+    (function() {
+        var pid = {{ patient.id }};
+        var wrapEl    = document.getElementById('tcp-tab-chart-wrap-' + pid);
+        var loadingEl = document.getElementById('tcp-tab-chart-loading-' + pid);
+        function renderChart(chartData) {
+            if (loadingEl) loadingEl.style.display = 'none';
+            if (!chartData || !chartData.datasets || !chartData.datasets.length) {
+                if (wrapEl) wrapEl.style.display = 'none'; return;
+            }
+            var isDark = document.documentElement.getAttribute('data-bs-theme') !== 'light';
+            var gc = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+            var tc = isDark ? 'rgba(255,255,255,0.6)'  : 'rgba(0,0,0,0.55)';
+            var ctx = document.getElementById('tcp-tab-chart-' + pid);
+            if (!ctx) return;
+            new Chart(ctx, {
+                type: 'line', data: chartData,
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { legend: { display: true, labels: { color: tc, usePointStyle: true, pointStyle: 'circle', padding: 12, font: { size: 10 } } } },
+                    scales: {
+                        x: { grid: { color: gc }, ticks: { color: tc, font: { size: 10 } } },
+                        y: { min: 1, max: 10, grid: { color: gc }, ticks: { color: tc, font: { size: 10 }, stepSize: 1 } }
+                    }
+                }
+            });
+        }
+        function loadData() {
+            fetch('/api/tcp/patienten/' + pid + '/fortschritt', {headers:{'X-Requested-With':'XMLHttpRequest'}})
+                .then(function(r){return r.json();})
+                .then(function(d){ renderChart(d.chart || null); })
+                .catch(function(){ if (wrapEl) wrapEl.style.display = 'none'; });
+        }
+        if (typeof Chart === 'undefined') {
+            var s = document.createElement('script');
+            s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js';
+            s.onload = loadData; document.head.appendChild(s);
+        } else { loadData(); }
+    })();
+    </script>
+
     {# Latest values summary #}
     {% if latest is not empty %}
     <div class="row g-2 mb-3">

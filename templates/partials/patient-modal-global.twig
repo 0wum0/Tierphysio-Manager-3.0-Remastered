@@ -495,6 +495,11 @@
                                 <div class="pd-section-label" style="margin: 0;">Therapiefortschritt</div>
                                 <button type="button" class="btn btn-secondary btn-sm" style="font-size:0.75rem;" onclick="openTcpFullView('progress')">Vollansicht →</button>
                             </div>
+                            {# Verlaufsgrafik #}
+                            <div id="pd-tcp-chart-wrap" style="display:none;border-radius:10px;border:1px solid var(--bs-border-color);padding:0.75rem;margin-bottom:1rem;">
+                                <div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--bs-secondary-color);margin-bottom:0.5rem;">Verlaufsgrafik</div>
+                                <div style="position:relative;height:160px;"><canvas id="pd-tcp-chart"></canvas></div>
+                            </div>
                             <div id="pd-fortschritt-list">
                                 <div style="text-align: center; padding: 2rem; color: var(--bs-secondary-color); font-size: 0.85rem;">
                                     Keine Fortschrittsdaten vorhanden.
@@ -1259,6 +1264,39 @@ function loadTcpData(patientId) {
                 });
                 naturalList.innerHTML = hn;
             }
+            /* Verlaufsgrafik */
+            var chartData = data.chart || null;
+            var chartWrap = document.getElementById('pd-tcp-chart-wrap');
+            if (chartData && chartData.datasets && chartData.datasets.length && chartWrap) {
+                chartWrap.style.display = '';
+                function _drawTcpModalChart() {
+                    var ctx = document.getElementById('pd-tcp-chart');
+                    if (!ctx) return;
+                    if (ctx._ci) { ctx._ci.destroy(); }
+                    var isDark = document.documentElement.getAttribute('data-bs-theme') !== 'light';
+                    var gc = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+                    var tc = isDark ? 'rgba(255,255,255,0.6)'  : 'rgba(0,0,0,0.55)';
+                    ctx._ci = new Chart(ctx, {
+                        type: 'line', data: chartData,
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            plugins: { legend: { display: true, labels: { color: tc, usePointStyle: true, pointStyle: 'circle', padding: 10, font: { size: 10 } } } },
+                            scales: {
+                                x: { grid: { color: gc }, ticks: { color: tc, font: { size: 10 } } },
+                                y: { min: 1, max: 10, grid: { color: gc }, ticks: { color: tc, font: { size: 10 }, stepSize: 1 } }
+                            }
+                        }
+                    });
+                }
+                if (typeof Chart === 'undefined') {
+                    var _cs = document.createElement('script');
+                    _cs.src = 'https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js';
+                    _cs.onload = _drawTcpModalChart;
+                    document.head.appendChild(_cs);
+                } else { _drawTcpModalChart(); }
+            }
+
             /* TCP Berichte */
             var reports = data.reports || [];
             if (reports.length && tcpRepSec && tcpRepList) {
