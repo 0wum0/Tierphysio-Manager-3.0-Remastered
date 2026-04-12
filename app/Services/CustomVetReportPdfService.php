@@ -68,8 +68,7 @@ class CustomVetReportPdfService
         $pdf->setPrintHeader(false);
         $pdf->setPrintFooter(false);
         $pdf->SetMargins(0, 0, 0);
-        $pdf->SetAutoPageBreak(false);
-        $pdf->AddPage();
+        $pdf->SetAutoPageBreak(true, 25); // Enable auto page break for writeHTML, 25mm bottom margin
 
         // ── Sidebar closure (reused on each new page) ─────────────────────
         $drawSidebar = function () use (
@@ -115,6 +114,11 @@ class CustomVetReportPdfService
             $pdf->SetXY(3, $sideY + 4);
             $pdf->Cell($sidebarW - 6, 5, $createdDate, 0, 1, 'C');
         };
+
+        // Page break callback to redraw sidebar on new pages (for writeHTML auto-breaks)
+        $pdf->setPageMarkCallback(function($page) use ($drawSidebar) {
+            $drawSidebar();
+        });
 
         $drawSidebar();
 
@@ -249,7 +253,8 @@ class CustomVetReportPdfService
             $pdf->SetFont($font, '', $fontSize - 0.5);
             $pdf->SetTextColor(30, 30, 30);
             $pdf->SetXY($contentX, $curY);
-            $pdf->MultiCell($contentW, 5, $recipient, 0, 'L');
+            // Use writeHTML to preserve formatting (bullet points, italic, etc.)
+            $pdf->writeHTML($recipient, true, false, true, false, 'L');
             $curY = $pdf->GetY() + 5;
         }
 
@@ -268,17 +273,12 @@ class CustomVetReportPdfService
 
             $pdf->SetFont($font, '', $fontSize);
             $pdf->SetTextColor(30, 30, 30);
+            $pdf->SetXY($contentX, $curY);
 
-            $cleanContent = str_replace("\r", '', $content);
-            foreach (explode("\n", $cleanContent) as $line) {
-                $needed = max(1, $pdf->getNumLines($line, $contentW)) * 5.0;
-                $this->checkPageBreak($pdf, $curY, $needed, $pageH, $drawSidebar, $contentX, $font, $fontSize);
-                $curY = $pdf->GetY();
-                $pdf->SetXY($contentX, $curY);
-                if (trim($line) === '') { $curY += 4; continue; }
-                $pdf->MultiCell($contentW, 5, $line, 0, 'L');
-                $curY = $pdf->GetY();
-            }
+            // Use writeHTML to preserve formatting (italic, bullet points, etc.)
+            // Auto page breaks are enabled via SetAutoPageBreak with margins
+            $pdf->writeHTML($content, true, false, true, false, 'L');
+            $curY = $pdf->GetY();
         }
 
         // ── Footer (all pages — identical to VetReportService) ────────────
