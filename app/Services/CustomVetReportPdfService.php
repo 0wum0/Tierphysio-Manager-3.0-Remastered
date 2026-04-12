@@ -23,11 +23,13 @@ class CustomVetReportPdfService
         array $settings
     ): string {
         // ── Settings ────────────────────────────────────────────────────
+        // Sidebar/accent uses the configured brand color; all text uses hardcoded
+        // neutral dark values so a pink invoice theme never bleeds into the report.
         $primaryColor = $this->hexToRgb($settings['pdf_primary_color'] ?? '#8B9E8B');
-        $accentColor  = $this->hexToRgb($settings['pdf_accent_color']  ?? '#6B7F6B');
-        $darkColor    = $this->hexToRgb($settings['pdf_color_company_name'] ?? '#1E1E1E');
-        $grayColor    = $this->hexToRgb($settings['pdf_color_company_info'] ?? '#6E6E6E');
-        $lineColor    = $this->hexToRgb($settings['pdf_color_line'] ?? '#B4B4B4');
+        $darkColor    = [30,  30,  30];   // near-black — titles, headings, body
+        $grayColor    = [90,  90,  90];   // medium-gray — subtext, labels
+        $lightGray    = [160, 160, 160];  // light-gray  — sidebar label text
+        $lineColor    = [185, 185, 185];  // separator lines
         $font         = $this->resolvePdfFont($settings['pdf_font'] ?? 'helvetica');
         $fontSize     = (float)($settings['pdf_font_size'] ?? 9);
 
@@ -81,7 +83,7 @@ class CustomVetReportPdfService
         // Sidebar: Dokument Typ
         $sideY = $logoY + 10;
         $pdf->SetFont($font, '', $fontSize - 2);
-        $pdf->SetTextColor(220, 235, 220);
+        $pdf->SetTextColor(...$lightGray);
         $pdf->SetXY(3, $sideY);
         $pdf->Cell($sidebarW - 6, 4, 'Dokument', 0, 1, 'C');
         $pdf->SetFont($font, 'B', $fontSize - 1);
@@ -92,7 +94,7 @@ class CustomVetReportPdfService
         // Sidebar: Datum
         $sideY += 22;
         $pdf->SetFont($font, '', $fontSize - 2);
-        $pdf->SetTextColor(220, 235, 220);
+        $pdf->SetTextColor(...$lightGray);
         $pdf->SetXY(3, $sideY);
         $pdf->Cell($sidebarW - 6, 4, 'Datum', 0, 1, 'C');
         $pdf->SetFont($font, 'B', $fontSize - 1);
@@ -263,16 +265,36 @@ class CustomVetReportPdfService
         $pdf->Cell($sigW, 4, 'Tierarzt / Behandler / Stempel', 0, 0, 'C');
 
         // ── FOOTER (all pages) ────────────────────────────────────────────
-        $pageCount = $pdf->getNumPages();
+        $pageCount   = $pdf->getNumPages();
+        $createdDate = date('d.m.Y', strtotime($reportData['created_at'] ?? 'now'));
+
+        // Build company contact line from settings
+        $footerParts = array_filter([$companyName, $companyEmail,
+            $companyPhone ? 'Tel: ' . $companyPhone : '']);
+        $companyLine = implode(' · ', $footerParts);
+
         for ($p = 1; $p <= $pageCount; $p++) {
             $pdf->setPage($p);
-            $pdf->SetFont($font, '', $fontSize - 2.5);
+
+            // Separator line above footer
+            $pdf->SetDrawColor(...$lineColor);
+            $pdf->SetLineWidth(0.3);
+            $pdf->Line($contentX, $pageH - 14, $rightEdge, $pageH - 14);
+
+            // Row 1: company info (left) + page number (right)
+            $pdf->SetFont($font, '', $fontSize - 2);
             $pdf->SetTextColor(...$grayColor);
-            $pdf->SetXY($contentX, $pageH - 8);
-            $pdf->Cell($contentW / 2, 4, $companyName . ' · Tierarztbericht', 0, 0, 'L');
-            $pdf->Cell($contentW / 2, 4, 'Seite ' . $p . ' von ' . $pageCount, 0, 0, 'R');
-            $pdf->SetXY($contentX, $pageH - 5);
-            $pdf->Cell($contentW, 4, 'Vertraulich — nur für den internen Gebrauch bestimmt.', 0, 0, 'C');
+            $pdf->SetXY($contentX, $pageH - 13);
+            $pdf->Cell($contentW - 20, 4, $companyLine, 0, 0, 'L');
+            $pdf->Cell(20, 4, 'Seite ' . $p . ' / ' . $pageCount, 0, 0, 'R');
+
+            // Row 2: created date + disclaimer
+            $pdf->SetFont($font, '', $fontSize - 2.5);
+            $pdf->SetTextColor(...$lineColor);
+            $pdf->SetXY($contentX, $pageH - 9);
+            $pdf->Cell($contentW, 4,
+                'Dieser Bericht wurde erstellt am ' . $createdDate . ' · Nur zur tierärztlichen Information',
+                0, 0, 'C');
         }
 
         return $pdf->Output('', 'S');
