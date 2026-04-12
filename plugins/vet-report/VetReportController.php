@@ -97,9 +97,16 @@ class VetReportController extends Controller
             file_put_contents($dir . '/' . $filename, $pdfContent);
 
             $userId = $this->session->get('user_id');
+
+            /* Compute next ID explicitly to avoid Duplicate entry '0' on tables
+             * that were created without AUTO_INCREMENT (prefix-migration bug). */
+            $nextId = 1 + (int)$this->db->fetchColumn(
+                "SELECT COALESCE(MAX(id), 0) FROM `{$this->t('vet_reports')}`"
+            );
+
             $this->db->query(
-                "INSERT INTO `{$this->t('vet_reports')}` (patient_id, created_by, filename, type, content, recipient) VALUES (?, ?, ?, 'custom', ?, ?)",
-                [$patientId, $userId ?: null, $filename, $content, $recipient]
+                "INSERT INTO `{$this->t('vet_reports')}` (id, patient_id, created_by, filename, type, content, recipient) VALUES (?, ?, ?, ?, 'custom', ?, ?)",
+                [$nextId, $patientId, $userId ?: null, $filename, $content, $recipient]
             );
         } catch (\Throwable $e) {
             $this->json(['ok' => false, 'error' => $e->getMessage()], 500);
