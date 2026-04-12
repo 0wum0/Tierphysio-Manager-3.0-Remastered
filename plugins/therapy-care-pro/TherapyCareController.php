@@ -98,6 +98,11 @@ class TherapyCareController extends Controller
                 'Fortschritt dokumentiert (' . $saved . ' Kategorien)', '', 'progress');
         }
 
+        if ($this->isAjax()) {
+            $this->json(['ok' => true, 'saved' => $saved]);
+            return;
+        }
+
         $this->session->flash('success', $saved . ' Fortschrittswerte gespeichert.');
         $this->redirect("/patienten/{$patientId}/fortschritt");
     }

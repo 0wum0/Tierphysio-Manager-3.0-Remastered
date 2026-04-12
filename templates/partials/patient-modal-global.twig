@@ -1191,67 +1191,111 @@ function loadVetReports(patientId) {
 function loadTcpData(patientId) {
     if (_tcpLoaded) return;
     _tcpLoaded = true;
-    var listEl      = document.getElementById('pd-fortschritt-list');
-    var naturalSec  = document.getElementById('pd-natural-section');
-    var naturalList = document.getElementById('pd-natural-list');
-    var tcpRepSec   = document.getElementById('pd-tcp-reports-section');
-    var tcpRepList  = document.getElementById('pd-tcp-reports-list');
+    var listEl = document.getElementById('pd-fortschritt-list');
 
     fetch('/api/tcp/patienten/'+patientId+'/modal-data', {headers:{'X-Requested-With':'XMLHttpRequest'}})
         .then(function(r){return r.json();})
         .then(function(data) {
-            if (!data.ok) return;
-            /* Fortschritt */
-            var latest = data.latest || [];
-            if (latest.length) {
-                var maxV = Math.max.apply(null, latest.map(function(e){ return e.scale_max || 10; }));
-                var html = '';
-                latest.forEach(function(e) {
-                    var color = esc(e.category_color || e.color || '#4f7cff');
-                    var pct   = Math.round(((e.score - (e.scale_min||1)) / ((e.scale_max||10)-(e.scale_min||1)))*100);
-                    var date  = e.entry_date ? e.entry_date.substring(0,10).split('-').reverse().join('.') : '';
-                    html += '<div style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0.65rem;border-radius:8px;background:var(--bs-secondary-bg);border:1px solid var(--bs-border-color);margin-bottom:0.4rem;">';
-                    html += '<div style="width:10px;height:10px;border-radius:50%;flex-shrink:0;background:'+color+';"></div>';
-                    html += '<div style="flex:1;min-width:0;"><div style="font-size:0.8rem;font-weight:600;">'+esc(e.category_name||'')+'</div><div class="tcp-progress-bar"><div class="tcp-progress-bar-fill" style="width:'+pct+'%;background:'+color+';"></div></div></div>';
-                    html += '<div style="text-align:right;flex-shrink:0;"><div style="font-size:0.85rem;font-weight:700;color:'+color+';">'+esc(String(e.score))+'</div><div style="font-size:0.65rem;color:var(--bs-secondary-color);">'+esc(date)+'</div></div>';
-                    html += '</div>';
-                });
-                listEl.innerHTML = html;
-            } else {
-                listEl.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--bs-secondary-color);font-size:0.85rem;">Noch keine Fortschrittsdaten vorhanden.</div>';
+            if (!data.ok) { listEl.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--bs-secondary-color);font-size:0.85rem;">TherapyCare Pro Plugin nicht aktiv.</div>'; return; }
+            var cats = data.categories || [];
+            if (!cats.length) {
+                listEl.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--bs-secondary-color);font-size:0.85rem;">Keine Kategorien konfiguriert.</div>';
+                return;
             }
-            /* Naturheilkunde */
-            var natural = data.natural || [];
-            if (natural.length && naturalSec && naturalList) {
-                naturalSec.style.display = '';
-                var hn = '';
-                natural.slice(0,4).forEach(function(e) {
-                    var date2 = e.entry_date ? e.entry_date.substring(0,10).split('-').reverse().join('.') : '';
-                    hn += '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;border-radius:7px;background:var(--bs-secondary-bg);border:1px solid var(--bs-border-color);margin-bottom:0.3rem;">';
-                    hn += '<svg width="12" height="12" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;opacity:0.5;"><path stroke="currentColor" stroke-width="2" d="M12 2a10 10 0 010 20M12 2C6.5 2 2 6.5 2 12"/></svg>';
-                    hn += '<div style="flex:1;min-width:0;font-size:0.8rem;font-weight:600;">'+esc(e.type_name||e.custom_type||'')+'</div>';
-                    hn += '<span style="font-size:0.68rem;color:var(--bs-secondary-color);">'+esc(date2)+'</span>';
-                    hn += '</div>';
-                });
-                naturalList.innerHTML = hn;
-            }
-            /* TCP Berichte */
-            var reports = data.reports || [];
-            if (reports.length && tcpRepSec && tcpRepList) {
-                tcpRepSec.style.display = '';
-                var hr = '';
-                reports.slice(0,4).forEach(function(r) {
-                    var date3 = r.created_at ? r.created_at.substring(0,10).split('-').reverse().join('.') : '';
-                    hr += '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;border-radius:7px;background:var(--bs-secondary-bg);border:1px solid var(--bs-border-color);margin-bottom:0.3rem;">';
-                    hr += '<svg width="12" height="12" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;opacity:0.5;"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>';
-                    hr += '<div style="flex:1;min-width:0;font-size:0.8rem;font-weight:600;">'+esc(r.title||'Therapiebericht')+' <span style="font-size:0.68rem;color:var(--bs-secondary-color);">'+esc(date3)+'</span></div>';
-                    hr += '<a href="/patienten/'+patientId+'/berichte/'+r.id+'/download" target="_blank" class="btn btn-sm btn-outline-secondary" style="font-size:0.72rem;">Öffnen</a>';
-                    hr += '</div>';
-                });
-                tcpRepList.innerHTML = hr;
-            }
+            listEl.innerHTML = _tcpBuildSliders(cats, patientId, true);
         })
         .catch(function() { /* TCP Plugin nicht aktiv */ });
+}
+
+/* ─── TCP SLIDER BUILDER ───────────────────────────────────────── */
+function _tcpBuildSliders(cats, patientId, compact) {
+    var today = new Date().toISOString().slice(0,10);
+    var sfx   = compact ? 'c' : 'f';
+    var html  = '<form onsubmit="_saveTcpProgress(event,'+patientId+',this,'+compact+')">';
+    html += '<input type="hidden" name="_csrf_token" value="{{ csrf_token }}">';
+    if (!compact) {
+        html += '<div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.75rem;">';
+        html += '<label style="font-size:0.78rem;font-weight:600;flex-shrink:0;margin:0;">Datum</label>';
+        html += '<input type="date" name="entry_date" class="form-control form-control-sm" value="'+today+'" style="max-width:165px;">';
+        html += '</div>';
+    } else {
+        html += '<input type="hidden" name="entry_date" value="'+today+'">';
+    }
+    cats.forEach(function(cat) {
+        var mid = Math.round((+cat.scale_max + +cat.scale_min) / 2);
+        var c   = esc(cat.color || '#4f7cff');
+        var uid = 'tcs-'+cat.id+'-'+sfx;
+        html += '<div style="margin-bottom:'+(compact?'0.6':'0.85')+'rem;">';
+        html += '<div style="display:flex;align-items:center;gap:0.45rem;margin-bottom:0.2rem;">';
+        html += '<div style="width:8px;height:8px;border-radius:50%;background:'+c+';flex-shrink:0;"></div>';
+        html += '<span style="font-size:0.8rem;font-weight:600;">'+esc(cat.name)+'</span>';
+        if (!compact) html += '<span style="font-size:0.68rem;color:var(--bs-secondary-color);">('+cat.scale_min+'\u2013'+cat.scale_max+')</span>';
+        html += '<span style="font-size:0.8rem;font-weight:700;color:'+c+';margin-left:auto;" id="'+uid+'">'+mid+'</span>';
+        html += '</div>';
+        html += '<input type="range" class="form-range" name="entries['+cat.id+']" min="'+cat.scale_min+'" max="'+cat.scale_max+'" value="'+mid+'" style="margin:0;" oninput="document.getElementById(\''+uid+'\').textContent=this.value">';
+        if (cat.scale_label_min || cat.scale_label_max) {
+            html += '<div style="display:flex;justify-content:space-between;font-size:0.65rem;color:var(--bs-secondary-color);margin-top:0.1rem;"><span>'+esc(cat.scale_label_min||'')+'</span><span>'+esc(cat.scale_label_max||'')+'</span></div>';
+        }
+        if (!compact) {
+            html += '<input type="text" name="notes_'+cat.id+'" class="form-control form-control-sm mt-1" placeholder="Notiz (optional)" style="font-size:0.78rem;">';
+        }
+        html += '</div>';
+    });
+    html += '<button type="submit" class="btn btn-primary btn-sm w-100" style="margin-top:0.25rem;">Werte speichern</button>';
+    html += '</form>';
+    return html;
+}
+
+function _saveTcpProgress(event, patientId, form, compact) {
+    event.preventDefault();
+    var btn = form.querySelector('[type="submit"]');
+    var orig = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = 'Speichern\u2026'; }
+    /* Update hidden date for compact form to today */
+    var hiddenDate = form.querySelector('input[type="hidden"][name="entry_date"]');
+    if (hiddenDate) hiddenDate.value = new Date().toISOString().slice(0,10);
+    fetch('/patienten/'+patientId+'/fortschritt', {
+        method: 'POST',
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
+        body: new FormData(form)
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+        if (btn) { btn.disabled = false; btn.textContent = orig; }
+        if (data.ok) {
+            _tcpCache = null;
+            _hwShowToast(data.saved + ' Werte gespeichert.', 'success');
+            /* Reset sliders to midpoint */
+            form.querySelectorAll('input[type="range"]').forEach(function(s) {
+                s.value = Math.round((+s.max + +s.min) / 2);
+                s.dispatchEvent(new Event('input'));
+            });
+            form.querySelectorAll('input[type="text"]').forEach(function(i){ i.value = ''; });
+            /* Reload full view history if open */
+            if (!compact) {
+                var fvEl = document.getElementById('modal-tcp-fullview');
+                if (fvEl && fvEl.classList.contains('show')) {
+                    fetch('/api/tcp/patienten/'+patientId+'/fortschritt', {headers:{'X-Requested-With':'XMLHttpRequest'}})
+                        .then(function(r){return r.json();})
+                        .then(function(pd) {
+                            if (_tcpCache === null) _tcpCache = {entries:[],natural:[],reports:[],cats:[]};
+                            _tcpCache.entries = pd.entries || [];
+                            /* Preserve other panels, only re-render progress */
+                            var cache = _tcpCache;
+                            fetch('/api/tcp/patienten/'+patientId+'/modal-data', {headers:{'X-Requested-With':'XMLHttpRequest'}})
+                                .then(function(r){return r.json();})
+                                .then(function(md) {
+                                    _tcpCache = {entries: pd.entries||[], natural: md.natural||[], reports: md.reports||[], cats: md.categories||[]};
+                                    _tcpfvRender(_tcpCache, patientId);
+                                });
+                        });
+                }
+            }
+        } else {
+            alert('Fehler beim Speichern.');
+        }
+    })
+    .catch(function() { if (btn) { btn.disabled = false; btn.textContent = orig; } alert('Netzwerkfehler.'); });
 }
 
 /* ─── TCP FULL VIEW MODAL ──────────────────────────────────────── */
@@ -1284,7 +1328,7 @@ window.openTcpFullView = function(activeTab) {
             return fetch('/api/tcp/patienten/'+patientId+'/fortschritt', {headers:{'X-Requested-With':'XMLHttpRequest'}})
                 .then(function(r){return r.json();})
                 .then(function(pd) {
-                    _tcpCache = {entries: pd.entries||[], natural: md.natural||[], reports: md.reports||[]};
+                    _tcpCache = {entries: pd.entries||[], natural: md.natural||[], reports: md.reports||[], cats: md.categories||[]};
                     _tcpfvRender(_tcpCache, patientId);
                 });
         })
@@ -1300,8 +1344,17 @@ function _tcpfvRender(cache, patientId) {
     /* Fortschritt */
     var progEl = document.getElementById('tcpfv-panel-progress');
     if (progEl) {
+        var html = '';
+        /* Slider form at top of full view */
+        if (cache.cats && cache.cats.length) {
+            html += '<div style="border:1px solid var(--bs-border-color);border-radius:10px;padding:1rem 1.1rem;margin-bottom:1.25rem;background:var(--bs-secondary-bg);">';
+            html += '<div style="font-weight:600;font-size:0.82rem;margin-bottom:0.75rem;color:var(--bs-primary);">Neue Werte erfassen</div>';
+            html += _tcpBuildSliders(cache.cats, patientId, false);
+            html += '</div>';
+        }
+        /* History */
         if (!cache.entries.length) {
-            progEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">Noch keine Fortschrittsdaten vorhanden.</div>';
+            html += '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">Noch keine Fortschrittsdaten vorhanden.</div>';
         } else {
             var byCat = {};
             cache.entries.forEach(function(e) {
@@ -1309,7 +1362,6 @@ function _tcpfvRender(cache, patientId) {
                 if (!byCat[cid]) byCat[cid] = {name:e.category_name||'',color:e.category_color||'#4f7cff',sMin:+(e.scale_min||1),sMax:+(e.scale_max||10),entries:[]};
                 byCat[cid].entries.push(e);
             });
-            var html = '';
             Object.values(byCat).forEach(function(cat) {
                 var c = esc(cat.color);
                 html += '<div style="margin-bottom:1.1rem;border:1px solid var(--bs-border-color);border-radius:10px;overflow:hidden;">';
@@ -1330,8 +1382,8 @@ function _tcpfvRender(cache, patientId) {
                 });
                 html += '</div>';
             });
-            progEl.innerHTML = html;
         }
+        progEl.innerHTML = html;
     }
     /* Naturheilkunde */
     var natEl = document.getElementById('tcpfv-panel-natural');
