@@ -1191,18 +1191,71 @@ function loadVetReports(patientId) {
 function loadTcpData(patientId) {
     if (_tcpLoaded) return;
     _tcpLoaded = true;
-    var listEl = document.getElementById('pd-fortschritt-list');
+    var listEl      = document.getElementById('pd-fortschritt-list');
+    var naturalSec  = document.getElementById('pd-natural-section');
+    var naturalList = document.getElementById('pd-natural-list');
+    var tcpRepSec   = document.getElementById('pd-tcp-reports-section');
+    var tcpRepList  = document.getElementById('pd-tcp-reports-list');
 
     fetch('/api/tcp/patienten/'+patientId+'/modal-data', {headers:{'X-Requested-With':'XMLHttpRequest'}})
         .then(function(r){return r.json();})
         .then(function(data) {
-            if (!data.ok) { listEl.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--bs-secondary-color);font-size:0.85rem;">TherapyCare Pro Plugin nicht aktiv.</div>'; return; }
-            var cats = data.categories || [];
-            if (!cats.length) {
-                listEl.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--bs-secondary-color);font-size:0.85rem;">Keine Kategorien konfiguriert.</div>';
-                return;
+            if (!data.ok) { listEl.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--bs-secondary-color);font-size:0.85rem;">TherapyCare Pro nicht aktiv.</div>'; return; }
+            var cats   = data.categories || [];
+            var latest = data.latest     || [];
+            if (!cats.length) { listEl.innerHTML = '<div style="text-align:center;padding:1.5rem;color:var(--bs-secondary-color);font-size:0.85rem;">Keine Kategorien konfiguriert.</div>'; return; }
+
+            var html = '';
+            /* Current values */
+            if (latest.length) {
+                html += '<div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--bs-secondary-color);margin-bottom:0.35rem;">Aktuelle Werte</div>';
+                latest.forEach(function(e) {
+                    var color = esc(e.category_color || '#4f7cff');
+                    var pct = Math.max(0,Math.min(100,Math.round(((+e.score-(+e.scale_min||1))/((+e.scale_max||10)-(+e.scale_min||1)))*100)));
+                    var date = e.entry_date ? e.entry_date.substring(0,10).split('-').reverse().join('.') : '';
+                    html += '<div style="display:flex;align-items:center;gap:0.45rem;padding:0.3rem 0.5rem;border-radius:7px;background:var(--bs-secondary-bg);border:1px solid var(--bs-border-color);margin-bottom:0.25rem;">';
+                    html += '<div style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:'+color+';"></div>';
+                    html += '<div style="flex:1;min-width:0;"><div style="font-size:0.75rem;font-weight:600;">'+esc(e.category_name||'')+'</div><div class="tcp-progress-bar" style="margin-top:0.1rem;"><div class="tcp-progress-bar-fill" style="width:'+pct+'%;background:'+color+';"></div></div></div>';
+                    html += '<div style="text-align:right;flex-shrink:0;"><div style="font-size:0.78rem;font-weight:700;color:'+color+';">'+esc(String(e.score))+'</div><div style="font-size:0.6rem;color:var(--bs-secondary-color);">'+esc(date)+'</div></div>';
+                    html += '</div>';
+                });
+                html += '<div style="border-top:1px solid var(--bs-border-color);margin:0.6rem 0;"></div>';
             }
-            listEl.innerHTML = _tcpBuildSliders(cats, patientId, true);
+            /* Slider form */
+            html += '<div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--bs-secondary-color);margin-bottom:0.4rem;">Neue Werte erfassen</div>';
+            html += _tcpBuildSliders(cats, patientId, true);
+            listEl.innerHTML = html;
+
+            /* Naturheilkunde */
+            var natural = data.natural || [];
+            if (natural.length && naturalSec && naturalList) {
+                naturalSec.style.display = '';
+                var hn = '';
+                natural.slice(0,4).forEach(function(e) {
+                    var date2 = e.entry_date ? e.entry_date.substring(0,10).split('-').reverse().join('.') : '';
+                    hn += '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;border-radius:7px;background:var(--bs-secondary-bg);border:1px solid var(--bs-border-color);margin-bottom:0.3rem;">';
+                    hn += '<svg width="12" height="12" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;opacity:0.5;"><path stroke="currentColor" stroke-width="2" d="M12 2a10 10 0 010 20M12 2C6.5 2 2 6.5 2 12"/></svg>';
+                    hn += '<div style="flex:1;min-width:0;font-size:0.78rem;font-weight:600;">'+esc(e.type_name||e.custom_type||'')+'</div>';
+                    hn += '<span style="font-size:0.68rem;color:var(--bs-secondary-color);">'+esc(date2)+'</span>';
+                    hn += '</div>';
+                });
+                naturalList.innerHTML = hn;
+            }
+            /* TCP Berichte */
+            var reports = data.reports || [];
+            if (reports.length && tcpRepSec && tcpRepList) {
+                tcpRepSec.style.display = '';
+                var hr = '';
+                reports.slice(0,4).forEach(function(r) {
+                    var date3 = r.created_at ? r.created_at.substring(0,10).split('-').reverse().join('.') : '';
+                    hr += '<div style="display:flex;align-items:center;gap:0.5rem;padding:0.4rem 0.6rem;border-radius:7px;background:var(--bs-secondary-bg);border:1px solid var(--bs-border-color);margin-bottom:0.3rem;">';
+                    hr += '<svg width="12" height="12" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;opacity:0.5;"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>';
+                    hr += '<div style="flex:1;min-width:0;font-size:0.78rem;font-weight:600;">'+esc(r.title||'Therapiebericht')+' <span style="font-size:0.68rem;color:var(--bs-secondary-color);">'+esc(date3)+'</span></div>';
+                    hr += '<a href="/patienten/'+patientId+'/berichte/'+r.id+'/download" target="_blank" class="btn btn-sm btn-outline-secondary" style="font-size:0.7rem;">Öffnen</a>';
+                    hr += '</div>';
+                });
+                tcpRepList.innerHTML = hr;
+            }
         })
         .catch(function() { /* TCP Plugin nicht aktiv */ });
 }
@@ -1211,7 +1264,8 @@ function loadTcpData(patientId) {
 function _tcpBuildSliders(cats, patientId, compact) {
     var today = new Date().toISOString().slice(0,10);
     var sfx   = compact ? 'c' : 'f';
-    var html  = '<form onsubmit="_saveTcpProgress(event,'+patientId+',this,'+compact+')">';
+    var formId = 'tcp-sf-'+(compact?'c':'f')+'-'+patientId;
+    var html  = '<form id="'+formId+'">';
     html += '<input type="hidden" name="_csrf_token" value="{{ csrf_token }}">';
     if (!compact) {
         html += '<div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.75rem;">';
@@ -1241,15 +1295,15 @@ function _tcpBuildSliders(cats, patientId, compact) {
         }
         html += '</div>';
     });
-    html += '<button type="submit" class="btn btn-primary btn-sm w-100" style="margin-top:0.25rem;">Werte speichern</button>';
+    html += '<button type="button" class="btn btn-primary btn-sm w-100" style="margin-top:0.25rem;" onclick="_saveTcpProgress(event,'+patientId+',document.getElementById(\''+formId+'\'),'+compact+')">Werte speichern</button>';
     html += '</form>';
     return html;
 }
 
 function _saveTcpProgress(event, patientId, form, compact) {
-    event.preventDefault();
-    var btn = form.querySelector('[type="submit"]');
-    var orig = btn ? btn.textContent : '';
+    if (event && event.preventDefault) event.preventDefault();
+    var btn = form ? form.querySelector('[type="button"].btn-primary') : null;
+    var orig = btn ? btn.textContent : 'Werte speichern';
     if (btn) { btn.disabled = true; btn.textContent = 'Speichern\u2026'; }
     /* Update hidden date for compact form to today */
     var hiddenDate = form.querySelector('input[type="hidden"][name="entry_date"]');
@@ -1292,10 +1346,11 @@ function _saveTcpProgress(event, patientId, form, compact) {
                 }
             }
         } else {
-            alert('Fehler beim Speichern.');
+            if (btn) { btn.disabled = false; btn.textContent = orig; }
+            alert('Fehler beim Speichern: ' + (data.error || 'Unbekannter Fehler'));
         }
     })
-    .catch(function() { if (btn) { btn.disabled = false; btn.textContent = orig; } alert('Netzwerkfehler.'); });
+    .catch(function(err) { if (btn) { btn.disabled = false; btn.textContent = orig; } alert('Netzwerkfehler: ' + err); });
 }
 
 /* ─── TCP FULL VIEW MODAL ──────────────────────────────────────── */
@@ -2245,17 +2300,22 @@ document.getElementById('custom-vet-report-form')?.addEventListener('submit', as
             body: fd
         });
         if (res.ok) {
-            bootstrap.Modal.getInstance(document.getElementById('modal-custom-vet-report'))?.hide();
-            // Reload list if we are in the global modal
-            if (window.pdAktPatientId && typeof loadVetReports !== 'undefined') {
-                document.getElementById('pd-vr-list').innerHTML = '<div style="text-align:center;padding:2rem;"><div class="pd-spinner"></div></div>';
-                window._vrLoaded = false;
-                loadVetReports(pid);
+            var rdata = await res.json().catch(function(){ return {ok:true}; });
+            if (rdata.ok === false) {
+                alert('Fehler: ' + (rdata.error || 'Unbekannter Fehler'));
             } else {
-                location.reload();
+                bootstrap.Modal.getInstance(document.getElementById('modal-custom-vet-report'))?.hide();
+                if (window.pdAktPatientId && typeof loadVetReports !== 'undefined') {
+                    document.getElementById('pd-vr-list').innerHTML = '<div style="text-align:center;padding:2rem;"><div class="pd-spinner"></div></div>';
+                    window._vrLoaded = false;
+                    loadVetReports(pid);
+                } else {
+                    location.reload();
+                }
             }
         } else {
-            alert('Fehler beim Generieren.');
+            var errData = await res.json().catch(function(){ return {}; });
+            alert('Fehler beim Generieren: ' + (errData.error || res.status));
         }
     } catch (err) {
         console.error(err);

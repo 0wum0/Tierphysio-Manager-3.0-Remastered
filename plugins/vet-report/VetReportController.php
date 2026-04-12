@@ -86,11 +86,10 @@ class VetReportController extends Controller
             'recipient'  => $recipient,
         ];
 
-        $pdfContent = $customService->generate($reportData, $patient, $owner ?? [], $settings);
-        $filename   = $this->buildFilename($patient['name'] ?? 'Patient', true);
-
-        // Save to storage and record in DB
         try {
+            $pdfContent = $customService->generate($reportData, $patient, $owner ?? [], $settings);
+            $filename   = $this->buildFilename($patient['name'] ?? 'Patient', true);
+
             $dir = tenant_storage_path('vet-reports');
             if (!is_dir($dir)) {
                 mkdir($dir, 0755, true);
@@ -103,7 +102,7 @@ class VetReportController extends Controller
                 [$patientId, $userId ?: null, $filename, $content]
             );
         } catch (\Throwable $e) {
-            $this->json(['ok' => false, 'error' => 'db_error', 'message' => $e->getMessage()], 500);
+            $this->json(['ok' => false, 'error' => $e->getMessage()], 500);
             return;
         }
 
