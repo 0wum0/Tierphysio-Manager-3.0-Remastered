@@ -26,14 +26,21 @@ class ServiceProvider
             $db    = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
             $table = $db->prefix('vet_reports');
 
-            $columns = [
+            $stmts = [
+                /* Ensure id column has AUTO_INCREMENT (fixes tables created without it) */
+                "ALTER TABLE `{$table}` MODIFY COLUMN `id` INT UNSIGNED NOT NULL AUTO_INCREMENT",
+                /* Remove phantom id=0 row if it exists (artifact of missing AUTO_INCREMENT) */
+                "DELETE FROM `{$table}` WHERE `id` = 0",
+                /* Reset AUTO_INCREMENT to max(id)+1 so sequences are correct */
+                "ALTER TABLE `{$table}` AUTO_INCREMENT = 1",
+                /* Plugin-specific columns */
                 "ALTER TABLE `{$table}` ADD COLUMN `type`      ENUM('auto','custom') NOT NULL DEFAULT 'auto' AFTER `created_by`",
                 "ALTER TABLE `{$table}` ADD COLUMN `title`     VARCHAR(255) NULL AFTER `type`",
                 "ALTER TABLE `{$table}` ADD COLUMN `content`   TEXT NULL AFTER `title`",
                 "ALTER TABLE `{$table}` ADD COLUMN `recipient` VARCHAR(500) NULL",
             ];
 
-            foreach ($columns as $sql) {
+            foreach ($stmts as $sql) {
                 try {
                     $db->execute($sql);
                 } catch (\Throwable $e) {
