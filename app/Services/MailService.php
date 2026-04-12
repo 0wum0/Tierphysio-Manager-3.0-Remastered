@@ -489,6 +489,31 @@ HTML;
         }
     }
 
+    public function sendVetReport(array $patient, array $owner, string $pdfContent, string $filename): bool
+    {
+        try {
+            $patName   = $patient['name'] ?? 'Ihrem Tier';
+            $ownerName = trim(($owner['first_name'] ?? '') . ' ' . ($owner['last_name'] ?? ''));
+            $company   = $this->settingsRepository->get('company_name', 'Ihre Tierphysiotherapie');
+            $subject   = 'Tierarztbericht für ' . $patName;
+            $bodyText  = "Hallo " . $ownerName . ",\n\nanbei erhalten Sie den Tierarztbericht für " . $patName . ".\n\nBei Fragen stehen wir Ihnen gerne zur Verfügung.\n\nMit freundlichen Grüßen\n" . $company;
+
+            $mailer = $this->createMailer();
+            $mailer->addAddress($owner['email'], $ownerName);
+            $mailer->Subject = $subject;
+            $mailer->isHTML(true);
+            $mailer->Body    = $this->wrapInEmailLayout($subject, $bodyText, '🐾');
+            $mailer->AltBody = $bodyText;
+            $mailer->addStringAttachment($pdfContent, $filename, PHPMailer::ENCODING_BASE64, 'application/pdf');
+
+            return $mailer->send();
+        } catch (\Throwable $e) {
+            $this->lastError = $e->getMessage();
+            error_log('[MailService::sendVetReport] ' . $e->getMessage());
+            return false;
+        }
+    }
+
     /* ══════════════════════════════════════════════════════════
        MAILER FACTORY
     ══════════════════════════════════════════════════════════ */

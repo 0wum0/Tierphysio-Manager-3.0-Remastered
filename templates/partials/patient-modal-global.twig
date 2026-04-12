@@ -636,9 +636,9 @@
                     </div>
                     <div style="padding:1.25rem 1.75rem;">
                         <div class="mb-3">
-                            <label class="form-label" style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">An (Empfänger)</label>
+                            <label class="form-label" style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">An (Tierarzt / Klinik) <span style="font-size:0.72rem;font-weight:400;text-transform:none;letter-spacing:0;font-style:italic;color:var(--bs-secondary-color);">— optional</span></label>
                             <input type="text" name="recipient" id="cvr-recipient" class="form-control" placeholder="z. B. Dr. Müller — Tierärztliche Klinik, Musterstraße 1, 80331 München">
-                            <div class="form-text">Optional: Empfänger des Berichts (Tierarzt / Klinik)</div>
+                            <div class="form-text">Leer lassen, wenn kein Tierarzt angegeben werden soll. Halter &amp; Tier werden immer im Bericht angezeigt.</div>
                         </div>
                         <div>
                             <label class="form-label" style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Berichtsinhalt <span class="text-danger">*</span></label>
@@ -706,10 +706,10 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" style="overflow-y:auto;max-height:calc(100vh - 180px);padding:1.25rem 1.5rem;">
-                <ul class="nav nav-tabs mb-3">
-                    <li class="nav-item"><button type="button" class="nav-link active" id="tcpfv-tab-progress" onclick="_tcpfvTab('progress')">📈 Therapiefortschritt</button></li>
-                    <li class="nav-item"><button type="button" class="nav-link" id="tcpfv-tab-natural" onclick="_tcpfvTab('natural')">🌿 Naturheilkunde</button></li>
-                    <li class="nav-item"><button type="button" class="nav-link" id="tcpfv-tab-reports" onclick="_tcpfvTab('reports')">📄 Therapieberichte</button></li>
+                <ul class="nav nav-tabs mb-3" style="flex-wrap:nowrap;overflow-x:auto;">
+                    <li class="nav-item"><a href="javascript:void(0)" class="nav-link active" id="tcpfv-tab-progress" onclick="_tcpfvTab('progress');return false;">📈 Therapiefortschritt</a></li>
+                    <li class="nav-item"><a href="javascript:void(0)" class="nav-link" id="tcpfv-tab-natural" onclick="_tcpfvTab('natural');return false;">🌿 Naturheilkunde</a></li>
+                    <li class="nav-item"><a href="javascript:void(0)" class="nav-link" id="tcpfv-tab-reports" onclick="_tcpfvTab('reports');return false;">📄 Therapieberichte</a></li>
                 </ul>
                 <div id="tcpfv-panel-progress">
                     <div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);"><div class="pd-spinner" style="margin:0 auto 1rem;"></div>Lade…</div>
@@ -1172,12 +1172,22 @@ function loadVetReports(patientId) {
                 var date = r.created_at ? r.created_at.substring(0,10).split('-').reverse().join('.') : '—';
                 var time = r.created_at ? r.created_at.substring(11,16) : '';
                 var by   = r.created_by_name ? ' · '+esc(r.created_by_name) : '';
-                var typeLabel = (r.type === 'custom') ? '<span class="badge text-bg-info me-1" style="font-size:0.6rem;padding:1px 4px;">Manuell</span>' : '';
-                html += '<div class="vr-card">';
-                html += '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;opacity:0.5;"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>';
-                html += '<div style="flex:1;min-width:0;"><div style="font-size:0.82rem;font-weight:600;">' + typeLabel + 'Tierarztbericht '+esc(date)+' '+esc(time)+'</div><div style="font-size:0.7rem;color:var(--bs-secondary-color);">Erstellt'+esc(by)+'</div></div>';
-                html += '<a href="/patienten/'+patientId+'/tierarztbericht/'+r.id+'/download" target="_blank" class="btn btn-sm btn-outline-secondary" style="font-size:0.72rem;white-space:nowrap;">Öffnen</a>';
-                html += '<button onclick="deleteVetReport('+patientId+','+r.id+',this)" class="btn btn-sm" style="color:var(--bs-secondary-color);background:none;border:none;padding:0 4px;" title="Löschen"><svg width="12" height="12" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" points="3 6 5 6 21 6"/><path stroke="currentColor" stroke-width="2" d="M19 6l-1 14H6L5 6"/></svg></button>';
+                var typeBadge = (r.type === 'custom')
+                    ? '<span style="font-size:0.6rem;padding:1px 6px;border-radius:4px;background:rgba(14,165,233,0.15);color:#0ea5e9;border:1px solid rgba(14,165,233,0.3);margin-right:4px;">Manuell</span>'
+                    : '<span style="font-size:0.6rem;padding:1px 6px;border-radius:4px;background:rgba(107,114,128,0.12);color:var(--bs-secondary-color);border:1px solid var(--bs-border-color);margin-right:4px;">Auto</span>';
+                html += '<div style="border:1px solid var(--bs-border-color);border-radius:10px;padding:0.65rem 0.8rem;margin-bottom:0.5rem;background:var(--bs-body-bg);">';
+                html += '<div style="display:flex;align-items:flex-start;gap:0.6rem;">';
+                html += '<svg width="15" height="15" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:2px;opacity:0.45;"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>';
+                html += '<div style="flex:1;min-width:0;">';
+                html += '<div style="font-size:0.82rem;font-weight:600;">'+typeBadge+'Tierarztbericht '+esc(date)+(time?' '+esc(time):'')+'</div>';
+                html += '<div style="font-size:0.7rem;color:var(--bs-secondary-color);margin-top:0.1rem;">Erstellt'+esc(by)+'</div>';
+                if (r.recipient) html += '<div style="font-size:0.7rem;color:var(--bs-secondary-color);margin-top:0.1rem;">An: '+esc(r.recipient)+'</div>';
+                html += '</div></div>';
+                html += '<div style="display:flex;gap:0.3rem;margin-top:0.55rem;justify-content:flex-end;">';
+                html += '<a href="/patienten/'+patientId+'/tierarztbericht/'+r.id+'/download" target="_blank" class="btn btn-sm btn-outline-secondary" style="font-size:0.72rem;">Öffnen</a>';
+                html += '<button onclick="sendVetReportEmail('+patientId+','+r.id+',this)" class="btn btn-sm btn-outline-primary" style="font-size:0.72rem;" title="Per E-Mail an Tierhalter senden">📧 E-Mail</button>';
+                html += '<button onclick="deleteVetReport('+patientId+','+r.id+',this)" class="btn btn-sm btn-outline-danger" style="font-size:0.72rem;" title="Löschen"><svg width="11" height="11" fill="none" viewBox="0 0 24 24" style="vertical-align:middle;"><polyline stroke="currentColor" stroke-width="2" points="3 6 5 6 21 6"/><path stroke="currentColor" stroke-width="2" d="M19 6l-1 14H6L5 6"/></svg> Löschen</button>';
+                html += '</div>';
                 html += '</div>';
             });
             container.innerHTML = html;
@@ -2307,7 +2317,7 @@ document.getElementById('custom-vet-report-form')?.addEventListener('submit', as
                 bootstrap.Modal.getInstance(document.getElementById('modal-custom-vet-report'))?.hide();
                 if (window.pdAktPatientId && typeof loadVetReports !== 'undefined') {
                     document.getElementById('pd-vr-list').innerHTML = '<div style="text-align:center;padding:2rem;"><div class="pd-spinner"></div></div>';
-                    window._vrLoaded = false;
+                    _vrLoaded = false;
                     loadVetReports(pid);
                 } else {
                     location.reload();
@@ -2322,9 +2332,54 @@ document.getElementById('custom-vet-report-form')?.addEventListener('submit', as
         alert('Fehler: ' + err.message);
     } finally {
         btn.disabled = false;
-        btn.textContent = 'Tierarztbericht generieren';
+        btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:0.4rem;margin-top:-2px;"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>PDF generieren &amp; speichern';
     }
 });
+
+window.sendVetReportEmail = function(patientId, reportId, btn) {
+    if (!confirm('Tierarztbericht per E-Mail an den Tierhalter senden?')) return;
+    var origText = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm" style="width:10px;height:10px;"></span>'; }
+    var fd = new FormData();
+    fd.append('_csrf_token', '{{ csrf_token }}');
+    fetch('/patienten/' + patientId + '/tierarztbericht/' + reportId + '/email', {
+        method: 'POST',
+        headers: {'X-Requested-With': 'XMLHttpRequest'},
+        body: fd
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+        if (btn) { btn.disabled = false; btn.innerHTML = origText; }
+        if (data.ok) {
+            _hwShowToast('E-Mail erfolgreich an ' + (data.email || 'Tierhalter') + ' gesendet!', 'success');
+        } else {
+            alert('Fehler: ' + (data.error || 'E-Mail konnte nicht gesendet werden.'));
+        }
+    })
+    .catch(function() {
+        if (btn) { btn.disabled = false; btn.innerHTML = origText; }
+        alert('Netzwerkfehler beim Senden.');
+    });
+};
+
+window.deleteVetReport = function(patientId, reportId, btn) {
+    if (!confirm('Diesen Tierarztbericht wirklich löschen?')) return;
+    var card = btn ? btn.closest('[style*="border-radius:10px"]') : null;
+    fetch('/patienten/' + patientId + '/tierarztbericht/' + reportId, {
+        method: 'DELETE',
+        headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Token': '{{ csrf_token }}'}
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            if (card) card.remove();
+            else { _vrLoaded = false; loadVetReports(patientId); }
+        } else {
+            alert('Fehler: ' + (data.error || 'Löschen fehlgeschlagen.'));
+        }
+    })
+    .catch(function() { alert('Netzwerkfehler.'); });
+};
 
 })();
 </script>

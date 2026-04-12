@@ -25,6 +25,7 @@ class ServiceProvider
         $router->get(   '/patienten/{id}/tierarztbericht/verlauf',                  [VetReportController::class, 'history'],  ['auth']);
         $router->get(   '/patienten/{id}/tierarztbericht/{reportId}/download',      [VetReportController::class, 'download'], ['auth']);
         $router->delete('/patienten/{id}/tierarztbericht/{reportId}',               [VetReportController::class, 'delete'],   ['auth']);
+        $router->post(  '/patienten/{id}/tierarztbericht/{reportId}/email',         [VetReportController::class, 'sendEmail'], ['auth']);
     }
 
     public function patientHeaderAction(array $context): string

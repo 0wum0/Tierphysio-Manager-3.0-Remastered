@@ -98,8 +98,8 @@ class VetReportController extends Controller
 
             $userId = $this->session->get('user_id');
             $this->db->query(
-                "INSERT INTO `{$this->t('vet_reports')}` (patient_id, created_by, filename, type, content) VALUES (?, ?, ?, 'custom', ?)",
-                [$patientId, $userId ?: null, $filename, $content]
+                "INSERT INTO `{$this->t('vet_reports')}` (patient_id, created_by, filename, type, content, recipient) VALUES (?, ?, ?, 'custom', ?, ?)",
+                [$patientId, $userId ?: null, $filename, $content, $recipient]
             );
         } catch (\Throwable $e) {
             $this->json(['ok' => false, 'error' => $e->getMessage()], 500);
@@ -117,7 +117,7 @@ class VetReportController extends Controller
 
         try {
             $rows = $this->db->query(
-                "SELECT vr.id, vr.created_at, vr.type, u.name AS created_by_name
+                "SELECT vr.id, vr.created_at, vr.type, vr.recipient, u.name AS created_by_name
                  FROM `{$this->t('vet_reports')}` vr
                  LEFT JOIN `{$this->t('users')}` u ON u.id = vr.created_by
                  WHERE vr.patient_id = ?
@@ -210,6 +210,65 @@ class VetReportController extends Controller
         }
 
         $this->json(['ok' => true]);
+    }
+
+    /* ── POST /patienten/{id}/tierarztbericht/{reportId}/email ── */
+    public function sendEmail(array $params = []): void
+    {
+        $patientId = (int)($params['id']       ?? 0);
+        $reportId  = (int)($params['reportId'] ?? 0);
+        if (!$patientId || !$reportId) {
+            $this->json(['ok' => false, 'error' => 'Ungültige Parameter'], 400);
+            return;
+        }
+
+        try {
+            $row = $this->db->query(
+                "SELECT filename FROM `{$this->t('vet_reports')}` WHERE id = ? AND patient_id = ? LIMIT 1",
+                [$reportId, $patientId]
+            )->fetch(\PDO::FETCH_ASSOC);
+
+            if (!$row) {
+                $this->json(['ok' => false, 'error' => 'Bericht nicht gefunden'], 404);
+                return;
+            }
+
+            $patient = $this->loadPatient($patientId);
+            if (!$patient) {
+                $this->json(['ok' => false, 'error' => 'Patient nicht gefunden'], 404);
+                return;
+            }
+
+            $owner = $this->extractOwner($patient);
+            if (!$owner || empty($owner['email'])) {
+                $this->json(['ok' => false, 'error' => 'Keine E-Mail-Adresse beim Tierhalter hinterlegt'], 422);
+                return;
+            }
+
+            $safeFilename = basename($row['filename']);
+            $storageDir   = realpath(tenant_storage_path('vet-reports'));
+            $path         = $storageDir . '/' . $safeFilename;
+            $realPath     = realpath($path);
+
+            if (!$storageDir || !$realPath || strpos($realPath, $storageDir) !== 0) {
+                $this->json(['ok' => false, 'error' => 'PDF-Datei nicht gefunden'], 404);
+                return;
+            }
+
+            $pdfContent  = file_get_contents($realPath);
+            $settingsRepo = \App\Core\Application::getInstance()->getContainer()->get(\App\Repositories\SettingsRepository::class);
+            $mailService  = new \App\Services\MailService($settingsRepo);
+
+            $ok = $mailService->sendVetReport($patient, $owner, $pdfContent, $safeFilename);
+
+            if ($ok) {
+                $this->json(['ok' => true, 'email' => $owner['email']]);
+            } else {
+                $this->json(['ok' => false, 'error' => $mailService->getLastError()], 500);
+            }
+        } catch (\Throwable $e) {
+            $this->json(['ok' => false, 'error' => $e->getMessage()], 500);
+        }
     }
 
     /* ── Private helpers ─────────────────────────────────────────────── */
