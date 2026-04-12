@@ -431,8 +431,9 @@ class BefundbogenController extends Controller
     private function fetchPatient(int $id): ?array
     {
         try {
-            $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
-            $row = $db->fetch("SELECT * FROM patients WHERE id = ? LIMIT 1", [$id]);
+            $db    = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $table = $db->prefix('patients');
+            $row   = $db->fetch("SELECT * FROM `{$table}` WHERE id = ? LIMIT 1", [$id]);
             return $row ?: null;
         } catch (\Throwable) {
             return null;
@@ -443,8 +444,9 @@ class BefundbogenController extends Controller
     {
         if (!$id) return null;
         try {
-            $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
-            $row = $db->fetch("SELECT * FROM owners WHERE id = ? LIMIT 1", [$id]);
+            $db    = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $table = $db->prefix('owners');
+            $row   = $db->fetch("SELECT * FROM `{$table}` WHERE id = ? LIMIT 1", [$id]);
             return $row ?: null;
         } catch (\Throwable) {
             return null;
