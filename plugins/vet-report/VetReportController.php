@@ -11,6 +11,7 @@ use App\Core\Translator;
 use App\Core\View;
 use App\Core\Database;
 use App\Repositories\SettingsRepository;
+use App\Services\CustomVetReportPdfService;
 
 class VetReportController extends Controller
 {
@@ -61,6 +62,50 @@ class VetReportController extends Controller
         header('Cache-Control: private, max-age=0, must-revalidate');
         echo $pdfContent;
         exit;
+    }
+
+    /* ── POST /patienten/{id}/tierarztbericht/custom ── */
+    public function createCustom(array $params = []): void
+    {
+        $patientId = (int)($params['id'] ?? 0);
+        $patient   = $this->loadPatient($patientId);
+        if (!$patient) { $this->abort(404); return; }
+
+        $content = $this->post('content', '');
+        
+        $owner    = $this->extractOwner($patient);
+        $settingsRepo = \App\Core\Application::getInstance()->getContainer()->get(SettingsRepository::class);
+        
+        $customService = new CustomVetReportPdfService($settingsRepo);
+        $settings = $settingsRepo->all();
+        
+        $reportData = [
+            'created_at' => date('Y-m-d H:i:s'),
+            'content'    => $content
+        ];
+
+        $pdfContent = $customService->generate($reportData, $patient, $owner ?? [], $settings);
+        $filename   = $this->buildFilename($patient['name'] ?? 'Patient', true);
+
+        // Save to storage and record in DB
+        try {
+            $dir = tenant_storage_path('vet-reports');
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            file_put_contents($dir . '/' . $filename, $pdfContent);
+
+            $userId = $this->session->get('user_id');
+            $this->db->query(
+                "INSERT INTO `{$this->t('vet_reports')}` (patient_id, created_by, filename, type, content) VALUES (?, ?, ?, 'custom', ?)",
+                [$patientId, $userId ?: null, $filename, $content]
+            );
+        } catch (\Throwable $e) {
+            $this->json(['ok' => false, 'error' => 'db_error', 'message' => $e->getMessage()], 500);
+            return;
+        }
+
+        $this->json(['ok' => true]);
     }
 
     /* ── GET /patienten/{id}/tierarztbericht/verlauf (JSON) ── */
@@ -223,10 +268,11 @@ class VetReportController extends Controller
         }
     }
 
-    private function buildFilename(string $patientName): string
+    private function buildFilename(string $patientName, bool $isCustom = false): string
     {
         $safe = preg_replace('/[^A-Za-z0-9\-]/', '_', $patientName);
-        return 'Tierarztbericht-' . $safe . '-' . date('Y-m-d_His') . '.pdf';
+        $prefix = $isCustom ? 'Tierarztbericht-Manuell-' : 'Tierarztbericht-';
+        return $prefix . $safe . '-' . date('Y-m-d_His') . '.pdf';
     }
 
     private function saveReport(int $patientId, string $filename, string $pdfContent): void
@@ -240,7 +286,7 @@ class VetReportController extends Controller
 
             $userId = $this->session->get('user_id');
             $this->db->query(
-                "INSERT INTO `{$this->t('vet_reports')}` (patient_id, created_by, filename) VALUES (?, ?, ?)",
+                "INSERT INTO `{$this->t('vet_reports')}` (patient_id, created_by, filename, type) VALUES (?, ?, ?, 'auto')",
                 [$patientId, $userId ?: null, $filename]
             );
         } catch (\Throwable) {

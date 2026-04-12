@@ -603,6 +603,32 @@
     </div>
 </div>
 
+{# Custom Vet Report Modal #}
+<div class="modal fade" id="modal-custom-vet-report" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Tierarztbericht Manuell Erstellen</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            </div>
+            <form id="custom-vet-report-form-standalone">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <div class="modal-body">
+                    <p style="font-size:0.82rem;color:var(--bs-secondary-color);margin-bottom:1rem;">Hier können Sie einen freien Tierarztbericht oder einen Befund/Rücküberweisung für den Tierarzt schreiben (ohne Tabellen).</p>
+                    <div class="form-group mb-3">
+                        <label class="form-label">Bericht (Befund/Rücküberweisung)</label>
+                        <textarea name="content" class="form-control" rows="12" placeholder="Sehr geehrte(r) Herr/Frau Kollege(in),..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary" id="btn-save-custom-vet-report-standalone">Tierarztbericht generieren</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     let patientId = {{ patient.id }};
@@ -1445,6 +1471,35 @@ function _showTlToast(msg, type) {
                 if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
             });
     });
+    });
+
+    document.getElementById('custom-vet-report-form-standalone')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        var btn = document.getElementById('btn-save-custom-vet-report-standalone');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generiere...';
+        
+        var fd = new FormData(this);
+        try {
+            var res = await fetch('/patienten/' + patientId + '/tierarztbericht/custom', {
+                method: 'POST',
+                body: fd
+            });
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('modal-custom-vet-report'))?.hide();
+                location.reload();
+            } else {
+                alert('Fehler beim Generieren des Berichts.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Fehler: ' + err.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Tierarztbericht generieren';
+        }
+    });
+
 })();
 </script>
 {% endblock %}

@@ -474,10 +474,18 @@
                         <div class="pd-tab-panel" id="pd-panel-therapiebericht">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
                                 <div class="pd-section-label" style="margin: 0;">Tierarztberichte</div>
-                                <a id="pd-vr-new-link" href="#" target="_blank" class="btn btn-primary btn-sm">
-                                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                                    Neuer Bericht
-                                </a>
+                                <div class="btn-group">
+                                    <a id="pd-vr-new-link" href="#" target="_blank" class="btn btn-primary btn-sm">
+                                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                                        Aus Verlauf
+                                    </a>
+                                    <button type="button" class="btn btn-primary btn-sm btn-icon dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false"></button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item" id="pd-vr-new-link-menu" href="#" target="_blank">Aus Verlauf generieren</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" href="#" onclick="openPdCustomVetReportModal()">Manuell schreiben (ohne Tabellen)</a></li>
+                                    </ul>
+                                </div>
                             </div>
                             <div id="pd-vr-list">
                                 <div style="text-align: center; padding: 2rem; color: var(--bs-secondary-color);">
@@ -607,6 +615,32 @@
             <button type="button" class="btn btn-primary" id="te-save-btn">Speichern</button>
         </div>
     </div></div>
+</div>
+
+{# ── Custom Vet Report Modal ──────────────────────────── #}
+<div class="modal fade" id="modal-custom-vet-report" tabindex="-1" aria-hidden="true" style="z-index:1060;">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Tierarztbericht Manuell Erstellen</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            </div>
+            <form id="custom-vet-report-form">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <div class="modal-body">
+                    <p style="font-size:0.82rem;color:var(--bs-secondary-color);margin-bottom:1rem;">Hier können Sie einen freien Tierarztbericht oder einen Befund/Rücküberweisung für den Tierarzt schreiben (ohne Tabellen).</p>
+                    <div class="form-group mb-3">
+                        <label class="form-label">Bericht (Befund/Rücküberweisung)</label>
+                        <textarea name="content" id="cvr-content" class="form-control" rows="12" placeholder="Sehr geehrte(r) Herr/Frau Kollege(in),..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary" id="btn-save-custom-vet-report">Tierarztbericht generieren</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 {# ── Patient bearbeiten Modal ─────────────────────────── #}
@@ -1286,6 +1320,8 @@ function openPatientModal(patientId) {
             if (vrl) vrl.href = '/patienten/'+patientId+'/tierarztbericht';
             var vrn = document.getElementById('pd-vr-new-link');
             if (vrn) vrn.href = '/patienten/'+patientId+'/tierarztbericht';
+            var vrnM = document.getElementById('pd-vr-new-link-menu');
+            if (vrnM) vrnM.href = '/patienten/'+patientId+'/tierarztbericht';
 
             /* Rechnungs-Badge */
             var existBadge = document.getElementById('pd-invoice-badge');
@@ -1886,6 +1922,51 @@ function _fillCpTemplateChecklist(){
 ═══════════════════════════════════════════════════════ */
 window._gsOpenPatient   = openPatientModal;
 window.showPatientModal = openPatientModal;
+
+// Custom Vet Report Logic
+window.openPdCustomVetReportModal = function() {
+    var pid = window.pdAktPatientId || (typeof patientId !== 'undefined' ? patientId : null);
+    if (!pid) return;
+    document.getElementById('custom-vet-report-form').reset();
+    var m = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-custom-vet-report'));
+    m.show();
+};
+
+document.getElementById('custom-vet-report-form')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    var pid = window.pdAktPatientId || (typeof patientId !== 'undefined' ? patientId : null) || window.customVetReportPatientId;
+    if (!pid) return;
+    var btn = document.getElementById('btn-save-custom-vet-report');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generiere...';
+    
+    var fd = new FormData(this);
+    try {
+        var res = await fetch('/patienten/' + pid + '/tierarztbericht/custom', {
+            method: 'POST',
+            body: fd
+        });
+        if (res.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('modal-custom-vet-report'))?.hide();
+            // Reload list if we are in the global modal
+            if (window.pdAktPatientId && typeof loadVetReports !== 'undefined') {
+                document.getElementById('pd-vr-list').innerHTML = '<div style="text-align:center;padding:2rem;"><div class="pd-spinner"></div></div>';
+                window._vrLoaded = false;
+                loadVetReports(pid);
+            } else {
+                location.reload();
+            }
+        } else {
+            alert('Fehler beim Generieren.');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Fehler: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Tierarztbericht generieren';
+    }
+});
 
 })();
 </script>
