@@ -493,7 +493,7 @@
                         <div class="pd-tab-panel" id="pd-panel-fortschritt">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
                                 <div class="pd-section-label" style="margin: 0;">Therapiefortschritt</div>
-                                <a id="pd-tcp-progress-link" href="#" class="btn btn-secondary btn-sm" style="font-size: 0.75rem;">Vollansicht →</a>
+                                <button type="button" class="btn btn-secondary btn-sm" style="font-size:0.75rem;" onclick="openTcpFullView('progress')">Vollansicht →</button>
                             </div>
                             <div id="pd-fortschritt-list">
                                 <div style="text-align: center; padding: 2rem; color: var(--bs-secondary-color); font-size: 0.85rem;">
@@ -504,7 +504,7 @@
                             <div id="pd-natural-section" style="display: none; margin-top: 1.5rem;">
                                 <div style="border-top: 1px solid var(--bs-border-color); padding-top: 1rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
                                     <div class="pd-section-label" style="margin: 0;">Naturheilkunde</div>
-                                    <a id="pd-tcp-natural-link" href="#" class="btn btn-secondary btn-sm" style="font-size: 0.75rem;">Vollansicht →</a>
+                                    <button type="button" class="btn btn-secondary btn-sm" style="font-size:0.75rem;" onclick="openTcpFullView('natural')">Vollansicht →</button>
                                 </div>
                                 <div id="pd-natural-list" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
                             </div>
@@ -512,7 +512,7 @@
                             <div id="pd-tcp-reports-section" style="display: none; margin-top: 1.5rem;">
                                 <div style="border-top: 1px solid var(--bs-border-color); padding-top: 1rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
                                     <div class="pd-section-label" style="margin: 0;">Therapieberichte</div>
-                                    <a id="pd-tcp-reports-link" href="#" class="btn btn-secondary btn-sm" style="font-size: 0.75rem;">Alle Berichte →</a>
+                                    <button type="button" class="btn btn-secondary btn-sm" style="font-size:0.75rem;" onclick="openTcpFullView('reports')">Alle Berichte →</button>
                                 </div>
                                 <div id="pd-tcp-reports-list" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
                             </div>
@@ -688,6 +688,37 @@
                             <div style="font-size:0.75rem; opacity:0.8;">Freitext-Bericht ohne Tabellen (Befund/Rücküberweisung).</div>
                         </div>
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── TCP Fortschritt Vollansicht Modal ────────────────── #}
+<div class="modal fade" id="modal-tcp-fullview" tabindex="-1" aria-hidden="true" style="z-index:1065;" data-bs-backdrop="false">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header" style="padding-bottom:0.5rem;">
+                <div>
+                    <h5 class="modal-title fw-bold">Therapiefortschritt — Vollansicht</h5>
+                    <div id="tcpfv-subtitle" style="font-size:0.74rem;color:var(--bs-secondary-color);margin-top:0.1rem;"></div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="overflow-y:auto;max-height:calc(100vh - 180px);padding:1.25rem 1.5rem;">
+                <ul class="nav nav-tabs mb-3">
+                    <li class="nav-item"><button type="button" class="nav-link active" id="tcpfv-tab-progress" onclick="_tcpfvTab('progress')">📈 Therapiefortschritt</button></li>
+                    <li class="nav-item"><button type="button" class="nav-link" id="tcpfv-tab-natural" onclick="_tcpfvTab('natural')">🌿 Naturheilkunde</button></li>
+                    <li class="nav-item"><button type="button" class="nav-link" id="tcpfv-tab-reports" onclick="_tcpfvTab('reports')">📄 Therapieberichte</button></li>
+                </ul>
+                <div id="tcpfv-panel-progress">
+                    <div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);"><div class="pd-spinner" style="margin:0 auto 1rem;"></div>Lade…</div>
+                </div>
+                <div id="tcpfv-panel-natural" style="display:none;">
+                    <div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);"><div class="pd-spinner" style="margin:0 auto 1rem;"></div>Lade…</div>
+                </div>
+                <div id="tcpfv-panel-reports" style="display:none;">
+                    <div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);"><div class="pd-spinner" style="margin:0 auto 1rem;"></div>Lade…</div>
                 </div>
             </div>
         </div>
@@ -995,6 +1026,7 @@ function resetModal() {
     _tcpLoaded     = false;
     _portalLoaded  = false;
     _hwLoaded      = false;
+    _tcpCache      = null;
 }
 
 var _befundeLoaded = false, _vrLoaded = false, _tcpLoaded = false, _portalLoaded = false, _hwLoaded = false;
@@ -1164,12 +1196,6 @@ function loadTcpData(patientId) {
     var naturalList = document.getElementById('pd-natural-list');
     var tcpRepSec   = document.getElementById('pd-tcp-reports-section');
     var tcpRepList  = document.getElementById('pd-tcp-reports-list');
-    var linkProg    = document.getElementById('pd-tcp-progress-link');
-    var linkNat     = document.getElementById('pd-tcp-natural-link');
-    var linkRep     = document.getElementById('pd-tcp-reports-link');
-    if (linkProg) linkProg.href = '/patienten/'+patientId+'/fortschritt';
-    if (linkNat)  linkNat.href  = '/patienten/'+patientId+'/naturheilkunde';
-    if (linkRep)  linkRep.href  = '/patienten/'+patientId+'/berichte';
 
     fetch('/api/tcp/patienten/'+patientId+'/modal-data', {headers:{'X-Requested-With':'XMLHttpRequest'}})
         .then(function(r){return r.json();})
@@ -1226,6 +1252,132 @@ function loadTcpData(patientId) {
             }
         })
         .catch(function() { /* TCP Plugin nicht aktiv */ });
+}
+
+/* ─── TCP FULL VIEW MODAL ──────────────────────────────────────── */
+var _tcpCache = null;
+
+function _tcpfvTab(tab) {
+    ['progress','natural','reports'].forEach(function(t) {
+        var btn = document.getElementById('tcpfv-tab-'+t);
+        var pan = document.getElementById('tcpfv-panel-'+t);
+        if (btn) btn.classList.toggle('active', t === tab);
+        if (pan) pan.style.display = (t === tab) ? '' : 'none';
+    });
+}
+
+window.openTcpFullView = function(activeTab) {
+    var patientId = window.pdAktPatientId || (currentPatientData && currentPatientData.patient ? currentPatientData.patient.id : null);
+    if (!patientId) return;
+    var p = currentPatientData && currentPatientData.patient;
+    var subEl = document.getElementById('tcpfv-subtitle');
+    if (subEl && p) subEl.textContent = (p.name||'') + (p.species ? ' \u00b7 ' + p.species : '');
+    var modalEl = document.getElementById('modal-tcp-fullview');
+    var m = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl, {backdrop: false});
+    m.show();
+    _tcpfvTab(activeTab || 'progress');
+    if (_tcpCache) { _tcpfvRender(_tcpCache, patientId); return; }
+    fetch('/api/tcp/patienten/'+patientId+'/modal-data', {headers:{'X-Requested-With':'XMLHttpRequest'}})
+        .then(function(r){return r.json();})
+        .then(function(md) {
+            if (!md.ok) throw new Error('TCP nicht aktiv');
+            return fetch('/api/tcp/patienten/'+patientId+'/fortschritt', {headers:{'X-Requested-With':'XMLHttpRequest'}})
+                .then(function(r){return r.json();})
+                .then(function(pd) {
+                    _tcpCache = {entries: pd.entries||[], natural: md.natural||[], reports: md.reports||[]};
+                    _tcpfvRender(_tcpCache, patientId);
+                });
+        })
+        .catch(function() {
+            ['progress','natural','reports'].forEach(function(t) {
+                var el = document.getElementById('tcpfv-panel-'+t);
+                if (el) el.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">Daten nicht verf\u00fcgbar \u2014 TherapyCare Pro Plugin pr\u00fcfen.</div>';
+            });
+        });
+};
+
+function _tcpfvRender(cache, patientId) {
+    /* Fortschritt */
+    var progEl = document.getElementById('tcpfv-panel-progress');
+    if (progEl) {
+        if (!cache.entries.length) {
+            progEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">Noch keine Fortschrittsdaten vorhanden.</div>';
+        } else {
+            var byCat = {};
+            cache.entries.forEach(function(e) {
+                var cid = e.category_id||0;
+                if (!byCat[cid]) byCat[cid] = {name:e.category_name||'',color:e.category_color||'#4f7cff',sMin:+(e.scale_min||1),sMax:+(e.scale_max||10),entries:[]};
+                byCat[cid].entries.push(e);
+            });
+            var html = '';
+            Object.values(byCat).forEach(function(cat) {
+                var c = esc(cat.color);
+                html += '<div style="margin-bottom:1.1rem;border:1px solid var(--bs-border-color);border-radius:10px;overflow:hidden;">';
+                html += '<div style="padding:0.6rem 0.85rem;background:var(--bs-secondary-bg);border-bottom:1px solid var(--bs-border-color);display:flex;align-items:center;gap:0.55rem;">';
+                html += '<div style="width:10px;height:10px;border-radius:50%;background:'+c+';flex-shrink:0;"></div>';
+                html += '<span style="font-weight:600;font-size:0.85rem;">'+esc(cat.name)+'</span>';
+                html += '<span style="font-size:0.68rem;color:var(--bs-secondary-color);margin-left:auto;">Skala '+cat.sMin+'\u2013'+cat.sMax+'</span>';
+                html += '</div>';
+                cat.entries.forEach(function(e) {
+                    var pct = Math.max(0,Math.min(100,Math.round(((+e.score-cat.sMin)/(cat.sMax-cat.sMin))*100)));
+                    var date = e.entry_date ? e.entry_date.substring(0,10).split('-').reverse().join('.') : '';
+                    html += '<div style="padding:0.45rem 0.85rem;border-bottom:1px solid var(--bs-border-color);display:flex;align-items:center;gap:0.7rem;">';
+                    html += '<div style="font-size:0.75rem;color:var(--bs-secondary-color);width:68px;flex-shrink:0;">'+esc(date)+'</div>';
+                    html += '<div style="flex:1;"><div class="tcp-progress-bar"><div class="tcp-progress-bar-fill" style="width:'+pct+'%;background:'+c+';"></div></div></div>';
+                    html += '<div style="font-size:0.85rem;font-weight:700;color:'+c+';width:28px;text-align:right;flex-shrink:0;">'+esc(String(e.score))+'</div>';
+                    html += '</div>';
+                    if (e.notes) { html += '<div style="padding:0.2rem 0.85rem 0.4rem;font-size:0.72rem;color:var(--bs-secondary-color);border-bottom:1px solid var(--bs-border-color);">'+esc(e.notes)+'</div>'; }
+                });
+                html += '</div>';
+            });
+            progEl.innerHTML = html;
+        }
+    }
+    /* Naturheilkunde */
+    var natEl = document.getElementById('tcpfv-panel-natural');
+    if (natEl) {
+        if (!cache.natural.length) {
+            natEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">Noch keine Naturheilkunde-Eintr\u00e4ge vorhanden.</div>';
+        } else {
+            var hn = '';
+            cache.natural.forEach(function(e) {
+                var date = e.entry_date ? e.entry_date.substring(0,10).split('-').reverse().join('.') : '';
+                hn += '<div style="padding:0.65rem 0.85rem;border:1px solid var(--bs-border-color);border-radius:8px;margin-bottom:0.45rem;">';
+                hn += '<div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;">';
+                hn += '<span style="font-size:0.85rem;font-weight:600;">\ud83c\udf3f '+esc(e.type_name||e.custom_type||'Naturheilkunde')+'</span>';
+                hn += '<span style="font-size:0.72rem;color:var(--bs-secondary-color);">'+esc(date)+(e.recorded_by_name?' \u00b7 '+esc(e.recorded_by_name):'')+'</span>';
+                hn += '</div>';
+                if (e.dosage||e.frequency) {
+                    hn += '<div style="font-size:0.75rem;color:var(--bs-secondary-color);margin-top:0.2rem;">';
+                    if (e.dosage) hn += 'Dosierung: <strong>'+esc(e.dosage)+'</strong> ';
+                    if (e.frequency) hn += '\u00b7 Frequenz: <strong>'+esc(e.frequency)+'</strong>';
+                    hn += '</div>';
+                }
+                if (e.notes) hn += '<div style="font-size:0.78rem;margin-top:0.3rem;">'+esc(e.notes)+'</div>';
+                hn += '</div>';
+            });
+            natEl.innerHTML = hn;
+        }
+    }
+    /* Therapieberichte */
+    var repEl = document.getElementById('tcpfv-panel-reports');
+    if (repEl) {
+        if (!cache.reports.length) {
+            repEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">Noch keine Therapieberichte vorhanden.</div>';
+        } else {
+            var hr = '';
+            cache.reports.forEach(function(r) {
+                var date = r.created_at ? r.created_at.substring(0,10).split('-').reverse().join('.') : '';
+                hr += '<div style="padding:0.6rem 0.85rem;border:1px solid var(--bs-border-color);border-radius:8px;margin-bottom:0.45rem;display:flex;align-items:center;gap:0.75rem;">';
+                hr += '<svg width="16" height="16" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;opacity:0.45;"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>';
+                hr += '<div style="flex:1;min-width:0;"><div style="font-size:0.85rem;font-weight:600;">'+esc(r.title||'Therapiebericht')+'</div>';
+                hr += '<div style="font-size:0.72rem;color:var(--bs-secondary-color);">'+esc(date)+(r.created_by_name?' \u00b7 '+esc(r.created_by_name):'')+'</div></div>';
+                hr += '<a href="/patienten/'+patientId+'/berichte/'+r.id+'/download" target="_blank" class="btn btn-sm btn-outline-secondary" style="font-size:0.72rem;white-space:nowrap;">Herunterladen</a>';
+                hr += '</div>';
+            });
+            repEl.innerHTML = hr;
+        }
+    }
 }
 
 /* --- Portal Checks --- */
