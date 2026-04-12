@@ -9,6 +9,7 @@ use App\Core\Config;
 use App\Core\Session;
 use App\Core\Translator;
 use App\Core\View;
+use App\Services\InvoiceCancellationService;
 use App\Services\InvoiceService;
 use App\Services\PatientService;
 use App\Services\OwnerService;
@@ -31,7 +32,8 @@ class InvoiceController extends Controller
         private readonly PdfService $pdfService,
         private readonly MailService $mailService,
         private readonly TreatmentTypeRepository $treatmentTypeRepository,
-        private readonly SettingsRepository $settingsRepository
+        private readonly SettingsRepository $settingsRepository,
+        private readonly InvoiceCancellationService $cancellationService
     ) {
         parent::__construct($view, $session, $config, $translator);
     }
@@ -214,12 +216,26 @@ class InvoiceController extends Controller
         $owner     = $invoice['owner_id'] ? $this->ownerService->findById((int)$invoice['owner_id']) : null;
         $patient   = $invoice['patient_id'] ? $this->patientService->findById((int)$invoice['patient_id']) : null;
 
+        /* Load related invoice (Stornobeleg ↔ Original) for the Verknüpfte-Dokumente panel */
+        $related = null;
+        if (!empty($invoice['cancellation_invoice_id'])) {
+            $related = $this->invoiceService->findById((int)$invoice['cancellation_invoice_id']);
+        } elseif (!empty($invoice['cancels_invoice_id'])) {
+            $related = $this->invoiceService->findById((int)$invoice['cancels_invoice_id']);
+        }
+
+        $isCancellable = in_array($invoice['status'] ?? '', ['open', 'paid', 'overdue'], true)
+            && ($invoice['invoice_type'] ?? 'normal') !== 'cancellation'
+            && empty($invoice['cancellation_invoice_id']);
+
         $this->render('invoices/show.twig', [
-            'page_title' => $this->translator->trans('invoices.invoice') . ' ' . $invoice['invoice_number'],
-            'invoice'    => $invoice,
-            'positions'  => $positions,
-            'owner'      => $owner,
-            'patient'    => $patient,
+            'page_title'     => $this->translator->trans('invoices.invoice') . ' ' . $invoice['invoice_number'],
+            'invoice'        => $invoice,
+            'positions'      => $positions,
+            'owner'          => $owner,
+            'patient'        => $patient,
+            'related'        => $related,
+            'is_cancellable' => $isCancellable,
         ]);
     }
 
@@ -230,8 +246,10 @@ class InvoiceController extends Controller
             $this->abort(404);
         }
 
-        if ($invoice['status'] === 'paid') {
-            $this->session->flash('error', $this->translator->trans('invoices.cannot_edit_paid'));
+        /* GoBD: Bezahlte, stornierte und Storno-Belege sind unveränderlich */
+        if (in_array($invoice['status'] ?? '', ['paid', 'cancelled', 'cancellation'], true)
+            || ($invoice['invoice_type'] ?? 'normal') === 'cancellation') {
+            $this->session->flash('error', 'Bezahlte, stornierte oder Storno-Belege können nicht bearbeitet werden (GoBD). Erstellen Sie stattdessen eine Stornorechnung.');
             $this->redirect("/rechnungen/{$params['id']}");
             return;
         }
@@ -346,18 +364,18 @@ class InvoiceController extends Controller
         }
 
         $status = $this->sanitize($this->post('status', ''));
-        $allowed = ['draft', 'open', 'paid', 'overdue', 'mahnung', 'cancelled'];
+        /* GoBD: 'cancelled' und 'cancellation' dürfen nur über den Storno-Workflow gesetzt werden */
+        $allowed = ['draft', 'open', 'paid', 'overdue', 'mahnung'];
 
         if (!in_array($status, $allowed, true)) {
-            $this->session->flash('error', $this->translator->trans('invoices.invalid_status'));
+            $this->session->flash('error', 'Ungültiger Status. Zum Stornieren bitte den Storno-Button verwenden.');
             $this->redirect("/rechnungen/{$params['id']}");
             return;
         }
 
         $paidAt = ($status === 'paid') ? date('Y-m-d H:i:s') : null;
-        $cancellationReason = ($status === 'cancelled') ? $this->sanitize($this->post('cancellation_reason', '')) : null;
         
-        $this->invoiceService->updateStatus((int)$params['id'], $status, $paidAt, $cancellationReason);
+        $this->invoiceService->updateStatus((int)$params['id'], $status, $paidAt);
 
         /* ── Automatischer Timeline-Eintrag bei Bezahlung ── */
         if ($status === 'paid' && $invoice['patient_id']) {
@@ -398,16 +416,16 @@ class InvoiceController extends Controller
         }
 
         $status  = $this->sanitize($this->post('status', ''));
-        $allowed = ['draft', 'open', 'paid', 'overdue', 'mahnung', 'cancelled'];
+        /* GoBD: 'cancelled' und 'cancellation' nur über Storno-Workflow */
+        $allowed = ['draft', 'open', 'paid', 'overdue', 'mahnung'];
 
         if (!in_array($status, $allowed, true)) {
-            $this->json(['ok' => false, 'error' => 'Ungültiger Status'], 422);
+            $this->json(['ok' => false, 'error' => 'Ungültiger Status. Für Storno bitte /stornieren verwenden.'], 422);
         }
 
         $paidAt = ($status === 'paid') ? date('Y-m-d H:i:s') : null;
-        $cancellationReason = ($status === 'cancelled') ? $this->sanitize($this->post('cancellation_reason', '')) : null;
         
-        $this->invoiceService->updateStatus((int)$params['id'], $status, $paidAt, $cancellationReason);
+        $this->invoiceService->updateStatus((int)$params['id'], $status, $paidAt);
 
         if ($status === 'paid' && $invoice['patient_id']) {
             try {
@@ -666,6 +684,74 @@ class InvoiceController extends Controller
             'top_positions'    => $topPositions,
             'yoy_growth'       => $yoyGrowth,
         ]);
+    }
+
+    /**
+     * GoBD-konformer Storno-Workflow.
+     * Erstellt eine Stornorechnung als Gegenbeleg — löscht NICHT die Originalrechnung.
+     */
+    public function cancel(array $params = []): void
+    {
+        $this->validateCsrf();
+
+        $invoice = $this->invoiceService->findById((int)$params['id']);
+        if (!$invoice) {
+            $this->abort(404);
+        }
+
+        $reason = trim($this->post('cancellation_reason', ''));
+
+        try {
+            $result = $this->cancellationService->cancel(
+                (int)$params['id'],
+                $reason,
+                (int)$this->session->get('user_id')
+            );
+
+            $this->session->flash(
+                'success',
+                'Stornorechnung <strong>' . htmlspecialchars($result['cancellation_number'], ENT_QUOTES, 'UTF-8') . '</strong> wurde erfolgreich erstellt. '
+                . '<a href="/rechnungen/' . $result['cancellation_id'] . '" style="color:inherit;text-decoration:underline;">Zur Stornorechnung</a>'
+            );
+            $this->redirect('/rechnungen/' . $result['cancellation_id']);
+        } catch (\RuntimeException $e) {
+            $this->session->flash('error', $e->getMessage());
+            $this->redirect('/rechnungen/' . $params['id']);
+        }
+    }
+
+    /**
+     * PDF-Download der Stornorechnung.
+     * Nur für Rechnungen mit invoice_type='cancellation'.
+     */
+    public function downloadCancellationPdf(array $params = []): void
+    {
+        $invoice = $this->invoiceService->findById((int)$params['id']);
+        if (!$invoice) {
+            $this->abort(404);
+        }
+
+        /* Kein Storno-Beleg → auf normales PDF umleiten */
+        if (($invoice['invoice_type'] ?? 'normal') !== 'cancellation') {
+            $this->redirect('/rechnungen/' . $params['id'] . '/pdf');
+            return;
+        }
+
+        $positions = $this->invoiceService->getPositions((int)$params['id']);
+        $owner     = $invoice['owner_id']   ? $this->ownerService->findById((int)$invoice['owner_id'])   : null;
+        $patient   = $invoice['patient_id'] ? $this->patientService->findById((int)$invoice['patient_id']) : null;
+
+        $original = null;
+        if (!empty($invoice['cancels_invoice_id'])) {
+            $original = $this->invoiceService->findById((int)$invoice['cancels_invoice_id']);
+        }
+
+        $pdf = $this->pdfService->generateCancellationPdf($invoice, $positions, $owner, $patient, $original);
+
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: inline; filename="Stornorechnung-' . $invoice['invoice_number'] . '.pdf"');
+        echo $pdf;
+        exit;
     }
 
     private function parsePositions(): array

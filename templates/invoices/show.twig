@@ -1,35 +1,53 @@
 {% extends active_theme_layout ?? 'layouts/base.twig' %}
 
 {% block content %}
+
+{% set isCancellationType = (invoice.invoice_type ?? 'normal') == 'cancellation' %}
+{% set isLocked = invoice.status in ['cancelled', 'cancellation'] or isCancellationType %}
+
 <div class="page-header">
     <div class="flex items-center gap-3">
         <a href="/rechnungen" class="btn btn-secondary btn-sm">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="15 18 9 12 15 6"/></svg>
             {{ t('invoices.back_to_list') }}
         </a>
-        <h1 class="page-title">{% if invoice.payment_method == 'bar' %}Quittung{% else %}{{ t('invoices.invoice') }}{% endif %} {{ invoice.invoice_number }}</h1>
-        <span class="badge badge-{{ invoice.status }}">{{ t('invoices.status_' ~ invoice.status) }}</span>
+        <h1 class="page-title">
+            {% if isCancellationType %}Stornorechnung
+            {% elseif invoice.payment_method == 'bar' %}Quittung
+            {% else %}{{ t('invoices.invoice') }}{% endif %}
+            {{ invoice.invoice_number }}
+        </h1>
+        {% if isCancellationType %}
+            <span class="badge" style="background:rgba(220,38,38,0.15);color:#dc2626;border:1px solid rgba(220,38,38,0.3);">Stornorechnung</span>
+        {% else %}
+            <span class="badge badge-{{ invoice.status }}">{{ t('invoices.status_' ~ invoice.status) }}</span>
+        {% endif %}
         {% if invoice.payment_method == 'bar' %}
-        <span class="badge bg-success text-white ms-1">Barzahlung</span>
+            <span class="badge bg-success text-white ms-1">Barzahlung</span>
         {% endif %}
     </div>
     <div class="flex gap-2">
-        {% if invoice.payment_method != 'bar' %}
-        <a href="/rechnungen/{{ invoice.id }}/vorschau" class="btn btn-secondary btn-sm" target="_blank">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>
-            Vorschau
-        </a>
-        <a href="/rechnungen/{{ invoice.id }}/pdf" class="btn btn-secondary btn-sm" target="_blank">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            {{ t('invoices.download_pdf') }}
-        </a>
+        {% if isCancellationType %}
+            <a href="/rechnungen/{{ invoice.id }}/storno-pdf" class="btn btn-secondary btn-sm" target="_blank">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                Stornorechnung PDF
+            </a>
+        {% elseif invoice.payment_method == 'bar' %}
+            <a href="/rechnungen/{{ invoice.id }}/quittung" class="btn btn-success btn-sm" target="_blank">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 11l3 3L22 4"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                Quittung PDF
+            </a>
         {% else %}
-        <a href="/rechnungen/{{ invoice.id }}/quittung" class="btn btn-success btn-sm" target="_blank">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 11l3 3L22 4"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-            Quittung PDF
-        </a>
+            <a href="/rechnungen/{{ invoice.id }}/vorschau" class="btn btn-secondary btn-sm" target="_blank">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>
+                Vorschau
+            </a>
+            <a href="/rechnungen/{{ invoice.id }}/pdf" class="btn btn-secondary btn-sm" target="_blank">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                {{ t('invoices.download_pdf') }}
+            </a>
         {% endif %}
-        {% if owner and owner.email %}
+        {% if owner and owner.email and not isCancellationType %}
         <form action="/rechnungen/{{ invoice.id }}/senden" method="POST" style="margin:0;">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
             <button type="submit" class="btn btn-secondary btn-sm">
@@ -38,7 +56,7 @@
             </button>
         </form>
         {% endif %}
-        {% if invoice.status != 'paid' %}
+        {% if not isLocked %}
         <a href="/rechnungen/{{ invoice.id }}/bearbeiten" class="btn btn-primary btn-sm">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             {{ t('common.edit') }}
@@ -52,19 +70,53 @@
     {# Left: Invoice Details #}
     <div style="flex:1;min-width:300px;display:flex;flex-direction:column;gap:1rem;">
 
+        {# Stornorechnung: reference to original invoice #}
+        {% if isCancellationType and related %}
+        <div class="glass-card" style="border-left:4px solid #dc2626;background:rgba(220,38,38,0.04);">
+            <div class="flex items-center gap-2 mb-2">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="17" x2="12.01" y2="17" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/></svg>
+                <span class="font-semibold text-sm" style="color:#dc2626;">Diese Stornorechnung hebt Originalrechnung {{ related.invoice_number }} vollständig auf.</span>
+            </div>
+            <div class="text-xs text-muted">
+                Originalrechnung vom {{ related.issue_date|date_de }} · Betrag: {{ related.total_gross|money }} ·
+                <a href="/rechnungen/{{ related.id }}" style="color:var(--accent);">Zur Originalrechnung →</a>
+            </div>
+        </div>
+        {% endif %}
+
+        {# Storniert-Hinweis für Originalrechnungen #}
+        {% if invoice.status == 'cancelled' %}
+        <div class="glass-card" style="border-left:4px solid #dc2626;background:rgba(220,38,38,0.04);">
+            <div class="flex items-center gap-2">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="#dc2626" stroke-width="2"/><line x1="15" y1="9" x2="9" y2="15" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="9" x2="15" y2="15" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/></svg>
+                <span class="font-semibold text-sm" style="color:#dc2626;">Diese Rechnung wurde storniert.</span>
+            </div>
+            {% if invoice.cancellation_reason %}
+            <div class="text-xs mt-2"><strong>Stornogrund:</strong> {{ invoice.cancellation_reason }}</div>
+            {% endif %}
+            {% if related %}
+            <div class="text-xs mt-1 text-muted">
+                Stornobeleg: <a href="/rechnungen/{{ related.id }}" style="color:var(--accent);">{{ related.invoice_number }}</a> vom {{ related.issue_date|date_de }}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
         {# Invoice header info #}
         <div class="glass-card">
             <div class="form-grid form-grid-2">
                 <div>
-                    <div class="text-xs text-muted mb-1">{{ t('invoices.issue_date') }}</div>
+                    <div class="text-xs text-muted mb-1">{{ isCancellationType ? 'Stornodatum' : t('invoices.issue_date') }}</div>
                     <div class="font-semibold">{{ invoice.issue_date|date_de }}</div>
                 </div>
+                {% if not isCancellationType %}
                 <div>
                     <div class="text-xs text-muted mb-1">{{ t('invoices.due_date') }}</div>
                     <div class="font-semibold {{ invoice.status == 'overdue' ? 'text-danger' : '' }}">
                         {{ invoice.due_date ? invoice.due_date|date_de : '—' }}
                     </div>
                 </div>
+                {% endif %}
                 {% if owner %}
                 <div>
                     <div class="text-xs text-muted mb-1">{{ t('invoices.owner') }}</div>
@@ -96,11 +148,6 @@
                     Barzahlung erhalten am {{ invoice.paid_at|datetime_de }}
                 </div>
             {% endif %}
-            {% if invoice.status == 'cancelled' and invoice.cancellation_reason %}
-                <div class="alert alert-danger mt-3" style="padding:0.5rem 0.875rem;font-size:0.8rem;">
-                    <strong>Stornierungsgrund:</strong> {{ invoice.cancellation_reason|nl2br }}
-                </div>
-            {% endif %}
             {% if invoice.email_sent_at %}
                 <div class="alert alert-info mt-3" style="padding:0.5rem 0.875rem;font-size:0.8rem;">
                     <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="22,6 12,13 2,6"/></svg>
@@ -123,7 +170,7 @@
                 </thead>
                 <tbody>
                     {% for pos in positions %}
-                    <tr>
+                    <tr {% if isCancellationType %}style="color:#dc2626;"{% endif %}>
                         <td>{{ pos.description }}</td>
                         <td style="text-align:right;">{{ pos.quantity|number_format(2, ',', '.') }}</td>
                         <td style="text-align:right;">{{ pos.unit_price|money }}</td>
@@ -135,15 +182,15 @@
                 <tfoot>
                     <tr style="border-top:2px solid var(--glass-border);">
                         <td colspan="4" style="text-align:right;color:var(--text-muted);font-size:0.8rem;">{{ t('invoices.total_net') }}</td>
-                        <td style="text-align:right;" class="font-semibold">{{ invoice.total_net|money }}</td>
+                        <td style="text-align:right;" class="font-semibold {{ isCancellationType ? 'text-danger' : '' }}">{{ invoice.total_net|money }}</td>
                     </tr>
                     <tr>
                         <td colspan="4" style="text-align:right;color:var(--text-muted);font-size:0.8rem;">{{ t('invoices.total_tax') }}</td>
-                        <td style="text-align:right;" class="font-semibold">{{ invoice.total_tax|money }}</td>
+                        <td style="text-align:right;" class="font-semibold {{ isCancellationType ? 'text-danger' : '' }}">{{ invoice.total_tax|money }}</td>
                     </tr>
-                    <tr style="border-top:2px solid var(--accent);background:rgba(79,124,255,0.05);">
-                        <td colspan="4" style="text-align:right;font-weight:700;color:var(--accent);">{{ t('invoices.total_gross') }}</td>
-                        <td style="text-align:right;font-size:1.15rem;font-weight:800;color:var(--accent);">{{ invoice.total_gross|money }}</td>
+                    <tr style="border-top:2px solid {{ isCancellationType ? '#dc2626' : 'var(--accent)' }};background:{{ isCancellationType ? 'rgba(220,38,38,0.05)' : 'rgba(79,124,255,0.05)' }};">
+                        <td colspan="4" style="text-align:right;font-weight:700;color:{{ isCancellationType ? '#dc2626' : 'var(--accent)' }};">{{ isCancellationType ? 'Stornobetrag gesamt' : t('invoices.total_gross') }}</td>
+                        <td style="text-align:right;font-size:1.15rem;font-weight:800;color:{{ isCancellationType ? '#dc2626' : 'var(--accent)' }};">{{ invoice.total_gross|money }}</td>
                     </tr>
                 </tfoot>
             </table>
@@ -162,57 +209,71 @@
             <div class="text-sm text-secondary" style="line-height:1.5;font-style:italic;">{{ invoice.payment_terms }}</div>
         </div>
         {% endif %}
+
+        {# Verknüpfte Dokumente Panel #}
+        {% if related %}
+        <div class="glass-card">
+            <h3 class="font-semibold mb-2" style="font-size:0.875rem;">Verknüpfte Dokumente</h3>
+            <div class="flex items-center gap-3" style="padding:0.5rem;border-radius:6px;background:var(--glass-bg);border:1px solid var(--glass-border);">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;opacity:0.7;"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="1.5" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
+                <div style="flex:1;min-width:0;">
+                    <div class="text-xs text-muted">{{ isCancellationType ? 'Originalrechnung' : 'Stornorechnung' }}</div>
+                    <div class="font-semibold text-sm">{{ related.invoice_number }}</div>
+                    <div class="text-xs text-muted">{{ related.issue_date|date_de }} · {{ related.total_gross|money }}</div>
+                </div>
+                <a href="/rechnungen/{{ related.id }}" class="btn btn-secondary btn-sm" style="flex-shrink:0;">Öffnen</a>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     {# Right: Actions #}
-    <div style="width:240px;flex-shrink:0;">
+    <div style="width:240px;flex-shrink:0;display:flex;flex-direction:column;gap:1rem;">
+
+        {# Status Panel — nur für normale, nicht gesperrte Rechnungen #}
+        {% if not isLocked %}
         <div class="glass-card" style="display:flex;flex-direction:column;gap:0.75rem;">
             <h3 class="font-semibold" style="font-size:0.9rem;">{{ t('invoices.status') }}</h3>
-
-            {% if invoice.status != 'draft' or true %}
-            <form action="/rechnungen/{{ invoice.id }}/status" method="POST" style="margin:0;" id="statusUpdateForm">
+            <form action="/rechnungen/{{ invoice.id }}/status" method="POST" style="margin:0;">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-                <input type="hidden" name="cancellation_reason" id="cancellationReasonInput" value="">
-                <select name="status" class="form-control mb-2" id="statusSelect">
+                <select name="status" class="form-control mb-2">
                     <option value="draft"   {{ invoice.status == 'draft'   ? 'selected' : '' }}>{{ t('invoices.status_draft') }}</option>
                     <option value="open"    {{ invoice.status == 'open'    ? 'selected' : '' }}>{{ t('invoices.status_open') }}</option>
                     <option value="paid"    {{ invoice.status == 'paid'    ? 'selected' : '' }}>{{ t('invoices.status_paid') }}</option>
                     <option value="overdue" {{ invoice.status == 'overdue' ? 'selected' : '' }}>{{ t('invoices.status_overdue') }}</option>
-                    <option value="cancelled" {{ invoice.status == 'cancelled' ? 'selected' : '' }}>Storniert</option>
                 </select>
                 <button type="submit" class="btn btn-primary btn-sm w-full">{{ t('common.save') }}</button>
             </form>
-            <script>
-                document.getElementById('statusUpdateForm').addEventListener('submit', function(e) {
-                    var status = document.getElementById('statusSelect').value;
-                    if (status === 'cancelled') {
-                        var reason = prompt('Bitte geben Sie einen Stornierungsgrund ein:');
-                        if (reason === null) {
-                            e.preventDefault(); // Cancelled prompt
-                        } else {
-                            document.getElementById('cancellationReasonInput').value = reason;
-                        }
-                    }
-                });
-            </script>
+            <div class="divider"></div>
+        </div>
+        {% endif %}
+
+        {# PDF / Vorschau Actions #}
+        <div class="glass-card" style="display:flex;flex-direction:column;gap:0.75rem;">
+            <h3 class="font-semibold" style="font-size:0.9rem;">Dokumente</h3>
+
+            {% if isCancellationType %}
+                <a href="/rechnungen/{{ invoice.id }}/storno-pdf" class="btn btn-secondary btn-sm w-full" target="_blank">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    Stornorechnung PDF
+                </a>
+            {% elseif invoice.payment_method == 'bar' %}
+                <a href="/rechnungen/{{ invoice.id }}/quittung" class="btn btn-success btn-sm w-full" target="_blank">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 11l3 3L22 4"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                    Quittung PDF
+                </a>
+            {% else %}
+                <a href="/rechnungen/{{ invoice.id }}/vorschau" class="btn btn-secondary btn-sm w-full" target="_blank">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>
+                    Vorschau
+                </a>
+                <a href="/rechnungen/{{ invoice.id }}/pdf" class="btn btn-secondary btn-sm w-full" target="_blank">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    {{ t('invoices.download_pdf') }}
+                </a>
             {% endif %}
 
-            <div class="divider"></div>
-
-            <a href="/rechnungen/{{ invoice.id }}/vorschau" class="btn btn-secondary btn-sm w-full" target="_blank">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>
-                Vorschau
-            </a>
-            <a href="/rechnungen/{{ invoice.id }}/pdf" class="btn btn-secondary btn-sm w-full" target="_blank">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                {{ t('invoices.download_pdf') }}
-            </a>
-            <a href="/rechnungen/{{ invoice.id }}/quittung" class="btn btn-success btn-sm w-full" target="_blank">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 11l3 3L22 4"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-                Quittung PDF
-            </a>
-
-            {% if owner and owner.email %}
+            {% if owner and owner.email and not isCancellationType %}
             <form action="/rechnungen/{{ invoice.id }}/senden" method="POST" style="margin:0;">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                 <button type="submit" class="btn btn-secondary btn-sm w-full">
@@ -220,7 +281,7 @@
                     {{ t('invoices.send_email') }}
                 </button>
             </form>
-            {% if owner.email %}
+            {% if invoice.payment_method == 'bar' %}
             <form action="/rechnungen/{{ invoice.id }}/quittung-senden" method="POST" style="margin:0;">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                 <button type="submit" class="btn btn-success btn-sm w-full">
@@ -230,9 +291,25 @@
             </form>
             {% endif %}
             {% endif %}
+        </div>
 
-            <div class="divider"></div>
+        {# Storno einleiten — nur bei stornierbaren Rechnungen #}
+        {% if is_cancellable %}
+        <div class="glass-card" style="border-color:rgba(220,38,38,0.3);">
+            <h3 class="font-semibold mb-1" style="font-size:0.9rem;color:#dc2626;">GoBD-Storno</h3>
+            <p class="text-xs text-muted mb-2" style="line-height:1.5;">Erstellt einen revisionssicheren Stornobeleg. Die Originalrechnung bleibt unverändert erhalten.</p>
+            <button type="button" class="btn btn-sm w-full" style="background:rgba(220,38,38,0.1);color:#dc2626;border:1px solid rgba(220,38,38,0.4);"
+                    onclick="document.getElementById('stornoModal').style.display='flex'">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                Storno einleiten
+            </button>
+        </div>
+        {% endif %}
 
+        {# Löschen — nur für Entwürfe #}
+        {% if invoice.status == 'draft' %}
+        <div class="glass-card">
+            <div class="divider mb-2"></div>
             <form action="/rechnungen/{{ invoice.id }}/loeschen" method="POST" style="margin:0;">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                 <button type="submit" class="btn btn-danger btn-sm w-full" data-confirm="{{ t('common.confirm_delete') }}">
@@ -241,7 +318,68 @@
                 </button>
             </form>
         </div>
+        {% endif %}
+
     </div>
 </div>
+
+{# ── STORNO MODAL ──────────────────────────────────────────────────────── #}
+{% if is_cancellable %}
+<div id="stornoModal" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);">
+    <div class="glass-card" style="width:100%;max-width:480px;margin:1rem;position:relative;">
+        <button type="button" onclick="document.getElementById('stornoModal').style.display='none'"
+                style="position:absolute;top:0.75rem;right:0.75rem;background:none;border:none;cursor:pointer;opacity:0.6;color:inherit;">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+
+        <div class="flex items-center gap-2 mb-3">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="#dc2626" stroke-width="2"/><line x1="15" y1="9" x2="9" y2="15" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="9" x2="15" y2="15" stroke="#dc2626" stroke-width="2" stroke-linecap="round"/></svg>
+            <h2 class="font-semibold" style="font-size:1.05rem;">Rechnung stornieren</h2>
+        </div>
+
+        <div class="glass-card mb-3" style="background:rgba(220,38,38,0.04);border-color:rgba(220,38,38,0.25);font-size:0.82rem;line-height:1.6;">
+            <strong>Rechnung:</strong> {{ invoice.invoice_number }} · {{ invoice.total_gross|money }}<br>
+            Es wird ein revisionssicherer <strong>Stornobeleg</strong> erstellt. Die Originalrechnung bleibt unverändert.<br>
+            Dieser Vorgang ist <strong>unwiderruflich</strong>.
+        </div>
+
+        <form action="/rechnungen/{{ invoice.id }}/stornieren" method="POST">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <div class="mb-3">
+                <label class="form-label" for="stornoReasonInput">
+                    Stornogrund <span style="color:#dc2626;">*</span>
+                </label>
+                <textarea id="stornoReasonInput" name="cancellation_reason" class="form-control"
+                          rows="3" required
+                          placeholder="z.B. Doppelt erstellt, Falsche Positionen, Kundenwunsch …"
+                          style="resize:vertical;"></textarea>
+                <div class="text-xs text-muted mt-1">Pflichtfeld — wird auf der Stornorechnung ausgewiesen.</div>
+            </div>
+            <div class="flex gap-2">
+                <button type="button" onclick="document.getElementById('stornoModal').style.display='none'"
+                        class="btn btn-secondary btn-sm" style="flex:1;">
+                    Abbrechen
+                </button>
+                <button type="submit" class="btn btn-sm" style="flex:1;background:#dc2626;color:#fff;border-color:#dc2626;">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    Stornierung bestätigen
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+    document.getElementById('stornoModal').addEventListener('click', function(e) {
+        if (e.target === this) this.style.display = 'none';
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            var m = document.getElementById('stornoModal');
+            if (m) m.style.display = 'none';
+        }
+    });
+</script>
+{% endif %}
+
 {% endblock %}
 

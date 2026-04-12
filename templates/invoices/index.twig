@@ -9,7 +9,13 @@
         <div class="modal-header" style="flex-shrink:0;">
             <div class="flex items-center gap-3">
                 <span class="font-bold" style="font-size:1rem;">{{ invoice.invoice_number }}</span>
-                <span class="badge badge-{{ invoice.status }}">{{ t('invoices.status_' ~ invoice.status) }}</span>
+                {% if (invoice.invoice_type ?? 'normal') == 'cancellation' %}
+                    <span class="badge" style="background:rgba(220,38,38,0.15);color:#dc2626;border:1px solid rgba(220,38,38,0.3);">Stornorechnung</span>
+                {% elseif invoice.status == 'cancelled' %}
+                    <span class="badge" style="background:rgba(220,38,38,0.15);color:#dc2626;border:1px solid rgba(220,38,38,0.3);">{{ t('invoices.status_cancelled') }}</span>
+                {% else %}
+                    <span class="badge badge-{{ invoice.status }}">{{ t('invoices.status_' ~ invoice.status) }}</span>
+                {% endif %}
             </div>
             <button class="modal-close" data-bs-dismiss="modal" type="button">
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -47,10 +53,12 @@
 
                     <div class="flex justify-between items-center" style="border-top:1px solid var(--glass-border);padding-top:0.75rem;">
                         <span class="text-xs text-muted">Gesamt (brutto)</span>
-                        <span class="font-bold" style="font-size:1.1rem;color:var(--accent);">{{ invoice.total_gross|money }}</span>
+                        <span class="font-bold" style="font-size:1.1rem;color:{{ (invoice.invoice_type ?? 'normal') == 'cancellation' ? '#dc2626' : 'var(--accent)' }};">{{ invoice.total_gross|money }}</span>
                     </div>
 
-                    {# Status ändern #}
+                    {# Status ändern — nur für nicht gesperrte Rechnungen #}
+                    {% set _isLocked = invoice.status in ['cancelled', 'cancellation'] or (invoice.invoice_type ?? 'normal') == 'cancellation' %}
+                    {% if not _isLocked %}
                     <form action="/rechnungen/{{ invoice.id }}/status" method="POST" class="flex gap-2 items-center">
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                         <select name="status" class="form-control" style="flex:1;font-size:0.85rem;">
@@ -61,12 +69,19 @@
                         </select>
                         <button type="submit" class="btn btn-primary btn-sm" style="flex-shrink:0;">Status speichern</button>
                     </form>
+                    {% endif %}
 
                     <div class="flex gap-2" style="flex-wrap:wrap;">
                         <a href="/rechnungen/{{ invoice.id }}" class="btn btn-secondary btn-sm">
-                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                            Bearbeiten
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>
+                            Öffnen
                         </a>
+                        {% if (invoice.invoice_type ?? 'normal') == 'cancellation' %}
+                        <button class="btn btn-secondary btn-sm" onclick="openPdfPreview('/rechnungen/{{ invoice.id }}/storno-pdf', '{{ invoice.invoice_number }}.pdf')">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="1.5" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
+                            Storno-PDF
+                        </button>
+                        {% else %}
                         <button class="btn btn-secondary btn-sm" onclick="openPdfPreview('/rechnungen/{{ invoice.id }}/pdf', '{{ invoice.invoice_number }}.pdf')">
                             <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="1.5" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
                             PDF Vorschau
@@ -75,6 +90,9 @@
                             <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                             Download
                         </a>
+                        {% endif %}
+                        {# Löschen nur für Entwürfe erlaubt (GoBD) #}
+                        {% if invoice.status == 'draft' %}
                         <form action="/rechnungen/{{ invoice.id }}/loeschen" method="POST" style="margin:0;">
                             <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                             <button type="submit" class="btn btn-danger btn-sm" data-confirm="{{ t('common.confirm_delete') }}">
@@ -82,6 +100,7 @@
                                 Löschen
                             </button>
                         </form>
+                        {% endif %}
                     </div>
 
                     {# ── Mahnwesen Buttons ── #}

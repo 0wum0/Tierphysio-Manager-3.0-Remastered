@@ -3743,7 +3743,12 @@ class MobileApiController
         $status = $_GET['status'] ?? '';
 
         try {
-            $sql  = "SELECT i.*,
+            $sql  = "SELECT i.id, i.invoice_number, i.invoice_type,
+                            i.status, i.issue_date, i.due_date,
+                            i.total_net, i.total_tax, i.total_gross,
+                            i.payment_method, i.cancels_invoice_id,
+                            i.cancellation_invoice_id, i.cancellation_reason,
+                            i.cancelled_at, i.finalized_at, i.gobd_hash,
                             CONCAT(o.first_name,' ',o.last_name) AS owner_name,
                             o.email AS owner_email,
                             p.name AS patient_name
@@ -3753,7 +3758,7 @@ class MobileApiController
                      WHERE i.issue_date >= ? AND i.issue_date <= ?";
             $bind = [$from, $to];
             if ($status) { $sql .= " AND i.status = ?"; $bind[] = $status; }
-            $sql .= " ORDER BY i.issue_date ASC, i.invoice_number ASC";
+            $sql .= " ORDER BY i.invoice_type ASC, i.issue_date ASC, i.invoice_number ASC";
             $rows = $this->db->fetchAll($sql, $bind);
         } catch (\Throwable) { $rows = []; }
 
@@ -3811,7 +3816,7 @@ class MobileApiController
         $this->json(['success' => true, 'gobd_hash' => $hash]);
     }
 
-    /** POST /api/mobile/steuerexport/{id}/stornieren — GoBD cancel (admin) */
+    /** POST /api/mobile/steuerexport/{id}/stornieren — GoBD-konformer Storno (admin) */
     public function taxExportCancel(array $params = []): void
     {
         $this->cors();
@@ -3822,25 +3827,17 @@ class MobileApiController
         if (!$invoice) $this->error('Rechnung nicht gefunden.', 404);
 
         $data   = $this->body();
-        $reason = trim($data['reason'] ?? 'Stornierung');
+        $reason = trim($data['reason'] ?? '');
+        if ($reason === '') $this->error('Stornogrund darf nicht leer sein.', 422);
 
         try {
-            $this->db->execute(
-                "UPDATE `{$this->t('invoices')}` SET status = 'cancelled', cancelled_at = NOW(), cancel_reason = ? WHERE id = ?",
-                [$reason, $id]
-            );
-            try {
-                $this->db->execute(
-                    "INSERT INTO `{$this->t('gobd_audit_log')}` (invoice_id, invoice_number, action, user_id, meta)
-                     VALUES (?, ?, 'cancelled', ?, ?)",
-                    [$id, $invoice['invoice_number'] ?? '', $auth['user_id'] ?? null, json_encode(['reason' => $reason])]
-                );
-            } catch (\Throwable) {}
-        } catch (\Throwable $e) {
-            $this->error('Fehler: ' . $e->getMessage(), 500);
+            $svc    = new \App\Services\InvoiceCancellationService($this->db, $this->invoices, $this->settings);
+            $result = $svc->cancel($id, $reason, (int)($auth['user_id'] ?? 0));
+        } catch (\RuntimeException $e) {
+            $this->error($e->getMessage(), 422);
         }
 
-        $this->json(['success' => true]);
+        $this->json(['success' => true, 'cancellation_id' => $result['cancellation_id'], 'cancellation_number' => $result['cancellation_number']]);
     }
 
     /** GET /api/mobile/steuerexport/audit-log?limit=50 */
