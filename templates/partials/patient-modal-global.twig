@@ -610,39 +610,40 @@
 </div>
 
 {# ── Custom Vet Report Modal ──────────────────────────── #}
-<div class="modal fade" id="modal-custom-vet-report" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+<div class="modal fade" id="modal-custom-vet-report" tabindex="-1" aria-hidden="true" style="z-index:1060;" data-bs-backdrop="false">
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
-        <div class="modal-content" style="min-height:70vh;">
+        <div class="modal-content">
             <div class="modal-header" style="padding-bottom:0.5rem;">
                 <h5 class="modal-title fw-bold">Tierarztbericht manuell verfassen</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
             </div>
             <form id="custom-vet-report-form">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-                <div class="modal-body" style="padding:0;">
-                    <div id="cvr-doc-header" style="background:var(--bs-secondary-bg,#f8f9fa);border-bottom:3px solid var(--bs-primary,#4f7cff);padding:1.5rem 1.75rem 1.25rem;">
+                <div class="modal-body" style="padding:0;overflow-y:auto;max-height:calc(100vh - 200px);">
+                    <div id="cvr-doc-header" style="background:var(--bs-secondary-bg,#f8f9fa);border-bottom:1px solid var(--bs-border-color);padding:1.25rem 1.75rem 1.1rem;position:relative;">
+                        <div style="position:absolute;top:0;left:0;bottom:0;width:4px;background:var(--bs-primary,#4f7cff);border-radius:0 2px 2px 0;"></div>
                         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
                             <div style="flex:1;">
-                                <div id="cvr-patient-name" style="font-size:0.72rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--bs-secondary-color);margin-bottom:0.6rem;"></div>
-                                <div style="font-size:2rem;font-weight:800;line-height:1;letter-spacing:-0.03em;color:var(--bs-body-color);">Tierarztbericht</div>
-                                <div style="font-size:1.05rem;font-weight:600;color:var(--bs-secondary-color);margin-top:0.35rem;">Befund / Rücküberweisung</div>
+                                <div id="cvr-patient-name" style="font-size:0.72rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--bs-secondary-color);margin-bottom:0.5rem;"></div>
+                                <div style="font-size:1.6rem;font-weight:800;line-height:1;letter-spacing:-0.02em;color:var(--bs-body-color);">Tierarztbericht</div>
+                                <div style="font-size:0.95rem;font-weight:600;color:var(--bs-secondary-color);margin-top:0.3rem;">Befund / Rücküberweisung</div>
                             </div>
                             <div style="text-align:right;padding-top:0.2rem;flex-shrink:0;">
-                                <div style="font-size:0.72rem;color:var(--bs-secondary-color);text-transform:uppercase;letter-spacing:0.06em;">Datum</div>
-                                <div id="cvr-date-display" style="font-size:0.92rem;font-weight:600;color:var(--bs-body-color);margin-top:0.2rem;"></div>
+                                <div style="font-size:0.7rem;color:var(--bs-secondary-color);text-transform:uppercase;letter-spacing:0.06em;">Datum</div>
+                                <div id="cvr-date-display" style="font-size:0.88rem;font-weight:600;color:var(--bs-body-color);margin-top:0.15rem;"></div>
                             </div>
                         </div>
                     </div>
-                    <div style="padding:1.5rem 1.75rem;">
-                        <div class="mb-4">
+                    <div style="padding:1.25rem 1.75rem;">
+                        <div class="mb-3">
                             <label class="form-label" style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">An (Empfänger)</label>
                             <input type="text" name="recipient" id="cvr-recipient" class="form-control" placeholder="z. B. Dr. Müller — Tierärztliche Klinik, Musterstraße 1, 80331 München">
                             <div class="form-text">Optional: Empfänger des Berichts (Tierarzt / Klinik)</div>
                         </div>
                         <div>
                             <label class="form-label" style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Berichtsinhalt <span class="text-danger">*</span></label>
-                            <textarea name="content" id="cvr-content" class="form-control" rows="16" required
-                                placeholder="Sehr geehrte Kollegin, sehr geehrter Kollege,&#10;&#10;ich berichte Ihnen über den Patienten…&#10;&#10;Befund:&#10;…&#10;&#10;Empfehlung / Weiteres Vorgehen:&#10;…&#10;&#10;Mit freundlichen kollegialen Grüßen" style="font-size:0.93rem;line-height:1.75;font-family:inherit;resize:vertical;min-height:280px;"></textarea>
+                            <textarea name="content" id="cvr-content" class="form-control" rows="14" required
+                                placeholder="Sehr geehrte Kollegin, sehr geehrter Kollege,&#10;&#10;ich berichte Ihnen über den Patienten…&#10;&#10;Befund:&#10;…&#10;&#10;Empfehlung / Weiteres Vorgehen:&#10;…&#10;&#10;Mit freundlichen kollegialen Grüßen" style="font-size:0.93rem;line-height:1.75;font-family:inherit;resize:vertical;"></textarea>
                         </div>
                     </div>
                 </div>
@@ -659,7 +660,7 @@
 </div>
 
 {# ── Vet Report Choice Modal ──────────────────────────── #}
-<div class="modal fade" id="modal-vet-report-choice" tabindex="-1" aria-hidden="true" style="z-index:1065;">
+<div class="modal fade" id="modal-vet-report-choice" tabindex="-1" aria-hidden="true" style="z-index:1065;" data-bs-backdrop="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content" style="border:none; box-shadow:0 20px 50px rgba(0,0,0,0.3);">
             <div class="modal-header" style="border-bottom:none; padding:1.5rem 1.5rem 0.5rem;">
@@ -1133,7 +1134,7 @@ function loadVetReports(patientId) {
         .then(function(data) {
             var reports = data.reports || [];
             if (countEl && reports.length) { countEl.textContent = reports.length; countEl.style.display = ''; }
-            if (!reports.length) { container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">Noch keine Tierarztberichte vorhanden.<br><br><a href="/patienten/'+patientId+'/tierarztbericht" target="_blank" class="btn btn-primary btn-sm">Ersten Bericht erstellen</a></div>'; return; }
+            if (!reports.length) { container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">Noch keine Tierarztberichte vorhanden.<br><br><button class="btn btn-primary btn-sm" onclick="openVetReportChoiceModal(null)">Ersten Bericht erstellen</button></div>'; return; }
             var html = '';
             reports.forEach(function(r) {
                 var date = r.created_at ? r.created_at.substring(0,10).split('-').reverse().join('.') : '—';
@@ -1150,7 +1151,7 @@ function loadVetReports(patientId) {
             container.innerHTML = html;
         })
         .catch(function() {
-            container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">Berichte noch nicht verfügbar.<br><br><a href="/patienten/'+patientId+'/tierarztbericht" target="_blank" class="btn btn-primary btn-sm">Bericht erstellen</a></div>';
+            container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">Berichte konnten nicht geladen werden.<br><br><button class="btn btn-primary btn-sm" onclick="openVetReportChoiceModal(null)">Neuer Bericht</button></div>';
         });
 }
 
@@ -1265,7 +1266,7 @@ function loadHwPlans(patientId) {
     fetch('/api/patients/'+patientId+'/plans', {headers:{'Accept':'application/json'}})
         .then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d};});})
         .then(function(res) {
-            if (!res.ok || !Array.isArray(res.d)) { container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">Noch keine Pläne vorhanden.</div>'; return; }
+            if (!res.ok || !Array.isArray(res.d)) { container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">'+(res.ok?'Noch keine Hausaufgabenpläne vorhanden.<br><br><button class="btn btn-primary btn-sm" onclick="openCreatePlanModal()">Ersten Plan erstellen</button>':'Fehler beim Laden der Pläne.')+'</div>'; return; }
             var plans = res.d;
             if (!plans.length) { container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">Noch keine Hausaufgabenpläne vorhanden.<br><br><button class="btn btn-primary btn-sm" onclick="openCreatePlanModal()">Ersten Plan erstellen</button></div>'; return; }
             var html = '';
@@ -1919,7 +1920,7 @@ window.openCreatePlanModal=function(){
         +'<form id="create-plan-form"><input type="hidden" name="_csrf_token" value="{{ csrf_token }}">'
         +'<div class="row g-3 mb-3">'
         +'<div class="col-md-4"><label class="form-label">Datum</label><input type="date" name="plan_date" class="form-control" value="'+today+'"></div>'
-        +'<div class="col-md-4"><label class="form-label">Therapeut</label><input type="text" name="therapist_name" class="form-control" value="{{ current_user.name ?? "" }}"></div>'
+        +'<div class="col-md-4"><label class="form-label">Therapeut</label><input type="text" name="therapist_name" class="form-control" value="{{ (current_user.name ?? '')|e }}"></div>'
         +'<div class="col-md-4"><label class="form-label">Wiedervorstellung</label><input type="date" name="next_appointment" class="form-control" id="cp-next-apt"></div>'
         +'</div>'
         +'<div class="row g-3 mb-3">'
@@ -1981,14 +1982,15 @@ window._vrChoicePatientId = null;
 window.openVetReportChoiceModal = function(pid) {
     window._vrChoicePatientId = pid || window.pdAktPatientId || (typeof patientId !== 'undefined' ? patientId : null);
     if (!window._vrChoicePatientId) return;
-    
-    var m = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-vet-report-choice'));
+    var el = document.getElementById('modal-vet-report-choice');
+    var m = bootstrap.Modal.getInstance(el) || new bootstrap.Modal(el, {backdrop: false});
     m.show();
 };
 
 window.handleVetReportChoice = function(type) {
     var pid = window._vrChoicePatientId;
-    bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-vet-report-choice')).hide();
+    var choiceInst = bootstrap.Modal.getInstance(document.getElementById('modal-vet-report-choice'));
+    if (choiceInst) choiceInst.hide();
     
     if (type === 'auto') {
         window.open('/patienten/' + pid + '/tierarztbericht', '_blank');
@@ -2019,7 +2021,8 @@ window.openPdCustomVetReportModal = function() {
         var now = new Date();
         dateEl.textContent = now.toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric'});
     }
-    var m = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-custom-vet-report'));
+    var el = document.getElementById('modal-custom-vet-report');
+    var m = bootstrap.Modal.getInstance(el) || new bootstrap.Modal(el, {backdrop: false});
     m.show();
 };
 
