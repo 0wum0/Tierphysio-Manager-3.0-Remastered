@@ -243,27 +243,6 @@ class CustomVetReportPdfService
         
         $curY += 10;
 
-        // ── SIGNATURE LINE ───────────────────────────────────────────────
-        $curY = $this->ensurePageSpace($pdf, $primaryColor, $sidebarW, $pageH, $curY, 20);
-        $curY += 4;
-
-        $pdf->SetDrawColor(...$lineColor);
-        $pdf->SetLineWidth(0.2);
-
-        $sigW = ($contentW - 10) / 2;
-        // Datum
-        $pdf->Line($contentX, $curY + 8, $contentX + $sigW, $curY + 8);
-        $pdf->SetFont($font, '', $fontSize - 2);
-        $pdf->SetTextColor(...$grayColor);
-        $pdf->SetXY($contentX, $curY + 9);
-        $pdf->Cell($sigW, 4, 'Datum', 0, 0, 'C');
-
-        // Unterschrift Behandler + Stempel
-        $sig2X = $contentX + $sigW + 10;
-        $pdf->Line($sig2X, $curY + 8, $sig2X + $sigW, $curY + 8);
-        $pdf->SetXY($sig2X, $curY + 9);
-        $pdf->Cell($sigW, 4, 'Tierarzt / Behandler / Stempel', 0, 0, 'C');
-
         // ── FOOTER (all pages) ────────────────────────────────────────────
         $pageCount   = $pdf->getNumPages();
         $createdDate = date('d.m.Y', strtotime($reportData['created_at'] ?? 'now'));
