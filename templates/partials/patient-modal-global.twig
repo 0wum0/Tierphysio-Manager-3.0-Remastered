@@ -776,6 +776,14 @@
                 </div>
                 <div class="mt-3"><label class="form-label">Tierhalter</label><select name="owner_id" id="edit-owner" class="form-select"></select></div>
                 <div class="mt-3"><label class="form-label">Notizen</label><textarea name="notes" id="edit-notes" class="form-control" rows="3"></textarea></div>
+                <div class="mt-3 pt-2" style="border-top:1px solid var(--bs-border-color);">
+                    <div class="fw-semibold mb-2" style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--bs-secondary-color);">🩺 Haustierarzt (optional)</div>
+                    <div class="row g-2">
+                        <div class="col-md-6"><label class="form-label">Tierarzt / Praxis</label><input type="text" name="vet_name" id="edit-vet-name" class="form-control" placeholder="z. B. Dr. Müller — Tierarztpraxis Muster"></div>
+                        <div class="col-md-6"><label class="form-label">Telefon</label><input type="text" name="vet_phone" id="edit-vet-phone" class="form-control" placeholder="z. B. 089 123456"></div>
+                        <div class="col-12"><label class="form-label">Anschrift</label><textarea name="vet_address" id="edit-vet-address" class="form-control" rows="2" placeholder="Straße, PLZ Ort"></textarea></div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
@@ -1602,7 +1610,8 @@ function openPatientModal(patientId) {
                 detail('Tierart', p.species) + detail('Rasse', p.breed) +
                 detail('Geschlecht', p.gender) + detail('Geb.', p.birth_date ? fmtDate(p.birth_date) : null) +
                 detail('Farbe', p.color) + detail('Chip-Nr.', p.chip_number) +
-                (p.notes ? '<div style="grid-column:1/-1;border-top:1px solid var(--bs-border-color);padding-top:0.4rem;margin-top:0.1rem;"><span>Notizen</span><div style="font-size:0.78rem;line-height:1.5;color:var(--bs-secondary-color);">'+esc(p.notes)+'</div></div>' : '');
+                (p.notes ? '<div style="grid-column:1/-1;border-top:1px solid var(--bs-border-color);padding-top:0.4rem;margin-top:0.1rem;"><span>Notizen</span><div style="font-size:0.78rem;line-height:1.5;color:var(--bs-secondary-color);">'+esc(p.notes)+'</div></div>' : '') +
+                (p.vet_name ? '<div style="grid-column:1/-1;border-top:1px solid var(--bs-border-color);padding-top:0.5rem;margin-top:0.2rem;"><div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:0.06em;color:var(--bs-secondary-color);margin-bottom:0.3rem;">🩺 Haustierarzt</div><div style="font-size:0.82rem;font-weight:600;">'+esc(p.vet_name)+'</div>'+(p.vet_phone?'<div style="font-size:0.78rem;color:var(--bs-secondary-color);">'+esc(p.vet_phone)+'</div>':'')+(p.vet_address?'<div style="font-size:0.75rem;color:var(--bs-secondary-color);white-space:pre-line;">'+esc(p.vet_address)+'</div>':'')+'</div>' : '');
 
             /* Owner */
             if (o) {
@@ -1837,8 +1846,11 @@ if (pdEditBtn) {
         document.getElementById('edit-breed').value   = p.breed||'';
         document.getElementById('edit-birth').value   = p.birth_date ? p.birth_date.slice(0,10) : '';
         document.getElementById('edit-color').value   = p.color||'';
-        document.getElementById('edit-chip').value    = p.chip_number||'';
-        document.getElementById('edit-notes').value   = p.notes||'';
+        document.getElementById('edit-chip').value      = p.chip_number||'';
+        document.getElementById('edit-vet-name').value  = p.vet_name||'';
+        document.getElementById('edit-vet-phone').value = p.vet_phone||'';
+        document.getElementById('edit-vet-address').value = p.vet_address||'';
+        document.getElementById('edit-notes').value     = p.notes||'';
         var gSel=document.getElementById('edit-gender'); for(var i=0;i<gSel.options.length;i++) gSel.options[i].selected=gSel.options[i].value===(p.gender||'unbekannt');
         var sSel=document.getElementById('edit-status'); for(var i=0;i<sSel.options.length;i++) sSel.options[i].selected=sSel.options[i].value===(p.status||'aktiv');
         var oSel=document.getElementById('edit-owner');
@@ -2283,6 +2295,15 @@ window.openPdCustomVetReportModal = function() {
             if (p.breed) info += ' (' + p.breed + ')';
             if (o) info += ' \u2014 ' + esc((o.first_name||'') + ' ' + (o.last_name||''));
             nameEl.textContent = info;
+
+            /* Pre-fill recipient with patient's vet info if available */
+            var recipEl = document.getElementById('cvr-recipient');
+            if (recipEl && !recipEl.value && p.vet_name) {
+                var vetInfo = p.vet_name;
+                if (p.vet_address) vetInfo += ', ' + p.vet_address.replace(/\n/g, ', ');
+                if (p.vet_phone) vetInfo += ' · Tel: ' + p.vet_phone;
+                recipEl.value = vetInfo;
+            }
         } else { nameEl.textContent = ''; }
     }
     var dateEl = document.getElementById('cvr-date-display');

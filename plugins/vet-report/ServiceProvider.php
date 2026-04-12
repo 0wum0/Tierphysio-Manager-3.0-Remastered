@@ -14,8 +14,29 @@ class ServiceProvider
         require_once __DIR__ . '/VetReportService.php';
         require_once __DIR__ . '/VetReportController.php';
 
+        $this->runMigrations();
+
         $pluginManager->hook('registerRoutes',        [$this, 'registerRoutes']);
         $pluginManager->hook('patientHeaderActions',  [$this, 'patientHeaderAction']);
+    }
+
+    private function runMigrations(): void
+    {
+        try {
+            $db     = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $table  = $db->prefix('vet_reports');
+
+            /* Add recipient column if missing */
+            $db->execute(
+                "ALTER TABLE `{$table}` ADD COLUMN `recipient` VARCHAR(500) NULL"
+            );
+        } catch (\Throwable $e) {
+            /* errno 1060 = duplicate column (already exists), 1146 = table missing → both are fine */
+            $errno = ($e instanceof \PDOException && isset($e->errorInfo[1])) ? (int)$e->errorInfo[1] : 0;
+            if (!in_array($errno, [1060, 1146], true)) {
+                error_log('[VetReport runMigrations] ' . $e->getMessage());
+            }
+        }
     }
 
     public function registerRoutes(Router $router): void
