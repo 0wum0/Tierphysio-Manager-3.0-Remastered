@@ -23,19 +23,29 @@ class ServiceProvider
     private function runMigrations(): void
     {
         try {
-            $db     = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
-            $table  = $db->prefix('vet_reports');
+            $db    = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $table = $db->prefix('vet_reports');
 
-            /* Add recipient column if missing */
-            $db->execute(
-                "ALTER TABLE `{$table}` ADD COLUMN `recipient` VARCHAR(500) NULL"
-            );
-        } catch (\Throwable $e) {
-            /* errno 1060 = duplicate column (already exists), 1146 = table missing → both are fine */
-            $errno = ($e instanceof \PDOException && isset($e->errorInfo[1])) ? (int)$e->errorInfo[1] : 0;
-            if (!in_array($errno, [1060, 1146], true)) {
-                error_log('[VetReport runMigrations] ' . $e->getMessage());
+            $columns = [
+                "ALTER TABLE `{$table}` ADD COLUMN `type`      ENUM('auto','custom') NOT NULL DEFAULT 'auto' AFTER `created_by`",
+                "ALTER TABLE `{$table}` ADD COLUMN `title`     VARCHAR(255) NULL AFTER `type`",
+                "ALTER TABLE `{$table}` ADD COLUMN `content`   TEXT NULL AFTER `title`",
+                "ALTER TABLE `{$table}` ADD COLUMN `recipient` VARCHAR(500) NULL",
+            ];
+
+            foreach ($columns as $sql) {
+                try {
+                    $db->execute($sql);
+                } catch (\Throwable $e) {
+                    /* 1060 = column already exists, 1146 = table missing → both are fine */
+                    $errno = ($e instanceof \PDOException && isset($e->errorInfo[1])) ? (int)$e->errorInfo[1] : 0;
+                    if (!in_array($errno, [1060, 1146], true)) {
+                        error_log('[VetReport runMigrations] ' . $e->getMessage());
+                    }
+                }
             }
+        } catch (\Throwable $e) {
+            error_log('[VetReport runMigrations] ' . $e->getMessage());
         }
     }
 
