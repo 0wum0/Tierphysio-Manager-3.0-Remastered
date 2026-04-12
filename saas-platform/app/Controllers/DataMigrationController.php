@@ -859,6 +859,7 @@ class DataMigrationController extends Controller
             'patient_timeline','treatment_types',
             'mobile_api_tokens','cron_job_log',
             'befundboegen','befundbogen_felder',
+            'vet_reports', 'homework_plans', 'homework_tasks', 'homework_templates'
         ];
 
         foreach ($tables as $table) {

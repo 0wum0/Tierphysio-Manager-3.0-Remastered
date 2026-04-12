@@ -116,7 +116,7 @@ class VetReportController extends Controller
 
         try {
             $rows = $this->db->query(
-                "SELECT vr.id, vr.created_at, u.name AS created_by_name
+                "SELECT vr.id, vr.created_at, vr.type, u.name AS created_by_name
                  FROM `{$this->t('vet_reports')}` vr
                  LEFT JOIN `{$this->t('users')}` u ON u.id = vr.created_by
                  WHERE vr.patient_id = ?
