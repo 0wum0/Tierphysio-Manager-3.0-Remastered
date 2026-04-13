@@ -84,17 +84,21 @@ class MigrationService
                 try {
                     $this->db->execute($statement);
                 } catch (\Throwable $e) {
-                    /* Silently ignore duplicate key / already-exists errors so
-                     * migrations that add indexes or columns are idempotent.
-                     * MySQL errno 1061 = Duplicate key name
-                     * MySQL errno 1060 = Duplicate column name
-                     * MySQL errno 1050 = Table already exists
+                    /* Silently ignore structural-already-exists / missing-object errors
+                     * so migrations are idempotent across tenants and re-runs.
+                     * 1050 = Table already exists
+                     * 1060 = Duplicate column name
+                     * 1061 = Duplicate key name
+                     * 1072 = Key column doesn't exist (ADD INDEX on absent column)
+                     * 1091 = Can't DROP key; check that it exists
+                     * 1146 = Table doesn't exist (ALTER on absent table)
+                     * 1215 = Cannot add foreign key constraint
                      */
                     $errno = 0;
                     if ($e instanceof \PDOException && isset($e->errorInfo[1])) {
                         $errno = (int)$e->errorInfo[1];
                     }
-                    if (!in_array($errno, [1050, 1060, 1061, 1091, 1146], true)) {
+                    if (!in_array($errno, [1050, 1060, 1061, 1072, 1091, 1146, 1215], true)) {
                         throw $e;
                     }
                 }

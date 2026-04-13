@@ -270,6 +270,21 @@
         </a>
     </div>
 
+    <div class="col-6 col-md-4 col-xl-2">
+        <a href="/rechnungen?status=cancelled" class="text-decoration-none kpi-filter-card" data-filter-status="cancelled">
+        <div class="card h-100" style="border-left:3px solid #dc2626;cursor:pointer;transition:box-shadow .15s;" onmouseenter="this.style.boxShadow='0 0 0 2px #dc262655'" onmouseleave="this.style.boxShadow=''">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center gap-1 text-muted small text-uppercase fw-semibold mb-1" style="font-size:.68rem;letter-spacing:.06em;">
+                    <svg width="11" height="11" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    Storniert
+                </div>
+                <div class="fw-bold" style="font-size:1.3rem;color:#dc2626;">{% if stats.cancelled_count > 0 %}{{ stats.cancelled_gross|money }}{% else %}<span style="color:var(--text-muted);font-size:1rem;">—</span>{% endif %}</div>
+                <div style="font-size:.72rem;color:var(--text-muted);margin-top:.2rem;">{{ stats.cancelled_count }} Storno{{ stats.cancelled_count != 1 ? 's' : '' }}</div>
+            </div>
+        </div>
+        </a>
+    </div>
+
 </div>
 
 {# ── Charts ───────────────────────────────────────────────────────── #}
@@ -302,6 +317,9 @@
                     <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#f59e0b;margin-right:4px;"></span>Offen ({{ stats.open_count }})</span>
                     <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ef4444;margin-right:4px;"></span>Überfällig ({{ stats.overdue_count }})</span>
                     <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#94a3b8;margin-right:4px;"></span>Entwurf ({{ stats.draft_count }})</span>
+                    {% if stats.cancelled_count > 0 %}
+                    <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#dc2626;margin-right:4px;"></span>Storniert ({{ stats.cancelled_count }})</span>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -323,7 +341,9 @@
                 <option value="open"    {{ status == 'open'    ? 'selected' : '' }}>{{ t('invoices.status_open') }}</option>
                 <option value="paid"    {{ status == 'paid'    ? 'selected' : '' }}>{{ t('invoices.status_paid') }}</option>
                 <option value="overdue"  {{ status == 'overdue'  ? 'selected' : '' }}>{{ t('invoices.status_overdue') }}</option>
-            <option value="mahnung"  {{ status == 'mahnung'  ? 'selected' : '' }}>Mahnung</option>
+            <option value="mahnung"   {{ status == 'mahnung'    ? 'selected' : '' }}>Mahnung</option>
+                <option value="cancelled" {{ status == 'cancelled' ? 'selected' : '' }}>Storniert</option>
+                <option value="cancellation" {{ status == 'cancellation' ? 'selected' : '' }}>Stornorechnung</option>
             </select>
             <button type="submit" class="btn btn-secondary">{{ t('common.filter') }}</button>
             {% if search or status %}<a href="/rechnungen" class="btn btn-secondary">{{ t('common.reset') }}</a>{% endif %}

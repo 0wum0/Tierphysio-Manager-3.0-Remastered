@@ -7,9 +7,10 @@
 ALTER TABLE `invoices`
     ADD COLUMN `invoice_type` ENUM('normal','cancellation') NOT NULL DEFAULT 'normal' AFTER `invoice_number`;
 
--- 2. Status um 'cancellation' erweitern (für den Storno-Beleg selbst)
+-- 2. Status um 'cancellation' + 'mahnung' erweitern (mahnung war ggf. bereits genutzt,
+--    muss im ENUM bleiben um MySQL Error 1265 "Data truncated" zu vermeiden)
 ALTER TABLE `invoices`
-    MODIFY COLUMN `status` ENUM('draft','open','paid','overdue','cancelled','cancellation') NOT NULL DEFAULT 'draft';
+    MODIFY COLUMN `status` ENUM('draft','open','paid','overdue','mahnung','cancelled','cancellation') NOT NULL DEFAULT 'draft';
 
 -- 3. cancelled_at sicherstellen (muss vor cancelled_by existieren)
 ALTER TABLE `invoices`
