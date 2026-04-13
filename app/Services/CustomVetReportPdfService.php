@@ -251,6 +251,8 @@ class CustomVetReportPdfService
             $pdf->SetXY($contentX, $curY);
             $pdf->Cell($contentW, 6, '  AN (TIERARZT / KLINIK)', 0, 1, 'L', true);
             $curY = $pdf->GetY() + 3;
+
+            // Ensure font and text color are set correctly
             $pdf->SetFont($font, '', $fontSize - 0.5);
             $pdf->SetTextColor(30, 30, 30);
             $pdf->SetXY($contentX, $curY);
@@ -271,10 +273,6 @@ class CustomVetReportPdfService
             $pdf->Cell($contentW, 6, '  BERICHTSINHALT', 0, 1, 'L', true);
             $curY = $pdf->GetY() + 3;
 
-            $pdf->SetFont($font, '', $fontSize);
-            $pdf->SetTextColor(30, 30, 30);
-            $pdf->SetXY($contentX, $curY);
-
             // Split content by paragraphs and check page breaks
             $paragraphs = preg_split('/(\n|\r\n)/', $content);
             foreach ($paragraphs as $paragraph) {
@@ -287,6 +285,9 @@ class CustomVetReportPdfService
                 $this->checkPageBreak($pdf, $curY, $neededHeight, $pageH, $drawSidebar, $contentX, $font, $fontSize);
                 $curY = $pdf->GetY();
 
+                // Ensure font and text color are set correctly after page break
+                $pdf->SetFont($font, '', $fontSize);
+                $pdf->SetTextColor(30, 30, 30);
                 $pdf->SetXY($contentX, $curY);
                 $pdf->MultiCell($contentW, 5, $paragraph, 0, 'L');
                 $curY = $pdf->GetY();
@@ -340,6 +341,8 @@ class CustomVetReportPdfService
             $pdf->AddPage();
             $drawSidebar();
             $curY = 15;
+            // Reset text color after sidebar drawing (sidebar uses white text)
+            $pdf->SetTextColor(30, 30, 30);
         }
         $pdf->SetXY($contentX, $curY);
     }
