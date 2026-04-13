@@ -120,11 +120,6 @@ class CustomVetReportPdfService
 
         $drawSidebar();
 
-        // Page break callback to redraw sidebar on each new page
-        $pdf->setPageMarkCallback(function($page) use ($drawSidebar) {
-            $drawSidebar();
-        });
-
         // ── Company info top right ────────────────────────────────────────
         $pdf->SetFont($font, 'B', $fontSize + 1);
         $pdf->SetTextColor(30, 30, 30);
@@ -277,11 +272,22 @@ class CustomVetReportPdfService
             $pdf->SetTextColor(30, 30, 30);
             $pdf->SetXY($contentX, $curY);
 
-            // Enable auto page break for content rendering
-            $pdf->SetAutoPageBreak(true, 25);
-            $pdf->MultiCell($contentW, 5, $content, 0, 'L');
-            $pdf->SetAutoPageBreak(false);
-            $curY = $pdf->GetY();
+            // Split content by sentences/paragraphs and check page breaks
+            $paragraphs = preg_split('/(\n|\r\n)/', $content);
+            foreach ($paragraphs as $paragraph) {
+                $paragraph = trim($paragraph);
+                if ($paragraph === '') continue;
+
+                $numLines = $pdf->getNumLines($paragraph, $contentW);
+                $neededHeight = max(5, $numLines * 5);
+
+                $this->checkPageBreak($pdf, $curY, $neededHeight, $pageH, $drawSidebar, $contentX, $font, $fontSize);
+                $curY = $pdf->GetY();
+
+                $pdf->SetXY($contentX, $curY);
+                $pdf->MultiCell($contentW, 5, $paragraph, 0, 'L');
+                $curY = $pdf->GetY();
+            }
         }
 
         // ── Footer ───────────────────────────────────────────────────────────
