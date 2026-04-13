@@ -3,7 +3,21 @@
 {% block title %}TheraPano – Premium Praxissoftware für Tiertherapeuten & Hundeschulen{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="/css/landing.css">
+<link rel="stylesheet" href="/css/landing.css?v=20260413-ux2">
+<style>
+    /* Hard override to ensure visible layout update even with stale cache */
+    .feature-stage .bento-grid { gap: 1.4rem !important; }
+    .feature-stage .bento {
+        border: 2px solid rgba(59,130,246,.55) !important;
+        border-radius: 20px !important;
+        padding: 1.7rem !important;
+        text-align: center !important;
+        background: linear-gradient(160deg, rgba(37,99,235,.28), rgba(124,58,237,.22), rgba(15,23,42,.95)) !important;
+        transform: none !important;
+    }
+    .feature-stage .bento h3 { font-size: 1.22rem !important; margin-bottom: .7rem !important; }
+    .feature-stage .bento p { font-size: 1rem !important; max-width: 40ch !important; margin: 0 auto !important; }
+</style>
 {% endblock %}
 
 {% block content %}
@@ -182,5 +196,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="/js/landing.js" defer></script>
+<script src="/js/landing.js?v=20260413-ux2" defer></script>
 {% endblock %}
