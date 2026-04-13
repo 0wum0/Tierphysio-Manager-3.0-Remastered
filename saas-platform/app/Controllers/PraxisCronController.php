@@ -99,14 +99,14 @@ class PraxisCronController extends Controller
             $this->redirect('/admin/praxis-cron');
         }
 
-        // Get tenant prefix
-        $tenant = $this->db->fetch("SELECT uuid FROM tenants WHERE id = ?", [$tenantId]);
+        // Get tenant
+        $tenant = $this->db->fetch("SELECT db_name, email FROM tenants WHERE id = ?", [$tenantId]);
         if (!$tenant) {
             $this->session->flash('error', 'Tenant nicht gefunden.');
             $this->redirect('/admin/praxis-cron');
         }
 
-        $prefix = 't_' . $tenant['uuid'] . '_';
+        $prefix = rtrim((string)($tenant['db_name'] ?? ''), '_') . '_';
         $settingsTable = $prefix . 'settings';
 
         // Get cronjob config
@@ -155,7 +155,7 @@ class PraxisCronController extends Controller
         }
 
         // Get tenant
-        $tenant = $this->db->fetch("SELECT uuid, email FROM tenants WHERE id = ?", [$tenantId]);
+        $tenant = $this->db->fetch("SELECT db_name, email FROM tenants WHERE id = ?", [$tenantId]);
         if (!$tenant) {
             echo json_encode(['success' => false, 'error' => 'Tenant nicht gefunden.']);
             exit;
@@ -183,7 +183,7 @@ class PraxisCronController extends Controller
         $url = 'https://' . $domain . $endpoint;
 
         // Get token from tenant settings
-        $prefix = 't_' . $tenant['uuid'] . '_';
+        $prefix = rtrim((string)($tenant['db_name'] ?? ''), '_') . '_';
         $settingsTable = $prefix . 'settings';
 
         $tokenFields = [
