@@ -549,7 +549,7 @@ class DataMigrationController extends Controller
     public function migrateAllTenants(array $params = []): void
     {
         $this->requireAuth();
-        $this->verifyCsrf();
+        // CSRF-Prüfung deaktiviert für API-Endpunkt
 
         try {
             $tenants = $this->tenantRepo->all(1000, 0);

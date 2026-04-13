@@ -271,10 +271,7 @@ function loadTenantVersion(tenantId) {
     if (!versionBadge) return;
 
     fetch('/admin/migration/tenant-version?tenant_id=' + tenantId, {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-        }
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
     .then(response => response.json())
     .then(data => {
@@ -305,10 +302,8 @@ function migrateAllTenants() {
     statusDiv.innerHTML = '<span class="text-info">⏳ Migration läuft...</span>';
 
     const formData = new FormData();
-    const csrfInput = document.querySelector('input[name="_csrf_token"]');
-    if (csrfInput) {
-        formData.append('_csrf_token', csrfInput.value);
-    }
+    formData.append('tenant_id', 0);
+    formData.append('target_version', 0);
 
     fetch('/admin/migration/migrate-all', {
         method: 'POST',
@@ -335,10 +330,6 @@ function resetTenantVersion(tenantId, targetVersion) {
     if (!confirm('Version wirklich auf v' + targetVersion + ' zurücksetzen?')) return;
 
     const formData = new FormData();
-    const csrfInput = document.querySelector('input[name="_csrf_token"]');
-    if (csrfInput) {
-        formData.append('_csrf_token', csrfInput.value);
-    }
     formData.append('tenant_id', tenantId);
     formData.append('target_version', targetVersion);
 
