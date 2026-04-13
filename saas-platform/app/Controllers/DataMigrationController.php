@@ -507,6 +507,44 @@ class DataMigrationController extends Controller
         return $statements;
     }
 
+    // ── Setzt die Migrations-Version eines Tenants zurück ─────────────────────────────
+    public function resetTenantVersion(array $params = []): void
+    {
+        $this->requireAuth();
+        $this->verifyCsrf();
+
+        $tenantId = (int)($_POST['tenant_id'] ?? 0);
+        $targetVersion = (int)($_POST['target_version'] ?? 0);
+
+        if (!$tenantId || !$targetVersion) {
+            $this->jsonError('Tenant ID und Ziel-Version erforderlich');
+        }
+
+        $tenant = $this->tenantRepo->find($tenantId);
+        if (!$tenant) {
+            $this->jsonError('Tenant nicht gefunden');
+        }
+
+        $prefix = rtrim((string)($tenant['db_name'] ?? ''), '_') . '_';
+        $migTbl = $prefix . 'migrations';
+
+        try {
+            $pdo = $this->db->getPdo();
+
+            // Alle Versionen größer als targetVersion löschen
+            $pdo->prepare("DELETE FROM `{$migTbl}` WHERE version > ?")->execute([$targetVersion]);
+
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'success' => true,
+                'message' => "Version von Tenant {$tenant['practice_name']} auf {$targetVersion} zurückgesetzt"
+            ]);
+            exit;
+        } catch (\Throwable $e) {
+            $this->jsonError('Fehler beim Zurücksetzen: ' . $e->getMessage());
+        }
+    }
+
     // ── Migriert alle Tenants auf die neueste Version ─────────────────────────────
     public function migrateAllTenants(array $params = []): void
     {

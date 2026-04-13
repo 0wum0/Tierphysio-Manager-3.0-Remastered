@@ -109,6 +109,9 @@
                                         <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modal-{{ tenant.id }}">
                                             Dispatcher konfigurieren
                                         </button>
+                                        <button type="button" class="btn btn-sm btn-warning ms-1" onclick="resetTenantVersion({{ tenant.id }}, 34)">
+                                            Reset v34
+                                        </button>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -297,10 +300,10 @@ function loadTenantVersion(tenantId) {
 function migrateAllTenants() {
     const statusDiv = document.getElementById('migration-status');
     statusDiv.innerHTML = '<span class="text-info">⏳ Migration läuft...</span>';
-    
+
     const formData = new FormData();
     formData.append('_csrf_token', '{{ csrf_token }}');
-    
+
     fetch('/admin/migration/migrate-all', {
         method: 'POST',
         body: formData
@@ -319,6 +322,32 @@ function migrateAllTenants() {
     })
     .catch(error => {
         statusDiv.innerHTML = '<span class="text-danger">✗ Fehler: ' + error + '</span>';
+    });
+}
+
+function resetTenantVersion(tenantId, targetVersion) {
+    if (!confirm('Version wirklich auf v' + targetVersion + ' zurücksetzen?')) return;
+
+    const formData = new FormData();
+    formData.append('_csrf_token', '{{ csrf_token }}');
+    formData.append('tenant_id', tenantId);
+    formData.append('target_version', targetVersion);
+
+    fetch('/admin/migration/reset-version', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            loadTenantVersion(tenantId);
+        } else {
+            alert('Fehler: ' + (data.error || data.message));
+        }
+    })
+    .catch(error => {
+        alert('Fehler: ' + error);
     });
 }
 </script>

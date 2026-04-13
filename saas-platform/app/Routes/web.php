@@ -124,6 +124,7 @@ $router->post('/admin/praxis-cron/run-now',          [PraxisCronController::clas
 // ── Datenbank-Version API ─────────────────────────────────────────────────────────────
 $router->get('/admin/migration/tenant-version',     [DataMigrationController::class, 'getTenantVersion']);
 $router->post('/admin/migration/migrate-all',       [DataMigrationController::class, 'migrateAllTenants']);
+$router->post('/admin/migration/reset-version',    [DataMigrationController::class, 'resetTenantVersion']);
 
 // ── Google Plugin: Einmal-Migration alle Tenants ───────────────────────────────────
 $router->post('/admin/migration/google-plugin', [DataMigrationController::class, 'migrateGooglePlugin']);
