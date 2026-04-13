@@ -36,30 +36,36 @@ class GoogleApiService
         $this->clientSecret = defined('GOOGLE_CLIENT_SECRET') ? GOOGLE_CLIENT_SECRET : (getenv('GOOGLE_CLIENT_SECRET') ?: '');
         $this->redirectUri  = defined('GOOGLE_REDIRECT_URI')  ? GOOGLE_REDIRECT_URI  : (getenv('GOOGLE_REDIRECT_URI')  ?: '');
 
-        /* Fallback: read from saas_settings table (SaaS platform configuration) */
+        /* Fallback: read from saas_settings table (SaaS platform MySQL configuration) */
         if (empty($this->clientId) || empty($this->clientSecret)) {
             try {
-                $saasDbPath = dirname(__DIR__, 2) . '/saas-platform/storage/database/saas.db';
-                if (file_exists($saasDbPath)) {
-                    $pdo = new \PDO('sqlite:' . $saasDbPath);
-                    $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+                $configPath = dirname(__DIR__, 2) . '/saas-platform/storage/config/config.php';
+                if (file_exists($configPath)) {
+                    $config = require $configPath;
+                    if (isset($config['db'])) {
+                        $db = $config['db'];
+                        $dsn = "mysql:host={$db['host']};port={$db['port']};dbname={$db['database']};charset=utf8mb4";
+                        $pdo = new \PDO($dsn, $db['username'], $db['password'], [
+                            \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+                        ]);
 
-                    if (empty($this->clientId)) {
-                        $stmt = $pdo->prepare("SELECT value FROM saas_settings WHERE `key` = 'google_client_id'");
-                        $stmt->execute();
-                        $this->clientId = (string)$stmt->fetchColumn();
-                    }
+                        if (empty($this->clientId)) {
+                            $stmt = $pdo->prepare("SELECT value FROM saas_settings WHERE `key` = 'google_client_id'");
+                            $stmt->execute();
+                            $this->clientId = (string)$stmt->fetchColumn();
+                        }
 
-                    if (empty($this->clientSecret)) {
-                        $stmt = $pdo->prepare("SELECT value FROM saas_settings WHERE `key` = 'google_client_secret'");
-                        $stmt->execute();
-                        $this->clientSecret = (string)$stmt->fetchColumn();
-                    }
+                        if (empty($this->clientSecret)) {
+                            $stmt = $pdo->prepare("SELECT value FROM saas_settings WHERE `key` = 'google_client_secret'");
+                            $stmt->execute();
+                            $this->clientSecret = (string)$stmt->fetchColumn();
+                        }
 
-                    if (empty($this->redirectUri)) {
-                        $stmt = $pdo->prepare("SELECT value FROM saas_settings WHERE `key` = 'google_redirect_uri'");
-                        $stmt->execute();
-                        $this->redirectUri = (string)$stmt->fetchColumn();
+                        if (empty($this->redirectUri)) {
+                            $stmt = $pdo->prepare("SELECT value FROM saas_settings WHERE `key` = 'google_redirect_uri'");
+                            $stmt->execute();
+                            $this->redirectUri = (string)$stmt->fetchColumn();
+                        }
                     }
                 }
             } catch (\Throwable) {
