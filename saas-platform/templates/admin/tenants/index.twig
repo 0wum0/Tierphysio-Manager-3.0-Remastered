@@ -13,7 +13,7 @@
             {% if search %}<a href="/admin/tenants" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x"></i></a>{% endif %}
         </form>
         <form method="POST" action="/admin/tenants/fix-storage" onsubmit="return confirm('Storage-Ordner für alle Praxen ohne Ordner anlegen?');">
-            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="_csrf" value="{{ csrf_token }}">
             <button type="submit" class="btn btn-sm btn-outline-warning" title="Fehlende Storage-Ordner für alle Mandanten anlegen">
                 <i class="bi bi-folder-symlink me-1"></i>Storage reparieren
             </button>

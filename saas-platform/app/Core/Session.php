@@ -30,6 +30,7 @@ class Session
         }
 
         session_set_cookie_params($cookieParams);
+        ini_set('session.gc_maxlifetime', (string)$lifetime);
 
         session_name('SAAS_SESSION');
         session_start();
