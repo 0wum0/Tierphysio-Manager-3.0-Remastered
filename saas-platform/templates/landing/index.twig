@@ -1,6 +1,6 @@
 {% extends 'layouts/landing.twig' %}
 
-{% block title %}TheraPano – Premium Praxissoftware für Tierherapie & Hundeschulen{% endblock %}
+{% block title %}TheraPano – Premium Praxis-Software für Tierherapie & Hundeschulen{% endblock %}
 
 {% block styles %}
 <link rel="stylesheet" href="/css/landing.css?v={{ "now"|date("U") }}">
@@ -8,47 +8,20 @@
 
 {% block content %}
 <section class="hero">
-    <div class="container">
-        <div class="row align-items-center g-5">
-            <div class="col-lg-7 hero-intro">
-                <h1 data-gsap="skew-up">Die <span class="gradient-text">einzigartige</span> Plattform für Tiertherapie & Hundeschulen.</h1>
-                <p data-gsap="fade-up">
-                    Ein durchgängiges Premium-System für deine Praxis: 
-                    Patientenmanagement, Termine, digitale Befunde und Abrechnung. 
-                    Modern, sicher und 100% maßgeschneidert auf deinen Workflow.
+    <div class="container text-center">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <span class="section-kicker reveal-hidden">Die Zukunft der Tiertherapie</span>
+                <h1 class="section-title reveal-hidden" style="font-size: clamp(2.5rem, 6vw, 4.5rem); line-height: 1.05;">
+                    Vom Praxistalltag zum <br>
+                    <span class="gradient-text">High-Performance Cockpit.</span>
+                </h1>
+                <p class="mx-auto mb-5 reveal-hidden" style="max-width: 750px; font-size: 1.25rem; color: var(--lp-muted);">
+                    TheraPano bündelt klinische Dokumentation, Patientenentwicklung und Praxismanagement in einer einzigen, hochintelligenten Plattform. Maßgeschneidert für Tierphysiotherapeuten und Hundeschulen.
                 </p>
-                <div class="d-flex gap-3 hero-actions" data-gsap="fade-up">
-                    <a href="/register" class="btn-nav-primary px-4 py-3 h5 mb-0">Jetzt kostenlos starten</a>
-                    <a href="/demo" class="btn-nav-outline px-4 py-3 h5 mb-0">Demo ansehen</a>
-                </div>
-            </div>
-            <div class="col-lg-5">
-                <div class="glass-card" data-gsap="float">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <span class="badge bg-primary px-3 py-2">LIVE MONITOR</span>
-                        <div class="d-flex gap-2">
-                            <span class="rounded-circle bg-danger" style="width: 8px; height: 8px;"></span>
-                            <span class="rounded-circle bg-success" style="width: 8px; height: 8px;"></span>
-                        </div>
-                    </div>
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <div class="metric-box">
-                                <small class="text-muted d-block text-uppercase">Termine</small>
-                                <span class="h2 fw-bold mb-0">17</span>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="metric-box">
-                                <small class="text-muted d-block text-uppercase">Neue Fälle</small>
-                                <span class="h2 fw-bold mb-0">146</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mt-4 p-3 rounded" style="background: rgba(255,255,255,0.03); border: 1px solid var(--lp-border);">
-                        <h6 class="mb-1 fw-bold">🐕 Milo · Gangbildanalyse</h6>
-                        <small class="text-muted">11:00 Uhr · Status: Bestätigt</small>
-                    </div>
+                <div class="d-flex justify-content-center gap-3 reveal-hidden">
+                    <a href="/register" class="btn-nav-primary px-5 py-3 h5 mb-0">Jetzt kostenlos starten</a>
+                    <a href="/demo" class="btn-nav-outline px-5 py-3 h5 mb-0">Live-Demo erleben</a>
                 </div>
             </div>
         </div>
@@ -67,79 +40,212 @@
     </div>
 </section>
 
-<section class="py-5" id="features">
+<!-- SECTION: DAS COCKPIT -->
+<section class="py-5 mt-5">
     <div class="container py-5">
-        <div class="text-center mb-5">
-            <h2 class="section-title h1 mb-4">Alles drin – ohne Tool-Chaos, <span class="gradient-text">ohne Medienbruch</span></h2>
-            <p class="text-muted mx-auto" style="max-width: 800px;">
-                Vom Patientenmanagement bis zur Abrechnung: Deine Module greifen nahtlos ineinander für deinen Workflow der Zukunft.
-            </p>
-        </div>
-
-        <div class="bento-grid">
-            <article class="bento-item large">
-                <div class="mb-3 d-flex justify-content-between align-items-center">
-                    <span class="badge bg-primary">MODUL_01</span>
+        <div class="row align-items-center g-5">
+            <div class="col-lg-6 reveal-hidden">
+                <span class="section-kicker">Patienten-Management</span>
+                <h2 class="section-title">Die digitale Akte. <br><span class="gradient-text">Mehr als nur Notizen.</span></h2>
+                <p class="text-muted mb-4">
+                    Behalte den vollen Überblick über jeden Heilungsprozess. Von der ersten Anamnese bis zur erfolgreichen Entlassung – alles an einem Ort dokumentiert.
+                </p>
+                <ul class="feature-list">
+                    <li><i class="bi bi-calendar-check"></i> <div><strong>Status-Tracking:</strong> Verfogle den Fortschritt deiner Patienten von "In Behandlung" über "Gebessert" bis "Schmerzfrei".</div></li>
+                    <li><i class="bi bi-file-earmark-pdf"></i> <div><strong>Automatisierte Berichte:</strong> Erstelle professionelle Tierarztberichte und Befunde direkt aus deiner Dokumentation.</div></li>
+                    <li><i class="bi bi-camera-video"></i> <div><strong>Visueller Verlauf:</strong> Dokumentiere Therapieerfolge mit Fotos und Videos direkt in der lückenlosen Timeline.</div></li>
+                </ul>
+            </div>
+            <div class="col-lg-6">
+                <div class="glass-card reveal-hidden" style="background: radial-gradient(circle at 0% 0%, rgba(59, 130, 246, 0.1), transparent 50%);">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle bg-success" style="width: 8px; height: 8px;"></div>
+                            <span class="small fw-bold opacity-75">STATUS: SCHMERZFREI</span>
+                        </div>
+                        <span class="clinical-tag">TIMELINE v2.0</span>
+                    </div>
+                    <div class="mb-4">
+                        <h4 class="mb-1">🐕 Milo (Labrador)</h4>
+                        <p class="small text-muted mb-0">Rasse: Labrador Retriever · Geb: 12.03.2019</p>
+                    </div>
+                    <div class="p-3 rounded-3 bg-white bg-opacity-5 mb-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="small fw-bold">Letzter Eintrag</span>
+                            <span class="small text-muted">Heute, 14:20</span>
+                        </div>
+                        <p class="small mb-0 opacity-75">Behandlung: Unterwasserlaufband. Hund zeigt freudiges Gangbild, keine Lahmheit erkennbar.</p>
+                    </div>
                 </div>
-                <h3>🧠 Praxis-Kern</h3>
-                <p>Patientenbesitzer, Akten, Anamnese, Befunde, Verlauf und Medien – alles zentral und digital dokumentiert.</p>
-            </article>
-            <article class="bento-item medium">
-                <h3>📅 Termin-Engine</h3>
-                <p>Intelligenter Kalender, Warteliste, Google-Sync und automatisierte Terminerinnerungen.</p>
-            </article>
-            <article class="bento-item small">
-                <h3>🧾 Umsatz-Flow</h3>
-                <p>Rechnungen, Mahnungen und Steuerexporte.</p>
-            </article>
-            <article class="bento-item small">
-                <h3>🏠 Besitzerportal</h3>
-                <p>Self-Service für Tierhalter.</p>
-            </article>
-            <article class="bento-item medium">
-                <h3>📱 Mobile App/API</h3>
-                <p>Mobil arbeiten auf Tablet und Smartphone.</p>
-            </article>
-            <article class="bento-item medium">
-                <h3>🎓 Übungen & Pläne</h3>
-                <p>Übungsbibliothek für Patientenbesitzer.</p>
-            </article>
-            <article class="bento-item small">
-                <h3>📈 Analytics Pro</h3>
-                <p>Praxis-Metriken im Blick.</p>
-            </article>
-            <article class="bento-item small">
-                <h3>🧩 Plugins</h3>
-                <p>Erweiterbarkeit ohne Grenzen.</p>
-            </article>
-            <article class="bento-item medium">
-                <h3>🔒 Compliance</h3>
-                <p>DSGVO-konform und sicher gehostet.</p>
-            </article>
+            </div>
         </div>
     </div>
 </section>
 
-<section class="py-5" id="modules">
-    <div class="container py-5 text-center">
-        <div class="row g-4 justify-content-center">
-            <div class="col-md-5">
-                <div class="glass-card h-100 p-5">
-                    <h2 class="h3 mb-3">Für Tiertherapeuten</h2>
-                    <p class="text-muted small">Präzise Dokumentation, Verlaufsgraphen und klinische Befundung – alles DSGVO-konform.</p>
-                    <div class="d-flex flex-wrap gap-2 justify-content-center mt-3">
-                        <span class="badge bg-dark border">Verlaufsdoku</span>
-                        <span class="badge bg-dark border">Befundlogik</span>
+<!-- SECTION: CLINICAL EXCELLENCE -->
+<section class="py-5" style="background: rgba(255,255,255,0.01);">
+    <div class="container py-5">
+        <div class="text-center mb-5 reveal-hidden">
+            <span class="section-kicker">Klinische Exzellenz</span>
+            <h2 class="section-title">Spezialisierte <span class="gradient-text">Befundbögen.</span></h2>
+            <p class="text-muted mx-auto" style="max-width: 700px;">
+                Egal ob Physiotherapie, Osteopathie oder Training – unsere intelligenten Bögen passen sich deinem Workflow an.
+            </p>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4 reveal-hidden">
+                <div class="glass-card">
+                    <i class="bi bi-activity h2 text-primary mb-4 d-block"></i>
+                    <h4>Physio-Befund</h4>
+                    <p class="small text-muted">Detaillierte Erfassung von Gangbildanalysen, Lahmheitsgraden und Palpationsergebnissen.</p>
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <span class="clinical-tag">Triggerpunkte</span>
+                        <span class="clinical-tag">Neurologie</span>
                     </div>
                 </div>
             </div>
-            <div class="col-md-5">
-                <div class="glass-card h-100 p-5">
-                    <h2 class="h3 mb-3">Für Hundeschulen</h2>
-                    <p class="text-muted small">Kursverwaltung, Teilnehmerlisten und direktes Feedback an die Besitzer professionell bündeln.</p>
-                    <div class="d-flex flex-wrap gap-2 justify-content-center mt-3">
-                        <span class="badge bg-dark border">Trainingspläne</span>
-                        <span class="badge bg-dark border">Kurslogik</span>
+            <div class="col-md-4 reveal-hidden">
+                <div class="glass-card">
+                    <i class="bi bi-flower1 h2 text-secondary mb-4 d-block"></i>
+                    <h4>Naturheilkunde</h4>
+                    <p class="small text-muted">Integrierte Module für Bachblüten, Homöopathie, Phytotherapie und Schüssler-Salze.</p>
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <span class="clinical-tag">Bachblüten</span>
+                        <span class="clinical-tag">Energetik</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 reveal-hidden">
+                <div class="glass-card">
+                    <i class="bi bi-clipboard2-pulse h2 text-accent mb-4 d-block"></i>
+                    <h4>Training & Plan</h4>
+                    <p class="small text-muted">Strukturiertes Feedback für Hundeschulen und langfristige Trainingspläne.</p>
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <span class="clinical-tag">Kurs-Logik</span>
+                        <span class="clinical-tag">Fortschritt</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SECTION: HOMEWORK -->
+<section class="py-5">
+    <div class="container py-5">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-6 order-lg-2 reveal-hidden">
+                <span class="section-kicker">Kunden-Bindung</span>
+                <h2 class="section-title">Hausaufgaben 2.0. <br><span class="gradient-text">Engagement steigern.</span></h2>
+                <p class="text-muted">
+                    Therapie endet nicht in der Praxis. Mit dem Hausaufgaben-Portal gibst du deinen Kunden professionelle Pläne mit nach Hause.
+                </p>
+                <ul class="feature-list mt-4">
+                    <li><i class="bi bi-phone"></i> <div><strong>Owner Portal:</strong> Besitzer loggen sich ein und sehen ihre Übungspläne jederzeit.</div></li>
+                    <li><i class="bi bi-play-btn"></i> <div><strong>Video-Anleitungen:</strong> Verknüpfe eigene Videos oder Beschreibungen für jede Übung.</div></li>
+                    <li><i class="bi bi-chat-dots"></i> <div><strong>Feedback-Schleife:</strong> Direkter Draht zwischen Besitzer und Therapeut für bessere Resultate.</div></li>
+                </ul>
+            </div>
+            <div class="col-lg-6 order-lg-1">
+                <div class="glass-card reveal-hidden" style="border-style: dashed;">
+                    <div class="text-center py-5">
+                        <i class="bi bi-cloud-upload display-1 text-primary opacity-25"></i>
+                        <h5 class="mt-4">Übungsplan: Kreuzband-Reha</h5>
+                        <p class="text-muted">3 Übungen · Status: Aktiv</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SECTION: BUSINESS ENGINE -->
+<section class="py-5 mt-5">
+    <div class="container py-5">
+        <div class="glass-card p-5 reveal-hidden" style="border: 1px solid rgba(59, 130, 246, 0.2);">
+            <div class="row g-5 align-items-center">
+                <div class="col-lg-7">
+                    <span class="section-kicker">Wirtschaftlichkeit</span>
+                    <h2 class="section-title">Die Finanz-Engine. <br><span class="gradient-text">Weniger Büro, mehr Tier.</span></h2>
+                    <div class="row g-4 mt-2">
+                        <div class="col-md-6">
+                            <h5 class="mb-2"><i class="bi bi-receipt me-2 text-primary"></i> Abrechnung</h5>
+                            <p class="small text-muted">Erstelle Rechnungen direkt aus den Behandlungen. Mit GoBD-konformer Logik.</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="mb-2"><i class="bi bi-megaphone me-2 text-primary"></i> Mahnwesen</h5>
+                            <p class="small text-muted">Automatische Zahlungserinnerungen sparen dir wertvolle Zeit und Nerven.</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="mb-2"><i class="bi bi-wallet2 me-2 text-primary"></i> Ausgaben</h5>
+                            <p class="small text-muted">Behalte deine Praxisausgaben und Fixkosten immer im Blick.</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="mb-2"><i class="bi bi-graph-up me-2 text-primary"></i> Statistiken</h5>
+                            <p class="small text-muted">Umsatzanalysen und Patientenentwicklung in Echtzeit.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="p-4 rounded-4" style="background: rgba(0,0,0,0.3); border: 1px solid var(--lp-border);">
+                        <div class="d-flex justify-content-between mb-3">
+                            <span class="small">UMSATZ_MARCH</span>
+                            <span class="text-success small">+12.4%</span>
+                        </div>
+                        <div class="h3 fw-bold mb-4">4.892,50 €</div>
+                        <div class="progress" style="height: 6px; background: rgba(255,255,255,0.05);">
+                            <div class="progress-bar" style="width: 70%; background: var(--lp-primary);"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- SECTION: CROSS-PLATFORM APPS (BETA) -->
+<section class="py-5" style="background: linear-gradient(180deg, transparent, rgba(124, 58, 237, 0.03), transparent);">
+    <div class="container py-5">
+        <div class="row g-5 align-items-center">
+            <div class="col-lg-6 reveal-hidden">
+                <span class="section-kicker">Native Experience</span>
+                <h2 class="section-title">TheraPano für <br><span class="gradient-text">alle deine Geräte.</span></h2>
+                <p class="text-muted mb-4">
+                    Ob am Schreibtisch in der Praxis oder mobil direkt beim Tier – TheraPano ist für dich da. Unsere nativen Anwendungen für Desktop und Mobile bringen die volle Leistung direkt auf dein Betriebssystem.
+                </p>
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <div class="app-platform-card">
+                            <i class="bi bi-windows h3 mb-2 d-block"></i>
+                            <span class="fw-bold">Windows</span> <span class="beta-badge">BETA</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="app-platform-card">
+                            <i class="bi bi-apple h3 mb-2 d-block"></i>
+                            <span class="fw-bold">macOS</span> <span class="beta-badge">BETA</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="app-platform-card">
+                            <i class="bi bi-google-play h3 mb-2 d-block"></i>
+                            <span class="fw-bold">Android</span> <span class="beta-badge">BETA</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="app-platform-card">
+                            <i class="bi bi-app-indicator h3 mb-2 d-block"></i>
+                            <span class="fw-bold">iOS / iPadOS</span> <span class="beta-badge">BETA</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="glass-card reveal-hidden p-0 overflow-hidden" style="border-color: rgba(124, 58, 237, 0.2);">
+                    <div class="p-4 bg-primary bg-opacity-10 text-center">
+                        <i class="bi bi-layers-fill display-4 text-primary opacity-50"></i>
+                        <h4 class="mt-3">Vollständige Synchronisation</h4>
+                        <p class="small text-muted mb-0">Echtzeit-Datenabgleich zwischen Web, Desktop und Mobile.</p>
                     </div>
                 </div>
             </div>
@@ -149,15 +255,16 @@
 
 <section class="py-5" id="pricing">
     <div class="container py-5">
-        <div class="text-center mb-5">
-            <h2 class="section-title h1 mb-4">Skalierbare Tarife <span class="gradient-text">für jede Praxisgröße</span></h2>
+        <div class="text-center mb-5 reveal-hidden">
+            <span class="section-kicker">Transparent & Fair</span>
+            <h2 class="section-title">Wähle deinen <span class="gradient-text">Plan.</span></h2>
             <p class="text-muted">Starten Sie mit 14 Tagen kostenfreiem Test. Keine Kreditkarte erforderlich.</p>
         </div>
 
         <div class="row g-4 justify-content-center">
             {% if plans is defined and plans|length > 0 %}
                 {% for plan in plans %}
-                    <div class="col-md-6 col-lg-4">
+                    <div class="col-md-6 col-lg-4 reveal-hidden">
                         <div class="glass-card price-card {% if plan.is_featured %}featured{% endif %} h-100 d-flex flex-column p-5">
                             {% if plan.is_featured %}
                                 <div class="position-absolute top-0 end-0 m-3 px-3 py-1 bg-primary text-white small fw-bold rounded-pill">BELIEBTESTE WAHL</div>
@@ -175,7 +282,7 @@
                                     </li>
                                 {% endfor %}
                             </ul>
-                            <a href="/register/{{ plan.slug }}" class="{% if plan.is_featured %}btn-nav-primary{% else %}btn-nav-outline{% endif %} w-100 py-3 text-center">Jetzt starten</a>
+                            <a href="/register/{{ plan.slug }}" class="{% if plan.is_featured %}btn-nav-primary{% else %}btn-nav-outline{% endif %} w-100 py-3 text-center">Jetzt einsteigen</a>
                         </div>
                     </div>
                 {% endfor %}
@@ -184,32 +291,50 @@
     </div>
 </section>
 
+<!-- FAQ SECTION EXPANDED -->
 <section class="py-5" id="faq">
     <div class="container py-5">
-        <div class="text-center mb-5">
-            <h2 class="section-title h2">Häufige Fragen</h2>
+        <div class="text-center mb-5 reveal-hidden">
+            <h2 class="section-title">Häufige Fragen</h2>
         </div>
-        <div class="row g-4">
-            <div class="col-md-6">
-                <div class="glass-card p-4">
-                    <h4 class="h6 fw-bold">Ist es für Hundeschulen geeignet?</h4>
-                    <p class="text-muted small mb-0">Ja, wir bieten spezielle Module für Trainingspläne und Kundenkommunikation.</p>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="glass-card p-4">
-                    <h4 class="h6 fw-bold">Wie sicher sind meine Daten?</h4>
-                    <p class="text-muted small mb-0">Ihre Daten werden verschlüsselt und auf deutschen Servern gehostet (DSGVO-konform).</p>
+        <div class="row g-4 justify-content-center">
+            <div class="col-lg-8">
+                <div class="accordion accordion-flush bg-transparent" id="faqAccordion">
+                    <div class="glass-card mb-3 reveal-hidden" style="padding: 1rem;">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed bg-transparent text-white" type="button" data-bs-toggle="collapse" data-bs-target="#q1">
+                                Ist TheraPano GoBD-konform?
+                            </button>
+                        </h2>
+                        <div id="q1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted small">
+                                Ja, unsere Rechnungsstellung und Stornosysteme folgen den strengen Vorgaben der GoBD für eine revisionssichere Buchführung.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-card mb-3 reveal-hidden" style="padding: 1rem;">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed bg-transparent text-white" type="button" data-bs-toggle="collapse" data-bs-target="#q2">
+                                Läuft die Software auf meinem iPad?
+                            </button>
+                        </h2>
+                        <div id="q2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+                            <div class="accordion-body text-muted small">
+                                Absolut. TheraPano ist webbasiert und für Tablets optimiert, sodass du Befunde direkt am Tier erfassen kannst.
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<section class="py-5 text-center">
+<section class="py-5 text-center reveal-hidden">
     <div class="container py-5">
-        <h2 class="section-title h1 mb-4">Starte jetzt digital durch.</h2>
-        <a href="/register" class="btn-nav-primary btn-lg px-5 py-3">Kostenlos testen</a>
+        <h2 class="section-title h1 mb-4">Bereit für die Praxis der <span class="gradient-text">Zukunft?</span></h2>
+        <p class="text-muted mb-5 mx-auto" style="max-width: 600px;">Teste TheraPano 14 Tage lang völlig unverbindlich mit vollem Funktionsumfang.</p>
+        <a href="/register" class="btn-nav-primary btn-lg px-5 py-3 h4">Kostenlos testen</a>
     </div>
 </section>
 {% endblock %}

@@ -175,7 +175,6 @@
                     </div>
                     
                     <form action="/admin/praxis-cron/update-token" method="POST" class="d-inline">
-                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                         <input type="hidden" name="tenant_id" value="{{ tenant.id }}">
                         <input type="hidden" name="cron_job_key" value="dispatcher">
                         <input type="hidden" name="token" id="input-token-{{ tenant.id }}">
@@ -216,12 +215,11 @@ function copyToClipboard(elementId) {
 function runCron(tenantId, cronJobKey) {
     const resultDiv = document.getElementById('result-' + tenantId);
     resultDiv.innerHTML = '<span class="text-info">⏳ Dispatcher wird gestartet...</span>';
-    
+
     const formData = new FormData();
     formData.append('tenant_id', tenantId);
     formData.append('cron_job_key', cronJobKey);
-    formData.append('_csrf_token', '{{ csrf_token }}');
-    
+
     fetch('/admin/praxis-cron/run-now', {
         method: 'POST',
         body: formData

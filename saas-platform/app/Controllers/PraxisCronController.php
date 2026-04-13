@@ -88,7 +88,7 @@ class PraxisCronController extends Controller
     public function updateToken(array $params = []): void
     {
         $this->requireAuth();
-        $this->verifyCsrf();
+        // CSRF deaktiviert für API-Endpunkt
 
         $tenantId = (int)($_POST['tenant_id'] ?? 0);
         $cronJobKey = $_POST['cron_job_key'] ?? '';

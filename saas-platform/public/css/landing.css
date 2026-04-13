@@ -5,64 +5,129 @@
     --lp-accent: #06b6d4;
     --lp-text: #f8fafc;
     --lp-muted: #94a3b8;
-    --lp-border: rgba(255, 255, 255, 0.1);
-    --lp-glass: rgba(15, 23, 42, 0.82);
+    --lp-border: rgba(255, 255, 255, 0.08);
+    --lp-glass: rgba(15, 23, 42, 0.7);
     --lp-font-header: 'Outfit', sans-serif;
+    --lp-glow: 0 0 20px rgba(59, 130, 246, 0.15);
 }
 
-/* Base resets */
 body {
     background-color: var(--lp-bg);
     color: var(--lp-text);
     font-family: 'Inter', sans-serif;
-    line-height: 1.6;
+    line-height: 1.7;
+    background-image: 
+        radial-gradient(circle at 0% 0%, rgba(59, 130, 246, 0.05), transparent 40%),
+        radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.05), transparent 40%);
 }
 
-h1, h2, h3, h4, .section-title {
-    font-family: var(--lp-font-header);
-    font-weight: 800;
-    color: #fff;
-}
+/* Animations Helpers */
+.reveal-hidden { opacity: 0; transform: translateY(30px); }
 
-.gradient-text {
-    background: linear-gradient(135deg, #fff 40%, var(--lp-primary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+/* Typography */
+.section-kicker {
     display: inline-block;
+    color: var(--lp-primary);
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
 }
 
-/* Sections */
-.hero {
-    padding: 8rem 0 6rem;
-    background: radial-gradient(circle at 50% 20%, rgba(59, 130, 246, 0.1), transparent 60%);
-}
-
-.hero-intro h1 {
-    font-size: clamp(2.2rem, 5vw, 4rem);
-    line-height: 1.1;
+.section-title {
+    font-size: clamp(2rem, 4vw, 3.2rem);
     margin-bottom: 1.5rem;
+    letter-spacing: -0.02em;
 }
 
-.hero-intro p {
-    font-size: 1.15rem;
-    color: var(--lp-muted);
-    max-width: 600px;
-    margin-bottom: 2.5rem;
-}
-
-/* Cards */
+/* Feature Cards & Boards */
 .glass-card {
     background: var(--lp-glass);
     backdrop-filter: blur(20px);
     border: 1px solid var(--lp-border);
-    border-radius: 24px;
-    padding: 2.5rem;
-    transition: transform 0.3s ease, border-color 0.3s ease;
+    border-radius: 28px;
+    padding: 3rem;
+    height: 100%;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-card:hover {
-    border-color: rgba(59, 130, 246, 0.3);
-    transform: translateY(-5px);
+    border-color: rgba(59, 130, 246, 0.4);
+    box-shadow: var(--lp-glow);
+    transform: translateY(-8px);
+}
+
+.feature-list { list-style: none; padding: 0; margin: 0; }
+.feature-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    font-size: 0.95rem;
+    color: var(--lp-muted);
+}
+
+.feature-list i {
+    color: var(--lp-primary);
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+/* Specific Feature UI */
+.clinical-tag {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--lp-border);
+    padding: 0.4rem 0.8rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--lp-text);
+}
+
+.beta-badge {
+    background: linear-gradient(90deg, #7c3aed, #ec4899);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 900;
+    padding: 0.2rem 0.5rem;
+    border-radius: 6px;
+    vertical-align: middle;
+    margin-left: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    box-shadow: 0 0 10px rgba(124, 58, 237, 0.4);
+}
+
+.app-platform-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--lp-border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.app-platform-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--lp-primary);
+}
+
+/* Hero enhancements */
+.hero {
+    padding: 10rem 0 8rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    top: -20%; left: 50%;
+    width: 60%; height: 60%;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.1), transparent 70%);
+    filter: blur(80px);
+    pointer-events: none;
 }
 
 /* Bento Grid */
