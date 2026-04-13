@@ -72,15 +72,33 @@ body{background:var(--lp-bg);color:var(--lp-text)}
 .section-title{margin:.85rem 0;color:var(--lp-title);font-size:clamp(1.8rem,4vw,2.8rem);font-weight:900;letter-spacing:-.02em}
 .section-sub{color:var(--lp-muted);max-width:850px;line-height:1.72}
 
-.feature-stage,.audience-section,.pricing,.faq-section{padding:5rem 0}
+.feature-stage,.audience-section,.pricing,.faq-section{padding:5.8rem 0}
 .feature-stage{background:linear-gradient(180deg,var(--lp-bg-soft),var(--lp-bg))}
-.bento-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1rem}
-.bento{background:var(--lp-card);border:1px solid var(--lp-border);border-radius:1rem;padding:1.1rem;box-shadow:var(--lp-shadow);text-align:center}
-.bento-large{grid-column:span 1}
-.bento h3{color:var(--lp-title);font-size:1.05rem;margin-bottom:.45rem}
-.bento p{color:var(--lp-muted);font-size:.9rem;line-height:1.65;margin:0}
-.bento ul{margin:.7rem 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:.4rem}
-.bento ul li{font-size:.72rem;padding:.24rem .55rem;border-radius:999px;background:rgba(59,130,246,.14);color:#bfdbfe;border:1px solid rgba(59,130,246,.35)}
+.bento-grid{
+    display:grid !important;
+    grid-template-columns:repeat(auto-fit,minmax(280px,1fr)) !important;
+    gap:1.1rem;
+    align-items:stretch;
+}
+.bento{
+    background:linear-gradient(155deg,rgba(22,32,58,.95),rgba(10,18,36,.92));
+    border:1px solid rgba(96,165,250,.45);
+    border-radius:1.1rem;
+    padding:1.35rem;
+    box-shadow:0 18px 42px rgba(2,6,23,.42), inset 0 1px 0 rgba(255,255,255,.06);
+    text-align:center !important;
+    min-height:170px;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+}
+html[data-bs-theme="light"] .bento{
+    background:linear-gradient(155deg,#ffffff,#eff4ff);
+    border-color:rgba(59,130,246,.28);
+    box-shadow:0 14px 30px rgba(15,23,42,.1), inset 0 1px 0 rgba(255,255,255,.6);
+}
+.bento h3{color:var(--lp-title);font-size:1.12rem;margin-bottom:.55rem;font-weight:800;letter-spacing:-.01em}
+.bento p{color:var(--lp-muted);font-size:.94rem;line-height:1.7;margin:0 auto;max-width:34ch}
 
 .audience-section{background:var(--lp-bg);border-top:1px solid var(--lp-border);border-bottom:1px solid var(--lp-border)}
 .audience-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
