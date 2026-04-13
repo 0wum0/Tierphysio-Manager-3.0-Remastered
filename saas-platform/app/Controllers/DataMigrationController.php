@@ -855,9 +855,9 @@ class DataMigrationController extends Controller
         $this->verifyCsrf();
 
         $migrationFiles = [
-            dirname(__DIR__, 2) . '/plugins/google-calendar-sync/migrations/001_google_calendar.sql',
-            dirname(__DIR__, 2) . '/plugins/google-calendar-sync/migrations/002_google_twoway_sync.sql',
-            dirname(__DIR__, 2) . '/plugins/google-calendar-sync/migrations/003_appointments_google_event_id.sql',
+            dirname(__DIR__, 3) . '/plugins/google-calendar-sync/migrations/001_google_calendar.sql',
+            dirname(__DIR__, 3) . '/plugins/google-calendar-sync/migrations/002_google_twoway_sync.sql',
+            dirname(__DIR__, 3) . '/plugins/google-calendar-sync/migrations/003_appointments_google_event_id.sql',
         ];
 
         // Prüfe ob alle Migrations-Dateien existieren
