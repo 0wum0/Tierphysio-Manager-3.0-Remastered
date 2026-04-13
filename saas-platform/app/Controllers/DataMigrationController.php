@@ -723,6 +723,121 @@ class DataMigrationController extends Controller
         }
     }
 
+    /**
+     * POST /admin/migration/patch-all-tenants
+     *
+     * Führt tenant_patch_existing.sql dynamisch für ALLE Tenants aus.
+     * Der hardcodierte Prefix im SQL wird durch den echten Tenant-Prefix ersetzt.
+     * IF NOT EXISTS / ADD COLUMN IF NOT EXISTS sorgt dafür dass alles
+     * sicher wiederholbar ist — vorhandene Tabellen/Spalten werden übersprungen.
+     */
+    public function patchAllTenants(array $params = []): void
+    {
+        $this->requireAuth();
+        $this->verifyCsrf();
+
+        // Patch-Datei einlesen
+        $patchFile = dirname(__DIR__, 2) . '/provisioning/tenant_patch_existing.sql';
+        if (!file_exists($patchFile)) {
+            $this->jsonError('Patch-Datei nicht gefunden: provisioning/tenant_patch_existing.sql');
+        }
+
+        $rawSql = file_get_contents($patchFile);
+        if ($rawSql === false || trim($rawSql) === '') {
+            $this->jsonError('Patch-Datei ist leer oder nicht lesbar.');
+        }
+
+        // Den hardcodierten Referenz-Prefix aus dem SQL ermitteln.
+        // In tenant_patch_existing.sql steht: SET @prefix = 'demo_praxis_tierphys_6771f0';
+        // und alle Tabellen heissen: `t_demo_praxis_tierphys_6771f0_tablename`
+        // Wir ersetzen diesen hardcodierten Prefix dynamisch.
+        $referencePrefix = 't_demo_praxis_tierphys_6771f0_';
+
+        // Alle Tenants laden
+        $tenants = $this->tenantRepo->all(1000, 0);
+        if (empty($tenants)) {
+            $this->jsonError('Keine Tenants gefunden.');
+        }
+
+        $results = [];
+
+        foreach ($tenants as $tenant) {
+            $prefix = rtrim((string)($tenant['db_name'] ?? ''), '_') . '_';
+            if ($prefix === '_' || empty($tenant['db_name'])) continue;
+
+            // SQL: Referenz-Prefix durch echten Tenant-Prefix ersetzen
+            $tenantSql = str_replace($referencePrefix, $prefix, $rawSql);
+
+            // SET @prefix Zeile entfernen (nicht nötig, würde Fehler verursachen)
+            $tenantSql = preg_replace("/SET\s+@prefix\s*=\s*'[^']*'\s*;/i", '', $tenantSql);
+
+            $pdo = $this->db->getPdo();
+            $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+
+            $statements = $this->splitStatements($tenantSql);
+            $ok = 0;
+            $skipped = 0;
+            $errors = [];
+
+            foreach ($statements as $stmt) {
+                $stmt = trim($stmt);
+                if ($stmt === '') continue;
+                // Kommentare überspringen
+                if (preg_match('/^(--|#|\/\*)/i', $stmt)) continue;
+                // SET FOREIGN_KEY_CHECKS bereits gesetzt, überspringen
+                if (preg_match('/^SET\s+FOREIGN_KEY_CHECKS/i', $stmt)) continue;
+
+                try {
+                    $pdo->exec($stmt);
+                    $ok++;
+                } catch (\Throwable $e) {
+                    $msg   = $e->getMessage();
+                    $errno = 0;
+                    if ($e instanceof \PDOException && isset($e->errorInfo[1])) {
+                        $errno = (int)$e->errorInfo[1];
+                    }
+                    // Sicher ignorieren:
+                    // 1050 = Table already exists
+                    // 1060 = Duplicate column name
+                    // 1061 = Duplicate key name
+                    // 1062 = Duplicate entry
+                    // 1068 = Multiple primary key defined
+                    if (in_array($errno, [1050, 1060, 1061, 1062, 1068], true)
+                        || str_contains($msg, 'already exists')
+                        || str_contains($msg, 'Duplicate')
+                        || str_contains($msg, 'Multiple primary key')) {
+                        $skipped++;
+                    } else {
+                        $errors[] = mb_substr($stmt, 0, 80) . '… → ' . $msg;
+                    }
+                }
+            }
+
+            $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+
+            $results[] = [
+                'tenant'  => $tenant['practice_name'],
+                'prefix'  => $prefix,
+                'status'  => empty($errors) ? 'success' : 'error',
+                'message' => empty($errors)
+                    ? "{$ok} ausgeführt, {$skipped} übersprungen."
+                    : count($errors) . " Fehler ({$ok} OK, {$skipped} skip)",
+                'errors'  => $errors,
+            ];
+        }
+
+        $successCount = count(array_filter($results, fn($r) => $r['status'] === 'success'));
+        $errorCount   = count($results) - $successCount;
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'success' => $errorCount === 0,
+            'message' => "Patch abgeschlossen: {$successCount} Tenants OK, {$errorCount} mit Fehlern.",
+            'results' => $results,
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
+
     public function migrateAll(array $params = []): void
     {
         $this->requireAuth();
@@ -955,6 +1070,221 @@ class DataMigrationController extends Controller
         echo json_encode([
             'success' => $errorCount === 0,
             'message' => "Google Plugin Migrations abgeschlossen: {$successCount} Tenants OK, {$errorCount} Fehler.",
+            'results' => $results,
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    /**
+     * POST /admin/migration/plugins-all-tenants
+     *
+     * Führt ALLE Plugin-Migrations (plugins/*/migrations/*.sql) für
+     * ALLE Tenants aus. Sicher wiederholbar.
+     * Tabellen-Prefixe werden automatisch gesetzt.
+     */
+    public function migratePluginsAllTenants(array $params = []): void
+    {
+        $this->requireAuth();
+        $this->verifyCsrf();
+
+        // Plugin-Migrations-Verzeichnisse finden
+        $pluginsDir = dirname(__DIR__, 2) . '/plugins';
+        if (!is_dir($pluginsDir)) {
+            $this->jsonError('Plugins-Verzeichnis nicht gefunden: ' . $pluginsDir);
+        }
+
+        // Alle SQL-Dateien aus allen plugins/*/migrations/ sammeln
+        $migrationFiles = [];
+        $pluginMigDirs  = glob($pluginsDir . '/*/migrations', GLOB_ONLYDIR) ?: [];
+        foreach ($pluginMigDirs as $dir) {
+            $files = glob($dir . '/*.sql') ?: [];
+            sort($files);
+            foreach ($files as $file) {
+                $migrationFiles[] = $file;
+            }
+        }
+
+        if (empty($migrationFiles)) {
+            $this->jsonError('Keine Plugin-Migrations-Dateien gefunden.');
+        }
+
+        // Alle Plugin-Tabellennamen die geprefixed werden müssen
+        $pluginTables = [
+            'google_calendar_connections',
+            'google_calendar_sync_map',
+            'google_calendar_sync_log',
+            'google_calendar_imported_events',
+        ];
+
+        $tenants = $this->tenantRepo->all(1000, 0);
+        $results = [];
+
+        foreach ($tenants as $tenant) {
+            $prefix = rtrim((string)($tenant['db_name'] ?? ''), '_') . '_';
+            if ($prefix === '_' || empty($tenant['db_name'])) continue;
+
+            $pdo = $this->db->getPdo();
+            $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+
+            $ok = 0;
+            $skipped = 0;
+            $errors = [];
+
+            foreach ($migrationFiles as $file) {
+                $sql = (string)file_get_contents($file);
+
+                // Plugin-Tabellen prefixen
+                foreach ($pluginTables as $table) {
+                    $sql = preg_replace(
+                        '/`' . preg_quote($table, '/') . '`/',
+                        '`' . $prefix . $table . '`',
+                        $sql
+                    );
+                }
+
+                // Constraint-Namen prefixen (verhindert Duplikat-Constraint-Fehler)
+                $sql = preg_replace_callback(
+                    '/\bCONSTRAINT\s+`([^`]+)`/i',
+                    fn($m) => 'CONSTRAINT `' . $prefix . $m[1] . '`',
+                    $sql
+                );
+
+                $statements = $this->splitStatements($sql);
+
+                foreach ($statements as $stmt) {
+                    $stmt = trim($stmt);
+                    if ($stmt === '') continue;
+                    if (preg_match('/^(--|#|\/\*)/i', $stmt)) continue;
+                    if (preg_match('/^SET\s+FOREIGN_KEY_CHECKS/i', $stmt)) continue;
+
+                    try {
+                        $pdo->exec($stmt);
+                        $ok++;
+                    } catch (\Throwable $e) {
+                        $msg   = $e->getMessage();
+                        $errno = 0;
+                        if ($e instanceof \PDOException && isset($e->errorInfo[1])) {
+                            $errno = (int)$e->errorInfo[1];
+                        }
+                        if (in_array($errno, [1050, 1060, 1061, 1062, 1068], true)
+                            || str_contains($msg, 'already exists')
+                            || str_contains($msg, 'Duplicate')
+                            || str_contains($msg, 'Multiple primary key')) {
+                            $skipped++;
+                        } else {
+                            $errors[] = basename($file) . ': ' . mb_substr($stmt, 0, 60) . '… → ' . $msg;
+                        }
+                    }
+                }
+            }
+
+            $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+
+            $results[] = [
+                'tenant'  => $tenant['practice_name'],
+                'prefix'  => $prefix,
+                'status'  => empty($errors) ? 'success' : 'error',
+                'message' => empty($errors)
+                    ? "{$ok} ausgeführt, {$skipped} übersprungen."
+                    : count($errors) . " Fehler ({$ok} OK)",
+                'errors'  => $errors,
+            ];
+        }
+
+        $successCount = count(array_filter($results, fn($r) => $r['status'] === 'success'));
+        $errorCount   = count($results) - $successCount;
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'success' => $errorCount === 0,
+            'message' => "Plugin-Migrations abgeschlossen: {$successCount} Tenants OK, {$errorCount} Fehler.",
+            'results' => $results,
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
+
+    /**
+     * POST /admin/migration/schema-all-tenants
+     *
+     * Führt tenant_schema.sql für ALLE Tenants aus.
+     * Legt fehlende Tabellen an, überspringt vorhandene (IF NOT EXISTS).
+     * Aktualisiert auch die migrations-Versionstabelle.
+     */
+    public function migrateSchemaAllTenants(array $params = []): void
+    {
+        $this->requireAuth();
+        $this->verifyCsrf();
+
+        $schemaFile = dirname(__DIR__, 2) . '/provisioning/tenant_schema.sql';
+        if (!file_exists($schemaFile)) {
+            $this->jsonError('Schema-Datei nicht gefunden: provisioning/tenant_schema.sql');
+        }
+
+        $rawSql = (string)file_get_contents($schemaFile);
+
+        $tenants = $this->tenantRepo->all(1000, 0);
+        $results = [];
+
+        foreach ($tenants as $tenant) {
+            $prefix = rtrim((string)($tenant['db_name'] ?? ''), '_') . '_';
+            if ($prefix === '_' || empty($tenant['db_name'])) continue;
+
+            // Prefix auf alle Tabellen im Schema anwenden
+            $tenantSql = $this->applyPrefixToSqlLocally($rawSql, $prefix);
+
+            $pdo = $this->db->getPdo();
+            $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+
+            $statements = $this->splitStatements($tenantSql);
+            $ok = 0;
+            $skipped = 0;
+            $errors = [];
+
+            foreach ($statements as $stmt) {
+                $stmt = trim($stmt);
+                if ($stmt === '') continue;
+                if (preg_match('/^(--|#|\/\*|SET\s+NAMES|SET\s+FOREIGN)/i', $stmt)) continue;
+
+                try {
+                    $pdo->exec($stmt);
+                    $ok++;
+                } catch (\Throwable $e) {
+                    $msg   = $e->getMessage();
+                    $errno = 0;
+                    if ($e instanceof \PDOException && isset($e->errorInfo[1])) {
+                        $errno = (int)$e->errorInfo[1];
+                    }
+                    if (in_array($errno, [1050, 1060, 1061, 1062, 1068], true)
+                        || str_contains($msg, 'already exists')
+                        || str_contains($msg, 'Duplicate')
+                        || str_contains($msg, 'Multiple primary key')) {
+                        $skipped++;
+                    } else {
+                        $errors[] = mb_substr($stmt, 0, 80) . '… → ' . $msg;
+                    }
+                }
+            }
+
+            $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+
+            $results[] = [
+                'tenant'  => $tenant['practice_name'],
+                'prefix'  => $prefix,
+                'status'  => empty($errors) ? 'success' : 'error',
+                'message' => empty($errors)
+                    ? "{$ok} ausgeführt, {$skipped} übersprungen."
+                    : count($errors) . " Fehler ({$ok} OK)",
+                'errors'  => $errors,
+            ];
+        }
+
+        $successCount = count(array_filter($results, fn($r) => $r['status'] === 'success'));
+        $errorCount   = count($results) - $successCount;
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'success' => $errorCount === 0,
+            'message' => "Schema-Migration abgeschlossen: {$successCount} Tenants OK, {$errorCount} Fehler.",
             'results' => $results,
         ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         exit;

@@ -95,10 +95,13 @@ $router->post('/admin/updates/apply',      [UpdateController::class, 'applyUpdat
 
 
 // ── Daten-Import / Migration ─────────────────────────────────────────────
-$router->get('/admin/migration',      [DataMigrationController::class, 'index']);
-$router->post('/admin/migration/run', [DataMigrationController::class, 'run']);
-$router->post('/admin/migration/patch-all', [DataMigrationController::class, 'patchAll']);
-$router->post('/admin/migration/migrate-all', [DataMigrationController::class, 'migrateAll']);
+$router->get('/admin/migration',                          [DataMigrationController::class, 'index']);
+$router->post('/admin/migration/run',                     [DataMigrationController::class, 'run']);
+$router->post('/admin/migration/patch-all',               [DataMigrationController::class, 'patchAll']);
+$router->post('/admin/migration/migrate-all',             [DataMigrationController::class, 'migrateAll']);
+$router->post('/admin/migration/patch-all-tenants',       [DataMigrationController::class, 'patchAllTenants']);
+$router->post('/admin/migration/plugins-all-tenants',     [DataMigrationController::class, 'migratePluginsAllTenants']);
+$router->post('/admin/migration/schema-all-tenants',      [DataMigrationController::class, 'migrateSchemaAllTenants']);
 
 // ── Payment Settings (Admin) ────────────────────────────────────────────────
 $router->get('/admin/payment-settings',              [PaymentSettingsController::class, 'index']);

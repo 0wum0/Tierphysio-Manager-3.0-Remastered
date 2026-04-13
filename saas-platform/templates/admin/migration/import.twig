@@ -9,6 +9,87 @@
     </div>
 </div>
 
+<!-- ═══ MIGRATIONS-ZENTRALE ═══════════════════════════════════════════ -->
+<div class="row g-3 mb-4">
+
+    <!-- Card 1: Schema für alle Tenants -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-database-fill-gear text-primary"></i>
+                <strong>Schema – Alle Tenants</strong>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3" style="font-size:.8rem;">
+                    Führt <code>tenant_schema.sql</code> für alle Tenants aus.
+                    Legt fehlende Tabellen an, überspringt vorhandene.
+                    Sicher wiederholbar.
+                </p>
+                <form method="POST" action="/admin/migration/schema-all-tenants"
+                      class="migration-form" data-result="result-schema">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-database-up me-2"></i>Schema ausrollen
+                    </button>
+                </form>
+                <div id="result-schema" class="mt-2" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 2: Patch für alle Tenants -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-wrench-adjustable text-warning"></i>
+                <strong>Patch – Alle Tenants</strong>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3" style="font-size:.8rem;">
+                    Führt <code>tenant_patch_existing.sql</code> für alle Tenants
+                    aus. Fügt fehlende Spalten & Tabellen hinzu.
+                    Sicher wiederholbar.
+                </p>
+                <form method="POST" action="/admin/migration/patch-all-tenants"
+                      class="migration-form" data-result="result-patch">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-warning w-100">
+                        <i class="bi bi-wrench me-2"></i>Patch ausrollen
+                    </button>
+                </form>
+                <div id="result-patch" class="mt-2" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 3: Plugin-Migrations für alle Tenants -->
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-puzzle-fill text-success"></i>
+                <strong>Plugins – Alle Tenants</strong>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3" style="font-size:.8rem;">
+                    Führt alle Plugin-Migrations (<code>plugins/*/migrations/*.sql</code>)
+                    für alle Tenants aus. Inkl. Google Kalender.
+                    Sicher wiederholbar.
+                </p>
+                <form method="POST" action="/admin/migration/plugins-all-tenants"
+                      class="migration-form" data-result="result-plugins">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-puzzle me-2"></i>Plugins ausrollen
+                    </button>
+                </form>
+                <div id="result-plugins" class="mt-2" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+</div>
+<!-- ═══ ENDE MIGRATIONS-ZENTRALE ══════════════════════════════════════ -->
+
 <div class="row g-4">
     <!-- Upload-Formular -->
     <div class="col-lg-5">
@@ -734,6 +815,65 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
     }
+
+    // Universeller AJAX-Handler für alle Migration-Forms
+    document.querySelectorAll('.migration-form').forEach(function(form) {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const resultId  = this.dataset.result;
+            const resultDiv = document.getElementById(resultId);
+            const btn       = this.querySelector('button[type="submit"]');
+            const origHtml  = btn.innerHTML;
+
+            btn.disabled  = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Läuft...';
+            if (resultDiv) resultDiv.style.display = 'none';
+
+            try {
+                const fd  = new FormData(this);
+                const res = await fetch(this.action, { method: 'POST', body: fd });
+                const data = await res.json();
+
+                if (!resultDiv) return;
+
+                // Ergebnis-Tabelle aufbauen
+                const rows = (data.results || []).map(function(r) {
+                    const icon = r.status === 'success' ? '✅' : '❌';
+                    const errs = (r.errors || []).length
+                        ? '<br><small style="color:#f87171;font-size:.7rem">'
+                          + r.errors.slice(0, 3).join('<br>') + '</small>'
+                        : '';
+                    return '<tr>'
+                        + '<td>' + icon + '</td>'
+                        + '<td style="font-size:.8rem">' + r.tenant + '</td>'
+                        + '<td><code style="font-size:.7rem">' + r.prefix + '</code></td>'
+                        + '<td style="font-size:.75rem">' + r.message + errs + '</td>'
+                        + '</tr>';
+                }).join('');
+
+                const alertClass = data.success ? 'alert-success' : 'alert-warning';
+                resultDiv.innerHTML =
+                    '<div class="alert ' + alertClass + ' py-2 mb-2" style="font-size:.8rem">'
+                    + data.message + '</div>'
+                    + (rows
+                        ? '<div style="max-height:250px;overflow-y:auto">'
+                          + '<table class="table table-sm mb-0" style="font-size:.75rem">'
+                          + '<thead><tr><th></th><th>Praxis</th><th>Prefix</th><th>Ergebnis</th></tr></thead>'
+                          + '<tbody>' + rows + '</tbody></table></div>'
+                        : '');
+                resultDiv.style.display = '';
+            } catch (err) {
+                if (resultDiv) {
+                    resultDiv.innerHTML = '<div class="alert alert-danger py-2" style="font-size:.8rem">Fehler: ' + err.message + '</div>';
+                    resultDiv.style.display = '';
+                }
+            } finally {
+                btn.disabled  = false;
+                btn.innerHTML = origHtml;
+            }
+        });
+    });
 })();
 </script>
 {% endblock %}
