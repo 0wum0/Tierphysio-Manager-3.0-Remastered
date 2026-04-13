@@ -72,6 +72,46 @@ class CustomVetReportPdfService
 
         $pdf->AddPage();
 
+        // ── Sidebar (Seitenstreifen) ─────────────────────────────────────────
+        $pdf->SetFillColor(...$sidebarColor);
+        $pdf->Rect(0, 0, $sidebarW, $pageH, 'F');
+
+        $logoY = 14;
+        if ($logoFile && file_exists($logoFile)) {
+            $pdf->Image($logoFile, 3, $logoY, $sidebarW - 6, 0, '', '', '', true, 300, '', false, false, 0, false, false, false);
+            $logoY += 18;
+        } else {
+            $cx = $sidebarW / 2; $cy = $logoY + 12;
+            $pdf->SetDrawColor(255, 255, 255);
+            $pdf->SetLineWidth(0.5);
+            $pdf->Circle($cx, $cy, 11, 0, 360, 'D');
+            $pdf->SetFont($font, 'B', 7);
+            $pdf->SetTextColor(255, 255, 255);
+            $pdf->SetXY(3, $cy - 4);
+            $pdf->Cell($sidebarW - 6, 8, 'LOGO', 0, 0, 'C');
+            $logoY += 28;
+        }
+
+        $sideY = $logoY + 8;
+        $pdf->SetFont($font, '', $fontSize - 2);
+        $pdf->SetTextColor(220, 235, 220);
+        $pdf->SetXY(3, $sideY);
+        $pdf->Cell($sidebarW - 6, 4, 'Dokument', 0, 1, 'C');
+        $pdf->SetFont($font, 'B', $fontSize - 1);
+        $pdf->SetTextColor(255, 255, 255);
+        $pdf->SetXY(3, $sideY + 4);
+        $pdf->Cell($sidebarW - 6, 5, 'Tierarztbericht', 0, 1, 'C');
+
+        $sideY += 22;
+        $pdf->SetFont($font, '', $fontSize - 2);
+        $pdf->SetTextColor(220, 235, 220);
+        $pdf->SetXY(3, $sideY);
+        $pdf->Cell($sidebarW - 6, 4, 'Erstellt am', 0, 1, 'C');
+        $pdf->SetFont($font, 'B', $fontSize - 1);
+        $pdf->SetTextColor(255, 255, 255);
+        $pdf->SetXY(3, $sideY + 4);
+        $pdf->Cell($sidebarW - 6, 5, $createdDate, 0, 1, 'C');
+
         // ── Company info top right ────────────────────────────────────────
         $pdf->SetFont($font, 'B', $fontSize + 1);
         $pdf->SetTextColor(30, 30, 30);
