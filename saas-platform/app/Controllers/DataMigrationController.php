@@ -542,16 +542,28 @@ class DataMigrationController extends Controller
             $stmt->execute([$targetVersion]);
             $deleted = $stmt->rowCount();
 
+            // Alle Versionen vor targetVersion auch löschen (komplettes Reset)
+            $stmt2 = $pdo->prepare("DELETE FROM `{$migTbl}` WHERE version >= ?");
+            $stmt2->execute([$targetVersion]);
+            $deleted2 = $stmt2->rowCount();
+
             // Aktuelle Version ermitteln
             $currentStmt = $pdo->query("SELECT MAX(version) as max_version FROM `{$migTbl}`");
             $currentVersion = (int)($currentStmt->fetchColumn() ?? 0);
 
+            // Alle Versionen anzeigen
+            $allStmt = $pdo->query("SELECT version FROM `{$migTbl}` ORDER BY version");
+            $allVersions = $allStmt->fetchAll(PDO::FETCH_COLUMN);
+
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
                 'success' => true,
-                'message' => "Version von Tenant {$tenant['practice_name']} zurückgesetzt: {$deleted} Einträge gelöscht, aktuelle Version: {$currentVersion}",
-                'deleted' => $deleted,
-                'current_version' => $currentVersion
+                'message' => "Version von Tenant {$tenant['practice_name']} zurückgesetzt: {$deleted} + {$deleted2} Einträge gelöscht, aktuelle Version: {$currentVersion}",
+                'deleted' => $deleted + $deleted2,
+                'current_version' => $currentVersion,
+                'all_versions' => $allVersions,
+                'prefix' => $prefix,
+                'migTbl' => $migTbl
             ]);
             exit;
         } catch (\Throwable $e) {
