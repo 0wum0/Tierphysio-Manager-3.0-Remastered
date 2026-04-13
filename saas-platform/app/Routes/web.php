@@ -16,6 +16,7 @@ use Saas\Controllers\DataMigrationController;
 use Saas\Controllers\FeedbackController;
 use Saas\Controllers\PaymentSettingsController;
 use Saas\Controllers\GoogleSettingsController;
+use Saas\Controllers\PraxisCronController;
 
 // ── License API (called by Praxissoftware) ─────────────────────────────────
 $router->post('/api/license/verify',  [LicenseApiController::class, 'verify']);
@@ -114,6 +115,11 @@ $router->post('/admin/payment-settings/cron/run',    [PaymentSettingsController:
 $router->get('/admin/google-settings',               [GoogleSettingsController::class, 'index']);
 $router->post('/admin/google-settings/update',       [GoogleSettingsController::class, 'update']);
 $router->get('/admin/google-settings/test',          [GoogleSettingsController::class, 'testConnection']);
+
+// ── Praxis Cronjobs (Admin) ───────────────────────────────────────────────────────────────
+$router->get('/admin/praxis-cron',                   [PraxisCronController::class, 'index']);
+$router->post('/admin/praxis-cron/update-token',     [PraxisCronController::class, 'updateToken']);
+$router->post('/admin/praxis-cron/run-now',          [PraxisCronController::class, 'runNow']);
 
 // ── Google Plugin: Einmal-Migration alle Tenants ───────────────────────────────────
 $router->post('/admin/migration/google-plugin', [DataMigrationController::class, 'migrateGooglePlugin']);

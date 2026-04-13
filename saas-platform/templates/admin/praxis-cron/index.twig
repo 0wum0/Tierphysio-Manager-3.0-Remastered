@@ -1,0 +1,249 @@
+{% extends 'layouts/base.twig' %}
+
+{% block title %}Praxis Cronjobs - SaaS Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h3 mb-4">Praxis Cronjobs</h1>
+            
+            <div class="alert alert-info">
+                <strong>Info:</strong> Hier können Sie die Cronjobs für alle Praxen konfigurieren. Die technischen Endpunkte in der Praxis-App bleiben bestehen, werden aber nicht mehr im Praxis-UI angezeigt.
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Verfügbare Cronjobs</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Icon</th>
+                                    <th>Name</th>
+                                    <th>Beschreibung</th>
+                                    <th>Zeitplan</th>
+                                    <th>Endpoint</th>
+                                    <th>Token-Feld</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for key, job in cronjobs %}
+                                <tr>
+                                    <td style="font-size: 1.5rem;">{{ job.icon }}</td>
+                                    <td><strong>{{ job.name }}</strong></td>
+                                    <td>{{ job.description }}</td>
+                                    <td>
+                                        <code>{{ job.schedule }}</code>
+                                        <br>
+                                        <small class="text-muted">{{ job.schedule_readable }}</small>
+                                    </td>
+                                    <td><code>{{ job.endpoint }}</code></td>
+                                    <td><code>{{ job.token_field }}</code></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Praxen</h5>
+                </div>
+                <div class="card-body">
+                    {% if tenants is empty %}
+                    <div class="alert alert-warning">
+                        Keine aktiven Praxen gefunden.
+                    </div>
+                    {% else %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Tenant ID</th>
+                                    <th>Praxis Name</th>
+                                    <th>Email</th>
+                                    <th>Status</th>
+                                    <th>Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tenant in tenants %}
+                                <tr>
+                                    <td>{{ tenant.id }}</td>
+                                    <td>{{ tenant.practice_name }}</td>
+                                    <td>{{ tenant.email }}</td>
+                                    <td>
+                                        <span class="badge bg-success">{{ tenant.status }}</span>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modal-{{ tenant.id }}">
+                                            Cronjobs konfigurieren
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% for tenant in tenants %}
+<!-- Modal für {{ tenant.slug }} -->
+<div class="modal fade" id="modal-{{ tenant.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cronjobs für {{ tenant.practice_name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Praxis:</strong> {{ tenant.practice_name }}</p>
+                <p><strong>Email:</strong> {{ tenant.email }}</p>
+                <p><strong>UUID:</strong> <code>{{ tenant.uuid }}</code></p>
+                <p><strong>Prefix:</strong> <code>t_{{ tenant.uuid }}_</code></p>
+                <hr>
+                
+                {% for key, job in cronjobs %}
+                <div class="mb-4 p-3 border rounded">
+                    <h6>{{ job.icon }} {{ job.name }}</h6>
+                    <p class="text-muted small">{{ job.description }}</p>
+                    
+                    <div class="mb-2">
+                        <label class="form-label fw-bold">Token für {{ job.token_field }}</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control font-monospace" id="token-{{ tenant.id }}-{{ key }}" placeholder="Token eingeben...">
+                            <button type="button" class="btn btn-outline-secondary" onclick="generateToken('token-{{ tenant.id }}-{{ key }}')">
+                                🎲 Generieren
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <label class="form-label fw-bold">Cron-URL</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control font-monospace" id="url-{{ tenant.id }}-{{ key }}" readonly>
+                            <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('url-{{ tenant.id }}-{{ key }}')">
+                                📋 Kopieren
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <label class="form-label fw-bold">Cron-Befehl</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control font-monospace" id="cmd-{{ tenant.id }}-{{ key }}" readonly>
+                            <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('cmd-{{ tenant.id }}-{{ key }}')">
+                                📋 Kopieren
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <form action="/admin/praxis-cron/update-token" method="POST" class="d-inline">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="tenant_id" value="{{ tenant.id }}">
+                        <input type="hidden" name="cron_job_key" value="{{ key }}">
+                        <input type="hidden" name="token" id="input-token-{{ tenant.id }}-{{ key }}">
+                        <button type="submit" class="btn btn-sm btn-success">Token speichern</button>
+                    </form>
+                    
+                    <button type="button" class="btn btn-sm btn-info" onclick="runCron({{ tenant.id }}, '{{ key }}')">
+                        ▶️ Run now
+                    </button>
+                    <div id="result-{{ tenant.id }}-{{ key }}" class="mt-2 small"></div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Schließen</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<script>
+function generateToken(inputId) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let token = '';
+    for (let i = 0; i < 40; i++) {
+        token += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    document.getElementById(inputId).value = token;
+    updateUrlsAndCmds();
+}
+
+function copyToClipboard(elementId) {
+    const element = document.getElementById(elementId);
+    element.select();
+    document.execCommand('copy');
+}
+
+function runCron(tenantId, cronJobKey) {
+    const resultDiv = document.getElementById('result-' + tenantId + '-' + cronJobKey);
+    resultDiv.innerHTML = '<span class="text-info">⏳ Ausführung wird gestartet...</span>';
+    
+    const formData = new FormData();
+    formData.append('tenant_id', tenantId);
+    formData.append('cron_job_key', cronJobKey);
+    formData.append('_csrf_token', '{{ csrf_token }}');
+    
+    fetch('/admin/praxis-cron/run-now', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultDiv.innerHTML = '<span class="text-success">✓ Erfolgreich (HTTP ' + data.http_code + ')</span>';
+        } else {
+            resultDiv.innerHTML = '<span class="text-danger">✗ Fehlgeschlagen: ' + (data.error || 'HTTP ' + data.http_code) + '</span>';
+        }
+    })
+    .catch(error => {
+        resultDiv.innerHTML = '<span class="text-danger">✗ Fehler: ' + error + '</span>';
+    });
+}
+
+function updateUrlsAndCmds() {
+    {% for tenant in tenants %}
+    {% for key, job in cronjobs %}
+    const token{{ tenant.id }}{{ key }} = document.getElementById('token-{{ tenant.id }}-{{ key }}').value;
+    const domain{{ tenant.id }} = '{{ tenant.email|split('@')[1] }}';
+    const url{{ tenant.id }}{{ key }} = 'https://' + domain{{ tenant.id }} + '{{ job.endpoint }}?token=' + token{{ tenant.id }}{{ key }};
+    const cmd{{ tenant.id }}{{ key }} = '{{ job.schedule }} curl -s "' + url{{ tenant.id }}{{ key }} + '" > /dev/null 2>&1';
+
+    document.getElementById('url-{{ tenant.id }}-{{ key }}').value = url{{ tenant.id }}{{ key }};
+    document.getElementById('cmd-{{ tenant.id }}-{{ key }}').value = cmd{{ tenant.id }}{{ key }};
+    document.getElementById('input-token-{{ tenant.id }}-{{ key }}').value = token{{ tenant.id }}{{ key }};
+    {% endfor %}
+    {% endfor %}
+}
+
+// Initialize on modal show
+document.addEventListener('DOMContentLoaded', function() {
+    {% for tenant in tenants %}
+    document.getElementById('modal-{{ tenant.id }}').addEventListener('show.bs.modal', function() {
+        // Load existing tokens from server via AJAX if needed
+    });
+    {% endfor %}
+});
+</script>
+{% endblock %}
