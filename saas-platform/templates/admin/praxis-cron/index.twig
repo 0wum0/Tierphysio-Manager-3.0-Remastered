@@ -73,8 +73,8 @@
                             <thead>
                                 <tr>
                                     <th>Tenant ID</th>
-                                    <th>Slug</th>
-                                    <th>Domain</th>
+                                    <th>Praxis Name</th>
+                                    <th>Email</th>
                                     <th>Status</th>
                                     <th>Aktionen</th>
                                 </tr>
@@ -83,8 +83,8 @@
                                 {% for tenant in tenants %}
                                 <tr>
                                     <td>{{ tenant.id }}</td>
-                                    <td><code>{{ tenant.slug }}</code></td>
-                                    <td>{{ tenant.domain }}</td>
+                                    <td>{{ tenant.practice_name }}</td>
+                                    <td>{{ tenant.email }}</td>
                                     <td>
                                         <span class="badge bg-success">{{ tenant.status }}</span>
                                     </td>
@@ -111,12 +111,14 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Cronjobs für {{ tenant.slug }}</h5>
+                <h5 class="modal-title">Cronjobs für {{ tenant.practice_name }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p><strong>Domain:</strong> {{ tenant.domain }}</p>
-                <p><strong>Prefix:</strong> <code>t_{{ tenant.slug }}_</code></p>
+                <p><strong>Praxis:</strong> {{ tenant.practice_name }}</p>
+                <p><strong>Email:</strong> {{ tenant.email }}</p>
+                <p><strong>UUID:</strong> <code>{{ tenant.uuid }}</code></p>
+                <p><strong>Prefix:</strong> <code>t_{{ tenant.uuid }}_</code></p>
                 <hr>
                 
                 {% for key, job in cronjobs %}
@@ -224,9 +226,10 @@ function updateUrlsAndCmds() {
     {% for tenant in tenants %}
     {% for key, job in cronjobs %}
     const token{{ tenant.id }}{{ key }} = document.getElementById('token-{{ tenant.id }}-{{ key }}').value;
-    const url{{ tenant.id }}{{ key }} = 'https://{{ tenant.domain }}{{ job.endpoint }}?token=' + token{{ tenant.id }}{{ key }};
+    const domain{{ tenant.id }} = '{{ tenant.email|split('@')[1] }}';
+    const url{{ tenant.id }}{{ key }} = 'https://' + domain{{ tenant.id }} + '{{ job.endpoint }}?token=' + token{{ tenant.id }}{{ key }};
     const cmd{{ tenant.id }}{{ key }} = '{{ job.schedule }} curl -s "' + url{{ tenant.id }}{{ key }} + '" > /dev/null 2>&1';
-    
+
     document.getElementById('url-{{ tenant.id }}-{{ key }}').value = url{{ tenant.id }}{{ key }};
     document.getElementById('cmd-{{ tenant.id }}-{{ key }}').value = cmd{{ tenant.id }}{{ key }};
     document.getElementById('input-token-{{ tenant.id }}-{{ key }}').value = token{{ tenant.id }}{{ key }};

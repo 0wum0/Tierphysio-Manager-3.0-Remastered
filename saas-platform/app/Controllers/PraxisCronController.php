@@ -25,8 +25,8 @@ class PraxisCronController extends Controller
     {
         $this->requireAuth();
 
-        // Get all tenants (without status filter for debugging)
-        $tenants = $this->db->fetchAll("SELECT id, slug, domain, status FROM tenants ORDER BY slug");
+        // Get all tenants
+        $tenants = $this->db->fetchAll("SELECT id, uuid, practice_name, email, status FROM tenants ORDER BY practice_name");
 
         // Define available cronjobs
         $cronjobs = [
@@ -100,13 +100,13 @@ class PraxisCronController extends Controller
         }
 
         // Get tenant prefix
-        $tenant = $this->db->fetch("SELECT slug FROM tenants WHERE id = ?", [$tenantId]);
+        $tenant = $this->db->fetch("SELECT uuid FROM tenants WHERE id = ?", [$tenantId]);
         if (!$tenant) {
             $this->session->flash('error', 'Tenant nicht gefunden.');
             $this->redirect('/admin/praxis-cron');
         }
 
-        $prefix = 't_' . $tenant['slug'] . '_';
+        $prefix = 't_' . $tenant['uuid'] . '_';
         $settingsTable = $prefix . 'settings';
 
         // Get cronjob config
@@ -154,7 +154,7 @@ class PraxisCronController extends Controller
         }
 
         // Get tenant
-        $tenant = $this->db->fetch("SELECT slug, domain FROM tenants WHERE id = ?", [$tenantId]);
+        $tenant = $this->db->fetch("SELECT uuid, email FROM tenants WHERE id = ?", [$tenantId]);
         if (!$tenant) {
             echo json_encode(['success' => false, 'error' => 'Tenant nicht gefunden.']);
             exit;
@@ -175,10 +175,13 @@ class PraxisCronController extends Controller
         }
 
         $endpoint = $cronjobs[$cronJobKey];
-        $url = 'https://' . $tenant['domain'] . $endpoint;
+        // Extract domain from email
+        $emailParts = explode('@', $tenant['email']);
+        $domain = isset($emailParts[1]) ? $emailParts[1] : 'example.com';
+        $url = 'https://' . $domain . $endpoint;
 
         // Get token from tenant settings
-        $prefix = 't_' . $tenant['slug'] . '_';
+        $prefix = 't_' . $tenant['uuid'] . '_';
         $settingsTable = $prefix . 'settings';
 
         $tokenFields = [
