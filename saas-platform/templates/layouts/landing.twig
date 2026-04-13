@@ -1,79 +1,102 @@
 <!DOCTYPE html>
 <html lang="de" data-bs-theme="dark">
 <head>
-            --tp-primary-dark: #1d4ed8;
-            --tp-accent: #7c3aed;
-            --tp-surface: #1e293b;
-            --tp-border: #334155;
-            --tp-text: #e2e8f0;
-            --tp-muted: #94a3b8;
-            --tp-bg: #0f172a;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ page_title ?? 'TheraPano' }}{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}TheraPano – Die Premium Praxis-Software für Tierphysiotherapeuten.{% endblock %}">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --tp-bg: #030712;
+            --tp-nav-bg: rgba(3, 7, 18, 0.9);
+            --tp-primary: #3b82f6;
+            --tp-border: rgba(255, 255, 255, 0.1);
         }
-        * { box-sizing: border-box; }
         body {
             font-family: 'Inter', sans-serif;
-            background: #0a0f1e;
-            border-top: 1px solid var(--tp-border);
-            padding: 3rem 0 1.5rem;
-            color: var(--tp-muted);
-            font-size: .875rem;
+            background-color: var(--tp-bg);
+            color: #f8fafc;
+            margin: 0;
+            overflow-x: hidden;
+            line-height: 1.6;
         }
-        .tp-footer a { color: var(--tp-muted); text-decoration: none; }
-        .tp-footer a:hover { color: var(--tp-text); }
-        .tp-footer .brand { font-weight: 800; font-size: 1.1rem; color: #fff; }
-        .tp-footer .brand span { color: var(--tp-primary); }
+        .tp-nav {
+            position: sticky; top: 0; z-index: 1000;
+            background: var(--tp-nav-bg);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--tp-border);
+            padding: 1rem 0;
+        }
+        .tp-nav .brand { 
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800; font-size: 1.5rem; color: #fff; text-decoration: none; 
+            letter-spacing: -0.02em;
+        }
+        .tp-nav .brand span { color: var(--tp-primary); }
+        
+        .nav-link-custom {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .nav-link-custom:hover { color: #fff; }
 
+        .btn-nav-primary {
+            background: var(--tp-primary);
+            color: white;
+            padding: 0.6rem 1.25rem;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-decoration: none;
+            transition: transform 0.2s;
+        }
+        .btn-nav-primary:hover { transform: scale(1.03); color: white; }
+
+        .btn-nav-outline {
+            border: 1px solid var(--tp-border);
+            color: #fff;
+            padding: 0.6rem 1.25rem;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-decoration: none;
+        }
     </style>
     {% block styles %}{% endblock %}
-    <script>
-        (function () {
-            try {
-                var stored = localStorage.getItem('tp_theme');
-                if (stored === 'light' || stored === 'dark') {
-                    document.documentElement.setAttribute('data-bs-theme', stored);
-                }
-            } catch (e) {}
-        })();
-    </script>
 </head>
 <body>
-<script>document.body.classList.add('js-ready');</script>
 
-<!-- Navbar -->
 <nav class="tp-nav">
     <div class="container d-flex align-items-center justify-content-between">
         <a href="/" class="brand">Thera<span>Pano</span></a>
 
-        <div class="tp-nav-actions">
-            <a href="#features" class="btn-tp-outline d-none d-md-inline-flex">Funktionen</a>
-            <a href="#modules" class="btn-tp-outline d-none d-md-inline-flex">Module</a>
-            <a href="#pricing" class="btn-tp-outline d-none d-md-inline-flex">Preise</a>
-            <a href="#faq" class="btn-tp-outline d-none d-md-inline-flex">FAQ</a>
-            <button type="button" id="themeToggle" class="btn-tp-outline d-none d-sm-inline-flex" aria-label="Theme wechseln">
-                <i class="bi bi-moon-stars-fill"></i> Theme
-            </button>
-            <a href="/demo" class="btn-tp-outline d-none d-md-inline-flex" style="color:#a78bfa;border-color:rgba(124,58,237,.4);"><i class="bi bi-play-circle-fill"></i> Demo</a>
-            <a href="/login" class="btn-tp-outline d-none d-sm-inline-flex">Anmelden</a>
-            <a href="/register" class="btn-tp-primary">Kostenlos testen</a>
+        <div class="d-flex align-items-center gap-4">
+            <div class="d-none d-lg-flex gap-4">
+                <a href="#features" class="nav-link-custom">Funktionen</a>
+                <a href="#pricing" class="nav-link-custom">Preise</a>
+                <a href="#faq" class="nav-link-custom">FAQ</a>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="/login" class="btn-nav-outline d-none d-sm-inline-flex">Login</a>
+                <a href="/register" class="btn-nav-primary">Kostenlos testen</a>
+            </div>
         </div>
     </div>
 </nav>
 
-<!-- Flash messages -->
 {% if flash_success or flash_error %}
-<div class="flash-container">
-    {% if flash_success %}
-        <div class="alert alert-success alert-dismissible fade show shadow-lg" role="alert">
-            <i class="bi bi-check-circle me-2"></i>{{ flash_success }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    {% endif %}
-    {% if flash_error %}
-        <div class="alert alert-danger alert-dismissible fade show shadow-lg" role="alert">
-            <i class="bi bi-exclamation-triangle me-2"></i>{{ flash_error }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    {% endif %}
+<div class="container mt-4">
+    {% if flash_success %}<div class="alert alert-success">{{ flash_success }}</div>{% endif %}
+    {% if flash_error %}<div class="alert alert-danger">{{ flash_error }}</div>{% endif %}
 </div>
 {% endif %}
 
@@ -81,54 +104,20 @@
     {% block content %}{% endblock %}
 </main>
 
-<!-- Footer -->
-<footer class="tp-footer">
-    <div class="container">
-        <div class="row g-4 mb-4">
-            <div class="col-lg-4">
-                <div class="brand mb-2">Thera<span>Pano</span></div>
-                <p style="color:var(--tp-muted);font-size:.85rem;line-height:1.6;">
-                    Mehr Zeit fürs Tier, weniger Zeit am Schreibtisch.<br>
-                    Die Praxis-Software für Tierphysiotherapeuten.
-                </p>
-            </div>
-            <div class="col-lg-2 col-6">
-                <div style="font-weight:600;color:var(--tp-text);margin-bottom:.75rem;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;">Produkt</div>
-                <div class="d-flex flex-column gap-2">
-                    <a href="#features">Features</a>
-                    <a href="#pricing">Preise</a>
-                    <a href="/register">Registrieren</a>
-                </div>
-            </div>
-            <div class="col-lg-2 col-6">
-                <div style="font-weight:600;color:var(--tp-text);margin-bottom:.75rem;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;">Rechtliches</div>
-                <div class="d-flex flex-column gap-2">
-                    <a href="/impressum">Impressum</a>
-                    <a href="/datenschutz">Datenschutz</a>
-                    <a href="/legal/agb">AGB</a>
-                    <a href="/legal/av-vertrag">AVV</a>
-                </div>
-            </div>
-            <div class="col-lg-4">
-                <div style="font-weight:600;color:var(--tp-text);margin-bottom:.75rem;font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;">Sicherheit &amp; Compliance</div>
-                <div class="d-flex flex-wrap gap-2">
-                    <span class="badge" style="background:#064e3b;color:#6ee7b7;font-weight:500;padding:.4rem .75rem;">DSGVO-konform</span>
-                    <span class="badge" style="background:#0c2a4a;color:#7dd3fc;font-weight:500;padding:.4rem .75rem;">EU-Hosting</span>
-                    <span class="badge" style="background:#1f1635;color:#a78bfa;font-weight:500;padding:.4rem .75rem;">SSL-verschlüsselt</span>
-                </div>
-            </div>
+<footer class="py-5 mt-5" style="border-top: 1px solid var(--tp-border); background: #010409;">
+    <div class="container text-center">
+        <div class="brand mb-4">Thera<span>Pano</span></div>
+        <div class="d-flex justify-content-center gap-4 mb-4">
+            <a href="/impressum" class="nav-link-custom">Impressum</a>
+            <a href="/datenschutz" class="nav-link-custom">Datenschutz</a>
         </div>
-        <hr style="border-color:var(--tp-border);">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2" style="font-size:.8rem;">
-            <span>&copy; {{ "now"|date("Y") }} TheraPano &ndash; Alle Rechte vorbehalten</span>
-            <span>Made with <i class="bi bi-heart-fill" style="color:#ef4444;font-size:.7rem;"></i> in Deutschland</span>
-        </div>
+        <p class="text-muted small">&copy; {{ "now"|date("Y") }} TheraPano. Alle Rechte vorbehalten.</p>
     </div>
 </footer>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>
