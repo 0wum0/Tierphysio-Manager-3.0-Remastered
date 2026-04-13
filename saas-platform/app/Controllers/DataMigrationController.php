@@ -1078,9 +1078,8 @@ class DataMigrationController extends Controller
     /**
      * POST /admin/migration/plugins-all-tenants
      *
-     * Führt ALLE Plugin-Migrations (plugins/*/migrations/*.sql) für
-     * ALLE Tenants aus. Sicher wiederholbar.
-     * Tabellen-Prefixe werden automatisch gesetzt.
+     * Führt ALLE Plugin-Migrations fuer alle Tenants aus.
+     * Sicher wiederholbar. Tabellen-Prefixe werden automatisch gesetzt.
      */
     public function migratePluginsAllTenants(array $params = []): void
     {
