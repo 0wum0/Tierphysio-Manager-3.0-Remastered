@@ -1,81 +1,93 @@
-/* ═══════════════════════════════════════════════════════════════
-   TheraPano Landing Page – Scripts
-   ════════════════════════════════════════════════════════════════ */
-
 (function () {
     'use strict';
 
-    // ── Scroll Reveal ─────────────────────────────────────────────
     const revealEls = document.querySelectorAll('.reveal, .reveal-left, .reveal-right');
     if ('IntersectionObserver' in window) {
         const revealObs = new IntersectionObserver((entries) => {
-            entries.forEach(e => {
-                if (e.isIntersecting) {
-                    e.target.classList.add('visible');
-                    revealObs.unobserve(e.target);
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    revealObs.unobserve(entry.target);
                 }
             });
         }, { threshold: 0.12 });
-        revealEls.forEach(el => revealObs.observe(el));
+        revealEls.forEach((el) => revealObs.observe(el));
     } else {
-        revealEls.forEach(el => el.classList.add('visible'));
+        revealEls.forEach((el) => el.classList.add('visible'));
     }
 
-    // ── Zähler Animation ──────────────────────────────────────────
+    const counters = document.querySelectorAll('[data-count]');
     function animateCount(el, target, suffix) {
-        let start = 0;
-        const duration = 1800;
-        const step = 16;
-        const increment = target / (duration / step);
-        const timer = setInterval(() => {
-            start += increment;
-            if (start >= target) {
-                start = target;
-                clearInterval(timer);
-            }
-            el.textContent = Math.floor(start) + suffix;
-        }, step);
+        const duration = 1700;
+        const start = performance.now();
+        function frame(now) {
+            const progress = Math.min((now - start) / duration, 1);
+            el.textContent = Math.floor(target * progress) + suffix;
+            if (progress < 1) requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
     }
 
-    if ('IntersectionObserver' in window) {
+    if (counters.length && 'IntersectionObserver' in window) {
         const countObs = new IntersectionObserver((entries) => {
-            entries.forEach(e => {
-                if (e.isIntersecting) {
-                    const el = e.target;
-                    const target = parseInt(el.dataset.count);
-                    const suffix = el.dataset.suffix || '+';
-                    if (target) animateCount(el, target, suffix);
-                    countObs.unobserve(el);
-                }
+            entries.forEach((entry) => {
+                if (!entry.isIntersecting) return;
+                const el = entry.target;
+                const target = parseInt(el.dataset.count || '0', 10);
+                const suffix = el.dataset.suffix || '+';
+                if (target > 0) animateCount(el, target, suffix);
+                countObs.unobserve(el);
             });
-        }, { threshold: 0.5 });
-        document.querySelectorAll('[data-count]').forEach(el => countObs.observe(el));
+        }, { threshold: 0.45 });
+        counters.forEach((el) => countObs.observe(el));
     }
 
-    // ── Smooth Scroll ─────────────────────────────────────────────
-    document.querySelectorAll('a[href^="#"]').forEach(a => {
-        a.addEventListener('click', e => {
-            const target = document.querySelector(a.getAttribute('href'));
-            if (target) {
-                e.preventDefault();
-                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
+    document.querySelectorAll('a[href^="#"]').forEach((a) => {
+        a.addEventListener('click', (e) => {
+            const href = a.getAttribute('href');
+            if (!href || href.length <= 1) return;
+            const target = document.querySelector(href);
+            if (!target) return;
+            e.preventDefault();
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
     });
 
-    // ── Mockup Progress Animation ─────────────────────────────────
     setTimeout(() => {
         const fill = document.querySelector('.mockup-progress-fill');
-        if (fill) fill.style.width = '72%';
-    }, 500);
+        if (fill) fill.style.width = '78%';
+    }, 420);
 
-    // ── Animations Fallback: force visible after 1.2s ─────────────
+    const toggleBtn = document.getElementById('themeToggle');
+    const root = document.documentElement;
+
+    function setTheme(theme) {
+        root.setAttribute('data-bs-theme', theme);
+        try {
+            localStorage.setItem('tp_theme', theme);
+        } catch (e) {}
+        if (toggleBtn) {
+            const icon = toggleBtn.querySelector('i');
+            if (icon) {
+                icon.className = theme === 'dark' ? 'bi bi-moon-stars-fill' : 'bi bi-sun-fill';
+            }
+        }
+    }
+
+    if (toggleBtn) {
+        const initial = root.getAttribute('data-bs-theme') || 'dark';
+        setTheme(initial);
+        toggleBtn.addEventListener('click', () => {
+            const current = root.getAttribute('data-bs-theme') === 'light' ? 'light' : 'dark';
+            setTheme(current === 'light' ? 'dark' : 'light');
+        });
+    }
+
     setTimeout(() => {
-        document.querySelectorAll('.anim-fadeup').forEach(el => {
+        document.querySelectorAll('.anim-fadeup').forEach((el) => {
             el.style.opacity = '1';
             el.style.transform = 'none';
             el.style.animation = 'none';
         });
     }, 1200);
-
 })();
