@@ -80,7 +80,7 @@ class GoogleApiService
             'client_id'             => $this->clientId,
             'redirect_uri'          => $this->redirectUri,
             'response_type'         => 'code',
-            'scope'                 => 'https://www.googleapis.com/auth/calendar openid email profile',
+            'scope'                 => 'https://www.googleapis.com/auth/calendar.events openid email profile',
             'access_type'           => 'offline',
             'prompt'                => 'consent',
             'include_granted_scopes'=> 'true',
