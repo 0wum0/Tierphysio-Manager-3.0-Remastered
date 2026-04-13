@@ -116,6 +116,11 @@ class CustomVetReportPdfService
                 $this->SetTextColor(255, 255, 255);
                 $this->SetXY(3, $sideY + 4);
                 $this->Cell($s['sidebarW'] - 6, 5, date('d.m.Y'), 0, 1, 'C');
+
+                // CRITICAL: Reset cursor to content area (right of sidebar).
+                // Without this, TCPDF places MultiCell continuations at X=0
+                // (inside the sidebar) after every automatic page break.
+                $this->SetXY($s['contentX'], 10);
             }
 
             public function Footer() {
@@ -151,8 +156,14 @@ class CustomVetReportPdfService
         $pdf->SetTitle('Tierarztbericht – ' . ($patient['name'] ?? ''));
         $pdf->setPrintHeader(true); // Enable header to draw sidebar on each page
         $pdf->setPrintFooter(true); // Enable footer to draw footer on each page
-        $pdf->SetMargins(0, 0, 0);
-        $pdf->SetAutoPageBreak(true, 40); // Enable auto page break for content, 40mm bottom margin
+        // Left margin = contentX so MultiCell always starts right of the sidebar after page breaks.
+        // Right margin keeps text away from the page edge.
+        // Top margin = 10 gives breathing room at the top of new pages.
+        $pdf->SetMargins($contentX, 10, 210 - $rightEdge);
+        $pdf->SetHeaderMargin(0);
+        $pdf->SetFooterMargin(0);
+        // Bottom margin of 22mm leaves room for the footer (footer starts at pageH - 20).
+        $pdf->SetAutoPageBreak(true, 22);
 
         // Set sidebar data for the custom Header() method
         $pdf->setSidebarData([
@@ -162,6 +173,7 @@ class CustomVetReportPdfService
             'logoFile' => $logoFile,
             'font' => $font,
             'fontSize' => $fontSize,
+            'contentX' => $contentX,
         ]);
 
         // Set footer data for the custom Footer() method
