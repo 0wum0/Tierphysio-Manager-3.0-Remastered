@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Saas\Controllers;
 
+use PDO;
 use Saas\Core\Controller;
 use Saas\Core\View;
 use Saas\Core\Session;
