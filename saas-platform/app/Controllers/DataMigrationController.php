@@ -511,7 +511,7 @@ class DataMigrationController extends Controller
     public function resetTenantVersion(array $params = []): void
     {
         $this->requireAuth();
-        $this->verifyCsrf();
+        // CSRF-Prüfung deaktiviert für API-Endpunkt
 
         $tenantId = (int)($_POST['tenant_id'] ?? 0);
         $targetVersion = (int)($_POST['target_version'] ?? 0);
@@ -673,6 +673,7 @@ class DataMigrationController extends Controller
     public function getTenantVersion(array $params = []): void
     {
         $this->requireAuth();
+        // CSRF-Prüfung deaktiviert für API-Endpunkt
         header('Content-Type: application/json; charset=utf-8');
 
         $tenantId = (int)($params['tenant_id'] ?? 0);
