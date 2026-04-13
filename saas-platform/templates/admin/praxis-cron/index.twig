@@ -301,14 +301,7 @@ function migrateAllTenants() {
     const statusDiv = document.getElementById('migration-status');
     statusDiv.innerHTML = '<span class="text-info">⏳ Migration läuft...</span>';
 
-    const formData = new FormData();
-    formData.append('tenant_id', 0);
-    formData.append('target_version', 0);
-
-    fetch('/admin/migration/migrate-all', {
-        method: 'POST',
-        body: formData
-    })
+    fetch('/admin/migration/migrate-all')
     .then(response => response.json())
     .then(data => {
         if (data.success) {
@@ -329,14 +322,7 @@ function migrateAllTenants() {
 function resetTenantVersion(tenantId, targetVersion) {
     if (!confirm('Version wirklich auf v' + targetVersion + ' zurücksetzen?')) return;
 
-    const formData = new FormData();
-    formData.append('tenant_id', tenantId);
-    formData.append('target_version', targetVersion);
-
-    fetch('/admin/migration/reset-version', {
-        method: 'POST',
-        body: formData
-    })
+    fetch('/admin/migration/reset-version?tenant_id=' + tenantId + '&target_version=' + targetVersion)
     .then(response => response.json())
     .then(data => {
         if (data.success) {

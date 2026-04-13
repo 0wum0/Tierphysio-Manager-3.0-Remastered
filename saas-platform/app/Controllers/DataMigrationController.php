@@ -513,8 +513,8 @@ class DataMigrationController extends Controller
         $this->requireAuth();
         // CSRF-Prüfung deaktiviert für API-Endpunkt
 
-        $tenantId = (int)($_POST['tenant_id'] ?? 0);
-        $targetVersion = (int)($_POST['target_version'] ?? 0);
+        $tenantId = (int)($params['tenant_id'] ?? 0);
+        $targetVersion = (int)($params['target_version'] ?? 0);
 
         if (!$tenantId || !$targetVersion) {
             $this->jsonError('Tenant ID und Ziel-Version erforderlich');
