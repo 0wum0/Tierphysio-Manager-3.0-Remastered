@@ -584,21 +584,26 @@ class DataMigrationController extends Controller
                             fn($s) => $s !== '' && !str_starts_with(ltrim($s), '--')
                         );
 
+                        $versionSuccess = true;
                         foreach ($statements as $stmt) {
                             try {
                                 $pdo->exec($stmt);
                             } catch (\Throwable $e) {
                                 // Fehler ignorieren (Tabelle existiert bereits, Spalte existiert bereits)
                                 if (!str_contains($e->getMessage(), 'Duplicate column') 
-                                    && !str_contains($e->getMessage(), 'already exists')) {
+                                    && !str_contains($e->getMessage(), 'already exists')
+                                    && !str_contains($e->getMessage(), 'Duplicate entry')) {
                                     $tenantResult['errors'][] = "Migration {$version}: " . $e->getMessage();
+                                    $versionSuccess = false;
                                 }
                             }
                         }
 
-                        // Version in migrations-Tabelle eintragen
-                        $pdo->prepare("INSERT IGNORE INTO `{$migTbl}` (`version`) VALUES (?)")->execute([$version]);
-                        $tenantResult['applied'][] = $version;
+                        // Version nur eintragen, wenn keine Fehler aufgetreten sind
+                        if ($versionSuccess) {
+                            $pdo->prepare("INSERT IGNORE INTO `{$migTbl}` (`version`) VALUES (?)")->execute([$version]);
+                            $tenantResult['applied'][] = $version;
+                        }
                     }
 
                     $tenantResult['success'] = empty($tenantResult['errors']);

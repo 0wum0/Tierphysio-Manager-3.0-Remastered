@@ -21,10 +21,11 @@ CREATE TABLE IF NOT EXISTS `users` (
     INDEX `idx_email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── settings (Migration 001) ──────────────────────────────────
+-- ── settings (Migration 001 + 035) ──────────────────────────────────
 CREATE TABLE IF NOT EXISTS `settings` (
     `key`        VARCHAR(100) NOT NULL,
     `value`      TEXT NULL,
+    `description` VARCHAR(255) NULL DEFAULT NULL,
     `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

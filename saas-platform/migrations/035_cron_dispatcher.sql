@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS `cron_dispatcher_log` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Dispatcher-Token in Settings Tabelle (für Authentifizierung)
+-- ALTER TABLE statt INSERT, da ältere DBs keine description-Spalte haben
+ALTER TABLE `settings` 
+ADD COLUMN IF NOT EXISTS `description` VARCHAR(255) NULL DEFAULT NULL AFTER `value`;
+
 INSERT INTO `settings` (`key`, `value`, `description`) 
 VALUES ('cron_dispatcher_token', '', 'Token für den zentralen Cron Dispatcher (alle 10 Minuten)')
-ON DUPLICATE KEY UPDATE `description` = 'Token für den zentralen Cron Dispatcher (alle 10 Minuten)';
+ON DUPLICATE KEY UPDATE `value` = '', `description` = 'Token für den zentralen Cron Dispatcher (alle 10 Minuten)';
