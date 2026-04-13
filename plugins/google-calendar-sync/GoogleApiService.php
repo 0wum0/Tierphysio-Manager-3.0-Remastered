@@ -31,10 +31,41 @@ class GoogleApiService
     public function __construct(
         private readonly GoogleCalendarRepository $repo
     ) {
-        /* Priority: defined constants → env → auto-detect */
+        /* Priority: defined constants → env → saas_settings → auto-detect */
         $this->clientId     = defined('GOOGLE_CLIENT_ID')     ? GOOGLE_CLIENT_ID     : (getenv('GOOGLE_CLIENT_ID')     ?: '');
         $this->clientSecret = defined('GOOGLE_CLIENT_SECRET') ? GOOGLE_CLIENT_SECRET : (getenv('GOOGLE_CLIENT_SECRET') ?: '');
         $this->redirectUri  = defined('GOOGLE_REDIRECT_URI')  ? GOOGLE_REDIRECT_URI  : (getenv('GOOGLE_REDIRECT_URI')  ?: '');
+
+        /* Fallback: read from saas_settings table (SaaS platform configuration) */
+        if (empty($this->clientId) || empty($this->clientSecret)) {
+            try {
+                $saasDbPath = dirname(__DIR__, 2) . '/saas-platform/storage/database/saas.db';
+                if (file_exists($saasDbPath)) {
+                    $pdo = new \PDO('sqlite:' . $saasDbPath);
+                    $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+
+                    if (empty($this->clientId)) {
+                        $stmt = $pdo->prepare("SELECT value FROM saas_settings WHERE `key` = 'google_client_id'");
+                        $stmt->execute();
+                        $this->clientId = (string)$stmt->fetchColumn();
+                    }
+
+                    if (empty($this->clientSecret)) {
+                        $stmt = $pdo->prepare("SELECT value FROM saas_settings WHERE `key` = 'google_client_secret'");
+                        $stmt->execute();
+                        $this->clientSecret = (string)$stmt->fetchColumn();
+                    }
+
+                    if (empty($this->redirectUri)) {
+                        $stmt = $pdo->prepare("SELECT value FROM saas_settings WHERE `key` = 'google_redirect_uri'");
+                        $stmt->execute();
+                        $this->redirectUri = (string)$stmt->fetchColumn();
+                    }
+                }
+            } catch (\Throwable) {
+                // Silently fail - fallback to auto-detect
+            }
+        }
 
         /* Auto-build redirect URI from current host if still empty */
         if (empty($this->redirectUri)) {
