@@ -146,8 +146,8 @@ class PraxisCronController extends Controller
         $this->requireAuth();
         header('Content-Type: application/json');
 
-        $tenantId = (int)($_POST['tenant_id'] ?? 0);
-        $cronJobKey = $_POST['cron_job_key'] ?? '';
+        $tenantId = (int)($params['tenant_id'] ?? $_GET['tenant_id'] ?? 0);
+        $cronJobKey = $params['cron_job_key'] ?? $_GET['cron_job_key'] ?? '';
 
         if (!$tenantId || !$cronJobKey) {
             echo json_encode(['success' => false, 'error' => 'Ungültige Anfrage.']);

@@ -216,14 +216,7 @@ function runCron(tenantId, cronJobKey) {
     const resultDiv = document.getElementById('result-' + tenantId);
     resultDiv.innerHTML = '<span class="text-info">⏳ Dispatcher wird gestartet...</span>';
 
-    const formData = new FormData();
-    formData.append('tenant_id', tenantId);
-    formData.append('cron_job_key', cronJobKey);
-
-    fetch('/admin/praxis-cron/run-now', {
-        method: 'POST',
-        body: formData
-    })
+    fetch('/admin/praxis-cron/run-now?tenant_id=' + tenantId + '&cron_job_key=' + cronJobKey)
     .then(response => response.json())
     .then(data => {
         if (data.success) {

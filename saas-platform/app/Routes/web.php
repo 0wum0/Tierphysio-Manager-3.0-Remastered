@@ -119,7 +119,7 @@ $router->get('/admin/google-settings/test',          [GoogleSettingsController::
 // ── Praxis Cronjobs (Admin) ───────────────────────────────────────────────────────────────
 $router->get('/admin/praxis-cron',                   [PraxisCronController::class, 'index']);
 $router->post('/admin/praxis-cron/update-token',     [PraxisCronController::class, 'updateToken']);
-$router->post('/admin/praxis-cron/run-now',          [PraxisCronController::class, 'runNow']);
+$router->get('/admin/praxis-cron/run-now',           [PraxisCronController::class, 'runNow']);
 
 // ── Datenbank-Version API ─────────────────────────────────────────────────────────────
 $router->get('/admin/migration/tenant-version',     [DataMigrationController::class, 'getTenantVersion']);
