@@ -102,6 +102,10 @@
             root.setAttribute('data-bs-theme', next);
             localStorage.setItem('tp_theme', next);
         });
-    }
+    // --- Special: Mockup Progress ---
+    setTimeout(() => {
+        const fill = document.querySelector('.mockup-progress-fill');
+        if (fill) fill.style.width = '78%';
+    }, 1000);
 
 })();

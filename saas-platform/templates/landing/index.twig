@@ -1,9 +1,9 @@
 {% extends 'layouts/landing.twig' %}
 
-{% block title %}TheraPano – Ultra-Premium Software für Tiertherapeuten{% endblock %}
+{% block title %}TheraPano – Premium Praxissoftware für Tiertherapeuten & Hundeschulen{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="/css/landing.css?v=20260413-brutal">
+<link rel="stylesheet" href="/css/landing.css?v={{ "now"|date("U") }}">
 {% endblock %}
 
 {% block content %}
@@ -12,22 +12,23 @@
     <div class="container hero-shell">
         <div class="row align-items-center">
             <div class="col-lg-7 hero-intro">
-                <span class="hero-kicker" data-gsap="fade-in"><i class="bi bi-cpu"></i> Next-Gen Praxismanagement</span>
-                <h1 data-gsap="skew-up">Die <span class="gradient-text">einzigartige</span> Plattform für Tiertherapie & Training.</h1>
+                <span class="hero-kicker" data-gsap="fade-in"><i class="bi bi-stars"></i> THERAPANO SIGNATURE EXPERIENCE</span>
+                <h1 data-gsap="skew-up">Die <span class="gradient-text">einzigartige</span> Plattform für Tiertherapie & Hundetraining.</h1>
                 <p data-gsap="fade-up" data-gsap-delay="0.2">
-                    Ein durchgängiges High-Tech-System für Praxis, Reha und Hundeschule. 
-                    Begeistere deine Kunden mit einem digitalen Erlebnis der Extraklasse.
+                    Ein durchgängiges Premium-System für Praxis, Reha und Hundeschule: 
+                    Patientenmanagement, Terminlogik, Befunde, Abrechnung, Portal, Teamsteuerung, 
+                    mobile Workflows und Automationen – visuell modern, fachlich vollständig.
                 </p>
                 <div class="hero-actions" data-gsap="fade-up" data-gsap-delay="0.4">
-                    <a href="/register" class="btn-tp-primary"><i class="bi bi-stars"></i> 14 Tage gratis starten</a>
+                    <a href="/register" class="btn-tp-primary"><i class="bi bi-rocket-takeoff"></i> 14 Tage gratis starten</a>
                     <a href="/demo" class="btn-tp-outline"><i class="bi bi-play-circle"></i> Live-Demo ansehen</a>
                 </div>
             </div>
 
-            <div class="col-lg-5 d-none d-lg-block">
+            <div class="col-lg-5">
                 <div class="glass-card hero-panel" data-gsap="float">
                     <div style="display:flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                        <span class="mono" style="font-size: 0.8rem; color: var(--lp-accent);">SYSTEM_STATUS: ACTIVE</span>
+                        <span class="mono" style="font-size: 0.8rem; color: var(--lp-accent);">PRAXIS_COMMAND_CENTER</span>
                         <div style="display:flex; gap: 0.5rem;">
                             <span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%;"></span>
                             <span style="width: 8px; height: 8px; background: #f59e0b; border-radius: 50%;"></span>
@@ -36,18 +37,28 @@
                     </div>
                     <div class="panel-grid">
                         <div class="glass-card" style="padding: 1rem; text-align: center;">
-                            <small class="mono" style="font-size: 0.65rem;">Termine</small>
-                            <div style="font-size: 1.5rem; font-weight: 800;" data-count="17">0</div>
+                            <small class="mono" style="font-size: 0.65rem; color: var(--lp-muted);">TERMINE HEUTE</small>
+                            <div style="font-size: 1.5rem; font-weight: 900; color: #fff;" data-count="17">0</div>
                         </div>
                         <div class="glass-card" style="padding: 1rem; text-align: center;">
-                            <small class="mono" style="font-size: 0.65rem;">Fälle</small>
-                            <div style="font-size: 1.5rem; font-weight: 800;" data-count="146">0</div>
+                            <small class="mono" style="font-size: 0.65rem; color: var(--lp-muted);">AKTIVE FÄLLE</small>
+                            <div style="font-size: 1.5rem; font-weight: 900; color: #fff;" data-count="146">0</div>
+                        </div>
+                        <div class="glass-card" style="padding: 1rem; text-align: center;">
+                            <small class="mono" style="font-size: 0.65rem; color: var(--lp-muted);">NEUE INTAKE-FORMULARE</small>
+                            <div style="font-size: 1.5rem; font-weight: 900; color: #fff;" data-count="6">0</div>
+                        </div>
+                        <div class="glass-card" style="padding: 1rem; text-align: center;">
+                            <small class="mono" style="font-size: 0.65rem; color: var(--lp-muted);">AUTOMAT. ERINNERUNGEN</small>
+                            <div style="font-size: 1.5rem; font-weight: 900; color: #fff;" data-count="34">0</div>
                         </div>
                     </div>
-                    <div style="margin-top: 2rem; border-top: 1px solid var(--lp-border); padding-top: 1.5rem;">
-                        <small class="mono" style="color: var(--lp-muted); font-size: 0.7rem;">NEXT_CONTACT</small>
-                        <h6 style="font-family: var(--lp-font-header); margin: 0.5rem 0;">🐕 Milo · Gangbildanalyse</h6>
-                        <p style="font-size: 0.85rem; color: var(--lp-muted);">11:00 Uhr · 45 Min</p>
+                    
+                    <div class="focus-card">
+                        <small class="mono" style="color: var(--lp-accent); font-size: 0.65rem; letter-spacing: 0.1em;">NÄCHSTER KUNDENKONTAKT</small>
+                        <h6 style="margin: 0.5rem 0; font-weight: 800; color: #fff;">🐕 Milo · Gangbildanalyse + Trainingsplan</h6>
+                        <p style="font-size: 0.85rem; color: var(--lp-muted); margin: 0;">11:00 Uhr · 45 Min · im Besitzerportal bestätigt</p>
+                        <div class="mockup-progress"><div class="mockup-progress-fill"></div></div>
                     </div>
                 </div>
             </div>
@@ -58,10 +69,11 @@
 <section class="brand-strip">
     <div class="container">
         <div class="strip-grid">
-            <span><i class="bi bi-shield-check"></i> Tierphysio</span>
-            <span><i class="bi bi-lightning-charge"></i> Hundeschulen</span>
-            <span><i class="bi bi-infinity"></i> Pferdetherapie</span>
-            <span><i class="bi bi-command"></i> Reha-Zentren</span>
+            <span>🐾 Tierphysio</span>
+            <span>🦮 Hundeschulen</span>
+            <span>🐴 Pferdetherapie</span>
+            <span>🏥 Reha-Zentren</span>
+            <span>🚐 Mobile Praxen</span>
         </div>
     </div>
 </section>
@@ -69,49 +81,62 @@
 <section class="feature-stage py-5" id="features">
     <div class="container py-5">
         <div class="section-head text-center mb-5" data-gsap="reveal">
-            <span class="hero-kicker">Core Intelligence</span>
-            <h2 class="section-title">Alles drin – <span class="gradient-text">Null Kompromisse</span></h2>
-            <p style="max-width: 700px; margin: 0 auto; color: var(--lp-muted);">
-                Vom Patientenmanagement bis zur intelligenten Abrechnung: 
-                Unsere Module greifen nahtlos ineinander für deinen Workflow der Zukunft.
+            <span class="hero-kicker">KOMPLETTER FUNKTIONSKATALOG</span>
+            <h2 class="section-title">Alles drin – ohne Tool-Chaos, <span class="gradient-text">ohne Medienbruch</span></h2>
+            <p style="max-width: 800px; margin: 1.5rem auto; color: var(--lp-muted); font-size: 1.1rem;">
+                Basierend auf den realen Modulen deiner Plattform: von Patienten- und Besitzerverwaltung über Kalender, 
+                Befunde, Rechnungen, Mahnungen und Kommunikation bis zu Owner-Portal, Mobile API, Therapy Care Pro, 
+                Steuerexport und intelligenten Automationen.
             </p>
         </div>
 
         <div class="bento-grid">
-            <article class="bento reveal" data-gsap="reveal">
+            <article class="bento" data-gsap="reveal">
                 <div>
-                    <i class="bi bi-layers-half" style="font-size: 2rem; color: var(--lp-accent);"></i>
-                    <h3>Praxis-Kern</h3>
-                    <p>Vollständige Patientenakten, Befunde und Verlauf – klinisch präzise dokumentiert.</p>
+                    <span class="mono" style="font-size: 0.7rem; color: var(--lp-accent);">[MODULE_01]</span>
+                    <h3>🧠 Praxis-Kern</h3>
+                    <p>Patienten, Besitzer, Akten, Anamnese, Befunde, Verlauf, Medien und strukturierte Therapiedokumentation – komplett digital und jederzeit abrufbar.</p>
                 </div>
-                <div class="mono" style="font-size: 0.7rem; color: var(--lp-muted); opacity: 0.5;">MODULE // CORE_V3</div>
             </article>
             
-            <article class="bento reveal" data-gsap="reveal">
-                <h3>Termin-Engine</h3>
-                <p>Kalender mit KI-Logik, Google-Sync und automatischer Warteliste.</p>
+            <article class="bento" data-gsap="reveal">
+                <h3>📅 Termin-Engine</h3>
+                <p>Kalender, Warteliste, Statuslogik, Google-Sync, Erinnerungen & Follow-up.</p>
             </article>
 
-            <article class="bento reveal" data-gsap="reveal">
-                <h3>Umsatz-Flow</h3>
-                <p>Digitaler Rechnungsversand, Mahnwesen und Exporte für den Steuerberater.</p>
+            <article class="bento" data-gsap="reveal">
+                <h3>🧾 Umsatz-Flow</h3>
+                <p>Rechnungen, Mahnungen, Zahlstatus, Ausgaben und steuerrelevante Exporte.</p>
             </article>
 
-            <article class="bento reveal" data-gsap="reveal">
-                <h3>Owner Portal</h3>
-                <p>Deine Kunden haben Termine, Übungen und Rechnungen immer in der Tasche.</p>
+            <article class="bento" data-gsap="reveal">
+                <h3>🏠 Besitzerportal</h3>
+                <p>Termine, Rechnungen, Befunde, Nachrichten und Übungsfreigaben für Tierhalter.</p>
             </article>
 
-            <article class="bento reveal" data-gsap="reveal">
-                <div>
-                    <h3>Therapy Care Pro</h3>
-                    <p>Strukturierte Übungspläne, Fortschrittsberichte und automatisierte Follow-ups.</p>
-                </div>
+            <article class="bento" data-gsap="reveal">
+                <h3>📱 Mobile App/API</h3>
+                <p>Volle Prozesse mobil: Patienten, Termine, Rechnungen, Befunde, Nachrichten, Dashboards.</p>
             </article>
 
-            <article class="bento reveal" data-gsap="reveal">
-                <h3>Mobile API</h3>
-                <p>Voller Zugriff auf deine Praxis-Daten, egal wo du dich gerade befindest.</p>
+            <article class="bento" data-gsap="reveal">
+                <h3>🎓 Übungen & Hausaufgaben</h3>
+                <p>Trainingspläne, Vorlagen, Fortschritt, PDF-Export und Rückmeldungen.</p>
+            </article>
+
+            <article class="bento" data-gsap="reveal">
+                <h3>📈 Therapy Care Pro</h3>
+                <p>Fortschrittskategorien, Berichte, Bibliothek, Naturheilkunde, Reminder-Queue.</p>
+            </article>
+
+            <article class="bento" data-gsap="reveal">
+                <h3>🧩 Plugin-Ökosystem</h3>
+                <p>Bulk-Mail, Intake, Owner-Portal, Kalender-Erweiterungen und modulare Erweiterbarkeit.</p>
+            </article>
+
+            <article class="bento" data-gsap="reveal">
+                <h3>🔒 Compliance & Sicherheit</h3>
+                <p>DSGVO-orientierte Prozesse, Rollen, Zugriffssteuerung, Dokumentation, sichere Kommunikation.</p>
             </article>
         </div>
     </div>
@@ -120,19 +145,30 @@
 <section class="audience-section py-5" id="modules">
     <div class="container py-5">
         <div class="section-head text-center mb-5" data-gsap="reveal">
-            <h2 class="section-title">Maßgeschneiderte <span class="gradient-text">Workflows</span></h2>
+            <span class="hero-kicker">PASSEND FÜR JEDE ARBEITSWEISE</span>
+            <h2 class="section-title">Tiertherapie + Hundeschule: <br><span class="gradient-text">Zwei perfekte Workflows</span></h2>
         </div>
         <div class="row g-4">
             <div class="col-md-6" data-gsap="reveal">
                 <div class="glass-card h-100">
-                    <h3 style="color: var(--lp-accent);">Für Tiertherapeuten</h3>
-                    <p>Präzise Dokumentation, Verlaufsgraphen und klinische Befundung – alles DSGVO-konform und mobil abrufbar.</p>
+                    <h3 style="color: #fff;">Für Tiertherapeuten</h3>
+                    <p style="color: var(--lp-muted);">Dokumentation, Verlauf, Befundqualität, Behandlungshistorie, Abrechnung und Nachsorge in einem klinisch klaren Prozess.</p>
+                    <div class="mini-tags">
+                        <span>Verlaufsdoku</span>
+                        <span>Befundlogik</span>
+                        <span>Rechnung & Mahnung</span>
+                    </div>
                 </div>
             </div>
             <div class="col-md-6" data-gsap="reveal">
                 <div class="glass-card h-100">
-                    <h3 style="color: var(--lp-secondary);">Für Hundeschulen</h3>
-                    <p>Effiziente Kursverwaltung, Hausaufgaben-Pläne für Besitzer und direktes Fortschritts-Feedback via Portal.</p>
+                    <h3 style="color: #fff;">Für Hundeschulen & Trainer</h3>
+                    <p style="color: var(--lp-muted);">Trainingseinheiten, Teilnehmerverwaltung, Hausaufgabenpläne, Kundenkommunikation und Fortschrittsfeedback professionell bündeln.</p>
+                    <div class="mini-tags">
+                        <span>Trainingspläne</span>
+                        <span>Kurslogik</span>
+                        <span>Kundenportal</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -142,8 +178,9 @@
 <section class="pricing py-5" id="pricing">
     <div class="container py-5">
         <div class="text-center mb-5" data-gsap="reveal">
-            <span class="hero-kicker">Transparente Tarife</span>
-            <h2 class="section-title">Bereit für dein <span class="gradient-text">Wachstum</span></h2>
+            <span class="hero-kicker">PREISE</span>
+            <h2 class="section-title">Skalierbar vom Solo-Profi <span class="gradient-text">bis zur Premium-Praxis</span></h2>
+            <p style="color: var(--lp-muted); font-size: 1.1rem; margin-top: 1rem;">14 Tage kostenlos, kein Risiko, sofort einsatzbereit.</p>
         </div>
 
         <div class="row g-4 justify-content-center">
@@ -151,19 +188,22 @@
                 {% for plan in plans %}
                     <div class="col-md-6 col-lg-4" data-gsap="reveal">
                         <div class="price-card {% if loop.index == 2 %}featured{% endif %} h-100">
+                            {% if loop.index == 2 %}<div style="position:absolute; top: 1.5rem; right: 1.5rem; background: var(--lp-primary); color: #fff; font-size: 0.65rem; padding: 0.3rem 0.8rem; border-radius: 100px; font-weight: 900;">EMPFOHLEN</div>{% endif %}
                             <div class="price-name mb-3">{{ plan.name }}</div>
                             <div class="price-amount mb-4">{{ plan.price_month ?? '29' }}€ <span style="font-size: 1rem; color: var(--lp-muted);">/ Monat</span></div>
+                            <p style="font-size: 0.9rem; color: var(--lp-muted); margin-bottom: 2rem;">{{ plan.description ?? 'Ideal für Ihren Einsatzbereich' }}</p>
                             <hr style="border-color: var(--lp-border);">
                             <ul class="list-unstyled mt-4 mb-5" style="display: grid; gap: 1rem;">
                                 {% set features = plan.features ? plan.features|json_decode : [] %}
                                 {% for feature in features %}
-                                    <li style="color: var(--lp-muted); font-size: 0.9rem;"><i class="bi bi-check2-circle" style="color: var(--lp-accent); margin-right: 0.5rem;"></i> {{ feature }}</li>
+                                    <li style="color: var(--lp-muted); font-size: 0.9rem;"><i class="bi bi-check-circle-fill" style="color: #22c55e; margin-right: 0.75rem;"></i> {{ feature }}</li>
                                 {% else %}
-                                    <li style="color: var(--lp-muted); font-size: 0.9rem;"><i class="bi bi-check2-circle" style="color: var(--lp-accent); margin-right: 0.5rem;"></i> Full Praxis Management</li>
-                                    <li style="color: var(--lp-muted); font-size: 0.9rem;"><i class="bi bi-check2-circle" style="color: var(--lp-accent); margin-right: 0.5rem;"></i> Mobile Apps Included</li>
+                                    <li style="color: var(--lp-muted); font-size: 0.9rem;"><i class="bi bi-check-circle-fill" style="color: #22c55e; margin-right: 0.75rem;"></i> Patienten, Termine, Befunde, Rechnungen</li>
+                                    <li style="color: var(--lp-muted); font-size: 0.9rem;"><i class="bi bi-check-circle-fill" style="color: #22c55e; margin-right: 0.75rem;"></i> Portal + mobile Workflows</li>
+                                    <li style="color: var(--lp-muted); font-size: 0.9rem;"><i class="bi bi-check-circle-fill" style="color: #22c55e; margin-right: 0.75rem;"></i> Automationen & Erinnerungen</li>
                                 {% endfor %}
                             </ul>
-                            <a href="/register/{{ plan.slug }}" class="{% if loop.index == 2 %}btn-tp-primary{% else %}btn-tp-outline{% endif %} w-100 justify-content-center">Start Experiment</a>
+                            <a href="/register/{{ plan.slug }}" class="{% if loop.index == 2 %}btn-tp-primary{% else %}btn-tp-outline{% endif %} w-100 justify-content-center">Jetzt starten</a>
                         </div>
                     </div>
                 {% endfor %}
@@ -175,31 +215,32 @@
 <section class="faq-section py-5" id="faq">
     <div class="container py-5">
         <div class="section-head text-center mb-5" data-gsap="reveal">
-            <h2 class="section-title">Häufige <span class="gradient-text">Fragen</span></h2>
+            <span class="hero-kicker">FAQ</span>
+            <h2 class="section-title">Schnelle <span class="gradient-text">Antworten</span></h2>
         </div>
         <div class="row g-4">
             <article class="col-md-6" data-gsap="reveal">
                 <div class="glass-card">
-                    <h4>Nutzbar für Hundeschulen?</h4>
-                    <p style="color: var(--lp-muted);">Ja – mit speziellen Modulen für Trainingspläne und Kundenportal absolut perfekt geeignet.</p>
+                    <h4 style="color: #fff;">Ist die Plattform wirklich für Hundeschulen nutzbar?</h4>
+                    <p style="color: var(--lp-muted); margin: 0;">Ja – mit Trainingsplänen, Kommunikationsmodulen, Owner-Portal und Fortschrittslogik ist sie explizit dafür geeignet.</p>
                 </div>
             </article>
             <article class="col-md-6" data-gsap="reveal">
                 <div class="glass-card">
-                    <h4>Team-Steuerung möglich?</h4>
-                    <p style="color: var(--lp-muted);">Ja. Granulare Rollen- und Rechteverwaltung für Mitarbeiter sind fester Bestandteil.</p>
+                    <h4 style="color: #fff;">Kann ich Teammitglieder granular steuern?</h4>
+                    <p style="color: var(--lp-muted); margin: 0;">Ja. Rollen- und Zugriffsmodelle unterstützen unterschiedliche Verantwortlichkeiten im Team.</p>
                 </div>
             </article>
             <article class="col-md-6" data-gsap="reveal">
                 <div class="glass-card">
-                    <h4>Wie schnell ist der Start?</h4>
-                    <p style="color: var(--lp-muted);">In wenigen Minuten. Registrieren, Daten einpflegen und direkt produktiv loslegen.</p>
+                    <h4 style="color: #fff;">Wie schnell ist der Start?</h4>
+                    <p style="color: var(--lp-muted); margin: 0;">In wenigen Minuten. Registrieren, Grunddaten setzen, direkt produktiv arbeiten.</p>
                 </div>
             </article>
             <article class="col-md-6" data-gsap="reveal">
                 <div class="glass-card">
-                    <h4>Skalierbarkeit?</h4>
-                    <p style="color: var(--lp-muted);">Die Plattform wächst mit dir – von der Solopraxis bis zum großen Reha-Zentrum.</p>
+                    <h4 style="color: #fff;">Kann ich später skalieren?</h4>
+                    <p style="color: var(--lp-muted); margin: 0;">Ja. Tarife und Funktionsumfang sind auf Wachstum und Mehrbenutzerbetrieb ausgerichtet.</p>
                 </div>
             </article>
         </div>
@@ -208,16 +249,17 @@
 
 <section class="cta-section py-5 text-center" style="background: radial-gradient(circle at top, var(--lp-primary-glow), transparent 60%);">
     <div class="container py-5">
-        <h2 class="section-title mb-4" data-gsap="reveal">Starte jetzt in die <br><span class="gradient-text">digitale Ära</span> deiner Praxis.</h2>
-        <p class="mb-5" style="color: var(--lp-muted); font-size: 1.1rem;" data-gsap="reveal">Über 500 Therapeuten vertrauen bereits auf TheraPano.</p>
+        <span class="hero-kicker" data-gsap="reveal">JETZT DURCHSTARTEN</span>
+        <h2 class="section-title mb-4" data-gsap="reveal" style="font-size: clamp(2rem, 5vw, 3.5rem);">Deine unverwechselbare digitale <br><span class="gradient-text">Praxis beginnt hier.</span></h2>
+        <p class="mb-5" style="color: var(--lp-muted); font-size: 1.2rem; max-width: 700px; margin-left: auto; margin-right: auto;" data-gsap="reveal">Premium-Auftritt, vollständige Prozesse, begeisterte Kunden.</p>
         <div class="d-flex gap-3 justify-content-center" data-gsap="reveal">
-            <a href="/register" class="btn-tp-primary btn-lg">Jetzt beitreten</a>
-            <a href="/demo" class="btn-tp-outline btn-lg">Vorschau sehen</a>
+            <a href="/register" class="btn-tp-primary btn-lg"><i class="bi bi-rocket-takeoff"></i> Kostenlos testen</a>
+            <a href="/demo" class="btn-tp-outline btn-lg"><i class="bi bi-play-circle-fill"></i> Demo öffnen</a>
         </div>
     </div>
 </section>
 {% endblock %}
 
 {% block scripts %}
-<script src="/js/landing.js?v=20260413-brutal" defer></script>
+<script src="/js/landing.js?v={{ "now"|date("U") }}" defer></script>
 {% endblock %}
