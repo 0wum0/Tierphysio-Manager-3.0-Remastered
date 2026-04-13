@@ -54,7 +54,7 @@ class GoogleSettingsController extends Controller
         $this->setSetting('google_cron_secret', trim($_POST['google_cron_secret'] ?? ''));
 
         // Write to config file for plugin access
-        $configPath = $this->view->getConfig()->getRootPath() . '/storage/config/google.php';
+        $configPath = dirname(__DIR__, 2) . '/storage/config/google.php';
         $configDir = dirname($configPath);
         if (!is_dir($configDir)) {
             @mkdir($configDir, 0755, true);
