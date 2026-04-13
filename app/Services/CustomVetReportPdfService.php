@@ -204,13 +204,18 @@ class CustomVetReportPdfService
         $hasPhoto = false;
         $patPhoto = null;
         if (!empty($patient['photo'])) {
-            $patientsDir    = realpath(tenant_storage_path('patients/' . (int)$patient['id']));
-            if ($patientsDir) {
-                $photoCandidate = $patientsDir . '/' . basename($patient['photo']);
-                $photoReal      = realpath($photoCandidate);
-                if ($photoReal && strpos($photoReal, $patientsDir) === 0) {
+            // Try multiple possible photo paths
+            $photoPaths = [
+                storage_path('app/public/patients/' . $patient['id'] . '/' . basename($patient['photo'])),
+                tenant_storage_path('patients/' . $patient['id'] . '/' . basename($patient['photo'])),
+                public_path('patients/' . $patient['id'] . '/' . basename($patient['photo'])),
+            ];
+
+            foreach ($photoPaths as $photoPath) {
+                if (file_exists($photoPath)) {
                     $hasPhoto = true;
-                    $patPhoto = $photoReal;
+                    $patPhoto = $photoPath;
+                    break;
                 }
             }
         }
