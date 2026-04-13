@@ -428,6 +428,7 @@ class DashboardService
                         COALESCE(SUM(total_gross), 0) AS amount
                  FROM `{$this->t('invoices')}`
                  WHERE issue_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                   AND status NOT IN ('cancelled','cancellation')
                  GROUP BY day ORDER BY day ASC"
             );
             $indexed = [];

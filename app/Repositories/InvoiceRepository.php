@@ -289,6 +289,18 @@ class InvoiceRepository extends Repository
             $paidInvoiceCount  = $paidCount;
         }
 
+        /* cancelled invoices (originals that were storniert) */
+        $cancelledCount = 0;
+        $cancelledGross = 0.0;
+        try {
+            $cancelledCount = (int)$this->db->fetchColumn(
+                "SELECT COUNT(*) FROM `{$inv}` WHERE status = 'cancelled'"
+            );
+            $cancelledGross = (float)$this->db->fetchColumn(
+                "SELECT COALESCE(SUM(total_gross), 0) FROM `{$inv}` WHERE status = 'cancelled'"
+            );
+        } catch (\Throwable) {}
+
         return [
             'revenue_week'         => $revenueWeek,
             'revenue_month'        => $revenueMonth,
@@ -306,6 +318,8 @@ class InvoiceRepository extends Repository
             'paid_invoice_count'   => $paidInvoiceCount,
             'cash_amount'          => $cashAmount,
             'cash_count'           => $cashCount,
+            'cancelled_count'      => $cancelledCount,
+            'cancelled_gross'      => $cancelledGross,
             'month_change'         => $prevMonthRevenue > 0
                 ? round((($revenueMonth - $prevMonthRevenue) / $prevMonthRevenue) * 100, 1)
                 : 0,
