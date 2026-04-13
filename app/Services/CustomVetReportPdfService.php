@@ -116,6 +116,9 @@ class CustomVetReportPdfService
             $pdf->SetTextColor(255, 255, 255);
             $pdf->SetXY(3, $sideY + 4);
             $pdf->Cell($sidebarW - 6, 5, date('d.m.Y'), 0, 1, 'C');
+
+            // Reset text color after sidebar drawing
+            $pdf->SetTextColor(30, 30, 30);
         };
 
         $drawSidebar();
@@ -252,12 +255,10 @@ class CustomVetReportPdfService
             $pdf->Cell($contentW, 6, '  AN (TIERARZT / KLINIK)', 0, 1, 'L', true);
             $curY = $pdf->GetY() + 3;
 
-            // Ensure font and text color are set correctly
             $pdf->SetFont($font, '', $fontSize - 0.5);
             $pdf->SetTextColor(30, 30, 30);
             $pdf->SetXY($contentX, $curY);
-            // Use ishtml=true to preserve formatting (paragraphs, bullet points, etc.)
-            $pdf->MultiCell($contentW, 5, $recipient, 0, 'L', false, 1, '', '', true, 0, true, true, 0, 'T', false);
+            $pdf->MultiCell($contentW, 5, $recipient, 0, 'L');
             $curY = $pdf->GetY() + 5;
         }
 
@@ -274,13 +275,29 @@ class CustomVetReportPdfService
             $pdf->Cell($contentW, 6, '  BERICHTSINHALT', 0, 1, 'L', true);
             $curY = $pdf->GetY() + 3;
 
-            // Ensure font and text color are set correctly after page break
             $pdf->SetFont($font, '', $fontSize);
             $pdf->SetTextColor(30, 30, 30);
-            $pdf->SetXY($contentX, $curY);
-            // Use ishtml=true to preserve formatting (paragraphs, bullet points, italic, etc.)
-            $pdf->MultiCell($contentW, 5, $content, 0, 'L', false, 1, '', '', true, 0, true, true, 0, 'T', false);
-            $curY = $pdf->GetY() + 5;
+
+            // Split content by line breaks and check page breaks for each line
+            $lines = explode("\n", $content);
+            foreach ($lines as $line) {
+                $line = trim($line);
+                if ($line === '') {
+                    $curY += 3;
+                    continue;
+                }
+
+                $numLines = $pdf->getNumLines($line, $contentW);
+                $neededHeight = max(5, $numLines * 5);
+
+                $this->checkPageBreak($pdf, $curY, $neededHeight, $pageH, $drawSidebar, $contentX, $font, $fontSize);
+                $curY = $pdf->GetY();
+
+                $pdf->SetXY($contentX, $curY);
+                $pdf->MultiCell($contentW, 5, $line, 0, 'L');
+                $curY = $pdf->GetY();
+            }
+            $curY += 5;
         }
 
         // ── Footer ───────────────────────────────────────────────────────────
@@ -330,8 +347,6 @@ class CustomVetReportPdfService
             $pdf->AddPage();
             $drawSidebar();
             $curY = 15;
-            // Reset text color after sidebar drawing (sidebar uses white text)
-            $pdf->SetTextColor(30, 30, 30);
         }
         $pdf->SetXY($contentX, $curY);
     }
