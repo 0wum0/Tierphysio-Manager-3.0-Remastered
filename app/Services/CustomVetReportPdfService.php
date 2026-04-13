@@ -211,16 +211,19 @@ class CustomVetReportPdfService
             $pdf->Image($patPhoto, $photoX, $blockTopY, $photoW, $photoW, '', '', '', true, 150, '', false, false, 1);
         }
 
-        $valW = $hasPhoto ? ($patColW - $photoW - $lblW - 2) : ($patColW - $lblW - 2);
+        // Value column width: reserve space for photo only when it exists
+        $valW = $hasPhoto
+            ? ($patColW - $photoW - $lblW - 2)
+            : ($patColW - $lblW - 2);
 
-        // Patient fields
+        // Patient fields (label + value, left of photo)
         $patFields = array_filter([
-            'Patient'    => $patient['name']    ?? '',
-            'Tierart'    => $patient['species']  ?? '',
-            'Rasse'      => $patient['breed']    ?? '',
-            'Geb.datum'  => !empty($patient['birth_date']) ? date('d.m.Y', strtotime($patient['birth_date'])) : '',
-            'Geschlecht' => $patient['gender']   ?? '',
-            'Status'     => $patient['status']   ?? '',
+            'Patient'   => $patient['name']        ?? '',
+            'Tierart'   => $patient['species']     ?? '',
+            'Rasse'     => $patient['breed']       ?? '',
+            'Geb.datum' => !empty($patient['birth_date']) ? date('d.m.Y', strtotime($patient['birth_date'])) : '',
+            'Geschlecht'=> $patient['gender']      ?? '',
+            'Status'    => $patient['status']      ?? '',
         ]);
         $pfy = $blockTopY;
         foreach ($patFields as $lbl => $val) {
@@ -347,6 +350,9 @@ class CustomVetReportPdfService
             $pdf->AddPage();
             $drawSidebar();
             $curY = 15;
+            // Reset font to normal weight after page break to prevent bold text on new page
+            $pdf->SetFont($font, '', $fontSize);
+            $pdf->SetTextColor(30, 30, 30);
         }
         $pdf->SetXY($contentX, $curY);
     }
