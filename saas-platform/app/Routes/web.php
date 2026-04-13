@@ -112,6 +112,9 @@ $router->get('/admin/google-settings',               [GoogleSettingsController::
 $router->post('/admin/google-settings/update',       [GoogleSettingsController::class, 'update']);
 $router->get('/admin/google-settings/test',          [GoogleSettingsController::class, 'testConnection']);
 
+// ── Google Plugin: Einmal-Migration alle Tenants ───────────────────────────────────
+$router->post('/admin/migration/google-plugin', [DataMigrationController::class, 'migrateGooglePlugin']);
+
 // ── Payment Webhooks + Callbacks ────────────────────────────────────────────
 $router->post('/webhooks/stripe', function (array $params): void {
     $app     = \Saas\Core\Application::getInstance();

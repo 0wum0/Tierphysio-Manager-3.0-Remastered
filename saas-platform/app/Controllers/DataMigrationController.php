@@ -844,6 +844,122 @@ class DataMigrationController extends Controller
         }
     }
 
+    /**
+     * POST /admin/migration/google-plugin
+     * Führt die 3 Google Calendar Plugin Migrations für ALLE bestehenden
+     * Tenants aus. Sicher wiederholbar (IF NOT EXISTS / ADD COLUMN IF NOT EXISTS).
+     */
+    public function migrateGooglePlugin(array $params = []): void
+    {
+        $this->requireAuth();
+        $this->verifyCsrf();
+
+        $migrationFiles = [
+            dirname(__DIR__, 2) . '/plugins/google-calendar-sync/migrations/001_google_calendar.sql',
+            dirname(__DIR__, 2) . '/plugins/google-calendar-sync/migrations/002_google_twoway_sync.sql',
+            dirname(__DIR__, 2) . '/plugins/google-calendar-sync/migrations/003_appointments_google_event_id.sql',
+        ];
+
+        // Prüfe ob alle Migrations-Dateien existieren
+        foreach ($migrationFiles as $file) {
+            if (!file_exists($file)) {
+                $this->jsonError('Migrations-Datei nicht gefunden: ' . basename($file));
+            }
+        }
+
+        $googleTables = [
+            'google_calendar_connections',
+            'google_calendar_sync_map',
+            'google_calendar_sync_log',
+            'google_calendar_imported_events',
+        ];
+
+        $tenants = $this->tenantRepo->all(1000, 0);
+        $results = [];
+
+        foreach ($tenants as $tenant) {
+            $prefix = rtrim((string)($tenant['db_name'] ?? ''), '_') . '_';
+            if ($prefix === '_') continue;
+
+            $pdo = $this->db->getPdo();
+            $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+
+            $ok      = 0;
+            $skipped = 0;
+            $errors  = [];
+
+            foreach ($migrationFiles as $file) {
+                $sql = (string)file_get_contents($file);
+
+                // Tabellennamen mit Tenant-Prefix versehen
+                foreach ($googleTables as $table) {
+                    $sql = preg_replace(
+                        '/`' . preg_quote($table, '/') . '`/',
+                        '`' . $prefix . $table . '`',
+                        $sql
+                    );
+                }
+
+                // Constraint-Namen prefixen
+                $sql = preg_replace_callback(
+                    '/\bCONSTRAINT\s+`([^`]+)`/i',
+                    fn($m) => 'CONSTRAINT `' . $prefix . $m[1] . '`',
+                    $sql
+                );
+
+                $statements = $this->splitStatements($sql);
+
+                foreach ($statements as $stmt) {
+                    $stmt = trim($stmt);
+                    if ($stmt === '') continue;
+                    if (preg_match('/^(--|#|\/\*)/i', $stmt)) continue;
+
+                    try {
+                        $pdo->exec($stmt);
+                        $ok++;
+                    } catch (\Throwable $e) {
+                        $msg   = $e->getMessage();
+                        $errno = 0;
+                        if ($e instanceof \PDOException && isset($e->errorInfo[1])) {
+                            $errno = (int)$e->errorInfo[1];
+                        }
+                        // Ignoriere: Tabelle existiert, Spalte existiert, Duplikat-Key, Duplikat-Eintrag
+                        if (in_array($errno, [1050, 1060, 1061, 1062], true)
+                            || str_contains($msg, 'already exists')
+                            || str_contains($msg, 'Duplicate')) {
+                            $skipped++;
+                        } else {
+                            $errors[] = basename($file) . ': ' . $msg;
+                        }
+                    }
+                }
+            }
+
+            $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+
+            $results[] = [
+                'tenant'  => $tenant['practice_name'],
+                'prefix'  => $prefix,
+                'status'  => empty($errors) ? 'success' : 'error',
+                'message' => empty($errors)
+                    ? "OK: {$ok} ausgeführt, {$skipped} übersprungen."
+                    : count($errors) . " Fehler ({$ok} OK)",
+                'errors'  => $errors,
+            ];
+        }
+
+        $successCount = count(array_filter($results, fn($r) => $r['status'] === 'success'));
+        $errorCount   = count($results) - $successCount;
+
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'success' => $errorCount === 0,
+            'message' => "Google Plugin Migrations abgeschlossen: {$successCount} Tenants OK, {$errorCount} Fehler.",
+            'results' => $results,
+        ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        exit;
+    }
+
     private function applyPrefixToSqlLocally(string $sql, string $prefix): string
     {
         $sql = preg_replace_callback(
@@ -859,7 +975,11 @@ class DataMigrationController extends Controller
             'patient_timeline','treatment_types',
             'mobile_api_tokens','cron_job_log',
             'befundboegen','befundbogen_felder',
-            'vet_reports', 'homework_plans', 'homework_tasks', 'homework_templates'
+            'vet_reports', 'homework_plans', 'homework_tasks', 'homework_templates',
+            'google_calendar_connections',
+            'google_calendar_sync_map',
+            'google_calendar_sync_log',
+            'google_calendar_imported_events',
         ];
 
         foreach ($tables as $table) {

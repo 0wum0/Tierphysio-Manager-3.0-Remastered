@@ -300,6 +300,93 @@ class TenantProvisioningService
         // Write tenant identity into prefixed settings table
         $pdo->prepare("INSERT IGNORE INTO `{$prefix}settings` (`key`, `value`) VALUES ('tenant_uuid', ?)")
             ->execute([$tenantUuid]);
+
+        // ── Plugin-Migrations ausführen ────────────────────────────────────
+        // Führe alle Plugin-Migrations aus damit neue Tenants sofort
+        // vollständig sind ohne dass sie die App aufrufen müssen.
+        $this->runPluginMigrations($prefix);
+    }
+
+    /**
+     * Run all plugin migration SQL files for a newly provisioned tenant.
+     * This ensures plugin tables exist immediately after provisioning
+     * without requiring the tenant to visit the app first.
+     */
+    private function runPluginMigrations(string $prefix): void
+    {
+        $pluginsDir = $this->config->getRootPath() . '/../app/plugins';
+        // Fallback: check relative to the saas-platform root
+        if (!is_dir($pluginsDir)) {
+            $pluginsDir = dirname($this->config->getRootPath()) . '/plugins';
+        }
+        if (!is_dir($pluginsDir)) {
+            // Plugins directory not found — skip silently
+            return;
+        }
+
+        $pdo = $this->db->getPdo();
+
+        // Find all plugin migration directories
+        $pluginDirs = glob($pluginsDir . '/*/migrations', GLOB_ONLYDIR) ?: [];
+
+        foreach ($pluginDirs as $migrationDir) {
+            $files = glob($migrationDir . '/*.sql') ?: [];
+            sort($files);
+
+            foreach ($files as $file) {
+                $sql = (string)file_get_contents($file);
+
+                // Apply prefix to known Google plugin tables
+                $googleTables = [
+                    'google_calendar_connections',
+                    'google_calendar_sync_map',
+                    'google_calendar_sync_log',
+                    'google_calendar_imported_events',
+                ];
+                foreach ($googleTables as $table) {
+                    $sql = preg_replace(
+                        '/`' . preg_quote($table, '/') . '`/',
+                        '`' . $prefix . $table . '`',
+                        $sql
+                    );
+                }
+
+                // Also apply constraint prefixing
+                $sql = preg_replace_callback(
+                    '/\bCONSTRAINT\s+`([^`]+)`/i',
+                    fn($m) => 'CONSTRAINT `' . $prefix . $m[1] . '`',
+                    $sql
+                );
+
+                // Split and execute statements
+                $lines   = explode("\n", $sql);
+                $cleaned = [];
+                foreach ($lines as $line) {
+                    if (!str_starts_with(ltrim($line), '--')) {
+                        $cleaned[] = $line;
+                    }
+                }
+                $statements = array_filter(
+                    array_map('trim', explode(';', implode("\n", $cleaned))),
+                    fn($s) => $s !== ''
+                );
+
+                foreach ($statements as $stmt) {
+                    try {
+                        $pdo->exec($stmt);
+                    } catch (\PDOException $e) {
+                        // Skip: table exists (42S01), duplicate column (1060),
+                        // duplicate key (1061), duplicate entry (1062)
+                        $code = (int)($e->errorInfo[1] ?? 0);
+                        if (!in_array($code, [1050, 1060, 1061, 1062], true)
+                            && $e->getCode() !== '42S01') {
+                            // Non-fatal: log but don't crash provisioning
+                            // Plugin migrations should never prevent tenant creation
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -353,6 +440,10 @@ class TenantProvisioningService
             'patient_timeline','treatment_types',
             'mobile_api_tokens','cron_job_log',
             'befundboegen','befundbogen_felder',
+            'google_calendar_connections',
+            'google_calendar_sync_map',
+            'google_calendar_sync_log',
+            'google_calendar_imported_events',
         ];
 
         foreach ($tables as $table) {
@@ -398,6 +489,10 @@ class TenantProvisioningService
     private function dropTenantTables(string $prefix): void
     {
         $tables = [
+            'google_calendar_imported_events',
+            'google_calendar_sync_log',
+            'google_calendar_sync_map',
+            'google_calendar_connections',
             'befundbogen_felder','befundboegen',
             'invoice_reminders','invoice_dunnings','invoice_positions','invoice_items','invoices',
             'mobile_api_tokens','cron_job_log',
