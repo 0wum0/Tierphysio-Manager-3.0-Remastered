@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Saas\Controllers;
 
+use Saas\Core\Config;
 use Saas\Core\Controller;
 use Saas\Core\View;
 use Saas\Core\Session;
@@ -19,6 +20,7 @@ class TenantController extends Controller
     public function __construct(
         View                          $view,
         Session                       $session,
+        private Config                $config,
         private TenantRepository       $tenantRepo,
         private SubscriptionRepository $subRepo,
         private PlanRepository         $planRepo,
@@ -299,10 +301,35 @@ class TenantController extends Controller
             $this->notFound();
         }
 
+        /* ── Storage-Schutz ──────────────────────────────────────────────────
+         * Der Daten-Ordner des Mandanten wird NIEMALS vom PHP-Code gelöscht.
+         * Stattdessen wird eine Marker-Datei erstellt, die anzeigt, dass der
+         * Mandant gelöscht wurde. So können Hosting-Cleanup-Tools erkennen,
+         * dass dieser Ordner intentional archiviert wird und nicht gelöscht
+         * werden darf.  Die App erstellt den Basis-Ordner bei Bedarf automatisch
+         * neu (Database::storagePath).                                       */
+        $prefix = rtrim((string)($tenant['db_name'] ?? ''), '_');
+        if ($prefix !== '') {
+            $practicePath = rtrim($this->config->get('practice.path', ''), '/');
+            $storageRoot  = $practicePath !== ''
+                ? $practicePath . '/storage/tenants'
+                : dirname($this->config->getRootPath()) . '/storage/tenants';
+            $tenantDir = $storageRoot . '/' . $prefix;
+            if (is_dir($tenantDir)) {
+                @file_put_contents(
+                    $tenantDir . '/_MANDANT_GELOESCHT_' . date('Y-m-d') . '.txt',
+                    "Praxis: {$tenant['practice_name']}\n" .
+                    "Mandant-ID: {$id}\n" .
+                    "Geloescht am: " . date('Y-m-d H:i:s') . "\n" .
+                    "Dieser Ordner ist ein Archiv. Bitte NICHT ohne Absprache loeschen.\n"
+                );
+            }
+        }
+
         $this->licenseService->revokeAllTokens($id);
         $this->tenantRepo->delete($id);
 
-        $this->session->flash('success', "Praxis '{$tenant['practice_name']}' wurde gelöscht.");
+        $this->session->flash('success', "Praxis '{$tenant['practice_name']}' wurde gelöscht. Storage-Daten wurden archiviert und nicht gelöscht.");
         $this->redirect('/admin/tenants');
     }
 

@@ -50,6 +50,16 @@ class Database
             /* Strip trailing underscore: "t_abc123_" → "t_abc123" */
             $slug = rtrim($this->tablePrefix, '_');
             $base = $base . '/tenants/' . $slug;
+
+            /* Auto-recreate the base tenant directory if it was deleted externally.
+             * Individual sub-directories (patients/, uploads/, …) are created by
+             * the respective upload handlers via mkdir($path, 0755, true).
+             * This single @mkdir here ensures the root is always present so that
+             * the recursive mkdir in upload handlers cannot fail due to a missing
+             * parent directory on a tenant whose storage was wiped externally. */
+            if (!is_dir($base)) {
+                @mkdir($base, 0755, true);
+            }
         }
 
         if ($subPath !== '') {
