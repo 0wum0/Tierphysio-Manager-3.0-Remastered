@@ -285,6 +285,34 @@
         </a>
     </div>
 
+    <div class="col-6 col-md-4 col-xl-2">
+        <a href="/ausgaben" class="text-decoration-none">
+        <div class="card h-100" style="border-left:3px solid #ef4444;cursor:pointer;transition:box-shadow .15s;" onmouseenter="this.style.boxShadow='0 0 0 2px #ef444455'" onmouseleave="this.style.boxShadow=''">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center gap-1 text-muted small text-uppercase fw-semibold mb-1" style="font-size:.68rem;letter-spacing:.06em;">
+                    <svg width="11" height="11" fill="none" viewBox="0 0 24 24" style="vertical-align:-1px;"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 2v20M17 5H9.5a2.5 2.5 0 0 1 0-5H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3.5a2.5 2.5 0 0 1 0-5H17z"/></svg>
+                    Ausgaben
+                </div>
+                <div class="fw-bold" style="font-size:1.3rem;color:#ef4444;">{% if stats.expenses_total > 0 %}{{ stats.expenses_total|money }}{% else %}<span style="color:var(--text-muted);font-size:1rem;">—</span>{% endif %}</div>
+                <div style="font-size:.72rem;color:var(--text-muted);margin-top:.2rem;">{{ stats.expenses_count ?? 0 }} Ausgabe{{ (stats.expenses_count ?? 0) != 1 ? 'n' : '' }}</div>
+            </div>
+        </div>
+        </a>
+    </div>
+
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card h-100" style="border-left:3px solid {{ stats.net_profit >= 0 ? '#22c55e' : '#ef4444' }};">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-center gap-1 text-muted small text-uppercase fw-semibold mb-1" style="font-size:.68rem;letter-spacing:.06em;">
+                    <svg width="11" height="11" fill="none" viewBox="0 0 24 24" style="vertical-align:-1px;"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 2v20M17 5H9.5a2.5 2.5 0 0 1 0-5H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3.5a2.5 2.5 0 0 1 0-5H17z"/></svg>
+                    Netto Umsatz
+                </div>
+                <div class="fw-bold" style="font-size:1.3rem;color:{{ stats.net_profit >= 0 ? '#22c55e' : '#ef4444' }};">{{ stats.net_profit|money }}</div>
+                <div style="font-size:.72rem;color:var(--text-muted);margin-top:.2rem;">Einnahmen - Ausgaben</div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 {# ── Charts ───────────────────────────────────────────────────────── #}

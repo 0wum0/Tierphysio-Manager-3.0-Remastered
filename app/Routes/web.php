@@ -18,6 +18,7 @@ use App\Controllers\HomeworkController;
 use App\Controllers\ReminderDunningController;
 use App\Controllers\MobileApiController;
 use App\Controllers\BefundbogenController;
+use App\Controllers\ExpenseController;
 
 /** @var \App\Core\Router $router */
 
@@ -450,6 +451,15 @@ $router->post('/rechnungen/{id}/status-inline', [InvoiceController::class, 'upda
 $router->post('/rechnungen/{id}/stornieren',    [InvoiceController::class, 'cancel'],             ['auth']);
 $router->get('/rechnungen/{id}/storno-pdf',     [InvoiceController::class, 'downloadCancellationPdf'], ['auth']);
 $router->get('/api/rechnungen/analytics',        [InvoiceController::class, 'analyticsJson'],      ['auth']);
+
+// ── Ausgaben (Expenses) ───────────────────────────────────────────────
+$router->get('/ausgaben',                [ExpenseController::class, 'index'],  ['auth']);
+$router->get('/ausgaben/neu',            [ExpenseController::class, 'create'], ['auth']);
+$router->post('/ausgaben',               [ExpenseController::class, 'store'],  ['auth']);
+$router->get('/ausgaben/{id}/bearbeiten',[ExpenseController::class, 'edit'],   ['auth']);
+$router->post('/ausgaben/{id}',          [ExpenseController::class, 'update'], ['auth']);
+$router->post('/ausgaben/{id}/loeschen', [ExpenseController::class, 'delete'], ['auth']);
+$router->get('/ausgaben/{id}/pdf',       [ExpenseController::class, 'pdf'],    ['auth']);
 
 // ── Mahnwesen: Erinnerungen ──────────────────────────────────────────
 $router->get('/mahnwesen/erinnerungen', [ReminderDunningController::class, 'reminderIndex'], ['auth']);

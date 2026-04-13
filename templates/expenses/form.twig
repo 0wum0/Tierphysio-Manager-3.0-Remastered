@@ -1,0 +1,71 @@
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
+
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">{{ expense is null ? 'Ausgabe erfassen' : 'Ausgabe bearbeiten' }}</h1>
+    <a href="/ausgaben" class="btn btn-secondary">Zurück</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form action="{{ expense is null ? '/ausgaben' : '/ausgaben/' ~ expense.id }}" method="POST" class="row g-3">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            {% if expense is not null %}
+            <input type="hidden" name="_method" value="PUT">
+            {% endif %}
+
+            <div class="col-md-6">
+                <label class="form-label">Datum *</label>
+                <input type="date" name="date" class="form-control" required value="{{ expense is null ? '' : expense.date }}">
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Kategorie *</label>
+                <select name="category" class="form-select" required>
+                    {% for cat in categories %}
+                    <option value="{{ cat }}" {{ expense is not null and expense.category == cat ? 'selected' : '' }}>{{ cat }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label">Beschreibung *</label>
+                <input type="text" name="description" class="form-control" required value="{{ expense is null ? '' : expense.description }}" placeholder="z.B. Tierarztbedarf, Miete, etc.">
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Lieferant</label>
+                <input type="text" name="supplier" class="form-control" value="{{ expense is null ? '' : expense.supplier }}" placeholder="Name des Lieferanten">
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">Nettobetrag (€) *</label>
+                <input type="number" name="amount_net" class="form-control" required step="0.01" value="{{ expense is null ? '' : expense.amount_net }}">
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label">MwSt. (%) *</label>
+                <select name="tax_rate" class="form-select" required>
+                    <option value="19" {{ expense is null or expense.tax_rate == 19 ? 'selected' : '' }}>19%</option>
+                    <option value="7" {{ expense is not null and expense.tax_rate == 7 ? 'selected' : '' }}>7%</option>
+                    <option value="0" {{ expense is not null and expense.tax_rate == 0 ? 'selected' : '' }}>0%</option>
+                </select>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label">Notizen</label>
+                <textarea name="notes" class="form-control" rows="3">{{ expense is null ? '' : expense.notes }}</textarea>
+            </div>
+
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">
+                    {{ expense is null ? 'Ausgabe erfassen' : 'Ausgabe speichern' }}
+                </button>
+                <a href="/ausgaben" class="btn btn-secondary">Abbrechen</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

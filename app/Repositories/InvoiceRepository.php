@@ -327,6 +327,27 @@ class InvoiceRepository extends Repository
                 ? round((($revenueYear - $prevYearRevenue) / $prevYearRevenue) * 100, 1)
                 : 0,
         ];
+
+        // Add expenses data for net profit calculation
+        $expensesTotal = 0.0;
+        $expensesCount = 0;
+        try {
+            $exp = $this->t('expenses');
+            $expensesTotal = (float)$this->db->fetchColumn(
+                "SELECT COALESCE(SUM(amount_gross), 0) FROM `{$exp}`"
+            );
+            $expensesCount = (int)$this->db->fetchColumn(
+                "SELECT COUNT(*) FROM `{$exp}`"
+            );
+        } catch (\Throwable) {
+            // expenses table might not exist yet
+        }
+
+        $stats['expenses_total'] = $expensesTotal;
+        $stats['expenses_count'] = $expensesCount;
+        $stats['net_profit']     = $revenueTotal - $expensesTotal;
+
+        return $stats;
     }
 
     public function getChartData(string $type): array
