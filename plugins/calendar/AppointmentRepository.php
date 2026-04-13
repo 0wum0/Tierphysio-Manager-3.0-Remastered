@@ -81,7 +81,7 @@ class AppointmentRepository
                AND a.status IN ('scheduled','confirmed')
                AND COALESCE(a.reminder_minutes, 0) > 0
                AND a.start_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL COALESCE(a.reminder_minutes, 60) MINUTE)
-               AND o.email IS NOT NULL AND o.email != ''",
+               AND (o.email IS NOT NULL AND o.email != '' OR a.patient_email IS NOT NULL AND a.patient_email != '')",
             []
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -92,9 +92,9 @@ class AppointmentRepository
         $this->db->query(
             "INSERT INTO `{$this->t('appointments')}`
              (title, description, start_at, end_at, all_day, status, color,
-              patient_id, owner_id, treatment_type_id, user_id,
-              recurrence_rule, recurrence_parent, notes, reminder_minutes)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+              patient_id, owner_id, patient_email, treatment_type_id, user_id,
+              recurrence_rule, recurrence_parent, notes, reminder_minutes, send_patient_reminder)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             [
                 $data['title'],
                 $data['description'] ?? null,
@@ -105,12 +105,14 @@ class AppointmentRepository
                 $data['color'] ?? null,
                 $data['patient_id'] ?? null,
                 $data['owner_id'] ?? null,
+                $data['patient_email'] ?? null,
                 $data['treatment_type_id'] ?? null,
                 $data['user_id'] ?? null,
                 $data['recurrence_rule'] ?? null,
                 $data['recurrence_parent'] ?? null,
                 $data['notes'] ?? null,
                 $data['reminder_minutes'] ?? 60,
+                $data['send_patient_reminder'] ?? 0,
             ]
         );
         return (int)$this->db->lastInsertId();
@@ -121,8 +123,8 @@ class AppointmentRepository
         $this->db->query(
             "UPDATE `{$this->t('appointments')}` SET
              title=?, description=?, start_at=?, end_at=?, all_day=?, status=?, color=?,
-             patient_id=?, owner_id=?, treatment_type_id=?, user_id=?,
-             recurrence_rule=?, notes=?, reminder_minutes=?
+             patient_id=?, owner_id=?, patient_email=?, treatment_type_id=?, user_id=?,
+             recurrence_rule=?, notes=?, reminder_minutes=?, send_patient_reminder=?
              WHERE id=?",
             [
                 $data['title'],
@@ -134,11 +136,13 @@ class AppointmentRepository
                 $data['color'] ?? null,
                 $data['patient_id'] ?? null,
                 $data['owner_id'] ?? null,
+                $data['patient_email'] ?? null,
                 $data['treatment_type_id'] ?? null,
                 $data['user_id'] ?? null,
                 $data['recurrence_rule'] ?? null,
                 $data['notes'] ?? null,
                 $data['reminder_minutes'] ?? 60,
+                $data['send_patient_reminder'] ?? 0,
                 $id,
             ]
         );

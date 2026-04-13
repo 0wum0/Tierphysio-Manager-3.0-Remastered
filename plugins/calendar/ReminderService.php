@@ -22,15 +22,19 @@ class ReminderService
         $failed = 0;
 
         foreach ($appointments as $a) {
-            if (empty($a['owner_email'])) {
-                $this->appointmentRepository->markReminderSent((int)$a['id']);
-                continue;
+            // Erinnerung an Praxisinhaber
+            if (!empty($a['owner_email'])) {
+                $success = $this->mailService->sendReminder($a);
+                $success ? $sent++ : $failed++;
             }
 
-            $success = $this->mailService->sendReminder($a);
+            // Erinnerung an Patient/Kunde (falls aktiviert und email vorhanden)
+            if (!empty($a['send_patient_reminder']) && !empty($a['patient_email'])) {
+                $success = $this->mailService->sendPatientReminder($a);
+                $success ? $sent++ : $failed++;
+            }
 
             $this->appointmentRepository->markReminderSent((int)$a['id']);
-            $success ? $sent++ : $failed++;
         }
 
         return ['sent' => $sent, 'failed' => $failed, 'total' => count($appointments)];

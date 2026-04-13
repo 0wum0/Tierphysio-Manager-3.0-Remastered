@@ -118,6 +118,36 @@ class MailService
         }
     }
 
+    public function sendPatientReminder(array $appointment): bool
+    {
+        try {
+            $placeholders = $this->buildReminderPlaceholders($appointment);
+            $subject = $this->applyPlaceholders(
+                $this->settingsRepository->get('email_patient_reminder_subject', 'Ihr Termin: {{appointment_title}} am {{appointment_date}}'),
+                $placeholders
+            );
+            $bodyText = $this->applyPlaceholders(
+                $this->settingsRepository->get('email_patient_reminder_body',
+                    "Hallo,\n\nhiermit möchten wir Sie an Ihren bevorstehenden Termin erinnern:\n\n📅 {{appointment_title}}\nDatum: {{appointment_date}}\nUhrzeit: {{appointment_time}}\n{{appointment_patient}}\n\nFalls Sie den Termin absagen oder verschieben möchten, kontaktieren Sie uns bitte.\n\nLiebe Grüße\n{{company_name}}"
+                ),
+                $placeholders
+            );
+
+            $mailer = $this->createMailer();
+            $mailer->addAddress($appointment['patient_email']);
+            $mailer->Subject = $subject;
+            $mailer->isHTML(true);
+            $mailer->Body    = $this->wrapInEmailLayout($subject, $bodyText, '📅');
+            $mailer->AltBody = $bodyText;
+
+            return $mailer->send();
+        } catch (\Throwable $e) {
+            $this->lastError = $e->getMessage();
+            error_log('[MailService::sendPatientReminder] ' . $e->getMessage());
+            return false;
+        }
+    }
+
     public function sendInvoiceReminder(array $invoice, array $reminder, array $owner, string $pdfContent): bool
     {
         try {

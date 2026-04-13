@@ -527,12 +527,10 @@ $router->get('/api/notifications', [NotificationController::class, 'index'], ['a
 $router->get('/api/invoice-form-data', [InvoiceController::class, 'formData'], ['auth']);
 
 $router->get('/cron/geburtstag', [CronController::class, 'birthday']);
+$router->get('/cron/dispatcher', [CronController::class, 'dispatcher']);
 $router->get('/cron/pixel.gif',  [CronPixelController::class, 'pixel']);
 
-// ── Cron Admin Panel ──────────────────────────────────────────────────
-$router->get('/admin/cronjobs',                          [CronAdminController::class, 'index'],   ['admin']);
-$router->post('/admin/cronjobs/{key}/trigger',           [CronAdminController::class, 'trigger'], ['admin']);
-$router->get('/admin/cronjobs/log',                      [CronAdminController::class, 'logJson'], ['admin']);
+// ── Cron Admin Panel entfernt - wird in SaaS-Platform verwaltet ─────────
 
 // Serve storage files via index.php — storage/ is outside DocumentRoot when public/ is the root
 function serveStorageFile(string $dir, string $file): void {

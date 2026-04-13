@@ -87,6 +87,198 @@ class CronController extends Controller
         }
     }
 
+    /* ─────────────────────────────────────────────────────────
+       GET /cron/dispatcher
+       Zentraler Dispatcher - führt fällige Jobs basierend auf Zeitplänen aus
+       Protected by cron_dispatcher_token from settings.
+       Läuft alle 10 Minuten via Hosting-Panel.
+    ───────────────────────────────────────────────────────── */
+    public function dispatcher(): void
+    {
+        $start = hrtime(true);
+        $startTime = date('Y-m-d H:i:s');
+        $this->cronLog("START dispatcher at {$startTime}");
+
+        try {
+            $expectedToken = $this->settings->get('cron_dispatcher_token', '');
+
+            if (empty($expectedToken)) {
+                http_response_code(503);
+                $this->cronLog("ERROR dispatcher: Token nicht konfiguriert");
+                $this->dispatcherLog('dispatcher', 'error', 'Token nicht konfiguriert.', $start);
+                $this->jsonCron(['error' => 'Dispatcher-Token nicht konfiguriert.']);
+                return;
+            }
+
+            $providedToken = '';
+            $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+            if (str_starts_with($authHeader, 'Bearer ')) {
+                $providedToken = substr($authHeader, 7);
+            }
+            if ($providedToken === '') {
+                $providedToken = $_GET['token'] ?? '';
+            }
+
+            if (!hash_equals($expectedToken, $providedToken)) {
+                http_response_code(401);
+                $this->cronLog("ERROR dispatcher: Ungültiger Token");
+                $this->dispatcherLog('dispatcher', 'error', 'Ungültiger Token.', $start);
+                $this->jsonCron(['error' => 'Ungültiger Token.']);
+                return;
+            }
+
+            // Job-Konfiguration mit Zeitplänen
+            $jobs = [
+                'birthday' => [
+                    'schedule' => '0 8 * * *', // Täglich um 08:00
+                    'interval_seconds' => 86400, // 24 Stunden
+                    'endpoint' => '/cron/geburtstag'
+                ],
+                'calendar_reminders' => [
+                    'schedule' => '*/15 * * * *', // Alle 15 Minuten
+                    'interval_seconds' => 900,
+                    'endpoint' => '/kalender/cron/erinnerungen'
+                ],
+                'google_sync' => [
+                    'schedule' => '0 * * * *', // Stündlich
+                    'interval_seconds' => 3600,
+                    'endpoint' => '/google-kalender/cron'
+                ],
+                'tcp_reminders' => [
+                    'schedule' => '*/15 * * * *', // Alle 15 Minuten
+                    'interval_seconds' => 900,
+                    'endpoint' => '/tcp/cron/erinnerungen'
+                ],
+                'holiday_greetings' => [
+                    'schedule' => '0 8 * * *', // Täglich um 08:00
+                    'interval_seconds' => 86400,
+                    'endpoint' => '/api/holiday-cron'
+                ]
+            ];
+
+            $results = [];
+
+            foreach ($jobs as $jobKey => $config) {
+                $jobStart = hrtime(true);
+
+                // Prüfen, ob Job fällig ist
+                $lastRun = $this->db->fetchColumn(
+                    "SELECT created_at FROM cron_dispatcher_log WHERE job_key = ? ORDER BY created_at DESC LIMIT 1",
+                    [$jobKey]
+                );
+
+                $isDue = true;
+                if ($lastRun) {
+                    $lastRunTime = strtotime($lastRun);
+                    $nextRunTime = $lastRunTime + $config['interval_seconds'];
+                    $isDue = time() >= $nextRunTime;
+                }
+
+                if (!$isDue) {
+                    $results[$jobKey] = ['status' => 'skipped', 'reason' => 'Not due yet'];
+                    $this->dispatcherLog($jobKey, 'skipped', 'Not due yet', $jobStart);
+                    continue;
+                }
+
+                // Job ausführen via internen Aufruf
+                $this->cronLog("EXECUTING job: {$jobKey}");
+                $jobResult = $this->executeJob($jobKey, $config['endpoint']);
+                $results[$jobKey] = $jobResult;
+
+                $status = $jobResult['success'] ? 'success' : 'error';
+                $message = $jobResult['message'] ?? ($jobResult['success'] ? 'Executed successfully' : 'Execution failed');
+                $this->dispatcherLog($jobKey, $status, $message, $jobStart);
+            }
+
+            $executedCount = count(array_filter($results, fn($r) => isset($r['status']) && $r['status'] !== 'skipped'));
+            $skippedCount = count(array_filter($results, fn($r) => isset($r['status']) && $r['status'] === 'skipped'));
+
+            $msg = "executed={$executedCount}, skipped={$skippedCount}";
+            $this->cronLog("SUCCESS dispatcher: {$msg}");
+            $this->dispatcherLog('dispatcher', 'success', $msg, $start);
+
+            $this->jsonCron([
+                'ok' => true,
+                'timestamp' => $startTime,
+                'executed' => $executedCount,
+                'skipped' => $skippedCount,
+                'results' => $results
+            ]);
+
+        } catch (\Throwable $e) {
+            $this->cronLog("EXCEPTION dispatcher: " . $e->getMessage());
+            $this->dispatcherLog('dispatcher', 'error', $e->getMessage(), $start);
+            http_response_code(200);
+            $this->jsonCron(['ok' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    private function executeJob(string $jobKey, string $endpoint): array
+    {
+        $start = hrtime(true);
+        $baseUrl = 'https://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+        $url = $baseUrl . $endpoint;
+
+        // Token für den spezifischen Job holen
+        $tokenKeys = [
+            'birthday' => 'birthday_cron_token',
+            'calendar_reminders' => 'calendar_cron_secret',
+            'google_sync' => 'google_sync_cron_secret',
+            'tcp_reminders' => 'tcp_cron_token',
+            'holiday_greetings' => 'cron_secret'
+        ];
+
+        $tokenKey = $tokenKeys[$jobKey] ?? '';
+        $token = $tokenKey ? $this->settings->get($tokenKey, '') : '';
+
+        if ($token) {
+            $url .= '?token=' . $token;
+        }
+
+        // Internen Aufruf via curl
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 120);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['X-Internal-Cron: true']);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        $duration = (int)((hrtime(true) - $start) / 1_000_000);
+
+        if ($error) {
+            return [
+                'success' => false,
+                'message' => 'CURL Error: ' . $error,
+                'duration_ms' => $duration
+            ];
+        }
+
+        return [
+            'success' => $httpCode >= 200 && $httpCode < 300,
+            'message' => "HTTP {$httpCode}",
+            'duration_ms' => $duration,
+            'response' => substr($response, 0, 500)
+        ];
+    }
+
+    private function dispatcherLog(string $jobKey, string $status, string $message, int $startHrtime): void
+    {
+        $ms = (int)((hrtime(true) - $startHrtime) / 1_000_000);
+        try {
+            $this->db->query(
+                "INSERT INTO cron_dispatcher_log (job_key, status, message, duration_ms) VALUES (?, ?, ?, ?)",
+                [$jobKey, $status, $message, $ms]
+            );
+        } catch (\Throwable) {
+            // Logging must never crash the dispatcher
+        }
+    }
+
     private function dbLog(string $jobKey, string $status, string $message, int $startHrtime): void
     {
         $ms = (int)((hrtime(true) - $startHrtime) / 1_000_000);

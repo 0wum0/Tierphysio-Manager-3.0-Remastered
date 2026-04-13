@@ -1,0 +1,325 @@
+{% extends 'layouts/base.twig' %}
+
+{% block title %}Praxis Cronjobs - SaaS Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h3 mb-4">Praxis Cronjobs</h1>
+            
+            <div class="alert alert-info">
+                <strong>Neue Architektur:</strong> Ein zentraler Dispatcher-Cronjob führt alle Aufgaben basierend auf Zeitplänen aus. Nur EIN Cronjob pro Praxis im Hosting-Panel erforderlich (alle 10 Minuten).
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Dispatcher-Informationen</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Icon</th>
+                                    <th>Name</th>
+                                    <th>Beschreibung</th>
+                                    <th>Zeitplan</th>
+                                    <th>Endpoint</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td style="font-size: 1.5rem;">⚡</td>
+                                    <td><strong>Cron Dispatcher</strong></td>
+                                    <td>Zentraler Dispatcher für alle Cronjobs - führt fällige Jobs basierend auf Zeitplänen aus</td>
+                                    <td>
+                                        <code>*/10 * * * *</code>
+                                        <br>
+                                        <small class="text-muted">Alle 10 Minuten</small>
+                                    </td>
+                                    <td><code>/cron/dispatcher</code></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6>Verwaltete Jobs:</h6>
+                    <ul>
+                        <li>🎂 <strong>Geburtstagsmail:</strong> Täglich um 08:00 Uhr</li>
+                        <li>📅 <strong>Kalender-Erinnerungen:</strong> Alle 15 Minuten</li>
+                        <li>🔄 <strong>Google Kalender Sync:</strong> Stündlich</li>
+                        <li>💉 <strong>TherapyCare Erinnerungen:</strong> Alle 15 Minuten</li>
+                        <li>🎉 <strong>Feiertagsgrüße:</strong> Täglich um 08:00 Uhr</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Praxen</h5>
+                </div>
+                <div class="card-body">
+                    {% if tenants is empty %}
+                    <div class="alert alert-warning">
+                        Keine Praxen gefunden.
+                    </div>
+                    {% else %}
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-warning" onclick="migrateAllTenants()">
+                            🔄 Alle Praxen migrieren (Version 35-36)
+                        </button>
+                        <div id="migration-status" class="mt-2 small"></div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Tenant ID</th>
+                                    <th>Praxis Name</th>
+                                    <th>Email</th>
+                                    <th>DB-Version</th>
+                                    <th>Status</th>
+                                    <th>Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tenant in tenants %}
+                                <tr>
+                                    <td>{{ tenant.id }}</td>
+                                    <td>{{ tenant.practice_name }}</td>
+                                    <td>{{ tenant.email }}</td>
+                                    <td>
+                                        <span id="db-version-{{ tenant.id }}" class="badge bg-secondary">Laden...</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success">{{ tenant.status }}</span>
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modal-{{ tenant.id }}">
+                                            Dispatcher konfigurieren
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% for tenant in tenants %}
+<!-- Modal für {{ tenant.practice_name }} -->
+<div class="modal fade" id="modal-{{ tenant.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Dispatcher für {{ tenant.practice_name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p><strong>Praxis:</strong> {{ tenant.practice_name }}</p>
+                <p><strong>Email:</strong> {{ tenant.email }}</p>
+                <p><strong>UUID:</strong> <code>{{ tenant.uuid }}</code></p>
+                <hr>
+                
+                <div class="mb-4 p-3 border rounded">
+                    <h6>⚡ Cron Dispatcher</h6>
+                    <p class="text-muted small">Zentraler Dispatcher für alle Cronjobs - läuft alle 10 Minuten</p>
+                    
+                    <div class="mb-2">
+                        <label class="form-label fw-bold">Dispatcher-Token</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control font-monospace" id="token-{{ tenant.id }}" placeholder="Dispatcher-Token eingeben...">
+                            <button type="button" class="btn btn-outline-secondary" onclick="generateToken('token-{{ tenant.id }}')">
+                                🎲 Generieren
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <label class="form-label fw-bold">Dispatcher-URL</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control font-monospace" id="url-{{ tenant.id }}" readonly>
+                            <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('url-{{ tenant.id }}')">
+                                📋 Kopieren
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <label class="form-label fw-bold">Cron-Befehl (für Hosting-Panel)</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control font-monospace" id="cmd-{{ tenant.id }}" readonly>
+                            <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('cmd-{{ tenant.id }}')">
+                                📋 Kopieren
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <form action="/admin/praxis-cron/update-token" method="POST" class="d-inline">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="tenant_id" value="{{ tenant.id }}">
+                        <input type="hidden" name="cron_job_key" value="dispatcher">
+                        <input type="hidden" name="token" id="input-token-{{ tenant.id }}">
+                        <button type="submit" class="btn btn-sm btn-success">Token speichern</button>
+                    </form>
+                    
+                    <button type="button" class="btn btn-sm btn-info" onclick="runCron({{ tenant.id }}, 'dispatcher')">
+                        ▶️ Dispatcher testen
+                    </button>
+                    <div id="result-{{ tenant.id }}" class="mt-2 small"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Schließen</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<script>
+function generateToken(inputId) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let token = '';
+    for (let i = 0; i < 40; i++) {
+        token += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    document.getElementById(inputId).value = token;
+    updateUrlsAndCmds();
+}
+
+function copyToClipboard(elementId) {
+    const element = document.getElementById(elementId);
+    element.select();
+    document.execCommand('copy');
+}
+
+function runCron(tenantId, cronJobKey) {
+    const resultDiv = document.getElementById('result-' + tenantId);
+    resultDiv.innerHTML = '<span class="text-info">⏳ Dispatcher wird gestartet...</span>';
+    
+    const formData = new FormData();
+    formData.append('tenant_id', tenantId);
+    formData.append('cron_job_key', cronJobKey);
+    formData.append('_csrf_token', '{{ csrf_token }}');
+    
+    fetch('/admin/praxis-cron/run-now', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultDiv.innerHTML = '<span class="text-success">✓ Erfolgreich (HTTP ' + data.http_code + ')</span>';
+        } else {
+            resultDiv.innerHTML = '<span class="text-danger">✗ Fehlgeschlagen: ' + (data.error || 'HTTP ' + data.http_code) + '</span>';
+        }
+    })
+    .catch(error => {
+        resultDiv.innerHTML = '<span class="text-danger">✗ Fehler: ' + error + '</span>';
+    });
+}
+
+function updateUrlsAndCmds() {
+    {% for tenant in tenants %}
+    const token{{ tenant.id }} = document.getElementById('token-{{ tenant.id }}').value;
+    const domain{{ tenant.id }} = '{{ tenant.email|split('@')[1] }}';
+    const url{{ tenant.id }} = 'https://' + domain{{ tenant.id }} + '/cron/dispatcher?token=' + token{{ tenant.id }};
+    const cmd{{ tenant.id }} = '*/10 * * * * curl -s "' + url{{ tenant.id }} + '" > /dev/null 2>&1';
+
+    document.getElementById('url-{{ tenant.id }}').value = url{{ tenant.id }};
+    document.getElementById('cmd-{{ tenant.id }}').value = cmd{{ tenant.id }};
+    document.getElementById('input-token-{{ tenant.id }}').value = token{{ tenant.id }};
+    {% endfor %}
+}
+
+// Initialize on modal show
+document.addEventListener('DOMContentLoaded', function() {
+    {% for tenant in tenants %}
+    document.getElementById('modal-{{ tenant.id }}').addEventListener('show.bs.modal', function() {
+        // Load existing token from server via AJAX if needed
+    });
+    {% endfor %}
+
+    // Load database versions
+    {% for tenant in tenants %}
+    loadTenantVersion({{ tenant.id }});
+    {% endfor %}
+});
+
+function loadTenantVersion(tenantId) {
+    const versionBadge = document.getElementById('db-version-' + tenantId);
+    if (!versionBadge) return;
+
+    fetch('/admin/migration/tenant-version?tenant_id=' + tenantId, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.current_version === null) {
+                versionBadge.textContent = 'N/A';
+                versionBadge.className = 'badge bg-warning';
+            } else if (data.is_up_to_date) {
+                versionBadge.textContent = 'v' + data.current_version;
+                versionBadge.className = 'badge bg-success';
+            } else {
+                versionBadge.textContent = 'v' + data.current_version + ' (neu: v' + data.latest_version + ')';
+                versionBadge.className = 'badge bg-warning';
+            }
+        } else {
+            versionBadge.textContent = 'Fehler';
+            versionBadge.className = 'badge bg-danger';
+        }
+    })
+    .catch(error => {
+        versionBadge.textContent = 'Fehler';
+        versionBadge.className = 'badge bg-danger';
+    });
+}
+
+function migrateAllTenants() {
+    const statusDiv = document.getElementById('migration-status');
+    statusDiv.innerHTML = '<span class="text-info">⏳ Migration läuft...</span>';
+    
+    const formData = new FormData();
+    formData.append('_csrf_token', '{{ csrf_token }}');
+    
+    fetch('/admin/migration/migrate-all', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            statusDiv.innerHTML = '<span class="text-success">✓ ' + data.message + '</span>';
+            // Reload versions
+            {% for tenant in tenants %}
+            loadTenantVersion({{ tenant.id }});
+            {% endfor %}
+        } else {
+            statusDiv.innerHTML = '<span class="text-danger">✗ ' + (data.error || data.message) + '</span>';
+        }
+    })
+    .catch(error => {
+        statusDiv.innerHTML = '<span class="text-danger">✗ Fehler: ' + error + '</span>';
+    });
+}
+</script>
+{% endblock %}
