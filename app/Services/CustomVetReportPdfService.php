@@ -192,6 +192,14 @@ class CustomVetReportPdfService
             }
         }
 
+        // ── Patient block layout ───────────────────────────────────────────
+        $ownerW = 58;
+        $patColX = $contentX + $ownerW + 4;
+        $patColW = $contentW - $ownerW - 4;
+        $photoW = 24;
+        $lblW = 24;
+        $rowH = 5.0;
+
         // Patient photo (path-safe)
         $hasPhoto = false;
         $patPhoto = null;
