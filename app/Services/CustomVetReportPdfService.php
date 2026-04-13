@@ -120,6 +120,11 @@ class CustomVetReportPdfService
 
         $drawSidebar();
 
+        // Page break callback to redraw sidebar on each new page
+        $pdf->setPageMarkCallback(function($page) use ($drawSidebar) {
+            $drawSidebar();
+        });
+
         // ── Company info top right ────────────────────────────────────────
         $pdf->SetFont($font, 'B', $fontSize + 1);
         $pdf->SetTextColor(30, 30, 30);
@@ -272,27 +277,11 @@ class CustomVetReportPdfService
             $pdf->SetTextColor(30, 30, 30);
             $pdf->SetXY($contentX, $curY);
 
-            // Estimate height needed for content and handle page breaks
-            $numLines = $pdf->getNumLines($content, $contentW);
-            $estimatedHeight = $numLines * 5;
-            $remainingSpace = $pageH - 22 - $curY;
-
-            if ($estimatedHeight > $remainingSpace) {
-                // Content needs multiple pages - split and render
-                $lines = explode("\n", $content);
-                foreach ($lines as $line) {
-                    $lineHeight = max(5, $pdf->getNumLines($line, $contentW) * 5);
-                    $this->checkPageBreak($pdf, $curY, $lineHeight, $pageH, $drawSidebar, $contentX, $font, $fontSize);
-                    $curY = $pdf->GetY();
-                    $pdf->SetXY($contentX, $curY);
-                    $pdf->MultiCell($contentW, 5, $line, 0, 'L');
-                    $curY = $pdf->GetY();
-                }
-            } else {
-                // Content fits on current page
-                $pdf->MultiCell($contentW, 5, $content, 0, 'L');
-                $curY = $pdf->GetY();
-            }
+            // Enable auto page break for content rendering
+            $pdf->SetAutoPageBreak(true, 25);
+            $pdf->MultiCell($contentW, 5, $content, 0, 'L');
+            $pdf->SetAutoPageBreak(false);
+            $curY = $pdf->GetY();
         }
 
         // ── Footer ───────────────────────────────────────────────────────────
