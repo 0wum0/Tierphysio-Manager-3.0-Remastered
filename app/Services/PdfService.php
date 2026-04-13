@@ -2317,18 +2317,20 @@ class PdfService
         $pdf->SetAutoPageBreak(false);
         $pdf->AddPage();
 
-        // ── WATERMARK „STORNO" ────────────────────────────────────────────
-        $pdf->SetFont($font, 'B', 55);
-        $pdf->SetTextColor(230, 200, 200);
-        $pdf->StartTransform();
-        $pdf->Rotate(35, 105, 148);
-        $pdf->SetXY(35, 133);
-        $pdf->Cell(140, 30, 'STORNO', 0, 0, 'C');
-        $pdf->StopTransform();
-
         // ── LEFT SIDEBAR (rot) ────────────────────────────────────────────
         $pdf->SetFillColor(...$stornoRed);
         $pdf->Rect(0, 0, $sidebarW, $pageH, 'F');
+
+        // ── DIAGONALER „STORNORECHNUNG"-Schriftzug IM Seitenstreifen ─────
+        // Rotiert 90° um die Mitte des roten Streifens → läuft senkrecht
+        // von unten nach oben; überlappt nur den Streifen, nicht den Inhalt.
+        $pdf->SetFont($font, 'B', 26);
+        $pdf->SetTextColor(255, 100, 100);
+        $pdf->StartTransform();
+        $pdf->Rotate(90, $sidebarW / 2, $pageH / 2);
+        $pdf->SetXY($sidebarW / 2 - 70, $pageH / 2 - 7);
+        $pdf->Cell(140, 14, 'STORNORECHNUNG', 0, 0, 'C');
+        $pdf->StopTransform();
 
         // Logo
         $logoY = 14;
@@ -2355,10 +2357,10 @@ class PdfService
         $pdf->SetTextColor(255, 200, 200);
         $pdf->SetXY(3, $sideY);
         $pdf->Cell($sidebarW - 6, 4, 'Stornonummer', 0, 1, 'C');
-        $pdf->SetFont($font, 'B', $fontSize - 1);
+        $pdf->SetFont($font, 'B', max(5, $fontSize - 2));
         $pdf->SetTextColor(255, 255, 255);
         $pdf->SetXY(3, $sideY + 4);
-        $pdf->Cell($sidebarW - 6, 5, $invoice['invoice_number'], 0, 1, 'C');
+        $pdf->MultiCell($sidebarW - 6, 4.5, $invoice['invoice_number'], 0, 'C');
 
         // Sidebar: Stornodatum
         $sideY += 22;
@@ -2378,10 +2380,10 @@ class PdfService
             $pdf->SetTextColor(255, 200, 200);
             $pdf->SetXY(3, $sideY);
             $pdf->Cell($sidebarW - 6, 4, 'Zu Rechnung', 0, 1, 'C');
-            $pdf->SetFont($font, 'B', $fontSize - 1);
+            $pdf->SetFont($font, 'B', max(5, $fontSize - 2));
             $pdf->SetTextColor(255, 255, 255);
             $pdf->SetXY(3, $sideY + 4);
-            $pdf->Cell($sidebarW - 6, 5, $original['invoice_number'], 0, 1, 'C');
+            $pdf->MultiCell($sidebarW - 6, 4.5, $original['invoice_number'], 0, 'C');
         }
 
         // Sidebar: Kundennummer

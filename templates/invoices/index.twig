@@ -368,6 +368,15 @@
                     </td>
                     <td class="font-semibold">{{ invoice.total_gross|money }}</td>
                     <td onclick="event.stopPropagation();">
+                        {% set _iType = invoice.invoice_type ?? 'normal' %}
+                        {% set _locked = invoice.status in ['cancelled','cancellation'] or _iType == 'cancellation' %}
+                        {% if _locked %}
+                            {% if _iType == 'cancellation' %}
+                                <span class="badge" style="background:rgba(220,38,38,0.15);color:#dc2626;border:1px solid rgba(220,38,38,0.3);font-size:.75rem;">Stornorechnung</span>
+                            {% else %}
+                                <span class="badge" style="background:rgba(220,38,38,0.15);color:#dc2626;border:1px solid rgba(220,38,38,0.3);font-size:.75rem;">Storniert</span>
+                            {% endif %}
+                        {% else %}
                         <select class="invoice-status-select form-select form-select-sm"
                                 data-invoice-id="{{ invoice.id }}"
                                 data-current="{{ invoice.status }}"
@@ -379,6 +388,7 @@
                             <option value="mahnung" {{ invoice.status == 'mahnung' ? 'selected' : '' }}>Mahnung</option>
                             <option value="draft"   {{ invoice.status == 'draft'   ? 'selected' : '' }}>Entwurf</option>
                         </select>
+                        {% endif %}
                         {% if invoice.payment_method == 'bar' %}
                         <span class="badge bg-success-subtle text-success ms-1" style="font-size:.7rem;">
                             <svg width="10" height="10" fill="none" viewBox="0 0 24 24" style="vertical-align:-1px;"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" stroke-width="2"/><line x1="2" y1="10" x2="22" y2="10" stroke="currentColor" stroke-width="2"/></svg>
@@ -406,7 +416,13 @@
             <div class="card-body pb-2">
             <div class="d-flex justify-content-between align-items-center mb-1">
                 <span class="fw-bold" style="color:var(--bs-primary);">{{ invoice.invoice_number }}</span>
-                <span class="badge badge-{{ invoice.status }}">{{ t('invoices.status_' ~ invoice.status) }}</span>
+                {% if (invoice.invoice_type ?? 'normal') == 'cancellation' %}
+                    <span class="badge" style="background:rgba(220,38,38,0.15);color:#dc2626;border:1px solid rgba(220,38,38,0.3);">Stornorechnung</span>
+                {% elseif invoice.status == 'cancelled' %}
+                    <span class="badge" style="background:rgba(220,38,38,0.15);color:#dc2626;border:1px solid rgba(220,38,38,0.3);">Storniert</span>
+                {% else %}
+                    <span class="badge badge-{{ invoice.status }}">{{ t('invoices.status_' ~ invoice.status) }}</span>
+                {% endif %}
             </div>
             <div class="d-flex flex-wrap gap-2 text-muted small">
                 <span class="fw-semibold text-body">{{ invoice.total_gross|money }}</span>
