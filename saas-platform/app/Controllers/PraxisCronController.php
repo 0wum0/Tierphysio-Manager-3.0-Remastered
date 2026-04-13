@@ -128,7 +128,7 @@ class PraxisCronController extends Controller
 
         // Update token in tenant settings
         try {
-            $this->db->query("INSERT INTO {$settingsTable} (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = ?", [$settingKey, $token, $token]);
+            $this->db->query("INSERT INTO `{$settingsTable}` (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = ?", [$settingKey, $token, $token]);
 
             $actor = $this->session->get('saas_user') ?? 'admin';
             $this->log->log('praxis.cron.update_token', $actor, 'tenant', $tenantId, "Cron token updated for {$cronJobKey} in tenant {$tenant['slug']}");
@@ -196,7 +196,7 @@ class PraxisCronController extends Controller
         ];
 
         $tokenField = $tokenFields[$cronJobKey];
-        $token = $this->db->fetchColumn("SELECT `value` FROM {$settingsTable} WHERE `key` = ?", [$tokenField]);
+        $token = $this->db->fetchColumn("SELECT `value` FROM `{$settingsTable}` WHERE `key` = ?", [$tokenField]);
 
         if ($token) {
             $url .= '?token=' . $token;
