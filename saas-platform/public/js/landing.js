@@ -1,93 +1,107 @@
 (function () {
     'use strict';
 
-    const revealEls = document.querySelectorAll('.reveal, .reveal-left, .reveal-right');
-    if ('IntersectionObserver' in window) {
-        const revealObs = new IntersectionObserver((entries) => {
-            entries.forEach((entry) => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                    revealObs.unobserve(entry.target);
-                }
+    // Register GSAP Plugins
+    if (typeof gsap !== 'undefined') {
+        gsap.registerPlugin(ScrollTrigger);
+
+        // --- Hero Animations ---
+        const heroTl = gsap.timeline({ defaults: { ease: "power4.out", duration: 1.2 } });
+
+        heroTl.from('[data-gsap="fade-in"]', { opacity: 0, y: -20, stagger: 0.1 })
+              .from('[data-gsap="skew-up"]', { opacity: 0, y: 100, skewY: 10 }, "-=0.8")
+              .from('[data-gsap="fade-up"]', { opacity: 0, y: 40, stagger: 0.2 }, "-=1")
+              .from('[data-gsap="float"]', { opacity: 0, scale: 0.9, x: 50 }, "-=1.2");
+
+        // Floating Animation for Panel
+        gsap.to('[data-gsap="float"]', {
+            y: "-=20",
+            duration: 3,
+            repeat: -1,
+            yoyo: true,
+            ease: "sine.inOut"
+        });
+
+        // --- Scroll Reveals ---
+        const reveals = document.querySelectorAll('[data-gsap="reveal"]');
+        reveals.forEach((el) => {
+            gsap.from(el, {
+                scrollTrigger: {
+                    trigger: el,
+                    start: "top 85%",
+                    toggleActions: "play none none none"
+                },
+                opacity: 0,
+                y: 50,
+                duration: 1,
+                ease: "power3.out"
             });
-        }, { threshold: 0.12 });
-        revealEls.forEach((el) => revealObs.observe(el));
-    } else {
-        revealEls.forEach((el) => el.classList.add('visible'));
+        });
+
+        // Staggered Bento Reveal
+        gsap.from('.bento', {
+            scrollTrigger: {
+                trigger: '.bento-grid',
+                start: "top 80%"
+            },
+            opacity: 0,
+            y: 30,
+            stagger: 0.15,
+            duration: 0.8,
+            ease: "back.out(1.7)"
+        });
     }
 
+    // --- Counters ---
     const counters = document.querySelectorAll('[data-count]');
-    function animateCount(el, target, suffix) {
-        const duration = 1700;
-        const start = performance.now();
-        function frame(now) {
-            const progress = Math.min((now - start) / duration, 1);
-            el.textContent = Math.floor(target * progress) + suffix;
-            if (progress < 1) requestAnimationFrame(frame);
-        }
-        requestAnimationFrame(frame);
+    function animateCount(el, target) {
+        let obj = { val: 0 };
+        gsap.to(obj, {
+            val: target,
+            duration: 2,
+            ease: "power2.out",
+            onUpdate: function() {
+                el.innerText = Math.round(obj.val);
+            },
+            scrollTrigger: {
+                trigger: el,
+                start: "top 90%"
+            }
+        });
     }
 
-    if (counters.length && 'IntersectionObserver' in window) {
-        const countObs = new IntersectionObserver((entries) => {
-            entries.forEach((entry) => {
-                if (!entry.isIntersecting) return;
-                const el = entry.target;
-                const target = parseInt(el.dataset.count || '0', 10);
-                const suffix = el.dataset.suffix || '+';
-                if (target > 0) animateCount(el, target, suffix);
-                countObs.unobserve(el);
-            });
-        }, { threshold: 0.45 });
-        counters.forEach((el) => countObs.observe(el));
-    }
+    counters.forEach(counter => {
+        const target = parseInt(counter.dataset.count);
+        animateCount(counter, target);
+    });
 
-    document.querySelectorAll('a[href^="#"]').forEach((a) => {
-        a.addEventListener('click', (e) => {
-            const href = a.getAttribute('href');
-            if (!href || href.length <= 1) return;
-            const target = document.querySelector(href);
-            if (!target) return;
+    // --- Smooth Scrolling ---
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
             e.preventDefault();
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const targetId = this.getAttribute('href');
+            if (targetId === '#') return;
+            const target = document.querySelector(targetId);
+            if (target) {
+                window.scrollTo({
+                    top: target.offsetTop - 80,
+                    behavior: 'smooth'
+                });
+            }
         });
     });
 
-    setTimeout(() => {
-        const fill = document.querySelector('.mockup-progress-fill');
-        if (fill) fill.style.width = '78%';
-    }, 420);
-
+    // --- Theme Toggle Integration (Minimal, mainly for persistence) ---
     const toggleBtn = document.getElementById('themeToggle');
     const root = document.documentElement;
 
-    function setTheme(theme) {
-        root.setAttribute('data-bs-theme', theme);
-        try {
-            localStorage.setItem('tp_theme', theme);
-        } catch (e) {}
-        if (toggleBtn) {
-            const icon = toggleBtn.querySelector('i');
-            if (icon) {
-                icon.className = theme === 'dark' ? 'bi bi-moon-stars-fill' : 'bi bi-sun-fill';
-            }
-        }
-    }
-
     if (toggleBtn) {
-        const initial = root.getAttribute('data-bs-theme') || 'dark';
-        setTheme(initial);
         toggleBtn.addEventListener('click', () => {
-            const current = root.getAttribute('data-bs-theme') === 'light' ? 'light' : 'dark';
-            setTheme(current === 'light' ? 'dark' : 'light');
+            const current = root.getAttribute('data-bs-theme');
+            const next = current === 'light' ? 'dark' : 'light';
+            root.setAttribute('data-bs-theme', next);
+            localStorage.setItem('tp_theme', next);
         });
     }
 
-    setTimeout(() => {
-        document.querySelectorAll('.anim-fadeup').forEach((el) => {
-            el.style.opacity = '1';
-            el.style.transform = 'none';
-            el.style.animation = 'none';
-        });
-    }, 1200);
 })();
