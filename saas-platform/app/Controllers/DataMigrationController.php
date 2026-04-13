@@ -531,13 +531,27 @@ class DataMigrationController extends Controller
         try {
             $pdo = $this->db->getPdo();
 
+            // Prüfen ob migrations-Tabelle existiert
+            $check = $pdo->query("SHOW TABLES LIKE '{$migTbl}'")->fetchColumn();
+            if (!$check) {
+                $this->jsonError('Migrations-Tabelle nicht vorhanden');
+            }
+
             // Alle Versionen größer als targetVersion löschen
-            $pdo->prepare("DELETE FROM `{$migTbl}` WHERE version > ?")->execute([$targetVersion]);
+            $stmt = $pdo->prepare("DELETE FROM `{$migTbl}` WHERE version > ?");
+            $stmt->execute([$targetVersion]);
+            $deleted = $stmt->rowCount();
+
+            // Aktuelle Version ermitteln
+            $currentStmt = $pdo->query("SELECT MAX(version) as max_version FROM `{$migTbl}`");
+            $currentVersion = (int)($currentStmt->fetchColumn() ?? 0);
 
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
                 'success' => true,
-                'message' => "Version von Tenant {$tenant['practice_name']} auf {$targetVersion} zurückgesetzt"
+                'message' => "Version von Tenant {$tenant['practice_name']} zurückgesetzt: {$deleted} Einträge gelöscht, aktuelle Version: {$currentVersion}",
+                'deleted' => $deleted,
+                'current_version' => $currentVersion
             ]);
             exit;
         } catch (\Throwable $e) {
