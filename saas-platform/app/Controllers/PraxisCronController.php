@@ -25,10 +25,10 @@ class PraxisCronController extends Controller
     {
         $this->requireAuth();
 
-        // Get all tenants
+        // Get all tenants (without status filter for debugging)
         $tenants = [];
         try {
-            $tenants = $this->db->fetchAll("SELECT id, slug, domain, status FROM tenants WHERE status = 'active' ORDER BY slug");
+            $tenants = $this->db->fetchAll("SELECT id, slug, domain, status FROM tenants ORDER BY slug");
         } catch (\Throwable) {}
 
         // Define available cronjobs
