@@ -111,6 +111,7 @@ class PraxisCronController extends Controller
 
         // Get cronjob config
         $cronjobs = [
+            'dispatcher' => 'cron_dispatcher_token',
             'birthday' => 'birthday_cron_token',
             'calendar_reminders' => 'calendar_cron_secret',
             'google_calendar' => 'google_sync_cron_secret',
@@ -162,6 +163,7 @@ class PraxisCronController extends Controller
 
         // Get cronjob endpoint
         $cronjobs = [
+            'dispatcher' => '/cron/dispatcher',
             'birthday' => '/cron/geburtstag',
             'calendar_reminders' => '/kalender/cron/erinnerungen',
             'google_calendar' => '/google-kalender/cron',
@@ -185,6 +187,7 @@ class PraxisCronController extends Controller
         $settingsTable = $prefix . 'settings';
 
         $tokenFields = [
+            'dispatcher' => 'cron_dispatcher_token',
             'birthday' => 'birthday_cron_token',
             'calendar_reminders' => 'calendar_cron_secret',
             'google_calendar' => 'google_sync_cron_secret',

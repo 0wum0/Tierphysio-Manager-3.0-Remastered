@@ -9,7 +9,7 @@
             <h1 class="h3 mb-4">Praxis Cronjobs</h1>
             
             <div class="alert alert-info">
-                <strong>Info:</strong> Hier können Sie die Cronjobs für alle Praxen konfigurieren. Die technischen Endpunkte in der Praxis-App bleiben bestehen, werden aber nicht mehr im Praxis-UI angezeigt.
+                <strong>Neue Architektur:</strong> Ein zentraler Dispatcher-Cronjob führt alle Aufgaben basierend auf Zeitplänen aus. Nur EIN Cronjob pro Praxis im Hosting-Panel erforderlich (alle 10 Minuten).
             </div>
         </div>
     </div>
@@ -18,7 +18,7 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Verfügbare Cronjobs</h5>
+                    <h5 class="card-title mb-0">Dispatcher-Informationen</h5>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -30,27 +30,34 @@
                                     <th>Beschreibung</th>
                                     <th>Zeitplan</th>
                                     <th>Endpoint</th>
-                                    <th>Token-Feld</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for key, job in cronjobs %}
                                 <tr>
-                                    <td style="font-size: 1.5rem;">{{ job.icon }}</td>
-                                    <td><strong>{{ job.name }}</strong></td>
-                                    <td>{{ job.description }}</td>
+                                    <td style="font-size: 1.5rem;">⚡</td>
+                                    <td><strong>Cron Dispatcher</strong></td>
+                                    <td>Zentraler Dispatcher für alle Cronjobs - führt fällige Jobs basierend auf Zeitplänen aus</td>
                                     <td>
-                                        <code>{{ job.schedule }}</code>
+                                        <code>*/10 * * * *</code>
                                         <br>
-                                        <small class="text-muted">{{ job.schedule_readable }}</small>
+                                        <small class="text-muted">Alle 10 Minuten</small>
                                     </td>
-                                    <td><code>{{ job.endpoint }}</code></td>
-                                    <td><code>{{ job.token_field }}</code></td>
+                                    <td><code>/cron/dispatcher</code></td>
                                 </tr>
-                                {% endfor %}
                             </tbody>
                         </table>
                     </div>
+                    
+                    <hr>
+                    
+                    <h6>Verwaltete Jobs:</h6>
+                    <ul>
+                        <li>🎂 <strong>Geburtstagsmail:</strong> Täglich um 08:00 Uhr</li>
+                        <li>📅 <strong>Kalender-Erinnerungen:</strong> Alle 15 Minuten</li>
+                        <li>🔄 <strong>Google Kalender Sync:</strong> Stündlich</li>
+                        <li>💉 <strong>TherapyCare Erinnerungen:</strong> Alle 15 Minuten</li>
+                        <li>🎉 <strong>Feiertagsgrüße:</strong> Täglich um 08:00 Uhr</li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -65,7 +72,7 @@
                 <div class="card-body">
                     {% if tenants is empty %}
                     <div class="alert alert-warning">
-                        Keine aktiven Praxen gefunden.
+                        Keine Praxen gefunden.
                     </div>
                     {% else %}
                     <div class="table-responsive">
@@ -75,6 +82,7 @@
                                     <th>Tenant ID</th>
                                     <th>Praxis Name</th>
                                     <th>Email</th>
+                                    <th>DB-Version</th>
                                     <th>Status</th>
                                     <th>Aktionen</th>
                                 </tr>
@@ -86,11 +94,14 @@
                                     <td>{{ tenant.practice_name }}</td>
                                     <td>{{ tenant.email }}</td>
                                     <td>
+                                        <span id="db-version-{{ tenant.id }}" class="badge bg-secondary">Laden...</span>
+                                    </td>
+                                    <td>
                                         <span class="badge bg-success">{{ tenant.status }}</span>
                                     </td>
                                     <td>
                                         <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modal-{{ tenant.id }}">
-                                            Cronjobs konfigurieren
+                                            Dispatcher konfigurieren
                                         </button>
                                     </td>
                                 </tr>
@@ -106,51 +117,49 @@
 </div>
 
 {% for tenant in tenants %}
-<!-- Modal für {{ tenant.slug }} -->
+<!-- Modal für {{ tenant.practice_name }} -->
 <div class="modal fade" id="modal-{{ tenant.id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Cronjobs für {{ tenant.practice_name }}</h5>
+                <h5 class="modal-title">Dispatcher für {{ tenant.practice_name }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <p><strong>Praxis:</strong> {{ tenant.practice_name }}</p>
                 <p><strong>Email:</strong> {{ tenant.email }}</p>
                 <p><strong>UUID:</strong> <code>{{ tenant.uuid }}</code></p>
-                <p><strong>Prefix:</strong> <code>t_{{ tenant.uuid }}_</code></p>
                 <hr>
                 
-                {% for key, job in cronjobs %}
                 <div class="mb-4 p-3 border rounded">
-                    <h6>{{ job.icon }} {{ job.name }}</h6>
-                    <p class="text-muted small">{{ job.description }}</p>
+                    <h6>⚡ Cron Dispatcher</h6>
+                    <p class="text-muted small">Zentraler Dispatcher für alle Cronjobs - läuft alle 10 Minuten</p>
                     
                     <div class="mb-2">
-                        <label class="form-label fw-bold">Token für {{ job.token_field }}</label>
+                        <label class="form-label fw-bold">Dispatcher-Token</label>
                         <div class="input-group">
-                            <input type="text" class="form-control font-monospace" id="token-{{ tenant.id }}-{{ key }}" placeholder="Token eingeben...">
-                            <button type="button" class="btn btn-outline-secondary" onclick="generateToken('token-{{ tenant.id }}-{{ key }}')">
+                            <input type="text" class="form-control font-monospace" id="token-{{ tenant.id }}" placeholder="Dispatcher-Token eingeben...">
+                            <button type="button" class="btn btn-outline-secondary" onclick="generateToken('token-{{ tenant.id }}')">
                                 🎲 Generieren
                             </button>
                         </div>
                     </div>
                     
                     <div class="mb-2">
-                        <label class="form-label fw-bold">Cron-URL</label>
+                        <label class="form-label fw-bold">Dispatcher-URL</label>
                         <div class="input-group">
-                            <input type="text" class="form-control font-monospace" id="url-{{ tenant.id }}-{{ key }}" readonly>
-                            <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('url-{{ tenant.id }}-{{ key }}')">
+                            <input type="text" class="form-control font-monospace" id="url-{{ tenant.id }}" readonly>
+                            <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('url-{{ tenant.id }}')">
                                 📋 Kopieren
                             </button>
                         </div>
                     </div>
                     
                     <div class="mb-2">
-                        <label class="form-label fw-bold">Cron-Befehl</label>
+                        <label class="form-label fw-bold">Cron-Befehl (für Hosting-Panel)</label>
                         <div class="input-group">
-                            <input type="text" class="form-control font-monospace" id="cmd-{{ tenant.id }}-{{ key }}" readonly>
-                            <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('cmd-{{ tenant.id }}-{{ key }}')">
+                            <input type="text" class="form-control font-monospace" id="cmd-{{ tenant.id }}" readonly>
+                            <button type="button" class="btn btn-outline-secondary" onclick="copyToClipboard('cmd-{{ tenant.id }}')">
                                 📋 Kopieren
                             </button>
                         </div>
@@ -159,17 +168,16 @@
                     <form action="/admin/praxis-cron/update-token" method="POST" class="d-inline">
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                         <input type="hidden" name="tenant_id" value="{{ tenant.id }}">
-                        <input type="hidden" name="cron_job_key" value="{{ key }}">
-                        <input type="hidden" name="token" id="input-token-{{ tenant.id }}-{{ key }}">
+                        <input type="hidden" name="cron_job_key" value="dispatcher">
+                        <input type="hidden" name="token" id="input-token-{{ tenant.id }}">
                         <button type="submit" class="btn btn-sm btn-success">Token speichern</button>
                     </form>
                     
-                    <button type="button" class="btn btn-sm btn-info" onclick="runCron({{ tenant.id }}, '{{ key }}')">
-                        ▶️ Run now
+                    <button type="button" class="btn btn-sm btn-info" onclick="runCron({{ tenant.id }}, 'dispatcher')">
+                        ▶️ Dispatcher testen
                     </button>
-                    <div id="result-{{ tenant.id }}-{{ key }}" class="mt-2 small"></div>
+                    <div id="result-{{ tenant.id }}" class="mt-2 small"></div>
                 </div>
-                {% endfor %}
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Schließen</button>
@@ -197,8 +205,8 @@ function copyToClipboard(elementId) {
 }
 
 function runCron(tenantId, cronJobKey) {
-    const resultDiv = document.getElementById('result-' + tenantId + '-' + cronJobKey);
-    resultDiv.innerHTML = '<span class="text-info">⏳ Ausführung wird gestartet...</span>';
+    const resultDiv = document.getElementById('result-' + tenantId);
+    resultDiv.innerHTML = '<span class="text-info">⏳ Dispatcher wird gestartet...</span>';
     
     const formData = new FormData();
     formData.append('tenant_id', tenantId);
@@ -224,16 +232,14 @@ function runCron(tenantId, cronJobKey) {
 
 function updateUrlsAndCmds() {
     {% for tenant in tenants %}
-    {% for key, job in cronjobs %}
-    const token{{ tenant.id }}{{ key }} = document.getElementById('token-{{ tenant.id }}-{{ key }}').value;
+    const token{{ tenant.id }} = document.getElementById('token-{{ tenant.id }}').value;
     const domain{{ tenant.id }} = '{{ tenant.email|split('@')[1] }}';
-    const url{{ tenant.id }}{{ key }} = 'https://' + domain{{ tenant.id }} + '{{ job.endpoint }}?token=' + token{{ tenant.id }}{{ key }};
-    const cmd{{ tenant.id }}{{ key }} = '{{ job.schedule }} curl -s "' + url{{ tenant.id }}{{ key }} + '" > /dev/null 2>&1';
+    const url{{ tenant.id }} = 'https://' + domain{{ tenant.id }} + '/cron/dispatcher?token=' + token{{ tenant.id }};
+    const cmd{{ tenant.id }} = '*/10 * * * * curl -s "' + url{{ tenant.id }} + '" > /dev/null 2>&1';
 
-    document.getElementById('url-{{ tenant.id }}-{{ key }}').value = url{{ tenant.id }}{{ key }};
-    document.getElementById('cmd-{{ tenant.id }}-{{ key }}').value = cmd{{ tenant.id }}{{ key }};
-    document.getElementById('input-token-{{ tenant.id }}-{{ key }}').value = token{{ tenant.id }}{{ key }};
-    {% endfor %}
+    document.getElementById('url-{{ tenant.id }}').value = url{{ tenant.id }};
+    document.getElementById('cmd-{{ tenant.id }}').value = cmd{{ tenant.id }};
+    document.getElementById('input-token-{{ tenant.id }}').value = token{{ tenant.id }};
     {% endfor %}
 }
 
@@ -241,9 +247,45 @@ function updateUrlsAndCmds() {
 document.addEventListener('DOMContentLoaded', function() {
     {% for tenant in tenants %}
     document.getElementById('modal-{{ tenant.id }}').addEventListener('show.bs.modal', function() {
-        // Load existing tokens from server via AJAX if needed
+        // Load existing token from server via AJAX if needed
     });
     {% endfor %}
+
+    // Load database versions
+    {% for tenant in tenants %}
+    loadTenantVersion({{ tenant.id }});
+    {% endfor %}
 });
+
+function loadTenantVersion(tenantId) {
+    const versionBadge = document.getElementById('db-version-' + tenantId);
+    if (!versionBadge) return;
+
+    fetch('/admin/migration/tenant-version?tenant_id=' + tenantId, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (data.current_version === null) {
+                versionBadge.textContent = 'N/A';
+                versionBadge.className = 'badge bg-warning';
+            } else if (data.is_up_to_date) {
+                versionBadge.textContent = 'v' + data.current_version;
+                versionBadge.className = 'badge bg-success';
+            } else {
+                versionBadge.textContent = 'v' + data.current_version + ' (neu: v' + data.latest_version + ')';
+                versionBadge.className = 'badge bg-warning';
+            }
+        } else {
+            versionBadge.textContent = 'Fehler';
+            versionBadge.className = 'badge bg-danger';
+        }
+    })
+    .catch(error => {
+        versionBadge.textContent = 'Fehler';
+        versionBadge.className = 'badge bg-danger';
+    });
+}
 </script>
 {% endblock %}

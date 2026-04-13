@@ -527,6 +527,7 @@ $router->get('/api/notifications', [NotificationController::class, 'index'], ['a
 $router->get('/api/invoice-form-data', [InvoiceController::class, 'formData'], ['auth']);
 
 $router->get('/cron/geburtstag', [CronController::class, 'birthday']);
+$router->get('/cron/dispatcher', [CronController::class, 'dispatcher']);
 $router->get('/cron/pixel.gif',  [CronPixelController::class, 'pixel']);
 
 // ── Cron Admin Panel entfernt - wird in SaaS-Platform verwaltet ─────────
