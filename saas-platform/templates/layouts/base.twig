@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{{ page_title ?? 'Tierphysio SaaS' }}{% endblock %} – {{ app_name }}</title>
+    <title>{% block title %}{{ (page_title is defined and page_title) ? page_title : 'Tierphysio SaaS' }}{% endblock %} – {{ app_name }}</title>
     <meta name="robots" content="noindex, nofollow">
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -220,8 +220,8 @@
                 {{ (auth_user ?? 'A')|slice(0,1)|upper }}
             </div>
             <div>
-                <div style="color:#e2e8f0;font-size:.8rem;font-weight:600;">{{ auth_user ?? 'Admin' }}</div>
-                <div style="color:#475569;font-size:.7rem;">{{ auth_role ?? '' }}</div>
+                <div style="color:#e2e8f0;font-size:.8rem;font-weight:600;">{{ (auth_user is defined and auth_user) ? auth_user : 'Admin' }}</div>
+                <div style="color:#475569;font-size:.7rem;">{{ (auth_role is defined and auth_role) ? auth_role : '' }}</div>
             </div>
         </div>
     </div>
@@ -233,7 +233,7 @@
             <button class="btn btn-sm btn-outline-secondary d-md-none" onclick="document.getElementById('sidebar').classList.toggle('open')">
                 <i class="bi bi-list"></i>
             </button>
-            <h6 class="mb-0 fw-semibold">{{ page_title ?? '' }}</h6>
+            <h6 class="mb-0 fw-semibold">{{ (page_title is defined and page_title) ? page_title : '' }}</h6>
         </div>
         <div class="d-flex align-items-center gap-2">
 
@@ -273,7 +273,7 @@
                 <i class="bi bi-gear"></i>
             </a>
 
-            <span class="badge" style="background:rgba(37,99,235,.2);color:#60a5fa;border:1px solid rgba(37,99,235,.3);">{{ auth_role ?? '' }}</span>
+            <span class="badge" style="background:rgba(37,99,235,.2);color:#60a5fa;border:1px solid rgba(37,99,235,.3);">{{ (auth_role is defined and auth_role) ? auth_role : '' }}</span>
         </div>
     </div>
 

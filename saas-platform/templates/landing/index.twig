@@ -163,7 +163,7 @@
                                 <div class="position-absolute top-0 end-0 m-3 px-3 py-1 bg-primary text-white small fw-bold rounded-pill">BELIEBTESTE WAHL</div>
                             {% endif %}
                             <h3 class="h5 mb-3">{{ plan.name }}</h3>
-                            <div class="price-amount mb-2">{{ plan.price_month ?? '0' }}€<small class="h6 text-muted">/mtl</small></div>
+                            <div class="price-amount mb-2">{{ (plan.price_month is defined and plan.price_month) ? plan.price_month : '0' }}€<small class="h6 text-muted">/mtl</small></div>
                             <p class="text-muted small mb-4">{{ plan.description }}</p>
                             <hr class="border-secondary opacity-25">
                             <ul class="list-unstyled text-muted mb-5 text-start flex-grow-1">
