@@ -6,9 +6,6 @@ namespace App\Services;
 
 use App\Repositories\SettingsRepository;
 use TCPDF;
-use function storage_path;
-use function tenant_storage_path;
-use function public_path;
 
 class CustomVetReportPdfService
 {
@@ -203,22 +200,17 @@ class CustomVetReportPdfService
         $lblW = 24;
         $rowH = 5.0;
 
-        // Patient photo (path-safe)
+        // Patient photo (path-safe) - construct path manually
         $hasPhoto = false;
         $patPhoto = null;
         if (!empty($patient['photo'])) {
-            // Try multiple possible photo paths
-            $photoPaths = [
-                storage_path('app/public/patients/' . $patient['id'] . '/' . basename($patient['photo'])),
-                tenant_storage_path('patients/' . $patient['id'] . '/' . basename($patient['photo'])),
-                public_path('patients/' . $patient['id'] . '/' . basename($patient['photo'])),
-            ];
-
-            foreach ($photoPaths as $photoPath) {
-                if (file_exists($photoPath)) {
+            // Construct path manually without helper functions
+            $patientsDir = dirname(__DIR__, 2) . '/storage/app/public/patients/' . $patient['id'];
+            if (is_dir($patientsDir)) {
+                $photoCandidate = $patientsDir . '/' . basename($patient['photo']);
+                if (file_exists($photoCandidate)) {
                     $hasPhoto = true;
-                    $patPhoto = $photoPath;
-                    break;
+                    $patPhoto = $photoCandidate;
                 }
             }
         }
