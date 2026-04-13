@@ -1087,7 +1087,7 @@ class DataMigrationController extends Controller
         $this->verifyCsrf();
 
         // Plugin-Migrations-Verzeichnisse finden
-        $pluginsDir = dirname(__DIR__, 2) . '/plugins';
+        $pluginsDir = dirname(__DIR__, 3) . '/plugins';
         if (!is_dir($pluginsDir)) {
             $this->jsonError('Plugins-Verzeichnis nicht gefunden: ' . $pluginsDir);
         }
