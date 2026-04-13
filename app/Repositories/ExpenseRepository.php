@@ -18,6 +18,36 @@ class ExpenseRepository extends Repository
 
     public function getPaginated(int $page, int $perPage, string $category = '', string $search = ''): array
     {
+        // Check if table exists first
+        try {
+            $exists = $this->db->fetchColumn(
+                "SELECT COUNT(*) FROM information_schema.TABLES
+                 WHERE TABLE_SCHEMA = DATABASE()
+                   AND TABLE_NAME = '{$this->t('expenses')}'"
+            );
+            if (!$exists) {
+                return [
+                    'items'       => [],
+                    'total'       => 0,
+                    'page'        => $page,
+                    'per_page'    => $perPage,
+                    'last_page'   => 1,
+                    'has_next'    => false,
+                    'has_prev'    => false,
+                ];
+            }
+        } catch (\Throwable) {
+            return [
+                'items'       => [],
+                'total'       => 0,
+                'page'        => $page,
+                'per_page'    => $perPage,
+                'last_page'   => 1,
+                'has_next'    => false,
+                'has_prev'    => false,
+            ];
+        }
+
         $where  = [];
         $params = [];
 
@@ -39,6 +69,34 @@ class ExpenseRepository extends Repository
 
     public function getStats(): array
     {
+        // Check if table exists first
+        try {
+            $exists = $this->db->fetchColumn(
+                "SELECT COUNT(*) FROM information_schema.TABLES
+                 WHERE TABLE_SCHEMA = DATABASE()
+                   AND TABLE_NAME = '{$this->t('expenses')}'"
+            );
+            if (!$exists) {
+                return [
+                    'total_all'    => 0.0,
+                    'total_month'  => 0.0,
+                    'total_year'   => 0.0,
+                    'count'        => 0,
+                    'count_month'  => 0,
+                    'categories'   => [],
+                ];
+            }
+        } catch (\Throwable) {
+            return [
+                'total_all'    => 0.0,
+                'total_month'  => 0.0,
+                'total_year'   => 0.0,
+                'count'        => 0,
+                'count_month'  => 0,
+                'categories'   => [],
+            ];
+        }
+
         $exp = $this->t('expenses');
         $month = date('Y-m-01');
         $year  = date('Y-01-01');
@@ -77,6 +135,19 @@ class ExpenseRepository extends Repository
 
     public function getCategories(): array
     {
+        try {
+            $exists = $this->db->fetchColumn(
+                "SELECT COUNT(*) FROM information_schema.TABLES
+                 WHERE TABLE_SCHEMA = DATABASE()
+                   AND TABLE_NAME = '{$this->t('expenses')}'"
+            );
+            if (!$exists) {
+                return [];
+            }
+        } catch (\Throwable) {
+            return [];
+        }
+
         $exp = $this->t('expenses');
         $rows = $this->db->fetchAll("SELECT DISTINCT `category` FROM `{$exp}` ORDER BY `category`");
         return array_column($rows, 'category');
@@ -84,6 +155,19 @@ class ExpenseRepository extends Repository
 
     public function getMonthlyTotals(int $months = 12): array
     {
+        try {
+            $exists = $this->db->fetchColumn(
+                "SELECT COUNT(*) FROM information_schema.TABLES
+                 WHERE TABLE_SCHEMA = DATABASE()
+                   AND TABLE_NAME = '{$this->t('expenses')}'"
+            );
+            if (!$exists) {
+                return [];
+            }
+        } catch (\Throwable) {
+            return [];
+        }
+
         $exp   = $this->t('expenses');
         $from  = date('Y-m-01', strtotime("-{$months} months"));
         return $this->db->fetchAll(
