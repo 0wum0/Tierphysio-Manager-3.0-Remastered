@@ -107,7 +107,7 @@ CREATE TABLE IF NOT EXISTS `treatment_types` (
     INDEX `idx_active` (`active`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ── appointments (Migration 001 + 006 + 009 + 011) ───────────
+-- ── appointments (Migration 001 + 006 + 009 + 011 + 036) ───────────
 CREATE TABLE IF NOT EXISTS `appointments` (
     `id`                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `title`              VARCHAR(255) NOT NULL,
@@ -119,6 +119,7 @@ CREATE TABLE IF NOT EXISTS `appointments` (
     `color`              VARCHAR(7) NULL,
     `patient_id`         INT UNSIGNED NULL,
     `owner_id`           INT UNSIGNED NULL,
+    `patient_email`      VARCHAR(255) NULL DEFAULT NULL,
     `treatment_type_id`  INT UNSIGNED NULL,
     `user_id`            INT UNSIGNED NULL,
     `invoice_id`         INT UNSIGNED NULL,
@@ -127,6 +128,8 @@ CREATE TABLE IF NOT EXISTS `appointments` (
     `notes`              TEXT NULL,
     `reminder_minutes`   INT UNSIGNED NOT NULL DEFAULT 60,
     `reminder_sent`      TINYINT(1) NOT NULL DEFAULT 0,
+    `send_patient_reminder` TINYINT(1) NOT NULL DEFAULT 0,
+    `patient_reminder_sent` TINYINT(1) NOT NULL DEFAULT 0,
     `created_at`         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at`         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
@@ -317,6 +320,19 @@ CREATE TABLE IF NOT EXISTS `migrations` (
     `applied_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ── cron_dispatcher_log (Dispatcher für alle Cronjobs) ──────────
+CREATE TABLE IF NOT EXISTS `cron_dispatcher_log` (
+  `id`         int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `job_key`    varchar(64)      NOT NULL COMMENT 'Job identifier: birthday, calendar_reminders, google_sync, tcp_reminders, holiday_greetings',
+  `status`     enum('success','error','skipped') NOT NULL DEFAULT 'success',
+  `message`    text             DEFAULT NULL,
+  `duration_ms` int(11) unsigned DEFAULT NULL,
+  `created_at` datetime         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_job_key` (`job_key`),
+  KEY `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ── settings seed data ────────────────────────────────────────
 INSERT IGNORE INTO `settings` (`key`, `value`) VALUES
 ('company_name',                    ''),
@@ -370,6 +386,7 @@ INSERT IGNORE INTO `treatment_types` (`name`, `color`, `price`, `sort_order`) VA
 INSERT IGNORE INTO `migrations` (`version`) VALUES
 (1),(2),(3),(4),(5),(6),(7),(8),(9),(10),
 (11),(12),(13),(14),(15),(16),(17),(18),(19),(20),
-(21),(22),(23),(24),(25),(26),(27),(28);
+(21),(22),(23),(24),(25),(26),(27),(28),
+(35),(36);
 
 SET FOREIGN_KEY_CHECKS = 1;

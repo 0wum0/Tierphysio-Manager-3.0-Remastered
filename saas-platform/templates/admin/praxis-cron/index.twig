@@ -75,6 +75,12 @@
                         Keine Praxen gefunden.
                     </div>
                     {% else %}
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-warning" onclick="migrateAllTenants()">
+                            🔄 Alle Praxen migrieren (Version 35-36)
+                        </button>
+                        <div id="migration-status" class="mt-2 small"></div>
+                    </div>
                     <div class="table-responsive">
                         <table class="table table-striped">
                             <thead>
@@ -285,6 +291,34 @@ function loadTenantVersion(tenantId) {
     .catch(error => {
         versionBadge.textContent = 'Fehler';
         versionBadge.className = 'badge bg-danger';
+    });
+}
+
+function migrateAllTenants() {
+    const statusDiv = document.getElementById('migration-status');
+    statusDiv.innerHTML = '<span class="text-info">⏳ Migration läuft...</span>';
+    
+    const formData = new FormData();
+    formData.append('_csrf_token', '{{ csrf_token }}');
+    
+    fetch('/admin/migration/migrate-all', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            statusDiv.innerHTML = '<span class="text-success">✓ ' + data.message + '</span>';
+            // Reload versions
+            {% for tenant in tenants %}
+            loadTenantVersion({{ tenant.id }});
+            {% endfor %}
+        } else {
+            statusDiv.innerHTML = '<span class="text-danger">✗ ' + (data.error || data.message) + '</span>';
+        }
+    })
+    .catch(error => {
+        statusDiv.innerHTML = '<span class="text-danger">✗ Fehler: ' + error + '</span>';
     });
 }
 </script>
