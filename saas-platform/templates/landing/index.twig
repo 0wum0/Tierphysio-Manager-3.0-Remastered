@@ -92,26 +92,29 @@
                 </div>
             </div>
             <div class="col-lg-6">
-                <div class="glass-card reveal-hidden overflow-hidden p-0">
-                    <div class="p-4 border-bottom border-white border-opacity-10 d-flex justify-content-between align-items-center bg-white bg-opacity-5">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="rounded-circle bg-success" style="width: 10px; height: 10px; box-shadow: 0 0 10px #198754;"></div>
-                            <span class="fw-bold small">AKTIVER PATIENT: MILO</span>
+                <div class="cockpit-mockup reveal-hidden">
+                    <div class="mockup-header">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="status-active">MILO · AKTIV</span>
+                            <span class="small opacity-50">Patientenakte v3.0</span>
                         </div>
-                        <div class="btn-group">
-                            <button class="btn btn-sm btn-outline-light opacity-50"><i class="bi bi-receipt"></i></button>
-                            <button class="btn btn-sm btn-outline-light opacity-50"><i class="bi bi-calendar"></i></button>
-                            <button class="btn btn-sm btn-outline-light opacity-50"><i class="bi bi-file-pdf"></i></button>
+                        <div class="d-flex gap-2">
+                            <i class="bi bi-file-pdf text-danger"></i>
+                            <i class="bi bi-receipt text-success"></i>
+                            <i class="bi bi-calendar-event text-primary"></i>
                         </div>
                     </div>
-                    <div class="p-4" style="height: 300px; background: linear-gradient(135deg, rgba(59,130,246,0.05), transparent);">
-                        <!-- Visual Timeline Simulation -->
-                        <div class="mb-3 p-3 rounded-3 bg-white bg-opacity-5 border border-white border-opacity-10">
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="small fw-bold">Behandlung: Physio</span>
-                                <span class="small opacity-50">14:30</span>
+                    <div class="mockup-body">
+                        <div class="mockup-item">
+                            <div class="mockup-item-title">Physiotherapie & Unterwasser-LB</div>
+                            <div class="mockup-item-text">Datum: Heute, 14:30 · Therapeut: Team Alpha</div>
+                            <div class="mt-2 text-white small">
+                                <strong>Befund:</strong> Hund zeigt freudiges Gangbild, keine Lahmheit erkennbar. Status auf <span class="text-success fw-bold">Schmerzfrei</span> gesetzt.
                             </div>
-                            <p class="small text-muted mb-0">Status auf "Schmerzfrei" gesetzt nach erfolgreichem Unterwasser-Laufband-Training.</p>
+                        </div>
+                        <div class="mockup-item" style="border-left-color: var(--lp-secondary); opacity: 0.6;">
+                            <div class="mockup-item-title">Anamnese & Erstbefund</div>
+                            <div class="mockup-item-text">Datum: 12.04.2026 · ID: #PA-8821</div>
                         </div>
                     </div>
                 </div>
@@ -139,11 +142,11 @@
             <div class="col-lg-7 order-lg-1">
                 <div class="glass-card reveal-hidden p-5" style="border-color: rgba(59, 130, 246, 0.2);">
                     <div class="row align-items-end g-3 mb-4">
-                        <div class="col" style="height: 60px; background: rgba(59, 130, 246, 0.1); border-radius: 8px;"></div>
-                        <div class="col" style="height: 90px; background: rgba(59, 130, 246, 0.2); border-radius: 8px;"></div>
-                        <div class="col" style="height: 140px; background: var(--lp-primary); border-radius: 8px; box-shadow: 0 0 20px var(--lp-primary);"></div>
-                        <div class="col" style="height: 110px; background: rgba(59, 130, 246, 0.4); border-radius: 8px;"></div>
-                        <div class="col" style="height: 160px; background: rgba(59, 130, 246, 0.6); border-radius: 8px;"></div>
+                        <div class="col forecast-bar" style="height: 60px; opacity: 0.3;"></div>
+                        <div class="col forecast-bar" style="height: 90px; opacity: 0.5;"></div>
+                        <div class="col forecast-bar" style="height: 140px; box-shadow: 0 0 30px var(--lp-primary);"></div>
+                        <div class="col forecast-bar" style="height: 110px; opacity: 0.7;"></div>
+                        <div class="col forecast-bar" style="height: 160px; opacity: 0.4;"></div>
                     </div>
                     <div class="d-flex justify-content-between align-items-center">
                         <div>

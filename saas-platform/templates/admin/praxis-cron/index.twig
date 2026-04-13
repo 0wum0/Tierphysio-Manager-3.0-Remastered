@@ -247,7 +247,18 @@ function updateUrlsAndCmds() {
 document.addEventListener('DOMContentLoaded', function() {
     {% for tenant in tenants %}
     document.getElementById('modal-{{ tenant.id }}').addEventListener('show.bs.modal', function() {
-        // Load existing token from server via AJAX if needed
+        // Load existing token from server via AJAX
+        fetch('/admin/praxis-cron/get-token?tenant_id={{ tenant.id }}&cron_job_key=dispatcher')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.token) {
+                document.getElementById('token-{{ tenant.id }}').value = data.token;
+                updateUrlsAndCmds();
+            }
+        })
+        .catch(error => {
+            console.error('Fehler beim Laden des Tokens:', error);
+        });
     });
     {% endfor %}
 

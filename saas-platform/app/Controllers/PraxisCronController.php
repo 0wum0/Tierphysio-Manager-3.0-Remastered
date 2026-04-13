@@ -141,6 +141,47 @@ class PraxisCronController extends Controller
         $this->redirect('/admin/praxis-cron');
     }
 
+    public function getToken(array $params = []): void
+    {
+        $this->requireAuth();
+        header('Content-Type: application/json');
+
+        $tenantId = (int)($params['tenant_id'] ?? $_GET['tenant_id'] ?? 0);
+        $cronJobKey = $params['cron_job_key'] ?? $_GET['cron_job_key'] ?? '';
+
+        if (!$tenantId || !$cronJobKey) {
+            echo json_encode(['success' => false, 'error' => 'Tenant ID und Cron Job Key erforderlich']);
+            exit;
+        }
+
+        $tenant = $this->db->fetch("SELECT db_name FROM tenants WHERE id = ?", [$tenantId]);
+        if (!$tenant) {
+            echo json_encode(['success' => false, 'error' => 'Tenant nicht gefunden']);
+            exit;
+        }
+
+        $prefix = rtrim((string)($tenant['db_name'] ?? ''), '_') . '_';
+        $settingsTable = $prefix . 'settings';
+
+        $tokenFields = [
+            'dispatcher' => 'cron_dispatcher_token',
+            'birthday' => 'birthday_cron_token',
+            'calendar_reminders' => 'calendar_cron_secret',
+            'google_calendar' => 'google_sync_cron_secret',
+            'tcp_reminders' => 'tcp_cron_token',
+            'holiday_greetings' => 'cron_secret'
+        ];
+
+        $tokenField = $tokenFields[$cronJobKey] ?? '';
+        $token = $this->db->fetchColumn("SELECT `value` FROM `{$settingsTable}` WHERE `key` = ?", [$tokenField]);
+
+        echo json_encode([
+            'success' => true,
+            'token' => $token ?? ''
+        ]);
+        exit;
+    }
+
     public function runNow(array $params = []): void
     {
         $this->requireAuth();
