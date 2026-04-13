@@ -206,9 +206,9 @@ class CustomVetReportPdfService
         if (!empty($patient['photo'])) {
             // Try multiple possible photo paths
             $photoPaths = [
-                storage_path('app/public/patients/' . $patient['id'] . '/' . basename($patient['photo'])),
-                tenant_storage_path('patients/' . $patient['id'] . '/' . basename($patient['photo'])),
-                public_path('patients/' . $patient['id'] . '/' . basename($patient['photo'])),
+                \storage_path('app/public/patients/' . $patient['id'] . '/' . basename($patient['photo'])),
+                \tenant_storage_path('patients/' . $patient['id'] . '/' . basename($patient['photo'])),
+                \public_path('patients/' . $patient['id'] . '/' . basename($patient['photo'])),
             ];
 
             foreach ($photoPaths as $photoPath) {
