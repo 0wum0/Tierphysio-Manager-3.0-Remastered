@@ -336,19 +336,23 @@ class TenantProvisioningService
             foreach ($files as $file) {
                 $sql = (string)file_get_contents($file);
 
-                // Apply prefix to known Google plugin tables
-                $googleTables = [
+                // Apply prefix to ALL table names (not just Google)
+                // Use the same logic as applyPrefixToSchema
+                $tables = [
+                    'users','settings','owners','patients','appointments','appointment_waitlist',
+                    'invoices','invoice_items','invoice_positions','invoice_reminders','invoice_dunnings',
+                    'waitlist','user_preferences','migrations',
+                    'patient_timeline','treatment_types',
+                    'mobile_api_tokens','cron_job_log',
+                    'befundboegen','befundbogen_felder',
                     'google_calendar_connections',
                     'google_calendar_sync_map',
                     'google_calendar_sync_log',
                     'google_calendar_imported_events',
                 ];
-                foreach ($googleTables as $table) {
-                    $sql = preg_replace(
-                        '/`' . preg_quote($table, '/') . '`/',
-                        '`' . $prefix . $table . '`',
-                        $sql
-                    );
+
+                foreach ($tables as $table) {
+                    $sql = preg_replace('/`' . preg_quote($table, '/') . '`/', '`' . $prefix . $table . '`', $sql);
                 }
 
                 // Also apply constraint prefixing
