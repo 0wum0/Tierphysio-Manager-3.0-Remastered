@@ -1,0 +1,3 @@
+-- Superseded by 012_homework_system.sql (correct INT UNSIGNED types)
+-- This file is intentionally empty
+
