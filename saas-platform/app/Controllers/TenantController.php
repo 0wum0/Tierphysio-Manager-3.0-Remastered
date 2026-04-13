@@ -333,6 +333,50 @@ class TenantController extends Controller
         $this->redirect('/admin/tenants');
     }
 
+    public function fixStorage(array $params = []): void
+    {
+        $this->requireRole('superadmin');
+        $this->verifyCsrf();
+
+        $tenants  = $this->tenantRepo->all();
+        $created  = [];
+        $skipped  = [];
+
+        $practicePath = rtrim($this->config->get('practice.path', ''), '/');
+        $storageRoot  = $practicePath !== ''
+            ? $practicePath . '/storage/tenants'
+            : dirname($this->config->getRootPath()) . '/storage/tenants';
+
+        if (!is_dir($storageRoot)) {
+            @mkdir($storageRoot, 0755, true);
+        }
+
+        foreach ($tenants as $tenant) {
+            $prefix = rtrim((string)($tenant['db_name'] ?? ''), '_');
+            if ($prefix === '') {
+                continue;
+            }
+            $tenantDir = $storageRoot . '/' . $prefix;
+            if (is_dir($tenantDir)) {
+                $skipped[] = $tenant['practice_name'];
+                continue;
+            }
+            @mkdir($tenantDir, 0755, true);
+            foreach (['patients', 'uploads', 'vet-reports', 'intake'] as $sub) {
+                @mkdir($tenantDir . '/' . $sub, 0755, true);
+            }
+            $created[] = $tenant['practice_name'] . ' (' . $prefix . ')';
+        }
+
+        $msg = count($created) > 0
+            ? 'Storage-Ordner erstellt für: ' . implode(', ', $created) . '. '
+            : 'Keine neuen Ordner benötigt. ';
+        $msg .= count($skipped) > 0 ? 'Bereits vorhanden: ' . implode(', ', $skipped) . '.' : '';
+
+        $this->session->flash('success', $msg);
+        $this->redirect('/admin/tenants');
+    }
+
     private function validateTenantData(array $data): array
     {
         $errors = [];

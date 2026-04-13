@@ -90,6 +90,9 @@ class TenantProvisioningService
                 $this->tenantRepo->setAdminCreated($tenantId);
                 $this->tenantRepo->setStatus($tenantId, 'trial');
 
+                // ── Storage-Ordner anlegen ─────────────────────────────────────────
+                $this->createTenantStorageDir($tablePrefix);
+
                 // Create subscription
                 $billingCycle = $data['billing_cycle'] ?? 'monthly';
                 $amount       = $billingCycle === 'yearly' ? $plan['price_year'] : $plan['price_month'];
@@ -297,6 +300,35 @@ class TenantProvisioningService
         // Write tenant identity into prefixed settings table
         $pdo->prepare("INSERT IGNORE INTO `{$prefix}settings` (`key`, `value`) VALUES ('tenant_uuid', ?)")
             ->execute([$tenantUuid]);
+    }
+
+    /**
+     * Create the tenant's storage directory structure under the main app's storage path.
+     * Called during provisioning so uploads work immediately after account creation.
+     */
+    private function createTenantStorageDir(string $tablePrefix): void
+    {
+        $slug = rtrim($tablePrefix, '_');
+
+        $practicePath = rtrim($this->config->get('practice.path', ''), '/');
+        $storageRoot  = $practicePath !== ''
+            ? $practicePath . '/storage/tenants'
+            : dirname($this->config->getRootPath()) . '/storage/tenants';
+
+        $tenantDir = $storageRoot . '/' . $slug;
+
+        foreach ([$storageRoot, $tenantDir] as $dir) {
+            if (!is_dir($dir)) {
+                @mkdir($dir, 0755, true);
+            }
+        }
+
+        foreach (['patients', 'uploads', 'vet-reports', 'intake'] as $sub) {
+            $subDir = $tenantDir . '/' . $sub;
+            if (!is_dir($subDir)) {
+                @mkdir($subDir, 0755, true);
+            }
+        }
     }
 
     /**
