@@ -15,6 +15,7 @@ use Saas\Controllers\UpdateController;
 use Saas\Controllers\DataMigrationController;
 use Saas\Controllers\FeedbackController;
 use Saas\Controllers\PaymentSettingsController;
+use Saas\Controllers\GoogleSettingsController;
 
 // ── License API (called by Praxissoftware) ─────────────────────────────────
 $router->post('/api/license/verify',  [LicenseApiController::class, 'verify']);
@@ -105,6 +106,11 @@ $router->post('/admin/payment-settings/update',      [PaymentSettingsController:
 $router->get('/admin/payment-settings/test/stripe',  [PaymentSettingsController::class, 'testStripe']);
 $router->get('/admin/payment-settings/test/paypal',  [PaymentSettingsController::class, 'testPayPal']);
 $router->post('/admin/payment-settings/cron/run',    [PaymentSettingsController::class, 'runCron']);
+
+// ── Google API Einstellungen (Admin) ────────────────────────────────────────────────
+$router->get('/admin/google-settings',               [GoogleSettingsController::class, 'index']);
+$router->post('/admin/google-settings/update',       [GoogleSettingsController::class, 'update']);
+$router->get('/admin/google-settings/test',          [GoogleSettingsController::class, 'testConnection']);
 
 // ── Payment Webhooks + Callbacks ────────────────────────────────────────────
 $router->post('/webhooks/stripe', function (array $params): void {

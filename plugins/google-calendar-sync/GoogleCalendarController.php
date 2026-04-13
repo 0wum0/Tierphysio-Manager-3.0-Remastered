@@ -47,17 +47,18 @@ class GoogleCalendarController extends Controller
         }
 
         $this->render('@google-calendar-sync/admin_index.twig', [
-            'page_title'   => 'Google Kalender Sync',
-            'connection'   => $connection,
-            'calendars'    => $calendars,
-            'recent_logs'  => $recentLogs,
-            'last_success' => $lastSuccess,
-            'last_error'   => $lastError,
-            'synced_count' => $syncedCount,
-            'is_configured'=> $this->api->isConfigured(),
-            'csrf_token'   => $this->session->generateCsrfToken(),
-            'success'      => $this->session->getFlash('success'),
-            'error'        => $this->session->getFlash('error'),
+            'page_title'         => 'Google Kalender Sync',
+            'connection'         => $connection,
+            'calendars'          => $calendars,
+            'recent_logs'        => $recentLogs,
+            'last_success'       => $lastSuccess,
+            'last_error'         => $lastError,
+            'synced_count'       => $syncedCount,
+            'is_configured'      => $this->api->isConfigured(),
+            'google_account_email'=> $connection['google_email'] ?? null,
+            'csrf_token'         => $this->session->generateCsrfToken(),
+            'success'            => $this->session->getFlash('success'),
+            'error'              => $this->session->getFlash('error'),
         ]);
     }
 

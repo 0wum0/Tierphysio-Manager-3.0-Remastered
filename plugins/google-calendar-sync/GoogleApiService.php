@@ -31,10 +31,10 @@ class GoogleApiService
     public function __construct(
         private readonly GoogleCalendarRepository $repo
     ) {
-        /* Priority: defined constants → DB settings → env → auto-detect */
-        $this->clientId     = defined('GOOGLE_CLIENT_ID')     ? GOOGLE_CLIENT_ID     : ($this->repo->getSetting('google_client_id')     ?? getenv('GOOGLE_CLIENT_ID')     ?: '');
-        $this->clientSecret = defined('GOOGLE_CLIENT_SECRET') ? GOOGLE_CLIENT_SECRET : ($this->repo->getSetting('google_client_secret') ?? getenv('GOOGLE_CLIENT_SECRET') ?: '');
-        $this->redirectUri  = defined('GOOGLE_REDIRECT_URI')  ? GOOGLE_REDIRECT_URI  : ($this->repo->getSetting('google_redirect_uri')  ?? getenv('GOOGLE_REDIRECT_URI')  ?: '');
+        /* Priority: defined constants → env → auto-detect */
+        $this->clientId     = defined('GOOGLE_CLIENT_ID')     ? GOOGLE_CLIENT_ID     : (getenv('GOOGLE_CLIENT_ID')     ?: '');
+        $this->clientSecret = defined('GOOGLE_CLIENT_SECRET') ? GOOGLE_CLIENT_SECRET : (getenv('GOOGLE_CLIENT_SECRET') ?: '');
+        $this->redirectUri  = defined('GOOGLE_REDIRECT_URI')  ? GOOGLE_REDIRECT_URI  : (getenv('GOOGLE_REDIRECT_URI')  ?: '');
 
         /* Auto-build redirect URI from current host if still empty */
         if (empty($this->redirectUri)) {

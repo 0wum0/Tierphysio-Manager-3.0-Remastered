@@ -1,0 +1,156 @@
+{% extends 'base.twig' %}
+{% block title %}Google Kalender API{% endblock %}
+{% block content %}
+
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        {% if is_configured %}
+        <div class="alert d-flex align-items-start gap-3" style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#4ade80;border-radius:.5rem;padding:1rem;">
+            <span style="font-size:1.5rem;">✓</span>
+            <div>
+                <strong>API konfiguriert – Tenants können Google Kalender verbinden</strong>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert d-flex align-items-start gap-3" style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);color:#fbbf24;border-radius:.5rem;padding:1rem;">
+            <span style="font-size:1.5rem;">⚠</span>
+            <div>
+                <strong>API nicht konfiguriert – Bitte Client ID und Secret eintragen</strong>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-book"></i>
+                <strong>Einrichtung – Google Cloud Console</strong>
+            </div>
+            <div class="card-body">
+                <ol class="mb-0" style="line-height:1.8;">
+                    <li class="mb-3">
+                        <strong>Schritt 1 – Google Cloud Console öffnen</strong><br>
+                        <span class="text-muted">Öffne https://console.cloud.google.com und melde dich mit deinem Google-Konto an.</span>
+                        <div class="mt-2">
+                            <a href="https://console.cloud.google.com" target="_blank" class="btn btn-sm btn-outline-primary">
+                                Google Cloud Console öffnen <i class="bi bi-box-arrow-up-right"></i>
+                            </a>
+                        </div>
+                    </li>
+                    <li class="mb-3">
+                        <strong>Schritt 2 – Projekt erstellen oder auswählen</strong><br>
+                        <span class="text-muted">Klicke oben links auf das Projekt-Dropdown → 'Neues Projekt' → Namen vergeben (z.B. 'Therapano') → 'Erstellen'.</span>
+                    </li>
+                    <li class="mb-3">
+                        <strong>Schritt 3 – Google Calendar API aktivieren</strong><br>
+                        <span class="text-muted">Navigiere zu 'APIs & Dienste' → 'Bibliothek' → Suche 'Google Calendar API' → Klicke darauf → 'Aktivieren'.</span>
+                    </li>
+                    <li class="mb-3">
+                        <strong>Schritt 4 – OAuth 2.0 Client erstellen</strong><br>
+                        <span class="text-muted">Navigiere zu 'APIs & Dienste' → 'Anmeldedaten' → '+ Anmeldedaten erstellen' → 'OAuth-Client-ID' → Anwendungstyp: 'Webanwendung' → Name vergeben → Unter 'Autorisierte Weiterleitungs-URIs' die URI von unten eintragen → 'Erstellen'.</span>
+                    </li>
+                    <li class="mb-3">
+                        <strong>Schritt 5 – Zugangsdaten kopieren</strong><br>
+                        <span class="text-muted">Nach dem Erstellen siehst du Client-ID und Client-Secret. Kopiere beide Werte und trage sie im Formular unten ein.</span>
+                    </li>
+                    <li>
+                        <strong>Schritt 6 – OAuth-Zustimmungsbildschirm konfigurieren (nur einmalig)</strong><br>
+                        <span class="text-muted">Falls noch nicht geschehen: 'APIs & Dienste' → 'OAuth-Zustimmungsbildschirm' → 'Extern' → App-Name 'Therapano' eintragen → Scopes: 'https://www.googleapis.com/auth/calendar' hinzufügen → Speichern.</span>
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-key"></i>
+                <strong>API-Zugangsdaten</strong>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="/admin/google-settings/update">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+
+                    <div class="mb-3">
+                        <label class="form-label">Google Client ID</label>
+                        <input type="text" name="google_client_id" class="form-control"
+                               value="{{ settings.google_client_id ?? '' }}"
+                               placeholder="123456789.apps.googleusercontent.com">
+                        <div class="form-text text-muted">Aus der Google Cloud Console → Anmeldedaten → OAuth 2.0-Client-IDs</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Google Client Secret</label>
+                        <input type="password" name="google_client_secret" class="form-control"
+                               value="{{ settings.google_client_secret ?? '' }}"
+                               placeholder="GOCSPX-...">
+                        <div class="form-text text-muted">Geheimschlüssel aus der Google Cloud Console. Wird verschlüsselt gespeichert.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Autorisierte Weiterleitungs-URI (Redirect URI)</label>
+                        <div class="input-group">
+                            <input type="text" name="google_redirect_uri" class="form-control"
+                                   value="{{ settings.google_redirect_uri ?? 'https://app.therapano.de/google-kalender/callback' }}"
+                                   placeholder="https://app.therapano.de/google-kalender/callback">
+                            <button type="button" class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.querySelector('input[name=google_redirect_uri]').value);this.innerHTML='<i class=\'bi bi-check\'></i> Kopiert';setTimeout(()=>this.innerHTML='<i class=\'bi bi-clipboard\'></i>',2000);">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                        <div class="form-text text-muted">Diese URI muss EXAKT so in der Google Cloud Console unter 'Autorisierte Weiterleitungs-URIs' eingetragen sein.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label">Cron-Secret Token</label>
+                        <div class="input-group">
+                            <input type="text" name="google_cron_secret" class="form-control"
+                                   value="{{ settings.google_cron_secret ?? '' }}"
+                                   placeholder="Zufälliger sicherer Token...">
+                            <button type="button" class="btn btn-outline-secondary" onclick="const chars='0123456789abcdef';let s='';for(let i=0;i<32;i++)s+=chars[Math.floor(Math.random()*16)];document.querySelector('input[name=google_cron_secret]').value=s;">
+                                <i class="bi bi-arrow-clockwise"></i> Generieren
+                            </button>
+                        </div>
+                        <div class="form-text text-muted">Sicherer Token für den automatischen Sync-Cron-Job. Mindestens 32 Zeichen empfohlen.</div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save me-2"></i>Einstellungen speichern
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" id="btn-test-connection">
+                            <i class="bi bi-plug me-2"></i>Verbindung testen
+                        </button>
+                    </div>
+                </form>
+
+                <div id="test-result" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('btn-test-connection').addEventListener('click', async function() {
+    const resultDiv = document.getElementById('test-result');
+    resultDiv.innerHTML = '<div class="alert alert-info"><i class="bi bi-hourglass-split me-2"></i>Verbindung wird getestet...</div>';
+
+    try {
+        const res = await fetch('/admin/google-settings/test', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const data = await res.json();
+
+        if (data.ok) {
+            resultDiv.innerHTML = '<div class="alert alert-success"><i class="bi bi-check-circle me-2"></i>' + data.message + '</div>';
+        } else {
+            resultDiv.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>' + data.message + '</div>';
+        }
+    } catch (e) {
+        resultDiv.innerHTML = '<div class="alert alert-danger"><i class="bi bi-exclamation-triangle me-2"></i>Fehler: ' + e.message + '</div>';
+    }
+});
+</script>
+
+{% endblock %}

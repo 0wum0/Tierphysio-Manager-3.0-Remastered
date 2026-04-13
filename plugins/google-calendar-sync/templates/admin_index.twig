@@ -23,18 +23,22 @@
 </div>
 {% endif %}
 
-{% if not is_configured %}
-<div class="alert alert-warning mb-3" role="alert">
-    <strong>⚠️ API Zugangsdaten fehlen</strong>
-    <p class="mb-2 mt-1">Damit Google Kalender Sync funktioniert, müssen zuerst Google API Zugangsdaten eingetragen werden.</p>
-    <hr class="my-2">
-    <ol class="mb-0 fs-sm">
-        <li>Öffne die <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a></li>
-        <li>Erstelle ein Projekt und aktiviere die <strong>Google Calendar API</strong></li>
-        <li>Erstelle eine OAuth 2.0 Client-ID (Typ: Webanwendung)</li>
-        <li>Füge folgende Weiterleitungs-URI hinzu: <code>/google-kalender/callback</code></li>
-        <li>Kopiere <code>plugins/google-calendar-sync/google.config.example.php</code> nach <code>storage/config/google.php</code></li>
-    </ol>
+{% if is_configured %}
+<div class="alert alert-info d-flex align-items-start gap-2 mb-3">
+    <span style="font-size:1.2em;">ℹ️</span>
+    <div>
+        <strong>Google Kalender wird zentral ueber Therapano bereitgestellt.</strong><br>
+        Klicke auf „Mit Google verbinden", um dein Google-Konto zu autorisieren.
+        Du benoenigst keine eigenen API-Zugangsdaten.
+    </div>
+</div>
+{% else %}
+<div class="alert alert-warning d-flex align-items-start gap-2 mb-3">
+    <span style="font-size:1.2em;">⚠️</span>
+    <div>
+        <strong>Google Kalender ist voruebergehend nicht verfuegbar.</strong><br>
+        Bitte kontaktiere den Support.
+    </div>
 </div>
 {% endif %}
 
