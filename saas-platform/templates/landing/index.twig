@@ -7,6 +7,7 @@
 {% endblock %}
 
 {% block content %}
+<!-- HERO SECTION -->
 <section class="hero">
     <div class="container text-center">
         <div class="row justify-content-center">
@@ -17,7 +18,7 @@
                     <span class="gradient-text">High-Performance Cockpit.</span>
                 </h1>
                 <p class="mx-auto mb-5 reveal-hidden" style="max-width: 750px; font-size: 1.25rem; color: var(--lp-muted);">
-                    TheraPano bündelt klinische Dokumentation, Patientenentwicklung und Praxismanagement in einer einzigen, hochintelligenten Plattform. Maßgeschneidert für Tierphysiotherapeuten und Hundeschulen.
+                    TheraPano bündelt klinische Dokumentation, Patientenentwicklung und Praxismanagement in einer einzigen, hochintelligenten Plattform. Maßgeschneidert für Tierherapeuten und Hundeschulen.
                 </p>
                 <div class="d-flex justify-content-center gap-3 reveal-hidden">
                     <a href="/register" class="btn-nav-primary px-5 py-3 h5 mb-0">Jetzt kostenlos starten</a>
@@ -28,6 +29,7 @@
     </div>
 </section>
 
+<!-- BRAND STRIP -->
 <section class="brand-strip py-4 border-top border-bottom" style="background: rgba(0,0,0,0.2);">
     <div class="container">
         <div class="d-flex flex-wrap justify-content-around gap-4 text-muted small fw-bold text-uppercase" style="letter-spacing: 0.1em;">
@@ -40,41 +42,77 @@
     </div>
 </section>
 
-<!-- SECTION: DAS COCKPIT -->
+<!-- SECTION: DAS COCKPIT (One-Stop Action) -->
 <section class="py-5 mt-5">
     <div class="container py-5">
         <div class="row align-items-center g-5">
             <div class="col-lg-6 reveal-hidden">
-                <span class="section-kicker">Patienten-Management</span>
-                <h2 class="section-title">Die digitale Akte. <br><span class="gradient-text">Mehr als nur Notizen.</span></h2>
+                <span class="section-kicker">Das Schaltzentrum</span>
+                <h2 class="section-title">Alles Erledigt. <br><span class="gradient-text">Ohne die Akte zu verlassen.</span></h2>
                 <p class="text-muted mb-4">
-                    Behalte den vollen Überblick über jeden Heilungsprozess. Von der ersten Anamnese bis zur erfolgreichen Entlassung – alles an einem Ort dokumentiert.
+                    In TheraPano ist die Patientenakte keine statische Liste, sondern dein interaktives Dashboard. Alle administrativen Aufgaben erledigst du direkt im Workflow.
                 </p>
-                <ul class="feature-list">
-                    <li><i class="bi bi-calendar-check"></i> <div><strong>Status-Tracking:</strong> Verfogle den Fortschritt deiner Patienten von "In Behandlung" über "Gebessert" bis "Schmerzfrei".</div></li>
-                    <li><i class="bi bi-file-earmark-pdf"></i> <div><strong>Automatisierte Berichte:</strong> Erstelle professionelle Tierarztberichte und Befunde direkt aus deiner Dokumentation.</div></li>
-                    <li><i class="bi bi-camera-video"></i> <div><strong>Visueller Verlauf:</strong> Dokumentiere Therapieerfolge mit Fotos und Videos direkt in der lückenlosen Timeline.</div></li>
-                </ul>
+                <div class="row g-4 mt-2">
+                    <div class="col-md-6">
+                        <div class="d-flex gap-3">
+                            <i class="bi bi-receipt text-primary h4"></i>
+                            <div>
+                                <h6 class="mb-1">Direkt-Abrechnung</h6>
+                                <p class="small text-muted">Erstelle GoBD-konforme Rechnungen mit einem Klick aus dem Behandlungsprotokoll.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex gap-3">
+                            <i class="bi bi-calendar-plus text-primary h4"></i>
+                            <div>
+                                <h6 class="mb-1">Schnell-Termine</h6>
+                                <p class="small text-muted">Buche Folgetermine sofort in der Akte. Synchronisiert in Echtzeit mit deinem Kalender.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex gap-3">
+                            <i class="bi bi-file-earmark-medical text-primary h4"></i>
+                            <div>
+                                <h6 class="mb-1">Tierarztberichte</h6>
+                                <p class="small text-muted">Generiere automatisierte Verlaufsberichte für überweisende Tierärzte direkt aus dem Log.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="d-flex gap-3">
+                            <i class="bi bi-heart-pulse text-primary h4"></i>
+                            <div>
+                                <h6 class="mb-1">Theracare Integration</h6>
+                                <p class="small text-muted">Überwache den Fortschritt (TCP) und passe Therapiepläne dynamisch an.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="col-lg-6">
-                <div class="glass-card reveal-hidden" style="background: radial-gradient(circle at 0% 0%, rgba(59, 130, 246, 0.1), transparent 50%);">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="rounded-circle bg-success" style="width: 8px; height: 8px;"></div>
-                            <span class="small fw-bold opacity-75">STATUS: SCHMERZFREI</span>
+                <div class="glass-card reveal-hidden overflow-hidden p-0">
+                    <div class="p-4 border-bottom border-white border-opacity-10 d-flex justify-content-between align-items-center bg-white bg-opacity-5">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="rounded-circle bg-success" style="width: 10px; height: 10px; box-shadow: 0 0 10px #198754;"></div>
+                            <span class="fw-bold small">AKTIVER PATIENT: MILO</span>
                         </div>
-                        <span class="clinical-tag">TIMELINE v2.0</span>
-                    </div>
-                    <div class="mb-4">
-                        <h4 class="mb-1">🐕 Milo (Labrador)</h4>
-                        <p class="small text-muted mb-0">Rasse: Labrador Retriever · Geb: 12.03.2019</p>
-                    </div>
-                    <div class="p-3 rounded-3 bg-white bg-opacity-5 mb-3">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span class="small fw-bold">Letzter Eintrag</span>
-                            <span class="small text-muted">Heute, 14:20</span>
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-light opacity-50"><i class="bi bi-receipt"></i></button>
+                            <button class="btn btn-sm btn-outline-light opacity-50"><i class="bi bi-calendar"></i></button>
+                            <button class="btn btn-sm btn-outline-light opacity-50"><i class="bi bi-file-pdf"></i></button>
                         </div>
-                        <p class="small mb-0 opacity-75">Behandlung: Unterwasserlaufband. Hund zeigt freudiges Gangbild, keine Lahmheit erkennbar.</p>
+                    </div>
+                    <div class="p-4" style="height: 300px; background: linear-gradient(135deg, rgba(59,130,246,0.05), transparent);">
+                        <!-- Visual Timeline Simulation -->
+                        <div class="mb-3 p-3 rounded-3 bg-white bg-opacity-5 border border-white border-opacity-10">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="small fw-bold">Behandlung: Physio</span>
+                                <span class="small opacity-50">14:30</span>
+                            </div>
+                            <p class="small text-muted mb-0">Status auf "Schmerzfrei" gesetzt nach erfolgreichem Unterwasser-Laufband-Training.</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -82,76 +120,37 @@
     </div>
 </section>
 
-<!-- SECTION: CLINICAL EXCELLENCE -->
+<!-- SECTION: BUSINESS INTELLIGENCE (Forecast) -->
 <section class="py-5" style="background: rgba(255,255,255,0.01);">
     <div class="container py-5">
-        <div class="text-center mb-5 reveal-hidden">
-            <span class="section-kicker">Klinische Exzellenz</span>
-            <h2 class="section-title">Spezialisierte <span class="gradient-text">Befundbögen.</span></h2>
-            <p class="text-muted mx-auto" style="max-width: 700px;">
-                Egal ob Physiotherapie, Osteopathie oder Training – unsere intelligenten Bögen passen sich deinem Workflow an.
-            </p>
-        </div>
-        <div class="row g-4">
-            <div class="col-md-4 reveal-hidden">
-                <div class="glass-card">
-                    <i class="bi bi-activity h2 text-primary mb-4 d-block"></i>
-                    <h4>Physio-Befund</h4>
-                    <p class="small text-muted">Detaillierte Erfassung von Gangbildanalysen, Lahmheitsgraden und Palpationsergebnissen.</p>
-                    <div class="d-flex flex-wrap gap-2 mt-3">
-                        <span class="clinical-tag">Triggerpunkte</span>
-                        <span class="clinical-tag">Neurologie</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 reveal-hidden">
-                <div class="glass-card">
-                    <i class="bi bi-flower1 h2 text-secondary mb-4 d-block"></i>
-                    <h4>Naturheilkunde</h4>
-                    <p class="small text-muted">Integrierte Module für Bachblüten, Homöopathie, Phytotherapie und Schüssler-Salze.</p>
-                    <div class="d-flex flex-wrap gap-2 mt-3">
-                        <span class="clinical-tag">Bachblüten</span>
-                        <span class="clinical-tag">Energetik</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 reveal-hidden">
-                <div class="glass-card">
-                    <i class="bi bi-clipboard2-pulse h2 text-accent mb-4 d-block"></i>
-                    <h4>Training & Plan</h4>
-                    <p class="small text-muted">Strukturiertes Feedback für Hundeschulen und langfristige Trainingspläne.</p>
-                    <div class="d-flex flex-wrap gap-2 mt-3">
-                        <span class="clinical-tag">Kurs-Logik</span>
-                        <span class="clinical-tag">Fortschritt</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- SECTION: HOMEWORK -->
-<section class="py-5">
-    <div class="container py-5">
-        <div class="row align-items-center g-5">
-            <div class="col-lg-6 order-lg-2 reveal-hidden">
-                <span class="section-kicker">Kunden-Bindung</span>
-                <h2 class="section-title">Hausaufgaben 2.0. <br><span class="gradient-text">Engagement steigern.</span></h2>
+        <div class="row g-5 align-items-center">
+            <div class="col-lg-5 order-lg-2 reveal-hidden">
+                <span class="section-kicker">Wirtschaftlichkeit</span>
+                <h2 class="section-title">Die Jahresprognose. <br><span class="gradient-text">Planung mit Weitblick.</span></h2>
                 <p class="text-muted">
-                    Therapie endet nicht in der Praxis. Mit dem Hausaufgaben-Portal gibst du deinen Kunden professionelle Pläne mit nach Hause.
+                    TheraPano analysiert deine Umsatztrends und liefert dir eine präzise **Jahresprognose**. So weißt du heute schon, wie sich dein Business entwickelt.
                 </p>
                 <ul class="feature-list mt-4">
-                    <li><i class="bi bi-phone"></i> <div><strong>Owner Portal:</strong> Besitzer loggen sich ein und sehen ihre Übungspläne jederzeit.</div></li>
-                    <li><i class="bi bi-play-btn"></i> <div><strong>Video-Anleitungen:</strong> Verknüpfe eigene Videos oder Beschreibungen für jede Übung.</div></li>
-                    <li><i class="bi bi-chat-dots"></i> <div><strong>Feedback-Schleife:</strong> Direkter Draht zwischen Besitzer und Therapeut für bessere Resultate.</div></li>
+                    <li><i class="bi bi-graph-up-arrow"></i> <div><strong>Forecast-Algorithmus:</strong> Hochrechnung basierend auf Terminen und historischen Daten.</div></li>
+                    <li><i class="bi bi-pie-chart"></i> <div><strong>Einnahmen-Mix:</strong> Detaillierte Analyse nach Behandlungsarten und Therapeuten.</div></li>
+                    <li><i class="bi bi-cash-stack"></i> <div><strong>Liquiditäts-Check:</strong> Übersicht über offene Forderungen, Mahnungen und Praxisausgaben (Expenses).</div></li>
                 </ul>
             </div>
-            <div class="col-lg-6 order-lg-1">
-                <div class="glass-card reveal-hidden" style="border-style: dashed;">
-                    <div class="text-center py-5">
-                        <i class="bi bi-cloud-upload display-1 text-primary opacity-25"></i>
-                        <h5 class="mt-4">Übungsplan: Kreuzband-Reha</h5>
-                        <p class="text-muted">3 Übungen · Status: Aktiv</p>
+            <div class="col-lg-7 order-lg-1">
+                <div class="glass-card reveal-hidden p-5" style="border-color: rgba(59, 130, 246, 0.2);">
+                    <div class="row align-items-end g-3 mb-4">
+                        <div class="col" style="height: 60px; background: rgba(59, 130, 246, 0.1); border-radius: 8px;"></div>
+                        <div class="col" style="height: 90px; background: rgba(59, 130, 246, 0.2); border-radius: 8px;"></div>
+                        <div class="col" style="height: 140px; background: var(--lp-primary); border-radius: 8px; box-shadow: 0 0 20px var(--lp-primary);"></div>
+                        <div class="col" style="height: 110px; background: rgba(59, 130, 246, 0.4); border-radius: 8px;"></div>
+                        <div class="col" style="height: 160px; background: rgba(59, 130, 246, 0.6); border-radius: 8px;"></div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="small opacity-50">PROGNOSE ENDE 2026</div>
+                            <div class="h3 fw-bold mb-0">+14.2% Wachstum</div>
+                        </div>
+                        <i class="bi bi-shield-fill-check h2 text-primary"></i>
                     </div>
                 </div>
             </div>
@@ -159,51 +158,38 @@
     </div>
 </section>
 
-<!-- SECTION: BUSINESS ENGINE -->
-<section class="py-5 mt-5">
-    <div class="container py-5">
-        <div class="glass-card p-5 reveal-hidden" style="border: 1px solid rgba(59, 130, 246, 0.2);">
-            <div class="row g-5 align-items-center">
-                <div class="col-lg-7">
-                    <span class="section-kicker">Wirtschaftlichkeit</span>
-                    <h2 class="section-title">Die Finanz-Engine. <br><span class="gradient-text">Weniger Büro, mehr Tier.</span></h2>
-                    <div class="row g-4 mt-2">
-                        <div class="col-md-6">
-                            <h5 class="mb-2"><i class="bi bi-receipt me-2 text-primary"></i> Abrechnung</h5>
-                            <p class="small text-muted">Erstelle Rechnungen direkt aus den Behandlungen. Mit GoBD-konformer Logik.</p>
-                        </div>
-                        <div class="col-md-6">
-                            <h5 class="mb-2"><i class="bi bi-megaphone me-2 text-primary"></i> Mahnwesen</h5>
-                            <p class="small text-muted">Automatische Zahlungserinnerungen sparen dir wertvolle Zeit und Nerven.</p>
-                        </div>
-                        <div class="col-md-6">
-                            <h5 class="mb-2"><i class="bi bi-wallet2 me-2 text-primary"></i> Ausgaben</h5>
-                            <p class="small text-muted">Behalte deine Praxisausgaben und Fixkosten immer im Blick.</p>
-                        </div>
-                        <div class="col-md-6">
-                            <h5 class="mb-2"><i class="bi bi-graph-up me-2 text-primary"></i> Statistiken</h5>
-                            <p class="small text-muted">Umsatzanalysen und Patientenentwicklung in Echtzeit.</p>
-                        </div>
-                    </div>
+<!-- SECTION: THERACARE (TCP) -->
+<section class="py-5">
+    <div class="container py-5 text-center reveal-hidden">
+        <span class="section-kicker">Therapeutische Tiefe</span>
+        <h2 class="section-title">Theracare (TCP). <br><span class="gradient-text">Fortschritt visualisiert.</span></h2>
+        <p class="text-muted mx-auto mb-5" style="max-width: 800px;">
+            Hinter Theracare (Therapy Care Progress) verbirgt sich ein mächtiges Analysetool. Dokumentiere nicht nur, sondern zeige deinen Kunden schwarz auf weiß, wie sich die Lebensqualität ihres Tieres verbessert.
+        </p>
+        <div class="row g-4 text-start">
+            <div class="col-md-4">
+                <div class="glass-card">
+                    <h5 class="mb-3"><i class="bi bi-bezier2 me-2 text-primary"></i> Verlaufsgrafiken</h5>
+                    <p class="small text-muted">Visualisierte Parameterübersicht über Schmerz-Inzidenz, Beweglichkeit und Belastbarkeit im Zeitverlauf.</p>
                 </div>
-                <div class="col-lg-5">
-                    <div class="p-4 rounded-4" style="background: rgba(0,0,0,0.3); border: 1px solid var(--lp-border);">
-                        <div class="d-flex justify-content-between mb-3">
-                            <span class="small">UMSATZ_MARCH</span>
-                            <span class="text-success small">+12.4%</span>
-                        </div>
-                        <div class="h3 fw-bold mb-4">4.892,50 €</div>
-                        <div class="progress" style="height: 6px; background: rgba(255,255,255,0.05);">
-                            <div class="progress-bar" style="width: 70%; background: var(--lp-primary);"></div>
-                        </div>
-                    </div>
+            </div>
+            <div class="col-md-4">
+                <div class="glass-card">
+                    <h5 class="mb-3"><i class="bi bi-flower3 me-2 text-primary"></i> Naturheilkunde-Log</h5>
+                    <p class="small text-muted">Lückenlose Historie aller naturheilkundlichen Interventionen – von Bachblüten bis zur Phytotherapie.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="glass-card">
+                    <h5 class="mb-3"><i class="bi bi-file-earmark-check me-2 text-primary"></i> Therapieberichte</h5>
+                    <p class="small text-muted">Per Klick exportierbare Berichte, die als Grundlage für Tierarztbriefe oder Versicherungsanträge dienen.</p>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- SECTION: CROSS-PLATFORM APPS (BETA) -->
+<!-- SECTION: BETA APPS -->
 <section class="py-5" style="background: linear-gradient(180deg, transparent, rgba(124, 58, 237, 0.03), transparent);">
     <div class="container py-5">
         <div class="row g-5 align-items-center">
@@ -211,78 +197,109 @@
                 <span class="section-kicker">Native Experience</span>
                 <h2 class="section-title">TheraPano für <br><span class="gradient-text">alle deine Geräte.</span></h2>
                 <p class="text-muted mb-4">
-                    Ob am Schreibtisch in der Praxis oder mobil direkt beim Tier – TheraPano ist für dich da. Unsere nativen Anwendungen für Desktop und Mobile bringen die volle Leistung direkt auf dein Betriebssystem.
+                    Unsere nativen Anwendungen befinden sich in der finalen Entwicklungsphase. Als Beta-User hast du die Chance, die Zukunft deiner Praxissoftware aktiv mitzugestalten.
                 </p>
                 <div class="row g-3">
-                    <div class="col-sm-6">
-                        <div class="app-platform-card">
-                            <i class="bi bi-windows h3 mb-2 d-block"></i>
-                            <span class="fw-bold">Windows</span> <span class="beta-badge">BETA</span>
-                        </div>
-                    </div>
-                    <div class="col-sm-6">
-                        <div class="app-platform-card">
-                            <i class="bi bi-apple h3 mb-2 d-block"></i>
-                            <span class="fw-bold">macOS</span> <span class="beta-badge">BETA</span>
-                        </div>
-                    </div>
-                    <div class="col-sm-6">
-                        <div class="app-platform-card">
-                            <i class="bi bi-google-play h3 mb-2 d-block"></i>
-                            <span class="fw-bold">Android</span> <span class="beta-badge">BETA</span>
-                        </div>
-                    </div>
-                    <div class="col-sm-6">
-                        <div class="app-platform-card">
-                            <i class="bi bi-app-indicator h3 mb-2 d-block"></i>
-                            <span class="fw-bold">iOS / iPadOS</span> <span class="beta-badge">BETA</span>
-                        </div>
-                    </div>
+                    <div class="col-6"><div class="app-platform-card"><i class="bi bi-windows h4 mb-2 d-block"></i> Windows <span class="beta-badge">BETA</span></div></div>
+                    <div class="col-6"><div class="app-platform-card"><i class="bi bi-apple h4 mb-2 d-block"></i> macOS <span class="beta-badge">BETA</span></div></div>
+                    <div class="col-6"><div class="app-platform-card"><i class="bi bi-google-play h4 mb-2 d-block"></i> Android <span class="beta-badge">BETA</span></div></div>
+                    <div class="col-6"><div class="app-platform-card"><i class="bi bi-phone h4 mb-2 d-block"></i> iOS <span class="beta-badge">BETA</span></div></div>
                 </div>
             </div>
             <div class="col-lg-6">
-                <div class="glass-card reveal-hidden p-0 overflow-hidden" style="border-color: rgba(124, 58, 237, 0.2);">
-                    <div class="p-4 bg-primary bg-opacity-10 text-center">
-                        <i class="bi bi-layers-fill display-4 text-primary opacity-50"></i>
-                        <h4 class="mt-3">Vollständige Synchronisation</h4>
-                        <p class="small text-muted mb-0">Echtzeit-Datenabgleich zwischen Web, Desktop und Mobile.</p>
-                    </div>
+                <div class="glass-card reveal-hidden p-5 text-center">
+                    <i class="bi bi-cloud-check display-3 text-primary mb-3"></i>
+                    <h4>Real-Time Sync</h4>
+                    <p class="text-muted">Deine Daten werden in Millisekunden zwischen Tablet, Smartphone und Browser synchronisiert.</p>
                 </div>
             </div>
         </div>
     </div>
 </section>
 
-<section class="py-5" id="pricing">
+<!-- MASSIVE FAQ SECTION -->
+<section class="py-5" id="faq">
     <div class="container py-5">
         <div class="text-center mb-5 reveal-hidden">
-            <span class="section-kicker">Transparent & Fair</span>
-            <h2 class="section-title">Wähle deinen <span class="gradient-text">Plan.</span></h2>
-            <p class="text-muted">Starten Sie mit 14 Tagen kostenfreiem Test. Keine Kreditkarte erforderlich.</p>
+            <span class="section-kicker">Detail-Wissen</span>
+            <h2 class="section-title">Häufige Fragen & <span class="gradient-text">Detail-Antworten.</span></h2>
         </div>
 
-        <div class="row g-4 justify-content-center">
-            {% if plans is defined and plans|length > 0 %}
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                
+                <h4 class="faq-group-title reveal-hidden">🚀 Einstieg & Arbeitsalltag</h4>
+                <div class="faq-item reveal-hidden">
+                    <button class="faq-question">Wie erstelle ich eine Rechnung direkt aus der Akte? <i class="bi bi-plus"></i></button>
+                    <div class="faq-answer">
+                        Über die Schnell-Aktion "Rechnung" in der Patienten-Akte. TheraPano übernimmt automatisch alle unberechneten Termine und Befunde dieses Patienten in einen Rechnungsentwurf. Du prüfst nur noch kurz den GoBD-Status und sendest die Rechnung direkt per E-Mail oder druckst sie aus.
+                    </div>
+                </div>
+                <div class="faq-item reveal-hidden">
+                    <button class="faq-question">Was ist das Theracare (TCP) Modul? <i class="bi bi-plus"></i></button>
+                    <div class="faq-answer">
+                        TCP steht für Therapy Care Progress. Es ist ein spezialisiertes Modul zur Visualisierung von Heilungsverläufen. Du kannst Schmerz-Scores, Beweglichkeitsparameter und Vitalwerte grafisch darstellen. Dies ist besonders wertvoll für die Kommunikation mit Tierhaltern, um Fortschritte objektiv belegbar zu machen.
+                    </div>
+                </div>
+
+                <h4 class="faq-group-title mt-5 reveal-hidden">💰 Finanzen & Rechtssicherheit</h4>
+                <div class="faq-item reveal-hidden">
+                    <button class="faq-question">Ist TheraPano wirklich GoBD-konform? <i class="bi bi-plus"></i></button>
+                    <div class="faq-answer">
+                        Ja. Wir haben eine dedizierte GoBD-Infrastruktur implementiert. Das bedeutet unter anderem: Rechnungen können nach dem Festschreiben nicht mehr einfach gelöscht werden. Stattdessen gibt es ein revisionssicheres Stornosystem mit korrekten Korrekturbelegen und Belegnummernkreisen, die lückenlos dokumentiert werden.
+                    </div>
+                </div>
+                <div class="faq-item reveal-hidden">
+                    <button class="faq-question">Wie funktioniert das automatisierte Mahnwesen? <i class="bi bi-plus"></i></button>
+                    <div class="faq-answer">
+                        Das System überwacht die Zahlungsziele deiner Rechnungen. Bei Überschreitung schlägt TheraPano automatisch die nächste Stufe vor: Von der freundlichen Zahlungserinnerung bis zur 1. und 2. Mahnung. Alle Vorlagen sind rechtlich geprüft und können mit einem Klick versendet werden.
+                    </div>
+                </div>
+                <div class="faq-item reveal-hidden">
+                    <button class="faq-question">Wie genau ist die Jahresprognose? <i class="bi bi-plus"></i></button>
+                    <div class="faq-answer">
+                        Die Prognose basiert auf einem statistischen Modell, das deine durchschnittlichen Monatsumsätze, die aktuelle Termindichte im Kalender und saisonale Trends (z.B. Ferienzeiten) einbezieht. Je mehr Daten du im System hast, desto präziser wird die Vorhersage deines Praxiserfolgs.
+                    </div>
+                </div>
+
+                <h4 class="faq-group-title mt-5 reveal-hidden">🔒 Sicherheit & Technik</h4>
+                <div class="faq-item reveal-hidden">
+                    <button class="faq-question">Wie sind meine Daten voneinander getrennt? <i class="bi bi-plus"></i></button>
+                    <div class="faq-answer">
+                        TheraPano nutzt eine echte Multi-Tenant-Architektur. Das bedeutet, dass jeder Kunde technisch isolierte Datenbestände hat. Deine Patientendaten, Finanzen und Dokumente sind durch strikte Präfixe und Zugriffsfilter von den Daten anderer Praxen getrennt – für maximale Datensicherheit.
+                    </div>
+                </div>
+                <div class="faq-item reveal-hidden">
+                    <button class="faq-question">Was bedeutet der Beta-Status der Apps? <i class="bi bi-plus"></i></button>
+                    <div class="faq-answer">
+                        Die native Anwendungen für Windows, Mac, iOS und Android befinden sich in der letzten Testphase. Sie sind voll funktionsfähig und synchronisieren sich mit der Cloud, erhalten aber derzeit noch wöchentliche Updates zur Optimierung der Performance und UI. Als Cloud-Nutzer hast du sofortigen Zugriff auf alle Beta-Versionen.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- PRICING SECTION -->
+<section class="py-5" id="pricing">
+    <div class="container py-5 text-center reveal-hidden">
+        <span class="section-kicker">Deine Wahl</span>
+        <h2 class="section-title">Einfache <span class="gradient-text">Preispläne.</span></h2>
+        <div class="row g-4 mt-4 justify-content-center">
+            {% if plans is defined %}
                 {% for plan in plans %}
-                    <div class="col-md-6 col-lg-4 reveal-hidden">
-                        <div class="glass-card price-card {% if plan.is_featured %}featured{% endif %} h-100 d-flex flex-column p-5">
-                            {% if plan.is_featured %}
-                                <div class="position-absolute top-0 end-0 m-3 px-3 py-1 bg-primary text-white small fw-bold rounded-pill">BELIEBTESTE WAHL</div>
-                            {% endif %}
-                            <h3 class="h5 mb-3">{{ plan.name }}</h3>
-                            <div class="price-amount mb-2">{{ (plan.price_month is defined and plan.price_month) ? plan.price_month : '0' }}€<small class="h6 text-muted">/mtl</small></div>
-                            <p class="text-muted small mb-4">{{ plan.description }}</p>
-                            <hr class="border-secondary opacity-25">
-                            <ul class="list-unstyled text-muted mb-5 text-start flex-grow-1">
+                    <div class="col-md-6 col-lg-4 d-flex">
+                        <div class="glass-card w-100 p-5 d-flex flex-column {% if plan.is_featured %}border-primary{% endif %}">
+                            <h3 class="h4 mb-3">{{ plan.name }}</h3>
+                            <div class="h2 fw-bold mb-4">{{ (plan.price_month is defined and plan.price_month) ? plan.price_month : '0' }}€ <small class="h6 opacity-50">/mtl</small></div>
+                            <ul class="list-unstyled text-start flex-grow-1 text-muted small mb-5">
                                 {% set features = plan.features ? plan.features|json_decode : [] %}
-                                {% for feature in features %}
-                                    <li class="mb-3 d-flex align-items-start small">
-                                        <i class="bi bi-check-circle-fill text-success me-2 mt-1"></i>
-                                        <span>{{ feature }}</span>
-                                    </li>
+                                {% for f in features %}
+                                    <li class="mb-2"><i class="bi bi-check2 text-primary me-2"></i> {{ f }}</li>
                                 {% endfor %}
                             </ul>
-                            <a href="/register/{{ plan.slug }}" class="{% if plan.is_featured %}btn-nav-primary{% else %}btn-nav-outline{% endif %} w-100 py-3 text-center">Jetzt einsteigen</a>
+                            <a href="/register/{{ plan.slug }}" class="btn-nav-primary w-100 py-3">Jetzt starten</a>
                         </div>
                     </div>
                 {% endfor %}
@@ -291,48 +308,9 @@
     </div>
 </section>
 
-<!-- FAQ SECTION EXPANDED -->
-<section class="py-5" id="faq">
-    <div class="container py-5">
-        <div class="text-center mb-5 reveal-hidden">
-            <h2 class="section-title">Häufige Fragen</h2>
-        </div>
-        <div class="row g-4 justify-content-center">
-            <div class="col-lg-8">
-                <div class="accordion accordion-flush bg-transparent" id="faqAccordion">
-                    <div class="glass-card mb-3 reveal-hidden" style="padding: 1rem;">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button collapsed bg-transparent text-white" type="button" data-bs-toggle="collapse" data-bs-target="#q1">
-                                Ist TheraPano GoBD-konform?
-                            </button>
-                        </h2>
-                        <div id="q1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                            <div class="accordion-body text-muted small">
-                                Ja, unsere Rechnungsstellung und Stornosysteme folgen den strengen Vorgaben der GoBD für eine revisionssichere Buchführung.
-                            </div>
-                        </div>
-                    </div>
-                    <div class="glass-card mb-3 reveal-hidden" style="padding: 1rem;">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button collapsed bg-transparent text-white" type="button" data-bs-toggle="collapse" data-bs-target="#q2">
-                                Läuft die Software auf meinem iPad?
-                            </button>
-                        </h2>
-                        <div id="q2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                            <div class="accordion-body text-muted small">
-                                Absolut. TheraPano ist webbasiert und für Tablets optimiert, sodass du Befunde direkt am Tier erfassen kannst.
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
 <section class="py-5 text-center reveal-hidden">
     <div class="container py-5">
-        <h2 class="section-title h1 mb-4">Bereit für die Praxis der <span class="gradient-text">Zukunft?</span></h2>
+        <h2 class="section-title h1 mb-4">Bereit für den <br><span class="gradient-text">nächsten Schritt?</span></h2>
         <p class="text-muted mb-5 mx-auto" style="max-width: 600px;">Teste TheraPano 14 Tage lang völlig unverbindlich mit vollem Funktionsumfang.</p>
         <a href="/register" class="btn-nav-primary btn-lg px-5 py-3 h4">Kostenlos testen</a>
     </div>
@@ -341,4 +319,23 @@
 
 {% block scripts %}
 <script src="/js/landing.js?v={{ "now"|date("U") }}" defer></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const faqs = document.querySelectorAll('.faq-question');
+        faqs.forEach(q => {
+            q.addEventListener('click', () => {
+                const item = q.parentElement;
+                item.classList.toggle('active');
+                const icon = q.querySelector('i');
+                icon.classList.toggle('bi-plus');
+                icon.classList.toggle('bi-dash');
+                
+                const answer = item.querySelector('.faq-answer');
+                if (item.classList.contains('active')) {
+                    gsap.from(answer, { opacity: 0, y: -10, duration: 0.4 });
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}
