@@ -31,40 +31,26 @@ class GoogleApiService
     public function __construct(
         private readonly GoogleCalendarRepository $repo
     ) {
-        /* Priority: defined constants → env → saas_settings → auto-detect */
+        /* Priority: defined constants → env → config file → auto-detect */
         $this->clientId     = defined('GOOGLE_CLIENT_ID')     ? GOOGLE_CLIENT_ID     : (getenv('GOOGLE_CLIENT_ID')     ?: '');
         $this->clientSecret = defined('GOOGLE_CLIENT_SECRET') ? GOOGLE_CLIENT_SECRET : (getenv('GOOGLE_CLIENT_SECRET') ?: '');
         $this->redirectUri  = defined('GOOGLE_REDIRECT_URI')  ? GOOGLE_REDIRECT_URI  : (getenv('GOOGLE_REDIRECT_URI')  ?: '');
 
-        /* Fallback: read from saas_settings table (SaaS platform MySQL configuration) */
+        /* Fallback: read from config file (written by SaaS platform) */
         if (empty($this->clientId) || empty($this->clientSecret)) {
             try {
-                $configPath = dirname(__DIR__, 2) . '/saas-platform/storage/config/config.php';
+                $configPath = dirname(__DIR__, 2) . '/saas-platform/storage/config/google.php';
                 if (file_exists($configPath)) {
                     $config = require $configPath;
-                    if (isset($config['db'])) {
-                        $db = $config['db'];
-                        $dsn = "mysql:host={$db['host']};port={$db['port']};dbname={$db['database']};charset=utf8mb4";
-                        $pdo = new \PDO($dsn, $db['username'], $db['password'], [
-                            \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
-                        ]);
-
+                    if (is_array($config)) {
                         if (empty($this->clientId)) {
-                            $stmt = $pdo->prepare("SELECT value FROM saas_settings WHERE `key` = 'google_client_id'");
-                            $stmt->execute();
-                            $this->clientId = (string)$stmt->fetchColumn();
+                            $this->clientId = $config['client_id'] ?? '';
                         }
-
                         if (empty($this->clientSecret)) {
-                            $stmt = $pdo->prepare("SELECT value FROM saas_settings WHERE `key` = 'google_client_secret'");
-                            $stmt->execute();
-                            $this->clientSecret = (string)$stmt->fetchColumn();
+                            $this->clientSecret = $config['client_secret'] ?? '';
                         }
-
                         if (empty($this->redirectUri)) {
-                            $stmt = $pdo->prepare("SELECT value FROM saas_settings WHERE `key` = 'google_redirect_uri'");
-                            $stmt->execute();
-                            $this->redirectUri = (string)$stmt->fetchColumn();
+                            $this->redirectUri = $config['redirect_uri'] ?? '';
                         }
                     }
                 }

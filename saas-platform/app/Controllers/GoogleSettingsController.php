@@ -53,6 +53,20 @@ class GoogleSettingsController extends Controller
         $this->setSetting('google_redirect_uri', trim($_POST['google_redirect_uri'] ?? ''));
         $this->setSetting('google_cron_secret', trim($_POST['google_cron_secret'] ?? ''));
 
+        // Write to config file for plugin access
+        $configPath = $this->view->getConfig()->getRootPath() . '/storage/config/google.php';
+        $configDir = dirname($configPath);
+        if (!is_dir($configDir)) {
+            @mkdir($configDir, 0755, true);
+        }
+        $configContent = "<?php\nreturn [\n";
+        $configContent .= "    'client_id'     => '" . addslashes(trim($_POST['google_client_id'] ?? '')) . "',\n";
+        $configContent .= "    'client_secret' => '" . addslashes(trim($_POST['google_client_secret'] ?? '')) . "',\n";
+        $configContent .= "    'redirect_uri'  => '" . addslashes(trim($_POST['google_redirect_uri'] ?? '')) . "',\n";
+        $configContent .= "    'cron_secret'   => '" . addslashes(trim($_POST['google_cron_secret'] ?? '')) . "',\n";
+        $configContent .= "];\n";
+        file_put_contents($configPath, $configContent);
+
         $actor = $this->session->get('saas_user') ?? 'admin';
         $this->log->log('settings.google.update', $actor, 'settings', null, 'Google API Einstellungen aktualisiert');
 
