@@ -118,9 +118,9 @@ class CustomVetReportPdfService
                 $this->Cell($s['sidebarW'] - 6, 5, date('d.m.Y'), 0, 1, 'C');
 
                 // CRITICAL: Reset cursor to content area (right of sidebar).
-                // Without this, TCPDF places MultiCell continuations at X=0
-                // (inside the sidebar) after every automatic page break.
+                // Without this, TCPDF may place MultiCell continuations incorrectly.
                 $this->SetXY($s['contentX'], 10);
+                $this->SetMargins($s['contentX'], 10, $this->GetPageWidth() - $s['rightEdge']);
             }
 
             public function Footer() {
@@ -174,6 +174,7 @@ class CustomVetReportPdfService
             'font' => $font,
             'fontSize' => $fontSize,
             'contentX' => $contentX,
+            'rightEdge' => $rightEdge,
         ]);
 
         // Set footer data for the custom Footer() method
@@ -342,7 +343,9 @@ class CustomVetReportPdfService
             $pdf->SetTextColor(30, 30, 30);
             $pdf->SetXY($contentX, $curY);
 
-            $pdf->MultiCell($contentW, 5, $content, 0, 'L');
+            // Use h=0 for automatic height calculation, and ensure reseth=true
+            // We also pass ishtml=false as it's a plain textarea
+            $pdf->MultiCell($contentW, 0, $content, 0, 'L', false, 1, '', '', true, 0, false, true, 0, 'T', false);
             $curY = $pdf->GetY() + 5;
         }
 

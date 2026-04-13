@@ -17,6 +17,7 @@ class VetReportController extends Controller
 {
     private VetReportService $service;
     private Database $db;
+    private SettingsRepository $settingsRepository;
 
     public function __construct(
         View $view,
@@ -28,6 +29,7 @@ class VetReportController extends Controller
     ) {
         parent::__construct($view, $session, $config, $translator);
         $this->db      = $db;
+        $this->settingsRepository = $settingsRepository;
         $this->service = new VetReportService($settingsRepository);
     }
 
@@ -75,10 +77,8 @@ class VetReportController extends Controller
         $recipient = $this->post('recipient', '');
 
         $owner    = $this->extractOwner($patient);
-        $settingsRepo = \App\Core\Application::getInstance()->getContainer()->get(SettingsRepository::class);
-
-        $customService = new CustomVetReportPdfService($settingsRepo);
-        $settings = $settingsRepo->all();
+        $customService = new CustomVetReportPdfService($this->settingsRepository);
+        $settings = $this->settingsRepository->all();
 
         $reportData = [
             'created_at' => date('Y-m-d H:i:s'),
