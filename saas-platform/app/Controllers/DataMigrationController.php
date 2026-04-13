@@ -1355,7 +1355,14 @@ class DataMigrationController extends Controller
         }
 
         // Alle Plugin-Tabellennamen die geprefixed werden müssen
+        // Plugin-Migrations können auch Core-Tabellen wie patients, invoices ändern
         $pluginTables = [
+            'users','settings','owners','patients','appointments','appointment_waitlist',
+            'invoices','invoice_items','invoice_positions','invoice_reminders','invoice_dunnings',
+            'waitlist','user_preferences','migrations',
+            'patient_timeline','treatment_types',
+            'mobile_api_tokens','cron_job_log',
+            'befundboegen','befundbogen_felder',
             'google_calendar_connections',
             'google_calendar_sync_map',
             'google_calendar_sync_log',
