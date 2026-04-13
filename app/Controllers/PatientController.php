@@ -304,6 +304,33 @@ class PatientController extends Controller
             'deceased_date' => $this->post('deceased_date', null) ?: null,
         ];
 
+        /* ── Photo upload (optional, included in edit modal form) ── */
+        if (isset($_FILES['photo']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
+            $destination = tenant_storage_path('patients/' . (int)$params['id']);
+            if (!is_dir($destination)) {
+                @mkdir($destination, 0755, true);
+            }
+            $photoFilename = $this->uploadFile('photo', $destination, [
+                'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+            ]);
+            if ($photoFilename !== false) {
+                $data['photo'] = $photoFilename;
+            } else {
+                try {
+                    $f = $_FILES['photo'];
+                    $maxSize = $this->config->get('storage.max_size', 10485760);
+                    if ($f['size'] > $maxSize) {
+                        $mb = round($f['size'] / 1048576, 1);
+                        error_log("[PatientUpdate] Photo rejected (too large {$mb} MB) for patient #{$params['id']}");
+                    } else {
+                        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                        $mime  = $finfo->file($f['tmp_name']);
+                        error_log("[PatientUpdate] Photo rejected (MIME {$mime}) for patient #{$params['id']}");
+                    }
+                } catch (\Throwable) {}
+            }
+        }
+
         PerformanceLogger::startTimer('db_save');
         $this->patientService->update((int)$params['id'], $data);
         PerformanceLogger::stopTimer('db_save');
@@ -399,12 +426,30 @@ class PatientController extends Controller
         ]);
 
         if ($filename === false) {
-            error_log("[PhotoUpload] Patient #{$params['id']}: uploadFile() returned false. Destination: {$destination}");
+            /* Diagnose: find out WHY uploadFile() rejected the file */
+            $diagMsg = $this->translator->trans('patients.photo_upload_failed');
+            try {
+                $file    = $_FILES['photo'];
+                $maxSize = $this->config->get('storage.max_size', 10485760);
+                if ($file['size'] > $maxSize) {
+                    $maxMb   = round($maxSize / 1048576, 1);
+                    $fileMb  = round($file['size'] / 1048576, 1);
+                    $diagMsg = "Foto zu groß ({$fileMb} MB). Maximale Größe: {$maxMb} MB.";
+                } else {
+                    $finfo    = new \finfo(FILEINFO_MIME_TYPE);
+                    $mimeType = $finfo->file($file['tmp_name']);
+                    $allowed  = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                    if (!in_array($mimeType, $allowed, true)) {
+                        $diagMsg = "Dateityp nicht erlaubt: {$mimeType}. Erlaubt: JPEG, PNG, GIF, WEBP.";
+                    }
+                }
+            } catch (\Throwable) {}
+            error_log("[PhotoUpload] Patient #{$params['id']}: uploadFile() false. Destination: {$destination}. Reason: {$diagMsg}");
             if ($wantsJson) {
-                $this->json(['ok' => false, 'error' => 'photo_upload_failed', 'message' => $this->translator->trans('patients.photo_upload_failed')], 400);
+                $this->json(['ok' => false, 'error' => 'photo_upload_failed', 'message' => $diagMsg], 400);
                 return;
             }
-            $this->session->flash('error', $this->translator->trans('patients.photo_upload_failed'));
+            $this->session->flash('error', $diagMsg);
             $this->redirect("/patienten/{$params['id']}");
             return;
         }
