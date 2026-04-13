@@ -343,20 +343,67 @@ class PatientController extends Controller
         $wantsJson = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
             || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json');
 
+        /* ── Pre-flight: detect PHP upload errors before touching the filesystem ── */
+        $fileError = $_FILES['photo']['error'] ?? UPLOAD_ERR_NO_FILE;
+        if ($fileError !== UPLOAD_ERR_OK) {
+            $phpErrors = [
+                UPLOAD_ERR_INI_SIZE   => 'Datei überschreitet upload_max_filesize (PHP-Konfiguration).',
+                UPLOAD_ERR_FORM_SIZE  => 'Datei überschreitet MAX_FILE_SIZE des Formulars.',
+                UPLOAD_ERR_PARTIAL    => 'Datei wurde nur teilweise übertragen.',
+                UPLOAD_ERR_NO_FILE    => 'Keine Datei ausgewählt.',
+                UPLOAD_ERR_NO_TMP_DIR => 'Temporäres Verzeichnis fehlt (Serverkonfiguration).',
+                UPLOAD_ERR_CANT_WRITE => 'Datei konnte nicht auf den Server geschrieben werden.',
+                UPLOAD_ERR_EXTENSION  => 'Upload durch PHP-Extension abgebrochen.',
+            ];
+            $msg = $phpErrors[$fileError] ?? "PHP Upload-Fehler Code {$fileError}.";
+            error_log("[PhotoUpload] Patient #{$params['id']}: PHP upload error {$fileError} – {$msg}");
+            if ($wantsJson) {
+                $this->json(['ok' => false, 'error' => 'upload_php_error', 'message' => $msg], 400);
+                return;
+            }
+            $this->session->flash('error', "Foto-Upload fehlgeschlagen: {$msg}");
+            $this->redirect("/patienten/{$params['id']}");
+            return;
+        }
+
+        /* ── Ensure storage directory exists and is writable ── */
         $destination = tenant_storage_path('patients/' . $params['id']);
         if (!is_dir($destination)) {
-            mkdir($destination, 0755, true);
+            $created = @mkdir($destination, 0755, true);
+            if (!$created && !is_dir($destination)) {
+                $msg = "Storage-Verzeichnis konnte nicht erstellt werden: {$destination}";
+                error_log("[PhotoUpload] Patient #{$params['id']}: {$msg}");
+                if ($wantsJson) {
+                    $this->json(['ok' => false, 'error' => 'storage_dir_error', 'message' => $msg], 500);
+                    return;
+                }
+                $this->session->flash('error', "Foto-Upload fehlgeschlagen: Speicherordner konnte nicht angelegt werden. Bitte Administrator kontaktieren.");
+                $this->redirect("/patienten/{$params['id']}");
+                return;
+            }
         }
+        if (!is_writable($destination)) {
+            $msg = "Storage-Verzeichnis nicht beschreibbar: {$destination}";
+            error_log("[PhotoUpload] Patient #{$params['id']}: {$msg}");
+            if ($wantsJson) {
+                $this->json(['ok' => false, 'error' => 'storage_not_writable', 'message' => $msg], 500);
+                return;
+            }
+            $this->session->flash('error', "Foto-Upload fehlgeschlagen: Speicherordner ist nicht beschreibbar. Bitte Dateisystem-Berechtigungen prüfen.");
+            $this->redirect("/patienten/{$params['id']}");
+            return;
+        }
+
         $filename = $this->uploadFile('photo', $destination, [
             'image/jpeg', 'image/png', 'image/gif', 'image/webp'
         ]);
 
         if ($filename === false) {
+            error_log("[PhotoUpload] Patient #{$params['id']}: uploadFile() returned false. Destination: {$destination}");
             if ($wantsJson) {
                 $this->json(['ok' => false, 'error' => 'photo_upload_failed', 'message' => $this->translator->trans('patients.photo_upload_failed')], 400);
                 return;
             }
-
             $this->session->flash('error', $this->translator->trans('patients.photo_upload_failed'));
             $this->redirect("/patienten/{$params['id']}");
             return;
