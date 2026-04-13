@@ -11,7 +11,7 @@
     <div class="container">
         <div class="row align-items-center g-5">
             <div class="col-lg-7 hero-intro">
-                <h1 data-gsap="skew-up">Die <span class="gradient-text">einzigartige</span> Plattform für Tiertherapie & Hundetraining.</h1>
+                <h1 data-gsap="skew-up">Die <span class="gradient-text">einzigartige</span> Plattform für Tiertherapie & Hundeschulen.</h1>
                 <p data-gsap="fade-up">
                     Ein durchgängiges Premium-System für deine Praxis: 
                     Patientenmanagement, Termine, digitale Befunde und Abrechnung. 
@@ -175,7 +175,7 @@
                                     </li>
                                 {% endfor %}
                             </ul>
-                            <a href="{{ path_for('register_plan', {slug: plan.slug}) }}" class="{% if plan.is_featured %}btn-nav-primary{% else %}btn-nav-outline{% endif %} w-100 py-3">Jetzt starten</a>
+                            <a href="/register/{{ plan.slug }}" class="{% if plan.is_featured %}btn-nav-primary{% else %}btn-nav-outline{% endif %} w-100 py-3 text-center">Jetzt starten</a>
                         </div>
                     </div>
                 {% endfor %}

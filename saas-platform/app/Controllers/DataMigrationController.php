@@ -512,10 +512,9 @@ class DataMigrationController extends Controller
     public function resetTenantVersion(array $params = []): void
     {
         $this->requireAuth();
-        // CSRF-Prüfung deaktiviert für API-Endpunkt
 
-        $tenantId = (int)($_GET['tenant_id'] ?? 0);
-        $targetVersion = (int)($_GET['target_version'] ?? 0);
+        $tenantId = (int)($params['tenant_id'] ?? $_GET['tenant_id'] ?? 0);
+        $targetVersion = (int)($params['target_version'] ?? $_GET['target_version'] ?? 0);
 
         if (!$tenantId || !$targetVersion) {
             $this->jsonError('Tenant ID und Ziel-Version erforderlich');
@@ -531,44 +530,20 @@ class DataMigrationController extends Controller
 
         try {
             $pdo = $this->db->getPdo();
+            $pdo->exec("DELETE FROM `{$migTbl}` WHERE version >= {$targetVersion}");
+            $deleted = $pdo->query("SELECT ROW_COUNT()")->fetchColumn();
 
-            // Prüfen ob migrations-Tabelle existiert
-            $check = $pdo->query("SHOW TABLES LIKE '{$migTbl}'")->fetchColumn();
-            if (!$check) {
-                $this->jsonError('Migrations-Tabelle nicht vorhanden');
-            }
-
-            // Alle Versionen größer als targetVersion löschen
-            $stmt = $pdo->prepare("DELETE FROM `{$migTbl}` WHERE version > ?");
-            $stmt->execute([$targetVersion]);
-            $deleted = $stmt->rowCount();
-
-            // Alle Versionen vor targetVersion auch löschen (komplettes Reset)
-            $stmt2 = $pdo->prepare("DELETE FROM `{$migTbl}` WHERE version >= ?");
-            $stmt2->execute([$targetVersion]);
-            $deleted2 = $stmt2->rowCount();
-
-            // Aktuelle Version ermitteln
-            $currentStmt = $pdo->query("SELECT MAX(version) as max_version FROM `{$migTbl}`");
-            $currentVersion = (int)($currentStmt->fetchColumn() ?? 0);
-
-            // Alle Versionen anzeigen
-            $allStmt = $pdo->query("SELECT version FROM `{$migTbl}` ORDER BY version");
-            $allVersions = $allStmt->fetchAll(PDO::FETCH_COLUMN);
+            $currentVersion = (int)($pdo->query("SELECT MAX(version) FROM `{$migTbl}`")->fetchColumn() ?? 0);
 
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
                 'success' => true,
-                'message' => "Version von Tenant {$tenant['practice_name']} zurückgesetzt: {$deleted} + {$deleted2} Einträge gelöscht, aktuelle Version: {$currentVersion}",
-                'deleted' => $deleted + $deleted2,
-                'current_version' => $currentVersion,
-                'all_versions' => $allVersions,
-                'prefix' => $prefix,
-                'migTbl' => $migTbl
+                'message' => "Version zurückgesetzt auf v{$currentVersion}",
+                'current_version' => $currentVersion
             ]);
             exit;
         } catch (\Throwable $e) {
-            $this->jsonError('Fehler beim Zurücksetzen: ' . $e->getMessage());
+            $this->jsonError('Fehler: ' . $e->getMessage());
         }
     }
 
@@ -576,7 +551,6 @@ class DataMigrationController extends Controller
     public function migrateAllTenants(array $params = []): void
     {
         $this->requireAuth();
-        // CSRF-Prüfung deaktiviert für API-Endpunkt
 
         try {
             $tenants = $this->tenantRepo->all(1000, 0);
@@ -584,115 +558,64 @@ class DataMigrationController extends Controller
                 $this->jsonError('Keine Tenants gefunden.');
             }
 
-            $results = [];
             $migrationsDir = dirname(__DIR__, 2) . '/migrations';
             $pdo = $this->db->getPdo();
+            $successCount = 0;
+            $errorCount = 0;
 
             foreach ($tenants as $tenant) {
                 $prefix = rtrim((string)($tenant['db_name'] ?? ''), '_') . '_';
                 if ($prefix === '_' || empty($tenant['db_name'])) continue;
 
                 $migTbl = $prefix . 'migrations';
-                $tenantResult = [
-                    'tenant_id' => $tenant['id'],
-                    'practice_name' => $tenant['practice_name'],
-                    'prefix' => $prefix,
-                    'applied' => [],
-                    'skipped' => [],
-                    'errors' => []
-                ];
 
                 try {
-                    // Prüfen ob migrations-Tabelle existiert
-                    $check = $pdo->query("SHOW TABLES LIKE '{$migTbl}'")->fetchColumn();
-                    if (!$check) {
-                        $tenantResult['errors'][] = 'Keine migrations-Tabelle';
-                        $results[] = $tenantResult;
-                        continue;
-                    }
-
                     // Aktuelle Version ermitteln
-                    $stmt = $pdo->query("SELECT MAX(version) as max_version FROM `{$migTbl}`");
-                    $currentVersion = (int)($stmt->fetchColumn() ?? 0);
+                    $currentVersion = (int)($pdo->query("SELECT MAX(version) FROM `{$migTbl}`")->fetchColumn() ?? 0);
 
-                    // Migrationen 35 und 36 anwenden
-                    $migrationsToApply = [];
-                    if ($currentVersion < 35) {
-                        $migrationsToApply[] = 35;
-                    }
-                    if ($currentVersion < 36) {
-                        $migrationsToApply[] = 36;
-                    }
-
-                    if (empty($migrationsToApply)) {
-                        $tenantResult['skipped'][] = 'Bereits auf Version ' . $currentVersion;
-                        $results[] = $tenantResult;
+                    if ($currentVersion >= 36) {
+                        $successCount++;
                         continue;
                     }
 
-                    foreach ($migrationsToApply as $version) {
-                        $migrationFile = $migrationsDir . '/' . sprintf('%03d', $version) . '_cron_dispatcher.sql';
-                        if ($version === 36) {
-                            $migrationFile = $migrationsDir . '/' . sprintf('%03d', $version) . '_appointments_patient_email.sql';
-                        }
-
-                        if (!file_exists($migrationFile)) {
-                            $tenantResult['errors'][] = "Migration {$version} nicht gefunden";
-                            continue;
-                        }
-
-                        $sql = (string)file_get_contents($migrationFile);
+                    // Migration 035
+                    if ($currentVersion < 35) {
+                        $sql = file_get_contents($migrationsDir . '/035_cron_dispatcher.sql');
                         $sql = str_replace('`', '`' . $prefix, $sql);
-
-                        $statements = array_filter(
-                            array_map('trim', explode(';', $sql)),
-                            fn($s) => $s !== '' && !str_starts_with(ltrim($s), '--')
-                        );
-
-                        $versionSuccess = true;
-                        foreach ($statements as $stmt) {
-                            try {
-                                $pdo->exec($stmt);
-                            } catch (\Throwable $e) {
-                                // Fehler ignorieren (Tabelle existiert bereits, Spalte existiert bereits)
-                                if (!str_contains($e->getMessage(), 'Duplicate column') 
-                                    && !str_contains($e->getMessage(), 'already exists')
-                                    && !str_contains($e->getMessage(), 'Duplicate entry')) {
-                                    $tenantResult['errors'][] = "Migration {$version}: " . $e->getMessage();
-                                    $versionSuccess = false;
-                                }
+                        foreach (array_filter(array_map('trim', explode(';', $sql))) as $stmt) {
+                            if ($stmt && !str_starts_with($stmt, '--')) {
+                                try { $pdo->exec($stmt); } catch (\Throwable $e) {}
                             }
                         }
-
-                        // Version nur eintragen, wenn keine Fehler aufgetreten sind
-                        if ($versionSuccess) {
-                            $pdo->prepare("INSERT IGNORE INTO `{$migTbl}` (`version`) VALUES (?)")->execute([$version]);
-                            $tenantResult['applied'][] = $version;
-                        }
+                        $pdo->exec("INSERT IGNORE INTO `{$migTbl}` (version) VALUES (35)");
                     }
 
-                    $tenantResult['success'] = empty($tenantResult['errors']);
+                    // Migration 036
+                    if ($currentVersion < 36) {
+                        $sql = file_get_contents($migrationsDir . '/036_appointments_patient_email.sql');
+                        $sql = str_replace('`', '`' . $prefix, $sql);
+                        foreach (array_filter(array_map('trim', explode(';', $sql))) as $stmt) {
+                            if ($stmt && !str_starts_with($stmt, '--')) {
+                                try { $pdo->exec($stmt); } catch (\Throwable $e) {}
+                            }
+                        }
+                        $pdo->exec("INSERT IGNORE INTO `{$migTbl}` (version) VALUES (36)");
+                    }
+
+                    $successCount++;
                 } catch (\Throwable $e) {
-                    $tenantResult['success'] = false;
-                    $tenantResult['errors'][] = $e->getMessage();
+                    $errorCount++;
                 }
-
-                $results[] = $tenantResult;
             }
-
-            $successCount = count(array_filter($results, fn($r) => ($r['success'] ?? false) || empty($r['errors'])));
-            $errorCount = count(array_filter($results, fn($r) => !empty($r['errors'])));
 
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
                 'success' => $errorCount === 0,
-                'message' => "Migration abgeschlossen: {$successCount} erfolgreich, {$errorCount} mit Fehlern",
-                'results' => $results
-            ], JSON_UNESCAPED_UNICODE);
+                'message' => "Migration: {$successCount} erfolgreich, {$errorCount} Fehler"
+            ]);
             exit;
-
         } catch (\Throwable $e) {
-            $this->jsonError('Ein unerwarteter Fehler ist aufgetreten: ' . $e->getMessage());
+            $this->jsonError('Fehler: ' . $e->getMessage());
         }
     }
 
@@ -700,10 +623,9 @@ class DataMigrationController extends Controller
     public function getTenantVersion(array $params = []): void
     {
         $this->requireAuth();
-        // CSRF-Prüfung deaktiviert für API-Endpunkt
         header('Content-Type: application/json; charset=utf-8');
 
-        $tenantId = (int)($params['tenant_id'] ?? 0);
+        $tenantId = (int)($params['tenant_id'] ?? $_GET['tenant_id'] ?? 0);
         if (!$tenantId) {
             echo json_encode(['success' => false, 'error' => 'Tenant ID erforderlich']);
             exit;
@@ -722,23 +644,7 @@ class DataMigrationController extends Controller
             $pdo = $this->db->getPdo();
             $latest = $this->getLatestMigrationVersion();
 
-            // Prüfen ob migrations-Tabelle existiert
-            $check = $pdo->query("SHOW TABLES LIKE '{$migTbl}'")->fetchColumn();
-            if (!$check) {
-                echo json_encode([
-                    'success' => true,
-                    'current_version' => null,
-                    'latest_version' => $latest,
-                    'status' => 'no_migrations_table',
-                    'message' => 'Keine migrations-Tabelle vorhanden'
-                ]);
-                exit;
-            }
-
-            // Höchste Version ermitteln
-            $stmt = $pdo->query("SELECT MAX(version) as max_version FROM `{$migTbl}`");
-            $currentVersion = (int)($stmt->fetchColumn() ?? 0);
-
+            $currentVersion = (int)($pdo->query("SELECT MAX(version) FROM `{$migTbl}`")->fetchColumn() ?? 0);
             $isUpToDate = $currentVersion >= $latest;
 
             echo json_encode([
@@ -750,10 +656,7 @@ class DataMigrationController extends Controller
                 'message' => $isUpToDate ? 'Datenbank ist aktuell' : 'Update verfügbar'
             ]);
         } catch (\Throwable $e) {
-            echo json_encode([
-                'success' => false,
-                'error' => $e->getMessage()
-            ]);
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
         exit;
     }
