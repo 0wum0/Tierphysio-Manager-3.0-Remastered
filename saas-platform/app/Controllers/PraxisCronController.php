@@ -142,4 +142,93 @@ class PraxisCronController extends Controller
 
         $this->redirect('/admin/praxis-cron');
     }
+
+    public function runNow(array $params = []): void
+    {
+        $this->requireAuth();
+        header('Content-Type: application/json');
+
+        $tenantId = (int)($_POST['tenant_id'] ?? 0);
+        $cronJobKey = $_POST['cron_job_key'] ?? '';
+
+        if (!$tenantId || !$cronJobKey) {
+            echo json_encode(['success' => false, 'error' => 'Ungültige Anfrage.']);
+            exit;
+        }
+
+        // Get tenant
+        $tenant = $this->db->fetch("SELECT slug, domain FROM tenants WHERE id = ?", [$tenantId]);
+        if (!$tenant) {
+            echo json_encode(['success' => false, 'error' => 'Tenant nicht gefunden.']);
+            exit;
+        }
+
+        // Get cronjob endpoint
+        $cronjobs = [
+            'birthday' => '/cron/geburtstag',
+            'calendar_reminders' => '/kalender/cron/erinnerungen',
+            'google_calendar' => '/google-kalender/cron',
+            'tcp_reminders' => '/tcp/cron/erinnerungen',
+            'holiday_greetings' => '/api/holiday-cron'
+        ];
+
+        if (!isset($cronjobs[$cronJobKey])) {
+            echo json_encode(['success' => false, 'error' => 'Ungültiger Cronjob.']);
+            exit;
+        }
+
+        $endpoint = $cronjobs[$cronJobKey];
+        $url = 'https://' . $tenant['domain'] . $endpoint;
+
+        // Get token from tenant settings
+        $prefix = 't_' . $tenant['slug'] . '_';
+        $settingsTable = $prefix . 'settings';
+
+        $tokenFields = [
+            'birthday' => 'birthday_cron_token',
+            'calendar_reminders' => 'calendar_cron_secret',
+            'google_calendar' => 'google_sync_cron_secret',
+            'tcp_reminders' => 'tcp_cron_token',
+            'holiday_greetings' => 'cron_secret'
+        ];
+
+        $tokenField = $tokenFields[$cronJobKey];
+        $token = $this->db->fetchColumn("SELECT `value` FROM {$settingsTable} WHERE `key` = ?", [$tokenField]);
+
+        if ($token) {
+            $url .= '?token=' . $token;
+        }
+
+        // Execute request
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        if ($error) {
+            echo json_encode([
+                'success' => false,
+                'error' => 'CURL Fehler: ' . $error,
+                'url' => $url
+            ]);
+            exit;
+        }
+
+        $actor = $this->session->get('saas_user') ?? 'admin';
+        $this->log->log('praxis.cron.run_now', $actor, 'tenant', $tenantId, "Cronjob {$cronJobKey} executed for tenant {$tenant['slug']} - HTTP {$httpCode}");
+
+        echo json_encode([
+            'success' => $httpCode >= 200 && $httpCode < 300,
+            'http_code' => $httpCode,
+            'response' => substr($response, 0, 500),
+            'url' => $url
+        ]);
+        exit;
+    }
 }

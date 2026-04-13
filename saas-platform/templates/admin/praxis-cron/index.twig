@@ -161,6 +161,11 @@
                         <input type="hidden" name="token" id="input-token-{{ tenant.id }}-{{ key }}">
                         <button type="submit" class="btn btn-sm btn-success">Token speichern</button>
                     </form>
+                    
+                    <button type="button" class="btn btn-sm btn-info" onclick="runCron({{ tenant.id }}, '{{ key }}')">
+                        ▶️ Run now
+                    </button>
+                    <div id="result-{{ tenant.id }}-{{ key }}" class="mt-2 small"></div>
                 </div>
                 {% endfor %}
             </div>
@@ -187,6 +192,32 @@ function copyToClipboard(elementId) {
     const element = document.getElementById(elementId);
     element.select();
     document.execCommand('copy');
+}
+
+function runCron(tenantId, cronJobKey) {
+    const resultDiv = document.getElementById('result-' + tenantId + '-' + cronJobKey);
+    resultDiv.innerHTML = '<span class="text-info">⏳ Ausführung wird gestartet...</span>';
+    
+    const formData = new FormData();
+    formData.append('tenant_id', tenantId);
+    formData.append('cron_job_key', cronJobKey);
+    formData.append('_csrf_token', '{{ csrf_token }}');
+    
+    fetch('/admin/praxis-cron/run-now', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            resultDiv.innerHTML = '<span class="text-success">✓ Erfolgreich (HTTP ' + data.http_code + ')</span>';
+        } else {
+            resultDiv.innerHTML = '<span class="text-danger">✗ Fehlgeschlagen: ' + (data.error || 'HTTP ' + data.http_code) + '</span>';
+        }
+    })
+    .catch(error => {
+        resultDiv.innerHTML = '<span class="text-danger">✗ Fehler: ' + error + '</span>';
+    });
 }
 
 function updateUrlsAndCmds() {
