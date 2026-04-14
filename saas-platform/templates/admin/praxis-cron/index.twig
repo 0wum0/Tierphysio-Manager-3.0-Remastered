@@ -297,8 +297,8 @@
                                     <td>
                                         <span class="status-badge badge-active small">Aktiv</span>
                                     </td>
-                                    <td class="pe-4 text-end">
-                                        <button type="button" class="btn btn-sm btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#modal-{{ tenant.id }}">
+                                    <td class="pe-4 text-end" id="tenant-actions-{{ tenant.id }}">
+                                        <button type="button" class="btn btn-sm btn-outline-primary me-2" data-bs-toggle="modal" data-bs-target="#modal-{{ tenant.id }}" title="Konfiguration">
                                             <i class="bi bi-gear"></i>
                                         </button>
                                         <button type="button" class="btn btn-sm btn-outline-secondary" onclick="resetTenantVersion({{ tenant.id }}, 34)" title="Reset v34">
@@ -438,81 +438,103 @@ function updateUrlsAndCmds() {
     {% endfor %}
 }
 
-// Initialize on modal show
+// Initialize
 document.addEventListener('DOMContentLoaded', function() {
     {% for tenant in tenants %}
-    document.getElementById('modal-{{ tenant.id }}').addEventListener('show.bs.modal', function() {
-        // Load existing token from server via AJAX
-        fetch('/admin/praxis-cron/get-token?tenant_id={{ tenant.id }}&cron_job_key=dispatcher')
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && data.token) {
-                document.getElementById('token-{{ tenant.id }}').value = data.token;
-                updateUrlsAndCmds();
-            }
-        })
-        .catch(error => {
-            console.error('Fehler beim Laden des Tokens:', error);
+    const modalEl{{ tenant.id }} = document.getElementById('modal-{{ tenant.id }}');
+    if (modalEl{{ tenant.id }}) {
+        modalEl{{ tenant.id }}.addEventListener('show.bs.modal', function() {
+            // Load existing token from server via AJAX
+            fetch('/admin/praxis-cron/get-token?tenant_id={{ tenant.id }}&cron_job_key=dispatcher')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.token) {
+                    document.getElementById('token-{{ tenant.id }}').value = data.token;
+                    updateUrlsAndCmds();
+                }
+            })
+            .catch(error => console.error('Token-Fehler:', error));
         });
-    });
+    }
     {% endfor %}
 
-    // Load database versions
-    {% for tenant in tenants %}
-    loadTenantVersion({{ tenant.id }});
-    {% endfor %}
+    // Batch Load database versions
+    checkAllVersions();
 });
 
-function loadTenantVersion(tenantId) {
-    const versionBadge = document.getElementById('db-version-' + tenantId);
-    if (!versionBadge) return;
-
-    fetch('/admin/migration/tenant-version?tenant_id=' + tenantId, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
+function checkAllVersions() {
+    const tableBody = document.querySelector('tbody');
+    
+    fetch('/admin/migration/check-all-versions')
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            if (data.current_version === null) {
-                versionBadge.textContent = 'N/A';
-                versionBadge.className = 'badge bg-warning';
-            } else if (data.is_up_to_date) {
-                versionBadge.textContent = 'v' + data.current_version;
-                versionBadge.className = 'badge bg-success';
-            } else {
-                versionBadge.textContent = 'v' + data.current_version + ' (neu: v' + data.latest_version + ')';
-                versionBadge.className = 'badge bg-warning';
-            }
-        } else {
-            versionBadge.textContent = 'Fehler';
-            versionBadge.className = 'badge bg-danger';
+            Object.keys(data.tenants).forEach(tenantId => {
+                const info = data.tenants[tenantId];
+                const versionBadge = document.getElementById('db-version-' + tenantId);
+                const actionCell = document.getElementById('tenant-actions-' + tenantId);
+                
+                if (versionBadge) {
+                    if (info.is_up_to_date) {
+                        versionBadge.textContent = 'v' + info.current_version;
+                        versionBadge.className = 'status-badge bg-success bg-opacity-25 text-success border border-success border-opacity-25';
+                    } else {
+                        versionBadge.textContent = 'v' + info.current_version + ' (Fehlt: v' + data.latest_version + ')';
+                        versionBadge.className = 'status-badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-25';
+                        
+                        // Add single update button if not already there
+                        if (actionCell && !actionCell.querySelector('.btn-migrate')) {
+                            const btn = document.createElement('button');
+                            btn.type = 'button';
+                            btn.className = 'btn btn-sm btn-primary btn-glow btn-migrate me-2';
+                            btn.innerHTML = '<i class="bi bi-arrow-up-circle"></i> Update';
+                            btn.onclick = () => migrateSingle(tenantId);
+                            actionCell.prepend(btn);
+                        }
+                    }
+                }
+            });
         }
-    })
-    .catch(error => {
-        versionBadge.textContent = 'Fehler';
-        versionBadge.className = 'badge bg-danger';
+    });
+}
+
+function migrateSingle(tenantId) {
+    const versionBadge = document.getElementById('db-version-' + tenantId);
+    if (versionBadge) versionBadge.textContent = '⏳...';
+
+    fetch('/admin/migration/migrate-single?tenant_id=' + tenantId)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            checkAllVersions(); // Refresh
+        } else {
+            alert(data.error || data.message);
+            checkAllVersions();
+        }
     });
 }
 
 function migrateAllTenants() {
     const statusDiv = document.getElementById('migration-status');
-    statusDiv.innerHTML = '<span class="text-info">⏳ Migration läuft...</span>';
+    statusDiv.innerHTML = '<div class="alert alert-info border-0 bg-info bg-opacity-10 text-info d-flex align-items-center"><div class="spinner-border spinner-border-sm me-3"></div><span>Globale Synchronisation läuft... Bitte warten.</span></div>';
 
     fetch('/admin/migration/migrate-all')
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            statusDiv.innerHTML = '<span class="text-success">✓ ' + data.message + '</span>';
-            // Reload versions
-            {% for tenant in tenants %}
-            loadTenantVersion({{ tenant.id }});
-            {% endfor %}
+            let detailHtml = '';
+            if (data.details && data.details.length > 0) {
+                detailHtml = '<ul class="mb-0 mt-2 small">' + data.details.map(d => '<li>' + d + '</li>').join('') + '</ul>';
+            }
+            statusDiv.innerHTML = '<div class="alert alert-success border-0 bg-success bg-opacity-10 text-success"><strong>Erfolg!</strong> ' + data.message + detailHtml + '</div>';
+            checkAllVersions();
         } else {
-            statusDiv.innerHTML = '<span class="text-danger">✗ ' + (data.error || data.message) + '</span>';
+            statusDiv.innerHTML = '<div class="alert alert-danger border-0 bg-danger bg-opacity-10 text-danger"><strong>Fehler:</strong> ' + (data.error || data.message) + '</div>';
+            checkAllVersions();
         }
     })
     .catch(error => {
-        statusDiv.innerHTML = '<span class="text-danger">✗ Fehler: ' + error + '</span>';
+        statusDiv.innerHTML = '<div class="alert alert-danger">✗ Fehler: ' + error + '</div>';
     });
 }
 

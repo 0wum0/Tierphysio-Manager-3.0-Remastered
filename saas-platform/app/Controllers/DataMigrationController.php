@@ -559,10 +559,9 @@ class DataMigrationController extends Controller
                 $this->jsonError('Keine Tenants gefunden.');
             }
 
-            $migrationsDir = dirname(__DIR__, 2) . '/migrations';
-            $pdo = $this->db->getPdo();
             $successCount = 0;
             $errorCount = 0;
+            $details = [];
 
             foreach ($tenants as $tenant) {
                 $prefix = rtrim((string)($tenant['db_name'] ?? ''), '_') . '_';
@@ -571,20 +570,101 @@ class DataMigrationController extends Controller
                 $result = $this->migrationService->migrateTenant($prefix);
                 if ($result['success']) {
                     $successCount++;
+                    if ($result['ran_count'] > 0) {
+                        $details[] = "{$tenant['practice_name']}: {$result['ran_count']} Migrations angewandt.";
+                    }
                 } else {
                     $errorCount++;
+                    $details[] = "{$tenant['practice_name']}: Fehler!";
                 }
             }
 
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
                 'success' => $errorCount === 0,
-                'message' => "Migration: {$successCount} erfolgreich, {$errorCount} Fehler"
+                'message' => "Update abgeschlossen: {$successCount} erfolgreich, {$errorCount} Fehler.",
+                'details' => $details
             ]);
             exit;
         } catch (\Throwable $e) {
             $this->jsonError('Fehler: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * GET /admin/migration/migrate-single
+     * Migriert einen spezifischen Tenant.
+     */
+    public function migrateSingle(array $params = []): void
+    {
+        $this->requireAuth();
+        header('Content-Type: application/json; charset=utf-8');
+
+        $tenantId = (int)($params['tenant_id'] ?? $_GET['tenant_id'] ?? 0);
+        if (!$tenantId) {
+            echo json_encode(['success' => false, 'error' => 'Tenant ID erforderlich']);
+            exit;
+        }
+
+        $tenant = $this->tenantRepo->find($tenantId);
+        if (!$tenant) {
+            echo json_encode(['success' => false, 'error' => 'Tenant nicht gefunden']);
+            exit;
+        }
+
+        try {
+            $prefix = rtrim((string)($tenant['db_name'] ?? ''), '_') . '_';
+            $result = $this->migrationService->migrateTenant($prefix);
+
+            echo json_encode([
+                'success' => $result['success'],
+                'ran_count' => $result['ran_count'],
+                'message' => $result['success'] 
+                    ? ($result['ran_count'] > 0 ? "{$result['ran_count']} Migrations erfolgreich angewandt." : "Datenbank ist bereits aktuell.")
+                    : "Fehler: " . implode(', ', $result['errors'] ?? []),
+            ]);
+        } catch (\Throwable $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    /**
+     * GET /admin/migration/check-all-versions
+     * Prüft den Status ALLER Tenants in einem Batch-Call.
+     */
+    public function checkAllVersions(array $params = []): void
+    {
+        $this->requireAuth();
+        header('Content-Type: application/json; charset=utf-8');
+
+        try {
+            $tenants = $this->tenantRepo->all(1000, 0);
+            $latestVersion = $this->migrationService->getLatestVersion();
+            $results = [];
+
+            foreach ($tenants as $tenant) {
+                $prefix = rtrim((string)($tenant['db_name'] ?? ''), '_') . '_';
+                if ($prefix === '_' || empty($tenant['db_name'])) continue;
+
+                $currentVersion = $this->migrationService->getTenantVersion($prefix);
+                
+                $results[$tenant['id']] = [
+                    'current_version' => $currentVersion,
+                    'latest_version'  => $latestVersion,
+                    'is_up_to_date'   => $currentVersion >= $latestVersion,
+                ];
+            }
+
+            echo json_encode([
+                'success' => true,
+                'tenants' => $results,
+                'latest_version' => $latestVersion
+            ]);
+        } catch (\Throwable $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
     }
 
     // ── API: Datenbank-Version eines Tenants ermitteln ─────────────────────────────

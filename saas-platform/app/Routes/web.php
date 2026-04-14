@@ -98,6 +98,8 @@ $router->post('/admin/updates/apply',      [UpdateController::class, 'applyUpdat
 // ── Daten-Import / Migration ─────────────────────────────────────────────
 $router->get('/admin/migration',                          [DataMigrationController::class, 'index']);
 $router->get('/admin/migration/migrate-all',             [DataMigrationController::class, 'migrateAllTenants']);
+$router->get('/admin/migration/migrate-single',          [DataMigrationController::class, 'migrateSingle']);
+$router->get('/admin/migration/check-all-versions',      [DataMigrationController::class, 'checkAllVersions']);
 
 // ── Payment Settings (Admin) ────────────────────────────────────────────────
 $router->get('/admin/payment-settings',              [PaymentSettingsController::class, 'index']);
