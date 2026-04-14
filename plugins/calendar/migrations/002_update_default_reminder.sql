@@ -1,5 +1,6 @@
 -- Fehlende Spalten zur appointments-Tabelle hinzufügen
 ALTER TABLE `appointments` 
+ADD COLUMN IF NOT EXISTS `reminder_minutes` SMALLINT UNSIGNED NULL DEFAULT 1440 COMMENT 'Erinnerung in Minuten vor Termin',
 ADD COLUMN IF NOT EXISTS `patient_email` VARCHAR(200) NULL DEFAULT NULL COMMENT 'E-Mail des Patienten für Erinnerungen',
 ADD COLUMN IF NOT EXISTS `send_patient_reminder` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Erinnerung an Patient senden';
 
