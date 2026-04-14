@@ -126,6 +126,7 @@ class ServiceProvider
     {
         try {
             $db = Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $prefix = $db->getPrefix();
             $migrationDir = __DIR__ . '/migrations';
             if (!is_dir($migrationDir)) return;
 
@@ -135,6 +136,7 @@ class ServiceProvider
 
             foreach ($files as $file) {
                 $sql        = file_get_contents($file);
+                $sql        = $this->applyPrefixToSql($sql, $prefix);
                 $statements = array_filter(array_map('trim', explode(';', $sql)));
                 foreach ($statements as $stmt) {
                     if (!empty($stmt)) {
@@ -146,8 +148,15 @@ class ServiceProvider
                     }
                 }
             }
-        } catch (\Throwable) {
-            /* DB not available yet (installer phase) */
+        } catch (\Throwable $e) {
+            error_log('[Calendar runMigrations] ' . $e->getMessage());
         }
+    }
+
+    private function applyPrefixToSql(string $sql, string $prefix): string
+    {
+        // Replace table names with prefix
+        $sql = preg_replace('/\bappointments\b/', $prefix . 'appointments', $sql);
+        return $sql;
     }
 }
