@@ -115,7 +115,7 @@ class GoogleCalendarRepository
     public function createSyncEntry(array $data): int
     {
         $this->db->query(
-            "INSERT INTO `{$this->t('google_calendar_sync_map')}`
+            "INSERT IGNORE INTO `{$this->t('google_calendar_sync_map')}`
              (appointment_id, connection_id, google_event_id, google_calendar_id, sync_status, last_synced_at)
              VALUES (?, ?, ?, ?, ?, NOW())",
             [

@@ -170,7 +170,11 @@ class GoogleSyncService
 
         foreach ($unsynced as $row) {
             try {
-                $this->syncCreated((int)$row['id']);
+                // Double check if sync record was created in the meantime
+                $existing = $this->repo->getSyncEntryByAppointment((int)$row['id']);
+                if (!$existing || $existing['sync_status'] === 'deleted') {
+                    $this->syncCreated((int)$row['id']);
+                }
                 $success++;
             } catch (\Throwable) {
                 $failed++;

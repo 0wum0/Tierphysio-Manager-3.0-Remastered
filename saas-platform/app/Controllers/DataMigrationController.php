@@ -599,7 +599,8 @@ class DataMigrationController extends Controller
     public function migrateSingle(array $params = []): void
     {
         $this->requireAuth();
-        }
+        $tenantId = (int)($params['tenant_id'] ?? $_GET['tenant_id'] ?? 0);
+        if (!$tenantId) $this->jsonError('Tenant ID erforderlich');
 
         $tenant = $this->tenantRepo->find($tenantId);
         if (!$tenant) {
@@ -622,6 +623,36 @@ class DataMigrationController extends Controller
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
         exit;
+    }
+
+    /**
+     * POST /admin/tenants/{id}/repair
+     * Erzwingt eine vollständige Neusynchronisation für einen Tenant (Reparatur).
+     */
+    public function repairDatabase(array $params = []): void
+    {
+        $this->requireAuth();
+        $this->verifyCsrf();
+
+        $tenantId = (int)($params['id'] ?? 0);
+        $tenant   = $this->tenantRepo->find($tenantId);
+
+        if (!$tenant) {
+            $this->session->flash('error', 'Praxis nicht gefunden.');
+            $this->redirect('/admin/tenants');
+            return;
+        }
+
+        $prefix = rtrim((string)($tenant['db_name'] ?? ''), '_') . '_';
+        $result = $this->migrationService->forceSyncTenant($prefix);
+
+        if ($result['success']) {
+            $this->session->flash('success', "Datenbank für '{$tenant['practice_name']}' erfolgreich repariert (v{$result['to']}).");
+        } else {
+            $this->session->flash('error', "Fehler bei der Reparatur: " . ($result['errors'][0]['error'] ?? 'Unbekannter Fehler'));
+        }
+
+        $this->redirect('/admin/tenants/' . $tenantId);
     }
 
     /**
