@@ -220,6 +220,16 @@ class MobileApiController
 
     private function exceptionHandler(\Throwable $e): never
     {
+        $logMsg = sprintf(
+            "[%s] MobileApi Exception: %s in %s:%d\nStack trace:\n%s\n",
+            date('Y-m-d H:i:s'),
+            $e->getMessage(),
+            $e->getFile(),
+            $e->getLine(),
+            $e->getTraceAsString()
+        );
+        error_log($logMsg);
+
         $msg = $e->getMessage() . ' in ' . basename($e->getFile()) . ':' . $e->getLine();
         $this->error('500 Internal Error: ' . $msg, 500);
     }
