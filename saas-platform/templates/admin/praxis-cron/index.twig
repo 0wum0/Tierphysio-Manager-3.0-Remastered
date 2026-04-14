@@ -233,7 +233,7 @@ function runCron(tenantId, cronJobKey) {
 function updateUrlsAndCmds() {
     {% for tenant in tenants %}
     const token{{ tenant.id }} = document.getElementById('token-{{ tenant.id }}').value;
-    const domain{{ tenant.id }} = '{{ tenant.email|split('@')[1] }}';
+    const domain{{ tenant.id }} = 'app.therapano.de';
     const url{{ tenant.id }} = 'https://' + domain{{ tenant.id }} + '/cron/dispatcher?token=' + token{{ tenant.id }};
     const cmd{{ tenant.id }} = '*/10 * * * * curl -s "' + url{{ tenant.id }} + '" > /dev/null 2>&1';
 

@@ -218,13 +218,8 @@ class PraxisCronController extends Controller
         }
 
         $endpoint = $cronjobs[$cronJobKey];
-        // Use domain column if available, otherwise fallback to email domain
-        if (!empty($tenant['domain'])) {
-            $domain = $tenant['domain'];
-        } else {
-            $emailParts = explode('@', $tenant['email']);
-            $domain = isset($emailParts[1]) ? $emailParts[1] : 'example.com';
-        }
+        // Alle Praxen teilen sich dieselbe Domain app.therapano.de
+        $domain = 'app.therapano.de';
         $url = 'https://' . $domain . $endpoint;
 
         // Get token from tenant settings
