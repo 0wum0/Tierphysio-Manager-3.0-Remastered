@@ -12,73 +12,40 @@
 <!-- ═══ MIGRATIONS-ZENTRALE ═══════════════════════════════════════════ -->
 <div class="row g-3 mb-4">
 
-    <!-- Card 1: Schema für alle Tenants -->
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-header d-flex align-items-center gap-2">
-                <i class="bi bi-database-fill-gear text-primary"></i>
-                <strong>Schema – Alle Tenants</strong>
+    <!-- Card 2: Globales Update für alle Tenants -->
+    <div class="col-md-6">
+        <div class="card h-100 border-0 shadow-sm border-start border-success border-4">
+            <div class="card-header bg-transparent d-flex align-items-center gap-2">
+                <i class="bi bi-database-check text-success"></i>
+                <h6 class="mb-0 fw-semibold">Globales Synchronisieren</h6>
             </div>
             <div class="card-body">
                 <p class="text-muted mb-3" style="font-size:.8rem;">
-                    Führt <code>tenant_schema.sql</code> für alle Tenants aus.
-                    Legt fehlende Tabellen an, überspringt vorhandene.
-                    Sicher wiederholbar.
+                    Rollt alle neuen regulären System-Updates (im <code>/migrations/</code> Ordner) gleichzeitig für <strong>alle</strong> Tenants aus.
                 </p>
-                <form method="POST" action="/admin/migration/schema-all-tenants"
-                      class="migration-form" data-result="result-schema">
-                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-database-up me-2"></i>Schema ausrollen
-                    </button>
-                </form>
-                <div id="result-schema" class="mt-2" style="display:none;"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Card 2: Patch für alle Tenants -->
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-header d-flex align-items-center gap-2">
-                <i class="bi bi-wrench-adjustable text-warning"></i>
-                <strong>Patch – Alle Tenants</strong>
-            </div>
-            <div class="card-body">
-                <p class="text-muted mb-3" style="font-size:.8rem;">
-                    Führt <code>tenant_patch_existing.sql</code> für alle Tenants
-                    aus. Fügt fehlende Spalten & Tabellen hinzu.
-                    Sicher wiederholbar.
-                </p>
-                <form method="POST" action="/admin/migration/patch-all-tenants"
-                      class="migration-form" data-result="result-patch">
-                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-warning w-100">
-                        <i class="bi bi-wrench me-2"></i>Patch ausrollen
-                    </button>
-                </form>
-                <div id="result-patch" class="mt-2" style="display:none;"></div>
+                <div id="migration-status" class="mb-3"></div>
+                <button type="button" class="btn btn-success w-100" onclick="migrateAllTenants()">
+                    <i class="bi bi-database-up me-2"></i>Migrations auf alle pushen
+                </button>
             </div>
         </div>
     </div>
 
     <!-- Card 3: Plugin-Migrations für alle Tenants -->
-    <div class="col-md-4">
-        <div class="card h-100">
-            <div class="card-header d-flex align-items-center gap-2">
-                <i class="bi bi-puzzle-fill text-success"></i>
-                <strong>Plugins – Alle Tenants</strong>
+    <div class="col-md-3">
+        <div class="card h-100 border-0 shadow-sm">
+            <div class="card-header bg-transparent d-flex align-items-center gap-2">
+                <i class="bi bi-puzzle-fill text-muted"></i>
+                <h6 class="mb-0 fw-semibold">Plugins</h6>
             </div>
             <div class="card-body">
                 <p class="text-muted mb-3" style="font-size:.8rem;">
-                    Führt alle Plugin-Migrations (<code>plugins/*/migrations/*.sql</code>)
-                    für alle Tenants aus. Inkl. Google Kalender.
-                    Sicher wiederholbar.
+                    Führt alle Plugin-Migrations (z.B. Google Kalender) für alle Tenants aus.
                 </p>
-                <form method="POST" action="/admin/migration/plugins-all-tenants"
+                <form method="POST" action="/admin/migration/google-plugin"
                       class="migration-form" data-result="result-plugins">
                     <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-success w-100">
+                    <button type="submit" class="btn btn-outline-secondary btn-sm w-100">
                         <i class="bi bi-puzzle me-2"></i>Plugins ausrollen
                     </button>
                 </form>
@@ -86,6 +53,52 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- ═══ PRAXIS STATUS ZENTRALE ════════════════════════════════════════ -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent border-bottom d-flex align-items-center justify-content-between py-3">
+        <h6 class="mb-0 fw-semibold"><i class="bi bi-view-list me-2"></i>Status der Praxen-Datenbanken</h6>
+        <div class="d-flex gap-2">
+             <button type="button" class="btn btn-sm btn-outline-primary" onclick="checkAllVersions()">
+                <i class="bi bi-arrow-clockwise me-1"></i>Jetzt prüfen
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4">Praxis</th>
+                        <th>DB-Prefix</th>
+                        <th>Status / Version</th>
+                        <th class="text-end pe-4">Aktion</th>
+                    </tr>
+                </thead>
+                <tbody id="tenant-status-body">
+                    {% for tenant in tenants %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-semibold">{{ tenant.practice_name }}</div>
+                            <div class="text-muted x-small">{{ tenant.company_email }}</div>
+                        </td>
+                        <td><code>{{ tenant.db_name }}</code></td>
+                        <td>
+                            <span id="db-version-{{ tenant.id }}" class="status-badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-10">
+                                <span class="spinner-border spinner-border-sm me-1"></span>Prüfe...
+                            </span>
+                        </td>
+                        <td class="text-end pe-4" id="tenant-actions-{{ tenant.id }}">
+                            <span class="text-muted small">Keine Aktion nötig</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
 </div>
 <!-- ═══ ENDE MIGRATIONS-ZENTRALE ══════════════════════════════════════ -->
@@ -257,43 +270,12 @@
                     <li>Tabellennamen werden automatisch mit dem Tenant-Prefix versehen</li>
                     <li>Foreign-Key-Constraints werden beim Import deaktiviert</li>
                     <li>Bestehende Daten werden bei Duplikaten <strong>nicht überschrieben</strong></li>
-                    <li>Führe danach den <strong>Schema-Patch</strong> aus um fehlende Spalten zu ergänzen</li>
+                    <li>Führe danach die <strong>Synchronisation</strong> im Bereich "Status der Praxen" aus um fehlende Spalten zu ergänzen</li>
                 </ul>
             </div>
         </div>
 
-        <!-- Massen-Patch -->
-        <div class="card border-0 shadow-sm mt-3 border-start border-primary border-4">
-            <div class="card-body py-3">
-                <h6 class="fw-semibold text-primary mb-2"><i class="bi bi-tools me-1"></i>Globaler Datenbank-Patch</h6>
-                <p class="small text-muted mb-3">Fehlende Spalten, Tabellen und Updates (z.B. neue Storno-Stati) automatisch auf <strong>alle</strong> Tenants anwenden (führt <code>tenant_patch_existing.sql</code> aus).</p>
-                <button type="button" id="patchAllBtn" class="btn btn-outline-primary btn-sm w-100">
-                    <i class="bi bi-magic me-1"></i>Alle praxen patchen
-                </button>
-            </div>
-        </div>
 
-        <!-- Standard-Migrations (Updates) -->
-        <div class="card border-0 shadow-sm mt-3 border-start border-success border-4">
-            <div class="card-body py-3">
-                <h6 class="fw-semibold text-success mb-2"><i class="bi bi-arrow-clockwise me-1"></i>Core-Migrations Ausrollen</h6>
-                <p class="small text-muted mb-3">Rollt alle neuen regulären System-Updates (im <code>/migrations/</code> Ordner) für <strong>alle</strong> Tenants aus und prüft deren Versionsstand.</p>
-                <button type="button" id="migrateAllBtn" class="btn btn-outline-success btn-sm w-100">
-                    <i class="bi bi-database-check me-1"></i>Migrations auf alle pushen
-                </button>
-            </div>
-        </div>
-
-        <!-- Google Calendar Plugin Migration -->
-        <div class="card border-0 shadow-sm mt-3 border-start border-primary border-4">
-            <div class="card-body py-3">
-                <h6 class="fw-semibold text-primary mb-2"><i class="bi bi-google me-1"></i>Google Calendar Plugin – Einmal-Migration</h6>
-                <p class="small text-muted mb-3">Führt die Google Calendar Plugin Migrations (001–003) für alle bestehenden Tenants aus. Sicher wiederholbar — bereits vorhandene Tabellen werden übersprungen.</p>
-                <button type="button" id="googlePluginBtn" class="btn btn-outline-primary btn-sm w-100">
-                    <i class="bi bi-google me-1"></i>Google Plugin für alle Tenants migrieren
-                </button>
-            </div>
-        </div>
     </div>
 
     <!-- Ergebnis-Bereich -->
@@ -384,7 +366,7 @@
                         <strong>Import starten:</strong> Das Tool prefixiert alle Tabellennamen und führt die Statements der Reihe nach aus.
                     </li>
                     <li class="mb-2">
-                        <strong>Schema-Patch ausführen:</strong> Nach dem Import die <code>tenant_patch_existing.sql</code> auf dem Server ausführen um alle fehlenden Spalten zu ergänzen.
+                        <strong>Datenbank synchronisieren:</strong> Nach dem Import empfiehlt es sich, die Praxis in der Liste "Status der Praxen" zu prüfen und ggf. zu aktualisieren.
                     </li>
                 </ol>
 
@@ -584,229 +566,95 @@
         }
     });
 
-    // Patch All Event Listener
-    const patchAllBtn = document.getElementById('patchAllBtn');
-    if(patchAllBtn) {
-        patchAllBtn.addEventListener('click', async function() {
-            if (!confirm('Bist du sicher? Dies führt die Schema-Updates über ALLE aktiven Praxen-Datenbanken aus. Dies kann einige Sekunden dauern.')) {
-                return;
-            }
 
-            guideCard.classList.add('d-none');
-            resultCard.classList.add('d-none');
-            progressCard.classList.remove('d-none');
-            
-            patchAllBtn.disabled = true;
-            patchAllBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Patching...';
+    // ── MIGRATION STATUS LOGIC ───────────────────────────────────────
+    function checkAllVersions() {
+        const statusBody = document.getElementById('tenant-status-body');
+        if (!statusBody) return;
 
-            try {
-                const formData = new FormData();
-                formData.append('_csrf', document.querySelector('input[name="_csrf"]').value);
-
-                const resp = await fetch('/admin/migration/patch-all', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const data = await resp.json();
-                
-                progressCard.classList.add('d-none');
-                resultCard.classList.remove('d-none');
-
-                const badge = document.getElementById('resultBadge');
-                const msg   = document.getElementById('resultMessage');
-                
-                badge.className = data.success ? 'badge bg-success' : 'badge bg-danger';
-                badge.textContent = data.success ? 'Erfolgreich' : 'Fehler';
-                msg.className = data.success ? 'alert alert-success mb-3' : 'alert alert-danger mb-3';
-                msg.textContent = data.message;
-
-                // Verstecke die Importbereiche
-                document.getElementById('statsRow').classList.add('d-none');
-                
-                // Mache den Fehlerbereich sauber und benutze ihn für Ergebnisse
-                const resSec = document.getElementById('errorsSection');
-                const resList = document.getElementById('errorsList');
-                resList.innerHTML = '';
-                
-                if (data.results && data.results.length > 0) {
-                    data.results.forEach(r => {
-                        const div = document.createElement('div');
-                        const isOk = r.status === 'success';
-                        div.className = 'border rounded p-2 mb-2 ' + (isOk ? 'bg-success-subtle' : 'bg-danger-subtle');
-                        div.innerHTML = `<div class="fw-semibold mb-1 ${isOk ? 'text-success' : 'text-danger'}">${escHtml(r.tenant)} (${r.prefix})</div>
-                            <div class="text-muted" style="font-size:.8rem;">${escHtml(r.message)}</div>
-                            ${(!isOk && r.errors) ? `<div class="text-danger mt-1" style="font-size:.75rem;">${r.errors.map(escHtml).join('<br>')}</div>` : ''}`;
-                        resList.appendChild(div);
-                    });
+        fetch('/admin/migration/check-all-versions')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                Object.keys(data.tenants).forEach(tenantId => {
+                    const info = data.tenants[tenantId];
+                    const versionBadge = document.getElementById('db-version-' + tenantId);
+                    const actionCell   = document.getElementById('tenant-actions-' + tenantId);
                     
-                    document.getElementById('errorsSection').querySelector('h6').textContent = 'TENANT PATCH ERGEBNISSE';
-                    resSec.classList.remove('d-none');
-                }
-
-            } catch (err) {
-                progressCard.classList.add('d-none');
-                alert('Netzwerkfehler beim Patching: ' + err.message);
-            } finally {
-                patchAllBtn.disabled = false;
-                patchAllBtn.innerHTML = '<i class="bi bi-magic me-1"></i>Alle praxen patchen';
-            }
-        });
-    }
-
-    // Migrate All Event Listener
-    const migrateAllBtn = document.getElementById('migrateAllBtn');
-    if(migrateAllBtn) {
-        migrateAllBtn.addEventListener('click', async function() {
-            if (!confirm('Diesen Vorgang starten? Dadurch werden alle ausstehenden Core-Migrations auf alle Tenants aufgespielt.')) {
-                return;
-            }
-
-            guideCard.classList.add('d-none');
-            resultCard.classList.add('d-none');
-            progressCard.classList.remove('d-none');
-            
-            migrateAllBtn.disabled = true;
-            migrateAllBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Wird ausgeführt...';
-
-            try {
-                const formData = new FormData();
-                formData.append('_csrf', document.querySelector('input[name="_csrf"]').value);
-
-                const resp = await fetch('/admin/migration/migrate-all', {
-                    method: 'POST',
-                    body: formData
+                    if (versionBadge) {
+                        if (info.is_up_to_date) {
+                            versionBadge.textContent = 'v' + info.current_version;
+                            versionBadge.className = 'status-badge bg-success bg-opacity-25 text-success border border-success border-opacity-25';
+                            if (actionCell) actionCell.innerHTML = '<span class="text-muted small">Aktuell ✅</span>';
+                        } else {
+                            versionBadge.textContent = 'v' + info.current_version + ' (Fehlt: v' + data.latest_version + ')';
+                            versionBadge.className = 'status-badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-25';
+                            
+                            if (actionCell) {
+                                actionCell.innerHTML = `
+                                    <button type="button" class="btn btn-sm btn-primary btn-glow" onclick="migrateSingle(${tenantId})">
+                                        <i class="bi bi-arrow-up-circle me-1"></i>Update
+                                    </button>
+                                `;
+                            }
+                        }
+                    }
                 });
-                
-                const data = await resp.json();
-                
-                progressCard.classList.add('d-none');
-                resultCard.classList.remove('d-none');
-
-                const badge = document.getElementById('resultBadge');
-                const msg   = document.getElementById('resultMessage');
-                
-                badge.className = data.success ? 'badge bg-success' : 'badge bg-danger';
-                badge.textContent = data.success ? 'Erfolgreich' : 'Fehler';
-                msg.className = data.success ? 'alert alert-success mb-3' : 'alert alert-danger mb-3';
-                msg.textContent = data.message;
-
-                document.getElementById('statsRow').classList.add('d-none');
-                
-                const resSec = document.getElementById('errorsSection');
-                const resList = document.getElementById('errorsList');
-                resList.innerHTML = '';
-                
-                if (data.results && data.results.length > 0) {
-                    data.results.forEach(r => {
-                        const div = document.createElement('div');
-                        const isOk = r.status === 'success';
-                        // Grau (secondary) wenn nichts zu tun ('Bereits aktuell') -> success
-                        const isNoOp = isOk && r.message.includes('aktuell');
-                        let colorClass = isOk ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger';
-                        if (isNoOp) colorClass = 'bg-light text-secondary';
-                        
-                        div.className = 'border rounded p-2 mb-2 ' + colorClass;
-                        div.innerHTML = `<div class="fw-semibold mb-1">${escHtml(r.tenant)} (${r.prefix})</div>
-                            <div class="text-muted" style="font-size:.8rem;">${escHtml(r.message)}</div>
-                            ${(!isOk && r.errors) ? `<div class="text-danger mt-1" style="font-size:.75rem;">${r.errors.map(escHtml).join('<br>')}</div>` : ''}`;
-                        resList.appendChild(div);
-                    });
-                    
-                    document.getElementById('errorsSection').querySelector('h6').textContent = 'TENANT MIGRATION ERGEBNISSE';
-                    resSec.classList.remove('d-none');
-                }
-
-            } catch (err) {
-                progressCard.classList.add('d-none');
-                alert('Netzwerkfehler: ' + err.message);
-            } finally {
-                migrateAllBtn.disabled = false;
-                migrateAllBtn.innerHTML = '<i class="bi bi-database-check me-1"></i>Migrations auf alle pushen';
             }
         });
     }
 
-    // Google Plugin Migration Event Listener
-    const googlePluginBtn = document.getElementById('googlePluginBtn');
-    if(googlePluginBtn) {
-        googlePluginBtn.addEventListener('click', async function() {
-            if (!confirm('Diesen Vorgang starten? Dadurch werden die Google Calendar Plugin Migrations (001–003) auf alle Tenants aufgespielt.')) {
-                return;
-            }
+    window.migrateSingle = function(tenantId) {
+        const versionBadge = document.getElementById('db-version-' + tenantId);
+        if (versionBadge) versionBadge.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Update läuft...';
 
-            guideCard.classList.add('d-none');
-            resultCard.classList.add('d-none');
-            progressCard.classList.remove('d-none');
-
-            googlePluginBtn.disabled = true;
-            googlePluginBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Wird ausgeführt...';
-
-            try {
-                const formData = new FormData();
-                formData.append('_csrf', document.querySelector('input[name="_csrf"]').value);
-
-                const resp = await fetch('/admin/migration/google-plugin', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await resp.json();
-
-                progressCard.classList.add('d-none');
-                resultCard.classList.remove('d-none');
-
-                const badge = document.getElementById('resultBadge');
-                const msg   = document.getElementById('resultMessage');
-
-                badge.className = data.success ? 'badge bg-success' : 'badge bg-danger';
-                badge.textContent = data.success ? 'Erfolgreich' : 'Fehler';
-                msg.className = data.success ? 'alert alert-success mb-3' : 'alert alert-danger mb-3';
-                msg.textContent = data.message;
-
-                document.getElementById('statsRow').classList.add('d-none');
-
-                const resSec = document.getElementById('errorsSection');
-                const resList = document.getElementById('errorsList');
-                resList.innerHTML = '';
-
-                if (data.results && data.results.length > 0) {
-                    data.results.forEach(r => {
-                        const div = document.createElement('div');
-                        const isOk = r.status === 'success';
-                        div.className = 'border rounded p-2 mb-2 ' + (isOk ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger');
-                        div.innerHTML = `<div class="fw-semibold mb-1">${escHtml(r.tenant)} (${r.prefix})</div>
-                            <div class="text-muted" style="font-size:.8rem;">${escHtml(r.message)}</div>
-                            ${(!isOk && r.errors) ? `<div class="text-danger mt-1" style="font-size:.75rem;">${r.errors.map(escHtml).join('<br>')}</div>` : ''}`;
-                        resList.appendChild(div);
-                    });
-
-                    document.getElementById('errorsSection').querySelector('h6').textContent = 'GOOGLE PLUGIN MIGRATION ERGEBNISSE';
-                    resSec.classList.remove('d-none');
-                }
-
-            } catch (err) {
-                progressCard.classList.add('d-none');
-                alert('Netzwerkfehler: ' + err.message);
-            } finally {
-                googlePluginBtn.disabled = false;
-                googlePluginBtn.innerHTML = '<i class="bi bi-google me-1"></i>Google Plugin für alle Tenants migrieren';
+        fetch('/admin/migration/migrate-single?tenant_id=' + tenantId)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                checkAllVersions();
+            } else {
+                alert('Fehler: ' + (data.error || data.message));
+                checkAllVersions();
             }
         });
-    }
+    };
+
+    window.migrateAllTenants = function() {
+        const statusDiv = document.getElementById('migration-status');
+        statusDiv.innerHTML = '<div class="alert alert-info py-2 small d-flex align-items-center"><div class="spinner-border spinner-border-sm me-2"></div>Sync läuft...</div>';
+
+        fetch('/admin/migration/migrate-all')
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                statusDiv.innerHTML = '<div class="alert alert-success py-2 small">✓ ' + data.message + '</div>';
+                checkAllVersions();
+            } else {
+                statusDiv.innerHTML = '<div class="alert alert-danger py-2 small">✗ ' + (data.error || data.message) + '</div>';
+                checkAllVersions();
+            }
+        });
+    };
+
+    // Auto-Run status check on load
+    document.addEventListener('DOMContentLoaded', checkAllVersions);
 
     // Passwort-Toggle
-    document.getElementById('togglePw').addEventListener('click', function () {
-        const pw   = document.getElementById('adminPassword');
-        const icon = document.getElementById('togglePwIcon');
-        if (pw.type === 'password') {
-            pw.type = 'text';
-            icon.className = 'bi bi-eye-slash';
-        } else {
-            pw.type = 'password';
-            icon.className = 'bi bi-eye';
-        }
-    });
+    const togglePwBtn = document.getElementById('togglePw');
+    if (togglePwBtn) {
+        togglePwBtn.addEventListener('click', function () {
+            const pw   = document.getElementById('adminPassword');
+            const icon = document.getElementById('togglePwIcon');
+            if (pw.type === 'password') {
+                pw.type = 'text';
+                icon.className = 'bi bi-eye-slash';
+            } else {
+                pw.type = 'password';
+                icon.className = 'bi bi-eye';
+            }
+        });
+    }
 
     function escHtml(str) {
         return String(str)

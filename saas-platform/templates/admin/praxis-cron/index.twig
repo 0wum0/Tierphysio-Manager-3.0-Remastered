@@ -258,12 +258,8 @@
                     <h5 class="card-title mb-0 d-flex align-items-center">
                         <i class="bi bi-building me-2 text-primary"></i> Registrierte Praxen
                     </h5>
-                    <button type="button" class="btn btn-sm btn-outline-warning" onclick="migrateAllTenants()">
-                        <i class="bi bi-database-up me-1"></i> Globales Datenbank-Update
-                    </button>
                 </div>
                 <div class="card-body p-0">
-                    <div id="migration-status" class="mb-3 px-4"></div>
                     {% if tenants is empty %}
                     <div class="p-4 text-center text-muted">
                         <i class="bi bi-search fs-2 d-block mb-2"></i>
@@ -276,7 +272,6 @@
                                 <tr>
                                     <th class="ps-4">Praxis Name</th>
                                     <th>Kontakt</th>
-                                    <th>Version</th>
                                     <th>Status</th>
                                     <th class="pe-4 text-end">Aktionen</th>
                                 </tr>
@@ -290,9 +285,6 @@
                                     </td>
                                     <td>
                                         <div class="small">{{ tenant.email }}</div>
-                                    </td>
-                                    <td>
-                                        <span id="db-version-{{ tenant.id }}" class="status-badge bg-secondary opacity-75">v?</span>
                                     </td>
                                     <td>
                                         <span class="status-badge badge-active small">Aktiv</span>
@@ -458,85 +450,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     {% endfor %}
 
-    // Batch Load database versions
-    checkAllVersions();
-});
-
-function checkAllVersions() {
-    const tableBody = document.querySelector('tbody');
-    
-    fetch('/admin/migration/check-all-versions')
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            Object.keys(data.tenants).forEach(tenantId => {
-                const info = data.tenants[tenantId];
-                const versionBadge = document.getElementById('db-version-' + tenantId);
-                const actionCell = document.getElementById('tenant-actions-' + tenantId);
-                
-                if (versionBadge) {
-                    if (info.is_up_to_date) {
-                        versionBadge.textContent = 'v' + info.current_version;
-                        versionBadge.className = 'status-badge bg-success bg-opacity-25 text-success border border-success border-opacity-25';
-                    } else {
-                        versionBadge.textContent = 'v' + info.current_version + ' (Fehlt: v' + data.latest_version + ')';
-                        versionBadge.className = 'status-badge bg-warning bg-opacity-25 text-warning border border-warning border-opacity-25';
-                        
-                        // Add single update button if not already there
-                        if (actionCell && !actionCell.querySelector('.btn-migrate')) {
-                            const btn = document.createElement('button');
-                            btn.type = 'button';
-                            btn.className = 'btn btn-sm btn-primary btn-glow btn-migrate me-2';
-                            btn.innerHTML = '<i class="bi bi-arrow-up-circle"></i> Update';
-                            btn.onclick = () => migrateSingle(tenantId);
-                            actionCell.prepend(btn);
-                        }
-                    }
-                }
-            });
-        }
-    });
-}
-
-function migrateSingle(tenantId) {
-    const versionBadge = document.getElementById('db-version-' + tenantId);
-    if (versionBadge) versionBadge.textContent = '⏳...';
-
-    fetch('/admin/migration/migrate-single?tenant_id=' + tenantId)
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            checkAllVersions(); // Refresh
-        } else {
-            alert(data.error || data.message);
-            checkAllVersions();
-        }
-    });
-}
-
-function migrateAllTenants() {
-    const statusDiv = document.getElementById('migration-status');
-    statusDiv.innerHTML = '<div class="alert alert-info border-0 bg-info bg-opacity-10 text-info d-flex align-items-center"><div class="spinner-border spinner-border-sm me-3"></div><span>Globale Synchronisation läuft... Bitte warten.</span></div>';
-
-    fetch('/admin/migration/migrate-all')
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            let detailHtml = '';
-            if (data.details && data.details.length > 0) {
-                detailHtml = '<ul class="mb-0 mt-2 small">' + data.details.map(d => '<li>' + d + '</li>').join('') + '</ul>';
-            }
-            statusDiv.innerHTML = '<div class="alert alert-success border-0 bg-success bg-opacity-10 text-success"><strong>Erfolg!</strong> ' + data.message + detailHtml + '</div>';
-            checkAllVersions();
-        } else {
-            statusDiv.innerHTML = '<div class="alert alert-danger border-0 bg-danger bg-opacity-10 text-danger"><strong>Fehler:</strong> ' + (data.error || data.message) + '</div>';
-            checkAllVersions();
-        }
-    })
-    .catch(error => {
-        statusDiv.innerHTML = '<div class="alert alert-danger">✗ Fehler: ' + error + '</div>';
-    });
-}
 
 function resetTenantVersion(tenantId, targetVersion) {
     if (!confirm('Version wirklich auf v' + targetVersion + ' zurücksetzen?')) return;
