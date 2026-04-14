@@ -82,14 +82,16 @@ class MigrationService
             'to'       => $latestVersion,
             'applied'  => 0,
             'errors'   => [],
-            'success'  => true
+            'success'  => true,
+            'ran_count' => 0
         ];
 
         if ($currentVersion >= $latestVersion) {
             return $stats;
         }
 
-        $migrationsDir = $this->config->getRootPath() . '/migrations';
+        // Use root migrations folder
+        $migrationsDir = dirname($this->config->getRootPath()) . '/migrations';
         $pdo = $this->db->getPdo();
         
         // Ensure migrations table exists
@@ -106,6 +108,7 @@ class MigrationService
                         $sql = (string)file_get_contents($migrationsDir . '/' . $file);
                         $this->executeMigration($prefix, $version, $sql);
                         $stats['applied']++;
+                        $stats['ran_count']++;
                     } catch (\Throwable $e) {
                         $stats['errors'][] = [
                             'version' => $version,
@@ -113,12 +116,48 @@ class MigrationService
                             'error'   => $e->getMessage()
                         ];
                         $stats['success'] = false;
+                        break; // Stop on error
                     }
                 }
             }
         }
 
+        // Fallback: Also update settings table if it exists
+        if ($stats['success']) {
+            try {
+                $pdo->prepare("UPDATE `{$prefix}settings` SET `value` = ? WHERE `key` = 'db_version'")
+                    ->execute([$latestVersion]);
+            } catch (\Throwable) {}
+        }
+
         return $stats;
+    }
+
+    /**
+     * FORCE SYNC: Resets version to 0 and runs ALL migrations.
+     * This is used for "Repair" functionality.
+     */
+    public function forceSyncTenant(string $prefix): array
+    {
+        $pdo = $this->db->getPdo();
+        $migTbl = $prefix . 'migrations';
+        $setTbl = $prefix . 'settings';
+
+        try {
+            // Reset version in both places
+            $pdo->exec("DELETE FROM `{$migTbl}`");
+            try {
+                $pdo->exec("UPDATE `{$setTbl}` SET `value` = '0' WHERE `key` = 'db_version'");
+            } catch (\Throwable) {}
+            
+            // Re-run everything
+            return $this->migrateTenant($prefix);
+        } catch (\Throwable $e) {
+            return [
+                'success' => false,
+                'message' => 'Reset failed: ' . $e->getMessage()
+            ];
+        }
     }
 
     /**
@@ -142,10 +181,10 @@ class MigrationService
             try {
                 $pdo->exec($stmt);
             } catch (\PDOException $e) {
-                // Ignore safe errors (already exists etc.)
+                // Ignore safe errors (already exists, duplicate column, etc.)
                 $code = (int)($e->errorInfo[1] ?? 0);
-                if (!in_array($code, [1050, 1060, 1061, 1062, 1068], true) && $e->getCode() !== '42S01') {
-                     throw $e;
+                if (!in_array($code, [1050, 1060, 1061, 1062, 1068, 1091, 1054], true) && $e->getCode() !== '42S01') {
+                    throw $e;
                 }
             }
         }
@@ -171,67 +210,21 @@ class MigrationService
 
     /**
      * Robust table name prefixing logic.
-     * Ported from DataMigrationController for maximum compatibility.
      */
     private function prefixTableNames(string $sql, string $prefix): string
     {
-        $placeholders = [];
-        $idx = 0;
-        
-        // 1. Placeholder SQL functions (avoid prefixing keywords that look like functions)
-        $sql = preg_replace_callback(
-            '/\b(current_timestamp|current_date|current_time|current_user|utc_timestamp|utc_date|utc_time|localtime|localtimestamp|sysdate)(\s*\(\s*\))?/i',
-            function ($m) use (&$placeholders, &$idx) {
-                $key = '__SQLFN_' . ($idx++) . '__';
-                $placeholders[$key] = $m[0];
-                return $key;
-            },
-            $sql
-        );
-        $sql = preg_replace_callback('/\b(now|uuid)\s*\(\s*\)/i', function ($m) use (&$placeholders, &$idx) {
-            $key = '__SQLFN_' . ($idx++) . '__';
-            $placeholders[$key] = $m[0];
-            return $key;
-        }, $sql);
-
         $addPrefix = function($name) use ($prefix) {
-            // Check if it's a global table - if so, don't prefix
-            if (in_array(strtolower($name), self::GLOBAL_TABLES)) {
-                return $name;
-            }
+            if (in_array(strtolower($name), self::GLOBAL_TABLES)) return $name;
             return str_starts_with($name, $prefix) ? $name : $prefix . $name;
         };
 
-        // 2. Prefix DDL/DML statements
-        // CREATE TABLE / DROP TABLE
-        $sql = preg_replace_callback('/\b(CREATE|DROP)\s+TABLE\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?`([^`]+)`/i', fn($m) => str_replace('`'.$m[2].'`', '`'.$addPrefix($m[2]).'`', $m[0]), $sql);
-        
-        // INSERT INTO / REPLACE INTO
-        $sql = preg_replace_callback('/\b(INSERT|REPLACE)\s+(?:IGNORE\s+)?INTO\s+`([^`]+)`/i', fn($m) => str_replace('`'.$m[2].'`', '`'.$addPrefix($m[2]).'`', $m[0]), $sql);
-        
-        // UPDATE
-        $sql = preg_replace_callback('/(?<!\w)UPDATE\s+`([^`]+)`/i', fn($m) => str_replace('`'.$m[1].'`', '`'.$addPrefix($m[1]).'`', $m[0]), $sql);
-        
-        // DELETE FROM / TRUNCATE TABLE
-        $sql = preg_replace_callback('/\bDELETE\s+FROM\s+`([^`]+)`/i', fn($m) => str_replace('`'.$m[1].'`', '`'.$addPrefix($m[1]).'`', $m[0]), $sql);
-        $sql = preg_replace_callback('/\bTRUNCATE\s+TABLE\s+`([^`]+)`/i', fn($m) => str_replace('`'.$m[1].'`', '`'.$addPrefix($m[1]).'`', $m[0]), $sql);
-        
-        // ALTER TABLE
-        $sql = preg_replace_callback('/\bALTER\s+TABLE\s+`([^`]+)`/i', fn($m) => str_replace('`'.$m[1].'`', '`'.$addPrefix($m[1]).'`', $m[0]), $sql);
-        
-        // JOIN / FROM patterns (for complex migrations)
-        $sql = preg_replace_callback('/\b(FROM|JOIN)\s+`([^`]+)`/i', function($m) use ($addPrefix) {
-            // Avoid prefixing if it looks like a subquery or keyword
-            return $m[1] . ' `' . $addPrefix($m[2]) . '`';
-        }, $sql);
+        // Prefixing logic
+        $sql = preg_replace_callback('/\b(CREATE|DROP|ALTER)\s+TABLE\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?[`"]?([^`"\s]+)[`"]?/i', fn($m) => str_replace($m[2], $addPrefix($m[2]), $m[0]), $sql);
+        $sql = preg_replace_callback('/\b(INSERT|REPLACE|UPDATE|DELETE\s+FROM|TRUNCATE\s+TABLE)\s+(?:IGNORE\s+)?(?:INTO\s+)?[`"]?([^`"\s]+)[`"]?/i', fn($m) => str_replace($m[2], $addPrefix($m[2]), $m[0]), $sql);
+        $sql = preg_replace_callback('/\b(FROM|JOIN|REFERENCES)\s+[`"]?([^`"\s]+)[`"]?/i', fn($m) => str_replace($m[2], $addPrefix($m[2]), $m[0]), $sql);
+        $sql = preg_replace_callback('/\bCONSTRAINT\s+[`"]?([^`"\s]+)[`"]?/i', fn($m) => 'CONSTRAINT `' . $prefix . $m[1] . '`', $sql);
 
-        // REFERENCES
-        $sql = preg_replace_callback('/\bREFERENCES\s+`([^`]+)`/i', fn($m) => str_replace('`'.$m[1].'`', '`'.$addPrefix($m[1]).'`', $m[0]), $sql);
-        
-        // Constraints
-        $sql = preg_replace_callback('/\bCONSTRAINT\s+`([^`]+)`/i', fn($m) => 'CONSTRAINT `' . $prefix . $m[1] . '`', $sql);
-
-        return strtr($sql, $placeholders);
+        return $sql;
     }
 
     private function splitStatements(string $sql): array
@@ -242,20 +235,36 @@ class MigrationService
         $inBacktick = false;
         $stringChar = '';
         $len        = strlen($sql);
-
+ 
         for ($i = 0; $i < $len; $i++) {
             $c = $sql[$i];
             if ($inBacktick) { $current .= $c; if ($c === '`') $inBacktick = false; continue; }
-            if ($inString) { $current .= $c; if ($c === '\\') { if ($i + 1 < $len) $current .= $sql[++$i]; } elseif ($c === $stringChar) $inString = false; continue; }
+            if ($inString) { 
+                $current .= $c; 
+                if ($c === '\\' && $i + 1 < $len) { $current .= $sql[++$i]; } 
+                elseif ($c === $stringChar) $inString = false; 
+                continue; 
+            }
             if ($c === '`') { $inBacktick = true; $current .= $c; }
-            elseif ($c === '"' || $c === "'") { $inString = true; $stringChar = $c; $current .= $c; }
-            elseif ($c === '-' && $i + 1 < $len && $sql[$i + 1] === '-') { while ($i < $len && $sql[$i] !== "\n") $i++; }
-            elseif ($c === '#') { while ($i < $len && $sql[$i] !== "\n") $i++; }
-            elseif ($c === '/' && $i + 1 < $len && $sql[$i + 1] === '*') { $i += 2; while ($i + 1 < $len && !($sql[$i] === '*' && $sql[$i + 1] === '/')) $i++; $i += 2; }
-            elseif ($c === ';') { $stmt = trim($current); if ($stmt !== '') $statements[] = $stmt; $current = ''; }
+            elseif ($c === "'" || $c === '"') { $inString = true; $stringChar = $c; $current .= $c; }
+            elseif ($c === '-' && $i + 1 < $len && $sql[$i+1] === '-') { 
+                // Skip comment line
+                while ($i < $len && $sql[$i] !== "\n") $i++;
+                continue;
+            }
+            elseif ($c === '#') { 
+                while ($i < $len && $sql[$i] !== "\n") $i++;
+                continue;
+            }
+            elseif ($c === ';') { 
+                $stmt = trim($current); 
+                if ($stmt !== '') $statements[] = $stmt; 
+                $current = ''; 
+            }
             else { $current .= $c; }
         }
-        $stmt = trim($current); if ($stmt !== '') $statements[] = $stmt;
+        $stmt = trim($current); 
+        if ($stmt !== '') $statements[] = $stmt;
         return $statements;
     }
 }

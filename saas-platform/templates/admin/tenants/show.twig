@@ -182,6 +182,14 @@
                         <span class="text-warning" style="font-size:.8rem;"><i class="bi bi-clock"></i> Ausstehend</span>
                     {% endif %}
                 </div>
+                
+                <hr style="border-color:#334155;">
+                <form method="POST" action="/admin/tenants/{{ tenant.id }}/repair" onsubmit="return confirm('ACHTUNG: Dies erzwingt eine Neusynchronisation ALLER Datenbank-Tabellen für diese Praxis. Vorhandene Daten bleiben erhalten, aber die Struktur wird auf v48 aktualisiert. Fortfahren?')">
+                    {{ csrf_field()|raw }}
+                    <button type="submit" class="btn btn-sm btn-outline-warning w-100">
+                        <i class="bi bi-tools me-1"></i>Tabellen reparieren
+                    </button>
+                </form>
             </div>
         </div>
 

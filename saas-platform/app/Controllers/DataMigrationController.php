@@ -599,12 +599,6 @@ class DataMigrationController extends Controller
     public function migrateSingle(array $params = []): void
     {
         $this->requireAuth();
-        header('Content-Type: application/json; charset=utf-8');
-
-        $tenantId = (int)($params['tenant_id'] ?? $_GET['tenant_id'] ?? 0);
-        if (!$tenantId) {
-            echo json_encode(['success' => false, 'error' => 'Tenant ID erforderlich']);
-            exit;
         }
 
         $tenant = $this->tenantRepo->find($tenantId);

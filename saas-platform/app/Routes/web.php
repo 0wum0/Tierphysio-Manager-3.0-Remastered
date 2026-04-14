@@ -46,6 +46,7 @@ $router->post('/admin/tenants/{id}/cancel',     [TenantController::class, 'cance
 $router->post('/admin/tenants/{id}/license',    [TenantController::class, 'issueLicense']);
 $router->post('/admin/tenants/{id}/set-trial',  [TenantController::class, 'setTrial']);
 $router->post('/admin/tenants/{id}/delete',     [TenantController::class, 'delete']);
+$router->post('/admin/tenants/{id}/repair',      [DataMigrationController::class, 'repairDatabase']);
 $router->post('/admin/tenants/fix-storage',     [TenantController::class, 'fixStorage']);
 
 // ── Plans Management ───────────────────────────────────────────────────────
