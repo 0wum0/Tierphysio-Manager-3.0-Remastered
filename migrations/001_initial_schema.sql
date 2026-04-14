@@ -1,147 +1,204 @@
--- Tierphysio Manager 3.0 - Initial Schema
+-- ============================================================
+-- Tierphysio SaaS Platform - Initial Schema
 -- Migration 001
+-- ============================================================
 
-CREATE TABLE IF NOT EXISTS `users` (
-    `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `name`       VARCHAR(255) NOT NULL,
-    `email`      VARCHAR(255) NOT NULL UNIQUE,
-    `password`   VARCHAR(255) NOT NULL,
-    `role`       ENUM('admin','mitarbeiter') NOT NULL DEFAULT 'mitarbeiter',
-    `active`     TINYINT(1) NOT NULL DEFAULT 1,
-    `last_login` DATETIME NULL,
-    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    INDEX `idx_email` (`email`)
+SET NAMES utf8mb4;
+SET FOREIGN_KEY_CHECKS = 0;
+
+-- ------------------------------------------------------------
+-- Abo-Pläne
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `plans` (
+  `id`          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `slug`        VARCHAR(50)  NOT NULL UNIQUE,
+  `name`        VARCHAR(100) NOT NULL,
+  `description` TEXT,
+  `price_month` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  `price_year`  DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  `max_users`   INT NOT NULL DEFAULT 1 COMMENT '-1 = unbegrenzt',
+  `features`    JSON NOT NULL COMMENT 'Liste freigeschalteter Features',
+  `is_active`   TINYINT(1) NOT NULL DEFAULT 1,
+  `sort_order`  INT NOT NULL DEFAULT 0,
+  `created_at`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `owners` (
-    `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `first_name` VARCHAR(100) NOT NULL,
-    `last_name`  VARCHAR(100) NOT NULL,
-    `email`      VARCHAR(255) NULL,
-    `phone`      VARCHAR(50) NULL,
-    `street`     VARCHAR(255) NULL,
-    `zip`        VARCHAR(10) NULL,
-    `city`       VARCHAR(100) NULL,
-    `notes`      TEXT NULL,
-    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    INDEX `idx_last_name` (`last_name`),
-    INDEX `idx_email` (`email`)
+-- ------------------------------------------------------------
+-- Kunden (Praxen / Tenants)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `tenants` (
+  `id`            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `uuid`          CHAR(36)     NOT NULL UNIQUE,
+  `practice_name` VARCHAR(200) NOT NULL,
+  `owner_name`    VARCHAR(200) NOT NULL,
+  `email`         VARCHAR(200) NOT NULL UNIQUE,
+  `phone`         VARCHAR(50),
+  `address`       VARCHAR(300),
+  `city`          VARCHAR(100),
+  `zip`           VARCHAR(20),
+  `country`       CHAR(2) NOT NULL DEFAULT 'DE',
+  `plan_id`       INT UNSIGNED NOT NULL,
+  `status`        ENUM('pending','active','paused','cancelled','suspended') NOT NULL DEFAULT 'pending',
+  `db_name`       VARCHAR(100) COMMENT 'Name der Tenant-Datenbank',
+  `domain`        VARCHAR(200) COMMENT 'Domain der Praxis-App (z.B. praxis.example.com)',
+  `db_created`    TINYINT(1) NOT NULL DEFAULT 0,
+  `admin_created` TINYINT(1) NOT NULL DEFAULT 0,
+  `trial_ends_at` DATETIME,
+  `notes`         TEXT,
+  `created_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT `fk_tenants_plan` FOREIGN KEY (`plan_id`) REFERENCES `plans` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `patients` (
-    `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `owner_id`    INT UNSIGNED NOT NULL,
-    `name`        VARCHAR(255) NOT NULL,
-    `species`     VARCHAR(100) NULL,
-    `breed`       VARCHAR(100) NULL,
-    `birth_date`  DATE NULL,
-    `gender`      ENUM('männlich','weiblich','unbekannt') NULL DEFAULT 'unbekannt',
-    `color`       VARCHAR(100) NULL,
-    `chip_number` VARCHAR(50) NULL,
-    `photo`       VARCHAR(255) NULL,
-    `status`      VARCHAR(50) NOT NULL DEFAULT 'aktiv',
-    `notes`       TEXT NULL,
-    `created_at`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    INDEX `idx_owner_id` (`owner_id`),
-    INDEX `idx_name` (`name`),
-    CONSTRAINT `fk_patients_owner` FOREIGN KEY (`owner_id`) REFERENCES `owners` (`id`) ON DELETE CASCADE
+-- ------------------------------------------------------------
+-- Abonnements
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `subscriptions` (
+  `id`             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `tenant_id`      INT UNSIGNED NOT NULL,
+  `plan_id`        INT UNSIGNED NOT NULL,
+  `billing_cycle`  ENUM('monthly','yearly') NOT NULL DEFAULT 'monthly',
+  `status`         ENUM('active','past_due','cancelled','trialing') NOT NULL DEFAULT 'active',
+  `started_at`     DATETIME NOT NULL,
+  `ends_at`        DATETIME,
+  `cancelled_at`   DATETIME,
+  `next_billing`   DATETIME,
+  `amount`         DECIMAL(10,2) NOT NULL,
+  `currency`       CHAR(3) NOT NULL DEFAULT 'EUR',
+  `payment_method` VARCHAR(100),
+  `external_id`    VARCHAR(200) COMMENT 'ID bei Stripe/PayPal etc.',
+  `created_at`     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT `fk_sub_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_sub_plan`   FOREIGN KEY (`plan_id`)   REFERENCES `plans` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `patient_timeline` (
-    `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `patient_id`   INT UNSIGNED NOT NULL,
-    `user_id`      INT UNSIGNED NULL,
-    `type`         ENUM('note','treatment','photo','document','other') NOT NULL DEFAULT 'note',
-    `title`        VARCHAR(255) NOT NULL DEFAULT '',
-    `content`      TEXT NULL,
-    `status_badge` VARCHAR(100) NULL,
-    `attachment`   VARCHAR(255) NULL,
-    `entry_date`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `created_at`   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    INDEX `idx_patient_id` (`patient_id`),
-    INDEX `idx_entry_date` (`entry_date`),
-    CONSTRAINT `fk_timeline_patient` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`id`) ON DELETE CASCADE,
-    CONSTRAINT `fk_timeline_user`    FOREIGN KEY (`user_id`)    REFERENCES `users` (`id`) ON DELETE SET NULL
+-- ------------------------------------------------------------
+-- Zahlungen / Rechnungen
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `payments` (
+  `id`          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `tenant_id`   INT UNSIGNED NOT NULL,
+  `sub_id`      INT UNSIGNED,
+  `amount`      DECIMAL(10,2) NOT NULL,
+  `currency`    CHAR(3) NOT NULL DEFAULT 'EUR',
+  `status`      ENUM('pending','paid','failed','refunded') NOT NULL DEFAULT 'pending',
+  `method`      VARCHAR(100),
+  `external_id` VARCHAR(200),
+  `invoice_nr`  VARCHAR(50),
+  `paid_at`     DATETIME,
+  `created_at`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT `fk_pay_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_pay_sub`    FOREIGN KEY (`sub_id`)    REFERENCES `subscriptions` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `invoices` (
-    `id`             INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `invoice_number` VARCHAR(50) NOT NULL UNIQUE,
-    `owner_id`       INT UNSIGNED NOT NULL,
-    `patient_id`     INT UNSIGNED NULL,
-    `status`         ENUM('draft','open','paid','overdue') NOT NULL DEFAULT 'draft',
-    `issue_date`     DATE NOT NULL,
-    `due_date`       DATE NULL,
-    `total_net`      DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    `total_tax`      DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    `total_gross`    DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    `notes`          TEXT NULL,
-    `payment_terms`  TEXT NULL,
-    `email_sent_at`  DATETIME NULL,
-    `created_at`     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at`     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`id`),
-    INDEX `idx_owner_id`  (`owner_id`),
-    INDEX `idx_patient_id`(`patient_id`),
-    INDEX `idx_status`    (`status`),
-    INDEX `idx_issue_date`(`issue_date`),
-    CONSTRAINT `fk_invoices_owner`   FOREIGN KEY (`owner_id`)   REFERENCES `owners` (`id`) ON DELETE RESTRICT,
-    CONSTRAINT `fk_invoices_patient` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`id`) ON DELETE SET NULL
+-- ------------------------------------------------------------
+-- Lizenz-Tokens (für Offline-Prüfung)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `license_tokens` (
+  `id`           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `tenant_id`    INT UNSIGNED NOT NULL,
+  `token_hash`   VARCHAR(255) NOT NULL UNIQUE COMMENT 'SHA-256 des ausgestellten Tokens',
+  `issued_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `expires_at`   DATETIME NOT NULL,
+  `revoked`      TINYINT(1) NOT NULL DEFAULT 0,
+  `revoked_at`   DATETIME,
+  `last_seen_at` DATETIME,
+  `ip_address`   VARCHAR(45),
+  CONSTRAINT `fk_lic_tenant` FOREIGN KEY (`tenant_id`) REFERENCES `tenants` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `invoice_positions` (
-    `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `invoice_id`  INT UNSIGNED NOT NULL,
-    `description` VARCHAR(500) NOT NULL,
-    `quantity`    DECIMAL(10,2) NOT NULL DEFAULT 1.00,
-    `unit_price`  DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    `tax_rate`    DECIMAL(5,2) NOT NULL DEFAULT 19.00,
-    `total`       DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-    `sort_order`  INT NOT NULL DEFAULT 0,
-    PRIMARY KEY (`id`),
-    INDEX `idx_invoice_id` (`invoice_id`),
-    CONSTRAINT `fk_positions_invoice` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`id`) ON DELETE CASCADE
+-- ------------------------------------------------------------
+-- SaaS-Admin-Benutzer (Plattform-Betreiber)
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `saas_admins` (
+  `id`         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `name`       VARCHAR(200) NOT NULL,
+  `email`      VARCHAR(200) NOT NULL UNIQUE,
+  `password`   VARCHAR(255) NOT NULL,
+  `role`       ENUM('superadmin','admin','support') NOT NULL DEFAULT 'admin',
+  `is_active`  TINYINT(1) NOT NULL DEFAULT 1,
+  `last_login` DATETIME,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `settings` (
-    `key`        VARCHAR(100) NOT NULL,
-    `value`      TEXT NULL,
-    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    PRIMARY KEY (`key`)
+-- ------------------------------------------------------------
+-- Rechtliche Dokumente
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `legal_documents` (
+  `id`         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `slug`       VARCHAR(100) NOT NULL UNIQUE,
+  `title`      VARCHAR(300) NOT NULL,
+  `content`    LONGTEXT NOT NULL,
+  `version`    VARCHAR(20) NOT NULL DEFAULT '1.0',
+  `is_active`  TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT IGNORE INTO `settings` (`key`, `value`) VALUES
-('company_name',          'Tierphysio Praxis'),
-('company_street',        ''),
-('company_zip',           ''),
-('company_city',          ''),
-('company_phone',         ''),
-('company_email',         ''),
-('company_website',       ''),
-('company_logo',          ''),
-('bank_name',             ''),
-('bank_iban',             ''),
-('bank_bic',              ''),
-('tax_number',            ''),
-('vat_number',            ''),
-('default_tax_rate',      '19'),
-('payment_terms',         'Bitte überweisen Sie den Betrag innerhalb von 14 Tagen.'),
-('invoice_prefix',        'RE'),
-('invoice_start_number',  '1000'),
-('smtp_host',             'localhost'),
-('smtp_port',             '587'),
-('smtp_username',         ''),
-('smtp_password',         ''),
-('smtp_encryption',       'tls'),
-('mail_from_address',     ''),
-('mail_from_name',        ''),
-('default_language',      'de'),
-('default_theme',         'dark'),
-('db_version',            '1')
+-- ------------------------------------------------------------
+-- Zustimmungen zu rechtlichen Dokumenten
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `legal_acceptances` (
+  `id`          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `tenant_id`   INT UNSIGNED NOT NULL,
+  `document_id` INT UNSIGNED NOT NULL,
+  `version`     VARCHAR(20) NOT NULL,
+  `ip_address`  VARCHAR(45),
+  `accepted_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT `fk_acc_tenant` FOREIGN KEY (`tenant_id`)   REFERENCES `tenants` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_acc_doc`    FOREIGN KEY (`document_id`) REFERENCES `legal_documents` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Aktivitäts-Log
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `activity_log` (
+  `id`         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `actor_type` ENUM('saas_admin','tenant','system') NOT NULL DEFAULT 'system',
+  `actor_id`   INT UNSIGNED,
+  `action`     VARCHAR(200) NOT NULL,
+  `subject`    VARCHAR(200),
+  `subject_id` INT UNSIGNED,
+  `details`    JSON,
+  `ip_address` VARCHAR(45),
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- Einstellungen der SaaS-Plattform
+-- ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `saas_settings` (
+  `key`        VARCHAR(100) PRIMARY KEY,
+  `value`      LONGTEXT,
+  `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- ------------------------------------------------------------
+-- Standard-Pläne einfügen
+-- ------------------------------------------------------------
+INSERT IGNORE INTO `plans` (`slug`, `name`, `description`, `price_month`, `price_year`, `max_users`, `features`, `sort_order`) VALUES
+('basic', 'Basic', 'Ideal für einzelne Therapeuten', 29.00, 290.00, 1,
+ '["invoices","appointments","patients","owners"]', 1),
+('pro', 'Pro', 'Für wachsende Praxen mit mehreren Mitarbeitern', 59.00, 590.00, 10,
+ '["invoices","appointments","patients","owners","dashboard","waitlist","intake","staff"]', 2),
+('praxis', 'Praxis', 'Voller Funktionsumfang ohne Einschränkungen', 99.00, 990.00, -1,
+ '["invoices","appointments","patients","owners","dashboard","waitlist","intake","staff","reports","premium"]', 3);
+
+-- ------------------------------------------------------------
+-- Standard-Rechtsdokumente
+-- ------------------------------------------------------------
+INSERT IGNORE INTO `legal_documents` (`slug`, `title`, `content`, `version`) VALUES
+('datenschutz', 'Datenschutzerklärung',
+'# Datenschutzerklärung\n\n## 1. Verantwortlicher\n\nVerantwortlicher im Sinne der DSGVO ist der Betreiber dieser SaaS-Plattform.\n\n## 2. Erhobene Daten\n\nWir erheben folgende personenbezogene Daten:\n- Name und Anschrift\n- E-Mail-Adresse\n- Telefonnummer\n- Zahlungsdaten\n\n## 3. Zweck der Verarbeitung\n\nDie Daten werden zur Bereitstellung der SaaS-Dienste verarbeitet.\n\n## 4. Speicherdauer\n\nDaten werden nach Kündigung des Vertrags innerhalb von 30 Tagen gelöscht.\n\n## 5. Ihre Rechte\n\nSie haben das Recht auf Auskunft, Berichtigung, Löschung und Einschränkung der Verarbeitung.',
+'1.0'),
+('agb', 'Allgemeine Geschäftsbedingungen',
+'# Allgemeine Geschäftsbedingungen\n\n## 1. Geltungsbereich\n\nDiese AGB gelten für alle Verträge über die Nutzung der Tierphysio Manager SaaS-Plattform.\n\n## 2. Vertragsschluss\n\nDer Vertrag kommt mit der Aktivierung des Abonnements zustande.\n\n## 3. Leistungsumfang\n\nDer Funktionsumfang richtet sich nach dem gebuchten Tarif (Basic, Pro, Praxis).\n\n## 4. Laufzeit und Kündigung\n\nMonatliche Abonnements sind monatlich kündbar. Jahresabonnements enden nach 12 Monaten.\n\n## 5. Preise und Zahlung\n\nDie aktuellen Preise sind auf der Website einsehbar. Die Zahlung erfolgt monatlich oder jährlich im Voraus.\n\n## 6. Datenschutz\n\nDie Verarbeitung personenbezogener Daten erfolgt gemäß unserer Datenschutzerklärung.',
+'1.0'),
+('av-vertrag', 'Auftragsverarbeitungsvertrag (AVV)',
+'# Auftragsverarbeitungsvertrag\n\ngemäß Art. 28 DSGVO\n\n## 1. Gegenstand\n\nDieser Vertrag regelt die Verarbeitung personenbezogener Daten durch den Auftragsverarbeiter (Plattformbetreiber) im Auftrag des Verantwortlichen (Kunden).\n\n## 2. Art der Daten\n\nVerarbeitet werden Daten von Tierhaltern und Patienten (Tieren) der therapeutischen Einrichtung.\n\n## 3. Weisungsgebundenheit\n\nDer Auftragsverarbeiter verarbeitet Daten ausschließlich auf dokumentierte Weisung des Verantwortlichen.\n\n## 4. Vertraulichkeit\n\nDer Auftragsverarbeiter gewährleistet, dass Personen, die Zugang zu den Daten haben, zur Vertraulichkeit verpflichtet sind.\n\n## 5. Technische und organisatorische Maßnahmen\n\nDer Auftragsverarbeiter implementiert geeignete TOMs gemäß Art. 32 DSGVO.\n\n## 6. Unterauftragsverarbeiter\n\nEine Weitergabe an Unterauftragsverarbeiter bedarf der vorherigen schriftlichen Genehmigung.\n\n## 7. Löschung\n\nNach Vertragsende werden alle Daten innerhalb von 30 Tagen gelöscht oder zurückgegeben.',
+'1.0');
