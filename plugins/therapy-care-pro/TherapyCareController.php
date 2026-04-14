@@ -94,7 +94,9 @@ class TherapyCareController extends Controller
         }
 
         if ($saved > 0) {
-            $this->addTimelineEntry($patientId, $userId, 'progress',
+            // patient_timeline.type is core enum (note/treatment/photo/document/other/payment)
+            // → store as non-breaking core type and tag semantic event via tcp_timeline_meta.
+            $this->addTimelineEntry($patientId, $userId, 'treatment',
                 'Fortschritt dokumentiert (' . $saved . ' Kategorien)', '', 'progress');
         }
 
