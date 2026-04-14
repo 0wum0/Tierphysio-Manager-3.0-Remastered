@@ -61,7 +61,6 @@ class MigrationService
         $migTbl = $prefix . 'migrations';
 
         try {
-            // Check if migrations table exists
             $check = $pdo->query("SHOW TABLES LIKE '{$migTbl}'")->fetchColumn();
             if (!$check) {
                 return 0;
@@ -129,13 +128,11 @@ class MigrationService
         $setTbl = $prefix . 'settings';
 
         try {
-            // Version zurücksetzen
             $pdo->exec("DELETE FROM `{$migTbl}`");
             try {
                 $pdo->exec("UPDATE `{$setTbl}` SET `value` = '0' WHERE `key` = 'db_version'");
             } catch (\Throwable $e) {}
             
-            // Alles neu ausführen
             return $this->migrateTenant($prefix);
         } catch (\Throwable $e) {
             return [
@@ -147,7 +144,6 @@ class MigrationService
 
     /**
      * Führt eine einzelne Migrationsdatei für einen Tenant aus.
-     * Gibt einen detaillierten Bericht zurück.
      */
     public function executeMigration(string $file, string $prefix): array
     {
@@ -160,7 +156,6 @@ class MigrationService
         $pdo     = $this->db->getPdo();
         $migTbl  = $prefix . 'migrations';
 
-        // Robustes Präfixing anwenden
         $prefixedSql = $this->prefixTableNames($sql, $prefix);
         $statements  = $this->splitStatements($prefixedSql);
 
@@ -184,7 +179,6 @@ class MigrationService
                 $code = (int)($e->errorInfo[1] ?? 0);
                 $msg  = $e->getMessage();
                 
-                // Bekannte "Safe"-Fehler (Existiert bereits etc.)
                 if (in_array($code, [1050, 1060, 1061, 1062, 1068, 1091, 1054], true) || $e->getCode() === '42S01') {
                     $report['skipped'][] = [
                         'code' => $code,
@@ -197,7 +191,6 @@ class MigrationService
                         'msg'  => $msg,
                         'stmt' => $stmt
                     ];
-                    // Bei kritischem Fehler abbrechen
                     break;
                 }
             }
@@ -206,7 +199,6 @@ class MigrationService
         $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
 
         if (empty($report['errors'])) {
-            // Als angewandt markieren
             $pdo->prepare("INSERT IGNORE INTO `{$migTbl}` (version, applied_at) VALUES (?, NOW())")
                 ->execute([$version]);
             return ['success' => true, 'report' => $report];
@@ -221,14 +213,11 @@ class MigrationService
      */
     private function prefixTableNames(string $sql, string $prefix): string
     {
-        // 0. Vorher: Platzhalter {{prefix}} ersetzen (falls vorhanden)
         $sql = str_replace(['{{prefix}}', '{{ prefix }}'], $prefix, $sql);
 
         $placeholders = [];
         $idx = 0;
 
-        // 1. Maskierung von Strings und Kommentaren (um Syntax-Zerstörung zu verhindern)
-        // Matcht: 'str', "str", /* multi-line */, -- line, # line (NICHT Backticks!)
         $maskPattern = "/('(?:''|\\\\.|[^'])*'|\"(?:\"\"|\\\\.|[^\"])*\"|\/\*.*?\*\/|--.*|#.*)/s";
         
         $sql = preg_replace_callback($maskPattern, function($m) use (&$placeholders, &$idx) {
@@ -259,20 +248,29 @@ class MigrationService
             return $prefix . $cleanName;
         };
 
-        // 2. Präfixen (nur auf dem maskierten SQL)
-        $sql = preg_replace_callback('/\b(CREATE|DROP|ALTER)\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`"]?([^`"\s\(\),;\.]+)[`"]?/i', 
-            fn($m) => str_replace($m[2], $addPrefix($m[2]), $m[0]), $sql);
+        // DDL: CREATE, DROP, ALTER TABLE
+        $sql = preg_replace_callback('/\b(CREATE|DROP|ALTER)\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([`"]?)([^`"\s\(\),;\.]+)\2/i', function($m) use ($addPrefix) {
+            return str_replace($m[3], $addPrefix($m[3]), $m[0]);
+        }, $sql);
 
-        $sql = preg_replace_callback('/\b(INSERT|REPLACE|UPDATE|DELETE\s+FROM|TRUNCATE\s+TABLE)\s+(?:IGNORE\s+)?(?:INTO\s+)?[`"]?([^`"\s\(\),;\.]+)[`"]?/i', 
-            fn($m) => str_replace($m[2], $addPrefix($m[2]), $m[0]), $sql);
+        // DML: INSERT, UPDATE, DELETE, TRUNCATE
+        $sql = preg_replace_callback('/\b(INSERT|REPLACE|UPDATE|DELETE\s+FROM|TRUNCATE\s+TABLE)\s+(?:IGNORE\s+)?(?:INTO\s+)?([`"]?)([^`"\s\(\),;\.]+)\2/i', function($m) use ($addPrefix) {
+            return str_replace($m[3], $addPrefix($m[3]), $m[0]);
+        }, $sql);
 
-        $sql = preg_replace_callback('/\b(FROM|JOIN|REFERENCES)\s+[`"]?([^`"\s\(\),;\.]+)[`"]?/i', 
-            fn($m) => str_replace($m[2], $addPrefix($m[2]), $m[0]), $sql);
+        // FROM, JOIN, REFERENCES
+        $sql = preg_replace_callback('/\b(FROM|JOIN|REFERENCES)\s+([`"]?)([^`"\s\(\),;\.]+)\2/i', function($m) use ($addPrefix) {
+            return str_replace($m[3], $addPrefix($m[3]), $m[0]);
+        }, $sql);
 
-        $sql = preg_replace_callback('/\bCONSTRAINT\s+[`"]?([^`"\s]+)[`"]?/i', 
-            fn($m) => 'CONSTRAINT `' . $prefix . $m[1] . '`', $sql);
+        // Constraints und Keys
+        $sql = preg_replace_callback('/\b(CONSTRAINT|INDEX|KEY)\s+([`"]?)([^`"\s\(\),;\.]+)\2/i', function($m) use ($prefix, $reserved) {
+            $name = $m[3];
+            if (in_array(strtolower($name), $reserved)) return $m[0];
+            if (str_starts_with(strtolower($name), strtolower($prefix))) return $m[0];
+            return str_replace($name, $prefix . $name, $m[0]);
+        }, $sql);
 
-        // 3. Demaskierung
         if (!empty($placeholders)) {
             $sql = strtr($sql, $placeholders);
         }
@@ -313,7 +311,6 @@ class MigrationService
             if ($c === '`') { $inBacktick = true; $current .= $c; }
             elseif ($c === "'" || $c === '"') { $inString = true; $stringChar = $c; $current .= $c; }
             elseif ($c === '-' && $i + 1 < $len && $sql[$i+1] === '-') { 
-                // Skip comment line
                 while ($i < $len && $sql[$i] !== "\n") $i++;
                 continue;
             }
