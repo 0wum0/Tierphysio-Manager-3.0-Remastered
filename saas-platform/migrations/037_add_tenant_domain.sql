@@ -3,5 +3,5 @@
 
 ALTER TABLE `tenants` ADD COLUMN IF NOT EXISTS `domain` VARCHAR(200) COMMENT 'Domain der Praxis-App (z.B. praxis.example.com)' AFTER `db_name`;
 
--- Bestehende Tenants mit Domain aus E-Mail aktualisieren
-UPDATE `tenants` SET `domain` = SUBSTRING_INDEX(`email`, '@', -1) WHERE `domain` IS NULL OR `domain` = '';
+-- Alle Tenants mit der gemeinsamen Domain app.therapano.de aktualisieren
+UPDATE `tenants` SET `domain` = 'app.therapano.de' WHERE `domain` IS NULL OR `domain` = '';
