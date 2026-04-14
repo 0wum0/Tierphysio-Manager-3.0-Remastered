@@ -10,6 +10,15 @@ use Saas\Core\Database;
 
 class MigrationService
 {
+    private const GLOBAL_TABLES = [
+        'tenants',
+        'plans',
+        'saas_admins',
+        'saas_logs',
+        'failed_jobs',
+        'migrations_global'
+    ];
+
     public function __construct(
         private Config   $config,
         private Database $db
@@ -185,7 +194,13 @@ class MigrationService
             return $key;
         }, $sql);
 
-        $addPrefix = fn($name) => str_starts_with($name, $prefix) ? $name : $prefix . $name;
+        $addPrefix = function($name) use ($prefix) {
+            // Check if it's a global table - if so, don't prefix
+            if (in_array(strtolower($name), self::GLOBAL_TABLES)) {
+                return $name;
+            }
+            return str_starts_with($name, $prefix) ? $name : $prefix . $name;
+        };
 
         // 2. Prefix DDL/DML statements
         // CREATE TABLE / DROP TABLE
