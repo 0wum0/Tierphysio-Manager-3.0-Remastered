@@ -228,7 +228,8 @@ class MigrationService
         $idx = 0;
 
         // 1. Maskierung von Strings und Kommentaren (um Syntax-Zerstörung zu verhindern)
-        $maskPattern = "/('(?:''|\\\\.|[^'])*'|\"(?:\"\"|\\\\.|[^\"])*\"|`[^`]*`|\/\*.*?\*\/|--.*|#.*)/s";
+        // Matcht: 'str', "str", /* multi-line */, -- line, # line (NICHT Backticks!)
+        $maskPattern = "/('(?:''|\\\\.|[^'])*'|\"(?:\"\"|\\\\.|[^\"])*\"|\/\*.*?\*\/|--.*|#.*)/s";
         
         $sql = preg_replace_callback($maskPattern, function($m) use (&$placeholders, &$idx) {
             $key = "___SQL_MASK_" . ($idx++) . "___";
