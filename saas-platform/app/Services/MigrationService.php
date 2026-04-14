@@ -221,13 +221,16 @@ class MigrationService
      */
     private function prefixTableNames(string $sql, string $prefix): string
     {
+        // Vorher: Platzhalter {{prefix}} ersetzen (falls vorhanden)
+        $sql = str_replace(['{{prefix}}', '{{ prefix }}'], $prefix, $sql);
+
         $reserved = [
             'current_timestamp', 'now', 'null', 'true', 'false', 'primary', 'key',
             'index', 'unique', 'constraint', 'references', 'cascade', 'restrict',
             'default', 'datetime', 'timestamp', 'varchar', 'text', 'enum', 'decimal',
             'unsigned', 'charset', 'collate', 'engine', 'innodb', 'comment', 'on',
             'update', 'delete', 'set', 'names', 'foreign', 'checks', 'exists', 'if', 'not',
-            'information_schema', 'performance_schema', 'mysql', 'sys', 'tables', 'columns'
+            'stmt', 'database', 'information_schema', 'performance_schema', 'mysql', 'sys', 'tables', 'columns'
         ];
 
         $addPrefix = function($name) use ($prefix, $reserved) {
