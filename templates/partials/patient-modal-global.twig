@@ -822,7 +822,7 @@
             <div class="modal-header" style="padding:0.7rem 1rem;">
                 <h5 class="modal-title" style="font-size:0.95rem;font-weight:700;">Neue Rechnung erstellen</h5>
                 <div class="d-flex align-items-center gap-2">
-                    <a id="im-open-new-tab" href="/rechnungen/neu" target="_blank" class="btn btn-secondary btn-sm">In neuem Tab öffnen</a>
+                    <a id="im-open-new-tab" href="/rechnungen/erstellen" target="_blank" class="btn btn-secondary btn-sm">In neuem Tab öffnen</a>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
                 </div>
             </div>
@@ -1950,7 +1950,7 @@ function openInvoiceModal(patientId, ownerId) {
     if (!modalEl || !iframe) return;
 
     var qs = '?patient_id=' + encodeURIComponent(patientId || '') + '&owner_id=' + encodeURIComponent(ownerId || '');
-    var url = '/rechnungen/neu' + qs;
+    var url = '/rechnungen/erstellen' + qs;
 
     iframe.src = url;
     if (openTab) openTab.href = url;
