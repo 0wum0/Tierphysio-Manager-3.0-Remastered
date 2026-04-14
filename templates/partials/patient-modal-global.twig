@@ -701,7 +701,7 @@
 
 {# ── TCP Fortschritt Vollansicht Modal ────────────────── #}
 <div class="modal fade" id="modal-tcp-fullview" tabindex="-1" aria-hidden="true" style="z-index:1065;" data-bs-backdrop="false">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width:min(1180px,96vw);">
         <div class="modal-content">
             <div class="modal-header" style="padding-bottom:0.5rem;">
                 <div>
@@ -711,10 +711,10 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body" style="overflow-y:auto;max-height:calc(100vh - 180px);padding:1.25rem 1.5rem;">
-                <ul class="nav nav-tabs mb-3" style="flex-wrap:nowrap;overflow-x:auto;">
-                    <li class="nav-item"><a href="javascript:void(0)" class="nav-link active" id="tcpfv-tab-progress" onclick="_tcpfvTab('progress');return false;">📈 Therapiefortschritt</a></li>
-                    <li class="nav-item"><a href="javascript:void(0)" class="nav-link" id="tcpfv-tab-natural" onclick="_tcpfvTab('natural');return false;">🌿 Naturheilkunde</a></li>
-                    <li class="nav-item"><a href="javascript:void(0)" class="nav-link" id="tcpfv-tab-reports" onclick="_tcpfvTab('reports');return false;">📄 Therapieberichte</a></li>
+                <ul class="nav nav-tabs mb-3" style="flex-wrap:nowrap;overflow-x:auto;gap:.25rem;">
+                    <li class="nav-item"><button type="button" class="nav-link active" id="tcpfv-tab-progress" data-tcpfv-tab="progress">📈 Therapiefortschritt</button></li>
+                    <li class="nav-item"><button type="button" class="nav-link" id="tcpfv-tab-natural" data-tcpfv-tab="natural">🌿 Naturheilkunde</button></li>
+                    <li class="nav-item"><button type="button" class="nav-link" id="tcpfv-tab-reports" data-tcpfv-tab="reports">📄 Therapieberichte</button></li>
                 </ul>
                 <div id="tcpfv-panel-progress">
                     <div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);"><div class="pd-spinner" style="margin:0 auto 1rem;"></div>Lade…</div>
@@ -817,7 +817,7 @@
 
 {# ── Invoice Create Modal ──────────────────────────────── #}
 <div class="modal fade" id="modal-invoice-create" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-dialog modal-fullscreen-lg-down modal-xl modal-dialog-scrollable" style="max-width:min(1320px,98vw);"><div class="modal-content">
         <div class="modal-header" style="padding:0.65rem 1rem;">
             <h5 class="modal-title" style="font-size:0.95rem;font-weight:700;">Neue Rechnung erstellen</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
@@ -858,7 +858,8 @@
                         <div class="glass-card">
                             <h3 class="fw-semibold mb-3" style="font-size:0.9rem;">Positionen</h3>
                             <div id="im-ku-note" style="display:none;background:rgba(255,193,7,0.12);border:1px solid rgba(255,193,7,0.3);border-radius:8px;padding:0.5rem 0.75rem;margin-bottom:0.75rem;font-size:0.82rem;"><strong>Kleinunternehmer §19 UStG</strong> — MwSt. automatisch 0%.</div>
-                            <div class="im-pos-headers" id="im-col-headers" style="display:grid;grid-template-columns:2fr 80px 100px 70px auto;gap:0.4rem;margin-bottom:0.25rem;">
+                            <div class="im-pos-headers" id="im-col-headers" style="display:grid;grid-template-columns:2fr 140px 80px 100px 70px auto;gap:0.4rem;margin-bottom:0.25rem;">
+                                <span style="font-size:0.72rem;color:var(--bs-secondary-color);">Beschreibung</span>
                                 <span style="font-size:0.72rem;color:var(--bs-secondary-color);">Behandlungsart</span>
                                 <span style="font-size:0.72rem;color:var(--bs-secondary-color);text-align:right;">Menge</span>
                                 <span style="font-size:0.72rem;color:var(--bs-secondary-color);text-align:right;">Preis</span>
@@ -1236,7 +1237,7 @@ function loadTcpData(patientId) {
                     var color = esc(e.category_color || '#4f7cff');
                     var pct = Math.max(0,Math.min(100,Math.round(((+e.score-(+e.scale_min||1))/((+e.scale_max||10)-(+e.scale_min||1)))*100)));
                     var date = e.entry_date ? e.entry_date.substring(0,10).split('-').reverse().join('.') : '';
-                    html += '<div style="display:flex;align-items:center;gap:0.45rem;padding:0.3rem 0.5rem;border-radius:7px;background:var(--bs-secondary-bg);border:1px solid var(--bs-border-color);margin-bottom:0.25rem;">';
+                    html += '<div style="display:flex;align-items:center;gap:0.45rem;padding:0.35rem 0.6rem;border-radius:9px;background:var(--bs-secondary-bg);border:1px solid var(--bs-border-color);margin-bottom:0.32rem;">';
                     html += '<div style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:'+color+';"></div>';
                     html += '<div style="flex:1;min-width:0;"><div style="font-size:0.75rem;font-weight:600;">'+esc(e.category_name||'')+'</div><div class="tcp-progress-bar" style="margin-top:0.1rem;"><div class="tcp-progress-bar-fill" style="width:'+pct+'%;background:'+color+';"></div></div></div>';
                     html += '<div style="text-align:right;flex-shrink:0;"><div style="font-size:0.78rem;font-weight:700;color:'+color+';">'+esc(String(e.score))+'</div><div style="font-size:0.6rem;color:var(--bs-secondary-color);">'+esc(date)+'</div></div>';
@@ -1331,26 +1332,26 @@ function _tcpBuildSliders(cats, patientId, compact) {
     } else {
         html += '<input type="hidden" name="entry_date" value="'+today+'">';
     }
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax('+(compact?'240px':'320px')+',1fr));gap:'+(compact?'0.45rem':'0.6rem')+';">';
     cats.forEach(function(cat) {
         var mid = Math.round((+cat.scale_max + +cat.scale_min) / 2);
         var c   = esc(cat.color || '#4f7cff');
         var uid = 'tcs-'+cat.id+'-'+sfx;
-        html += '<div style="margin-bottom:'+(compact?'0.6':'0.85')+'rem;">';
-        html += '<div style="display:flex;align-items:center;gap:0.45rem;margin-bottom:0.2rem;">';
+        html += '<div style="padding:'+(compact?'0.45rem 0.55rem':'0.6rem 0.7rem')+';border:1px solid var(--bs-border-color);border-radius:10px;background:var(--bs-body-bg);">';
+        html += '<div style="display:flex;align-items:center;gap:0.45rem;margin-bottom:0.25rem;">';
         html += '<div style="width:8px;height:8px;border-radius:50%;background:'+c+';flex-shrink:0;"></div>';
         html += '<span style="font-size:0.8rem;font-weight:600;">'+esc(cat.name)+'</span>';
-        if (!compact) html += '<span style="font-size:0.68rem;color:var(--bs-secondary-color);">('+cat.scale_min+'\u2013'+cat.scale_max+')</span>';
-        html += '<span style="font-size:0.8rem;font-weight:700;color:'+c+';margin-left:auto;" id="'+uid+'">'+mid+'</span>';
+        html += '<span style="font-size:0.66rem;color:var(--bs-secondary-color);">('+cat.scale_min+'\u2013'+cat.scale_max+')</span>';
+        html += '<span style="font-size:0.82rem;font-weight:700;color:'+c+';margin-left:auto;" id="'+uid+'">'+mid+'</span>';
         html += '</div>';
         html += '<input type="range" class="form-range" name="entries['+cat.id+']" min="'+cat.scale_min+'" max="'+cat.scale_max+'" value="'+mid+'" style="margin:0;" oninput="document.getElementById(\''+uid+'\').textContent=this.value">';
-        if (cat.scale_label_min || cat.scale_label_max) {
-            html += '<div style="display:flex;justify-content:space-between;font-size:0.65rem;color:var(--bs-secondary-color);margin-top:0.1rem;"><span>'+esc(cat.scale_label_min||'')+'</span><span>'+esc(cat.scale_label_max||'')+'</span></div>';
-        }
+        html += '<div style="display:flex;justify-content:space-between;font-size:0.65rem;color:var(--bs-secondary-color);margin-top:0.08rem;"><span>'+esc(cat.scale_label_min||'')+'</span><span>'+esc(cat.scale_label_max||'')+'</span></div>';
         if (!compact) {
-            html += '<input type="text" name="notes_'+cat.id+'" class="form-control form-control-sm mt-1" placeholder="Notiz (optional)" style="font-size:0.78rem;">';
+            html += '<input type="text" name="notes_'+cat.id+'" class="form-control form-control-sm mt-1" placeholder="Notiz (optional)" style="font-size:0.76rem;height:30px;">';
         }
         html += '</div>';
     });
+    html += '</div>';
     html += '<button type="button" class="btn btn-primary btn-sm w-100" style="margin-top:0.25rem;" onclick="_saveTcpProgress(event,'+patientId+',document.getElementById(\''+formId+'\'),'+compact+')">Werte speichern</button>';
     html += '</form>';
     return html;
@@ -1421,6 +1422,17 @@ function _tcpfvTab(tab) {
     });
 }
 
+
+/* make inline tcp handlers globally reachable for modal HTML onclick/data hooks */
+window._tcpfvTab = _tcpfvTab;
+window._saveTcpProgress = _saveTcpProgress;
+
+
+
+document.querySelectorAll('[data-tcpfv-tab]').forEach(function(btn){
+    btn.addEventListener('click', function(){ _tcpfvTab(btn.getAttribute('data-tcpfv-tab')); });
+});
+
 window.openTcpFullView = function(activeTab) {
     var patientId = window.pdAktPatientId || (currentPatientData && currentPatientData.patient ? currentPatientData.patient.id : null);
     if (!patientId) return;
@@ -1458,7 +1470,7 @@ function _tcpfvRender(cache, patientId) {
         var html = '';
         /* Slider form at top of full view */
         if (cache.cats && cache.cats.length) {
-            html += '<div style="border:1px solid var(--bs-border-color);border-radius:10px;padding:1rem 1.1rem;margin-bottom:1.25rem;background:var(--bs-secondary-bg);">';
+            html += '<div style="border:1px solid var(--bs-border-color);border-radius:12px;padding:0.9rem 1rem;margin-bottom:1rem;background:linear-gradient(180deg,var(--bs-secondary-bg),var(--bs-body-bg));">';
             html += '<div style="font-weight:600;font-size:0.82rem;margin-bottom:0.75rem;color:var(--bs-primary);">Neue Werte erfassen</div>';
             html += _tcpBuildSliders(cache.cats, patientId, false);
             html += '</div>';
@@ -1475,7 +1487,7 @@ function _tcpfvRender(cache, patientId) {
             });
             Object.values(byCat).forEach(function(cat) {
                 var c = esc(cat.color);
-                html += '<div style="margin-bottom:1.1rem;border:1px solid var(--bs-border-color);border-radius:10px;overflow:hidden;">';
+                html += '<div style="margin-bottom:0.8rem;border:1px solid var(--bs-border-color);border-radius:10px;overflow:hidden;background:var(--bs-body-bg);">';
                 html += '<div style="padding:0.6rem 0.85rem;background:var(--bs-secondary-bg);border-bottom:1px solid var(--bs-border-color);display:flex;align-items:center;gap:0.55rem;">';
                 html += '<div style="width:10px;height:10px;border-radius:50%;background:'+c+';flex-shrink:0;"></div>';
                 html += '<span style="font-weight:600;font-size:0.85rem;">'+esc(cat.name)+'</span>';
@@ -2040,17 +2052,18 @@ function addImPosition(form) {
     var ku=form.dataset.ku==='1'; var defTax=form.dataset.defaultTax||'19';
     var treatmentTypes = window._imTreatmentTypes || [];
     var row=document.createElement('div');
-    row.style.cssText='display:grid;grid-template-columns:2fr 80px 100px '+(ku?'0px':'70px')+' auto;gap:0.4rem;margin-bottom:0.4rem;align-items:center;';
+    row.style.cssText='display:grid;grid-template-columns:2fr 140px 80px 100px '+(ku?'0px':'70px')+' auto;gap:0.4rem;margin-bottom:0.4rem;align-items:center;';
     
     // Build treatment type select options
-    var treatmentOptions = '<option value="">— Manuell eingeben —</option>';
+    var treatmentOptions = '<option value="">— keine —</option>';
     treatmentTypes.forEach(function(tt){
         var price = parseFloat(tt.price) || 0;
         var priceStr = price > 0 ? ' ('+price.toFixed(2).replace('.',',')+' €)' : '';
         treatmentOptions += '<option value="'+tt.id+'" data-price="'+price+'" data-name="'+(tt.name||'')+'">'+tt.name+priceStr+'</option>';
     });
     
-    row.innerHTML='<select name="position_treatment_type_id[]" class="form-select form-select-sm im-treatment-type" style="font-size:0.8rem;">'+treatmentOptions+'</select>'
+    row.innerHTML='<input type="text" name="position_description[]" class="form-control form-control-sm im-desc" placeholder="Beschreibung" required>'
+        +'<select name="position_treatment_type_id[]" class="form-select form-select-sm im-treatment-type" style="font-size:0.8rem;">'+treatmentOptions+'</select>'
         +'<input type="number" name="position_quantity[]" class="form-control form-control-sm im-qty" value="1" min="0.01" step="0.01" style="text-align:right;">'
         +'<input type="number" name="position_price[]" class="form-control form-control-sm im-price" value="0.00" min="0" step="0.01" style="text-align:right;">'
         +(ku?'':'<input type="number" name="position_tax_rate[]" class="form-control form-control-sm im-tax im-tax-col" value="'+defTax+'" min="0" step="0.01" style="text-align:right;">')
@@ -2058,13 +2071,7 @@ function addImPosition(form) {
     
     // Treatment type change handler - auto-fill description and price
     var treatmentSelect = row.querySelector('.im-treatment-type');
-    var descInput = document.createElement('input');
-    descInput.type = 'text';
-    descInput.name = 'position_description[]';
-    descInput.className = 'form-control form-control-sm im-desc';
-    descInput.placeholder = 'Beschreibung';
-    descInput.required = true;
-    descInput.style.display = 'none'; // Hidden, value will be set from treatment
+    var descInput = row.querySelector('.im-desc');
     
     treatmentSelect.addEventListener('change', function(){
         var selectedOption = this.options[this.selectedIndex];
@@ -2073,18 +2080,17 @@ function addImPosition(form) {
         var descInput = row.querySelector('.im-desc');
         var priceInput = row.querySelector('.im-price');
         
-        if(descInput) descInput.value = name;
+        if(descInput && name) descInput.value = name;
         if(priceInput) priceInput.value = price.toFixed(2);
         imRecalc();
     });
     
+    row.querySelector('.im-desc')?.addEventListener('input',imRecalc);
     row.querySelector('.im-qty')?.addEventListener('input',imRecalc);
     row.querySelector('.im-price')?.addEventListener('input',imRecalc);
     row.querySelector('.im-tax')?.addEventListener('input',imRecalc);
     row.querySelector('.im-del').addEventListener('click',function(){row.remove();imRecalc();});
-    
-    // Add hidden description input
-    row.appendChild(descInput);
+
     document.getElementById('im-positions-container').appendChild(row);
 }
 
