@@ -164,6 +164,16 @@ class MobileApiController
 
     private function exceptionHandler(\Throwable $e): never
     {
+        $logMsg = sprintf(
+            "[%s] MobileApi Exception: %s in %s:%d\nStack trace:\n%s\n",
+            date('Y-m-d H:i:s'),
+            $e->getMessage(),
+            $e->getFile(),
+            $e->getLine(),
+            $e->getTraceAsString()
+        );
+        error_log($logMsg);
+
         $msg = $e->getMessage() . ' in ' . basename($e->getFile()) . ':' . $e->getLine();
         $this->error('500 Internal Error: ' . $msg, 500);
     }
@@ -194,23 +204,25 @@ class MobileApiController
         $tokenRow = false;
         $savedPrefix = $this->db->getPrefix();
         
-        // 1. Check if there is a global (unprefixed) table first
-        $this->db->setPrefix('');
+        // 1. Check for token row.
+        // We look for the token in the global table AND in potentially prefixed tables.
+        // IMPORTANT: We try to get the tenant_prefix from the token row.
         try {
+            $this->db->setPrefix('');
             $tokenRow = $this->db->fetch(
-                "SELECT t.*, u.*, u.id AS user_id,
-                        t.tenant_prefix
+                "SELECT t.*, u.*, u.id AS user_id, t.tenant_prefix
                  FROM mobile_api_tokens t
                  JOIN users u ON u.id = t.user_id
-                 WHERE t.token = ?
-                   AND (t.expires_at IS NULL OR t.expires_at > NOW())",
+                 WHERE t.token = ? AND (t.expires_at IS NULL OR t.expires_at > NOW())",
                 [$token]
             );
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
             $tokenRow = false;
         }
 
-        // 2. If not found globally, search across all prefixed tenant tables
+        // 2. If not found in global table, it might be in a tenant-specific table from an old version.
+        // We only do this scan as a absolute last resort to avoid 500s on heavy load.
+        // This is only necessary for tokens created before the global table was initialized.
         if ($tokenRow === false) {
             try {
                 $tables = $this->db->fetchAll(
@@ -245,7 +257,9 @@ class MobileApiController
                         continue;
                     }
                 }
-            } catch (\Throwable) {}
+            } catch (\Throwable $e) {
+                // Ignore schema errors here
+            }
         }
 
         // 3. Still nothing? Fallback to whatever current active prefix is (if randomly resolved)

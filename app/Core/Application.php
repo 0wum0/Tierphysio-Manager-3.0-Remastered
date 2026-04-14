@@ -203,14 +203,21 @@ class Application
                     AND table_name LIKE 't\_%\_users'
                   ORDER BY table_name ASC"
             );
+            
+            // If more than 1 tenant exists, auto-detection via schema is ambiguous and dangerous.
+            // We only allow it if there is exactly one prefix found.
+            $prefixes = [];
             foreach ($rows as $row) {
                 $tableName = $row['table_name'] ?? $row['TABLE_NAME'] ?? '';
-                /* Exclude portal/owner tables — the real staff users table never
-                   contains 'portal' in its name. */
                 if (str_contains($tableName, 'portal') || str_contains($tableName, 'attempt')) {
                     continue;
                 }
-                return substr($tableName, 0, -strlen('users'));
+                $prefixes[] = substr($tableName, 0, -strlen('users'));
+            }
+
+            $prefixes = array_unique($prefixes);
+            if (count($prefixes) === 1) {
+                return $prefixes[0];
             }
         } catch (\Throwable) {}
         return '';
