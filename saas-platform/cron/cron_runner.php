@@ -252,7 +252,7 @@ function notify(PDO $pdo, string $type, string $title, string $message): void
 function dispatchTenants(PDO $pdo): void
 {
     echo "  [TENANTS] Suche aktive Tenants...\n";
-    $tenants = $pdo->query("SELECT id, tid, db_name, practice_name FROM tenants WHERE status = 'active'")->fetchAll();
+    $tenants = $pdo->query("SELECT id, tid, db_name, practice_name FROM tenants WHERE status IN ('active', 'trial')")->fetchAll();
 
     foreach ($tenants as $t) {
         $tid   = $t['tid'];
