@@ -160,7 +160,7 @@ class GoogleSyncService
              WHERE m.id IS NULL
                AND a.status NOT IN ('cancelled','noshow')
                AND a.start_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
-             LIMIT 100"
+             LIMIT 20"
         );
         $unsynced = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -176,8 +176,23 @@ class GoogleSyncService
                     $this->syncCreated((int)$row['id']);
                 }
                 $success++;
-            } catch (\Throwable) {
+                
+                // Pause einbauen (250ms), um Google-Rate-Limits zu schonen
+                usleep(250000); 
+
+            } catch (\Throwable $e) {
                 $failed++;
+                $errorMsg = $e->getMessage();
+                
+                // Bei Rate-Limit Fehlern sofort abbrechen
+                if (str_contains($errorMsg, 'rateLimitExceeded') || str_contains($errorMsg, 'usageLimits')) {
+                    return [
+                        'success' => $success, 
+                        'skipped' => $skipped, 
+                        'failed'  => $failed, 
+                        'error'   => 'Google Rate Limit erreicht. Sync pausiert.'
+                    ];
+                }
             }
         }
 
