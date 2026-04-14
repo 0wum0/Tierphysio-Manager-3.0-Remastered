@@ -421,15 +421,19 @@ function runCron(tenantId, cronJobKey) {
 
 function updateUrlsAndCmds() {
     {% for tenant in tenants %}
-    const token{{ tenant.id }} = document.getElementById('token-{{ tenant.id }}').value;
-    const domain{{ tenant.id }} = 'app.therapano.de';
-    const tid{{ tenant.id }} = '{{ tenant.tid|default('') }}';
-    const url{{ tenant.id }} = 'https://' + domain{{ tenant.id }} + '/cron/dispatcher?tid=' + tid{{ tenant.id }} + '&token=' + token{{ tenant.id }};
-    const cmd{{ tenant.id }} = '*/10 * * * * curl -s "' + url{{ tenant.id }} + '" > /dev/null 2>&1';
+    const tokenEl{{ tenant.id }} = document.getElementById('token-{{ tenant.id }}');
+    if (tokenEl{{ tenant.id }}) {
+        const token{{ tenant.id }} = tokenEl{{ tenant.id }}.value;
+        const domain{{ tenant.id }} = 'app.therapano.de';
+        const tid{{ tenant.id }} = '{{ tenant.tid|default('') }}';
+        const url{{ tenant.id }} = 'https://' + domain{{ tenant.id }} + '/cron/dispatcher?tid=' + tid{{ tenant.id }} + '&token=' + token{{ tenant.id }};
 
-    document.getElementById('url-{{ tenant.id }}').value = url{{ tenant.id }};
-    document.getElementById('cmd-{{ tenant.id }}').value = cmd{{ tenant.id }};
-    document.getElementById('input-token-{{ tenant.id }}').value = token{{ tenant.id }};
+        const urlInput{{ tenant.id }} = document.getElementById('url-{{ tenant.id }}');
+        if (urlInput{{ tenant.id }}) urlInput{{ tenant.id }}.value = url{{ tenant.id }};
+
+        const inputToken{{ tenant.id }} = document.getElementById('input-token-{{ tenant.id }}');
+        if (inputToken{{ tenant.id }}) inputToken{{ tenant.id }}.value = token{{ tenant.id }};
+    }
     {% endfor %}
 }
 
