@@ -231,6 +231,10 @@ class MigrationService
         $addPrefix = function($name) use ($prefix) {
             // Clean name from backticks for comparison
             $cleanName = trim($name, '`"');
+            
+            // PROTECT PLACEHOLDERS
+            if (str_starts_with($cleanName, '__SQLKEY_')) return $name;
+            
             if (in_array(strtolower($cleanName), self::GLOBAL_TABLES)) return $name;
             
             // Only prefix if it's not already prefixed
