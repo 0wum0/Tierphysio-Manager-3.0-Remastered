@@ -100,6 +100,14 @@ class CronController extends Controller
         $this->cronLog("START dispatcher at {$startTime}");
 
         try {
+            // Tenant-Identifikation über tid-Parameter
+            $tid = $_GET['tid'] ?? '';
+            if ($tid) {
+                // Prefix aus tid setzen (z.B. praxis-wenzel -> t_praxis-wenzel_)
+                $prefix = 't_' . $tid . '_';
+                $this->db->setPrefix($prefix);
+            }
+
             $expectedToken = $this->settings->get('cron_dispatcher_token', '');
 
             if (empty($expectedToken)) {

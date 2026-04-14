@@ -199,7 +199,7 @@ class PraxisCronController extends Controller
         }
 
         // Get tenant
-        $tenant = $this->db->fetch("SELECT db_name, domain, email FROM tenants WHERE id = ?", [$tenantId]);
+        $tenant = $this->db->fetch("SELECT db_name, domain, email, tid FROM tenants WHERE id = ?", [$tenantId]);
         if (!$tenant) {
             echo json_encode(['success' => false, 'error' => 'Tenant nicht gefunden.']);
             exit;
@@ -224,6 +224,11 @@ class PraxisCronController extends Controller
         // Alle Praxen teilen sich dieselbe Domain app.therapano.de
         $domain = 'app.therapano.de';
         $url = 'https://' . $domain . $endpoint;
+
+        // Tenant-Identifikation über tid-Parameter hinzufügen
+        if (!empty($tenant['tid'])) {
+            $url .= '?tid=' . $tenant['tid'];
+        }
 
         // Get token from tenant settings
         $prefix = rtrim((string)($tenant['db_name'] ?? ''), '_') . '_';
