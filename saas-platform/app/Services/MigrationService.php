@@ -210,19 +210,56 @@ class MigrationService
 
     /**
      * Robust table name prefixing logic.
+     * Protects SQL keywords like CURRENT_TIMESTAMP from being incorrectly prefixed.
      */
     private function prefixTableNames(string $sql, string $prefix): string
     {
+        $placeholders = [];
+        $idx = 0;
+
+        // 1. Temporarily replace SQL functions/constants with placeholders
+        $sql = preg_replace_callback(
+            '/\b(CURRENT_TIMESTAMP|NOW|NULL|UTC_TIMESTAMP|CURRENT_DATE|CURRENT_TIME|CURRENT_USER)\b(\s*\(\s*\))?/i',
+            function ($m) use (&$placeholders, &$idx) {
+                $key = '__SQLKEY_' . ($idx++) . '__';
+                $placeholders[$key] = $m[0];
+                return $key;
+            },
+            $sql
+        );
+
         $addPrefix = function($name) use ($prefix) {
-            if (in_array(strtolower($name), self::GLOBAL_TABLES)) return $name;
-            return str_starts_with($name, $prefix) ? $name : $prefix . $name;
+            // Clean name from backticks for comparison
+            $cleanName = trim($name, '`"');
+            if (in_array(strtolower($cleanName), self::GLOBAL_TABLES)) return $name;
+            
+            // Only prefix if it's not already prefixed
+            if (str_starts_with($cleanName, $prefix)) return $name;
+            
+            // Re-apply backticks if they were present
+            return str_contains($name, '`') ? '`' . $prefix . $cleanName . '`' : $prefix . $cleanName;
         };
 
-        // Prefixing logic
-        $sql = preg_replace_callback('/\b(CREATE|DROP|ALTER)\s+TABLE\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?[`"]?([^`"\s]+)[`"]?/i', fn($m) => str_replace($m[2], $addPrefix($m[2]), $m[0]), $sql);
-        $sql = preg_replace_callback('/\b(INSERT|REPLACE|UPDATE|DELETE\s+FROM|TRUNCATE\s+TABLE)\s+(?:IGNORE\s+)?(?:INTO\s+)?[`"]?([^`"\s]+)[`"]?/i', fn($m) => str_replace($m[2], $addPrefix($m[2]), $m[0]), $sql);
-        $sql = preg_replace_callback('/\b(FROM|JOIN|REFERENCES)\s+[`"]?([^`"\s]+)[`"]?/i', fn($m) => str_replace($m[2], $addPrefix($m[2]), $m[0]), $sql);
-        $sql = preg_replace_callback('/\bCONSTRAINT\s+[`"]?([^`"\s]+)[`"]?/i', fn($m) => 'CONSTRAINT `' . $prefix . $m[1] . '`', $sql);
+        // 2. Prefix DDL Statements
+        $sql = preg_replace_callback('/\b(CREATE|DROP|ALTER)\s+TABLE\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?[`"]?([^`"\s\(\),;]+)[`"]?/i', 
+            fn($m) => str_replace($m[2], $addPrefix($m[2]), $m[0]), $sql);
+
+        // 3. Prefix DML Statements
+        $sql = preg_replace_callback('/\b(INSERT|REPLACE|UPDATE|DELETE\s+FROM|TRUNCATE\s+TABLE)\s+(?:IGNORE\s+)?(?:INTO\s+)?[`"]?([^`"\s\(\),;]+)[`"]?/i', 
+            fn($m) => str_replace($m[2], $addPrefix($m[2]), $m[0]), $sql);
+
+        // 4. Prefix Query/Relation keywords
+        $sql = preg_replace_callback('/\b(FROM|JOIN|REFERENCES)\s+[`"]?([^`"\s\(\),;]+)[`"]?/i', 
+            fn($m) => str_replace($m[2], $addPrefix($m[2]), $m[0]), $sql);
+
+        // 5. Prefix Constraints
+        $sql = preg_replace_callback('/\bCONSTRAINT\s+[`"]?([^`"\s]+)[`"]?/i', 
+            fn($m) => 'CONSTRAINT `' . $prefix . $m[1] . '`', $sql);
+
+        // 6. Restore shielded keywords
+        if (!empty($placeholders)) {
+            $sql = strtr($sql, $placeholders);
+        }
 
         return $sql;
     }
