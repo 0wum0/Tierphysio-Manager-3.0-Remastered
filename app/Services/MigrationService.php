@@ -107,7 +107,7 @@ class MigrationService
                     if ($e instanceof \PDOException && isset($e->errorInfo[1])) {
                         $errno = (int)$e->errorInfo[1];
                     }
-                    if (!in_array($errno, [1050, 1060, 1061, 1072, 1091, 1146, 1215], true)) {
+                    if (!in_array($errno, [1050, 1060, 1061, 1062, 1072, 1091, 1146, 1215], true)) {
                         throw $e;
                     }
                 }

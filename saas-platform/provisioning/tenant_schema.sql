@@ -455,7 +455,7 @@ INSERT IGNORE INTO `settings` (`key`, `value`) VALUES
 ('email_dunning_body',              ''),
 ('dunning_default_fee',             '5.00'),
 ('reminder_default_days',           '7'),
-('db_version',                      '41');
+('db_version',                      '48');
 
 -- ── treatment_types seed data ─────────────────────────────────
 INSERT IGNORE INTO `treatment_types` (`name`, `color`, `price`, `sort_order`) VALUES
@@ -472,6 +472,7 @@ INSERT IGNORE INTO `migrations` (`version`) VALUES
 (1),(2),(3),(4),(5),(6),(7),(8),(9),(10),
 (11),(12),(13),(14),(15),(16),(17),(18),(19),(20),
 (21),(22),(23),(24),(25),(26),(27),(28),(29),(30),
-(31),(32),(33),(34),(35),(36),(37),(38),(39),(40),(41);
+(31),(32),(33),(34),(35),(36),(37),(38),(39),(40),
+(41),(42),(43),(44),(45),(46),(47),(48);
 
 SET FOREIGN_KEY_CHECKS = 1;
