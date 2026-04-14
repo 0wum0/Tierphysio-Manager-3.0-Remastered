@@ -446,14 +446,29 @@ class MobileApiController
         $this->cors();
         $this->requireAuth();
 
-        $stats    = $this->invoices->getStats();
-        $settings = $this->settings->all();
+        $stats = [
+            'revenue_month' => 0.0,
+            'revenue_year'  => 0.0,
+            'open_count'    => 0,
+            'overdue_count' => 0,
+            'open_amount'   => 0.0,
+            'overdue_amount'=> 0.0,
+        ];
+        $settings = [];
 
-        $patientsTotal = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM `{$this->t('patients')}`");
-        $patientsNew   = (int)$this->db->fetchColumn(
-            "SELECT COUNT(*) FROM `{$this->t('patients')}` WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"
-        );
-        $ownersTotal = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM `{$this->t('owners')}`");
+        try { $stats = array_merge($stats, (array)$this->invoices->getStats()); } catch (\Throwable) {}
+        try { $settings = (array)$this->settings->all(); } catch (\Throwable) {}
+
+        $patientsTotal = 0;
+        $patientsNew   = 0;
+        $ownersTotal   = 0;
+        try {
+            $patientsTotal = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM `{$this->t('patients')}`");
+            $patientsNew   = (int)$this->db->fetchColumn(
+                "SELECT COUNT(*) FROM `{$this->t('patients')}` WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"
+            );
+            $ownersTotal = (int)$this->db->fetchColumn("SELECT COUNT(*) FROM `{$this->t('owners')}`");
+        } catch (\Throwable) {}
 
         $todayApts       = 0;
         $upcomingApts    = 0;
