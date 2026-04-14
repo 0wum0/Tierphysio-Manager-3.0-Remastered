@@ -109,8 +109,8 @@ class PraxisCronController extends Controller
         $prefix = rtrim((string)($tenant['db_name'] ?? ''), '_') . '_';
         $settingsTable = $prefix . 'settings';
 
-        // Debug: Log prefix and table name
-        error_log("DEBUG updateToken: db_name={$tenant['db_name']}, prefix={$prefix}, settingsTable={$settingsTable}");
+        // Debug: Show prefix and table name in flash message
+        $debugInfo = "DEBUG: db_name={$tenant['db_name']}, prefix={$prefix}, settingsTable={$settingsTable}";
 
         // Get cronjob config
         $cronjobs = [
@@ -136,9 +136,9 @@ class PraxisCronController extends Controller
             $actor = $this->session->get('saas_user') ?? 'admin';
             $this->log->log('praxis.cron.update_token', $actor, 'tenant', $tenantId, "Cron token updated for {$cronJobKey} in tenant {$tenant['slug']}");
 
-            $this->session->flash('success', 'Cron-Token aktualisiert.');
+            $this->session->flash('success', 'Cron-Token aktualisiert. ' . $debugInfo);
         } catch (\Throwable $e) {
-            $this->session->flash('error', 'Fehler beim Speichern: ' . $e->getMessage());
+            $this->session->flash('error', 'Fehler beim Speichern: ' . $e->getMessage() . ' - ' . $debugInfo);
         }
 
         $this->redirect('/admin/praxis-cron');
