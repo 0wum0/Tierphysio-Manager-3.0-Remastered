@@ -573,7 +573,7 @@ class DataMigrationController extends Controller
                     // Aktuelle Version ermitteln
                     $currentVersion = (int)($pdo->query("SELECT MAX(version) FROM `{$migTbl}`")->fetchColumn() ?? 0);
 
-                    if ($currentVersion >= 36) {
+                    if ($currentVersion >= 39) {
                         $successCount++;
                         continue;
                     }
@@ -600,6 +600,23 @@ class DataMigrationController extends Controller
                             }
                         }
                         $pdo->exec("INSERT IGNORE INTO `{$migTbl}` (version) VALUES (36)");
+                    }
+
+                    // Migration 039 — fehlende appointments-Spalten (recurrence_rule etc.)
+                    // Direkte Prefixierung des Tabellennamens, sicher mit IF NOT EXISTS
+                    if ($currentVersion < 39) {
+                        $aptTable = $prefix . 'appointments';
+                        $fix039 = [
+                            "ALTER TABLE `{$aptTable}` ADD COLUMN IF NOT EXISTS `recurrence_rule`          VARCHAR(512) NULL DEFAULT NULL AFTER `user_id`",
+                            "ALTER TABLE `{$aptTable}` ADD COLUMN IF NOT EXISTS `recurrence_parent`        INT UNSIGNED NULL DEFAULT NULL AFTER `recurrence_rule`",
+                            "ALTER TABLE `{$aptTable}` ADD COLUMN IF NOT EXISTS `patient_email`            VARCHAR(255) NULL DEFAULT NULL AFTER `owner_id`",
+                            "ALTER TABLE `{$aptTable}` ADD COLUMN IF NOT EXISTS `send_patient_reminder`    TINYINT(1) NOT NULL DEFAULT 0",
+                            "ALTER TABLE `{$aptTable}` ADD COLUMN IF NOT EXISTS `patient_reminder_sent`    TINYINT(1) NOT NULL DEFAULT 0",
+                        ];
+                        foreach ($fix039 as $stmt) {
+                            try { $pdo->exec($stmt); } catch (\Throwable $e) {}
+                        }
+                        $pdo->exec("INSERT IGNORE INTO `{$migTbl}` (version) VALUES (37),(38),(39)");
                     }
 
                     $successCount++;

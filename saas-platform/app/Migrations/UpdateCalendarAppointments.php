@@ -22,14 +22,21 @@ class UpdateCalendarAppointments
             $appointmentsTable = $prefix . 'appointments';
 
             try {
-                // Fehlende Spalten hinzufügen
-                $this->db->query("ALTER TABLE `{$appointmentsTable}` 
-                    ADD COLUMN IF NOT EXISTS `patient_email` VARCHAR(200) NULL DEFAULT NULL COMMENT 'E-Mail des Patienten für Erinnerungen',
-                    ADD COLUMN IF NOT EXISTS `send_patient_reminder` TINYINT(1) NOT NULL DEFAULT 0 COMMENT 'Erinnerung an Patient senden'");
+                // Fehlende Spalten hinzufügen (alle potenziell fehlenden Spalten)
+                $columns = [
+                    "ALTER TABLE `{$appointmentsTable}` ADD COLUMN IF NOT EXISTS `recurrence_rule`       VARCHAR(512) NULL DEFAULT NULL AFTER `user_id`",
+                    "ALTER TABLE `{$appointmentsTable}` ADD COLUMN IF NOT EXISTS `recurrence_parent`     INT UNSIGNED NULL DEFAULT NULL AFTER `recurrence_rule`",
+                    "ALTER TABLE `{$appointmentsTable}` ADD COLUMN IF NOT EXISTS `patient_email`         VARCHAR(255) NULL DEFAULT NULL AFTER `owner_id`",
+                    "ALTER TABLE `{$appointmentsTable}` ADD COLUMN IF NOT EXISTS `send_patient_reminder` TINYINT(1) NOT NULL DEFAULT 0",
+                    "ALTER TABLE `{$appointmentsTable}` ADD COLUMN IF NOT EXISTS `patient_reminder_sent` TINYINT(1) NOT NULL DEFAULT 0",
+                ];
+                foreach ($columns as $sql) {
+                    try { $this->db->query($sql, []); } catch (\Throwable $inner) {}
+                }
 
                 // Standard-Erinnerung aktualisieren
-                $this->db->query("UPDATE `{$appointmentsTable}` SET `reminder_minutes` = 1440 
-                    WHERE `reminder_minutes` = 60 OR `reminder_minutes` IS NULL");
+                $this->db->query("UPDATE `{$appointmentsTable}` SET `reminder_minutes` = 1440
+                    WHERE `reminder_minutes` = 60 OR `reminder_minutes` IS NULL", []);
 
                 echo "Updated appointments table for tenant: {$tenant['db_name']}\n";
             } catch (\Throwable $e) {
