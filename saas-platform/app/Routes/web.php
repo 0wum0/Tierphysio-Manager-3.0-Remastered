@@ -97,12 +97,7 @@ $router->post('/admin/updates/apply',      [UpdateController::class, 'applyUpdat
 
 // ── Daten-Import / Migration ─────────────────────────────────────────────
 $router->get('/admin/migration',                          [DataMigrationController::class, 'index']);
-$router->post('/admin/migration/run',                     [DataMigrationController::class, 'run']);
-$router->post('/admin/migration/patch-all',               [DataMigrationController::class, 'patchAll']);
-$router->post('/admin/migration/migrate-all',             [DataMigrationController::class, 'migrateAll']);
-$router->post('/admin/migration/patch-all-tenants',       [DataMigrationController::class, 'patchAllTenants']);
-$router->post('/admin/migration/plugins-all-tenants',     [DataMigrationController::class, 'migratePluginsAllTenants']);
-$router->post('/admin/migration/schema-all-tenants',      [DataMigrationController::class, 'migrateSchemaAllTenants']);
+$router->get('/admin/migration/migrate-all',             [DataMigrationController::class, 'migrateAllTenants']);
 
 // ── Payment Settings (Admin) ────────────────────────────────────────────────
 $router->get('/admin/payment-settings',              [PaymentSettingsController::class, 'index']);
@@ -124,7 +119,6 @@ $router->get('/admin/praxis-cron/run-now',           [PraxisCronController::clas
 
 // ── Datenbank-Version API ─────────────────────────────────────────────────────────────
 $router->get('/admin/migration/tenant-version',     [DataMigrationController::class, 'getTenantVersion']);
-$router->get('/admin/migration/migrate-all',       [DataMigrationController::class, 'migrateAllTenants']);
 $router->get('/admin/migration/reset-version',    [DataMigrationController::class, 'resetTenantVersion']);
 
 // ── Google Plugin: Einmal-Migration alle Tenants ───────────────────────────────────

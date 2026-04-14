@@ -14,14 +14,10 @@ use Ramsey\Uuid\Uuid;
 
 class TenantProvisioningService
 {
-    public function __construct(
-        private Config                 $config,
-        private Database               $db,
-        private TenantRepository       $tenantRepo,
-        private SubscriptionRepository $subRepo,
         private PlanRepository         $planRepo,
         private LicenseService         $licenseService,
-        private MailService            $mailService
+        private MailService            $mailService,
+        private MigrationService       $migrationService
     ) {}
 
     /**
@@ -305,6 +301,10 @@ class TenantProvisioningService
         // Führe alle Plugin-Migrations aus damit neue Tenants sofort
         // vollständig sind ohne dass sie die App aufrufen müssen.
         $this->runPluginMigrations($prefix);
+
+        // ── Zentrale SaaS-Migrations ausführen ──────────────────────────────
+        // Dies führt alle SQLs unter /migrations aus (v001 bis aktuell)
+        $this->migrationService->migrateTenant($prefix);
     }
 
     /**
