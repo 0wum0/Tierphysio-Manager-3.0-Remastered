@@ -109,6 +109,9 @@ class PraxisCronController extends Controller
         $prefix = rtrim((string)($tenant['db_name'] ?? ''), '_') . '_';
         $settingsTable = $prefix . 'settings';
 
+        // Debug: Log prefix and table name
+        error_log("DEBUG updateToken: db_name={$tenant['db_name']}, prefix={$prefix}, settingsTable={$settingsTable}");
+
         // Get cronjob config
         $cronjobs = [
             'dispatcher' => 'cron_dispatcher_token',
