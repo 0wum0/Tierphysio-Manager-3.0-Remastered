@@ -647,9 +647,22 @@ class DataMigrationController extends Controller
         $result = $this->migrationService->forceSyncTenant($prefix);
 
         if ($result['success']) {
-            $this->session->flash('success', "Datenbank für '{$tenant['practice_name']}' erfolgreich repariert (v{$result['to']}).");
+            $appliedCount = 0;
+            $skippedCount = 0;
+            
+            foreach ($result['report'] as $fileReport) {
+                $appliedCount += count($fileReport['applied'] ?? []);
+                $skippedCount += count($fileReport['skipped'] ?? []);
+            }
+
+            $msg = "Datenbank für '{$tenant['practice_name']}' erfolgreich repariert (v{$result['to']}). ";
+            $msg .= "Ergebnis: {$appliedCount} Statements ausgeführt, {$skippedCount} übersprungen (bereits vorhanden).";
+            
+            $this->session->flash('success', $msg);
         } else {
-            $this->session->flash('error', "Fehler bei der Reparatur: " . ($result['errors'][0]['error'] ?? 'Unbekannter Fehler'));
+            $lastFileReport = end($result['report']) ?: [];
+            $error = $lastFileReport['errors'][0] ?? ['msg' => 'Unbekannter Fehler'];
+            $this->session->flash('error', "Fehler bei der Reparatur: {$error['msg']} (bei Statement: " . mb_substr($error['stmt'] ?? '', 0, 100) . "...)");
         }
 
         $this->redirect('/admin/tenants/' . $tenantId);

@@ -74,34 +74,27 @@ class MigrationService
     }
 
     /**
-     * Run all missing migrations for a specific tenant.
+     * Führt alle ausstehenden Migrations für einen Tenant aus.
      */
     public function migrateTenant(string $prefix): array
     {
+        $this->ensureMigrationsTable($prefix);
         $currentVersion = $this->getTenantVersion($prefix);
         $latestVersion  = $this->getLatestVersion();
-        
-        $stats = [
-            'tenant'   => $prefix,
-            'from'     => $currentVersion,
-            'to'       => $latestVersion,
-            'applied'  => 0,
-            'errors'   => [],
-            'success'  => true,
-            'ran_count' => 0
+
+        $results = [
+            'success'   => true,
+            'from'      => $currentVersion,
+            'to'        => $currentVersion,
+            'ran_count' => 0,
+            'report'    => []
         ];
 
         if ($currentVersion >= $latestVersion) {
-            return $stats;
+            return $results;
         }
 
-        // Use root migrations folder
-        $migrationsDir = dirname($this->config->getRootPath()) . '/migrations';
-        $pdo = $this->db->getPdo();
-        
-        // Ensure migrations table exists
-        $this->ensureMigrationsTable($prefix);
-
+        $migrationsDir = $this->config->getRootPath() . '/migrations';
         $files = scandir($migrationsDir);
         sort($files);
 
@@ -109,38 +102,25 @@ class MigrationService
             if (preg_match('/^(\d{3})_/', $file, $matches)) {
                 $version = (int)$matches[1];
                 if ($version > $currentVersion) {
-                    try {
-                        $sql = (string)file_get_contents($migrationsDir . '/' . $file);
-                        $this->executeMigration($prefix, $version, $sql);
-                        $stats['applied']++;
-                        $stats['ran_count']++;
-                    } catch (\Throwable $e) {
-                        $stats['errors'][] = [
-                            'version' => $version,
-                            'file'    => $file,
-                            'error'   => $e->getMessage()
-                        ];
-                        $stats['success'] = false;
-                        break; // Stop on error
+                    $res = $this->executeMigration($migrationsDir . '/' . $file, $prefix);
+                    $results['report'][] = $res['report'];
+                    
+                    if (!$res['success']) {
+                        $results['success'] = false;
+                        break;
                     }
+                    
+                    $results['ran_count']++;
+                    $results['to'] = $version;
                 }
             }
         }
 
-        // Fallback: Also update settings table if it exists
-        if ($stats['success']) {
-            try {
-                $pdo->prepare("UPDATE `{$prefix}settings` SET `value` = ? WHERE `key` = 'db_version'")
-                    ->execute([$latestVersion]);
-            } catch (\Throwable) {}
-        }
-
-        return $stats;
+        return $results;
     }
 
     /**
-     * FORCE SYNC: Resets version to 0 and runs ALL migrations.
-     * This is used for "Repair" functionality.
+     * Erzwingt eine Neusynchronisation für einen Tenant.
      */
     public function forceSyncTenant(string $prefix): array
     {
@@ -149,56 +129,139 @@ class MigrationService
         $setTbl = $prefix . 'settings';
 
         try {
-            // Reset version in both places
+            // Version zurücksetzen
             $pdo->exec("DELETE FROM `{$migTbl}`");
             try {
                 $pdo->exec("UPDATE `{$setTbl}` SET `value` = '0' WHERE `key` = 'db_version'");
-            } catch (\Throwable) {}
+            } catch (\Throwable $e) {}
             
-            // Re-run everything
+            // Alles neu ausführen
             return $this->migrateTenant($prefix);
         } catch (\Throwable $e) {
             return [
                 'success' => false,
-                'message' => 'Reset failed: ' . $e->getMessage()
+                'message' => 'Reset fehlgeschlagen: ' . $e->getMessage()
             ];
         }
     }
 
     /**
-     * Execute a single migration SQL with proper prefixing.
+     * Führt eine einzelne Migrationsdatei für einen Tenant aus.
+     * Gibt einen detaillierten Bericht zurück.
      */
-    private function executeMigration(string $prefix, int $version, string $sql): void
+    public function executeMigration(string $file, string $prefix): array
     {
-        $pdo = $this->db->getPdo();
-        $migTbl = $prefix . 'migrations';
+        if (!file_exists($file)) {
+            return ['success' => false, 'error' => "Datei nicht gefunden: {$file}"];
+        }
 
-        // Apply robust prefixing
+        $version = (int)basename($file);
+        $sql     = (string)file_get_contents($file);
+        $pdo     = $this->db->getPdo();
+        $migTbl  = $prefix . 'migrations';
+
+        // Robustes Präfixing anwenden
         $prefixedSql = $this->prefixTableNames($sql, $prefix);
         $statements  = $this->splitStatements($prefixedSql);
 
         $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
         
+        $report = [
+            'version' => $version,
+            'applied' => [],
+            'skipped' => [],
+            'errors'  => []
+        ];
+
         foreach ($statements as $stmt) {
             $stmt = trim($stmt);
             if ($stmt === '' || $stmt === ';') continue;
             
             try {
                 $pdo->exec($stmt);
+                $report['applied'][] = mb_substr($stmt, 0, 100) . '...';
             } catch (\PDOException $e) {
-                // Ignore safe errors (already exists, duplicate column, etc.)
                 $code = (int)($e->errorInfo[1] ?? 0);
-                if (!in_array($code, [1050, 1060, 1061, 1062, 1068, 1091, 1054], true) && $e->getCode() !== '42S01') {
-                    throw $e;
+                $msg  = $e->getMessage();
+                
+                // Bekannte "Safe"-Fehler (Existiert bereits etc.)
+                if (in_array($code, [1050, 1060, 1061, 1062, 1068, 1091, 1054], true) || $e->getCode() === '42S01') {
+                    $report['skipped'][] = [
+                        'code' => $code,
+                        'msg'  => $msg,
+                        'stmt' => mb_substr($stmt, 0, 100) . '...'
+                    ];
+                } else {
+                    $report['errors'][] = [
+                        'code' => $code,
+                        'msg'  => $msg,
+                        'stmt' => $stmt
+                    ];
+                    // Bei kritischem Fehler abbrechen
+                    break;
                 }
             }
         }
 
         $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
 
-        // Mark as applied
-        $pdo->prepare("INSERT IGNORE INTO `{$migTbl}` (version, applied_at) VALUES (?, NOW())")
-            ->execute([$version]);
+        if (empty($report['errors'])) {
+            // Als angewandt markieren
+            $pdo->prepare("INSERT IGNORE INTO `{$migTbl}` (version, applied_at) VALUES (?, NOW())")
+                ->execute([$version]);
+            return ['success' => true, 'report' => $report];
+        }
+
+        return ['success' => false, 'report' => $report];
+    }
+
+    /**
+     * Robuste Tabellen-Präfix-Logik.
+     * Schützt SQL-Keywords und System-Schemas.
+     */
+    private function prefixTableNames(string $sql, string $prefix): string
+    {
+        $reserved = [
+            'current_timestamp', 'now', 'null', 'true', 'false', 'primary', 'key',
+            'index', 'unique', 'constraint', 'references', 'cascade', 'restrict',
+            'default', 'datetime', 'timestamp', 'varchar', 'text', 'enum', 'decimal',
+            'unsigned', 'charset', 'collate', 'engine', 'innodb', 'comment', 'on',
+            'update', 'delete', 'set', 'names', 'foreign', 'checks', 'exists', 'if', 'not',
+            'information_schema', 'performance_schema', 'mysql', 'sys', 'tables', 'columns'
+        ];
+
+        $addPrefix = function($name) use ($prefix, $reserved) {
+            $cleanName = trim($name, '`"');
+            $lowerName = strtolower($cleanName);
+            
+            // NIEMALS Schlüsselwörter oder System-Schemas präfixen
+            if (in_array($lowerName, $reserved)) return $name;
+            if (in_array($lowerName, self::GLOBAL_TABLES)) return $name;
+            if (str_contains($cleanName, '.')) return $name;
+            
+            // Bereits geprägt?
+            if (str_starts_with($cleanName, $prefix)) return $name;
+            
+            return str_contains($name, '`') ? '`' . $prefix . $cleanName . '`' : $prefix . $cleanName;
+        };
+
+        // 1. DDL Statements (CREATE, DROP, ALTER)
+        $sql = preg_replace_callback('/\b(CREATE|DROP|ALTER)\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`"]?([^`"\s\(\),;\.]+)[`"]?/i', 
+            fn($m) => str_replace($m[2], $addPrefix($m[2]), $m[0]), $sql);
+
+        // 2. DML Statements (INSERT, UPDATE, DELETE, TRUNCATE)
+        $sql = preg_replace_callback('/\b(INSERT|REPLACE|UPDATE|DELETE\s+FROM|TRUNCATE\s+TABLE)\s+(?:IGNORE\s+)?(?:INTO\s+)?[`"]?([^`"\s\(\),;\.]+)[`"]?/i', 
+            fn($m) => str_replace($m[2], $addPrefix($m[2]), $m[0]), $sql);
+
+        // 3. Relationen (FROM, JOIN, REFERENCES)
+        $sql = preg_replace_callback('/\b(FROM|JOIN|REFERENCES)\s+[`"]?([^`"\s\(\),;\.]+)[`"]?/i', 
+            fn($m) => str_replace($m[2], $addPrefix($m[2]), $m[0]), $sql);
+
+        // 4. Constraints
+        $sql = preg_replace_callback('/\bCONSTRAINT\s+[`"]?([^`"\s]+)[`"]?/i', 
+            fn($m) => 'CONSTRAINT `' . $prefix . $m[1] . '`', $sql);
+
+        return $sql;
     }
 
     private function ensureMigrationsTable(string $prefix): void
@@ -211,83 +274,6 @@ class MigrationService
             `version`    INT NOT NULL UNIQUE,
             `applied_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-    }
-
-    /**
-     * Robust table name prefixing logic.
-     * Protects SQL keywords and system schemas from being incorrectly prefixed.
-     */
-    private function prefixTableNames(string $sql, string $prefix): string
-    {
-        $placeholders = [];
-        $idx = 0;
-
-        // 1. Comprehensive list of SQL keywords and functions to protect
-        $keywords = [
-            'CURRENT_TIMESTAMP', 'CURRENT_DATE', 'CURRENT_TIME', 'CURRENT_USER',
-            'UTC_TIMESTAMP', 'UTC_DATE', 'UTC_TIME',
-            'NOW', 'NULL', 'TRUE', 'FALSE', 'AUTO_INCREMENT', 'PRIMARY', 'KEY',
-            'INDEX', 'UNIQUE', 'CONSTRAINT', 'REFERENCES', 'CASCADE', 'RESTRICT',
-            'DEFAULT', 'DATETIME', 'TIMESTAMP', 'VARCHAR', 'TEXT', 'ENUM', 'DECIMAL',
-            'NOT', 'EXISTS', 'UNSIGNED', 'CHARSET', 'COLLATE', 'AUTO_INCREMENT',
-            'ENGINE', 'INNODB', 'COMMENT', 'ON', 'UPDATE', 'DELETE', 'SET', 'NAMES',
-            'FOREIGN', 'CHECKS', 'SCHEMA', 'DATABASE', 'TABLES', 'COLUMNS',
-            'INFORMATION_SCHEMA', 'PERFORMANCE_SCHEMA', 'MYSQL', 'SYS'
-        ];
-
-        // Ensure we catch common functions like COUNT(), MAX() etc.
-        $sql = preg_replace_callback(
-            '/\b(' . implode('|', $keywords) . ')\b(\s*\(\s*\))?/i',
-            function ($m) use (&$placeholders, &$idx) {
-                $key = '__SQLKEY_' . ($idx++) . '__';
-                $placeholders[$key] = $m[0];
-                return $key;
-            },
-            $sql
-        );
-
-        $addPrefix = function($name) use ($prefix) {
-            $cleanName = trim($name, '`"');
-            
-            // Protect placeholders
-            if (str_starts_with($cleanName, '__SQLKEY_')) return $name;
-            
-            // Case-insensitive check for global tables or reserved words
-            $lowerName = strtolower($cleanName);
-            if (in_array($lowerName, self::GLOBAL_TABLES)) return $name;
-            
-            // Skip database-qualified names (containing .)
-            if (str_contains($cleanName, '.')) return $name;
-            
-            // Only prefix if it's not already prefixed
-            if (str_starts_with($cleanName, $prefix)) return $name;
-            
-            return str_contains($name, '`') ? '`' . $prefix . $cleanName . '`' : $prefix . $cleanName;
-        };
-
-        // Table detection regex — excluding more special characters like . () , ;
-        // DDL: CREATE, DROP, ALTER TABLE
-        $sql = preg_replace_callback('/\b(CREATE|DROP|ALTER)\s+TABLE\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?[`"]?([^`"\s\(\),;\.]+)[`"]?/i', 
-            fn($m) => str_replace($m[2], $addPrefix($m[2]), $m[0]), $sql);
-
-        // DML: INSERT, REPLACE, UPDATE, DELETE FROM, TRUNCATE TABLE
-        $sql = preg_replace_callback('/\b(INSERT|REPLACE|UPDATE|DELETE\s+FROM|TRUNCATE\s+TABLE)\s+(?:IGNORE\s+)?(?:INTO\s+)?[`"]?([^`"\s\(\),;\.]+)[`"]?/i', 
-            fn($m) => str_replace($m[2], $addPrefix($m[2]), $m[0]), $sql);
-
-        // Queries/Relations: FROM, JOIN, REFERENCES
-        $sql = preg_replace_callback('/\b(FROM|JOIN|REFERENCES)\s+[`"]?([^`"\s\(\),;\.]+)[`"]?/i', 
-            fn($m) => str_replace($m[2], $addPrefix($m[2]), $m[0]), $sql);
-
-        // Constraints
-        $sql = preg_replace_callback('/\bCONSTRAINT\s+[`"]?([^`"\s]+)[`"]?/i', 
-            fn($m) => 'CONSTRAINT `' . $prefix . $m[1] . '`', $sql);
-
-        // Restore shielded keywords
-        if (!empty($placeholders)) {
-            $sql = strtr($sql, $placeholders);
-        }
-
-        return $sql;
     }
 
     private function splitStatements(string $sql): array
