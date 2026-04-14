@@ -234,6 +234,7 @@ function syncStripeSubscriptions(PDO $pdo): void
 }
 
 // ── Helper: Notification erstellen ────────────────────────────────────────
+// ── Helper: Notification erstellen ────────────────────────────────────────
 function notify(PDO $pdo, string $type, string $title, string $message): void
 {
     try {
@@ -243,11 +244,99 @@ function notify(PDO $pdo, string $type, string $title, string $message): void
     } catch (\Throwable) {}
 }
 
+/**
+ * ── 7. Tenant Dispatcher & Self-Healing ──────────────────────────────────
+ * Triggers the local /cron/dispatcher for all active tenants.
+ * Also performs "Self-healing" for known missing columns or tables.
+ */
+function dispatchTenants(PDO $pdo): void
+{
+    echo "  [TENANTS] Suche aktive Tenants...\n";
+    $tenants = $pdo->query("SELECT id, tid, db_name, practice_name FROM tenants WHERE status = 'active'")->fetchAll();
+
+    foreach ($tenants as $t) {
+        $tid   = $t['tid'];
+        $prefix = $t['db_name'];
+        echo "  [TENANT] Verarbeite \"{$t['practice_name']}\" ({$tid})...\n";
+
+        // ── Self Healing ──
+        try {
+            // 1. Check for missing columns in appointments
+            $pdo->exec("ALTER TABLE `{$prefix}appointments` ADD COLUMN IF NOT EXISTS `reminder_minutes` SMALLINT UNSIGNED NULL DEFAULT 60 AFTER `notes`") ;
+            $pdo->exec("ALTER TABLE `{$prefix}appointments` ADD COLUMN IF NOT EXISTS `reminder_sent` TINYINT(1) NOT NULL DEFAULT 0 AFTER `reminder_minutes`") ;
+            $pdo->exec("ALTER TABLE `{$prefix}appointments` ADD COLUMN IF NOT EXISTS `patient_reminder_sent` TINYINT(1) NOT NULL DEFAULT 0 AFTER `reminder_sent`") ;
+
+            // 2. Ensure TherapyCare Pro tables exist (Basic set)
+            $pdo->exec("CREATE TABLE IF NOT EXISTS `{$prefix}tcp_reminder_queue` (
+                `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `template_id` INT UNSIGNED NULL,
+                `type` ENUM('appointment','homework','followup','custom') NOT NULL,
+                `patient_id` INT UNSIGNED NULL,
+                `owner_id` INT UNSIGNED NOT NULL,
+                `appointment_id` INT UNSIGNED NULL,
+                `subject` VARCHAR(255) NOT NULL,
+                `body` TEXT NOT NULL,
+                `send_at` DATETIME NOT NULL,
+                `sent_at` DATETIME NULL,
+                `status` ENUM('pending','sent','failed','cancelled') NOT NULL DEFAULT 'pending',
+                `error_message` TEXT NULL,
+                `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+            // Add other critical TCP tables if missing
+            $pdo->exec("CREATE TABLE IF NOT EXISTS `{$prefix}tcp_reminder_logs` (
+                `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                `queue_id` INT UNSIGNED NULL,
+                `type` VARCHAR(50) NOT NULL,
+                `recipient` VARCHAR(255) NOT NULL,
+                `subject` VARCHAR(255) NOT NULL,
+                `status` ENUM('sent','failed') NOT NULL,
+                `error` TEXT NULL,
+                `sent_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (`id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+
+        } catch (\Throwable $e) {
+            echo "    [WARN] Self-healing failed for {$tid}: " . $e->getMessage() . "\n";
+        }
+
+        // ── Dispatch via HTTP ──
+        // Since all tenants are hosted on app.therapano.de (or similar)
+        $baseUrl = getenv('APP_URL') ?: 'https://app.therapano.de';
+        $url     = $baseUrl . "/cron/dispatcher?tid=" . urlencode($tid);
+
+        // Optional: Token aus Settings holen falls erforderlich (obwohl wir den Header nutzen)
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 60,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_HTTPHEADER     => [
+                'X-Internal-Cron: true',
+                'User-Agent: TheraPano-SaaS-Dispatcher/1.0'
+            ],
+        ]);
+
+        $res      = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode >= 200 && $httpCode < 300) {
+            echo "    [OK] Dispatcher erfolgreich (HTTP {$httpCode})\n";
+        } else {
+            echo "    [FAIL] Dispatcher Fehler (HTTP {$httpCode})\n";
+            echo "    Response: " . substr((string)$res, 0, 200) . "...\n";
+        }
+    }
+}
+
 // ── Ausführen ─────────────────────────────────────────────────────────────
 try {
     checkTrialExpiry($pdo);
     checkOverduePayments($pdo);
     createRevenueSnapshot($pdo);
+    dispatchTenants($pdo);
 
     if ($mode === 'daily') {
         cleanOldNotifications($pdo);

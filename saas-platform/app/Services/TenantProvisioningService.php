@@ -349,6 +349,12 @@ class TenantProvisioningService
                     'google_calendar_sync_map',
                     'google_calendar_sync_log',
                     'google_calendar_imported_events',
+                    // TherapyCare Pro tables
+                    'tcp_progress_categories', 'tcp_progress_entries', 'tcp_exercise_feedback',
+                    'tcp_reminder_templates', 'tcp_reminder_queue', 'tcp_reminder_logs',
+                    'tcp_therapy_reports', 'tcp_exercise_library',
+                    'tcp_natural_therapy_types', 'tcp_natural_therapy_entries',
+                    'tcp_timeline_meta', 'tcp_portal_visibility',
                 ];
 
                 foreach ($tables as $table) {
@@ -448,6 +454,12 @@ class TenantProvisioningService
             'google_calendar_sync_map',
             'google_calendar_sync_log',
             'google_calendar_imported_events',
+            // TherapyCare Pro tables
+            'tcp_progress_categories', 'tcp_progress_entries', 'tcp_exercise_feedback',
+            'tcp_reminder_templates', 'tcp_reminder_queue', 'tcp_reminder_logs',
+            'tcp_therapy_reports', 'tcp_exercise_library',
+            'tcp_natural_therapy_types', 'tcp_natural_therapy_entries',
+            'tcp_timeline_meta', 'tcp_portal_visibility',
         ];
 
         foreach ($tables as $table) {
