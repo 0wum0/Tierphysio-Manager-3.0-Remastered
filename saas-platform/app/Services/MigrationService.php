@@ -217,12 +217,24 @@ class MigrationService
 
     /**
      * Robuste Tabellen-Präfix-Logik.
-     * Schützt SQL-Keywords und System-Schemas.
+     * Maskiert Strings und Kommentare, um Syntax-Fehler zu vermeiden.
      */
     private function prefixTableNames(string $sql, string $prefix): string
     {
-        // Vorher: Platzhalter {{prefix}} ersetzen (falls vorhanden)
+        // 0. Vorher: Platzhalter {{prefix}} ersetzen (falls vorhanden)
         $sql = str_replace(['{{prefix}}', '{{ prefix }}'], $prefix, $sql);
+
+        $placeholders = [];
+        $idx = 0;
+
+        // 1. Maskierung von Strings und Kommentaren (um Syntax-Zerstörung zu verhindern)
+        $maskPattern = "/('(?:''|\\\\.|[^'])*'|\"(?:\"\"|\\\\.|[^\"])*\"|`[^`]*`|\/\*.*?\*\/|--.*|#.*)/s";
+        
+        $sql = preg_replace_callback($maskPattern, function($m) use (&$placeholders, &$idx) {
+            $key = "___SQL_MASK_" . ($idx++) . "___";
+            $placeholders[$key] = $m[0];
+            return $key;
+        }, $sql);
 
         $reserved = [
             'current_timestamp', 'now', 'null', 'true', 'false', 'primary', 'key',
@@ -234,43 +246,35 @@ class MigrationService
         ];
 
         $addPrefix = function($name) use ($prefix, $reserved) {
-            $cleanName = trim($name, '`"\''); // Jetzt auch einfache Anführungszeichen trimmen!
+            $cleanName = trim($name, '`"\' ');
             $lowerName = strtolower($cleanName);
             
-            // NIEMALS Variablen (@sql), Schlüsselwörter oder System-Schemas präfixen
             if (str_starts_with($cleanName, '@')) return $name;
             if (in_array($lowerName, $reserved)) return $name;
             if (in_array($lowerName, self::GLOBAL_TABLES)) return $name;
             if (str_contains($cleanName, '.')) return $name;
+            if (str_starts_with($lowerName, strtolower($prefix))) return $name;
             
-            // Bereits geprägt?
-            if (str_starts_with($cleanName, $prefix)) return $name;
-            
-            // Erhalt der ursprünglichen Begrenzer
-            $quote = $name[0];
-            if ($quote !== '`' && $quote !== '"' && $quote !== '\'') $quote = '';
-            
-            if ($quote) {
-                return $quote . $prefix . $cleanName . $quote;
-            }
             return $prefix . $cleanName;
         };
 
-        // 1. DDL Statements (CREATE, DROP, ALTER)
+        // 2. Präfixen (nur auf dem maskierten SQL)
         $sql = preg_replace_callback('/\b(CREATE|DROP|ALTER)\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`"]?([^`"\s\(\),;\.]+)[`"]?/i', 
             fn($m) => str_replace($m[2], $addPrefix($m[2]), $m[0]), $sql);
 
-        // 2. DML Statements (INSERT, UPDATE, DELETE, TRUNCATE)
         $sql = preg_replace_callback('/\b(INSERT|REPLACE|UPDATE|DELETE\s+FROM|TRUNCATE\s+TABLE)\s+(?:IGNORE\s+)?(?:INTO\s+)?[`"]?([^`"\s\(\),;\.]+)[`"]?/i', 
             fn($m) => str_replace($m[2], $addPrefix($m[2]), $m[0]), $sql);
 
-        // 3. Relationen (FROM, JOIN, REFERENCES)
         $sql = preg_replace_callback('/\b(FROM|JOIN|REFERENCES)\s+[`"]?([^`"\s\(\),;\.]+)[`"]?/i', 
             fn($m) => str_replace($m[2], $addPrefix($m[2]), $m[0]), $sql);
 
-        // 4. Constraints
         $sql = preg_replace_callback('/\bCONSTRAINT\s+[`"]?([^`"\s]+)[`"]?/i', 
             fn($m) => 'CONSTRAINT `' . $prefix . $m[1] . '`', $sql);
+
+        // 3. Demaskierung
+        if (!empty($placeholders)) {
+            $sql = strtr($sql, $placeholders);
+        }
 
         return $sql;
     }
