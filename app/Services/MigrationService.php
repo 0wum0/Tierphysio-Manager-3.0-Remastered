@@ -8,6 +8,15 @@ use App\Core\Database;
 
 class MigrationService
 {
+    private const GLOBAL_TABLES = [
+        'tenants',
+        'plans',
+        'saas_admins',
+        'saas_logs',
+        'failed_jobs',
+        'migrations_global'
+    ];
+
     public function __construct(
         private readonly Database $db
     ) {}
@@ -107,17 +116,12 @@ class MigrationService
     }
 
     /**
-     * Ersetzt in einem SQL-String nur bekannte Tabellennamen (Whitelist) mit dem
-     * Tenant-Prefix sowie CONSTRAINT-Namen, damit bei Multi-Tenant keine
-     * doppelten Foreign-Key-Namen (errno 121) entstehen.
-     *
-     * WICHTIG: Niemals blind alle Backtick-Identifier prefixen — das würde auch
-     * Spaltennamen wie `key`, `value`, `name` usw. kaputt machen.
+     * Ersetzt in einem SQL-String Tabellennamen mit dem Tenant-Prefix.
+     * Schützt globale Tabellen vor dem Prefixing.
      */
     private function applyPrefixToSql(string $sql): string
     {
         $prefix = $this->db->prefix('');
-
         if ($prefix === '') {
             return $sql;
         }
@@ -129,28 +133,38 @@ class MigrationService
             $sql
         );
 
-        /* 2. Nur bekannte Tabellennamen prefixen */
-        $tables = [
-            'users','settings','owners','patients','appointments','appointment_waitlist',
-            'invoices','invoice_items','invoice_positions','invoice_reminders','invoice_dunnings',
-            'waitlist','user_preferences','migrations',
-            'patient_timeline','treatment_types',
-            'mobile_api_tokens','cron_job_log',
-            'befundboegen','befundbogen_felder',
-            'vet_reports',
-            'gdpr_consents',
-            'invoice_cancellations',
-            'invoice_audit_log',
-            'gobd_audit_log',
-        ];
+        $addPrefix = function($name) use ($prefix) {
+            // Check if it's a global table - if so, don't prefix
+            if (in_array(strtolower($name), self::GLOBAL_TABLES)) {
+                return $name;
+            }
+            return str_starts_with($name, $prefix) ? $name : $prefix . $name;
+        };
 
-        foreach ($tables as $table) {
-            $sql = preg_replace(
-                '/`' . preg_quote($table, '/') . '`/',
-                '`' . $prefix . $table . '`',
-                $sql
-            );
-        }
+        // 2. Prefix DDL/DML statements
+        // CREATE TABLE / DROP TABLE
+        $sql = preg_replace_callback('/\b(CREATE|DROP)\s+TABLE\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?`([^`]+)`/i', fn($m) => str_replace('`'.$m[2].'`', '`'.$addPrefix($m[2]).'`', $m[0]), $sql);
+        
+        // INSERT INTO / REPLACE INTO
+        $sql = preg_replace_callback('/\b(INSERT|REPLACE)\s+(?:IGNORE\s+)?INTO\s+`([^`]+)`/i', fn($m) => str_replace('`'.$m[2].'`', '`'.$addPrefix($m[2]).'`', $m[0]), $sql);
+        
+        // UPDATE
+        $sql = preg_replace_callback('/(?<!\w)UPDATE\s+`([^`]+)`/i', fn($m) => str_replace('`'.$m[1].'`', '`'.$addPrefix($m[1]).'`', $m[0]), $sql);
+        
+        // DELETE FROM / TRUNCATE TABLE
+        $sql = preg_replace_callback('/\bDELETE\s+FROM\s+`([^`]+)`/i', fn($m) => str_replace('`'.$m[1].'`', '`'.$addPrefix($m[1]).'`', $m[0]), $sql);
+        $sql = preg_replace_callback('/\bTRUNCATE\s+TABLE\s+`([^`]+)`/i', fn($m) => str_replace('`'.$m[1].'`', '`'.$addPrefix($m[1]).'`', $m[0]), $sql);
+        
+        // ALTER TABLE
+        $sql = preg_replace_callback('/\bALTER\s+TABLE\s+`([^`]+)`/i', fn($m) => str_replace('`'.$m[1].'`', '`'.$addPrefix($m[1]).'`', $m[0]), $sql);
+        
+        // JOIN / FROM patterns
+        $sql = preg_replace_callback('/\b(FROM|JOIN)\s+`([^`]+)`/i', function($m) use ($addPrefix) {
+            return $m[1] . ' `' . $addPrefix($m[2]) . '`';
+        }, $sql);
+
+        // REFERENCES
+        $sql = preg_replace_callback('/\bREFERENCES\s+`([^`]+)`/i', fn($m) => str_replace('`'.$m[1].'`', '`'.$addPrefix($m[1]).'`', $m[0]), $sql);
 
         return $sql;
     }
