@@ -47,6 +47,15 @@ class MigrationService
         return isset($m[1]) ? (int)$m[1] : 0;
     }
 
+    public function forceSync(): array
+    {
+        // 1. Reset version to 0 to make all migrations "pending"
+        $this->setVersion(0);
+        
+        // 2. Run all migrations (our engine handles IF NOT EXISTS/IGNORE)
+        return $this->runPending();
+    }
+
     public function getPendingMigrations(): array
     {
         $current = $this->getCurrentVersion();

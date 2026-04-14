@@ -1,4 +1,4 @@
-﻿{% extends active_theme_layout ?? 'layouts/base.twig' %}
+{% extends active_theme_layout ?? 'layouts/base.twig' %}
 
 {% block content %}
 <div class="page-header">
@@ -310,7 +310,11 @@
             </div>
         </div>
 
-        <div class="flex justify-end mt-3">
+        <div class="flex justify-end mt-3 gap-2">
+            <button type="button" id="btn-test-smtp" class="btn btn-secondary">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:4px;"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+                Verbindung testen
+            </button>
             <button type="submit" class="btn btn-primary">
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="17 21 17 13 7 13 7 21"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="7 3 7 8 15 8"/></svg>
                 {{ t('common.save') }}
@@ -318,6 +322,38 @@
         </div>
     </form>
 </div>
+
+<script>
+document.getElementById('btn-test-smtp')?.addEventListener('click', async function() {
+    const btn = this;
+    const originalHtml = btn.innerHTML;
+    const form = btn.closest('form');
+    const formData = new FormData(form);
+    
+    btn.disabled = true;
+    btn.textContent = 'Testet...';
+    
+    try {
+        const response = await fetch('/einstellungen/smtp/test', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast('success', result.message);
+        } else {
+            showToast('error', result.message);
+        }
+    } catch (e) {
+        showToast('error', 'Netzwerkfehler beim Verbindungstest.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+    }
+});
+</script>
 
 {# ════════════════════════════════════════════════════
    TAB: DARSTELLUNG
@@ -1484,14 +1520,16 @@ function openEditHT(ht) {
                 </div>
             {% endif %}
         </div>
-        <div class="glass-card" style="flex:1;min-width:280px;">
-            <h3 class="section-title">Systeminfo</h3>
-            <div style="display:flex;flex-direction:column;gap:0.625rem;">
-                <div class="flex justify-between text-sm"><span class="text-muted">PHP Version</span><span class="font-medium">{{ php_version }}</span></div>
-                <div class="flex justify-between text-sm"><span class="text-muted">App Version</span><span class="font-medium">{{ app_version }}</span></div>
-                <div class="flex justify-between text-sm"><span class="text-muted">Umgebung</span><span class="badge {{ app_env == 'production' ? 'badge-aktiv' : 'badge-warning' }}">{{ app_env }}</span></div>
-                <div class="flex justify-between text-sm"><span class="text-muted">DB-Version</span><span class="font-medium">v{{ current_version }}</span></div>
-            </div>
+        <div class="glass-card" style="flex:1;min-width:280px;border-color:rgba(239,68,68,0.2);">
+            <h3 class="section-title" style="color:var(--danger) !important;">Reparatur-Modus</h3>
+            <p class="text-muted mb-3" style="font-size:0.78rem;">Verwenden Sie diese Funktion nur, wenn Tabellen fehlen oder Fehlermeldungen in der Patientenakte auftreten. Alle Migrationsschritte werden erneut überprüft.</p>
+            <form action="/einstellungen/migrations/repair" method="POST">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="btn btn-secondary btn-sm" style="width:100%;" data-confirm="System-Reparatur wirklich starten? Alle Datenbank-Änderungen werden erneut validiert.">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:4px;"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.77 3.77z"/></svg>
+                    Tabellen reparieren
+                </button>
+            </form>
         </div>
     </div>
 </div>

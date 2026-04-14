@@ -12,6 +12,7 @@ use App\Core\View;
 use App\Core\PluginManager;
 use App\Services\SettingsService;
 use App\Services\MigrationService;
+use App\Services\MailService;
 use App\Repositories\UserRepository;
 use App\Repositories\TreatmentTypeRepository;
 use App\Repositories\HomeworkRepository;
@@ -28,7 +29,8 @@ class SettingsController extends Controller
         private readonly MigrationService $migrationService,
         private readonly UserRepository $userRepository,
         private readonly TreatmentTypeRepository $treatmentTypeRepository,
-        private readonly HomeworkRepository $homeworkRepository
+        private readonly HomeworkRepository $homeworkRepository,
+        private readonly MailService $mailService
     ) {
         parent::__construct($view, $session, $config, $translator);
     }
@@ -333,6 +335,58 @@ class SettingsController extends Controller
         }
 
         $this->redirect('/einstellungen#updates');
+    }
+
+    /**
+     * Forced Sync / Repair: Resets version to 0 and re-runs all migrations.
+     */
+    public function repairMigrations(array $params = []): void
+    {
+        $this->validateCsrf();
+
+        try {
+            $ran = $this->migrationService->forceSync();
+            $this->session->flash('success', 'System-Reparatur abgeschlossen. ' . count($ran) . ' Migrations-Schritte überprüft.');
+        } catch (\Throwable $e) {
+            $this->session->flash('error', 'Fehler bei der Reparatur: ' . $e->getMessage());
+        }
+
+        $this->redirect('/einstellungen#updates');
+    }
+
+    /**
+     * Tests SMTP Connection with POST data
+     */
+    public function testSmtp(array $params = []): void
+    {
+        $this->validateCsrf();
+
+        // Collect config from POST (not yet saved to DB)
+        $config = [
+            'smtp_host'          => $this->post('smtp_host', ''),
+            'smtp_port'          => $this->post('smtp_port', '587'),
+            'smtp_username'      => $this->post('smtp_username', ''),
+            'smtp_password'      => $this->post('smtp_password', ''),
+            'smtp_encryption'    => $this->post('smtp_encryption', 'tls'),
+            'mail_from_address'  => $this->post('mail_from_address', ''),
+            'mail_from_name'     => $this->post('mail_from_name', 'SMTP Test'),
+        ];
+
+        $target = $config['mail_from_address'] ?: 'test@example.com';
+        
+        header('Content-Type: application/json');
+        
+        if (empty($config['smtp_host'])) {
+            echo json_encode(['success' => false, 'message' => 'Bitte geben Sie einen SMTP-Host an.']);
+            exit;
+        }
+
+        if ($this->mailService->testConnection($config, $target)) {
+            echo json_encode(['success' => true, 'message' => 'Verbindung erfolgreich! Eine Test-E-Mail wurde an ' . $target . ' gesendet.']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Verbindung fehlgeschlagen: ' . $this->mailService->getLastError()]);
+        }
+        exit;
     }
 
     public function users(array $params = []): void

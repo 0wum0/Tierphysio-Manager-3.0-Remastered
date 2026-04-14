@@ -493,7 +493,9 @@ $router->post('/einstellungen/plugins/{name}/aktivieren', [SettingsController::c
 $router->post('/einstellungen/plugins/{name}/deaktivieren', [SettingsController::class, 'disablePlugin'], ['admin']);
 $router->get('/einstellungen/updater', [SettingsController::class, 'updater'], ['admin']);
 $router->post('/einstellungen/updater/run', [SettingsController::class, 'runMigrations'], ['admin']);
+$router->post('/einstellungen/migrations/repair', [SettingsController::class, 'repairMigrations'], ['admin']);
 $router->post('/einstellungen/migrationen', [SettingsController::class, 'runMigrations'], ['admin']);
+$router->post('/einstellungen/smtp/test', [SettingsController::class, 'testSmtp'], ['admin']);
 $router->get('/einstellungen/benutzer', [SettingsController::class, 'users'], ['admin']);
 $router->post('/einstellungen/benutzer', [SettingsController::class, 'createUser'], ['admin']);
 $router->post('/einstellungen/benutzer/{id}', [SettingsController::class, 'updateUser'], ['admin']);

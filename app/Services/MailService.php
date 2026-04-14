@@ -273,6 +273,43 @@ class MailService
         }
     }
 
+    public function testConnection(array $config, string $toEmail): bool
+    {
+        try {
+            $mailer = new PHPMailer(true);
+            $mailer->isSMTP();
+            $mailer->Host       = $config['smtp_host'] ?? '';
+            $mailer->Port       = (int)($config['smtp_port'] ?? 587);
+            $mailer->Username   = $config['smtp_username'] ?? '';
+            $mailer->Password   = $config['smtp_password'] ?? '';
+            $mailer->SMTPAuth   = !empty($mailer->Username);
+            $mailer->Timeout    = 10;
+            
+            $enc = $config['smtp_encryption'] ?? 'tls';
+            if ($enc === 'ssl') {
+                $mailer->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
+            } elseif ($enc === 'none') {
+                $mailer->SMTPSecure  = '';
+                $mailer->SMTPAutoTLS = false;
+            } else {
+                $mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            }
+
+            $mailer->setFrom($config['mail_from_address'] ?? 'test@example.com', $config['mail_from_name'] ?? 'SMTP Test');
+            $mailer->addAddress($toEmail);
+            $mailer->Subject = '🚀 SMTP Verbindungstest — TheraPano';
+            $mailer->isHTML(true);
+            
+            $body = "<h3>SMTP Test erfolgreich!</h3><p>Diese Nachricht bestätigt, dass die E-Mail-Einstellungen in TheraPano korrekt konfiguriert sind.</p><hr><p>Zeitpunkt: " . date('d.m.Y H:i:s') . "</p>";
+            $mailer->Body = $this->wrapInEmailLayout('SMTP Test Erfolgreich', $body, '🚀');
+            
+            return $mailer->send();
+        } catch (\Throwable $e) {
+            $this->lastError = $e->getMessage();
+            return false;
+        }
+    }
+
     public function sendRaw(string $to, string $toName, string $subject, string $body, array $attachments = []): bool
     {
         try {
