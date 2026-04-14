@@ -77,7 +77,7 @@ class MobileApiController
      *   1. Look up the prefix stored in the token row (set at login time).
      *   2. If not stored yet, auto-detect via INFORMATION_SCHEMA: find the
      *      t_*_users table whose rows contain the given e-mail address.
-     *   3. Fallback: take the first t_*_users table found (single-tenant case).
+     *   3. Fallback only if there is exactly one tenant users table.
      *
      * The detected prefix is written into the token row on the first call so
      * subsequent requests skip the expensive schema lookup.
@@ -114,19 +114,75 @@ class MobileApiController
                     return $prefix;
                 }
             }
-            // Fallback: single-tenant – use the first matching table
+            // Fallback only when there is exactly one usable tenant users table.
+            $usable = [];
             foreach ($rows as $row) {
                 $tableName = $row['table_name'] ?? $row['TABLE_NAME'] ?? '';
-                if (str_contains($tableName, 'portal') || str_contains($tableName, 'attempt')) {
+                if ($tableName === '' || str_contains($tableName, 'portal') || str_contains($tableName, 'attempt')) {
                     continue;
                 }
-                $prefix = substr($tableName, 0, -strlen('users'));
+                $usable[] = $tableName;
+            }
+            if (count($usable) === 1) {
+                $prefix = substr($usable[0], 0, -strlen('users'));
                 $this->db->setPrefix($prefix);
                 return $prefix;
             }
         } catch (\Throwable $e) {
             // Schema lookup failed – log silently
         }
+        return '';
+    }
+
+    /**
+     * Resolve the exact tenant by validating credentials against all tenant users tables.
+     * This avoids picking the wrong tenant when the same email exists in multiple tenants.
+     */
+    private function resolveTenantPrefixForCredentials(string $email, string $password): string
+    {
+        try {
+            $rows = $this->db->fetchAll(
+                "SELECT table_name FROM information_schema.tables
+                  WHERE table_schema = DATABASE()
+                    AND table_name LIKE 't\_%\_users'
+                  ORDER BY table_name ASC"
+            );
+
+            foreach ($rows as $row) {
+                $tableName = $row['table_name'] ?? $row['TABLE_NAME'] ?? '';
+                if ($tableName === '' || str_contains($tableName, 'portal') || str_contains($tableName, 'attempt')) {
+                    continue;
+                }
+
+                try {
+                    $candidate = $this->db->fetch(
+                        "SELECT * FROM `{$tableName}` WHERE email = ? LIMIT 1",
+                        [$email]
+                    );
+                    if (!$candidate) {
+                        continue;
+                    }
+
+                    $hash = (string)($candidate['password'] ?? $candidate['password_hash'] ?? '');
+                    if ($hash === '' || !password_verify($password, $hash)) {
+                        continue;
+                    }
+
+                    $isActive = (int)($candidate['active'] ?? $candidate['is_active'] ?? 1);
+                    if ($isActive !== 1) {
+                        continue;
+                    }
+
+                    $prefix = substr($tableName, 0, -strlen('users'));
+                    $this->db->setPrefix($prefix);
+                    return $prefix;
+                } catch (\Throwable) {
+                    continue;
+                }
+            }
+        } catch (\Throwable) {
+        }
+
         return '';
     }
 
@@ -204,61 +260,56 @@ class MobileApiController
         $tokenRow = false;
         $savedPrefix = $this->db->getPrefix();
         
-        // 1. Check for token row.
-        // We look for the token in the global table AND in potentially prefixed tables.
-        // IMPORTANT: We try to get the tenant_prefix from the token row.
+        // 1. Search prefixed tenant token tables first (authoritative in multi-tenant mode).
         try {
-            $this->db->setPrefix('');
-            $tokenRow = $this->db->fetch(
-                "SELECT t.*, u.*, u.id AS user_id, t.tenant_prefix
-                 FROM mobile_api_tokens t
-                 JOIN users u ON u.id = t.user_id
-                 WHERE t.token = ? AND (t.expires_at IS NULL OR t.expires_at > NOW())",
-                [$token]
+            $tables = $this->db->fetchAll(
+                "SELECT table_name FROM information_schema.tables
+                 WHERE table_schema = DATABASE()
+                   AND table_name LIKE 't\_%\_mobile\_api\_tokens'"
             );
-        } catch (\Throwable $e) {
-            $tokenRow = false;
-        }
+            foreach ($tables as $row) {
+                $tableName = $row['table_name'] ?? $row['TABLE_NAME'] ?? '';
+                $prefix = substr($tableName, 0, -strlen('mobile_api_tokens'));
 
-        // 2. If not found in global table, it might be in a tenant-specific table from an old version.
-        // We only do this scan as a absolute last resort to avoid 500s on heavy load.
-        // This is only necessary for tokens created before the global table was initialized.
-        if ($tokenRow === false) {
-            try {
-                $tables = $this->db->fetchAll(
-                    "SELECT table_name FROM information_schema.tables
-                     WHERE table_schema = DATABASE()
-                       AND table_name LIKE 't\_%\_mobile\_api\_tokens'"
-                );
-                foreach ($tables as $row) {
-                    $tableName = $row['table_name'] ?? $row['TABLE_NAME'] ?? '';
-                    $prefix = substr($tableName, 0, -strlen('mobile_api_tokens'));
-                    
-                    $this->db->setPrefix($prefix);
-                    try {
-                        $testRow = $this->db->fetch(
-                            "SELECT t.*, u.*, u.id AS user_id,
-                                    t.tenant_prefix
-                             FROM `{$this->t('mobile_api_tokens')}` t
-                             JOIN `{$this->t('users')}` u ON u.id = t.user_id
-                             WHERE t.token = ?
-                               AND (t.expires_at IS NULL OR t.expires_at > NOW())",
-                            [$token]
-                        );
-                        if ($testRow) {
-                            $tokenRow = $testRow;
-                            // Ensure the prefix is right
-                            if (empty($tokenRow['tenant_prefix'])) {
-                                $tokenRow['tenant_prefix'] = $prefix;
-                            }
-                            break; // found it
+                $this->db->setPrefix($prefix);
+                try {
+                    $testRow = $this->db->fetch(
+                        "SELECT t.*, u.*, u.id AS user_id,
+                                t.tenant_prefix
+                         FROM `{$this->t('mobile_api_tokens')}` t
+                         JOIN `{$this->t('users')}` u ON u.id = t.user_id
+                         WHERE t.token = ?
+                           AND (t.expires_at IS NULL OR t.expires_at > NOW())",
+                        [$token]
+                    );
+                    if ($testRow) {
+                        $tokenRow = $testRow;
+                        if (empty($tokenRow['tenant_prefix'])) {
+                            $tokenRow['tenant_prefix'] = $prefix;
                         }
-                    } catch (\Throwable) {
-                        continue;
+                        break;
                     }
+                } catch (\Throwable) {
+                    continue;
                 }
-            } catch (\Throwable $e) {
-                // Ignore schema errors here
+            }
+        } catch (\Throwable) {}
+
+        // 2. Fallback: check global (legacy) token table.
+        if ($tokenRow === false) {
+            $this->db->setPrefix('');
+            try {
+                $tokenRow = $this->db->fetch(
+                    "SELECT t.*, u.*, u.id AS user_id,
+                            t.tenant_prefix
+                     FROM mobile_api_tokens t
+                     JOIN users u ON u.id = t.user_id
+                     WHERE t.token = ?
+                       AND (t.expires_at IS NULL OR t.expires_at > NOW())",
+                    [$token]
+                );
+            } catch (\Throwable) {
+                $tokenRow = false;
             }
         }
 
@@ -293,6 +344,17 @@ class MobileApiController
             $this->db->setPrefix($storedPrefix);
         } else {
             $this->resolveTenantPrefixForEmail($tokenRow['email'] ?? '');
+        }
+
+        // Persist tenant_prefix if it was inferred dynamically.
+        if (($tokenRow['tenant_prefix'] ?? '') === '' && $this->db->getPrefix() !== '') {
+            try {
+                $this->db->execute(
+                    "UPDATE `{$this->t('mobile_api_tokens')}` SET tenant_prefix = ? WHERE token = ?",
+                    [$this->db->getPrefix(), $token]
+                );
+            } catch (\Throwable) {
+            }
         }
 
         // Update last_used
@@ -335,7 +397,10 @@ class MobileApiController
         // ── Tenant-Prefix-Auflösung ────────────────────────────────────────────
         // The Mobile API is stateless – no PHP session. We must find the correct
         // tenant prefix from the database schema before querying the users table.
-        $prefix = $this->resolveTenantPrefixForEmail($email);
+        $prefix = $this->resolveTenantPrefixForCredentials($email, $password);
+        if ($prefix === '') {
+            $prefix = $this->resolveTenantPrefixForEmail($email);
+        }
 
         if ($prefix === '') {
             // Log this for diagnostics
@@ -399,12 +464,17 @@ class MobileApiController
                     $this->error('Datenbank-Fehler (Tabelle fehlt). Bitte an Admin wenden.', 500);
                 }
             } else {
-                // Otherwise (e.g. table exists but column missing), try fallback
+                // Otherwise (e.g. column drift), self-heal and retry with tenant_prefix.
                 try {
                     $this->db->execute(
-                        "INSERT INTO `{$this->t('mobile_api_tokens')}` (user_id, token, device_name, expires_at, created_at)
-                         VALUES (?, ?, ?, ?, NOW())",
-                        [$user['id'], $token, $deviceName, $expiresAt]
+                        "ALTER TABLE `{$this->t('mobile_api_tokens')}` ADD COLUMN IF NOT EXISTS `tenant_prefix` VARCHAR(64) NOT NULL DEFAULT ''"
+                    );
+                } catch (\Throwable) {}
+                try {
+                    $this->db->execute(
+                        "INSERT INTO `{$this->t('mobile_api_tokens')}` (user_id, token, device_name, tenant_prefix, expires_at, created_at)
+                         VALUES (?, ?, ?, ?, ?, NOW())",
+                        [$user['id'], $token, $deviceName, $prefix, $expiresAt]
                     );
                 } catch (\Throwable $fallbackEx) {
                     error_log('[MobileApi] Insert fallback failed: ' . $fallbackEx->getMessage());

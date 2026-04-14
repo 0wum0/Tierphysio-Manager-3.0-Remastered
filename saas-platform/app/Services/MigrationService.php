@@ -190,7 +190,6 @@ class MigrationService
                 }
 
                 // Keep bootstrap non-fatal: migrations below can still heal incrementally.
-                error_log("[MigrationService] Bootstrap error for {$prefix}: " . $e->getMessage() . " (Code: {$code}) in statement: " . substr($stmt, 0, 100));
                 continue;
             }
         }
