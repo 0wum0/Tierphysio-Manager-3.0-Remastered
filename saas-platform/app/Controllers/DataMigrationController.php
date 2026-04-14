@@ -1271,4 +1271,53 @@ class DataMigrationController extends Controller
         echo json_encode(['success' => false, 'message' => $message], JSON_UNESCAPED_UNICODE);
         exit;
     }
+
+    /**
+     * GET /admin/repair-all-tenants/{secret}
+     * Emergency repair for all tenants from the web.
+     */
+    public function repairAllTenantsEmergency(array $params = []): void
+    {
+        $secret = $params['secret'] ?? '';
+        if ($secret !== 'repair2026') {
+            http_response_code(403);
+            echo "Forbidden: Invalid Secret.";
+            exit;
+        }
+
+        header('Content-Type: text/html; charset=utf-8');
+        echo "<h1>SaaS Platform: Mandanten-Reparatur wird gestartet...</h1>";
+        echo "<pre>";
+
+        try {
+            $tenants = $this->tenantRepo->all(1000, 0);
+            echo "Gefundene Mandanten: " . count($tenants) . "\n" . str_repeat("-", 40) . "\n";
+
+            foreach ($tenants as $t) {
+                $prefix = rtrim((string)($t['db_name'] ?? ''), '_') . '_';
+                if ($prefix === '_' || empty($t['db_name'])) continue;
+
+                echo "Repariere Mandant: {$t['practice_name']} ({$prefix})...\n";
+                try {
+                    // forceSyncTenant ensures all missing migrations are applied even if the version check matches.
+                    $res = $this->migrationService->forceSyncTenant($prefix);
+                    if ($res['success']) {
+                        echo "  ✓ OK (Version {$res['from']} -> {$res['to']})\n";
+                    } else {
+                        echo "  ✗ FEHLER: " . json_encode($res['report']) . "\n";
+                    }
+                } catch (\Throwable $e) {
+                    echo "  ✗ FATAL: " . $e->getMessage() . "\n";
+                }
+                echo str_repeat("-", 40) . "\n";
+                flush();
+            }
+
+            echo "\nFERTIG.";
+        } catch (\Throwable $e) {
+            echo "Kritischer Fehler: " . $e->getMessage();
+        }
+        echo "</pre>";
+        exit;
+    }
 }
