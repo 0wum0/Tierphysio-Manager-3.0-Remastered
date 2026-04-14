@@ -139,6 +139,7 @@ class PatientController extends Controller
         $tcpFeedback   = null;
         $tcpCategories = null;
         $tcpVisibility = null;
+        $tcpNaturalTypes = null;
         try {
             if (class_exists('\Plugins\TherapyCarePro\TherapyCareRepository')) {
                 $db         = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
@@ -147,6 +148,7 @@ class PatientController extends Controller
                 $tcpProgress   = $tcpRepo->getLatestProgressForPatient($patId);
                 $tcpCategories = $tcpRepo->getActiveProgressCategories();
                 $tcpNatural    = $tcpRepo->getNaturalEntriesForPatient($patId);
+                $tcpNaturalTypes = $tcpRepo->getNaturalTherapyTypesByCategory();
                 $tcpReports    = $tcpRepo->getTherapyReportsForPatient($patId);
                 $tcpFeedback   = $tcpRepo->getFeedbackForPatient($patId, 30);
                 $tcpVisibility = $tcpRepo->getPortalVisibility($patId);
@@ -170,6 +172,7 @@ class PatientController extends Controller
             'tcp_progress'             => $tcpProgress,
             'tcp_categories'           => $tcpCategories,
             'tcp_natural'              => $tcpNatural,
+            'tcp_natural_types'        => $tcpNaturalTypes,
             'tcp_reports'              => $tcpReports,
             'tcp_feedback'             => $tcpFeedback,
             'tcp_visibility'           => $tcpVisibility,
