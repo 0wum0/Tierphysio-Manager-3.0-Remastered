@@ -601,7 +601,7 @@ class CalendarController extends Controller
             'user_id'           => $user ? (int)$user['id'] : null,
             'recurrence_rule'   => $this->post('recurrence_rule') ?: null,
             'notes'             => $this->post('notes', ''),
-            'reminder_minutes'  => (int)$this->post('reminder_minutes', 60),
+            'reminder_minutes'  => (int)$this->post('reminder_minutes', 1440),
         ];
     }
 

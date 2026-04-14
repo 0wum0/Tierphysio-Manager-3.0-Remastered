@@ -194,9 +194,9 @@
                             <option value="0">Keine</option>
                             <option value="15">15 Minuten</option>
                             <option value="30">30 Minuten</option>
-                            <option value="60" selected>1 Stunde</option>
+                            <option value="60">1 Stunde</option>
                             <option value="120">2 Stunden</option>
-                            <option value="1440">1 Tag</option>
+                            <option value="1440" selected>1 Tag</option>
                         </select>
                     </div>
                     <div class="form-group" style="display:flex;align-items:center;padding-top:1.5rem;">
@@ -365,7 +365,7 @@
         setSelectVal('apt-owner',      p.owner_id);
         setSelectVal('apt-treatment',  p.treatment_type_id);
         setSelectVal('apt-recurrence', p.recurrence_rule || '');
-        setSelectVal('apt-reminder',   p.reminder_minutes ?? 60);
+        setSelectVal('apt-reminder',   p.reminder_minutes ?? 1440);
 
         document.getElementById('btn-apt-delete').style.display  = '';
         document.getElementById('btn-apt-invoice').style.display = '';

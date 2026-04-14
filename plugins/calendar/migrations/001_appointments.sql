@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS `appointments` (
     `recurrence_parent` INT UNSIGNED NULL DEFAULT NULL,
     `notes`             TEXT NULL,
     `reminder_sent`     TINYINT(1) NOT NULL DEFAULT 0,
-    `reminder_minutes`  SMALLINT UNSIGNED NULL DEFAULT 60,
+    `reminder_minutes`  SMALLINT UNSIGNED NULL DEFAULT 1440,
     `invoice_id`        INT UNSIGNED NULL DEFAULT NULL,
     `created_at`        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at`        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

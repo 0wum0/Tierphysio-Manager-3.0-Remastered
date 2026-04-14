@@ -111,7 +111,7 @@ class AppointmentRepository
                 $data['recurrence_rule'] ?? null,
                 $data['recurrence_parent'] ?? null,
                 $data['notes'] ?? null,
-                $data['reminder_minutes'] ?? 60,
+                $data['reminder_minutes'] ?? 1440,
                 $data['send_patient_reminder'] ?? 0,
             ]
         );
@@ -141,7 +141,7 @@ class AppointmentRepository
                 $data['user_id'] ?? null,
                 $data['recurrence_rule'] ?? null,
                 $data['notes'] ?? null,
-                $data['reminder_minutes'] ?? 60,
+                $data['reminder_minutes'] ?? 1440,
                 $data['send_patient_reminder'] ?? 0,
                 $id,
             ]
