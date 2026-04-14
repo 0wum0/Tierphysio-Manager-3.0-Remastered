@@ -77,6 +77,7 @@ class MigrationService
      */
     public function migrateTenant(string $prefix): array
     {
+        $this->ensureTenantBaseSchema($prefix);
         $this->ensureMigrationsTable($prefix);
         $currentVersion = $this->getTenantVersion($prefix);
         $latestVersion  = $this->getLatestVersion();
@@ -142,6 +143,83 @@ class MigrationService
         }
     }
 
+
+    /**
+     * Ensure the canonical tenant base schema exists before running incremental migrations.
+     *
+     * This self-heals tenants where core tables were accidentally removed and prevents
+     * ALTER TABLE migrations from failing with 1146 / 42S02 (table not found).
+     */
+    private function ensureTenantBaseSchema(string $prefix): void
+    {
+        $schemaPath = $this->config->getRootPath() . '/provisioning/tenant_schema.sql';
+        if (!is_file($schemaPath)) {
+            return;
+        }
+
+        $sql = (string)file_get_contents($schemaPath);
+        if ($sql === '') {
+            return;
+        }
+
+        $pdo        = $this->db->getPdo();
+        $prefixed   = $this->prefixTableNames($sql, $prefix);
+        $statements = $this->splitStatements($prefixed);
+
+        $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
+
+        foreach ($statements as $stmt) {
+            $stmt = trim($stmt);
+            if ($stmt === '' || $stmt === ';') {
+                continue;
+            }
+
+            // Never run destructive statements in schema bootstrap on existing tenants.
+            if (!$this->isSafeBootstrapStatement($stmt)) {
+                continue;
+            }
+
+            try {
+                $pdo->exec($stmt);
+            } catch (\PDOException $e) {
+                $code = (int)($e->errorInfo[1] ?? 0);
+
+                // Ignore idempotent / already-existing failures while bootstrapping.
+                if (in_array($code, [1050, 1060, 1061, 1062, 1068, 1091, 1054, 1146], true) || in_array($e->getCode(), ['42S01', '42S02'], true)) {
+                    continue;
+                }
+
+                // Keep bootstrap non-fatal: migrations below can still heal incrementally.
+                continue;
+            }
+        }
+
+        $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
+    }
+
+
+    /**
+     * Safety gate for base-schema bootstrap on existing tenants.
+     *
+     * We intentionally allow only additive statements to avoid any data loss
+     * when repair is executed for productive practices.
+     */
+    private function isSafeBootstrapStatement(string $stmt): bool
+    {
+        $s = strtoupper(ltrim($stmt));
+
+        if (str_starts_with($s, 'DROP ') || str_starts_with($s, 'TRUNCATE ') || str_starts_with($s, 'DELETE ')) {
+            return false;
+        }
+
+        return str_starts_with($s, 'SET ')
+            || str_starts_with($s, 'CREATE TABLE')
+            || str_starts_with($s, 'ALTER TABLE')
+            || str_starts_with($s, 'CREATE INDEX')
+            || str_starts_with($s, 'CREATE UNIQUE INDEX')
+            || str_starts_with($s, 'INSERT IGNORE INTO');
+    }
+
     /**
      * Führt eine einzelne Migrationsdatei für einen Tenant aus.
      */
@@ -179,7 +257,7 @@ class MigrationService
                 $code = (int)($e->errorInfo[1] ?? 0);
                 $msg  = $e->getMessage();
                 
-                if (in_array($code, [1050, 1060, 1061, 1062, 1068, 1091, 1054], true) || $e->getCode() === '42S01') {
+                if (in_array($code, [1050, 1060, 1061, 1062, 1068, 1091, 1054, 1146], true) || in_array($e->getCode(), ['42S01', '42S02'], true)) {
                     $report['skipped'][] = [
                         'code' => $code,
                         'msg'  => $msg,
