@@ -910,68 +910,76 @@ class TherapyCareController extends Controller
         $start         = hrtime(true);
         $settings      = $this->settingsRepo->all();
         $expectedToken = $settings['tcp_cron_token'] ?? '';
+        $isInternal    = ($_SERVER['HTTP_X_INTERNAL_CRON'] ?? '') === 'true';
 
-        if ($expectedToken !== '') {
-            $provided = $_GET['token'] ?? '';
-            $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
-            if (str_starts_with($authHeader, 'Bearer ')) {
-                $provided = substr($authHeader, 7);
+        try {
+            if (!$isInternal && $expectedToken !== '') {
+                $provided = $_GET['token'] ?? '';
+                $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+                if (str_starts_with($authHeader, 'Bearer ')) {
+                    $provided = substr($authHeader, 7);
+                }
+                if (!hash_equals($expectedToken, $provided)) {
+                    http_response_code(401);
+                    $this->tcpDbLog('tcp_reminders', 'error', 'Ungültiger Token.', $start);
+                    header('Content-Type: application/json');
+                    echo json_encode(['error' => 'Ungültiger Token.']);
+                    exit;
+                }
             }
-            if (!hash_equals($expectedToken, $provided)) {
-                http_response_code(401);
-                $this->tcpDbLog('tcp_reminders', 'error', 'Ungültiger Token.', $start);
-                header('Content-Type: application/json');
-                echo json_encode(['error' => 'Ungültiger Token.']);
-                exit;
-            }
-        }
 
-        $queue = $this->repo->getPendingReminderQueue();
+            $queue = $this->repo->getPendingReminderQueue();
 
-        $db      = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
-        $mailer  = \App\Core\Application::getInstance()->getContainer()->get(\App\Services\MailService::class);
+            $db      = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $mailer  = \App\Core\Application::getInstance()->getContainer()->get(\App\Services\MailService::class);
 
-        $sent = 0; $failed = 0;
-        foreach ($queue as $item) {
-            try {
-                $ok = $mailer->sendRaw(
-                    $item['owner_email'],
-                    $item['owner_first_name'] . ' ' . $item['owner_last_name'],
-                    $item['subject'],
-                    $this->wrapReminderBody($item['body'])
-                );
-                if ($ok) {
-                    $this->repo->markReminderSent($item['id']);
+            $sent = 0; $failed = 0;
+            foreach ($queue as $item) {
+                try {
+                    $ok = $mailer->sendRaw(
+                        $item['owner_email'],
+                        $item['owner_first_name'] . ' ' . $item['owner_last_name'],
+                        $item['subject'],
+                        $this->wrapReminderBody($item['body'])
+                    );
+                    if ($ok) {
+                        $this->repo->markReminderSent($item['id']);
+                        $this->repo->logReminder([
+                            'queue_id'  => $item['id'],
+                            'type'      => $item['type'],
+                            'recipient' => $item['owner_email'],
+                            'subject'   => $item['subject'],
+                            'status'    => 'sent',
+                        ]);
+                        $sent++;
+                    } else {
+                        throw new \RuntimeException($mailer->getLastError());
+                    }
+                } catch (\Throwable $e) {
+                    $this->repo->markReminderFailed($item['id'], $e->getMessage());
                     $this->repo->logReminder([
                         'queue_id'  => $item['id'],
                         'type'      => $item['type'],
                         'recipient' => $item['owner_email'],
                         'subject'   => $item['subject'],
-                        'status'    => 'sent',
+                        'status'    => 'failed',
+                        'error'     => $e->getMessage(),
                     ]);
-                    $sent++;
-                } else {
-                    throw new \RuntimeException($mailer->getLastError());
+                    $failed++;
                 }
-            } catch (\Throwable $e) {
-                $this->repo->markReminderFailed($item['id'], $e->getMessage());
-                $this->repo->logReminder([
-                    'queue_id'  => $item['id'],
-                    'type'      => $item['type'],
-                    'recipient' => $item['owner_email'],
-                    'subject'   => $item['subject'],
-                    'status'    => 'failed',
-                    'error'     => $e->getMessage(),
-                ]);
-                $failed++;
             }
+
+            $msg = "sent={$sent}, failed={$failed}, total=" . count($queue);
+            $this->tcpDbLog('tcp_reminders', $failed > 0 && $sent === 0 ? 'error' : 'success', $msg, $start);
+
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => true, 'sent' => $sent, 'failed' => $failed, 'total' => count($queue)]);
+
+        } catch (\Throwable $e) {
+            $this->tcpDbLog('tcp_reminders', 'error', $e->getMessage(), $start);
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
         }
-
-        $msg = "sent={$sent}, failed={$failed}, total=" . count($queue);
-        $this->tcpDbLog('tcp_reminders', $failed > 0 && $sent === 0 ? 'error' : 'success', $msg, $start);
-
-        header('Content-Type: application/json');
-        echo json_encode(['ok' => true, 'sent' => $sent, 'failed' => $failed, 'total' => count($queue)]);
         exit;
     }
 

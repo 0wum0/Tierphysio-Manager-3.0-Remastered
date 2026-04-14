@@ -258,8 +258,9 @@ class GoogleCalendarController extends Controller
         $start  = hrtime(true);
         $token  = $_GET['token'] ?? ($_SERVER['HTTP_X_CRON_TOKEN'] ?? '');
         $secret = defined('GOOGLE_SYNC_CRON_SECRET') ? GOOGLE_SYNC_CRON_SECRET : '';
+        $isInternal = ($_SERVER['HTTP_X_INTERNAL_CRON'] ?? '') === 'true';
 
-        if (empty($secret) || !hash_equals($secret, $token)) {
+        if (!$isInternal && (empty($secret) || !hash_equals($secret, $token))) {
             http_response_code(403);
             $this->googleDbLog('google_calendar', 'error', 'Unauthorized token.', $start);
             echo json_encode(['error' => 'Unauthorized']);

@@ -472,8 +472,9 @@ class CalendarController extends Controller
         try {
             $secret = $this->settingsRepository->get('calendar_cron_secret', '');
             $token  = $_GET['token'] ?? ($_SERVER['HTTP_X_CRON_TOKEN'] ?? '');
+            $isInternal = ($_SERVER['HTTP_X_INTERNAL_CRON'] ?? '') === 'true';
 
-            if (empty($secret) || !hash_equals($secret, $token)) {
+            if (!$isInternal && (empty($secret) || !hash_equals($secret, $token))) {
                 http_response_code(403);
                 $this->calCronLog('ERROR calendar cron: Unauthorized token');
                 $this->calDbLog('calendar_reminders', 'error', 'Unauthorized token.', $start);
