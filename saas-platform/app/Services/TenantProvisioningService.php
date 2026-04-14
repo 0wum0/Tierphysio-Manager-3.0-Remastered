@@ -10,10 +10,17 @@ use Saas\Core\Database;
 use Saas\Repositories\TenantRepository;
 use Saas\Repositories\SubscriptionRepository;
 use Saas\Repositories\PlanRepository;
+use Saas\Services\MigrationService;
+use Saas\Services\MailService;
+use Saas\Services\LicenseService;
 use Ramsey\Uuid\Uuid;
 
 class TenantProvisioningService
 {
+    public function __construct(
+        private Database               $db,
+        private TenantRepository       $tenantRepo,
+        private SubscriptionRepository $subscriptionRepo,
         private PlanRepository         $planRepo,
         private LicenseService         $licenseService,
         private MailService            $mailService,
