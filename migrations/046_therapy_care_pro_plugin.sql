@@ -90,6 +90,14 @@ CREATE TABLE IF NOT EXISTS `tcp_reminder_templates` (
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Ensure columns exist if table was already created (Self-healing)
+ALTER TABLE `tcp_reminder_templates` ADD COLUMN `type` ENUM('appointment','homework','followup') NOT NULL DEFAULT 'appointment' AFTER `id`;
+ALTER TABLE `tcp_reminder_templates` ADD COLUMN `name` VARCHAR(150) NOT NULL AFTER `type`;
+ALTER TABLE `tcp_reminder_templates` ADD COLUMN `subject` VARCHAR(255) NOT NULL AFTER `name`;
+ALTER TABLE `tcp_reminder_templates` ADD COLUMN `body` TEXT NOT NULL AFTER `subject`;
+ALTER TABLE `tcp_reminder_templates` ADD COLUMN `trigger_hours` INT NOT NULL DEFAULT 24 AFTER `body`;
+ALTER TABLE `tcp_reminder_templates` ADD COLUMN `is_active` TINYINT(1) NOT NULL DEFAULT 1 AFTER `trigger_hours`;
+
 CREATE TABLE IF NOT EXISTS `tcp_reminder_queue` (
     `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `template_id`   INT UNSIGNED NULL,
@@ -112,6 +120,10 @@ CREATE TABLE IF NOT EXISTS `tcp_reminder_queue` (
     CONSTRAINT `fk_tcp_rq_patient` FOREIGN KEY (`patient_id`) REFERENCES `patients` (`id`) ON DELETE CASCADE,
     CONSTRAINT `fk_tcp_rq_owner`   FOREIGN KEY (`owner_id`)   REFERENCES `owners` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Ensure columns exist
+ALTER TABLE `tcp_reminder_queue` ADD COLUMN `type` ENUM('appointment','homework','followup','custom') NOT NULL AFTER `template_id`;
+ALTER TABLE `tcp_reminder_queue` ADD COLUMN `status` ENUM('pending','sent','failed','cancelled') NOT NULL DEFAULT 'pending' AFTER `sent_at`;
 
 CREATE TABLE IF NOT EXISTS `tcp_reminder_logs` (
     `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
