@@ -237,7 +237,8 @@ class MigrationService
             $cleanName = trim($name, '`"');
             $lowerName = strtolower($cleanName);
             
-            // NIEMALS Schlüsselwörter oder System-Schemas präfixen
+            // NIEMALS Variablen (@sql), Schlüsselwörter oder System-Schemas präfixen
+            if (str_starts_with($cleanName, '@')) return $name;
             if (in_array($lowerName, $reserved)) return $name;
             if (in_array($lowerName, self::GLOBAL_TABLES)) return $name;
             if (str_contains($cleanName, '.')) return $name;
