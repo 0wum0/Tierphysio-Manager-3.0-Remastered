@@ -196,7 +196,7 @@ class PraxisCronController extends Controller
         }
 
         // Get tenant
-        $tenant = $this->db->fetch("SELECT db_name, email FROM tenants WHERE id = ?", [$tenantId]);
+        $tenant = $this->db->fetch("SELECT db_name, domain, email FROM tenants WHERE id = ?", [$tenantId]);
         if (!$tenant) {
             echo json_encode(['success' => false, 'error' => 'Tenant nicht gefunden.']);
             exit;
@@ -218,9 +218,13 @@ class PraxisCronController extends Controller
         }
 
         $endpoint = $cronjobs[$cronJobKey];
-        // Extract domain from email
-        $emailParts = explode('@', $tenant['email']);
-        $domain = isset($emailParts[1]) ? $emailParts[1] : 'example.com';
+        // Use domain column if available, otherwise fallback to email domain
+        if (!empty($tenant['domain'])) {
+            $domain = $tenant['domain'];
+        } else {
+            $emailParts = explode('@', $tenant['email']);
+            $domain = isset($emailParts[1]) ? $emailParts[1] : 'example.com';
+        }
         $url = 'https://' . $domain . $endpoint;
 
         // Get token from tenant settings

@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS `tenants` (
   `plan_id`       INT UNSIGNED NOT NULL,
   `status`        ENUM('pending','active','paused','cancelled','suspended') NOT NULL DEFAULT 'pending',
   `db_name`       VARCHAR(100) COMMENT 'Name der Tenant-Datenbank',
+  `domain`        VARCHAR(200) COMMENT 'Domain der Praxis-App (z.B. praxis.example.com)',
   `db_created`    TINYINT(1) NOT NULL DEFAULT 0,
   `admin_created` TINYINT(1) NOT NULL DEFAULT 0,
   `trial_ends_at` DATETIME,
