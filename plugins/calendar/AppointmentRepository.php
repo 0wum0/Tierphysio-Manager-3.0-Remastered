@@ -94,7 +94,7 @@ class AppointmentRepository
              (title, description, start_at, end_at, all_day, status, color,
               patient_id, owner_id, treatment_type_id, user_id,
               recurrence_rule, recurrence_parent, notes, reminder_minutes)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             [
                 $data['title'],
                 $data['description'] ?? null,
