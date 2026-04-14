@@ -234,7 +234,7 @@ class MigrationService
         ];
 
         $addPrefix = function($name) use ($prefix, $reserved) {
-            $cleanName = trim($name, '`"');
+            $cleanName = trim($name, '`"\''); // Jetzt auch einfache Anführungszeichen trimmen!
             $lowerName = strtolower($cleanName);
             
             // NIEMALS Variablen (@sql), Schlüsselwörter oder System-Schemas präfixen
@@ -246,7 +246,14 @@ class MigrationService
             // Bereits geprägt?
             if (str_starts_with($cleanName, $prefix)) return $name;
             
-            return str_contains($name, '`') ? '`' . $prefix . $cleanName . '`' : $prefix . $cleanName;
+            // Erhalt der ursprünglichen Begrenzer
+            $quote = $name[0];
+            if ($quote !== '`' && $quote !== '"' && $quote !== '\'') $quote = '';
+            
+            if ($quote) {
+                return $quote . $prefix . $cleanName . $quote;
+            }
+            return $prefix . $cleanName;
         };
 
         // 1. DDL Statements (CREATE, DROP, ALTER)
