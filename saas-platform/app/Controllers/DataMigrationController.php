@@ -12,6 +12,7 @@ use Saas\Core\Database;
 use Saas\Repositories\TenantRepository;
 use Saas\Repositories\PlanRepository;
 use Saas\Services\TenantProvisioningService;
+use Saas\Services\MigrationService;
 
 class DataMigrationController extends Controller
 {
