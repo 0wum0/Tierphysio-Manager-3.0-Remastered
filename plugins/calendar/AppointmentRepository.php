@@ -92,9 +92,9 @@ class AppointmentRepository
         $this->db->query(
             "INSERT INTO `{$this->t('appointments')}`
              (title, description, start_at, end_at, all_day, status, color,
-              patient_id, owner_id, patient_email, treatment_type_id, user_id,
-              recurrence_rule, recurrence_parent, notes, reminder_minutes, send_patient_reminder)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+              patient_id, owner_id, treatment_type_id, user_id,
+              recurrence_rule, recurrence_parent, notes, reminder_minutes)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             [
                 $data['title'],
                 $data['description'] ?? null,
@@ -105,14 +105,12 @@ class AppointmentRepository
                 $data['color'] ?? null,
                 $data['patient_id'] ?? null,
                 $data['owner_id'] ?? null,
-                $data['patient_email'] ?? null,
                 $data['treatment_type_id'] ?? null,
                 $data['user_id'] ?? null,
                 $data['recurrence_rule'] ?? null,
                 $data['recurrence_parent'] ?? null,
                 $data['notes'] ?? null,
                 $data['reminder_minutes'] ?? 1440,
-                $data['send_patient_reminder'] ?? 0,
             ]
         );
         return (int)$this->db->lastInsertId();
@@ -123,8 +121,8 @@ class AppointmentRepository
         $this->db->query(
             "UPDATE `{$this->t('appointments')}` SET
              title=?, description=?, start_at=?, end_at=?, all_day=?, status=?, color=?,
-             patient_id=?, owner_id=?, patient_email=?, treatment_type_id=?, user_id=?,
-             recurrence_rule=?, notes=?, reminder_minutes=?, send_patient_reminder=?
+             patient_id=?, owner_id=?, treatment_type_id=?, user_id=?,
+             recurrence_rule=?, notes=?, reminder_minutes=?
              WHERE id=?",
             [
                 $data['title'],
@@ -136,13 +134,11 @@ class AppointmentRepository
                 $data['color'] ?? null,
                 $data['patient_id'] ?? null,
                 $data['owner_id'] ?? null,
-                $data['patient_email'] ?? null,
                 $data['treatment_type_id'] ?? null,
                 $data['user_id'] ?? null,
                 $data['recurrence_rule'] ?? null,
                 $data['notes'] ?? null,
                 $data['reminder_minutes'] ?? 1440,
-                $data['send_patient_reminder'] ?? 0,
                 $id,
             ]
         );
