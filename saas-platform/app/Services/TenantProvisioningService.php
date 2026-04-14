@@ -343,62 +343,52 @@ class TenantProvisioningService
             foreach ($files as $file) {
                 $sql = (string)file_get_contents($file);
 
-                // Apply prefix to ALL table names (not just Google)
-                // Use the same logic as applyPrefixToSchema
-                $tables = [
-                    'users','settings','owners','patients','appointments','appointment_waitlist',
-                    'invoices','invoice_items','invoice_positions','invoice_reminders','invoice_dunnings',
-                    'waitlist','user_preferences','migrations',
-                    'patient_timeline','treatment_types',
-                    'mobile_api_tokens','cron_job_log',
-                    'befundboegen','befundbogen_felder',
-                    'google_calendar_connections',
-                    'google_calendar_sync_map',
-                    'google_calendar_sync_log',
-                    'google_calendar_imported_events',
-                    // TherapyCare Pro tables
-                    'tcp_progress_categories', 'tcp_progress_entries', 'tcp_exercise_feedback',
-                    'tcp_reminder_templates', 'tcp_reminder_queue', 'tcp_reminder_logs',
-                    'tcp_therapy_reports', 'tcp_exercise_library',
-                    'tcp_natural_therapy_types', 'tcp_natural_therapy_entries',
-                    'tcp_timeline_meta', 'tcp_portal_visibility',
-                ];
+                $addPrefix = function($name) use ($prefix) {
+                    // Skip global tables
+                    if (in_array(strtolower($name), ['tenants', 'plans', 'saas_admins', 'saas_logs', 'failed_jobs', 'migrations_global'])) {
+                        return $name;
+                    }
+                    return str_starts_with($name, $prefix) ? $name : $prefix . $name;
+                };
 
-                foreach ($tables as $table) {
-                    $sql = preg_replace('/`' . preg_quote($table, '/') . '`/', '`' . $prefix . $table . '`', $sql);
-                }
-
-                // Also apply constraint prefixing
+                // Apply robust prefixing
                 $sql = preg_replace_callback(
                     '/\bCONSTRAINT\s+`([^`]+)`/i',
                     fn($m) => 'CONSTRAINT `' . $prefix . $m[1] . '`',
                     $sql
                 );
 
-                // Split and execute statements
-                $lines   = explode("\n", $sql);
-                $cleaned = [];
-                foreach ($lines as $line) {
-                    if (!str_starts_with(ltrim($line), '--')) {
-                        $cleaned[] = $line;
-                    }
+                $patterns = [
+                    '/\b(?:CREATE|DROP)\s+TABLE\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?`([^`]+)`/i',
+                    '/\b(?:INSERT|REPLACE)\s+(?:IGNORE\s+)?INTO\s+`([^`]+)`/i',
+                    '/(?<!\w)UPDATE\s+`([^`]+)`/i',
+                    '/\bDELETE\s+FROM\s+`([^`]+)`/i',
+                    '/\bTRUNCATE\s+TABLE\s+`([^`]+)`/i',
+                    '/\bALTER\s+TABLE\s+`([^`]+)`/i',
+                    '/\b(?:FROM|JOIN)\s+`([^`]+)`/i',
+                    '/\bREFERENCES\s+`([^`]+)`/i'
+                ];
+
+                foreach ($patterns as $pattern) {
+                    $sql = preg_replace_callback($pattern, function($m) use ($addPrefix) {
+                        return str_replace('`'.$m[1].'`', '`'.$addPrefix($m[1]).'`', $m[0]);
+                    }, $sql);
                 }
+
+                // Split and execute statements
                 $statements = array_filter(
-                    array_map('trim', explode(';', implode("\n", $cleaned))),
-                    fn($s) => $s !== ''
+                    array_map('trim', explode(';', $sql)),
+                    fn($s) => $s !== '' && !str_starts_with(ltrim($s), '--')
                 );
 
                 foreach ($statements as $stmt) {
+                    if (empty($stmt)) continue;
                     try {
                         $pdo->exec($stmt);
                     } catch (\PDOException $e) {
-                        // Skip: table exists (42S01), duplicate column (1060),
-                        // duplicate key (1061), duplicate entry (1062)
                         $code = (int)($e->errorInfo[1] ?? 0);
-                        if (!in_array($code, [1050, 1060, 1061, 1062], true)
-                            && $e->getCode() !== '42S01') {
-                            // Non-fatal: log but don't crash provisioning
-                            // Plugin migrations should never prevent tenant creation
+                        if (!in_array($code, [1050, 1060, 1061, 1062], true) && $e->getCode() !== '42S01') {
+                            // Non-fatal for plugin migrations
                         }
                     }
                 }
@@ -442,35 +432,36 @@ class TenantProvisioningService
      */
     private function applyPrefixToSchema(string $sql, string $prefix): string
     {
-        // 1. Constraint-Namen prefixen: CONSTRAINT `fk_xyz` → CONSTRAINT `{prefix}fk_xyz`
+        $addPrefix = function($name) use ($prefix) {
+            if (in_array(strtolower($name), ['tenants', 'plans', 'saas_admins', 'saas_logs', 'failed_jobs', 'migrations_global'])) {
+                return $name;
+            }
+            return str_starts_with($name, $prefix) ? $name : $prefix . $name;
+        };
+
+        // Prefix Constraints
         $sql = preg_replace_callback(
             '/\bCONSTRAINT\s+`([^`]+)`/i',
             fn($m) => 'CONSTRAINT `' . $prefix . $m[1] . '`',
             $sql
         );
 
-        // 2. Tabellennamen prefixen (alle Tenant-Tabellen)
-        $tables = [
-            'users','settings','owners','patients','appointments','appointment_waitlist',
-            'invoices','invoice_items','invoice_positions','invoice_reminders','invoice_dunnings',
-            'waitlist','user_preferences','migrations',
-            'patient_timeline','treatment_types',
-            'mobile_api_tokens','cron_job_log',
-            'befundboegen','befundbogen_felder',
-            'google_calendar_connections',
-            'google_calendar_sync_map',
-            'google_calendar_sync_log',
-            'google_calendar_imported_events',
-            // TherapyCare Pro tables
-            'tcp_progress_categories', 'tcp_progress_entries', 'tcp_exercise_feedback',
-            'tcp_reminder_templates', 'tcp_reminder_queue', 'tcp_reminder_logs',
-            'tcp_therapy_reports', 'tcp_exercise_library',
-            'tcp_natural_therapy_types', 'tcp_natural_therapy_entries',
-            'tcp_timeline_meta', 'tcp_portal_visibility',
+        // Prefix Tables
+        $patterns = [
+            '/\b(?:CREATE|DROP)\s+TABLE\s+(?:IF\s+(?:NOT\s+)?EXISTS\s+)?`([^`]+)`/i',
+            '/\b(?:INSERT|REPLACE)\s+(?:IGNORE\s+)?INTO\s+`([^`]+)`/i',
+            '/(?<!\w)UPDATE\s+`([^`]+)`/i',
+            '/\bDELETE\s+FROM\s+`([^`]+)`/i',
+            '/\bTRUNCATE\s+TABLE\s+`([^`]+)`/i',
+            '/\bALTER\s+TABLE\s+`([^`]+)`/i',
+            '/\b(?:FROM|JOIN)\s+`([^`]+)`/i',
+            '/\bREFERENCES\s+`([^`]+)`/i'
         ];
 
-        foreach ($tables as $table) {
-            $sql = preg_replace('/`' . preg_quote($table, '/') . '`/', '`' . $prefix . $table . '`', $sql);
+        foreach ($patterns as $pattern) {
+            $sql = preg_replace_callback($pattern, function($m) use ($addPrefix) {
+                return str_replace('`'.$m[1].'`', '`'.$addPrefix($m[1]).'`', $m[0]);
+            }, $sql);
         }
 
         return $sql;
