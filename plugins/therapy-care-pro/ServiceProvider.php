@@ -214,12 +214,18 @@ class ServiceProvider
             $latest    = $repo->getLatestProgressForPatient($patientId);
             $cats      = $repo->getActiveProgressCategories();
             $visibility = $repo->getPortalVisibility($patientId);
+            $natural    = $repo->getNaturalEntriesForPatient($patientId);
+            $naturalTypes = $repo->getNaturalTherapyTypesByCategory();
+            $reports    = $repo->getTherapyReportsForPatient($patientId);
 
             return $view->fetch('@therapy-care-pro/patient_tab_progress.twig', [
                 'patient'    => $patient,
                 'latest'     => $latest,
                 'categories' => $cats,
                 'visibility' => $visibility,
+                'natural'    => $natural,
+                'types'      => $naturalTypes,
+                'reports'    => $reports,
                 'csrf_token' => $_SESSION['csrf_token'] ?? '',
             ]);
         } catch (\Throwable $e) {
