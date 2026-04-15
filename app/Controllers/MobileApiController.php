@@ -117,30 +117,40 @@ class MobileApiController
         }
     }
 
-    private function findTokenRowInTable(string $tableName, string $token): array|false
+    private function findTokenRowInTable(string $tableName, string $token, bool $joinUser = true): array|false
     {
         $hasToken      = $this->tableHasColumn($tableName, 'token');
         $hasTokenHash  = $this->tableHasColumn($tableName, 'token_hash');
         $hasTenantPref = $this->tableHasColumn($tableName, 'tenant_prefix');
         $hasExpiresAt  = $this->tableHasColumn($tableName, 'expires_at');
-
+ 
         if (!$hasToken && !$hasTokenHash) {
             return false;
         }
-
+ 
         $tokenColumn    = $hasToken ? 'token' : 'token_hash';
         $tokenToCompare = $hasToken ? $token : hash('sha256', $token);
         $tenantSelect   = $hasTenantPref ? 't.tenant_prefix' : "'' AS tenant_prefix";
         $expiryFilter   = $hasExpiresAt ? ' AND (t.expires_at IS NULL OR t.expires_at > NOW())' : '';
-
-        return $this->db->fetch(
-            "SELECT t.*, u.*, u.id AS user_id, {$tenantSelect}
-               FROM `{$tableName}` t
-               JOIN `{$this->t('users')}` u ON u.id = t.user_id
-              WHERE t.{$tokenColumn} = ?{$expiryFilter}
-              LIMIT 1",
-            [$tokenToCompare]
-        );
+ 
+        if ($joinUser) {
+            return $this->db->fetch(
+                "SELECT t.*, u.*, u.id AS user_id, {$tenantSelect}
+                   FROM `{$tableName}` t
+                   JOIN `{$this->t('users')}` u ON u.id = t.user_id
+                  WHERE t.{$tokenColumn} = ?{$expiryFilter}
+                  LIMIT 1",
+                [$tokenToCompare]
+            );
+        } else {
+            return $this->db->fetch(
+                "SELECT t.*, t.user_id, {$tenantSelect}
+                   FROM `{$tableName}` t
+                  WHERE t.{$tokenColumn} = ?{$expiryFilter}
+                  LIMIT 1",
+                [$tokenToCompare]
+            );
+        }
     }
 
     /**
@@ -384,20 +394,20 @@ class MobileApiController
         }
         $token = trim($m[1]);
 
-        $tokenRow = false;
+        $tokenRow    = false;
         $savedPrefix = $this->db->getPrefix();
         
         // 1. PERFORMANCE PRIORITY: Check GLOBAL token table first.
-        // This avoids scanning dozens of tenant tables and prevents HTTP 500 timeouts.
+        // Important: We do NOT join with users yet, because the user is in a tenant-specific table.
         $this->db->setPrefix('');
         try {
-            $tokenRow = $this->findTokenRowInTable('mobile_api_tokens', $token);
-        } catch (\Throwable $e) {
-            // Silently fall through if global table doesn't exist yet
-        }
+            $tokenRow = $this->findTokenRowInTable('mobile_api_tokens', $token, false);
+            if ($tokenRow) {
+                $tokenRow['found_in_global'] = true;
+            }
+        } catch (\Throwable $e) {}
 
-        // 2. LEGACY FALLBACK: Scan tenant tables only if not found in global table.
-        // This is expensive but ensures existing sessions aren't broken.
+        // 2. LEGACY FALLBACK: Scan tenant tables if not in global table.
         if ($tokenRow === false) {
             try {
                 $tables = $this->db->fetchAll(
@@ -411,7 +421,8 @@ class MobileApiController
 
                     $this->db->setPrefix($prefix);
                     try {
-                        $testRow = $this->findTokenRowInTable($this->t('mobile_api_tokens'), $token);
+                        // Here we CAN join with users because we are already in the tenant context.
+                        $testRow = $this->findTokenRowInTable($this->t('mobile_api_tokens'), $token, true);
                         if ($testRow) {
                             $tokenRow = $testRow;
                             if (empty($tokenRow['tenant_prefix'])) {
@@ -426,11 +437,11 @@ class MobileApiController
             } catch (\Throwable) {}
         }
 
-        // 3. LAST RESORT: Check current active prefix (if any)
+        // 3. LAST RESORT fallback for active prefix
         if ($tokenRow === false && $savedPrefix !== '') {
             $this->db->setPrefix($savedPrefix);
             try {
-                $tokenRow = $this->findTokenRowInTable($this->t('mobile_api_tokens'), $token);
+                $tokenRow = $this->findTokenRowInTable($this->t('mobile_api_tokens'), $token, true);
             } catch (\Throwable) { }
         }
 
@@ -438,27 +449,46 @@ class MobileApiController
             $this->error('Ungültiger oder abgelaufener Token.', 401);
         }
         
+        // ── Tenant Resolution & User Loading ──────────────────────────────────
+        
+        // If we found the token in the global table, we now MUST switch to the correct tenant
+        // and fetch the actual user data from the tenant's users table.
+        $storedPrefix = $this->normalizeTenantPrefix((string)($tokenRow['tenant_prefix'] ?? ''));
+        if ($storedPrefix !== '') {
+            $this->db->setPrefix($storedPrefix);
+        } else {
+            // Fallback for global tokens missing the prefix column
+            $email = $tokenRow['email'] ?? $tokenRow['user_email'] ?? '';
+            $storedPrefix = $this->resolveTenantPrefixForEmail($email);
+        }
+
+        // If it was a global token without user info, fetch the user info now!
+        if (!isset($tokenRow['name']) || !isset($tokenRow['role'])) {
+            try {
+                $userData = $this->db->fetch(
+                    "SELECT * FROM `{$this->t('users')}` WHERE id = ? LIMIT 1",
+                    [(int)$tokenRow['user_id']]
+                );
+                if ($userData) {
+                    $tokenRow = array_merge($tokenRow, $userData);
+                } else {
+                    $this->error('Benutzer im Mandanten nicht gefunden.', 401);
+                }
+            } catch (\Throwable $e) {
+                $this->error('Zugehörige Mandantendaten konnten nicht geladen werden.', 500);
+            }
+        }
+
         $isActive = (int)($tokenRow['active'] ?? $tokenRow['is_active'] ?? 1);
         if ($isActive !== 1) {
             $this->error('Konto ist deaktiviert.', 401);
         }
 
-        // Apply discovered prefix permanently for this request
-        $storedPrefix = $this->normalizeTenantPrefix((string)($tokenRow['tenant_prefix'] ?? ''));
-        if ($storedPrefix !== '') {
-            $this->db->setPrefix($storedPrefix);
-        } else {
-            $email = $tokenRow['email'] ?? $tokenRow['user_email'] ?? '';
-            $this->resolveTenantPrefixForEmail($email);
-        }
-
         // SELF-HEAL: Persist tenant_prefix in the token row if it was inferred.
-        // This makes future lookups significantly faster.
         if (($tokenRow['tenant_prefix'] ?? '') === '' && $this->db->getPrefix() !== '') {
             try {
                 $prefixToStore = $this->db->getPrefix();
-                // We use global table if we found it there, otherwise tenant table
-                $tokenTable = $tokenRow['id_in_global_table'] ?? false ? 'mobile_api_tokens' : $this->t('mobile_api_tokens');
+                $tokenTable    = ($tokenRow['found_in_global'] ?? false) ? 'mobile_api_tokens' : $this->t('mobile_api_tokens');
                 
                 if ($this->tableHasColumn($tokenTable, 'tenant_prefix')) {
                     $tokenCol = $this->tableHasColumn($tokenTable, 'token') ? 'token' : 'token_hash';
@@ -473,7 +503,7 @@ class MobileApiController
 
         // Update last_used
         try {
-            $tokenTable = $this->db->getPrefix() === '' ? 'mobile_api_tokens' : $this->t('mobile_api_tokens');
+            $tokenTable = ($tokenRow['found_in_global'] ?? false) ? 'mobile_api_tokens' : $this->t('mobile_api_tokens');
             if ($this->tableHasColumn($tokenTable, 'last_used')) {
                 $tokenCol = $this->tableHasColumn($tokenTable, 'token') ? 'token' : 'token_hash';
                 $tokenVal = $tokenCol === 'token' ? $token : hash('sha256', $token);
