@@ -115,7 +115,7 @@ class AuthService extends ChangeNotifier {
       dev.log('[Auth] SocketException: ${e.message}', name: 'AuthService');
       return LoginResult.fail(
         LoginError.network,
-        'Netzwerkfehler: Server ${ApiService.baseUrl} nicht erreichbar. '
+        'Netzwerkfehler: Server app.therapano.de nicht erreichbar. '
         'Bitte Internetverbindung prüfen.',
       );
     } on TimeoutException {
@@ -166,10 +166,7 @@ class AuthService extends ChangeNotifier {
   }
 
   /// Legacy bool-returning wrapper, still used in some places.
-  Future<bool> login(String email, String password, String serverUrl) async {
-    if (serverUrl.trim().isNotEmpty) {
-      await ApiService.setBaseUrl(serverUrl);
-    }
+  Future<bool> login(String email, String password, String _serverUrl) async {
     final result = await loginWithResult(email, password);
     return result.success;
   }
