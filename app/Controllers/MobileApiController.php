@@ -69,6 +69,76 @@ class MobileApiController
         return $this->db->prefix($table);
     }
 
+
+    /**
+     * Normalize tenant prefixes to canonical format: t_<slug>_
+     */
+    private function normalizeTenantPrefix(string $raw): string
+    {
+        $p = trim($raw);
+        if ($p === '') {
+            return '';
+        }
+
+        if (str_ends_with($p, '_users')) {
+            $p = substr($p, 0, -strlen('users'));
+        }
+
+        if (!str_starts_with($p, 't_')) {
+            $p = 't_' . $p;
+        }
+
+        $p = preg_replace('/_+/', '_', $p) ?? $p;
+        if (!str_ends_with($p, '_')) {
+            $p .= '_';
+        }
+
+        return $p;
+    }
+
+    private function tableHasColumn(string $tableName, string $column): bool
+    {
+        try {
+            $count = (int)$this->db->fetchColumn(
+                "SELECT COUNT(*)
+                   FROM information_schema.columns
+                  WHERE table_schema = DATABASE()
+                    AND table_name = ?
+                    AND column_name = ?",
+                [$tableName, $column]
+            );
+            return $count > 0;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    private function findTokenRowInTable(string $tableName, string $token): array|false
+    {
+        $hasToken      = $this->tableHasColumn($tableName, 'token');
+        $hasTokenHash  = $this->tableHasColumn($tableName, 'token_hash');
+        $hasTenantPref = $this->tableHasColumn($tableName, 'tenant_prefix');
+        $hasExpiresAt  = $this->tableHasColumn($tableName, 'expires_at');
+
+        if (!$hasToken && !$hasTokenHash) {
+            return false;
+        }
+
+        $tokenColumn    = $hasToken ? 'token' : 'token_hash';
+        $tokenToCompare = $hasToken ? $token : hash('sha256', $token);
+        $tenantSelect   = $hasTenantPref ? 't.tenant_prefix' : "'' AS tenant_prefix";
+        $expiryFilter   = $hasExpiresAt ? ' AND (t.expires_at IS NULL OR t.expires_at > NOW())' : '';
+
+        return $this->db->fetch(
+            "SELECT t.*, u.*, u.id AS user_id, {$tenantSelect}
+               FROM `{$tableName}` t
+               JOIN `{$this->t('users')}` u ON u.id = t.user_id
+              WHERE t.{$tokenColumn} = ?{$expiryFilter}
+              LIMIT 1",
+            [$tokenToCompare]
+        );
+    }
+
     /**
      * Resolve the tenant table-prefix for a given user email.
      *
@@ -103,7 +173,7 @@ class MobileApiController
                 if (str_contains($tableName, 'portal') || str_contains($tableName, 'attempt')) {
                     continue;
                 }
-                $prefix = substr($tableName, 0, -strlen('users'));
+                $prefix = $this->normalizeTenantPrefix(substr($tableName, 0, -strlen('users')));
                 // Verify: does this tenant actually have this user?
                 $found = $this->db->fetchColumn(
                     "SELECT COUNT(*) FROM `{$tableName}` WHERE email = ? LIMIT 1",
@@ -124,7 +194,7 @@ class MobileApiController
                 $usable[] = $tableName;
             }
             if (count($usable) === 1) {
-                $prefix = substr($usable[0], 0, -strlen('users'));
+                $prefix = $this->normalizeTenantPrefix(substr($usable[0], 0, -strlen('users')));
                 $this->db->setPrefix($prefix);
                 return $prefix;
             }
@@ -173,7 +243,7 @@ class MobileApiController
                         continue;
                     }
 
-                    $prefix = substr($tableName, 0, -strlen('users'));
+                    $prefix = $this->normalizeTenantPrefix(substr($tableName, 0, -strlen('users')));
                     $this->db->setPrefix($prefix);
                     return $prefix;
                 } catch (\Throwable) {
@@ -269,19 +339,11 @@ class MobileApiController
             );
             foreach ($tables as $row) {
                 $tableName = $row['table_name'] ?? $row['TABLE_NAME'] ?? '';
-                $prefix = substr($tableName, 0, -strlen('mobile_api_tokens'));
+                $prefix = $this->normalizeTenantPrefix(substr($tableName, 0, -strlen('mobile_api_tokens')));
 
                 $this->db->setPrefix($prefix);
                 try {
-                    $testRow = $this->db->fetch(
-                        "SELECT t.*, u.*, u.id AS user_id,
-                                t.tenant_prefix
-                         FROM `{$this->t('mobile_api_tokens')}` t
-                         JOIN `{$this->t('users')}` u ON u.id = t.user_id
-                         WHERE t.token = ?
-                           AND (t.expires_at IS NULL OR t.expires_at > NOW())",
-                        [$token]
-                    );
+                    $testRow = $this->findTokenRowInTable($this->t('mobile_api_tokens'), $token);
                     if ($testRow) {
                         $tokenRow = $testRow;
                         if (empty($tokenRow['tenant_prefix'])) {
@@ -299,15 +361,7 @@ class MobileApiController
         if ($tokenRow === false) {
             $this->db->setPrefix('');
             try {
-                $tokenRow = $this->db->fetch(
-                    "SELECT t.*, u.*, u.id AS user_id,
-                            t.tenant_prefix
-                     FROM mobile_api_tokens t
-                     JOIN users u ON u.id = t.user_id
-                     WHERE t.token = ?
-                       AND (t.expires_at IS NULL OR t.expires_at > NOW())",
-                    [$token]
-                );
+                $tokenRow = $this->findTokenRowInTable('mobile_api_tokens', $token);
             } catch (\Throwable) {
                 $tokenRow = false;
             }
@@ -317,15 +371,7 @@ class MobileApiController
         if ($tokenRow === false && $savedPrefix !== '') {
             $this->db->setPrefix($savedPrefix);
             try {
-                $tokenRow = $this->db->fetch(
-                    "SELECT t.*, u.*, u.id AS user_id,
-                            t.tenant_prefix
-                     FROM `{$this->t('mobile_api_tokens')}` t
-                     JOIN `{$this->t('users')}` u ON u.id = t.user_id
-                     WHERE t.token = ?
-                       AND (t.expires_at IS NULL OR t.expires_at > NOW())",
-                    [$token]
-                );
+                $tokenRow = $this->findTokenRowInTable($this->t('mobile_api_tokens'), $token);
             } catch (\Throwable) { }
         }
 
@@ -339,7 +385,7 @@ class MobileApiController
         }
 
         // Apply discovered prefix permanently for this request
-        $storedPrefix = $tokenRow['tenant_prefix'] ?? '';
+        $storedPrefix = $this->normalizeTenantPrefix((string)($tokenRow['tenant_prefix'] ?? ''));
         if ($storedPrefix !== '') {
             $this->db->setPrefix($storedPrefix);
         } else {
@@ -349,20 +395,30 @@ class MobileApiController
         // Persist tenant_prefix if it was inferred dynamically.
         if (($tokenRow['tenant_prefix'] ?? '') === '' && $this->db->getPrefix() !== '') {
             try {
-                $this->db->execute(
-                    "UPDATE `{$this->t('mobile_api_tokens')}` SET tenant_prefix = ? WHERE token = ?",
-                    [$this->db->getPrefix(), $token]
-                );
+                $tokenTable = $this->t('mobile_api_tokens');
+                if ($this->tableHasColumn($tokenTable, 'tenant_prefix')) {
+                    $tokenCol = $this->tableHasColumn($tokenTable, 'token') ? 'token' : 'token_hash';
+                    $tokenVal = $tokenCol === 'token' ? $token : hash('sha256', $token);
+                    $this->db->execute(
+                        "UPDATE `{$tokenTable}` SET tenant_prefix = ? WHERE {$tokenCol} = ?",
+                        [$this->db->getPrefix(), $tokenVal]
+                    );
+                }
             } catch (\Throwable) {
             }
         }
 
         // Update last_used
         try {
-            $this->db->execute(
-                "UPDATE `{$this->t('mobile_api_tokens')}` SET last_used = NOW() WHERE token = ?",
-                [$token]
-            );
+            $tokenTable = $this->t('mobile_api_tokens');
+            if ($this->tableHasColumn($tokenTable, 'last_used')) {
+                $tokenCol = $this->tableHasColumn($tokenTable, 'token') ? 'token' : 'token_hash';
+                $tokenVal = $tokenCol === 'token' ? $token : hash('sha256', $token);
+                $this->db->execute(
+                    "UPDATE `{$tokenTable}` SET last_used = NOW() WHERE {$tokenCol} = ?",
+                    [$tokenVal]
+                );
+            }
         } catch (\Throwable) {}
 
         $this->authUser = $tokenRow;
@@ -423,15 +479,56 @@ class MobileApiController
         }
 
         $token     = bin2hex(random_bytes(32));
+        $tokenHash = hash('sha256', $token);
         $expiresAt = date('Y-m-d H:i:s', strtotime('+90 days'));
 
         // Store the tenant prefix IN the token row so requireAuth() can restore it
         // on every subsequent stateless API request (no session needed).
         try {
+            $tableName      = $this->t('mobile_api_tokens');
+            $hasToken       = $this->tableHasColumn($tableName, 'token');
+            $hasTokenHash   = $this->tableHasColumn($tableName, 'token_hash');
+            $hasDeviceName  = $this->tableHasColumn($tableName, 'device_name');
+            $hasDevice      = $this->tableHasColumn($tableName, 'device');
+            $hasTenantPref  = $this->tableHasColumn($tableName, 'tenant_prefix');
+            $hasExpiresAt   = $this->tableHasColumn($tableName, 'expires_at');
+
+            $columns = ['user_id'];
+            $values  = [(int)$user['id']];
+
+            if ($hasToken) {
+                $columns[] = 'token';
+                $values[]  = $token;
+            } elseif ($hasTokenHash) {
+                $columns[] = 'token_hash';
+                $values[]  = $tokenHash;
+            } else {
+                throw new \RuntimeException('mobile_api_tokens has neither token nor token_hash column.');
+            }
+
+            if ($hasDeviceName) {
+                $columns[] = 'device_name';
+                $values[]  = $deviceName;
+            } elseif ($hasDevice) {
+                $columns[] = 'device';
+                $values[]  = $deviceName;
+            }
+
+            if ($hasTenantPref) {
+                $columns[] = 'tenant_prefix';
+                $values[]  = $prefix;
+            }
+
+            if ($hasExpiresAt) {
+                $columns[] = 'expires_at';
+                $values[]  = $expiresAt;
+            }
+
+            $columns[] = 'created_at';
+            $placeholder = implode(', ', array_fill(0, count($columns) - 1, '?'));
             $this->db->execute(
-                "INSERT INTO `{$this->t('mobile_api_tokens')}` (user_id, token, device_name, tenant_prefix, expires_at, created_at)
-                 VALUES (?, ?, ?, ?, ?, NOW())",
-                [$user['id'], $token, $deviceName, $prefix, $expiresAt]
+                "INSERT INTO `{$tableName}` (" . implode(', ', $columns) . ") VALUES ({$placeholder}, NOW())",
+                $values
             );
         } catch (\Throwable $e) {
             $errorStr = $e->getMessage();
@@ -505,7 +602,11 @@ class MobileApiController
         $this->requireAuth();
         $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
         preg_match('/^Bearer\s+(.+)$/i', $header, $m);
-        $this->db->execute("DELETE FROM `{$this->t('mobile_api_tokens')}` WHERE token = ?", [trim($m[1])]);
+        $rawToken = trim($m[1] ?? '');
+        $tokenTable = $this->t('mobile_api_tokens');
+        $tokenCol = $this->tableHasColumn($tokenTable, 'token') ? 'token' : 'token_hash';
+        $tokenVal = $tokenCol === 'token' ? $rawToken : hash('sha256', $rawToken);
+        $this->db->execute("DELETE FROM `{$tokenTable}` WHERE {$tokenCol} = ?", [$tokenVal]);
         $this->json(['success' => true]);
     }
 

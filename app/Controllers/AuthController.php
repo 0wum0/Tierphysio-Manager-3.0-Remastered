@@ -15,6 +15,22 @@ use App\Repositories\SettingsRepository;
 
 class AuthController extends Controller
 {
+    private function normalizeTenantPrefix(string $raw): string
+    {
+        $prefix = trim($raw);
+        if ($prefix === '') {
+            return '';
+        }
+        if (!str_starts_with($prefix, 't_')) {
+            $prefix = 't_' . $prefix;
+        }
+        $prefix = preg_replace('/_+/', '_', $prefix) ?? $prefix;
+        if (!str_ends_with($prefix, '_')) {
+            $prefix .= '_';
+        }
+        return $prefix;
+    }
+
     public function __construct(
         View $view,
         Session $session,
@@ -142,7 +158,9 @@ class AuthController extends Controller
             $stmt = $pdo->prepare("SELECT db_name FROM tenants WHERE email = ? AND status IN ('active','trial') LIMIT 1");
             $stmt->execute([$email]);
             $row = $stmt->fetch();
-            return ($row && !empty($row['db_name'])) ? (string)$row['db_name'] : '';
+            return ($row && !empty($row['db_name']))
+                ? $this->normalizeTenantPrefix((string)$row['db_name'])
+                : '';
         } catch (\Throwable) {
             return '';
         }
