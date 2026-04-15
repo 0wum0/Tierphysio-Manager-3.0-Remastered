@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../../core/terminology.dart';
 import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
 import '../../widgets/search_bar_widget.dart';
 import '../../widgets/paw_avatar.dart';
 import '../../widgets/shimmer_list.dart';
@@ -55,9 +58,10 @@ class _PatientsScreenState extends State<PatientsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = Terminology(isTrainer: context.watch<AuthService>().isTrainer);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Patienten'),
+        title: Text(t.patientPlural),
         actions: [
           IconButton(
             icon: const Icon(Icons.add_rounded),
@@ -66,13 +70,14 @@ class _PatientsScreenState extends State<PatientsScreen> {
         ],
       ),
       body: Column(children: [
-        AppSearchBar(onSearch: _onSearch, hint: 'Patient suchen…'),
+        AppSearchBar(onSearch: _onSearch, hint: '${t.patientSingular} suchen…'),
         Expanded(child: _buildList()),
       ]),
     );
   }
 
   Widget _buildList() {
+    final t = Terminology(isTrainer: context.watch<AuthService>().isTrainer);
     if (_loading && _items.isEmpty) return const ShimmerList();
     if (_error != null && _items.isEmpty) {
       return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -86,7 +91,7 @@ class _PatientsScreenState extends State<PatientsScreen> {
     if (_items.isEmpty) return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
       Icon(Icons.pets_rounded, size: 56, color: Colors.grey.shade300),
       const SizedBox(height: 12),
-      Text('Keine Patienten gefunden', style: Theme.of(context).textTheme.bodyLarge),
+      Text(t.patientsFoundEmpty(), style: Theme.of(context).textTheme.bodyLarge),
     ]));
 
     final isTablet = MediaQuery.of(context).size.width >= 600;

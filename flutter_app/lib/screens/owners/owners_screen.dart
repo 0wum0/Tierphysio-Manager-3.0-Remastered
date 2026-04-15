@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../../core/terminology.dart';
 import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
 import '../../core/theme.dart';
 import '../../widgets/search_bar_widget.dart';
 import '../../widgets/shimmer_list.dart';
@@ -42,9 +45,10 @@ class _OwnersScreenState extends State<OwnersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = Terminology(isTrainer: context.watch<AuthService>().isTrainer);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tierhalter'),
+        title: Text(t.ownerPlural),
         actions: [
           IconButton(
             icon: const Icon(Icons.person_add_rounded),
@@ -53,13 +57,14 @@ class _OwnersScreenState extends State<OwnersScreen> {
         ],
       ),
       body: Column(children: [
-        AppSearchBar(onSearch: (q) { _search = q; _load(); }, hint: 'Tierhalter suchen…'),
+        AppSearchBar(onSearch: (q) { _search = q; _load(); }, hint: '${t.ownerSingular} suchen…'),
         Expanded(child: _buildList()),
       ]),
     );
   }
 
   Widget _buildList() {
+    final t = Terminology(isTrainer: context.watch<AuthService>().isTrainer);
     if (_loading && _items.isEmpty) return const ShimmerList();
     if (_error != null && _items.isEmpty) {
       return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -74,7 +79,7 @@ class _OwnersScreenState extends State<OwnersScreen> {
       return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         Icon(Icons.people_outline_rounded, size: 64, color: Colors.grey.shade300),
         const SizedBox(height: 12),
-        Text('Keine Tierhalter gefunden', style: Theme.of(context).textTheme.bodyLarge),
+        Text(t.ownersFoundEmpty(), style: Theme.of(context).textTheme.bodyLarge),
       ]));
     }
 

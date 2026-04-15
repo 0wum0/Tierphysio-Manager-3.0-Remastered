@@ -32,16 +32,20 @@ class AuthService extends ChangeNotifier {
   static const _userEmailKey = 'user_email';
   static const _userRoleKey  = 'user_role';
   static const _userIdKey    = 'user_id';
+  static const _practiceTypeKey = 'practice_type';
 
   SharedPreferences? _prefs;
 
   bool _loggedIn = false;
   Map<String, dynamic> _user = {};
+  String _practiceType = 'therapeut';
   bool _initialized = false;
 
   bool get isLoggedIn  => _loggedIn;
   bool get initialized => _initialized;
   Map<String, dynamic> get user => _user;
+  String get practiceType => _practiceType;
+  bool get isTrainer => _practiceType == 'trainer';
   String get userName  => _user['name']  as String? ?? '';
   String get userEmail => _user['email'] as String? ?? '';
   String get userRole  => _user['role']  as String? ?? '';
@@ -56,8 +60,10 @@ class AuthService extends ChangeNotifier {
       final email = _prefs?.getString(_userEmailKey) ?? '';
       final role  = _prefs?.getString(_userRoleKey)  ?? '';
       final id    = _prefs?.getString(_userIdKey)    ?? '';
+      _practiceType = _prefs?.getString(_practiceTypeKey) ?? 'therapeut';
       _user = {'name': name, 'email': email, 'role': role, 'id': id};
       _loggedIn = true;
+      await _refreshPracticeType();
     }
     _initialized = true;
     notifyListeners();
@@ -100,6 +106,7 @@ class AuthService extends ChangeNotifier {
 
       _user = user;
       _loggedIn = true;
+      await _refreshPracticeType();
       notifyListeners();
       dev.log('[Auth] Login successful for ${user['email']}', name: 'AuthService');
       return const LoginResult.ok();
@@ -172,7 +179,20 @@ class AuthService extends ChangeNotifier {
     await ApiService.clearToken();
     await _prefs?.clear();
     _user = {};
+    _practiceType = 'therapeut';
     _loggedIn = false;
     notifyListeners();
+  }
+
+  Future<void> _refreshPracticeType() async {
+    try {
+      final api = ApiService();
+      final settings = await api.settings();
+      final practiceType = (settings['practice_type'] as String? ?? 'therapeut').trim();
+      _practiceType = practiceType.isEmpty ? 'therapeut' : practiceType;
+      await _prefs?.setString(_practiceTypeKey, _practiceType);
+    } catch (_) {
+      _practiceType = _prefs?.getString(_practiceTypeKey) ?? _practiceType;
+    }
   }
 }
