@@ -254,7 +254,7 @@ class Application
             $row = $stmt->fetch();
 
             if ($row && !empty($row['db_name'])) {
-                $prefix = $row['db_name'];
+                $prefix = $this->normalizeTenantPrefix((string)$row['db_name']);
                 $session->set('tenant_table_prefix', $prefix);
                 return $prefix;
             }
@@ -263,6 +263,22 @@ class Application
         }
 
         return '';
+    }
+
+    private function normalizeTenantPrefix(string $raw): string
+    {
+        $prefix = trim($raw);
+        if ($prefix === '') {
+            return '';
+        }
+        if (!str_starts_with($prefix, 't_')) {
+            $prefix = 't_' . $prefix;
+        }
+        $prefix = preg_replace('/_+/', '_', $prefix) ?? $prefix;
+        if (!str_ends_with($prefix, '_')) {
+            $prefix .= '_';
+        }
+        return $prefix;
     }
 
     public function getRootPath(): string

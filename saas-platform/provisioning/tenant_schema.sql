@@ -259,13 +259,15 @@ CREATE TABLE IF NOT EXISTS `user_preferences` (
 CREATE TABLE IF NOT EXISTS `mobile_api_tokens` (
     `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `user_id`    INT UNSIGNED NOT NULL,
-    `token_hash` VARCHAR(255) NOT NULL UNIQUE,
-    `device`     VARCHAR(255) NULL,
+    `token`      VARCHAR(64)  NOT NULL UNIQUE,
+    `device_name` VARCHAR(100) NOT NULL DEFAULT '',
+    `tenant_prefix` VARCHAR(64) NOT NULL DEFAULT '',
     `last_used`  DATETIME NULL,
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `expires_at` DATETIME NULL,
     PRIMARY KEY (`id`),
-    INDEX `idx_user_id` (`user_id`),
-    CONSTRAINT `fk_mat_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+    INDEX `idx_token` (`token`),
+    INDEX `idx_user`  (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── cron_job_log (Migration 020) ─────────────────────────────
