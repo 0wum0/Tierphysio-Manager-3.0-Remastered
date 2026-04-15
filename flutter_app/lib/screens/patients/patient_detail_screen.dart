@@ -1539,6 +1539,8 @@ class _TimelineCard extends StatelessWidget {
         ),
       ]),
     );
+  }
+
   Color _statusColor(dynamic badge) {
     if (badge == null) return Colors.grey;
     return switch (badge.toString()) {
