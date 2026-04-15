@@ -4,22 +4,37 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
+  static const _baseKey = 'api_base_url';
   static const _tokenKey = 'api_token';
   static SharedPreferences? _prefs;
 
-  // Feste Domain für alle Flutter-Clients (Windows + Android).
-  static final String _baseUrl = 'https://app.therapano.de';
+  // Default SaaS-Domain; kann pro Installation überschrieben werden.
+  static String _baseUrl = 'https://app.therapano.de';
 
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
+    final saved = (_prefs?.getString(_baseKey) ?? '').trim();
+    if (saved.isNotEmpty) {
+      _baseUrl = _normalizeBaseUrl(saved);
+    }
   }
 
-  @Deprecated('Die API-Domain ist fest auf https://app.therapano.de gesetzt.')
   static Future<void> setBaseUrl(String url) async {
-    // Legacy no-op: Domainwechsel wird bewusst nicht mehr unterstützt.
+    final normalized = _normalizeBaseUrl(url);
+    _baseUrl = normalized;
+    await _prefs?.setString(_baseKey, normalized);
   }
 
   static String get baseUrl => _baseUrl;
+
+  static String _normalizeBaseUrl(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return 'https://app.therapano.de';
+    final withScheme = RegExp(r'^https?://', caseSensitive: false).hasMatch(trimmed)
+        ? trimmed
+        : 'https://$trimmed';
+    return withScheme.replaceAll(RegExp(r'/$'), '');
+  }
 
   /// Build an absolute media URL from a relative path returned by the backend.
   /// Handles paths like /patient-photos/5/abc.jpg, /patient-timeline/5/abc.mp4,
