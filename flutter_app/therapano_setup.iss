@@ -5,7 +5,7 @@
 #define MyAppPublisher "Therapano"
 #define MyAppURL "https://therapano.de"
 #define MyAppExeName "therapano.exe"
-#define MyAppIconName "assets\icons\therapano_icon.ico"
+#define MyAppIconName "windows\runner\resources\app_icon.ico"
 
 ; Version will be passed as a command line parameter from the build script
 #ifndef AppVersion
