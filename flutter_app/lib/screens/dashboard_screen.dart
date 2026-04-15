@@ -73,10 +73,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ? _buildShimmer()
           : _error != null
               ? _ErrorView(error: _error!, onRetry: _load)
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: _buildContent(),
-                ),
+              : Column(children: [
+                  _UpdateBanner(),
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: _load,
+                      child: _buildContent(),
+                    ),
+                  ),
+                ]),
     );
   }
 
@@ -1079,5 +1084,93 @@ class _ErrorView extends StatelessWidget {
         FilledButton.icon(onPressed: onRetry, icon: const Icon(Icons.refresh_rounded), label: const Text('Erneut versuchen')),
       ]),
     ));
+  }
+}
+
+class _UpdateBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<UpdateInfo?>(
+      valueListenable: UpdateService.updateNotifier,
+      builder: (context, info, _) {
+        if (info == null) return const SizedBox.shrink();
+
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 500),
+          width: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppTheme.primary, AppTheme.secondary],
+            ),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.system_update_rounded, color: Colors.white, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Update verfügbar: v${info.version} - Neue Funktionen & Stabilität',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                      ),
+                      ValueListenableBuilder<bool>(
+                        valueListenable: UpdateService.isDownloading,
+                        builder: (context, downloading, _) {
+                          if (downloading) return const SizedBox.shrink();
+                          return TextButton(
+                            onPressed: () => UpdateService.downloadAndInstall(),
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.white.withValues(alpha: 0.2),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                            ),
+                            child: const Text('Jetzt installieren', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: UpdateService.isDownloading,
+                    builder: (context, downloading, _) {
+                      if (!downloading) return const SizedBox.shrink();
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Column(
+                          children: [
+                            ValueListenableBuilder<double>(
+                              valueListenable: UpdateService.downloadProgress,
+                              builder: (context, progress, _) {
+                                return LinearProgressIndicator(
+                                  value: progress > 0 ? progress : null,
+                                  backgroundColor: Colors.white.withValues(alpha: 0.2),
+                                  valueColor: const AlwaysStoppedAnimation(Colors.white),
+                                  borderRadius: BorderRadius.circular(4),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Herunterladen... Die App wird nach dem Download neu gestartet.',
+                              style: TextStyle(color: Colors.white70, fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 }
