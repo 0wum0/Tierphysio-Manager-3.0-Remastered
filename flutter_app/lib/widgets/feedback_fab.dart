@@ -4,27 +4,42 @@ import '../services/api_service.dart';
 
 /// Floating Action Button that opens the feedback bottom sheet.
 /// Usage: add FeedbackFab() anywhere in a Scaffold, or via the shell.
-class FeedbackFab extends StatelessWidget {
+class FeedbackFab extends StatefulWidget {
   const FeedbackFab({super.key});
 
   @override
+  State<FeedbackFab> createState() => _FeedbackFabState();
+}
+
+class _ShellLevelFeedback {
+  static bool isOpen = false;
+}
+
+class _FeedbackFabState extends State<FeedbackFab> {
+  @override
   Widget build(BuildContext context) {
+    if (_ShellLevelFeedback.isOpen) return const SizedBox.shrink();
+
     return FloatingActionButton.small(
       heroTag: 'feedback_fab',
       tooltip: 'Feedback senden',
       backgroundColor: const Color(0xFF6EA8FE),
-      onPressed: () => _showFeedbackSheet(context),
+      onPressed: () => _displaySheet(context),
       child: const Icon(Icons.chat_bubble_outline_rounded, color: Colors.white, size: 20),
     );
   }
 
-  static Future<void> _showFeedbackSheet(BuildContext context) async {
+  Future<void> _displaySheet(BuildContext context) async {
+    setState(() => _ShellLevelFeedback.isOpen = true);
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => const _FeedbackSheet(),
     );
+    if (mounted) {
+      setState(() => _ShellLevelFeedback.isOpen = false);
+    }
   }
 }
 

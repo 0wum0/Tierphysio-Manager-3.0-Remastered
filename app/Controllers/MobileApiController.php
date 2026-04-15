@@ -14,6 +14,9 @@ use App\Repositories\ReminderDunningRepository;
 use App\Repositories\TreatmentTypeRepository;
 use App\Services\MailService;
 use App\Services\TimelineMediaService;
+use App\Services\InvoiceCancellationService;
+use Plugins\OwnerPortal\MessagingRepository;
+use Plugins\TherapyCarePro\TherapyCareRepository;
 
 /**
  * Mobile REST API — Bearer token authentication.
@@ -31,6 +34,9 @@ class MobileApiController
     private TreatmentTypeRepository  $treatmentTypeRepo;
     private MailService              $mail;
     private TimelineMediaService     $timelineMedia;
+    private InvoiceCancellationService $cancellationService;
+    private ?MessagingRepository     $messagingRepo = null;
+    private ?TherapyCareRepository   $tcpRepo = null;
 
     private ?array $authUser  = null;
     private ?array $bodyCache = null;
@@ -45,7 +51,8 @@ class MobileApiController
         ReminderDunningRepository $reminderDunningRepository,
         TreatmentTypeRepository   $treatmentTypeRepository,
         MailService               $mailService,
-        TimelineMediaService      $timelineMediaService
+        TimelineMediaService      $timelineMediaService,
+        InvoiceCancellationService $invoiceCancellationService
     ) {
         // Intercept all exceptions for the mobile API and return them as JSON
         set_exception_handler([$this, 'exceptionHandler']);
@@ -66,11 +73,28 @@ class MobileApiController
         $this->treatmentTypeRepo = $treatmentTypeRepository;
         $this->mail              = $mailService;
         $this->timelineMedia     = $timelineMediaService;
+        $this->cancellationService = $invoiceCancellationService;
     }
 
     private function t(string $table): string
     {
         return $this->db->prefix($table);
+    }
+
+    private function messaging(): MessagingRepository
+    {
+        if (!$this->messagingRepo) {
+            $this->messagingRepo = new MessagingRepository($this->db);
+        }
+        return $this->messagingRepo;
+    }
+
+    private function tcp(): TherapyCareRepository
+    {
+        if (!$this->tcpRepo) {
+            $this->tcpRepo = new TherapyCareRepository($this->db);
+        }
+        return $this->tcpRepo;
     }
 
 
@@ -1498,6 +1522,25 @@ class MobileApiController
         $this->json(['success' => true, 'status' => $status]);
     }
 
+    /** POST /api/mobile/rechnungen/{id}/storno — GoBD compliant cancellation */
+    public function invoiceStorno(array $params = []): void
+    {
+        $this->cors();
+        $user = $this->requireAuth();
+        $id   = (int)($params['id'] ?? 0);
+
+        $data   = $this->body();
+        $reason = trim($data['reason'] ?? '');
+        if ($reason === '') $this->error('Stornogrund ist erforderlich.');
+
+        try {
+            $res = $this->cancellationService->cancel($id, $reason, (int)$user['user_id']);
+            $this->json($res);
+        } catch (\Throwable $e) {
+            $this->error($e->getMessage(), 400);
+        }
+    }
+
     /* ══════════════════════════════════════════════════════
        CALENDAR
     ══════════════════════════════════════════════════════ */
@@ -1795,7 +1838,39 @@ class MobileApiController
         ]);
     }
 
-    /** POST /api/mobile/nachrichten/{id}/antworten — admin replies to a thread */
+    /** GET /api/mobile/patients/{id}/portal-threads — list threads for a patient (owner) */
+    public function portalThreadsByPatient(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+        $patientId = (int)($params['id'] ?? 0);
+        
+        $patient = $this->patients->findById($patientId);
+        if (!$patient) $this->error('Patient nicht gefunden.', 404);
+        
+        $ownerId = (int)$patient['owner_id'];
+
+        try {
+            $rows = $this->db->fetchAll(
+                "SELECT t.id, t.subject, t.status, t.last_message_at, t.created_at,
+                        (SELECT COUNT(*) FROM `{$this->t('portal_messages')}` m
+                         WHERE m.thread_id = t.id AND m.is_read = 0
+                           AND m.sender_type = 'owner') AS unread_count,
+                        (SELECT m2.body FROM `{$this->t('portal_messages')}` m2
+                         WHERE m2.thread_id = t.id
+                         ORDER BY m2.created_at DESC LIMIT 1) AS last_body
+                  FROM `{$this->t('portal_message_threads')}` t
+                  WHERE t.owner_id = ?
+                  ORDER BY t.last_message_at DESC",
+                [$ownerId]
+            );
+            $this->json($rows);
+        } catch (\Throwable $e) {
+            $this->error('Fehler: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /** POST /api/mobile/nachrichten/{id}/status — open or close a thread */
     public function messageReply(array $params = []): void
     {
         $this->cors();
@@ -1908,6 +1983,145 @@ class MobileApiController
             $this->error('Fehler: ' . $e->getMessage(), 500);
         }
         $this->json(['ok' => true]);
+    }
+
+    /* ══════════════════════════════════════════════════════
+       THERAPY CARE PRO (TCP)
+    ══════════════════════════════════════════════════════ */
+
+    /** GET /api/mobile/tcp/{patient_id}/progress — categories and latest scores */
+    public function tcpProgress(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+        $patientId = (int)($params['id'] ?? 0);
+
+        try {
+            $categories = $this->tcp()->getActiveProgressCategories();
+            $latest     = $this->tcp()->getLatestProgressForPatient($patientId);
+            
+            $this->json([
+                'categories' => $categories,
+                'latest'     => $latest
+            ]);
+        } catch (\Throwable $e) {
+            $this->error('TCP Fehler: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /** POST /api/mobile/tcp/{patient_id}/save — save progress entry */
+    public function tcpSave(array $params = []): void
+    {
+        $this->cors();
+        $user = $this->requireAuth();
+        $patientId = (int)($params['id'] ?? 0);
+        $data = $this->body();
+
+        if (empty($data['category_id']) || !isset($data['score'])) {
+            $this->error('category_id und score sind erforderlich.', 422);
+        }
+
+        try {
+            $id = $this->tcp()->createProgressEntry([
+                'patient_id'  => $patientId,
+                'category_id' => (int)$data['category_id'],
+                'score'       => (int)$data['score'],
+                'notes'       => $data['notes'] ?? '',
+                'entry_date'  => $data['entry_date'] ?? date('Y-m-d'),
+                'recorded_by' => (int)$user['user_id']
+            ]);
+            $this->json(['ok' => true, 'id' => $id], 201);
+        } catch (\Throwable $e) {
+            $this->error('TCP Fehler: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /** GET /api/mobile/tcp/{patient_id}/natural — natural medicine entries */
+    public function tcpNatural(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+        $patientId = (int)($params['id'] ?? 0);
+
+        try {
+            $entries = $this->tcp()->getNaturalEntriesForPatient($patientId);
+            $this->json($entries);
+        } catch (\Throwable $e) {
+            $this->error('TCP Fehler: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /** GET /api/mobile/tcp/{patient_id}/reports — PDF reports list */
+    public function tcpReports(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+        $patientId = (int)($params['id'] ?? 0);
+
+        try {
+            $reports = $this->tcp()->getTherapyReportsForPatient($patientId);
+            $this->json($reports);
+        } catch (\Throwable $e) {
+            $this->error('TCP Fehler: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /* ══════════════════════════════════════════════════════
+       HOMEWORK
+    ══════════════════════════════════════════════════════ */
+
+    /** GET /api/mobile/hausaufgaben/{patient_id} — list all plans for a patient */
+    public function homeworkList(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+        $patientId = (int)($params['id'] ?? 0);
+
+        try {
+            $plans = $this->db->fetchAll(
+                "SELECT ph.*, CONCAT(o.first_name, ' ', o.last_name) AS owner_name, p.name AS patient_name
+                 FROM `{$this->t('patient_homework')}` ph
+                 JOIN `{$this->t('owners')}` o ON o.id = ph.owner_id
+                 JOIN `{$this->t('patients')}` p ON p.id = ph.patient_id
+                 WHERE ph.patient_id = ?
+                 ORDER BY ph.created_at DESC",
+                [$patientId]
+            );
+            $this->json($plans);
+        } catch (\Throwable $e) {
+            $this->error('Fehler: ' . $e->getMessage(), 500);
+        }
+    }
+
+    /** POST /api/mobile/hausaufgaben/{patient_id} — create a new homework plan */
+    public function homeworkCreate(array $params = []): void
+    {
+        $this->cors();
+        $user = $this->requireAuth();
+        $patientId = (int)($params['id'] ?? 0);
+        $data = $this->body();
+
+        if (empty($data['title'])) $this->error('Titel ist erforderlich.', 422);
+
+        $patient = $this->patients->findById($patientId);
+        if (!$patient) $this->error('Patient nicht gefunden.', 404);
+
+        try {
+            $id = $this->db->insert(
+                "INSERT INTO `{$this->t('patient_homework')}` (patient_id, owner_id, title, plan_date, general_notes, created_at)
+                 VALUES (?, ?, ?, ?, ?, NOW())",
+                [
+                    $patientId,
+                    (int)$patient['owner_id'],
+                    trim($data['title']),
+                    $data['plan_date'] ?? date('Y-m-d'),
+                    $data['notes'] ?? ''
+                ]
+            );
+            $this->json(['ok' => true, 'id' => $id], 201);
+        } catch (\Throwable $e) {
+            $this->error('Fehler: ' . $e->getMessage(), 500);
+        }
     }
 
     /* ══════════════════════════════════════════════════════

@@ -44,10 +44,25 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   bool _loadingBefunde = false;
   bool _befundeLoaded  = false;
 
+  // TCP (Therapy Care Pro)
+  Map<String, dynamic>? _tcpData;
+  bool _loadingTcp = false;
+  bool _tcpLoaded  = false;
+
+  // Reports
+  List<Map<String, dynamic>> _reports = [];
+  bool _loadingReports = false;
+  bool _reportsLoaded  = false;
+
+  // Portal
+  List<Map<String, dynamic>> _threads = [];
+  bool _loadingThreads = false;
+  bool _threadsLoaded  = false;
+
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: 5, vsync: this);
+    _tabCtrl = TabController(length: 8, vsync: this);
     _tabCtrl.addListener(_onTabChanged);
     _load();
   }
@@ -57,6 +72,45 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     if (_tabCtrl.index == 1 && !_exercisesLoaded) _loadExercises();
     if (_tabCtrl.index == 2 && !_homeworkLoaded)  _loadHomework();
     if (_tabCtrl.index == 3 && !_befundeLoaded)   _loadBefunde();
+    if (_tabCtrl.index == 4 && !_tcpLoaded)       _loadTcp();
+    if (_tabCtrl.index == 5 && !_reportsLoaded)   _loadReports();
+    if (_tabCtrl.index == 6 && !_threadsLoaded)   _loadThreads();
+  }
+
+  Future<void> _loadTcp() async {
+    setState(() => _loadingTcp = true);
+    try {
+      final data = await _api.tcpProgress(widget.id);
+      setState(() {
+        _tcpData = Map<String, dynamic>.from(data as Map);
+        _tcpLoaded = true;
+        _loadingTcp = false;
+      });
+    } catch (_) { setState(() => _loadingTcp = false); }
+  }
+
+  Future<void> _loadReports() async {
+    setState(() => _loadingReports = true);
+    try {
+      final list = await _api.tcpReports(widget.id);
+      setState(() {
+        _reports = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _reportsLoaded = true;
+        _loadingReports = false;
+      });
+    } catch (_) { setState(() => _loadingReports = false); }
+  }
+
+  Future<void> _loadThreads() async {
+    setState(() => _loadingThreads = true);
+    try {
+      final list = await _api.portalThreadsByPatient(widget.id);
+      setState(() {
+        _threads = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _threadsLoaded = true;
+        _loadingThreads = false;
+      });
+    } catch (_) { setState(() => _loadingThreads = false); }
   }
 
   Future<void> _loadExercises() async {
@@ -340,6 +394,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                 Tab(text: 'Übungen',      icon: Icon(Icons.fitness_center_rounded,   size: 16)),
                 Tab(text: 'Hausaufgaben', icon: Icon(Icons.assignment_rounded,       size: 16)),
                 Tab(text: 'Befunde',      icon: Icon(Icons.medical_information_rounded, size: 16)),
+                Tab(text: 'TCP',          icon: Icon(Icons.show_chart_rounded,       size: 16)),
+                Tab(text: 'Berichte',     icon: Icon(Icons.description_rounded,      size: 16)),
+                Tab(text: 'Portal',       icon: Icon(Icons.forum_rounded,            size: 16)),
                 Tab(text: 'Daten',        icon: Icon(Icons.info_outline_rounded,     size: 16)),
               ],
             ),
@@ -354,6 +411,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                 _buildExercisesTab(),
                 _buildHomeworkTab(),
                 _buildBefundeTab(),
+                _buildTcpTab(),
+                _buildReportsTab(),
+                _buildPortalTab(),
                 _buildInfo(p),
               ],
             ),
@@ -571,6 +631,145 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
               itemCount: _befunde.length,
               separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (_, i) => _BefundCard(befund: _befunde[i]),
+            ),
+    );
+  }
+
+  // ── TCP Tab ─────────────────────────────────────────────
+
+  Widget _buildTcpTab() {
+    if (_loadingTcp) return const Center(child: CircularProgressIndicator());
+    if (_tcpData == null) return const Center(child: Text('Fehler beim Laden von TCP-Daten'));
+
+    final latest = List<Map<String, dynamic>>.from(
+        (_tcpData!['latest'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)));
+
+    return RefreshIndicator(
+      onRefresh: () async { _tcpLoaded = false; await _loadTcp(); },
+      child: latest.isEmpty
+          ? ListView(padding: const EdgeInsets.all(32), children: [
+              Center(child: Column(children: [
+                const SizedBox(height: 40),
+                Icon(Icons.show_chart_rounded, size: 72, color: Colors.grey.shade300),
+                const SizedBox(height: 16),
+                Text('Keine Fortschrittsdaten', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+                const SizedBox(height: 8),
+                Text('TCP-Daten werden in der Web-Anwendung oder über "Eintrag hinzufügen" erfasst.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+              ])),
+            ])
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+              itemCount: latest.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (_, i) {
+                final entry = latest[i];
+                final score = int.tryParse(entry['score']?.toString() ?? '0') ?? 0;
+                final cat   = entry['category_name'] ?? 'Unbekannt';
+                return Card(
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: _scoreColor(score).withValues(alpha: 0.1),
+                      child: Text(score.toString(), style: TextStyle(color: _scoreColor(score), fontWeight: FontWeight.bold)),
+                    ),
+                    title: Text(cat, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    subtitle: Text(entry['notes'] ?? ''),
+                    trailing: Text(entry['entry_date'] ?? ''),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  Color _scoreColor(int score) {
+    if (score >= 8) return Colors.green;
+    if (score >= 5) return Colors.orange;
+    return Colors.red;
+  }
+
+  // ── Reports Tab ──────────────────────────────────────────
+
+  Widget _buildReportsTab() {
+    if (_loadingReports) return const Center(child: CircularProgressIndicator());
+    return RefreshIndicator(
+      onRefresh: () async { _reportsLoaded = false; await _loadReports(); },
+      child: _reports.isEmpty
+          ? ListView(padding: const EdgeInsets.all(32), children: [
+              Center(child: Column(children: [
+                const SizedBox(height: 40),
+                Icon(Icons.description_outlined, size: 72, color: Colors.grey.shade300),
+                const SizedBox(height: 16),
+                Text('Keine Therapieberichte', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+              ])),
+            ])
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+              itemCount: _reports.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (_, i) {
+                final r = _reports[i];
+                return Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.picture_as_pdf_rounded, color: Colors.red),
+                    title: Text(r['title'] ?? 'Therapiebericht'),
+                    subtitle: Text(r['created_at'] ?? ''),
+                    onTap: () {
+                      if (r['pdf_url'] != null) launchUrl(Uri.parse(ApiService.mediaUrl(r['pdf_url'])));
+                    },
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  // ── Portal Tab ───────────────────────────────────────────
+
+  Widget _buildPortalTab() {
+    if (_loadingThreads) return const Center(child: CircularProgressIndicator());
+    return RefreshIndicator(
+      onRefresh: () async { _threadsLoaded = false; await _loadThreads(); },
+      child: _threads.isEmpty
+          ? ListView(padding: const EdgeInsets.all(32), children: [
+              Center(child: Column(children: [
+                const SizedBox(height: 40),
+                Icon(Icons.forum_outlined, size: 72, color: Colors.grey.shade300),
+                const SizedBox(height: 16),
+                Text('Keine Portal-Nachrichten', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+                const SizedBox(height: 8),
+                Text('Nutze das Portal, um mit dem Tierhalter zu kommunizieren.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+              ])),
+            ])
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+              itemCount: _threads.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (_, i) {
+                final t = _threads[i];
+                final unread = (int.tryParse(t['unread_count']?.toString() ?? '0') ?? 0) > 0;
+                return Card(
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: unread ? AppTheme.primary : Colors.grey.shade200,
+                      child: Icon(Icons.forum_rounded, color: unread ? Colors.white : Colors.grey, size: 20),
+                    ),
+                    title: Text(t['subject'] ?? 'Kein Betreff', style: TextStyle(fontWeight: unread ? FontWeight.bold : FontWeight.normal)),
+                    subtitle: Text(t['last_body'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis),
+                    trailing: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(t['last_message_at']?.split(' ')[0] ?? '', style: const TextStyle(fontSize: 10)),
+                        if (unread) Icon(Icons.circle, size: 10, color: AppTheme.primary),
+                      ],
+                    ),
+                    onTap: () => context.push('/nachrichten/${t['id']}').then((_) => _loadThreads()),
+                  ),
+                );
+              },
             ),
     );
   }
@@ -885,7 +1084,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
       context: context,
       isScrollControlled: true,
       builder: (ctx) => _AddEntrySheet(
-        onSubmit: (type, title, content, treatmentTypeId, files) async {
+        onSubmit: (type, title, content, treatmentTypeId, statusBadge, files) async {
           Navigator.pop(ctx);
           setState(() => _uploading = true);
           try {
@@ -895,6 +1094,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
               title: title.trim().isEmpty ? null : title.trim(),
               content: content.trim().isEmpty ? null : content.trim(),
               treatmentTypeId: treatmentTypeId,
+              statusBadge: statusBadge,
               files: files,
             );
             _load();
@@ -913,7 +1113,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
 // ── Add Entry Bottom Sheet ────────────────────────────────────────────────────
 
 class _AddEntrySheet extends StatefulWidget {
-  final Future<void> Function(String type, String title, String content, int? treatmentTypeId, List<File> files) onSubmit;
+  final Future<void> Function(String type, String title, String content, int? treatmentTypeId, String? statusBadge, List<File> files) onSubmit;
   const _AddEntrySheet({required this.onSubmit});
 
   @override
@@ -931,6 +1131,7 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
 
   List<Map<String, dynamic>> _treatmentTypes = [];
   int? _selectedTreatmentTypeId;
+  String? _statusBadge;
 
   @override
   void dispose() {
@@ -1003,6 +1204,23 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
             setState(() => _type = v ?? 'note');
             if (_type == 'treatment') _loadTreatmentTypes();
           },
+        ),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          initialValue: _statusBadge,
+          decoration: const InputDecoration(
+            labelText: 'Status-Markierung',
+            prefixIcon: Icon(Icons.bookmark_rounded),
+          ),
+          hint: const Text('Keine Markierung'),
+          items: const [
+            DropdownMenuItem(value: null, child: Text('Normal (Standard)')),
+            DropdownMenuItem(value: 'info', child: Text('Info (Blau)')),
+            DropdownMenuItem(value: 'warning', child: Text('Wichtig (Gelb/Orange)')),
+            DropdownMenuItem(value: 'danger', child: Text('Kritisch (Rot)')),
+            DropdownMenuItem(value: 'success', child: Text('Abgeschlossen (Grün)')),
+          ],
+          onChanged: (v) => setState(() => _statusBadge = v),
         ),
         const SizedBox(height: 12),
         // Treatment type dropdown
@@ -1129,6 +1347,7 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
                 _titleCtrl.text.trim(),
                 _htmlContent.trim(),
                 _selectedTreatmentTypeId,
+                _statusBadge,
                 _files,
               );
             },
@@ -1234,6 +1453,27 @@ class _TimelineCard extends StatelessWidget {
                   ),
                 ]),
               ),
+              if (entry['status_badge'] != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: _statusColor(entry['status_badge']).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: _statusColor(entry['status_badge']).withValues(alpha: 0.2)),
+                    ),
+                    child: Text(
+                      _statusLabel(entry['status_badge']),
+                      style: TextStyle(
+                        color: _statusColor(entry['status_badge']),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ),
+                ),
               if ((entry['content'] as String? ?? '').isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
@@ -1299,6 +1539,26 @@ class _TimelineCard extends StatelessWidget {
         ),
       ]),
     );
+  Color _statusColor(dynamic badge) {
+    if (badge == null) return Colors.grey;
+    return switch (badge.toString()) {
+      'info'    => Colors.blue,
+      'warning' => Colors.orange,
+      'danger'  => Colors.red,
+      'success' => Colors.green,
+      _         => Colors.grey,
+    };
+  }
+
+  String _statusLabel(dynamic badge) {
+    if (badge == null) return '';
+    return switch (badge.toString()) {
+      'info'    => 'Info',
+      'warning' => 'Wichtig',
+      'danger'  => 'Kritisch',
+      'success' => 'Erledigt',
+      _         => badge.toString().toUpperCase(),
+    };
   }
 }
 

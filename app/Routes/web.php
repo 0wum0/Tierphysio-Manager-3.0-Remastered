@@ -47,6 +47,7 @@ $router->post('/api/mobile/invoices',            [MobileApiController::class, 'i
 $router->get('/api/mobile/invoices/stats',       [MobileApiController::class, 'invoiceStats']);
 $router->get('/api/mobile/invoices/{id}',        [MobileApiController::class, 'invoiceShow']);
 $router->post('/api/mobile/invoices/{id}/status',[MobileApiController::class, 'invoiceUpdateStatus']);
+$router->post('/api/mobile/invoices/{id}/storno', [MobileApiController::class, 'invoiceStorno']);
 
 $router->get('/api/mobile/appointments',      [MobileApiController::class, 'appointmentsList']);
 $router->post('/api/mobile/appointments',     [MobileApiController::class, 'appointmentCreate']);
@@ -63,6 +64,7 @@ $router->get('/api/mobile/nachrichten/{id}',                     [MobileApiContr
 $router->post('/api/mobile/nachrichten/{id}/antworten',          [MobileApiController::class, 'messageReply']);
 $router->post('/api/mobile/nachrichten/{id}/status',             [MobileApiController::class, 'messageSetStatus']);
 $router->post('/api/mobile/nachrichten/{id}/loeschen',           [MobileApiController::class, 'messageDelete']);
+$router->get('/api/mobile/patients/{id}/portal-threads',         [MobileApiController::class, 'portalThreadsByPatient']);
 
 // ── Mobile API v2 — Extended endpoints ──────────────────────────────
 
@@ -193,6 +195,8 @@ $router->post('/api/mobile/profil/passwort',                  [MobileApiControll
 // Progress tracking
 $router->get('/api/mobile/tcp/fortschritt/kategorien',                   [MobileApiController::class, 'tcpProgressCategories']);
 $router->get('/api/mobile/tcp/patienten/{id}/fortschritt',               [MobileApiController::class, 'tcpProgressList']);
+$router->get('/api/mobile/tcp/{id}/progress',                            [MobileApiController::class, 'tcpProgress']);
+$router->post('/api/mobile/tcp/{id}/save',                               [MobileApiController::class, 'tcpSave']);
 $router->post('/api/mobile/tcp/patienten/{id}/fortschritt',              [MobileApiController::class, 'tcpProgressStore']);
 $router->post('/api/mobile/tcp/fortschritt/{entry_id}/loeschen',         [MobileApiController::class, 'tcpProgressDelete']);
 
@@ -216,9 +220,12 @@ $router->post('/api/mobile/tcp/bibliothek/{id}/loeschen',                [Mobile
 
 // Natural therapy
 $router->get('/api/mobile/tcp/patienten/{id}/naturheilkunde',            [MobileApiController::class, 'tcpNaturalList']);
+$router->get('/api/mobile/tcp/{id}/natural',                            [MobileApiController::class, 'tcpNatural']);
 $router->post('/api/mobile/tcp/patienten/{id}/naturheilkunde',           [MobileApiController::class, 'tcpNaturalCreate']);
 $router->post('/api/mobile/tcp/naturheilkunde/{id}/update',              [MobileApiController::class, 'tcpNaturalUpdate']);
 $router->post('/api/mobile/tcp/naturheilkunde/{id}/loeschen',            [MobileApiController::class, 'tcpNaturalDelete']);
+
+$router->get('/api/mobile/tcp/{id}/reports',                            [MobileApiController::class, 'tcpReports']);
 
 // Reminder queue (TCP)
 $router->get('/api/mobile/tcp/erinnerungen/vorlagen',                    [MobileApiController::class, 'tcpReminderTemplates']);

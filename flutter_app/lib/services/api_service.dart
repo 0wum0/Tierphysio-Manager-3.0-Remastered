@@ -186,6 +186,7 @@ class ApiService {
     String? content,
     String type = 'note',
     int? treatmentTypeId,
+    String? statusBadge,
     List<File> files = const [],
   }) async {
     final token = await getToken();
@@ -197,6 +198,7 @@ class ApiService {
     if (title != null) req.fields['title'] = title;
     if (content != null) req.fields['content'] = content;
     if (treatmentTypeId != null) req.fields['treatment_type_id'] = treatmentTypeId.toString();
+    if (statusBadge != null) req.fields['status_badge'] = statusBadge;
 
     for (final file in files) {
       req.files.add(await http.MultipartFile.fromPath('files[]', file.path));
@@ -309,6 +311,13 @@ class ApiService {
         'subject': subject,
         'body': body,
       }));
+
+  Future<void> invoiceUpdateStatus(int id, String status, {String? reason, String? paidAt}) async =>
+      await post('/invoices/$id/status', {
+        'status': status,
+        if (reason != null) 'cancellation_reason': reason,
+        if (paidAt != null) 'paid_at': paidAt,
+      });
 
   Future<void> messageSetStatus(int threadId, String status) async =>
       await post('/nachrichten/$threadId/status', {'status': status});
@@ -597,6 +606,30 @@ class ApiService {
 
   Future<void> portalDeactivate(int id) async =>
       await post('/portal-admin/benutzer/$id/deaktivieren', {});
+
+  /* ── Therapy Care Pro (TCP) ── */
+
+  Future<Map<String, dynamic>> tcpProgress(int patientId) async =>
+      Map<String, dynamic>.from(await get('/tcp/$patientId/progress'));
+
+  Future<Map<String, dynamic>> tcpSave(int patientId, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/tcp/$patientId/save', data));
+
+  Future<List<dynamic>> tcpNatural(int patientId) async =>
+      List<dynamic>.from(await get('/tcp/$patientId/natural'));
+
+  Future<List<dynamic>> tcpReports(int patientId) async =>
+      List<dynamic>.from(await get('/tcp/$patientId/reports'));
+
+  /* ── Portal Messaging (Patient Context) ── */
+
+  Future<List<dynamic>> portalThreadsByPatient(int patientId) async =>
+      List<dynamic>.from(await get('/patients/$patientId/portal-threads'));
+
+  /* ── Invoices extended ── */
+
+  Future<Map<String, dynamic>> invoiceStorno(int id, String reason) async =>
+      Map<String, dynamic>.from(await post('/rechnungen/$id/storno', {'reason': reason}));
 
   Future<void> portalUserDelete(int id) async =>
       await post('/portal-admin/benutzer/$id/loeschen', {});
