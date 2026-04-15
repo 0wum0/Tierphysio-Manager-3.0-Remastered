@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
-import '../services/api_service.dart';
 import '../core/theme.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -19,7 +18,6 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen>
     with TickerProviderStateMixin {
   final _formKey   = GlobalKey<FormState>();
-  final _serverCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passCtrl  = TextEditingController();
   bool _loading  = false;
@@ -52,7 +50,6 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
-    _serverCtrl.text = ApiService.baseUrl;
 
     // Background
     _bgCtrl = AnimationController(vsync: this, duration: const Duration(seconds: 7))
@@ -122,7 +119,6 @@ class _LoginScreenState extends State<LoginScreen>
     _lettersCtrl.dispose();
     _shakeCtrl.dispose();
     _shimmerCtrl.dispose();
-    _serverCtrl.dispose();
     _emailCtrl.dispose();
     _passCtrl.dispose();
     super.dispose();
@@ -131,7 +127,6 @@ class _LoginScreenState extends State<LoginScreen>
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _loading = true; _error = null; _errorType = null; });
-    await ApiService.setBaseUrl(_serverCtrl.text);
 
     final result = await context.read<AuthService>().loginWithResult(
       _emailCtrl.text.trim(),
@@ -408,7 +403,7 @@ class _LoginScreenState extends State<LoginScreen>
                     const Icon(Icons.cloud_done_outlined, size: 14, color: AppTheme.success),
                     const SizedBox(width: 8),
                     Text(
-                      _serverCtrl.text.replaceFirst(RegExp(r'^https?://'), ''),
+                      'app.therapano.de',
                       style: TextStyle(
                         fontSize: 12, color: AppTheme.success.withValues(alpha: 0.9),
                         fontWeight: FontWeight.w500,
@@ -423,17 +418,6 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
 
                 const SizedBox(height: 20),
-
-                _DarkTextField(
-                  controller: _serverCtrl,
-                  label: 'Server',
-                  icon: Icons.dns_rounded,
-                  keyboardType: TextInputType.url,
-                  textInputAction: TextInputAction.next,
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Server eingeben' : null,
-                ),
-
-                const SizedBox(height: 14),
 
                 // Email
                 _DarkTextField(
