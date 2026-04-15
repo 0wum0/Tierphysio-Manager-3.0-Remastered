@@ -180,6 +180,32 @@ class ApiService {
   Future<Map<String, dynamic>> patientTimelineCreate(int id, Map<String, dynamic> data) async =>
       Map<String, dynamic>.from(await post('/patients/$id/timeline', data));
 
+  Future<Map<String, dynamic>> patientTimelineCreateMultipart(
+    int patientId, {
+    String? title,
+    String? content,
+    String type = 'note',
+    int? treatmentTypeId,
+    List<File> files = const [],
+  }) async {
+    final token = await getToken();
+    final req = http.MultipartRequest('POST', _uri('/patients/$patientId/timeline'))
+      ..headers.addAll({'Authorization': 'Bearer $token', 'Accept': 'application/json'})
+      ..fields['type'] = type
+      ..fields['entry_date'] = DateTime.now().toIso8601String().substring(0, 10);
+
+    if (title != null) req.fields['title'] = title;
+    if (content != null) req.fields['content'] = content;
+    if (treatmentTypeId != null) req.fields['treatment_type_id'] = treatmentTypeId.toString();
+
+    for (final file in files) {
+      req.files.add(await http.MultipartFile.fromPath('files[]', file.path));
+    }
+
+    final res = await http.Response.fromStream(await req.send());
+    return Map<String, dynamic>.from(_parse(res) as Map);
+  }
+
   Future<Map<String, dynamic>> patientTimelineUpload(int patientId, File file, {
     required String title,
     required String type,

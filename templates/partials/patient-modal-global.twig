@@ -1057,17 +1057,18 @@ function renderTimeline(timeline, patientId) {
     var html = '';
     timeline.forEach(function(e) {
         var ep = encodeURIComponent(JSON.stringify(e));
-        var hasAttach = e.attachment;
-        var ext = hasAttach ? (e.attachment.split('.').pop() || '').toLowerCase() : '';
-        var isImg   = imgExts.includes(ext);
-        var isVideo = videoExts.includes(ext);
-        var src = hasAttach ? '/patienten/'+patientId+'/dokumente/'+encodeURIComponent(e.attachment) : '';
-        var attachHtml = '';
-        if (hasAttach) {
-            if (isImg) attachHtml = '<div class="mt-2"><a href="'+src+'" data-lightbox-modal="'+src+'" data-filename="'+esc(e.attachment)+'" style="cursor:pointer;display:inline-block;"><img src="'+src+'" style="max-height:100px;max-width:100%;border-radius:6px;border:1px solid var(--bs-border-color);display:block;"></a></div>';
-            else if (isVideo) attachHtml = '<div class="mt-2"><a href="'+src+'" data-lightbox-modal="'+src+'" data-filename="'+esc(e.attachment)+'" style="cursor:pointer;display:inline-block;position:relative;"><video src="'+src+'" style="max-height:120px;max-width:100%;border-radius:6px;display:block;background:#000;" preload="metadata"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);border-radius:6px;"><svg width="36" height="36" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="rgba(0,0,0,0.55)"/><polygon points="10,8 18,12 10,16" fill="white"/></svg></div></a></div>';
-            else attachHtml = '<div class="mt-2"><a href="'+src+'" data-lightbox-modal="'+src+'" data-filename="'+esc(e.attachment)+'" class="btn btn-secondary btn-sm" style="font-size:0.78rem;">📎 '+esc(e.attachment)+'</a></div>';
+        var media = Array.isArray(e.media) ? e.media : [];
+        if (!media.length && e.attachment) {
+            media = [{ filename: e.attachment, kind: 'file', web_url: '/patienten/'+patientId+'/dokumente/'+encodeURIComponent(e.attachment) }];
         }
+        var attachHtml = '';
+        media.forEach(function(m) {
+            var src = m.web_url || ('/patienten/'+patientId+'/dokumente/'+encodeURIComponent(m.filename || ''));
+            var filename = m.original_name || m.filename || 'Datei';
+            if (m.kind === 'image') attachHtml += '<div class="mt-2"><a href="'+src+'" data-lightbox-modal="'+src+'" data-filename="'+esc(filename)+'" style="cursor:pointer;display:inline-block;"><img src="'+src+'" style="max-height:120px;max-width:100%;border-radius:6px;border:1px solid var(--bs-border-color);display:block;"></a></div>';
+            else if (m.kind === 'video') attachHtml += '<div class="mt-2"><a href="'+src+'" data-lightbox-modal="'+src+'" data-filename="'+esc(filename)+'" style="cursor:pointer;display:inline-block;position:relative;"><video src="'+src+'" style="max-height:120px;max-width:100%;border-radius:6px;display:block;background:#000;" preload="metadata"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);border-radius:6px;"><svg width="36" height="36" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="rgba(0,0,0,0.55)"/><polygon points="10,8 18,12 10,16" fill="white"/></svg></div></a></div>';
+            else attachHtml += '<div class="mt-2"><a href="'+src+'" data-lightbox-modal="'+src+'" data-filename="'+esc(filename)+'" class="btn btn-secondary btn-sm" style="font-size:0.78rem;">📎 '+esc(filename)+'</a></div>';
+        });
         html += '<div class="timeline-item" data-entry-id="'+e.id+'">';
         html += '<div class="timeline-dot timeline-dot-'+esc(e.type)+'"></div>';
         html += '<div class="timeline-card">';

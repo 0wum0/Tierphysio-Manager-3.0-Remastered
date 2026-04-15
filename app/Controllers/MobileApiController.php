@@ -13,6 +13,7 @@ use App\Repositories\SettingsRepository;
 use App\Repositories\ReminderDunningRepository;
 use App\Repositories\TreatmentTypeRepository;
 use App\Services\MailService;
+use App\Services\TimelineMediaService;
 
 /**
  * Mobile REST API — Bearer token authentication.
@@ -29,6 +30,7 @@ class MobileApiController
     private ReminderDunningRepository $reminderDunning;
     private TreatmentTypeRepository  $treatmentTypeRepo;
     private MailService              $mail;
+    private TimelineMediaService     $timelineMedia;
 
     private ?array $authUser  = null;
     private ?array $bodyCache = null;
@@ -42,7 +44,8 @@ class MobileApiController
         SettingsRepository        $settingsRepository,
         ReminderDunningRepository $reminderDunningRepository,
         TreatmentTypeRepository   $treatmentTypeRepository,
-        MailService               $mailService
+        MailService               $mailService,
+        TimelineMediaService      $timelineMediaService
     ) {
         // Intercept all exceptions for the mobile API and return them as JSON
         set_exception_handler([$this, 'exceptionHandler']);
@@ -62,6 +65,7 @@ class MobileApiController
         $this->reminderDunning   = $reminderDunningRepository;
         $this->treatmentTypeRepo = $treatmentTypeRepository;
         $this->mail              = $mailService;
+        $this->timelineMedia     = $timelineMediaService;
     }
 
     private function t(string $table): string
@@ -838,14 +842,7 @@ class MobileApiController
         $rawTimeline  = $this->patients->getTimeline($id);
         $invoiceStats = $this->invoices->getInvoiceStatsByPatientId($id);
 
-        // Expose attachment as file_url using the mobile API media endpoint (Bearer auth)
-        $timeline = array_map(static function (array $e): array {
-            if (!empty($e['attachment'])) {
-                $filename = basename($e['attachment']);
-                $e['file_url'] = '/api/mobile/patients/' . $e['patient_id'] . '/media/' . rawurlencode($filename);
-            }
-            return $e;
-        }, $rawTimeline);
+        $timeline = $this->timelineMedia->normalizeTimeline($rawTimeline);
 
         if (!empty($patient['photo'])) {
             $patient['photo_url'] = '/api/mobile/patients/' . $id . '/foto/' . rawurlencode(basename($patient['photo']));
@@ -941,7 +938,7 @@ class MobileApiController
         $id = (int)($params['id'] ?? 0);
         if (!$this->patients->findById($id)) $this->error('Patient nicht gefunden.', 404);
 
-        $this->json($this->patients->getTimeline($id));
+        $this->json($this->timelineMedia->normalizeTimeline($this->patients->getTimeline($id)));
     }
 
     public function patientTimelineCreate(array $params = []): void
@@ -952,22 +949,59 @@ class MobileApiController
         $patientId = (int)($params['id'] ?? 0);
         if (!$this->patients->findById($patientId)) $this->error('Patient nicht gefunden.', 404);
 
-        $data = $this->body();
-        if (empty($data['title'])) $this->error('Titel ist erforderlich.');
+        $isMultipart = !empty($_FILES);
+        $data = $isMultipart ? $_POST : $this->body();
+
+        $entryType = trim((string)($data['type'] ?? 'note'));
+        $title = trim((string)($data['title'] ?? ''));
+        $content = trim((string)($data['content'] ?? ''));
+        $entryDate = (string)($data['entry_date'] ?? date('Y-m-d'));
+        $treatmentTypeId = isset($data['treatment_type_id']) && $data['treatment_type_id'] !== ''
+            ? (int)$data['treatment_type_id']
+            : null;
+
+        $uploadedMedia = $this->collectAndStoreTimelineUploads($patientId);
+        if ($entryType === 'note' && !empty($uploadedMedia)) {
+            $firstKind = $uploadedMedia[0]['kind'] ?? 'file';
+            $entryType = $firstKind === 'image' ? 'photo' : ($firstKind === 'video' ? 'video' : 'document');
+        }
+
+        $attachmentValue = null;
+        if (count($uploadedMedia) === 1) {
+            $attachmentValue = $uploadedMedia[0]['filename'];
+        } elseif (count($uploadedMedia) > 1) {
+            $attachmentValue = json_encode($uploadedMedia, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        }
+
+        if ($title === '' && $content === '' && empty($uploadedMedia)) {
+            $this->error('Bitte mindestens Titel, Inhalt oder Datei angeben.');
+        }
+        if ($title === '' && !empty($uploadedMedia)) {
+            $title = (string)($uploadedMedia[0]['original_name'] ?? $uploadedMedia[0]['filename'] ?? 'Datei');
+        }
 
         $entryId = $this->patients->addTimelineEntry([
             'patient_id'        => $patientId,
-            'type'              => $data['type'] ?? 'note',
-            'treatment_type_id' => isset($data['treatment_type_id']) ? (int)$data['treatment_type_id'] : null,
-            'title'             => trim($data['title']),
-            'content'           => trim($data['content'] ?? ''),
+            'type'              => $entryType,
+            'treatment_type_id' => $treatmentTypeId,
+            'title'             => $title,
+            'content'           => $content,
             'status_badge'      => $data['status_badge'] ?? null,
-            'attachment'        => null,
-            'entry_date'        => $data['entry_date'] ?? date('Y-m-d'),
+            'attachment'        => $attachmentValue,
+            'entry_date'        => $entryDate,
             'user_id'           => $user['user_id'],
         ]);
 
-        $this->json(['id' => $entryId, 'success' => true], 201);
+        $entry = $this->db->fetch(
+            "SELECT * FROM `{$this->t('patient_timeline')}` WHERE id = ? LIMIT 1",
+            [(int)$entryId]
+        ) ?: [];
+
+        $this->json([
+            'id' => (int)$entryId,
+            'success' => true,
+            'entry' => $entry ? $this->timelineMedia->enrichTimelineEntry($entry) : null,
+        ], 201);
     }
 
     public function patientTimelineUpload(array $params = []): void
@@ -1017,8 +1051,6 @@ class MobileApiController
         $dest     = $uploadDir . $filename;
         if (!move_uploaded_file($file['tmp_name'], $dest)) $this->error('Datei konnte nicht gespeichert werden.');
 
-        $fileUrl  = '/api/mobile/patients/' . $patientId . '/media/' . rawurlencode($filename);
-
         $entryId = $this->patients->addTimelineEntry([
             'patient_id'        => $patientId,
             'type'              => $type,
@@ -1026,12 +1058,87 @@ class MobileApiController
             'title'             => $title ?: $file['name'],
             'content'           => $content,
             'status_badge'      => null,
-            'attachment'        => $fileUrl,
+            'attachment'        => $filename,
             'entry_date'        => $date,
             'user_id'           => $user['user_id'],
         ]);
 
+        $fileUrl = '/api/mobile/patients/' . $patientId . '/media/' . rawurlencode($filename);
         $this->json(['id' => $entryId, 'file_url' => $fileUrl, 'success' => true], 201);
+    }
+
+    private function collectAndStoreTimelineUploads(int $patientId): array
+    {
+        if (empty($_FILES)) {
+            return [];
+        }
+
+        $files = [];
+        foreach (['files', 'files[]', 'file', 'attachment'] as $key) {
+            if (!isset($_FILES[$key])) {
+                continue;
+            }
+            $bucket = $_FILES[$key];
+            if (is_array($bucket['name'] ?? null)) {
+                foreach ($bucket['name'] as $i => $name) {
+                    if (($bucket['error'][$i] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                        continue;
+                    }
+                    $files[] = [
+                        'name' => (string)$name,
+                        'tmp_name' => (string)($bucket['tmp_name'][$i] ?? ''),
+                    ];
+                }
+            } else {
+                if (($bucket['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_OK) {
+                    $files[] = [
+                        'name' => (string)($bucket['name'] ?? ''),
+                        'tmp_name' => (string)($bucket['tmp_name'] ?? ''),
+                    ];
+                }
+            }
+        }
+
+        if (empty($files)) {
+            return [];
+        }
+
+        $uploadDir = tenant_storage_path('patients/' . $patientId . '/timeline/');
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        $mimeMap = $this->timelineMedia->allowedMimeMap();
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $media = [];
+
+        foreach ($files as $file) {
+            $tmp = $file['tmp_name'];
+            if ($tmp === '' || !is_uploaded_file($tmp)) {
+                continue;
+            }
+
+            $uploadMime = $finfo->file($tmp);
+            if (!isset($mimeMap[$uploadMime])) {
+                $this->error('Dateityp nicht erlaubt: ' . $uploadMime);
+            }
+
+            $filename = bin2hex(random_bytes(16)) . '.' . $mimeMap[$uploadMime];
+            $dest = $uploadDir . $filename;
+            if (!move_uploaded_file($tmp, $dest)) {
+                $this->error('Datei konnte nicht gespeichert werden.');
+            }
+
+            $media[] = $this->timelineMedia->buildMediaItem(
+                $patientId,
+                $filename,
+                $uploadMime,
+                @filesize($dest) ?: null,
+                $file['name'] !== '' ? $file['name'] : null
+            );
+        }
+
+        return $media;
     }
 
     public function patientTimelineDelete(array $params = []): void
@@ -1063,7 +1170,7 @@ class MobileApiController
         $this->requireAuth();
 
         $id   = (int)($params['id'] ?? 0);
-        $file = basename($params['file'] ?? '');
+        $file = $this->timelineMedia->filenameFromLegacyAttachment((string)($params['file'] ?? ''));
         if ($file === '') { http_response_code(404); exit; }
 
         $candidates  = [
