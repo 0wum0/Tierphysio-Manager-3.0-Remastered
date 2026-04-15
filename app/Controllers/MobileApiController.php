@@ -156,15 +156,59 @@ class MobileApiController
      * The detected prefix is written into the token row on the first call so
      * subsequent requests skip the expensive schema lookup.
      */
+    private function resolveTenantPrefixFromSaasDb(string $email): string
+    {
+        $config = Application::getInstance()->getContainer()->get(Config::class);
+        $saasDb = $config->get('saas_db.database', '');
+        if ($saasDb === '' || $email === '') {
+            return '';
+        }
+
+        try {
+            $dsn = sprintf(
+                'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
+                $config->get('saas_db.host', 'localhost'),
+                $config->get('saas_db.port', 3306),
+                $saasDb
+            );
+            $pdo = new \PDO($dsn, $config->get('saas_db.username'), $config->get('saas_db.password'), [
+                \PDO::ATTR_ERRMODE            => \PDO::ERRMODE_EXCEPTION,
+                \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+            ]);
+
+            $stmt = $pdo->prepare("SELECT db_name FROM tenants WHERE email = ? AND status IN ('active','trial') LIMIT 1");
+            $stmt->execute([$email]);
+            $row = $stmt->fetch();
+
+            if ($row && !empty($row['db_name'])) {
+                return $this->normalizeTenantPrefix((string)$row['db_name']);
+            }
+        } catch (\Throwable $e) {
+            error_log('[MobileApi] SaaS DB resolution failed: ' . $e->getMessage());
+        }
+        return '';
+    }
+
+    /**
+     * Resolve the tenant prefix associated with a given email address.
+     * Priority: 1. SaaS DB (authoritative), 2. INFORMATION_SCHEMA auto-detect (fallback)
+     */
     private function resolveTenantPrefixForEmail(string $email): string
     {
-        // 1. Already set on the DB object by requireAuth() from the token row?
+        // 1. Already set on the DB object?
         $current = $this->db->getPrefix();
         if ($current !== '') {
             return $current;
         }
 
-        // 2. Auto-detect by looking for the tenant whose users table has this email.
+        // 2. Try the central SaaS registry first.
+        $saasPrefix = $this->resolveTenantPrefixFromSaasDb($email);
+        if ($saasPrefix !== '') {
+            $this->db->setPrefix($saasPrefix);
+            return $saasPrefix;
+        }
+
+        // 3. Fallback to auto-detect by looking for users tables.
         try {
             $rows = $this->db->fetchAll(
                 "SELECT table_name FROM information_schema.tables
@@ -172,39 +216,48 @@ class MobileApiController
                     AND table_name LIKE 't\_%\_users'
                   ORDER BY table_name ASC"
             );
+            
+            $matches = [];
             foreach ($rows as $row) {
                 $tableName = $row['table_name'] ?? $row['TABLE_NAME'] ?? '';
                 if (str_contains($tableName, 'portal') || str_contains($tableName, 'attempt')) {
                     continue;
                 }
                 $prefix = $this->normalizeTenantPrefix(substr($tableName, 0, -strlen('users')));
-                // Verify: does this tenant actually have this user?
+                
+                // Verify if this user exists in this tenant.
                 $found = $this->db->fetchColumn(
                     "SELECT COUNT(*) FROM `{$tableName}` WHERE email = ? LIMIT 1",
                     [$email]
                 );
                 if ((int)$found > 0) {
-                    $this->db->setPrefix($prefix);
-                    return $prefix;
+                    $matches[] = $prefix;
                 }
             }
-            // Fallback only when there is exactly one usable tenant users table.
+
+            // Only return if exactly one match found to avoid security ambiguity.
+            if (count($matches) === 1) {
+                $this->db->setPrefix($matches[0]);
+                return $matches[0];
+            }
+            
+            // Absolute fallback: if there is exactly one tenant in the whole DB, use it.
             $usable = [];
             foreach ($rows as $row) {
                 $tableName = $row['table_name'] ?? $row['TABLE_NAME'] ?? '';
                 if ($tableName === '' || str_contains($tableName, 'portal') || str_contains($tableName, 'attempt')) {
                     continue;
                 }
-                $usable[] = $tableName;
+                $prefix = $this->normalizeTenantPrefix(substr($tableName, 0, -strlen('users')));
+                $usable[] = $prefix;
             }
-            if (count($usable) === 1) {
-                $prefix = $this->normalizeTenantPrefix(substr($usable[0], 0, -strlen('users')));
+            if (count(array_unique($usable)) === 1) {
+                $prefix = $usable[0];
                 $this->db->setPrefix($prefix);
                 return $prefix;
             }
-        } catch (\Throwable $e) {
-            // Schema lookup failed – log silently
-        }
+        } catch (\Throwable $e) {}
+
         return '';
     }
 
