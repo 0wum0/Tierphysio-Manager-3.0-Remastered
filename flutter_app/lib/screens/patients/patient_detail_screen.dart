@@ -4,6 +4,7 @@ import 'package:flutter_html/flutter_html.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/api_service.dart';
 import '../../core/theme.dart';
 import '../../widgets/html_editor.dart';
@@ -884,70 +885,36 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
       context: context,
       isScrollControlled: true,
       builder: (ctx) => _AddEntrySheet(
-        onTextEntry: (type, title, content, treatmentTypeId) async {
+        onSubmit: (type, title, content, treatmentTypeId, files) async {
           Navigator.pop(ctx);
+          setState(() => _uploading = true);
           try {
-            await _api.patientTimelineCreate(widget.id, {
-              'type':    type,
-              'title':   title,
-              'content': content,
-              'entry_date': DateTime.now().toIso8601String().substring(0, 10),
-              if (treatmentTypeId != null) 'treatment_type_id': treatmentTypeId,
-            });
+            await _api.patientTimelineCreateMultipart(
+              widget.id,
+              type: type,
+              title: title.trim().isEmpty ? null : title.trim(),
+              content: content.trim().isEmpty ? null : content.trim(),
+              treatmentTypeId: treatmentTypeId,
+              files: files,
+            );
             _load();
           } catch (e) {
             if (mounted) ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(e.toString()), backgroundColor: AppTheme.danger));
+          } finally {
+            if (mounted) setState(() => _uploading = false);
           }
-        },
-        onFileEntry: (type) async {
-          Navigator.pop(ctx);
-          await _pickAndUpload(type);
         },
       ),
     );
-  }
-
-  Future<void> _pickAndUpload(String type) async {
-    FileType ft;
-    List<String>? exts;
-    if (type == 'video') {
-      ft = FileType.video;
-    } else if (type == 'photo') {
-      ft = FileType.image;
-    } else {
-      ft = FileType.custom;
-      exts = ['pdf', 'doc', 'docx', 'txt'];
-    }
-
-    final result = await FilePicker.platform.pickFiles(type: ft, allowedExtensions: exts);
-    if (result == null || result.files.single.path == null) return;
-
-    final file = File(result.files.single.path!);
-    final name = result.files.single.name;
-    setState(() => _uploading = true);
-    try {
-      await _api.patientTimelineUpload(
-        widget.id, file,
-        title: name,
-        type: type,
-      );
-      _load();
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: AppTheme.danger));
-    } finally {
-      if (mounted) setState(() => _uploading = false);
-    }
   }
 }
 
 // ── Add Entry Bottom Sheet ────────────────────────────────────────────────────
 
 class _AddEntrySheet extends StatefulWidget {
-  final Future<void> Function(String type, String title, String content, int? treatmentTypeId) onTextEntry;
-  final Future<void> Function(String type) onFileEntry;
-  const _AddEntrySheet({required this.onTextEntry, required this.onFileEntry});
+  final Future<void> Function(String type, String title, String content, int? treatmentTypeId, List<File> files) onSubmit;
+  const _AddEntrySheet({required this.onSubmit});
 
   @override
   State<_AddEntrySheet> createState() => _AddEntrySheetState();
@@ -958,8 +925,9 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
   final _titleCtrl   = TextEditingController();
   String _type       = 'note';
   String _htmlContent = '';
-  bool   _showForm   = false;
   bool   _loadingTx  = false;
+  final List<File> _files = [];
+  final List<String> _fileNames = [];
 
   List<Map<String, dynamic>> _treatmentTypes = [];
   int? _selectedTreatmentTypeId;
@@ -1002,47 +970,7 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: AnimatedSize(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-        child: _showForm ? _buildForm(context) : _buildOptions(),
-      ),
-    );
-  }
-
-  Widget _buildOptions() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 40, height: 4, decoration: BoxDecoration(
-          color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
-        const SizedBox(height: 16),
-        Text('Eintrag hinzufügen', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 20),
-        Row(children: [
-          _OptionTile(icon: Icons.note_rounded, label: 'Notiz', color: AppTheme.success,
-              onTap: () { setState(() { _type = 'note'; _showForm = true; }); }),
-          const SizedBox(width: 10),
-          _OptionTile(icon: Icons.medical_services_rounded, label: 'Behandlung', color: AppTheme.primary,
-              onTap: () { setState(() { _type = 'treatment'; _showForm = true; }); _loadTreatmentTypes(); }),
-        ]),
-        const SizedBox(height: 10),
-        Row(children: [
-          _OptionTile(icon: Icons.photo_camera_rounded, label: 'Foto', color: AppTheme.secondary,
-              onTap: () => widget.onFileEntry('photo')),
-          const SizedBox(width: 10),
-          _OptionTile(icon: Icons.videocam_rounded, label: 'Video', color: AppTheme.tertiary,
-              onTap: () => widget.onFileEntry('video')),
-        ]),
-        const SizedBox(height: 10),
-        Row(children: [
-          _OptionTile(icon: Icons.attach_file_rounded, label: 'Dokument', color: AppTheme.warning,
-              onTap: () => widget.onFileEntry('document')),
-          const SizedBox(width: 10),
-          _OptionTile(icon: Icons.text_snippet_rounded, label: 'Sonstiges', color: Colors.grey,
-              onTap: () { setState(() { _type = 'other'; _showForm = true; }); }),
-        ]),
-      ]),
+      child: _buildForm(context),
     );
   }
 
@@ -1054,14 +982,28 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
         Container(width: 40, height: 4, decoration: BoxDecoration(
           color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
         const SizedBox(height: 12),
-        Row(children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
-            onPressed: () => setState(() { _showForm = false; _htmlContent = ''; _selectedTreatmentTypeId = null; }),
+        Text('Akte-Eintrag hinzufügen',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          initialValue: _type,
+          decoration: const InputDecoration(
+            labelText: 'Eintragstyp',
+            prefixIcon: Icon(Icons.category_rounded),
           ),
-          Expanded(child: Text(_typeLabel(_type),
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700))),
-        ]),
+          items: const [
+            DropdownMenuItem(value: 'note', child: Text('Notiz')),
+            DropdownMenuItem(value: 'treatment', child: Text('Behandlung')),
+            DropdownMenuItem(value: 'photo', child: Text('Foto')),
+            DropdownMenuItem(value: 'video', child: Text('Video')),
+            DropdownMenuItem(value: 'document', child: Text('Dokument')),
+            DropdownMenuItem(value: 'other', child: Text('Sonstiges')),
+          ],
+          onChanged: (v) {
+            setState(() => _type = v ?? 'note');
+            if (_type == 'treatment') _loadTreatmentTypes();
+          },
+        ),
         const SizedBox(height: 12),
         // Treatment type dropdown
         if (_type == 'treatment') ...[
@@ -1101,7 +1043,7 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
         TextField(
           controller: _titleCtrl,
           decoration: const InputDecoration(
-            labelText: 'Titel *',
+            labelText: 'Titel (optional)',
             prefixIcon: Icon(Icons.title_rounded),
           ),
         ),
@@ -1142,6 +1084,39 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
               onPressed: () => _openEditor(context),
             ),
           ),
+        const SizedBox(height: 8),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: OutlinedButton.icon(
+            onPressed: () async {
+              final result = await FilePicker.platform.pickFiles(type: FileType.any, allowMultiple: true);
+              if (result == null) return;
+              setState(() {
+                _files.clear();
+                _fileNames.clear();
+                for (final f in result.files) {
+                  if (f.path == null) continue;
+                  _files.add(File(f.path!));
+                  _fileNames.add(f.name);
+                }
+              });
+            },
+            icon: const Icon(Icons.attach_file_rounded),
+            label: const Text('Medien hinzufügen'),
+          ),
+        ),
+        if (_fileNames.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: _fileNames.map((name) => Chip(label: Text(name, overflow: TextOverflow.ellipsis))).toList(),
+              ),
+            ),
+          ),
         const SizedBox(height: 20),
         SizedBox(
           width: double.infinity,
@@ -1149,12 +1124,12 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
             icon: const Icon(Icons.save_rounded),
             label: const Text('Speichern'),
             onPressed: () {
-              if (_titleCtrl.text.trim().isEmpty) return;
-              widget.onTextEntry(
+              widget.onSubmit(
                 _type,
                 _titleCtrl.text.trim(),
                 _htmlContent.trim(),
                 _selectedTreatmentTypeId,
+                _files,
               );
             },
           ),
@@ -1176,36 +1151,6 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
     } catch (_) {
       return AppTheme.primary;
     }
-  }
-}
-
-class _OptionTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-  const _OptionTile({required this.icon, required this.label, required this.color, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Material(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Icon(icon, color: color, size: 28),
-              const SizedBox(height: 6),
-              Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w600, fontSize: 12)),
-            ]),
-          ),
-        ),
-      ),
-    );
   }
 }
 
@@ -1237,11 +1182,13 @@ class _TimelineCard extends StatelessWidget {
       dateStr = DateFormat('dd.MM.yy', 'de_DE').format(d);
     } catch (_) {}
 
-    final fileUrl  = entry['file_url'] as String?;
-    final hasFile  = fileUrl != null && fileUrl.isNotEmpty;
-    final isMedia  = hasFile && (type == 'photo' || type == 'video' || type == 'document');
-    final isPdf    = type == 'document';
-    final fullUrl  = hasFile ? ApiService.mediaUrl(fileUrl) : null;
+    final media = List<Map<String, dynamic>>.from(
+      (entry['media'] as List? ?? []).map((m) => Map<String, dynamic>.from(m as Map)),
+    );
+    final fileUrl = entry['file_url'] as String?;
+    if (media.isEmpty && fileUrl != null && fileUrl.isNotEmpty) {
+      media.add({'url': fileUrl, 'kind': type == 'photo' ? 'image' : (type == 'video' ? 'video' : 'file')});
+    }
 
     return IntrinsicHeight(
       child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -1304,12 +1251,38 @@ class _TimelineCard extends StatelessWidget {
                     },
                   ),
                 ),
-              // Media preview
-              if (isMedia && fullUrl != null)
-                Padding(
+              ...media.map((m) {
+                final url = (m['url'] as String?) ?? '';
+                if (url.isEmpty) return const SizedBox.shrink();
+                final fullUrl = ApiService.mediaUrl(url);
+                final kind = (m['kind'] as String?) ?? 'file';
+                if (kind == 'file' || kind == 'document') {
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final uri = Uri.parse(fullUrl);
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        icon: const Icon(Icons.attach_file_rounded, size: 16),
+                        label: Text((m['original_name'] ?? m['filename'] ?? 'Datei').toString()),
+                      ),
+                    ),
+                  );
+                }
+                return Padding(
                   padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-                  child: MediaThumbnail(url: fullUrl, isVideo: type == 'video', isPdf: isPdf),
-                ),
+                  child: MediaThumbnail(
+                    url: fullUrl,
+                    isVideo: kind == 'video',
+                    isPdf: kind == 'document',
+                  ),
+                );
+              }),
               if (entry['user_name'] != null)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
@@ -1623,4 +1596,3 @@ class _ModernInfoCard extends StatelessWidget {
     );
   }
 }
-

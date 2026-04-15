@@ -19,6 +19,7 @@ use App\Repositories\SettingsRepository;
 use App\Repositories\HomeworkRepository;
 use App\Core\Database;
 use App\Core\PerformanceLogger;
+use App\Services\TimelineMediaService;
 
 class PatientController extends Controller
 {
@@ -35,7 +36,8 @@ class PatientController extends Controller
         private readonly PdfService $pdfService,
         private readonly MailService $mailService,
         private readonly HomeworkRepository $homeworkRepository,
-        private readonly Database $db
+        private readonly Database $db,
+        private readonly TimelineMediaService $timelineMedia
     ) {
         parent::__construct($view, $session, $config, $translator);
     }
@@ -83,7 +85,7 @@ class PatientController extends Controller
         }
 
         $owner    = $this->ownerService->findById((int)$patient['owner_id']);
-        $timeline = $this->patientService->getTimeline((int)$params['id']);
+        $timeline = $this->timelineMedia->normalizeTimeline($this->patientService->getTimeline((int)$params['id']));
         $owners   = $this->ownerService->findAll();
 
         $treatmentTypes = [];
@@ -190,7 +192,7 @@ class PatientController extends Controller
         }
 
         $owner          = $this->ownerService->findById((int)$patient['owner_id']);
-        $timeline       = $this->patientService->getTimeline((int)$params['id']);
+        $timeline       = $this->timelineMedia->normalizeTimeline($this->patientService->getTimeline((int)$params['id']));
         $treatmentTypes = [];
         try { $treatmentTypes = $this->treatmentTypeRepository->findActive(); } catch (\Throwable) {}
 
@@ -598,7 +600,7 @@ class PatientController extends Controller
         }
 
         $this->patientService->addTimelineEntry($data);
-        $timeline = $this->patientService->getTimeline((int)$params['id'], 100);
+        $timeline = $this->timelineMedia->normalizeTimeline($this->patientService->getTimeline((int)$params['id'], 100));
 
         header('Content-Type: application/json');
         echo json_encode(['ok' => true, 'timeline' => $timeline]);
@@ -708,7 +710,7 @@ class PatientController extends Controller
         ];
 
         $this->patientService->updateTimelineEntry((int)$params['entryId'], $data);
-        $timeline = $this->patientService->getTimeline((int)$params['id'], 100);
+        $timeline = $this->timelineMedia->normalizeTimeline($this->patientService->getTimeline((int)$params['id'], 100));
 
         header('Content-Type: application/json');
         echo json_encode(['ok' => true, 'timeline' => $timeline]);
@@ -722,7 +724,7 @@ class PatientController extends Controller
         if (!$patient) { http_response_code(404); header('Content-Type: application/json'); echo json_encode(['error' => 'not found']); exit; }
 
         $this->patientService->deleteTimelineEntry((int)$params['entryId']);
-        $timeline = $this->patientService->getTimeline((int)$params['id'], 100);
+        $timeline = $this->timelineMedia->normalizeTimeline($this->patientService->getTimeline((int)$params['id'], 100));
 
         header('Content-Type: application/json');
         echo json_encode(['ok' => true, 'timeline' => $timeline]);

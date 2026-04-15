@@ -502,12 +502,27 @@
                                         {% if entry.content %}
                                             <div class="timeline-content">{{ entry.content|nl2br }}</div>
                                         {% endif %}
-                                        {% if entry.attachment %}
+                                        {% if entry.media is defined and entry.media|length > 0 %}
+                                            <div class="timeline-attachment" style="display:flex;flex-direction:column;gap:.6rem;margin-top:.6rem;">
+                                                {% for medium in entry.media %}
+                                                    {% set mediaUrl = medium.web_url ?? ('/patienten/' ~ patient.id ~ '/dokumente/' ~ medium.filename) %}
+                                                    {% if medium.kind == 'image' %}
+                                                        <a href="{{ mediaUrl }}" target="_blank" style="display:inline-block;max-width:340px;">
+                                                            <img src="{{ mediaUrl }}" alt="{{ medium.original_name ?? medium.filename }}" style="max-width:100%;max-height:220px;border-radius:8px;border:1px solid var(--bs-border-color);">
+                                                        </a>
+                                                    {% elseif medium.kind == 'video' %}
+                                                        <video src="{{ mediaUrl }}" controls preload="metadata" style="max-width:380px;max-height:240px;border-radius:8px;background:#000;"></video>
+                                                    {% else %}
+                                                        <a href="{{ mediaUrl }}" class="btn btn-sm btn-outline-secondary" target="_blank">
+                                                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" points="7 10 12 15 17 10"/><line stroke="currentColor" stroke-width="2" x1="12" y1="15" x2="12" y2="3"/></svg>
+                                                            {{ medium.original_name ?? medium.filename }}
+                                                        </a>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        {% elseif entry.attachment %}
                                             <div class="timeline-attachment">
-                                                <a href="/patienten/{{ patient.id }}/dokumente/{{ entry.attachment }}" class="btn btn-sm btn-outline-secondary" target="_blank">
-                                                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" points="7 10 12 15 17 10"/><line stroke="currentColor" stroke-width="2" x1="12" y1="15" x2="12" y2="3"/></svg>
-                                                    {{ entry.attachment }}
-                                                </a>
+                                                <a href="/patienten/{{ patient.id }}/dokumente/{{ entry.attachment }}" class="btn btn-sm btn-outline-secondary" target="_blank">{{ entry.attachment }}</a>
                                             </div>
                                         {% endif %}
                                     </div>
