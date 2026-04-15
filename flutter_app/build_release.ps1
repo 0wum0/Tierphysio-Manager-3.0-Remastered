@@ -24,7 +24,7 @@ if ($versionMatch.Success) {
 
 # 3. Create Certificate if missing
 Write-Host "--- Handling Certificates ---" -ForegroundColor Cyan
-if (-not (Test-Path "therapano_cert.pfx")) {
+if (-not (Test-Path "therapano_cert.pfx") -or -not (Test-Path "therapano_cert.cer")) {
     Write-Host "Generating self-signed certificate..."
     $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=Therapano" -KeyUsage DigitalSignature -FriendlyName "Therapano Self-Signed" -CertStoreLocation "Cert:\CurrentUser\My" -NotAfter (Get-Date).AddYears(10) -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3")
     
@@ -59,7 +59,7 @@ if (Test-Path $ISCC_PATH) {
 # 7. Sign the Setup.exe
 $SETUP_EXE = "releases\$VERSION\TherapanoSetup_v$VERSION.exe"
 Write-Host "--- Signing Setup.exe ---" -ForegroundColor Cyan
-if (Test-Path $SIGNTOOL_PATH -and (Test-Path $SETUP_EXE)) {
+if ((Test-Path $SIGNTOOL_PATH) -and (Test-Path $SETUP_EXE)) {
     & $SIGNTOOL_PATH sign /f "therapano_cert.pfx" /p "therapano" /fd SHA256 /t http://timestamp.digicert.com $SETUP_EXE
 }
 
