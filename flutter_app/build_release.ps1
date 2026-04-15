@@ -28,8 +28,8 @@ if (-not (Test-Path "therapano_cert.pfx")) {
     Write-Host "Generating self-signed certificate..."
     $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=Therapano" -KeyUsage DigitalSignature -FriendlyName "Therapano Self-Signed" -CertStoreLocation "Cert:\CurrentUser\My" -NotAfter (Get-Date).AddYears(10) -TextExtension @("2.5.29.37={text}1.3.6.1.5.5.7.3.3")
     
-    # Export PFX (no password for automation simplicity)
-    $pwd = ConvertTo-SecureString -String "" -Force -AsPlainText
+    # Export PFX (using a default password for automation)
+    $pwd = ConvertTo-SecureString -String "therapano" -Force -AsPlainText
     Export-PfxCertificate -Cert $cert -FilePath "therapano_cert.pfx" -Password $pwd
     
     # Export CER for the installer

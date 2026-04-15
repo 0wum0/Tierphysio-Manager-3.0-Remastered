@@ -108,7 +108,7 @@ class UpdateService {
 
       // Launch the installer
       // Silent install? Typically Inno Setup uses /VERYSILENT /SUPPRESSMSGBOXES
-      await OpenFilePlus.open(installFile.path);
+      await OpenFile.open(installFile.path);
 
       // Close the app to allow the installer to overwrite files
       Future.delayed(const Duration(seconds: 1), () {
