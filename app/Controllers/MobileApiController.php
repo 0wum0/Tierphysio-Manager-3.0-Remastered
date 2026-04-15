@@ -340,6 +340,56 @@ class MobileApiController
         return '';
     }
 
+    /**
+     * Legacy fallback for global tokens without tenant_prefix.
+     * Try to infer tenant by matching user_id across tenant users tables.
+     * Returns a prefix only when exactly one tenant matches.
+     */
+    private function resolveTenantPrefixForUserId(int $userId): string
+    {
+        if ($userId <= 0) {
+            return '';
+        }
+
+        try {
+            $rows = $this->db->fetchAll(
+                "SELECT table_name FROM information_schema.tables
+                  WHERE table_schema = DATABASE()
+                    AND table_name LIKE 't\_%\_users'
+                  ORDER BY table_name ASC"
+            );
+
+            $matches = [];
+            foreach ($rows as $row) {
+                $tableName = $row['table_name'] ?? $row['TABLE_NAME'] ?? '';
+                if ($tableName === '' || str_contains($tableName, 'portal') || str_contains($tableName, 'attempt')) {
+                    continue;
+                }
+
+                try {
+                    $exists = (int)$this->db->fetchColumn(
+                        "SELECT COUNT(*) FROM `{$tableName}` WHERE id = ? LIMIT 1",
+                        [$userId]
+                    );
+                    if ($exists > 0) {
+                        $matches[] = $this->normalizeTenantPrefix(substr($tableName, 0, -strlen('users')));
+                    }
+                } catch (\Throwable) {
+                    continue;
+                }
+            }
+
+            $matches = array_values(array_unique(array_filter($matches)));
+            if (count($matches) === 1) {
+                $this->db->setPrefix($matches[0]);
+                return $matches[0];
+            }
+        } catch (\Throwable) {
+        }
+
+        return '';
+    }
+
     /* ══════════════════════════════════════════════════════
        HELPERS
     ══════════════════════════════════════════════════════ */
@@ -481,9 +531,46 @@ class MobileApiController
         if ($storedPrefix !== '') {
             $this->db->setPrefix($storedPrefix);
         } else {
-            // Fallback for global tokens missing the prefix column
-            $email = $tokenRow['email'] ?? $tokenRow['user_email'] ?? '';
-            $storedPrefix = $this->resolveTenantPrefixForEmail($email);
+            // Legacy/global fallback: some old global rows have no tenant_prefix and no user payload.
+            // 1) Try user_id-based resolution first (available in global token rows).
+            $storedPrefix = $this->resolveTenantPrefixForUserId((int)($tokenRow['user_id'] ?? 0));
+
+            // 2) If user data is already present, fallback to email-based resolution.
+            if ($storedPrefix === '') {
+                $email = (string)($tokenRow['email'] ?? $tokenRow['user_email'] ?? '');
+                $storedPrefix = $this->resolveTenantPrefixForEmail($email);
+            }
+
+            // 3) If still unresolved, scan legacy tenant token tables once.
+            if ($storedPrefix === '') {
+                try {
+                    $tables = $this->db->fetchAll(
+                        "SELECT table_name FROM information_schema.tables
+                         WHERE table_schema = DATABASE()
+                           AND table_name LIKE 't\_%\_mobile\_api\_tokens'"
+                    );
+                    foreach ($tables as $row) {
+                        $tableName = $row['table_name'] ?? $row['TABLE_NAME'] ?? '';
+                        if ($tableName === '') {
+                            continue;
+                        }
+                        $prefix = $this->normalizeTenantPrefix(substr($tableName, 0, -strlen('mobile_api_tokens')));
+                        $this->db->setPrefix($prefix);
+                        $legacyRow = $this->findTokenRowInTable($this->t('mobile_api_tokens'), $token, true);
+                        if ($legacyRow) {
+                            $storedPrefix = $prefix;
+                            $tokenRow = array_merge($legacyRow, $tokenRow);
+                            break;
+                        }
+                    }
+                } catch (\Throwable) {
+                }
+            }
+        }
+
+        // Invalid/legacy token with no tenant association must not become HTTP 500.
+        if ($storedPrefix === '' || $this->db->getPrefix() === '') {
+            $this->error('Ungültiger oder veralteter Token (Mandant nicht zugeordnet).', 401);
         }
 
         // If it was a global token without user info, fetch the user info now!
@@ -499,7 +586,7 @@ class MobileApiController
                     $this->error('Benutzer im Mandanten nicht gefunden.', 401);
                 }
             } catch (\Throwable $e) {
-                $this->error('Zugehörige Mandantendaten konnten nicht geladen werden.', 500);
+                $this->error('Zugehörige Mandantendaten konnten nicht geladen werden.', 401);
             }
         }
 
@@ -2070,8 +2157,8 @@ class MobileApiController
        HOMEWORK
     ══════════════════════════════════════════════════════ */
 
-    /** GET /api/mobile/hausaufgaben/{patient_id} — list all plans for a patient */
-    public function homeworkList(array $params = []): void
+    /** @deprecated Legacy endpoint implementation kept for backward compatibility only. */
+    public function homeworkListLegacy(array $params = []): void
     {
         $this->cors();
         $this->requireAuth();
@@ -2093,8 +2180,8 @@ class MobileApiController
         }
     }
 
-    /** POST /api/mobile/hausaufgaben/{patient_id} — create a new homework plan */
-    public function homeworkCreate(array $params = []): void
+    /** @deprecated Legacy endpoint implementation kept for backward compatibility only. */
+    public function homeworkCreateLegacy(array $params = []): void
     {
         $this->cors();
         $user = $this->requireAuth();
