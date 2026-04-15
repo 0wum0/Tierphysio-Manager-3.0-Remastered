@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:go_router/go_router.dart';
 import '../services/api_service.dart';
 
 /// Floating Action Button that opens the feedback bottom sheet.
@@ -19,6 +20,22 @@ class _FeedbackFabState extends State<FeedbackFab> {
   @override
   Widget build(BuildContext context) {
     if (_ShellLevelFeedback.isOpen) return const SizedBox.shrink();
+
+    // Hide FAB on messaging/chat screens to prevent overlapping with send buttons
+    try {
+      final location = GoRouterState.of(context).matchedLocation;
+      if (location.contains('nachrichten') || location.contains('chat')) {
+        return const SizedBox.shrink();
+      }
+    } catch (_) {
+      // Fallback to ModalRoute if GoRouter is not available
+      try {
+        final route = ModalRoute.of(context)?.settings.name ?? '';
+        if (route.contains('nachrichten') || route.contains('chat')) {
+          return const SizedBox.shrink();
+        }
+      } catch (_) {}
+    }
 
     return FloatingActionButton.small(
       heroTag: 'feedback_fab',
