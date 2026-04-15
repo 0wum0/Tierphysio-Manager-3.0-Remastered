@@ -4,23 +4,19 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const _baseKey = 'api_base_url';
   static const _tokenKey = 'api_token';
   static SharedPreferences? _prefs;
 
-  // Feste Domain für Windows App
+  // Feste Domain für alle Flutter-Clients (Windows + Android).
   static final String _baseUrl = 'https://app.therapano.de';
 
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
-    // Fixed domain for Windows app – saved URL is intentionally ignored.
-    await _prefs?.remove(_baseKey);
   }
 
+  @Deprecated('Die API-Domain ist fest auf https://app.therapano.de gesetzt.')
   static Future<void> setBaseUrl(String url) async {
-    // Für Windows App: feste Domain nicht ändern lassen
-    // _baseUrl = url.trimRight().replaceAll(RegExp(r'/$'), '');
-    // await _prefs?.setString(_baseKey, _baseUrl);
+    // Legacy no-op: Domainwechsel wird bewusst nicht mehr unterstützt.
   }
 
   static String get baseUrl => _baseUrl;
@@ -443,8 +439,48 @@ class ApiService {
 
   /* ── Search & Notifications ── */
 
-  Future<List<dynamic>> globalSearch(String q) async =>
-      List<dynamic>.from(await get('/search', query: {'q': q}));
+  Future<List<dynamic>> globalSearch(String q) async {
+    final raw = await get('/search', query: {'q': q});
+    if (raw is List) return List<dynamic>.from(raw);
+    if (raw is Map) {
+      final grouped = Map<String, dynamic>.from(raw);
+      final out = <Map<String, dynamic>>[];
+
+      void addType(String type, List<dynamic> entries) {
+        for (final entry in entries) {
+          final row = Map<String, dynamic>.from(entry as Map);
+          final id = row['id'];
+          if (id == null) continue;
+          final title = (row['name'] ?? row['title'] ?? '').toString();
+          String subtitle = '';
+          if (type == 'patient') {
+            final species = (row['species'] ?? '').toString();
+            subtitle = species.isNotEmpty ? species : (row['status'] ?? '').toString();
+          } else if (type == 'owner') {
+            subtitle = (row['email'] ?? row['phone'] ?? '').toString();
+          } else if (type == 'invoice') {
+            subtitle = '${row['status'] ?? ''} · ${row['issue_date'] ?? ''}'.trim();
+          } else if (type == 'appointment') {
+            subtitle = (row['start_at'] ?? '').toString();
+          }
+          out.add({
+            ...row,
+            'id': id is int ? id : int.tryParse(id.toString()),
+            'type': type,
+            'title': title.isEmpty ? '—' : title,
+            'subtitle': subtitle,
+          });
+        }
+      }
+
+      addType('patient', List<dynamic>.from(grouped['patients'] as List? ?? const []));
+      addType('owner', List<dynamic>.from(grouped['owners'] as List? ?? const []));
+      addType('invoice', List<dynamic>.from(grouped['invoices'] as List? ?? const []));
+      addType('appointment', List<dynamic>.from(grouped['appointments'] as List? ?? const []));
+      return out;
+    }
+    return <dynamic>[];
+  }
 
   Future<Map<String, dynamic>> notificationSummary() async =>
       Map<String, dynamic>.from(await get('/notifications'));

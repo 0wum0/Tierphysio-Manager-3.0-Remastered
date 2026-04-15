@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../../core/terminology.dart';
 import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
 import '../../core/theme.dart';
 
 class SearchScreen extends StatefulWidget {
@@ -46,9 +49,9 @@ class _SearchScreenState extends State<SearchScreen> {
     _ => Colors.grey,
   };
 
-  String _labelFor(String type) => switch (type) {
-    'patient' => 'Patient',
-    'owner'   => 'Tierhalter',
+  String _labelFor(String type, Terminology t) => switch (type) {
+    'patient' => t.patientSingular,
+    'owner'   => t.ownerSingular,
     'invoice' => 'Rechnung',
     'appointment' => 'Termin',
     _ => type,
@@ -68,6 +71,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final t = Terminology(isTrainer: context.watch<AuthService>().isTrainer);
     return Scaffold(
       appBar: AppBar(
         title: TextField(
@@ -75,7 +79,7 @@ class _SearchScreenState extends State<SearchScreen> {
           autofocus: true,
           onChanged: _search,
           decoration: InputDecoration(
-            hintText: 'Patienten, Tierhalter, Rechnungen…',
+            hintText: t.searchHint(),
             border: InputBorder.none,
             suffixIcon: _ctrl.text.isNotEmpty
                 ? IconButton(icon: const Icon(Icons.clear_rounded), onPressed: () { _ctrl.clear(); setState(() => _results = []); })
@@ -130,7 +134,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                   decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                                  child: Text(_labelFor(type), style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600)),
+                                  child: Text(_labelFor(type, t), style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600)),
                                 ),
                               ]),
                             ),

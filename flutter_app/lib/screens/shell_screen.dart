@@ -11,6 +11,7 @@ import '../services/api_service.dart';
 import '../services/notification_service.dart';
 import '../services/theme_service.dart';
 import '../core/theme.dart';
+import '../core/terminology.dart';
 
 const double _kSidebarCollapsed = 72.0;
 const double _kSidebarExpanded  = 240.0;
@@ -250,8 +251,10 @@ class _ShellScreenState extends State<ShellScreen>
   }
 
   final _narrowScaffoldKey = GlobalKey<ScaffoldState>();
+  Terminology _term() => Terminology(isTrainer: context.read<AuthService>().isTrainer);
 
   void _openMoreDrawer() {
+    final t = _term();
     final cs = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
@@ -261,7 +264,7 @@ class _ShellScreenState extends State<ShellScreen>
       ),
       builder: (ctx) {
         final items = [
-          _GridItem(Icons.person_rounded,          'Tierhalter',       AppTheme.secondary, '/tierhalter'),
+          _GridItem(Icons.person_rounded,          t.ownerPlural,      AppTheme.secondary, '/tierhalter'),
           _GridItem(Icons.people_alt_rounded,      'Warteliste',       AppTheme.warning,   '/warteliste'),
           _GridItem(Icons.warning_amber_rounded,   'Mahnungen',        AppTheme.danger,    '/mahnungen',  badge: _overdueCount),
           _GridItem(Icons.assignment_ind_rounded,  'Anmeldungen',      AppTheme.primary,   '/anmeldungen', badge: _newIntakes),
@@ -376,6 +379,7 @@ class _ShellScreenState extends State<ShellScreen>
 
   @override
   Widget build(BuildContext context) {
+    context.watch<AuthService>();
     final isWide = MediaQuery.of(context).size.width >= 600;
 
     if (isWide) {
@@ -385,6 +389,7 @@ class _ShellScreenState extends State<ShellScreen>
   }
 
   Widget _buildWideLayout(BuildContext context) {
+    final t = _term();
     final location = GoRouterState.of(context).matchedLocation;
     final railIdx  = _railRoutes.indexWhere((r) => location.startsWith(r));
     final selected = railIdx >= 0 ? railIdx : 0;
@@ -392,8 +397,8 @@ class _ShellScreenState extends State<ShellScreen>
 
     final destinations = [
       _SidebarDest(Icons.dashboard_outlined,      Icons.dashboard_rounded,         'Dashboard'),
-      _SidebarDest(Icons.pets_outlined,           Icons.pets_rounded,              'Patienten'),
-      _SidebarDest(Icons.person_outline_rounded,  Icons.person_rounded,            'Tierhalter'),
+      _SidebarDest(Icons.pets_outlined,           Icons.pets_rounded,              t.patientPlural),
+      _SidebarDest(Icons.person_outline_rounded,  Icons.person_rounded,            t.ownerPlural),
       _SidebarDest(Icons.receipt_long_outlined,   Icons.receipt_long_rounded,      'Rechnungen'),
       _SidebarDest(Icons.calendar_month_outlined, Icons.calendar_month_rounded,    'Kalender'),
       _SidebarDest(Icons.chat_outlined,           Icons.chat_rounded,              'Nachrichten',  badge: _unreadMessages),
@@ -759,6 +764,7 @@ class _ShellScreenState extends State<ShellScreen>
   }
 
   Widget _buildNarrowLayout(BuildContext context) {
+    final t = _term();
     final location = GoRouterState.of(context).matchedLocation;
     final primaryIdx = _primaryRoutes.indexWhere((r) => location.startsWith(r));
     final navIdx = primaryIdx >= 0 ? primaryIdx : 0;
@@ -806,7 +812,7 @@ class _ShellScreenState extends State<ShellScreen>
               colorFilter: ColorFilter.mode(Theme.of(context).colorScheme.onSurfaceVariant, BlendMode.srcIn)),
             selectedIcon: SvgPicture.asset('assets/icons/paw.svg', width: 22, height: 22,
               colorFilter: ColorFilter.mode(AppTheme.primary, BlendMode.srcIn)),
-            label: 'Patienten',
+            label: t.patientPlural,
           ),
           const NavigationDestination(
             icon: Icon(Icons.receipt_long_outlined),

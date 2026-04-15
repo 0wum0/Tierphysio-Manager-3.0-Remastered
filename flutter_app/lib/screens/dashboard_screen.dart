@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../services/api_service.dart';
+import '../services/auth_service.dart';
 import '../services/update_service.dart';
 import '../core/theme.dart';
+import '../core/terminology.dart';
 import '../widgets/shimmer_list.dart';
 import '../widgets/animated_stat_card.dart';
 
@@ -18,6 +21,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final _api = ApiService();
   Map<String, dynamic>? _data;
+  Map<String, dynamic>? _analytics;
   Map<String, dynamic>? _notifications;
   List<Map<String, dynamic>> _waitlist = [];
   bool _loading = true;
@@ -38,13 +42,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final results = await Future.wait([
         _api.dashboard(),
+        _api.analytics().catchError((_) => <String, dynamic>{}),
         _api.notificationSummary().catchError((_) => <String, dynamic>{}),
         _api.waitlistList().catchError((_) => <dynamic>[]),
       ]);
       setState(() {
         _data          = results[0] as Map<String, dynamic>;
-        _notifications = results[1] as Map<String, dynamic>;
-        _waitlist      = (results[2] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _analytics     = results[1] as Map<String, dynamic>;
+        _notifications = results[2] as Map<String, dynamic>;
+        _waitlist      = (results[3] as List).map((e) => Map<String, dynamic>.from(e as Map)).toList();
         _loading = false;
       });
     } catch (e) {
@@ -57,6 +63,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   String _eur(dynamic v) =>
       NumberFormat.currency(locale: 'de_DE', symbol: '€').format(_toDouble(v));
+
+  Terminology get _t => Terminology(isTrainer: context.watch<AuthService>().isTrainer);
 
   @override
   Widget build(BuildContext context) {
@@ -111,6 +119,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         // Stats row
         _buildStatsRow(isTablet, d),
         const SizedBox(height: 16),
+        _buildRevenueKpis(d),
+        const SizedBox(height: 16),
 
         // Notification banners
         ..._buildAlertBanners(d),
@@ -144,6 +154,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         const SizedBox(height: 16),
         _invoiceStats(d),
+        if ((_analytics?['summary'] as Map?)?.isNotEmpty ?? false) ...[
+          const SizedBox(height: 16),
+          _analyticsSummary(),
+        ],
         if (_waitlist.isNotEmpty) ...[const SizedBox(height: 16), _waitlistPreview()],
         const SizedBox(height: 80),
       ]),
@@ -178,7 +192,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       banners.add(_AlertBanner(
         icon: Icons.people_alt_rounded,
         color: AppTheme.warning,
-        message: '$waitCnt Patient${waitCnt == 1 ? '' : 'en'} auf der Warteliste',
+        message: '$waitCnt ${waitCnt == 1 ? _t.patientSingular : _t.patientPlural} auf der Warteliste',
         action: 'Anzeigen',
         onTap: () => context.push('/warteliste'),
       ));
@@ -196,7 +210,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         icon: Icons.cake_rounded,
         color: AppTheme.secondary,
         message: '🎂 ${b['name']} hat heute Geburtstag! (${b['age']} Jahre)',
-        action: 'Profil',
+        action: '${_t.patientSingular} öffnen',
         onTap: () => context.push('/patienten/${b['id']}'),
       )),
       const SizedBox(height: 4),
@@ -214,7 +228,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           icon: Icons.cake_outlined,
           color: AppTheme.tertiary,
           message: '🎂 ${b['name']} hat in $days Tag${days == 1 ? '' : 'en'} Geburtstag (${b['age']} Jahre)',
-          action: 'Profil',
+          action: '${_t.patientSingular} öffnen',
           onTap: () => context.push('/patienten/${b['id']}'),
         );
       }),
@@ -431,10 +445,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildStatsRow(bool isTablet, Map<String, dynamic> d) {
     final cards = [
-      AnimatedStatCard(label: 'Patienten', value: '${d['patients_total'] ?? 0}',
+      AnimatedStatCard(label: _t.patientPlural, value: '${d['patients_total'] ?? 0}',
           icon: Icons.pets_rounded, color: AppTheme.primary,
           sub: '+${d['patients_new'] ?? 0} neu'),
-      AnimatedStatCard(label: 'Tierhalter', value: '${d['owners_total'] ?? 0}',
+      AnimatedStatCard(label: _t.ownerPlural, value: '${d['owners_total'] ?? 0}',
           icon: Icons.person_rounded, color: AppTheme.secondary),
       AnimatedStatCard(label: 'Heute', value: '${d['today_apts'] ?? 0}',
           icon: Icons.today_rounded, color: AppTheme.tertiary,
@@ -452,6 +466,85 @@ class _DashboardScreenState extends State<DashboardScreen> {
       childAspectRatio: isTablet ? 1.4 : 1.5,
       padding: EdgeInsets.zero,
       children: cards,
+    );
+  }
+
+  Widget _buildRevenueKpis(Map<String, dynamic> d) {
+    final monthChange = _toDouble(d['month_change']);
+    final yearChange = _toDouble(d['year_change']);
+    final cancelledCount = (d['cancelled_count'] as num?)?.toInt() ?? 0;
+
+    Widget trend(double value, String suffix) {
+      final up = value > 0;
+      final down = value < 0;
+      final color = up ? AppTheme.success : (down ? AppTheme.danger : Colors.grey);
+      final txt = up ? '▲ ${value.toStringAsFixed(1)}%' : down ? '▼ ${value.abs().toStringAsFixed(1)}%' : '—';
+      return Text('$txt $suffix', style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600));
+    }
+
+    return Column(
+      children: [
+        Row(children: [
+          Expanded(child: AnimatedStatCard(label: 'Woche', value: _eur(d['revenue_week']), icon: Icons.date_range_rounded, color: AppTheme.tertiary)),
+          const SizedBox(width: 10),
+          Expanded(child: AnimatedStatCard(label: 'Monat', value: _eur(d['revenue_month']), icon: Icons.calendar_month_rounded, color: AppTheme.primary, sub: monthChange == 0 ? 'ggü. Vormonat —' : null)),
+        ]),
+        const SizedBox(height: 10),
+        Row(children: [
+          Expanded(child: AnimatedStatCard(label: 'Jahr', value: _eur(d['revenue_year']), icon: Icons.assessment_rounded, color: AppTheme.success)),
+          const SizedBox(width: 10),
+          Expanded(child: AnimatedStatCard(label: 'Gesamt', value: _eur(d['revenue_total']), icon: Icons.euro_rounded, color: AppTheme.secondary, sub: cancelledCount > 0 ? '$cancelledCount Storno' : null)),
+        ]),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            trend(monthChange, 'ggü. Vormonat'),
+            trend(yearChange, 'ggü. Vorjahr'),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _analyticsSummary() {
+    final summary = Map<String, dynamic>.from(_analytics?['summary'] as Map? ?? {});
+    final outstanding = _eur(summary['outstanding_gross'] ?? 0);
+    final collected = _eur(summary['collected_gross'] ?? 0);
+    final overdue = _eur(summary['overdue_gross'] ?? 0);
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Theme.of(context).dividerColor),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Analyse', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+          const SizedBox(height: 10),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            _chip('Offener Betrag', outstanding, AppTheme.warning),
+            _chip('Eingenommen', collected, AppTheme.success),
+            _chip('Überfällig', overdue, AppTheme.danger),
+          ]),
+        ]),
+      ),
+    );
+  }
+
+  Widget _chip(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+        Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+      ]),
     );
   }
 
