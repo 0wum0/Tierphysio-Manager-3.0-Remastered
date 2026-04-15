@@ -158,25 +158,18 @@ class MobileApiController
      */
     private function resolveTenantPrefixFromSaasDb(string $email): string
     {
-        $config = Application::getInstance()->getContainer()->get(Config::class);
-        $saasDb = $config->get('saas_db.database', '');
-        if ($saasDb === '' || $email === '') {
+        if ($email === '') {
             return '';
         }
 
         try {
-            $dsn = sprintf(
-                'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
-                $config->get('saas_db.host', 'localhost'),
-                $config->get('saas_db.port', 3306),
-                $saasDb
-            );
-            $pdo = new \PDO($dsn, $config->get('saas_db.username'), $config->get('saas_db.password'), [
-                \PDO::ATTR_ERRMODE            => \PDO::ERRMODE_EXCEPTION,
-                \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
-            ]);
-
-            $stmt = $pdo->prepare("SELECT db_name FROM tenants WHERE email = ? AND status IN ('active','trial') LIMIT 1");
+            // Optimization: Use the existing DB connection because DB_DATABASE and SAAS_DB_DATABASE
+            // are identical in .env, avoiding redundant PDO handshakes.
+            $stmt = $this->db->getPdo()->prepare("
+                SELECT db_name FROM tenants 
+                WHERE email = ? AND status IN ('active','trial') 
+                LIMIT 1
+            ");
             $stmt->execute([$email]);
             $row = $stmt->fetch();
 
@@ -347,9 +340,16 @@ class MobileApiController
 
     private function exceptionHandler(\Throwable $e): never
     {
+        $uri    = $_SERVER['REQUEST_URI'] ?? 'unknown';
+        $method = $_SERVER['REQUEST_METHOD'] ?? 'unknown';
+        $prefix = $this->db->getPrefix();
+        
         $logMsg = sprintf(
-            "[%s] MobileApi Exception: %s in %s:%d\nStack trace:\n%s\n",
+            "[%s] MobileApi Exception (%s %s) [Prefix: %s]: %s in %s:%d\nStack trace:\n%s\n",
             date('Y-m-d H:i:s'),
+            $method,
+            $uri,
+            $prefix,
             $e->getMessage(),
             $e->getFile(),
             $e->getLine(),
@@ -387,44 +387,46 @@ class MobileApiController
         $tokenRow = false;
         $savedPrefix = $this->db->getPrefix();
         
-        // 1. Search prefixed tenant token tables first (authoritative in multi-tenant mode).
+        // 1. PERFORMANCE PRIORITY: Check GLOBAL token table first.
+        // This avoids scanning dozens of tenant tables and prevents HTTP 500 timeouts.
+        $this->db->setPrefix('');
         try {
-            $tables = $this->db->fetchAll(
-                "SELECT table_name FROM information_schema.tables
-                 WHERE table_schema = DATABASE()
-                   AND table_name LIKE 't\_%\_mobile\_api\_tokens'"
-            );
-            foreach ($tables as $row) {
-                $tableName = $row['table_name'] ?? $row['TABLE_NAME'] ?? '';
-                $prefix = $this->normalizeTenantPrefix(substr($tableName, 0, -strlen('mobile_api_tokens')));
-
-                $this->db->setPrefix($prefix);
-                try {
-                    $testRow = $this->findTokenRowInTable($this->t('mobile_api_tokens'), $token);
-                    if ($testRow) {
-                        $tokenRow = $testRow;
-                        if (empty($tokenRow['tenant_prefix'])) {
-                            $tokenRow['tenant_prefix'] = $prefix;
-                        }
-                        break;
-                    }
-                } catch (\Throwable) {
-                    continue;
-                }
-            }
-        } catch (\Throwable) {}
-
-        // 2. Fallback: check global (legacy) token table.
-        if ($tokenRow === false) {
-            $this->db->setPrefix('');
-            try {
-                $tokenRow = $this->findTokenRowInTable('mobile_api_tokens', $token);
-            } catch (\Throwable) {
-                $tokenRow = false;
-            }
+            $tokenRow = $this->findTokenRowInTable('mobile_api_tokens', $token);
+        } catch (\Throwable $e) {
+            // Silently fall through if global table doesn't exist yet
         }
 
-        // 3. Still nothing? Fallback to whatever current active prefix is (if randomly resolved)
+        // 2. LEGACY FALLBACK: Scan tenant tables only if not found in global table.
+        // This is expensive but ensures existing sessions aren't broken.
+        if ($tokenRow === false) {
+            try {
+                $tables = $this->db->fetchAll(
+                    "SELECT table_name FROM information_schema.tables
+                     WHERE table_schema = DATABASE()
+                       AND table_name LIKE 't\_%\_mobile\_api\_tokens'"
+                );
+                foreach ($tables as $row) {
+                    $tableName = $row['table_name'] ?? $row['TABLE_NAME'] ?? '';
+                    $prefix = $this->normalizeTenantPrefix(substr($tableName, 0, -strlen('mobile_api_tokens')));
+
+                    $this->db->setPrefix($prefix);
+                    try {
+                        $testRow = $this->findTokenRowInTable($this->t('mobile_api_tokens'), $token);
+                        if ($testRow) {
+                            $tokenRow = $testRow;
+                            if (empty($tokenRow['tenant_prefix'])) {
+                                $tokenRow['tenant_prefix'] = $prefix;
+                            }
+                            break;
+                        }
+                    } catch (\Throwable) {
+                        continue;
+                    }
+                }
+            } catch (\Throwable) {}
+        }
+
+        // 3. LAST RESORT: Check current active prefix (if any)
         if ($tokenRow === false && $savedPrefix !== '') {
             $this->db->setPrefix($savedPrefix);
             try {
@@ -446,28 +448,32 @@ class MobileApiController
         if ($storedPrefix !== '') {
             $this->db->setPrefix($storedPrefix);
         } else {
-            $this->resolveTenantPrefixForEmail($tokenRow['email'] ?? '');
+            $email = $tokenRow['email'] ?? $tokenRow['user_email'] ?? '';
+            $this->resolveTenantPrefixForEmail($email);
         }
 
-        // Persist tenant_prefix if it was inferred dynamically.
+        // SELF-HEAL: Persist tenant_prefix in the token row if it was inferred.
+        // This makes future lookups significantly faster.
         if (($tokenRow['tenant_prefix'] ?? '') === '' && $this->db->getPrefix() !== '') {
             try {
-                $tokenTable = $this->t('mobile_api_tokens');
+                $prefixToStore = $this->db->getPrefix();
+                // We use global table if we found it there, otherwise tenant table
+                $tokenTable = $tokenRow['id_in_global_table'] ?? false ? 'mobile_api_tokens' : $this->t('mobile_api_tokens');
+                
                 if ($this->tableHasColumn($tokenTable, 'tenant_prefix')) {
                     $tokenCol = $this->tableHasColumn($tokenTable, 'token') ? 'token' : 'token_hash';
                     $tokenVal = $tokenCol === 'token' ? $token : hash('sha256', $token);
                     $this->db->execute(
                         "UPDATE `{$tokenTable}` SET tenant_prefix = ? WHERE {$tokenCol} = ?",
-                        [$this->db->getPrefix(), $tokenVal]
+                        [$prefixToStore, $tokenVal]
                     );
                 }
-            } catch (\Throwable) {
-            }
+            } catch (\Throwable) {}
         }
 
         // Update last_used
         try {
-            $tokenTable = $this->t('mobile_api_tokens');
+            $tokenTable = $this->db->getPrefix() === '' ? 'mobile_api_tokens' : $this->t('mobile_api_tokens');
             if ($this->tableHasColumn($tokenTable, 'last_used')) {
                 $tokenCol = $this->tableHasColumn($tokenTable, 'token') ? 'token' : 'token_hash';
                 $tokenVal = $tokenCol === 'token' ? $token : hash('sha256', $token);
@@ -539,105 +545,71 @@ class MobileApiController
         $tokenHash = hash('sha256', $token);
         $expiresAt = date('Y-m-d H:i:s', strtotime('+90 days'));
 
-        // Store the tenant prefix IN the token row so requireAuth() can restore it
-        // on every subsequent stateless API request (no session needed).
+        // ── Token-Speicherung ──────────────────────────────────────────────────
+        // PERFORMANCE-STRATEGIE: Wir speichern alle Mobile-Tokens ZENTRAL in 
+        // der Hauptdatenbank (Prefix ''). Dies erlaubt requireAuth(), den 
+        // Mandanten mit einer einzigen Abfrage statt eines Scans zu finden.
+        
+        // Temporär Prefix auf global setzen für Token-Eintrag
+        $this->db->setPrefix('');
+        
         try {
-            $tableName      = $this->t('mobile_api_tokens');
-            $hasToken       = $this->tableHasColumn($tableName, 'token');
-            $hasTokenHash   = $this->tableHasColumn($tableName, 'token_hash');
-            $hasDeviceName  = $this->tableHasColumn($tableName, 'device_name');
-            $hasDevice      = $this->tableHasColumn($tableName, 'device');
-            $hasTenantPref  = $this->tableHasColumn($tableName, 'tenant_prefix');
-            $hasExpiresAt   = $this->tableHasColumn($tableName, 'expires_at');
-
-            $columns = ['user_id'];
-            $values  = [(int)$user['id']];
-
-            if ($hasToken) {
-                $columns[] = 'token';
-                $values[]  = $token;
-            } elseif ($hasTokenHash) {
-                $columns[] = 'token_hash';
-                $values[]  = $tokenHash;
+            $globalTable = 'mobile_api_tokens';
+            
+            // Auto-Heal: Falls die globale Tabelle fehlt, erstellen wir sie.
+            if (!$this->db->tableExists($globalTable)) {
+                $this->db->execute("
+                    CREATE TABLE IF NOT EXISTS `{$globalTable}` (
+                        id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                        user_id     INT UNSIGNED NOT NULL,
+                        token       VARCHAR(64)  NOT NULL UNIQUE,
+                        device_name VARCHAR(100) NOT NULL DEFAULT '',
+                        tenant_prefix VARCHAR(64) NOT NULL DEFAULT '',
+                        last_used   DATETIME     NULL,
+                        created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        expires_at  DATETIME     NULL,
+                        INDEX idx_token (token),
+                        INDEX idx_user  (user_id),
+                        INDEX idx_prefix (tenant_prefix)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+                ");
             } else {
-                throw new \RuntimeException('mobile_api_tokens has neither token nor token_hash column.');
+                // Sicherstellen, dass die Spalte tenant_prefix existiert
+                if (!$this->tableHasColumn($globalTable, 'tenant_prefix')) {
+                    $this->db->execute("ALTER TABLE `{$globalTable}` ADD COLUMN `tenant_prefix` VARCHAR(64) NOT NULL DEFAULT ''");
+                }
             }
 
-            if ($hasDeviceName) {
-                $columns[] = 'device_name';
-                $values[]  = $deviceName;
-            } elseif ($hasDevice) {
-                $columns[] = 'device';
-                $values[]  = $deviceName;
-            }
-
-            if ($hasTenantPref) {
-                $columns[] = 'tenant_prefix';
-                $values[]  = $prefix;
-            }
-
-            if ($hasExpiresAt) {
-                $columns[] = 'expires_at';
-                $values[]  = $expiresAt;
-            }
-
-            $columns[] = 'created_at';
-            $placeholder = implode(', ', array_fill(0, count($columns) - 1, '?'));
             $this->db->execute(
-                "INSERT INTO `{$tableName}` (" . implode(', ', $columns) . ") VALUES ({$placeholder}, NOW())",
-                $values
+                "INSERT INTO `{$globalTable}` (user_id, token, device_name, tenant_prefix, expires_at, created_at)
+                 VALUES (?, ?, ?, ?, ?, NOW())",
+                [$user['id'], $token, $deviceName, $prefix, $expiresAt]
             );
         } catch (\Throwable $e) {
-            $errorStr = $e->getMessage();
-            // If the table is missing entirely (Base table or view not found), auto-create it!
-            if (str_contains($errorStr, "doesn't exist") || str_contains($errorStr, 'not found') || str_contains($errorStr, '1146')) {
-                try {
-                    $this->db->execute("
-                        CREATE TABLE IF NOT EXISTS `{$this->t('mobile_api_tokens')}` (
-                            id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-                            user_id     INT UNSIGNED NOT NULL,
-                            token       VARCHAR(64)  NOT NULL UNIQUE,
-                            device_name VARCHAR(100) NOT NULL DEFAULT '',
-                            tenant_prefix VARCHAR(64) NOT NULL DEFAULT '',
-                            last_used   DATETIME     NULL,
-                            created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                            expires_at  DATETIME     NULL,
-                            INDEX idx_token (token),
-                            INDEX idx_user  (user_id)
-                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-                    ");
-                    // Retry the insert!
-                    $this->db->execute(
-                        "INSERT INTO `{$this->t('mobile_api_tokens')}` (user_id, token, device_name, tenant_prefix, expires_at, created_at)
-                         VALUES (?, ?, ?, ?, ?, NOW())",
-                        [$user['id'], $token, $deviceName, $prefix, $expiresAt]
-                    );
-                } catch (\Throwable $innerEx) {
-                    error_log('[MobileApi] Could not create tokens table: ' . $innerEx->getMessage());
-                    error_reporting($prev);
-                    $this->error('Datenbank-Fehler (Tabelle fehlt). Bitte an Admin wenden.', 500);
+            error_log('[MobileApi] Global token storage failed: ' . $e->getMessage() . ' - Falling back to tenant storage.');
+            
+            // Fallback: In Mandanten-Tabelle speichern (alter Weg)
+            try {
+                $this->db->setPrefix($prefix);
+                $tenantTable = $this->t('mobile_api_tokens');
+                if (!$this->db->tableExists($tenantTable)) {
+                     // Auto-create tenant table if missing
+                     $this->db->execute("CREATE TABLE IF NOT EXISTS `{$tenantTable}` LIKE `mobile_api_tokens` ");
                 }
-            } else {
-                // Otherwise (e.g. column drift), self-heal and retry with tenant_prefix.
-                try {
-                    $this->db->execute(
-                        "ALTER TABLE `{$this->t('mobile_api_tokens')}` ADD COLUMN IF NOT EXISTS `tenant_prefix` VARCHAR(64) NOT NULL DEFAULT ''"
-                    );
-                } catch (\Throwable) {}
-                try {
-                    $this->db->execute(
-                        "INSERT INTO `{$this->t('mobile_api_tokens')}` (user_id, token, device_name, tenant_prefix, expires_at, created_at)
-                         VALUES (?, ?, ?, ?, ?, NOW())",
-                        [$user['id'], $token, $deviceName, $prefix, $expiresAt]
-                    );
-                } catch (\Throwable $fallbackEx) {
-                    error_log('[MobileApi] Insert fallback failed: ' . $fallbackEx->getMessage());
-                    error_reporting($prev);
-                    $this->error('Interner Datenbankfehler beim Login.', 500);
-                }
+                $this->db->execute(
+                    "INSERT INTO `{$tenantTable}` (user_id, token, device_name, tenant_prefix, expires_at, created_at)
+                     VALUES (?, ?, ?, ?, ?, NOW())",
+                    [$user['id'], $token, $deviceName, $prefix, $expiresAt]
+                );
+            } catch (\Throwable $innerEx) {
+                error_log('[MobileApi] Critical: Both token storage paths failed: ' . $innerEx->getMessage());
+                error_reporting($prev);
+                $this->error('Interner Datenbankfehler beim Login.', 500);
             }
         }
 
+        // Prefix zurücksetzen auf den Mandanten für nachfolgende Aktionen in dieser Instanz
+        $this->db->setPrefix($prefix);
         $this->users->updateLastLogin($user['id']);
 
         error_reporting($prev);
