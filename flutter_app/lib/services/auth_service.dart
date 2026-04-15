@@ -69,7 +69,11 @@ class AuthService extends ChangeNotifier {
         name: 'AuthService');
     try {
       final api  = ApiService();
-      final data = await api.login(email.trim(), password, 'TheraPano Windows');
+      final data = await api.login(
+        email.trim(),
+        password,
+        Platform.isAndroid ? 'TheraPano Android' : 'TheraPano Windows',
+      );
 
       dev.log('[Auth] Login response keys: ${data.keys.toList()}',
           name: 'AuthService');
@@ -155,7 +159,7 @@ class AuthService extends ChangeNotifier {
   }
 
   /// Legacy bool-returning wrapper, still used in some places.
-  Future<bool> login(String email, String password, String serverUrl) async {
+  Future<bool> login(String email, String password, String _serverUrl) async {
     final result = await loginWithResult(email, password);
     return result.success;
   }

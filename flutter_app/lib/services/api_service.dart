@@ -4,23 +4,19 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const _baseKey = 'api_base_url';
   static const _tokenKey = 'api_token';
   static SharedPreferences? _prefs;
 
-  // Feste Domain für Windows App
+  // Feste Domain für alle Flutter-Clients (Windows + Android).
   static final String _baseUrl = 'https://app.therapano.de';
 
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
-    // Fixed domain for Windows app – saved URL is intentionally ignored.
-    await _prefs?.remove(_baseKey);
   }
 
+  @Deprecated('Die API-Domain ist fest auf https://app.therapano.de gesetzt.')
   static Future<void> setBaseUrl(String url) async {
-    // Für Windows App: feste Domain nicht ändern lassen
-    // _baseUrl = url.trimRight().replaceAll(RegExp(r'/$'), '');
-    // await _prefs?.setString(_baseKey, _baseUrl);
+    // Legacy no-op: Domainwechsel wird bewusst nicht mehr unterstützt.
   }
 
   static String get baseUrl => _baseUrl;
