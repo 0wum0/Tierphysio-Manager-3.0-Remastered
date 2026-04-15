@@ -8,7 +8,7 @@ param (
 $ErrorActionPreference = "Stop"
 
 # 1. Configuration
-$ISCC_PATH = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+$ISCC_PATH = "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
 $SIGNTOOL_PATH = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.19041.0\x64\signtool.exe" # Adjust as needed
 
 # 2. Extract Version from pubspec.yaml
