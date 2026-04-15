@@ -43,7 +43,7 @@ flutter build windows --release
 # 5. Sign the main executable
 Write-Host "--- Signing Executable ---" -ForegroundColor Cyan
 if (Test-Path $SIGNTOOL_PATH) {
-    & $SIGNTOOL_PATH sign /f "therapano_cert.pfx" /fd SHA256 /t http://timestamp.digicert.com "build\windows\x64\runner\Release\therapano.exe"
+    & $SIGNTOOL_PATH sign /f "therapano_cert.pfx" /p "therapano" /fd SHA256 /t http://timestamp.digicert.com "build\windows\x64\runner\Release\therapano.exe"
 } else {
     Write-Warning "signtool.exe not found at $SIGNTOOL_PATH. Skipping signing."
 }
@@ -60,7 +60,7 @@ if (Test-Path $ISCC_PATH) {
 $SETUP_EXE = "releases\$VERSION\TherapanoSetup_v$VERSION.exe"
 Write-Host "--- Signing Setup.exe ---" -ForegroundColor Cyan
 if (Test-Path $SIGNTOOL_PATH -and (Test-Path $SETUP_EXE)) {
-    & $SIGNTOOL_PATH sign /f "therapano_cert.pfx" /fd SHA256 /t http://timestamp.digicert.com $SETUP_EXE
+    & $SIGNTOOL_PATH sign /f "therapano_cert.pfx" /p "therapano" /fd SHA256 /t http://timestamp.digicert.com $SETUP_EXE
 }
 
 # 8. Optional: GitHub Release via CLI (gh)
