@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de" data-bs-theme="dark" class="set-nav-dark">
+<html lang="de" data-bs-theme="dark" class="set-nav-dark set-header-fixed">
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -129,6 +129,27 @@
     <header class="app-header">
         <div class="d-flex flex-grow-1 w-100 me-auto align-items-center">
 
+            {# App-Logo (sichtbar in der Header-Leiste) #}
+            <a href="/admin" class="app-logo flex-shrink-0">
+                <svg class="custom-logo">
+                    <use href="/sa/img/app-logo.svg#custom-logo"></use>
+                </svg>
+                <div class="logo-backdrop">
+                    <div class="blobs">
+                        <svg viewBox="0 0 1200 1200">
+                            <g class="blob blob-1"><path d="M 100 600 q 0 -700, 500 -500 t 500 500 t -500 500 T 100 600 z"/></g>
+                            <g class="blob blob-2"><path d="M 100 600 q -50 -400, 500 -500 t 450 550 t -500 500 T 100 600 z"/></g>
+                            <g class="blob blob-3"><path d="M 100 600 q 0 -400, 500 -500 t 400 500 t -500 500 T 100 600 z"/></g>
+                            <g class="blob blob-4"><path d="M 150 600 q 0 -600, 500 -500 t 500 550 t -500 500 T 150 600 z"/></g>
+                            <g class="blob blob-1 alt"><path d="M 150 600 q 0 -600, 500 -500 t 500 550 t -500 500 T 150 600 z"/></g>
+                            <g class="blob blob-2 alt"><path d="M 100 600 q 100 -600, 500 -500 t 400 500 t -500 500 T 100 600 z"/></g>
+                            <g class="blob blob-3 alt"><path d="M 100 600 q 0 -400, 500 -500 t 400 500 t -500 500 T 100 600 z"/></g>
+                            <g class="blob blob-4 alt"><path d="M 150 600 q 0 -600, 500 -500 t 500 550 t -500 500 T 150 600 z"/></g>
+                        </svg>
+                    </div>
+                </div>
+            </a>
+
             {# Mobile hamburger #}
             <button class="mobile-menu-icon me-2 d-flex d-lg-none flex-shrink-0"
                     data-action="toggle-swap" data-toggleclass="app-mobile-menu-open" aria-label="Menü">
@@ -143,9 +164,6 @@
                 </svg>
             </button>
 
-            <span class="fw-500 fs-md text-muted d-none d-md-inline">
-                {{ page_title ?? '' }}
-            </span>
         </div>
 
         {# Update-Hinweis #}
@@ -453,7 +471,7 @@
             <div class="mod-status primary-mod" data-prefix="Layout">
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="actionHeaderFixed"
-                           data-action="toggle" data-class="set-header-fixed">
+                           data-action="toggle" data-class="set-header-fixed" checked>
                     <label class="form-check-label" for="actionHeaderFixed">Header fixiert</label>
                 </div>
                 <div class="form-check d-none d-lg-block">
