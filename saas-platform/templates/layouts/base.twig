@@ -117,6 +117,16 @@
         /* Subheader override: consistent padding */
         .subheader { padding: .75rem 1.5rem; }
         .page-inner { padding: 1.25rem 1.5rem 2rem; }
+
+        /* Fixed header: push app-main down by header height */
+        .set-header-fixed .app-header {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 1020;
+        }
+        .set-header-fixed .app-main {
+            padding-top: var(--header-height, 3.5rem);
+        }
     </style>
     {% block styles %}{% endblock %}
 </head>
