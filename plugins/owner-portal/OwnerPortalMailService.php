@@ -138,15 +138,22 @@ class OwnerPortalMailService
         $configured = $this->settings->get('portal_base_url', '');
         if ($configured !== '') return rtrim($configured, '/');
 
+        $envAppUrl = rtrim((string)($_ENV['APP_URL'] ?? ''), '/');
+        if ($envAppUrl !== '') {
+            return $envAppUrl;
+        }
+
         $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
         $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        return $scheme . '://' . $host;
+    }
 
         /* Keep dedicated portal subdomain for owner links */
         if (str_starts_with($host, 'app.')) {
             $host = 'portal.' . substr($host, 4);
         }
-
-        return $scheme . '://' . $host;
+        $tid = trim(substr($prefix, 2), '_');
+        return $tid !== '' ? ('?tid=' . rawurlencode($tid)) : '';
     }
 
     private function tenantQuery(): string
