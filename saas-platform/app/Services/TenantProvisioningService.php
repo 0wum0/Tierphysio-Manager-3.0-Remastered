@@ -57,7 +57,8 @@ class TenantProvisioningService
             return $this->db->transaction(function (Database $db) use ($data, $plan, $uuid, $tid, $tablePrefix, $adminPassword): array {
 
                 $passwordHash = password_hash($adminPassword, PASSWORD_BCRYPT, ['cost' => 12]);
-                $trialEndsAt  = date('Y-m-d H:i:s', strtotime('+14 days'));
+                $trialDays    = max(1, (int)($plan['trial_days'] ?? 14));
+                $trialEndsAt  = date('Y-m-d H:i:s', strtotime("+{$trialDays} days"));
 
                 $tenantId = $this->tenantRepo->createWithAuth([
                     'uuid'          => $uuid,
@@ -100,22 +101,23 @@ class TenantProvisioningService
                 $billingCycle = $data['billing_cycle'] ?? 'monthly';
                 $amount       = $billingCycle === 'yearly' ? $plan['price_year'] : $plan['price_month'];
                 $startedAt    = date('Y-m-d H:i:s');
-                $endsAt       = $billingCycle === 'yearly'
-                                ? date('Y-m-d H:i:s', strtotime('+1 year'))
-                                : date('Y-m-d H:i:s', strtotime('+1 month'));
+                $endsAt       = $trialEndsAt;
 
-                $this->subRepo->create([
-                    'tenant_id'      => $tenantId,
-                    'plan_id'        => (int)$plan['id'],
-                    'billing_cycle'  => $billingCycle,
-                    'status'         => 'active',
-                    'started_at'     => $startedAt,
-                    'ends_at'        => $endsAt,
-                    'next_billing'   => $endsAt,
-                    'amount'         => $amount,
-                    'currency'       => 'EUR',
-                    'payment_method' => $data['payment_method'] ?? null,
-                    'external_id'    => $data['payment_external_id'] ?? null,
+                $this->subscriptionRepo->create([
+                    'tenant_id'       => $tenantId,
+                    'plan_id'         => (int)$plan['id'],
+                    'billing_cycle'   => $billingCycle,
+                    'status'          => 'trial',
+                    'started_at'      => $startedAt,
+                    'ends_at'         => $endsAt,
+                    'next_billing'    => $endsAt,
+                    'amount'          => $amount,
+                    'currency'        => 'EUR',
+                    'payment_method'  => $data['payment_method'] ?? null,
+                    'external_id'     => $data['payment_external_id'] ?? null,
+                    'trial_starts_at' => $startedAt,
+                    'trial_ends_at'   => $trialEndsAt,
+                    'billing_starts_at' => null,
                 ]);
 
                 // Issue license token
@@ -176,7 +178,8 @@ class TenantProvisioningService
         $tablePrefix   = substr('t_' . preg_replace('/[^a-z0-9]/', '_', $tid) . '_', 0, 48);
         $adminPassword = $data['admin_password'] ?? bin2hex(random_bytes(8));
         $passwordHash  = password_hash($adminPassword, PASSWORD_BCRYPT, ['cost' => 12]);
-        $trialEndsAt   = date('Y-m-d H:i:s', strtotime('+14 days'));
+        $trialDays     = max(1, (int)($plan['trial_days'] ?? 14));
+        $trialEndsAt   = date('Y-m-d H:i:s', strtotime("+{$trialDays} days"));
 
         return $this->db->transaction(function (Database $db) use (
             $data, $plan, $uuid, $tid, $tablePrefix, $passwordHash, $adminPassword, $trialEndsAt
@@ -205,22 +208,23 @@ class TenantProvisioningService
             $billingCycle = $data['billing_cycle'] ?? 'monthly';
             $amount       = $billingCycle === 'yearly' ? $plan['price_year'] : $plan['price_month'];
             $startedAt    = date('Y-m-d H:i:s');
-            $endsAt       = $billingCycle === 'yearly'
-                            ? date('Y-m-d H:i:s', strtotime('+1 year'))
-                            : date('Y-m-d H:i:s', strtotime('+1 month'));
+            $endsAt       = $trialEndsAt;
 
-            $this->subRepo->create([
-                'tenant_id'      => $tenantId,
-                'plan_id'        => (int)$plan['id'],
-                'billing_cycle'  => $billingCycle,
-                'status'         => 'active',
-                'started_at'     => $startedAt,
-                'ends_at'        => $endsAt,
-                'next_billing'   => $endsAt,
-                'amount'         => $amount,
-                'currency'       => 'EUR',
-                'payment_method' => $data['payment_method'] ?? null,
-                'external_id'    => null,
+            $this->subscriptionRepo->create([
+                'tenant_id'         => $tenantId,
+                'plan_id'           => (int)$plan['id'],
+                'billing_cycle'     => $billingCycle,
+                'status'            => 'trial',
+                'started_at'        => $startedAt,
+                'ends_at'           => $endsAt,
+                'next_billing'      => $endsAt,
+                'amount'            => $amount,
+                'currency'          => 'EUR',
+                'payment_method'    => $data['payment_method'] ?? null,
+                'external_id'       => null,
+                'trial_starts_at'   => $startedAt,
+                'trial_ends_at'     => $trialEndsAt,
+                'billing_starts_at' => null,
             ]);
 
             $licenseToken = $this->licenseService->issueToken($tenantId);

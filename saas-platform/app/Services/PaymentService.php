@@ -113,7 +113,13 @@ class PaymentService
         }
         if ($subId) {
             $this->db->execute(
-                "UPDATE subscriptions SET stripe_sub_id = ?, status = 'active', last_payment_at = NOW(), last_payment_status = 'paid'
+                "UPDATE subscriptions
+                 SET stripe_sub_id = ?,
+                     status = 'active',
+                     last_payment_at = NOW(),
+                     last_payment_status = 'paid',
+                     billing_starts_at = COALESCE(billing_starts_at, NOW()),
+                     last_webhook_sync_at = NOW()
                  WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 1",
                 [$subId, $tenantId]
             );
@@ -182,7 +188,12 @@ class PaymentService
             "UPDATE tenants SET status = 'active' WHERE id = ?", [$tenant['id']]
         );
         $this->db->execute(
-            "UPDATE subscriptions SET status = 'active', last_payment_at = NOW(), last_payment_status = 'paid'
+            "UPDATE subscriptions
+             SET status = 'active',
+                 last_payment_at = NOW(),
+                 last_payment_status = 'paid',
+                 billing_starts_at = COALESCE(billing_starts_at, NOW()),
+                 last_webhook_sync_at = NOW()
              WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 1",
             [$tenant['id']]
         );
@@ -223,7 +234,10 @@ class PaymentService
 
         $this->db->execute("UPDATE tenants SET status = 'cancelled' WHERE id = ?", [$tenant['id']]);
         $this->db->execute(
-            "UPDATE subscriptions SET status = 'cancelled', cancelled_at = NOW()
+            "UPDATE subscriptions
+             SET status = 'cancelled',
+                 cancelled_at = NOW(),
+                 last_webhook_sync_at = NOW()
              WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 1",
             [$tenant['id']]
         );

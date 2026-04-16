@@ -100,6 +100,41 @@
             </div>
         </div>
 
+        {# Subscription Events (audit log) #}
+        {% if sub_events is defined and sub_events|length > 0 %}
+        <div class="card mb-3">
+            <div class="card-header px-4 py-3 d-flex align-items-center justify-content-between">
+                <span class="fw-semibold">Abo-Ereignisse</span>
+                <span class="badge bg-secondary" style="font-size:.7rem;">{{ sub_events|length }} Einträge</span>
+            </div>
+            <div class="card-body px-4 py-2" style="max-height:280px;overflow-y:auto;">
+                <div style="position:relative;padding-left:1.5rem;">
+                    <div style="position:absolute;left:.5rem;top:0;bottom:0;width:2px;background:#334155;"></div>
+                    {% for ev in sub_events %}
+                    <div style="position:relative;margin-bottom:.9rem;">
+                        <div style="position:absolute;left:-1.125rem;top:.2rem;width:.5rem;height:.5rem;border-radius:50%;background:#6366f1;"></div>
+                        <div class="d-flex justify-content-between align-items-start">
+                            <span class="fw-semibold" style="font-size:.78rem;color:#c4b5fd;">{{ ev.event }}</span>
+                            <span style="font-size:.65rem;color:#64748b;white-space:nowrap;margin-left:.5rem;">{{ ev.created_at|date('d.m.Y H:i') }}</span>
+                        </div>
+                        {% if ev.actor and ev.actor != 'system' %}
+                        <div style="font-size:.65rem;color:#64748b;">von: {{ ev.actor }}</div>
+                        {% endif %}
+                        {% if ev.details %}
+                        {% set details = ev.details|json_decode %}
+                        {% if details %}
+                        <div style="font-size:.68rem;color:#94a3b8;margin-top:.15rem;">
+                            {% for k, v in details %}{{ k }}: <span class="text-light">{{ v }}</span>{% if not loop.last %} · {% endif %}{% endfor %}
+                        </div>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         {# Subscription History #}
         <div class="card mb-3">
             <div class="card-header px-4 py-3"><span class="fw-semibold">Abo-Verlauf</span></div>
@@ -120,9 +155,17 @@
                         <tr>
                             <td class="px-4"><span class="badge bg-secondary">{{ sub.plan_name }}</span></td>
                             <td style="font-size:.8rem;">{{ sub.billing_cycle == 'monthly' ? 'Monatlich' : 'Jährlich' }}</td>
-                            <td class="fw-medium">{{ sub.amount|number_format(2, ',', '.') }} {{ sub.currency }}</td>
+                            <td class="fw-medium">
+                                {% if sub.grandfathered_price %}
+                                    <span class="text-warning" title="Sonderpreis">
+                                        <i class="bi bi-lock-fill me-1" style="font-size:.7rem;"></i>{{ sub.grandfathered_price|number_format(2, ',', '.') }} €
+                                    </span>
+                                {% else %}
+                                    {{ sub.amount|number_format(2, ',', '.') }} {{ sub.currency }}
+                                {% endif %}
+                            </td>
                             <td>
-                                {% set subStatus = {'active':'badge-active','cancelled':'badge-cancelled','past_due':'badge-pending','trialing':'badge-paused'} %}
+                                {% set subStatus = {'active':'badge-active','trial':'badge-paused','trialing':'badge-paused','cancelled':'badge-cancelled','past_due':'badge-pending','expired':'badge-cancelled','suspended':'badge-cancelled'} %}
                                 <span class="badge {{ subStatus[sub.status] ?? 'bg-secondary' }}">{{ sub.status }}</span>
                             </td>
                             <td style="font-size:.8rem;">{{ sub.started_at|date('d.m.Y') }}</td>
@@ -232,6 +275,60 @@
                         </div>
                         <div class="mt-1" style="font-size:.7rem;color:#64748b;">z.B. 30 = 1 Monat, 365 = 1 Jahr</div>
                     </div>
+                </form>
+            </div>
+        </div>
+
+        {# Sonderpreis (Grandfathered Pricing) #}
+        <div class="card mb-3">
+            <div class="card-header px-4 py-3"><span class="fw-semibold">Sonderpreis (Early Adopter / Vertrag)</span></div>
+            <div class="card-body px-4 py-3">
+                {% if subscription and subscription.grandfathered_price %}
+                <div class="mb-3 p-2 rounded" style="background:rgba(234,179,8,.08);border:1px solid rgba(234,179,8,.25);">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-warning fw-semibold" style="font-size:.9rem;">
+                            <i class="bi bi-lock me-1"></i>{{ subscription.grandfathered_price|number_format(2, ',', '.') }} €/Monat
+                        </span>
+                        <span class="badge bg-warning text-dark" style="font-size:.7rem;">eingefroren</span>
+                    </div>
+                    {% if subscription.grandfathered_reason %}
+                    <div class="text-secondary mt-1" style="font-size:.7rem;">Grund: {{ subscription.grandfathered_reason }}</div>
+                    {% endif %}
+                    {% if subscription.pricing_note %}
+                    <div class="text-secondary" style="font-size:.7rem;">{{ subscription.pricing_note }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                <form method="POST" action="/admin/tenants/{{ tenant.id }}/set-grandfathered">
+                    {{ csrf_field()|raw }}
+                    <div class="mb-2">
+                        <label class="form-label" style="font-size:.75rem;color:#94a3b8;">Preis (€/Monat) — 0 zum Entfernen</label>
+                        <input type="number" name="grandfathered_price" step="0.01" min="0"
+                               class="form-control form-control-sm"
+                               style="background:#0f172a;border-color:#334155;color:#f1f5f9;"
+                               value="{{ subscription.grandfathered_price ?? '' }}"
+                               placeholder="z.B. 19.00">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label" style="font-size:.75rem;color:#94a3b8;">Begründung</label>
+                        <select name="grandfathered_reason" class="form-select form-select-sm"
+                                style="background:#0f172a;border-color:#334155;color:#f1f5f9;">
+                            <option value="early-adopter" {{ subscription.grandfathered_reason == 'early-adopter' ? 'selected' : '' }}>Early Adopter</option>
+                            <option value="tester" {{ subscription.grandfathered_reason == 'tester' ? 'selected' : '' }}>Tester</option>
+                            <option value="partner" {{ subscription.grandfathered_reason == 'partner' ? 'selected' : '' }}>Partner</option>
+                            <option value="contract" {{ subscription.grandfathered_reason == 'contract' ? 'selected' : '' }}>Vertrag</option>
+                            <option value="admin-override" {{ subscription.grandfathered_reason == 'admin-override' ? 'selected' : '' }}>Admin-Override</option>
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <input type="text" name="pricing_note" class="form-control form-control-sm"
+                               style="background:#0f172a;border-color:#334155;color:#f1f5f9;"
+                               placeholder="Optionale Notiz…"
+                               value="{{ subscription.pricing_note ?? '' }}">
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-outline-warning w-100">
+                        <i class="bi bi-lock me-1"></i>Sonderpreis setzen
+                    </button>
                 </form>
             </div>
         </div>

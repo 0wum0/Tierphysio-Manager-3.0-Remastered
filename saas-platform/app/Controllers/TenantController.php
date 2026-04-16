@@ -18,6 +18,7 @@ use Saas\Services\LicenseService;
 use Saas\Services\TenantHealthService;
 use Saas\Services\TenantActivityService;
 use Saas\Services\FeatureFlagService;
+use Saas\Services\SubscriptionService;
 
 class TenantController extends Controller
 {
@@ -31,7 +32,8 @@ class TenantController extends Controller
         private PlanRepository         $planRepo,
         private LicenseRepository      $licenseRepo,
         private TenantProvisioningService $provisioningService,
-        private LicenseService         $licenseService
+        private LicenseService         $licenseService,
+        private SubscriptionService    $subscriptionService
     ) {
         parent::__construct($view, $session);
     }
@@ -77,6 +79,7 @@ class TenantController extends Controller
         $allSubs      = $this->subRepo->allByTenant((int)$tenant['id']);
         $licenses     = $this->licenseRepo->getActiveForTenant((int)$tenant['id']);
         $plans        = $this->planRepo->allActive();
+        $subEvents    = $this->subscriptionService->getEventsForTenant((int)$tenant['id'], 20);
 
         // Feature flags (loaded inline so the page shows them immediately)
         $flags = [];
@@ -93,6 +96,7 @@ class TenantController extends Controller
             'licenses'     => $licenses,
             'plans'        => $plans,
             'flags'        => $flags,
+            'sub_events'   => $subEvents,
             'page_title'   => $tenant['practice_name'],
         ]);
     }
@@ -237,28 +241,31 @@ class TenantController extends Controller
         $this->requireRole('superadmin', 'admin');
         $this->verifyCsrf();
 
-        $id   = (int)($params['id'] ?? 0);
-        $days = (int)$this->post('trial_days', 14);
-        $type = $this->post('trial_type', 'days'); // 'days' or 'lifetime'
+        $id    = (int)($params['id'] ?? 0);
+        $days  = (int)$this->post('trial_days', 14);
+        $type  = $this->post('trial_type', 'days');
+        $actor = $this->session->get('saas_user') ?? 'admin';
 
         if ($type === 'lifetime') {
-            // Lifetime: set trial_ends_at far in the future + status active
             $this->tenantRepo->update($id, [
                 'trial_ends_at' => '2099-12-31 23:59:59',
                 'status'        => 'active',
             ]);
-            // Update subscription ends_at
             $sub = $this->subRepo->findByTenant($id);
             if ($sub) {
                 $this->subRepo->update((int)$sub['id'], [
-                    'ends_at'      => '2099-12-31 23:59:59',
-                    'next_billing' => '2099-12-31 23:59:59',
-                    'status'       => 'active',
+                    'ends_at'       => '2099-12-31 23:59:59',
+                    'next_billing'  => '2099-12-31 23:59:59',
+                    'trial_ends_at' => '2099-12-31 23:59:59',
+                    'status'        => 'active',
                 ]);
             }
+            $this->subscriptionService->logEvent($id, 'trial_started', [
+                'type' => 'lifetime', 'ends_at' => '2099-12-31 23:59:59',
+            ], $actor);
             $this->session->flash('success', 'Lifetime-Lizenz vergeben.');
         } else {
-            $days = max(1, min(3650, $days));
+            $days   = max(1, min(3650, $days));
             $endsAt = date('Y-m-d H:i:s', strtotime("+{$days} days"));
             $this->tenantRepo->update($id, [
                 'trial_ends_at' => $endsAt,
@@ -267,12 +274,56 @@ class TenantController extends Controller
             $sub = $this->subRepo->findByTenant($id);
             if ($sub) {
                 $this->subRepo->update((int)$sub['id'], [
-                    'ends_at'      => $endsAt,
-                    'next_billing' => $endsAt,
-                    'status'       => 'active',
+                    'ends_at'       => $endsAt,
+                    'next_billing'  => $endsAt,
+                    'trial_ends_at' => $endsAt,
+                    'status'        => 'trial',
                 ]);
             }
+            $this->subscriptionService->logEvent($id, 'trial_started', [
+                'type' => 'days', 'trial_days' => $days, 'ends_at' => $endsAt,
+            ], $actor);
             $this->session->flash('success', "Kostenlose Nutzung für {$days} Tage vergeben (bis " . date('d.m.Y', strtotime("+{$days} days")) . ").");
+        }
+
+        $this->redirect('/admin/tenants/' . $id);
+    }
+
+    public function setGrandfatheredPrice(array $params = []): void
+    {
+        $this->requireRole('superadmin', 'admin');
+        $this->verifyCsrf();
+
+        $id     = (int)($params['id'] ?? 0);
+        $tenant = $this->tenantRepo->find($id);
+        if (!$tenant) {
+            $this->notFound();
+        }
+
+        $price  = (float)str_replace(',', '.', trim($this->post('grandfathered_price', '0')));
+        $reason = trim($this->post('grandfathered_reason', 'early-adopter'));
+        $note   = trim($this->post('pricing_note', ''));
+        $actor  = $this->session->get('saas_user') ?? 'admin';
+
+        if ($price <= 0) {
+            try {
+                $this->subscriptionService->removeGrandfatheredPrice($id, $actor);
+                $this->session->flash('success', 'Sonderpreis entfernt. Standardpreis wird wieder angewendet.');
+            } catch (\Throwable $e) {
+                $this->session->flash('error', 'Fehler: ' . $e->getMessage());
+            }
+        } else {
+            try {
+                $this->subscriptionService->setGrandfatheredPrice(
+                    $id, $price, $reason, $note ?: null, $actor
+                );
+                $this->session->flash('success', sprintf(
+                    "Sonderpreis von %.2f \u{20AC} f\u{FC}r '%s' gesetzt (%s).",
+                    $price, $tenant['practice_name'], $reason
+                ));
+            } catch (\Throwable $e) {
+                $this->session->flash('error', 'Fehler: ' . $e->getMessage());
+            }
         }
 
         $this->redirect('/admin/tenants/' . $id);

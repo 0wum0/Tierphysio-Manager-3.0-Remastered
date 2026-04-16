@@ -54,7 +54,7 @@ echo "[" . date('Y-m-d H:i:s') . "] TheraPano Cron ({$mode}) gestartet\n";
 // ── 1. Trial-Ablauf prüfen ────────────────────────────────────────────────
 function checkTrialExpiry(PDO $pdo): void
 {
-    // Trials die gestern abgelaufen sind → suspend
+    // (a) Trials auf Tenant-Ebene abgelaufen → suspend
     $expired = $pdo->query(
         "SELECT id, practice_name, email FROM tenants
          WHERE status = 'trial'
@@ -64,11 +64,47 @@ function checkTrialExpiry(PDO $pdo): void
 
     foreach ($expired as $t) {
         $pdo->prepare("UPDATE tenants SET status = 'suspended' WHERE id = ?")->execute([$t['id']]);
+
+        // Subscription ebenfalls auf expired setzen
+        $pdo->prepare(
+            "UPDATE subscriptions SET status = 'expired'
+             WHERE tenant_id = ? AND status IN ('trial','trialing')
+             ORDER BY created_at DESC LIMIT 1"
+        )->execute([$t['id']]);
+
+        // Audit-Log: subscription_events
+        logSubEvent($pdo, $t['id'], 'trial_ended', [
+            'reason'   => 'trial_expired_cron',
+            'practice' => $t['practice_name'],
+        ]);
+
         notify($pdo, 'trial_expiry', 'Trial abgelaufen', "Praxis \"{$t['practice_name']}\" (#{$t['id']}) wurde gesperrt.");
         echo "  [TRIAL] Tenant #{$t['id']} '{$t['practice_name']}' suspended (trial ended)\n";
     }
 
-    // Trials die in 3 Tagen ablaufen → Erinnerungsbenachrichtigung
+    // (b) Subscription-Ebene: trial_ends_at abgelaufen, Tenant aber noch nicht suspended
+    //     Selbst-Heilung: Tenant-Status angleichen wenn Abo abgelaufen
+    $subExpired = $pdo->query(
+        "SELECT s.id AS sub_id, s.tenant_id, t.practice_name
+         FROM subscriptions s
+         JOIN tenants t ON t.id = s.tenant_id
+         WHERE s.status = 'trial'
+           AND s.trial_ends_at IS NOT NULL
+           AND s.trial_ends_at < NOW()
+           AND t.status NOT IN ('suspended','cancelled','expired')"
+    )->fetchAll();
+
+    foreach ($subExpired as $row) {
+        $pdo->prepare("UPDATE subscriptions SET status = 'expired' WHERE id = ?")->execute([$row['sub_id']]);
+        $pdo->prepare("UPDATE tenants SET status = 'suspended' WHERE id = ?")->execute([$row['tenant_id']]);
+        logSubEvent($pdo, $row['tenant_id'], 'trial_ended', [
+            'reason'   => 'sub_trial_ends_at_cron',
+            'practice' => $row['practice_name'],
+        ]);
+        echo "  [TRIAL/HEAL] Sub #{$row['sub_id']} Tenant #{$row['tenant_id']} '{$row['practice_name']}' suspended via sub.trial_ends_at\n";
+    }
+
+    // (c) Trials die in 3 Tagen ablaufen → Erinnerungsbenachrichtigung
     $soonExpiring = $pdo->query(
         "SELECT id, practice_name FROM tenants
          WHERE status = 'trial'
@@ -77,7 +113,6 @@ function checkTrialExpiry(PDO $pdo): void
     )->fetchAll();
 
     foreach ($soonExpiring as $t) {
-        // Nur einmal pro Tenant benachrichtigen (prüfen ob bereits gesendet)
         $exists = $pdo->prepare(
             "SELECT id FROM saas_notifications WHERE type = 'trial_expiry' AND message LIKE ? AND created_at > DATE_SUB(NOW(), INTERVAL 24 HOUR)"
         );
@@ -219,11 +254,18 @@ function syncStripeSubscriptions(PDO $pdo): void
             ? date('Y-m-d H:i:s', $res['current_period_end']) : null;
 
         $pdo->prepare(
-            "UPDATE subscriptions SET last_payment_status = ?, next_billing = ? WHERE id = ?"
+            "UPDATE subscriptions SET last_payment_status = ?, next_billing = ?, last_webhook_sync_at = NOW() WHERE id = ?"
         )->execute([$status, $nextBilling, $t['sub_id']]);
+
+        logSubEvent($pdo, $t['id'], 'stripe_sync', [
+            'stripe_status' => $status,
+            'next_billing'  => $nextBilling,
+        ]);
 
         if ($status === 'canceled') {
             $pdo->prepare("UPDATE tenants SET status = 'cancelled' WHERE id = ?")->execute([$t['id']]);
+            $pdo->prepare("UPDATE subscriptions SET status = 'cancelled', cancelled_at = NOW() WHERE id = ?")->execute([$t['sub_id']]);
+            logSubEvent($pdo, $t['id'], 'canceled', ['source' => 'stripe_sync_cron']);
             echo "  [STRIPE] Tenant #{$t['id']} - subscription canceled\n";
         } elseif ($status === 'past_due') {
             $pdo->prepare("UPDATE subscriptions SET status = 'past_due' WHERE id = ?")->execute([$t['sub_id']]);
@@ -234,7 +276,6 @@ function syncStripeSubscriptions(PDO $pdo): void
 }
 
 // ── Helper: Notification erstellen ────────────────────────────────────────
-// ── Helper: Notification erstellen ────────────────────────────────────────
 function notify(PDO $pdo, string $type, string $title, string $message): void
 {
     try {
@@ -242,6 +283,19 @@ function notify(PDO $pdo, string $type, string $title, string $message): void
             "INSERT INTO saas_notifications (type, title, message, is_read, created_at) VALUES (?, ?, ?, 0, NOW())"
         )->execute([$type, $title, $message]);
     } catch (\Throwable) {}
+}
+
+// ── Helper: Subscription-Event protokollieren ─────────────────────────────
+function logSubEvent(PDO $pdo, int $tenantId, string $event, array $details = [], string $actor = 'cron'): void
+{
+    try {
+        $pdo->prepare(
+            "INSERT INTO subscription_events (tenant_id, event, details, actor, created_at)
+             VALUES (?, ?, ?, ?, NOW())"
+        )->execute([$tenantId, $event, json_encode($details, JSON_UNESCAPED_UNICODE), $actor]);
+    } catch (\Throwable $e) {
+        echo "  [WARN] logSubEvent failed: " . $e->getMessage() . "\n";
+    }
 }
 
 /**

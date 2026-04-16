@@ -44,7 +44,8 @@ $router->post('/admin/tenants/{id}/activate',   [TenantController::class, 'activ
 $router->post('/admin/tenants/{id}/reactivate', [TenantController::class, 'reactivate']);
 $router->post('/admin/tenants/{id}/cancel',     [TenantController::class, 'cancel']);
 $router->post('/admin/tenants/{id}/license',    [TenantController::class, 'issueLicense']);
-$router->post('/admin/tenants/{id}/set-trial',  [TenantController::class, 'setTrial']);
+$router->post('/admin/tenants/{id}/set-trial',        [TenantController::class, 'setTrial']);
+$router->post('/admin/tenants/{id}/set-grandfathered', [TenantController::class, 'setGrandfatheredPrice']);
 $router->post('/admin/tenants/{id}/delete',     [TenantController::class, 'delete']);
 $router->post('/admin/tenants/{id}/repair',      [DataMigrationController::class, 'repairDatabase']);
 $router->post('/admin/tenants/fix-storage',     [TenantController::class, 'fixStorage']);
@@ -53,9 +54,12 @@ $router->get('/admin/tenants/{id}/activity',    [TenantController::class, 'activ
 $router->post('/admin/tenants/{id}/features',   [TenantController::class, 'setFeature']);
 
 // ── Plans Management ───────────────────────────────────────────────────────
-$router->get('/admin/plans',            [PlansController::class, 'index']);
-$router->get('/admin/plans/{id}/edit',  [PlansController::class, 'edit']);
-$router->post('/admin/plans/{id}/edit', [PlansController::class, 'update']);
+$router->get('/admin/plans',               [PlansController::class, 'index']);
+$router->get('/admin/plans/create',        [PlansController::class, 'createForm']);
+$router->post('/admin/plans/create',       [PlansController::class, 'store']);
+$router->get('/admin/plans/{id}/edit',     [PlansController::class, 'edit']);
+$router->post('/admin/plans/{id}/edit',    [PlansController::class, 'update']);
+$router->post('/admin/plans/{id}/toggle',  [PlansController::class, 'toggleActive']);
 
 // ── Legal Documents Management ─────────────────────────────────────────────
 $router->get('/admin/legal',            [LegalController::class, 'index']);

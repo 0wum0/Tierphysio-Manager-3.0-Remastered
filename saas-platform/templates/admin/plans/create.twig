@@ -1,0 +1,156 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'plans' %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <a href="/admin/plans" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Zurück zur Übersicht
+    </a>
+    <h5 class="mb-0 fw-semibold">Neuen Plan erstellen</h5>
+</div>
+
+{% if flash_error %}
+<div class="alert alert-danger">{{ flash_error }}</div>
+{% endif %}
+
+<form method="POST" action="/admin/plans/create">
+    {{ csrf_field()|raw }}
+
+    <div class="row g-3">
+
+        {# Left column: basic fields #}
+        <div class="col-lg-8">
+            <div class="card mb-3">
+                <div class="card-header px-4 py-3"><span class="fw-semibold">Plan-Details</span></div>
+                <div class="card-body px-4 py-3">
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label class="form-label" style="font-size:.75rem;color:#94a3b8;">Planname <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" required
+                                   placeholder="z.B. Professional" value="{{ old_name ?? '' }}">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label" style="font-size:.75rem;color:#94a3b8;">Slug <span class="text-danger">*</span></label>
+                            <input type="text" name="slug" class="form-control" required
+                                   placeholder="z.B. professional"
+                                   pattern="[a-z0-9\-]+"
+                                   title="Nur Kleinbuchstaben, Ziffern und Bindestriche erlaubt"
+                                   value="{{ old_slug ?? '' }}">
+                            <div class="form-text text-secondary" style="font-size:.7rem;">Eindeutig, unveränderlich nach Erstellung.</div>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" style="font-size:.75rem;color:#94a3b8;">Beschreibung</label>
+                            <textarea name="description" class="form-control" rows="2"
+                                      placeholder="Kurze Beschreibung des Plans…">{{ old_description ?? '' }}</textarea>
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label" style="font-size:.75rem;color:#94a3b8;">Preis / Monat (€)</label>
+                            <input type="number" name="price_month" class="form-control" step="0.01" min="0"
+                                   value="{{ old_price_month ?? '39.00' }}">
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label" style="font-size:.75rem;color:#94a3b8;">Preis / Jahr (€)</label>
+                            <input type="number" name="price_year" class="form-control" step="0.01" min="0"
+                                   value="{{ old_price_year ?? '390.00' }}">
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label" style="font-size:.75rem;color:#94a3b8;">Max. Benutzer (−1 = ∞)</label>
+                            <input type="number" name="max_users" class="form-control" min="-1"
+                                   value="{{ old_max_users ?? '5' }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Features #}
+            <div class="card mb-3">
+                <div class="card-header px-4 py-3"><span class="fw-semibold">Features</span></div>
+                <div class="card-body px-4 py-3">
+                    <div class="row g-2">
+                        {% set allFeatures = {
+                            'invoices':        'Rechnungen',
+                            'appointments':    'Termine',
+                            'patients':        'Patienten',
+                            'owners':          'Besitzer',
+                            'dashboard':       'Dashboard',
+                            'waitlist':        'Warteliste',
+                            'intake':          'Patientenanmeldung',
+                            'staff':           'Mitarbeiterverwaltung',
+                            'reports':         'Berichte',
+                            'calendar':        'Kalender',
+                            'google_sync':     'Google Sync',
+                            'therapy_care':    'Therapie-Dokumentation',
+                            'messaging':       'Nachrichten',
+                            'file_uploads':    'Datei-Uploads',
+                            'advanced_reports':'Erweiterte Berichte',
+                            'owner_portal':    'Besitzer-Portal',
+                            'reminders':       'Erinnerungen',
+                            'premium_support': 'Premium Support',
+                            'ai_features':     'KI-Features',
+                            'premium':         'Premium'
+                        } %}
+                        {% for key, label in allFeatures %}
+                        <div class="col-sm-4 col-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="features[]"
+                                       value="{{ key }}" id="feat_{{ key }}">
+                                <label class="form-check-label" for="feat_{{ key }}" style="font-size:.85rem;">{{ label }}</label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Right column: config #}
+        <div class="col-lg-4">
+            <div class="card mb-3">
+                <div class="card-header px-4 py-3"><span class="fw-semibold">Konfiguration</span></div>
+                <div class="card-body px-4 py-3">
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size:.75rem;color:#94a3b8;">Testtage (Trial)</label>
+                        <input type="number" name="trial_days" class="form-control" min="0" max="365"
+                               value="14">
+                        <div class="form-text" style="font-size:.7rem;color:#64748b;">0 = kein Trial</div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="is_active" value="1" id="is_active" checked>
+                            <label class="form-check-label" for="is_active" style="font-size:.85rem;">Aktiv</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="is_public" value="1" id="is_public" checked>
+                            <label class="form-check-label" for="is_public" style="font-size:.85rem;">Öffentlich (im Registrierungsdialog sichtbar)</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header px-4 py-3"><span class="fw-semibold">Stripe Integration</span></div>
+                <div class="card-body px-4 py-3">
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size:.75rem;color:#94a3b8;">Stripe Price ID (monatlich)</label>
+                        <input type="text" name="stripe_price_id" class="form-control"
+                               placeholder="price_1ABC…" value="">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" style="font-size:.75rem;color:#94a3b8;">Stripe Price ID (jährlich)</label>
+                        <input type="text" name="stripe_price_id_yearly" class="form-control"
+                               placeholder="price_1DEF…" value="">
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-success w-100">
+                <i class="bi bi-plus-circle me-1"></i>Plan erstellen
+            </button>
+            <a href="/admin/plans" class="btn btn-outline-secondary w-100 mt-2">Abbrechen</a>
+        </div>
+
+    </div>
+</form>
+{% endblock %}
