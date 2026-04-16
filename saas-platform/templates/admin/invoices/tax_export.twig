@@ -1,19 +1,4 @@
 {% extends 'layouts/base.twig' %}
-{% set active_nav = 'invoices' %}
-
-{% block styles %}
-<style>
-.section-card { background:#1e293b; border:1px solid #334155; border-radius:.75rem; padding:1.5rem; margin-bottom:1.25rem; }
-.section-title { font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#64748b; margin-bottom:1rem; }
-.tax-summary-card { background:#0f172a; border:1px solid #334155; border-radius:.75rem; padding:1.25rem; }
-.tax-row { display:flex; justify-content:space-between; align-items:center; padding:.5rem 0; border-bottom:1px solid #1e293b; font-size:.9rem; }
-.tax-row:last-child { border-bottom:none; }
-.badge-inv { font-size:.7rem; padding:.25rem .6rem; border-radius:1rem; font-weight:700; }
-.badge-paid     { background:#064e3b; color:#6ee7b7; }
-.badge-open     { background:#0c2a4a; color:#7dd3fc; }
-.badge-overdue  { background:#3b1a08; color:#fb923c; }
-</style>
-{% endblock %}
 
 {% block content %}
 
@@ -22,8 +7,9 @@
     <a href="/admin/invoices" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Zurück</a>
 </div>
 
-<div class="section-card">
-    <div class="section-title"><i class="bi bi-funnel me-1"></i>Zeitraum auswählen</div>
+<div class="card mb-3">
+    <div class="card-header px-4 py-3 text-muted fs-xs fw-700 text-uppercase" style="letter-spacing:.08em;"><i class="bi bi-funnel me-1"></i>Zeitraum auswählen</div>
+    <div class="card-body px-4 py-3">
     <form method="GET" action="/admin/invoices/tax-export" class="row g-3 align-items-end">
         <div class="col-md-3">
             <label class="form-label">Von</label>
@@ -48,14 +34,19 @@
             <a href="/admin/invoices/tax-export?date_from={{ 'now'|date('Y') }}-{{ 'now'|date('m') }}-01&date_to={{ 'now'|date('Y-m-d') }}" class="btn btn-sm btn-outline-secondary">Dieser Monat</a>
         </div>
     </form>
+    </div>
 </div>
 
 {# ── Steuer-Zusammenfassung ────────────────────────────────────────── #}
 {% if summary %}
 <div class="row g-3 mb-4">
     <div class="col-12">
-        <div class="section-card">
-            <div class="section-title"><i class="bi bi-calculator me-1"></i>Steuer-Zusammenfassung für {{ date_from|date('d.m.Y') }} – {{ date_to|date('d.m.Y') }}</div>
+        <div class="card mb-3">
+            <div class="card-header px-4 py-3">
+                <span class="fw-600 fs-sm">
+                    <i class="bi bi-calculator me-1"></i>Steuer-Zusammenfassung für {{ date_from|date('d.m.Y') }} – {{ date_to|date('d.m.Y') }}
+                </span>
+            </div>
             <div class="table-responsive">
                 <table class="table mb-0">
                     <thead>
@@ -73,18 +64,18 @@
                             <td><strong>{{ row.tax_rate|number_format(0,',','.') }} %</strong></td>
                             <td class="text-end">{{ row.invoice_count }}</td>
                             <td class="text-end">{{ row.total_net|number_format(2,',','.') }} €</td>
-                            <td class="text-end" style="color:#fbbf24;">{{ row.total_tax|number_format(2,',','.') }} €</td>
+                            <td class="text-end text-warning">{{ row.total_tax|number_format(2,',','.') }} €</td>
                             <td class="text-end"><strong>{{ row.total_gross|number_format(2,',','.') }} €</strong></td>
                         </tr>
                         {% endfor %}
                     </tbody>
                     <tfoot>
-                        <tr style="border-top:2px solid #334155;">
+                        <tr class="fw-700 border-top">
                             <th>Gesamt</th>
                             <th class="text-end">{{ summary|map(r => r.invoice_count)|reduce((carry, v) => carry + v, 0) }}</th>
                             <th class="text-end">{{ summary|map(r => r.total_net)|reduce((carry, v) => carry + v, 0)|number_format(2,',','.') }} €</th>
-                            <th class="text-end" style="color:#fbbf24;">{{ summary|map(r => r.total_tax)|reduce((carry, v) => carry + v, 0)|number_format(2,',','.') }} €</th>
-                            <th class="text-end" style="color:#34d399;">{{ summary|map(r => r.total_gross)|reduce((carry, v) => carry + v, 0)|number_format(2,',','.') }} €</th>
+                            <th class="text-end text-warning">{{ summary|map(r => r.total_tax)|reduce((carry, v) => carry + v, 0)|number_format(2,',','.') }} €</th>
+                            <th class="text-end text-success">{{ summary|map(r => r.total_gross)|reduce((carry, v) => carry + v, 0)|number_format(2,',','.') }} €</th>
                         </tr>
                     </tfoot>
                 </table>
@@ -96,15 +87,15 @@
 
 {# ── Einzelne Rechnungen ───────────────────────────────────────────── #}
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span style="font-size:.8rem;color:#64748b;">{{ invoices|length }} Rechnung(en) im Zeitraum</span>
+    <div class="card-header px-4 py-3 d-flex justify-content-between align-items-center">
+        <span class="text-muted fs-sm">{{ invoices|length }} Rechnung(en) im Zeitraum</span>
         <a href="/admin/invoices/tax-export?date_from={{ date_from }}&date_to={{ date_to }}&format=csv" class="btn btn-sm btn-success">
             <i class="bi bi-download me-1"></i>CSV exportieren
         </a>
     </div>
     <div class="table-responsive">
-        <table class="table mb-0">
-            <thead>
+        <table class="table table-hover table-sm mb-0">
+            <thead class="fs-xs text-muted">
                 <tr>
                     <th>Rechnungsnr.</th>
                     <th>Datum</th>
@@ -121,31 +112,33 @@
                 {% for inv in invoices %}
                 {% set statusLabels = {'draft':'Entwurf','open':'Offen','paid':'Bezahlt','overdue':'Überfällig','cancelled':'Storniert'} %}
                 <tr>
-                    <td><strong class="text-white">{{ inv.invoice_number }}</strong></td>
-                    <td>{{ inv.issue_date|date('d.m.Y') }}</td>
+                    <td class="px-4"><strong class="fs-sm">{{ inv.invoice_number }}</strong></td>
+                    <td class="fs-sm text-nowrap">{{ inv.issue_date|date('d.m.Y') }}</td>
                     <td>
-                        <div>{{ inv.tenant_display }}</div>
-                        <div style="font-size:.75rem;color:#64748b;">{{ inv.tenant_email }}</div>
+                        <div class="fs-sm">{{ inv.tenant_display }}</div>
+                        <div class="text-muted fs-xs">{{ inv.tenant_email }}</div>
                     </td>
-                    <td><span class="badge-inv badge-{{ inv.status }}">{{ statusLabels[inv.status] ?? inv.status }}</span></td>
-                    <td class="text-end">{{ inv.total_net|number_format(2,',','.') }}</td>
-                    <td class="text-end" style="color:#fbbf24;">{{ inv.total_tax|number_format(2,',','.') }}</td>
-                    <td class="text-end"><strong>{{ inv.total_gross|number_format(2,',','.') }}</strong></td>
-                    <td>
+                    <td><span class="badge-inv badge-inv-{{ inv.status }}">{{ statusLabels[inv.status] ?? inv.status }}</span></td>
+                    <td class="text-end fs-sm">{{ inv.total_net|number_format(2,',','.') }}</td>
+                    <td class="text-end text-warning fs-sm">{{ inv.total_tax|number_format(2,',','.') }}</td>
+                    <td class="text-end fw-600 fs-sm">{{ inv.total_gross|number_format(2,',','.') }}</td>
+                    <td class="text-nowrap fs-sm">
                         {% if inv.paid_at %}
-                            <span style="color:#34d399;">{{ inv.paid_at|date('d.m.Y') }}</span>
+                            <span class="text-success">{{ inv.paid_at|date('d.m.Y') }}</span>
                         {% else %}
-                            <span class="text-secondary">—</span>
+                            <span class="text-muted">—</span>
                         {% endif %}
                     </td>
                     <td>
-                        <a href="/admin/invoices/{{ inv.id }}" class="btn btn-sm btn-outline-secondary py-0 px-2"><i class="bi bi-eye"></i></a>
+                        <a href="/admin/invoices/{{ inv.id }}" class="btn btn-sm btn-outline-secondary">
+                            <svg class="sa-icon"><use href="/sa/icons/sprite.svg#eye"></use></svg>
+                        </a>
                     </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="9" class="text-center py-5 text-secondary">
-                        <i class="bi bi-search" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
+                    <td colspan="9" class="text-center py-5 text-muted">
+                        <svg class="sa-icon sa-icon-3x d-block mx-auto mb-2 opacity-25"><use href="/sa/icons/sprite.svg#search"></use></svg>
                         Keine Rechnungen im gewählten Zeitraum.
                     </td>
                 </tr>

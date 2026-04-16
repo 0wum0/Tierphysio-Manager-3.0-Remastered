@@ -1,18 +1,4 @@
 {% extends 'layouts/base.twig' %}
-{% set active_nav = 'notifications' %}
-
-{% block styles %}
-<style>
-.log-row td { font-size:.8rem; }
-.action-badge { display:inline-block; padding:.15rem .5rem; border-radius:.3rem; font-size:.7rem; font-weight:600; }
-.action-settings  { background:rgba(37,99,235,.12); color:#60a5fa; }
-.action-tenant    { background:rgba(16,185,129,.12); color:#34d399; }
-.action-invoice   { background:rgba(245,158,11,.12); color:#fbbf24; }
-.action-system    { background:rgba(139,92,246,.12); color:#c4b5fd; }
-.action-auth      { background:rgba(239,68,68,.12);  color:#f87171; }
-.action-default   { background:rgba(100,116,139,.12);color:#94a3b8; }
-</style>
-{% endblock %}
 
 {% block content %}
 <div class="d-flex align-items-center justify-content-between mb-4">
@@ -21,8 +7,8 @@
 
 {# Filter #}
 <form method="GET" action="/admin/notifications/activity-log" class="d-flex gap-2 mb-4 flex-wrap">
-    <input type="text" name="action" value="{{ filter_action }}" class="form-control form-control-sm" placeholder="Aktion…" style="width:180px;">
-    <input type="text" name="actor"  value="{{ filter_actor }}"  class="form-control form-control-sm" placeholder="Benutzer…" style="width:160px;">
+    <input type="text" name="action" value="{{ filter_action }}" class="form-control form-control-sm" placeholder="Aktion…" style="min-width:150px;max-width:200px;">
+    <input type="text" name="actor"  value="{{ filter_actor }}"  class="form-control form-control-sm" placeholder="Benutzer…" style="min-width:130px;max-width:180px;">
     <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="bi bi-search"></i></button>
     {% if filter_action or filter_actor %}
     <a href="/admin/notifications/activity-log" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x"></i></a>
@@ -31,8 +17,8 @@
 
 <div class="card">
     <div class="table-responsive">
-        <table class="table mb-0">
-            <thead>
+        <table class="table table-hover table-sm mb-0">
+            <thead class="fs-xs text-muted">
                 <tr>
                     <th style="width:150px;">Zeitpunkt</th>
                     <th style="width:130px;">Benutzer</th>
@@ -52,20 +38,20 @@
                     'system':   'action-system',
                     'auth':     'action-auth',
                 }[actionPrefix] ?? 'action-default' %}
-                <tr class="log-row">
-                    <td style="color:#64748b;white-space:nowrap;">{{ entry.created_at|date('d.m.Y H:i:s') }}</td>
-                    <td style="color:#94a3b8;">{{ entry.actor }}</td>
+                <tr>
+                    <td class="text-muted text-nowrap fs-xs">{{ entry.created_at|date('d.m.Y H:i:s') }}</td>
+                    <td class="text-muted fs-xs">{{ entry.actor }}</td>
                     <td><span class="action-badge {{ actionClass }}">{{ entry.action }}</span></td>
-                    <td style="color:#94a3b8;">
+                    <td class="text-muted fs-sm">
                         {% if entry.subject %}{{ entry.subject }}{% if entry.subject_id %} #{{ entry.subject_id }}{% endif %}{% endif %}
                     </td>
-                    <td style="color:#64748b;">{{ entry.detail }}</td>
-                    <td style="color:#475569;font-size:.72rem;">{{ entry.ip }}</td>
+                    <td class="text-muted fs-sm">{{ entry.detail }}</td>
+                    <td class="text-muted fs-xs">{{ entry.ip }}</td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="6" class="text-center py-5 text-secondary">
-                        <i class="bi bi-journal-text" style="font-size:2rem;opacity:.3;display:block;margin-bottom:.5rem;"></i>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                        <svg class="sa-icon sa-icon-3x d-block mx-auto mb-2 opacity-25"><use href="/sa/icons/sprite.svg#document-text"></use></svg>
                         Keine Aktivitäten gefunden.
                     </td>
                 </tr>
@@ -77,7 +63,7 @@
 
 {% if pagination.last_page > 1 %}
 <nav class="mt-3 d-flex justify-content-between align-items-center">
-    <small class="text-secondary">{{ pagination.total }} Einträge</small>
+    <span class="text-muted fs-sm">{{ pagination.total }} Einträge</span>
     <ul class="pagination pagination-sm mb-0">
         {% if pagination.has_prev %}
         <li class="page-item"><a class="page-link" href="?page={{ pagination.page - 1 }}&action={{ filter_action }}&actor={{ filter_actor }}">‹</a></li>

@@ -1,35 +1,17 @@
 {% extends 'layouts/base.twig' %}
-{% set active_nav = 'updates' %}
-
-{% block styles %}
-<style>
-.version-badge { display:inline-flex; align-items:center; gap:.4rem; padding:.35rem .9rem; border-radius:2rem; font-size:.8rem; font-weight:700; }
-.version-current  { background:rgba(37,99,235,.15); color:#60a5fa; border:1px solid rgba(37,99,235,.3); }
-.version-new      { background:rgba(16,185,129,.15); color:#34d399; border:1px solid rgba(16,185,129,.3); }
-.version-uptodate { background:rgba(100,116,139,.15);color:#94a3b8; border:1px solid rgba(100,116,139,.3); }
-.section-card { background:#1e293b; border:1px solid #334155; border-radius:.75rem; padding:1.5rem; margin-bottom:1.25rem; }
-.section-title { font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#64748b; margin-bottom:1rem; }
-.ext-ok   { color:#34d399; }
-.ext-fail { color:#f87171; }
-.disk-bar { height:8px; background:#1e293b; border-radius:4px; overflow:hidden; margin-top:.4rem; }
-.disk-fill { height:100%; border-radius:4px; transition:width .6s ease; }
-.changelog-body { background:#0f172a; border-radius:.5rem; padding:1rem; font-size:.825rem; color:#94a3b8; line-height:1.7; white-space:pre-wrap; max-height:200px; overflow-y:auto; }
-.update-log-row td { font-size:.8rem; }
-</style>
-{% endblock %}
 
 {% block content %}
 
 <div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
-    <span class="version-badge version-current"><i class="bi bi-tag"></i>v{{ current }}</span>
+    <span class="v-badge v-badge-current"><i class="bi bi-tag"></i>v{{ current }}</span>
     {% if available %}
         {% if available.version > current %}
-        <span class="version-badge version-new"><i class="bi bi-stars"></i>v{{ available.version }} verfügbar</span>
+        <span class="v-badge v-badge-new"><i class="bi bi-stars"></i>v{{ available.version }} verfügbar</span>
         {% else %}
-        <span class="version-badge version-uptodate"><i class="bi bi-check-circle"></i>Aktuell</span>
+        <span class="v-badge v-badge-uptodate"><i class="bi bi-check-circle"></i>Aktuell</span>
         {% endif %}
     {% else %}
-    <span class="version-badge version-uptodate"><i class="bi bi-wifi-off"></i>Update-Server nicht erreichbar</span>
+    <span class="v-badge v-badge-uptodate"><i class="bi bi-wifi-off"></i>Update-Server nicht erreichbar</span>
     {% endif %}
     <div class="ms-auto d-flex gap-2">
         <button class="btn btn-sm btn-outline-secondary" id="checkUpdateBtn" onclick="checkUpdate()">
@@ -49,32 +31,29 @@
 
         {# ── Update-Box ──────────────────────────────────────────────── #}
         {% if available and available.version > current %}
-        <div class="section-card" style="border-color:rgba(16,185,129,.3);background:linear-gradient(135deg,rgba(16,185,129,.05),#1e293b);">
-            <div class="section-title" style="color:#34d399;"><i class="bi bi-stars me-2"></i>Neues Update verfügbar</div>
+        <div class="card mb-3" style="border-color:rgba(16,185,129,.3);">
+            <div class="card-header px-4 py-3 text-success fs-xs fw-700 text-uppercase" style="letter-spacing:.08em;"><i class="bi bi-stars me-2"></i>Neues Update verfügbar</div>
+            <div class="card-body px-4 py-3">
             <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
                 <div>
-                    <div style="font-size:1.5rem;font-weight:800;color:#34d399;">v{{ available.version }}</div>
-                    <div style="font-size:.8rem;color:#64748b;margin-top:.25rem;">
-                        {% if available.published_at %}
-                        Veröffentlicht: {{ available.published_at|date('d.m.Y') }}
-                        {% endif %}
-                        {% if available.prerelease %}
-                        <span class="badge ms-2" style="background:rgba(245,158,11,.2);color:#fbbf24;font-size:.7rem;">Beta</span>
-                        {% endif %}
+                    <div class="h3 fw-700 mb-0 text-success">v{{ available.version }}</div>
+                    <div class="text-muted fs-sm mt-1">
+                        {% if available.published_at %}Veröffentlicht: {{ available.published_at|date('d.m.Y') }}{% endif %}
+                        {% if available.prerelease %}<span class="badge bg-warning text-dark ms-2 fs-xs">Beta</span>{% endif %}
                     </div>
                 </div>
                 <div>
-                    <span style="font-size:.8rem;color:#64748b;">Kanal: <strong class="text-white">{{ channel }}</strong></span>
+                    <span class="text-muted fs-sm">Kanal: <strong>{{ channel }}</strong></span>
                 </div>
             </div>
             {% if available.body %}
             <div class="mb-3">
-                <div style="font-size:.75rem;color:#64748b;margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.06em;">Release Notes</div>
-                <div class="changelog-body">{{ available.body }}</div>
+                <div class="text-muted fs-xs text-uppercase mb-2" style="letter-spacing:.06em;">Release Notes</div>
+                <div class="release-body" style="max-height:200px;">{{ available.body }}</div>
             </div>
             {% endif %}
             <form method="POST" action="/admin/updates/apply" onsubmit="return confirm('Update auf v{{ available.version }} anwenden? Die Plattform wird kurz neu gestartet.')">
-                <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                {{ csrf_field()|raw }}
                 <button type="submit" class="btn btn-success">
                     <i class="bi bi-cloud-download me-1"></i>Update auf v{{ available.version }} anwenden
                 </button>
@@ -82,23 +61,26 @@
                     <i class="bi bi-github me-1"></i>Release ansehen
                 </a>
             </form>
+            </div>
         </div>
         {% else %}
-        <div class="section-card" style="border-color:rgba(100,116,139,.3);">
-            <div class="section-title"><i class="bi bi-check-circle me-2"></i>Kein Update verfügbar</div>
-            <p class="text-secondary mb-3" style="font-size:.875rem;">Die installierte Version <strong class="text-white">v{{ current }}</strong> ist aktuell.</p>
+        <div class="card mb-3">
+            <div class="card-header px-4 py-3 text-muted fs-xs fw-700 text-uppercase" style="letter-spacing:.08em;"><i class="bi bi-check-circle me-2"></i>Kein Update verfügbar</div>
+            <div class="card-body px-4 py-3">
+            <p class="text-muted fs-sm mb-3">Die installierte Version <strong>v{{ current }}</strong> ist aktuell.</p>
             <button class="btn btn-sm btn-outline-secondary" onclick="checkUpdate()">
                 <i class="bi bi-arrow-clockwise me-1"></i>Erneut prüfen
             </button>
+            </div>
         </div>
         {% endif %}
 
         {# ── Update-Verlauf ─────────────────────────────────────────── #}
         {% if update_log %}
-        <div class="section-card">
-            <div class="section-title"><i class="bi bi-clock-history me-2"></i>Update-Verlauf</div>
+        <div class="card mb-3">
+            <div class="card-header px-4 py-3 text-muted fs-xs fw-700 text-uppercase" style="letter-spacing:.08em;"><i class="bi bi-clock-history me-2"></i>Update-Verlauf</div>
             <div class="table-responsive">
-                <table class="table mb-0">
+                <table class="table table-sm mb-0">
                     <thead>
                         <tr>
                             <th>Datum</th>
@@ -113,17 +95,17 @@
                         {% set statusMap = {'success':'Erfolgreich','failed':'Fehlgeschlagen','rolled_back':'Zurückgerollt'} %}
                         {% set statusColor = {'success':'#34d399','failed':'#f87171','rolled_back':'#fbbf24'} %}
                         {% for entry in update_log %}
-                        <tr class="update-log-row">
-                            <td style="color:#64748b;white-space:nowrap;">{{ entry.performed_at|date('d.m.Y H:i') }}</td>
-                            <td>v{{ entry.from_version }}</td>
-                            <td style="font-weight:600;color:#34d399;">v{{ entry.to_version }}</td>
-                            <td style="color:#64748b;">{{ entry.channel }}</td>
+                        <tr>
+                            <td class="text-muted text-nowrap fs-xs">{{ entry.performed_at|date('d.m.Y H:i') }}</td>
+                            <td class="fs-sm">v{{ entry.from_version }}</td>
+                            <td class="fs-sm fw-600 text-success">v{{ entry.to_version }}</td>
+                            <td class="text-muted fs-sm">{{ entry.channel }}</td>
                             <td>
-                                <span style="font-size:.75rem;font-weight:600;color:{{ statusColor[entry.status] ?? '#94a3b8' }};">
+                                <span class="fs-xs fw-600 {% if entry.status == 'success' %}text-success{% elseif entry.status == 'failed' %}text-danger{% else %}text-warning{% endif %}">
                                     {{ statusMap[entry.status] ?? entry.status }}
                                 </span>
                             </td>
-                            <td style="color:#64748b;">{{ entry.performed_by }}</td>
+                            <td class="text-muted fs-sm">{{ entry.performed_by }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -138,35 +120,36 @@
         {# ── SaaS Platform DB-Migrationen ────────────────────────────── #}
         {% set dbm = db_migration ?? {} %}
         {% set pendingCount = dbm.pending ?? 0 %}
-        <div class="section-card {% if pendingCount > 0 %}" style="border-color:rgba(234,179,8,.35);background:linear-gradient(135deg,rgba(234,179,8,.04),#1e293b){% endif %}">
-            <div class="section-title d-flex align-items-center gap-2">
-                <i class="bi bi-database-gear me-1 {% if pendingCount > 0 %}text-warning{% else %}text-success{% endif %}"></i>
+        <div class="card mb-3{% if pendingCount > 0 %} border-warning{% endif %}">
+            <div class="card-header px-4 py-3 d-flex align-items-center gap-2 fs-xs fw-700 text-uppercase" style="letter-spacing:.08em;">
+                <i class="bi bi-database-gear {% if pendingCount > 0 %}text-warning{% else %}text-success{% endif %}"></i>
                 Datenbank-Migrationen (Global)
                 {% if pendingCount > 0 %}
-                <span class="badge bg-warning text-dark ms-1" style="font-size:.65rem;">{{ pendingCount }} ausstehend</span>
+                <span class="badge bg-warning text-dark">{{ pendingCount }} ausstehend</span>
                 {% else %}
-                <span class="badge" style="background:rgba(16,185,129,.15);color:#34d399;font-size:.65rem;border:1px solid rgba(16,185,129,.3);">Aktuell</span>
+                <span class="badge text-success">Aktuell</span>
                 {% endif %}
             </div>
+            <div class="card-body px-4 py-3">
 
             {% if pendingCount > 0 %}
-            <div class="alert" style="background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.3);border-radius:.5rem;padding:.75rem 1rem;margin-bottom:1rem;font-size:.8rem;color:#fde68a;">
+            <div class="alert alert-warning fs-sm">
                 <i class="bi bi-exclamation-triangle me-2"></i>
                 <strong>{{ pendingCount }} ausstehende Migration(en)</strong> müssen auf der Produktionsdatenbank angewandt werden. Dies behebt aktuelle 500-Fehler durch fehlende Spalten.
             </div>
             {% endif %}
 
-            <div class="d-flex justify-content-between py-1 mb-1" style="border-bottom:1px solid #1e293b;font-size:.825rem;">
-                <span style="color:#64748b;">Angewandt</span>
-                <span style="color:#e2e8f0;font-weight:500;">{{ dbm.applied ?? 0 }} / {{ (dbm.applied ?? 0) + pendingCount }}</span>
+            <div class="d-flex justify-content-between py-2 border-bottom fs-sm mb-2">
+                <span class="text-muted">Angewandt</span>
+                <span class="fw-500">{{ dbm.applied ?? 0 }} / {{ (dbm.applied ?? 0) + pendingCount }}</span>
             </div>
 
             {% if dbm.files is defined and dbm.files %}
-            <div style="max-height:140px;overflow-y:auto;margin:.75rem 0;">
+            <div style="max-height:140px;overflow-y:auto;" class="mb-3">
                 {% for f in dbm.files %}
-                <div class="d-flex align-items-center gap-2 py-1" style="font-size:.75rem;border-bottom:1px solid rgba(51,65,85,.5);">
-                    <i class="bi bi-{{ f.applied ? 'check-circle-fill text-success' : 'clock text-warning' }}" style="font-size:.8rem;flex-shrink:0;"></i>
-                    <span style="color:{{ f.applied ? '#94a3b8' : '#fde68a' }};font-family:monospace;">{{ f.filename }}</span>
+                <div class="d-flex align-items-center gap-2 py-1 border-bottom fs-xs">
+                    <i class="bi bi-{{ f.applied ? 'check-circle-fill text-success' : 'clock text-warning' }} flex-shrink-0"></i>
+                    <span class="{{ f.applied ? 'text-muted' : 'text-warning' }} font-monospace">{{ f.filename }}</span>
                 </div>
                 {% endfor %}
             </div>
@@ -180,11 +163,13 @@
                     {% if pendingCount > 0 %}{{ pendingCount }} Migration(en) anwenden{% else %}Migrationen prüfen / neu ausführen{% endif %}
                 </button>
             </form>
+            </div>
         </div>
 
-        {# ── System-Übersicht ───────────────────────────────────────── #}
-        <div class="section-card">
-            <div class="section-title"><i class="bi bi-info-circle me-2"></i>Systemübersicht</div>
+        {# ── System-Übersicht ──────────────────────────────────────────── #}
+        <div class="card mb-3">
+            <div class="card-header px-4 py-3 text-muted fs-xs fw-700 text-uppercase" style="letter-spacing:.08em;"><i class="bi bi-info-circle me-2"></i>Systemübersicht</div>
+            <div class="card-body px-4 py-3">
             {% set rows = [
                 ['PHP-Version',      sysinfo.php_version],
                 ['Betriebssystem',   sysinfo.os],
@@ -195,47 +180,52 @@
                 ['Max. Upload',      sysinfo.max_upload],
             ] %}
             {% for row in rows %}
-            <div class="d-flex justify-content-between py-1" style="border-bottom:1px solid #1e293b;font-size:.825rem;">
-                <span style="color:#64748b;">{{ row[0] }}</span>
-                <span style="color:#e2e8f0;font-weight:500;">{{ row[1] }}</span>
+            <div class="d-flex justify-content-between py-2 border-bottom fs-sm">
+                <span class="text-muted">{{ row[0] }}</span>
+                <span class="fw-500">{{ row[1] }}</span>
             </div>
             {% endfor %}
             {% if sysinfo.uptime != 'n/a' %}
-            <div class="d-flex justify-content-between py-1" style="font-size:.825rem;">
-                <span style="color:#64748b;">Uptime</span>
-                <span style="color:#e2e8f0;font-weight:500;">{{ sysinfo.uptime }}</span>
+            <div class="d-flex justify-content-between py-2 fs-sm">
+                <span class="text-muted">Uptime</span>
+                <span class="fw-500">{{ sysinfo.uptime }}</span>
             </div>
             {% endif %}
+            </div>
         </div>
 
-        {# ── Festplattenspeicher ─────────────────────────────────────── #}
+        {# ── Festplattenspeicher ───────────────────────────────────────────── #}
         {% if disk_total > 0 %}
-        <div class="section-card">
-            <div class="section-title"><i class="bi bi-hdd me-2"></i>Festplattenspeicher</div>
+        <div class="card mb-3">
+            <div class="card-header px-4 py-3 text-muted fs-xs fw-700 text-uppercase" style="letter-spacing:.08em;"><i class="bi bi-hdd me-2"></i>Festplattenspeicher</div>
+            <div class="card-body px-4 py-3">
             {% set used = disk_total - disk_free %}
             {% set pct  = (used / disk_total * 100)|round %}
-            <div class="d-flex justify-content-between mb-1" style="font-size:.825rem;">
-                <span style="color:#64748b;">Belegt: {{ (used / 1073741824)|round(1) }} GB</span>
-                <span style="color:#e2e8f0;">Frei: {{ (disk_free / 1073741824)|round(1) }} GB</span>
+            <div class="d-flex justify-content-between mb-2 fs-sm">
+                <span class="text-muted">Belegt: {{ (used / 1073741824)|round(1) }} GB</span>
+                <span>Frei: {{ (disk_free / 1073741824)|round(1) }} GB</span>
             </div>
-            <div class="disk-bar">
-                <div class="disk-fill" style="width:{{ pct }}%;background:{% if pct > 85 %}#ef4444{% elseif pct > 65 %}#f59e0b{% else %}#22c55e{% endif %};"></div>
+            <div class="progress" style="height:8px;">
+                <div class="progress-bar {% if pct > 85 %}bg-danger{% elseif pct > 65 %}bg-warning{% else %}bg-success{% endif %}" style="width:{{ pct }}%"></div>
             </div>
-            <div style="font-size:.72rem;color:#475569;margin-top:.35rem;">{{ pct }}% von {{ (disk_total / 1073741824)|round(1) }} GB belegt</div>
+            <div class="text-muted fs-xs mt-1">{{ pct }}% von {{ (disk_total / 1073741824)|round(1) }} GB belegt</div>
+            </div>
         </div>
         {% endif %}
 
-        {# ── PHP-Extensions ─────────────────────────────────────────── #}
-        <div class="section-card">
-            <div class="section-title"><i class="bi bi-puzzle me-2"></i>PHP-Extensions</div>
+        {# ── PHP-Extensions ────────────────────────────────────────────────── #}
+        <div class="card mb-3">
+            <div class="card-header px-4 py-3 text-muted fs-xs fw-700 text-uppercase" style="letter-spacing:.08em;"><i class="bi bi-puzzle me-2"></i>PHP-Extensions</div>
+            <div class="card-body px-4 py-3">
             <div class="row g-1">
                 {% for ext, ok in extensions %}
                 <div class="col-6">
-                    <div style="font-size:.775rem;padding:.2rem 0;" class="{{ ok ? 'ext-ok' : 'ext-fail' }}">
+                    <div class="fs-sm {{ ok ? 'text-success' : 'text-danger' }} py-1">
                         <i class="bi bi-{{ ok ? 'check-circle' : 'x-circle' }} me-1"></i>{{ ext }}
                     </div>
                 </div>
                 {% endfor %}
+            </div>
             </div>
         </div>
     </div>

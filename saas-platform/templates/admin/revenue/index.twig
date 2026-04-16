@@ -1,193 +1,201 @@
 {% extends 'layouts/base.twig' %}
-{% set active_nav = 'revenue' %}
-
-{% block styles %}
-<style>
-.kpi-card        { background:#1e293b; border:1px solid #334155; border-radius:.75rem; padding:1.25rem 1.5rem; height:100%; }
-.kpi-label       { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#64748b; margin-bottom:.35rem; }
-.kpi-value       { font-size:1.75rem; font-weight:800; letter-spacing:-.03em; color:#e2e8f0; line-height:1.1; }
-.kpi-sub         { font-size:.75rem; color:#475569; margin-top:.35rem; }
-.kpi-badge       { display:inline-block; font-size:.65rem; font-weight:700; padding:.15rem .5rem; border-radius:.25rem; margin-bottom:.4rem; }
-.badge-paid      { background:rgba(52,211,153,.12); color:#34d399; border:1px solid rgba(52,211,153,.25); }
-.badge-projected { background:rgba(96,165,250,.1);  color:#60a5fa; border:1px solid rgba(96,165,250,.2); }
-.chart-card      { background:#1e293b; border:1px solid #334155; border-radius:.75rem; padding:1.25rem; }
-.chart-title     { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#64748b; margin-bottom:1rem; }
-.plan-bar        { height:8px; border-radius:4px; background:#334155; overflow:hidden; margin-top:.3rem; }
-.plan-fill       { height:100%; border-radius:4px; }
-.inv-row td      { font-size:.8rem; vertical-align:middle; }
-.divider-label   { font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:#475569;
-                   padding:.4rem 0; border-top:1px solid #334155; margin-top:.5rem; margin-bottom:.75rem; }
-</style>
-{% endblock %}
 
 {% block content %}
 
 {# ── Header ─────────────────────────────────────────────────────────────── #}
-<div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
     <div>
-        <h4 class="mb-0 fw-bold" style="color:#e2e8f0;">Umsatz-Übersicht</h4>
-        <small style="color:#475569;">Nur tatsächlich eingegangene Zahlungen werden als Umsatz gezählt.</small>
+        <h5 class="fw-700 mb-0">Umsatz-Übersicht</h5>
+        <div class="text-muted fs-xs">Nur tatsächlich eingegangene Zahlungen werden als Umsatz gezählt.</div>
     </div>
-    <div class="ms-auto">
-        <button class="btn btn-sm btn-outline-secondary" onclick="refreshKPIs()">
-            <i class="bi bi-arrow-clockwise me-1"></i>Aktualisieren
-        </button>
+    <button class="btn btn-sm btn-outline-secondary" onclick="refreshKPIs()">
+        <i class="bi bi-arrow-clockwise me-1"></i>Aktualisieren
+    </button>
+</div>
+
+{# ── Tatsächlicher Umsatz ────────────────────────────────────────────────── #}
+<div class="d-flex align-items-center gap-2 mb-2 mt-1">
+    <svg class="sa-icon sa-icon-success"><use href="/sa/icons/sprite.svg#check-circle"></use></svg>
+    <span class="text-muted fs-xs fw-700 text-uppercase" style="letter-spacing:.08em;">Tatsächlicher Umsatz – nur bezahlte Rechnungen</span>
+</div>
+<div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+        <div class="card h-100">
+            <div class="card-body p-3">
+                <span class="badge bg-success bg-opacity-15 text-success fs-nano mb-2 d-inline-block">Bezahlt</span>
+                <div class="text-muted fs-xs fw-700 text-uppercase mb-1" style="letter-spacing:.06em;">Umsatz diesen Monat</div>
+                <div class="h3 fw-700 mb-0 text-success" id="kpi-month">{{ month_rev|number_format(2, ',', '.') }} €</div>
+                <div class="text-muted fs-xs mt-1">Eingegangene Zahlungen im {{ "now"|date('F Y') }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100">
+            <div class="card-body p-3">
+                <span class="badge bg-success bg-opacity-15 text-success fs-nano mb-2 d-inline-block">Bezahlt</span>
+                <div class="text-muted fs-xs fw-700 text-uppercase mb-1" style="letter-spacing:.06em;">Zahlende Kunden</div>
+                <div class="h3 fw-700 mb-0" id="kpi-active">{{ active }}</div>
+                <div class="text-muted fs-xs mt-1">Aktive Abonnements · {{ churned }} Kündigungen diesen Monat</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100">
+            <div class="card-body p-3">
+                <span class="badge bg-success bg-opacity-15 text-success fs-nano mb-2 d-inline-block">Bezahlt</span>
+                <div class="text-muted fs-xs fw-700 text-uppercase mb-1" style="letter-spacing:.06em;">Ø pro Kunde / Monat</div>
+                <div class="h3 fw-700 mb-0" id="kpi-arpu">{{ arpu|number_format(2, ',', '.') }} €</div>
+                <div class="text-muted fs-xs mt-1">Durchschnittlicher Betrag je zahlendem Kunden</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100">
+            <div class="card-body p-3">
+                <span class="badge bg-secondary bg-opacity-25 text-muted fs-nano mb-2 d-inline-block">Analyse</span>
+                <div class="text-muted fs-xs fw-700 text-uppercase mb-1" style="letter-spacing:.06em;">Trial-zu-Kunde Quote</div>
+                <div class="h3 fw-700 mb-0 {% if conversion >= 20 %}text-success{% elseif conversion >= 10 %}text-warning{% else %}text-danger{% endif %}" id="kpi-conv">
+                    {{ conversion }} %
+                </div>
+                <div class="text-muted fs-xs mt-1">{{ trials }} Testkonten aktiv · Berechnung: 90 Tage</div>
+            </div>
+        </div>
     </div>
 </div>
 
-{# ══════════════════════════════════════════════════════════════════════════ #}
-{# SEKTION 1 – TATSÄCHLICHER UMSATZ (nur bezahlte Rechnungen)               #}
-{# ══════════════════════════════════════════════════════════════════════════ #}
-<div class="divider-label"><i class="bi bi-check-circle-fill me-1" style="color:#34d399;"></i>Tatsächlicher Umsatz – nur bezahlte Rechnungen</div>
-<div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-        <div class="kpi-card">
-            <div class="kpi-badge badge-paid">Bezahlt</div>
-            <div class="kpi-label">Umsatz diesen Monat</div>
-            <div class="kpi-value" id="kpi-month" style="color:#34d399;">
-                {{ month_rev|number_format(2, ',', '.') }} €
-            </div>
-            <div class="kpi-sub">Eingegangene Zahlungen im {{ "now"|date('F Y') }}</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="kpi-card">
-            <div class="kpi-badge badge-paid">Bezahlt</div>
-            <div class="kpi-label">Zahlende Kunden</div>
-            <div class="kpi-value" id="kpi-active" style="color:#e2e8f0;">{{ active }}</div>
-            <div class="kpi-sub">Aktive Abonnements · {{ churned }} Kündigungen diesen Monat</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="kpi-card">
-            <div class="kpi-badge badge-paid">Bezahlt</div>
-            <div class="kpi-label">Ø pro Kunde / Monat</div>
-            <div class="kpi-value" id="kpi-arpu">{{ arpu|number_format(2, ',', '.') }} €</div>
-            <div class="kpi-sub">Durchschnittlicher Betrag je zahlendem Kunden</div>
-        </div>
-    </div>
-    <div class="col-6 col-md-3">
-        <div class="kpi-card">
-            <div class="kpi-badge" style="background:rgba(100,116,139,.12);color:#94a3b8;border:1px solid rgba(100,116,139,.2);">Analyse</div>
-            <div class="kpi-label">Trial-zu-Kunde Quote</div>
-            <div class="kpi-value" id="kpi-conv"
-                 style="color:{% if conversion >= 20 %}#34d399{% elseif conversion >= 10 %}#fbbf24{% else %}#f87171{% endif %};">
-                {{ conversion }} %
-            </div>
-            <div class="kpi-sub">{{ trials }} Testkonten aktiv · Berechnung: 90 Tage</div>
-        </div>
-    </div>
+{# ── Möglicher Umsatz / Prognose ─────────────────────────────────────────── #}
+<div class="d-flex align-items-center gap-2 mb-2 mt-2">
+    <svg class="sa-icon sa-icon-info"><use href="/sa/icons/sprite.svg#trending-up"></use></svg>
+    <span class="text-muted fs-xs fw-700 text-uppercase" style="letter-spacing:.08em;">Möglicher Umsatz – Prognose bei gleichbleibenden Abonnements</span>
 </div>
-
-{# ══════════════════════════════════════════════════════════════════════════ #}
-{# SEKTION 2 – MÖGLICHER UMSATZ (Prognose, noch nicht bezahlt)              #}
-{# ══════════════════════════════════════════════════════════════════════════ #}
-<div class="divider-label"><i class="bi bi-graph-up-arrow me-1" style="color:#60a5fa;"></i>Möglicher Umsatz – Prognose bei gleichbleibenden Abonnements</div>
-<div class="row g-3 mb-4">
+<div class="row g-3 mb-3">
     <div class="col-6 col-md-4">
-        <div class="kpi-card" style="border-color:rgba(96,165,250,.25);">
-            <div class="kpi-badge badge-projected">Prognose</div>
-            <div class="kpi-label">Möglicher Monatsumsatz</div>
-            <div class="kpi-value" id="kpi-mrr" style="color:#60a5fa;">
-                {{ mrr|number_format(2, ',', '.') }} €
+        <div class="card h-100">
+            <div class="card-body p-3">
+                <span class="badge bg-info bg-opacity-15 text-info fs-nano mb-2 d-inline-block">Prognose</span>
+                <div class="text-muted fs-xs fw-700 text-uppercase mb-1" style="letter-spacing:.06em;">Möglicher Monatsumsatz</div>
+                <div class="h3 fw-700 mb-0 text-info" id="kpi-mrr">{{ mrr|number_format(2, ',', '.') }} €</div>
+                <div class="text-muted fs-xs mt-1">Wenn alle {{ active }} aktiven Abos diesen Monat zahlen</div>
             </div>
-            <div class="kpi-sub">Wenn alle {{ active }} aktiven Abos diesen Monat zahlen</div>
         </div>
     </div>
     <div class="col-6 col-md-4">
-        <div class="kpi-card" style="border-color:rgba(96,165,250,.25);">
-            <div class="kpi-badge badge-projected">Prognose</div>
-            <div class="kpi-label">Möglicher Jahresumsatz</div>
-            <div class="kpi-value" id="kpi-arr" style="color:#60a5fa;">
-                {{ arr|number_format(2, ',', '.') }} €
+        <div class="card h-100">
+            <div class="card-body p-3">
+                <span class="badge bg-info bg-opacity-15 text-info fs-nano mb-2 d-inline-block">Prognose</span>
+                <div class="text-muted fs-xs fw-700 text-uppercase mb-1" style="letter-spacing:.06em;">Möglicher Jahresumsatz</div>
+                <div class="h3 fw-700 mb-0 text-info" id="kpi-arr">{{ arr|number_format(2, ',', '.') }} €</div>
+                <div class="text-muted fs-xs mt-1">Hochrechnung: Monatlicher Betrag × 12</div>
             </div>
-            <div class="kpi-sub">Hochrechnung: Monatlicher Betrag × 12</div>
         </div>
     </div>
     <div class="col-md-4">
-        <div class="kpi-card" style="border-color:rgba(96,165,250,.15);background:rgba(96,165,250,.03);">
-            <div class="kpi-label" style="color:#475569;">Hinweis</div>
-            <p style="font-size:.8rem;color:#64748b;margin:0;line-height:1.6;">
-                Die Prognosewerte basieren auf aktiven Abonnements und zeigen den <strong style="color:#94a3b8;">maximal möglichen Umsatz</strong>.
-                Sie sind erst Umsatz, wenn die Zahlung tatsächlich eingegangen ist.
-            </p>
+        <div class="card h-100">
+            <div class="card-body p-3">
+                <div class="text-muted fs-xs fw-700 text-uppercase mb-2" style="letter-spacing:.06em;">Hinweis</div>
+                <p class="text-muted fs-sm mb-0 lh-base">
+                    Die Prognosewerte basieren auf aktiven Abonnements und zeigen den <strong>maximal möglichen Umsatz</strong>.
+                    Sie sind erst Umsatz, wenn die Zahlung tatsächlich eingegangen ist.
+                </p>
+            </div>
         </div>
     </div>
 </div>
 
-{# ══════════════════════════════════════════════════════════════════════════ #}
-{# SEKTION 3 – CHARTS & DETAILS                                              #}
-{# ══════════════════════════════════════════════════════════════════════════ #}
-<div class="divider-label"><i class="bi bi-bar-chart-line me-1"></i>Verlauf & Aufschlüsselung</div>
-<div class="row g-3 mb-4">
+{# ── Charts & Details ────────────────────────────────────────────────────── #}
+<div class="d-flex align-items-center gap-2 mb-2 mt-2">
+    <svg class="sa-icon"><use href="/sa/icons/sprite.svg#bar-chart-2"></use></svg>
+    <span class="text-muted fs-xs fw-700 text-uppercase" style="letter-spacing:.08em;">Verlauf &amp; Aufschlüsselung</span>
+</div>
+<div class="row g-3 mb-3">
     <div class="col-lg-8">
-        <div class="chart-card">
-            <div class="chart-title"><i class="bi bi-bar-chart-line me-1"></i>Neukunden & Abgänge pro Monat (12 Monate)</div>
-            <canvas id="tenantsChart" height="90"></canvas>
+        <div class="card">
+            <div class="card-header px-4 py-3">
+                <span class="fw-600 fs-md">
+                    <svg class="sa-icon me-1"><use href="/sa/icons/sprite.svg#bar-chart-2"></use></svg>
+                    Neukunden &amp; Abgänge pro Monat (12 Monate)
+                </span>
+            </div>
+            <div class="card-body px-4 py-3">
+                <canvas id="tenantsChart" height="90"></canvas>
+            </div>
         </div>
     </div>
     <div class="col-lg-4">
-        <div class="chart-card h-100">
-            <div class="chart-title"><i class="bi bi-pie-chart me-1"></i>Prognose nach Tarif</div>
-            {% set totalMrr = mrr > 0 ? mrr : 1 %}
-            {% for plan in by_plan %}
-            {% set pct = (plan.mrr / totalMrr * 100)|round %}
-            <div class="mb-3">
-                <div class="d-flex justify-content-between" style="font-size:.8rem;">
-                    <span style="color:#e2e8f0;font-weight:600;">{{ plan.plan_name }}</span>
-                    <span style="color:#94a3b8;">{{ plan.sub_count }}×</span>
-                </div>
-                <div class="plan-bar">
-                    <div class="plan-fill" style="width:{{ pct }}%;background:{% if loop.index == 1 %}#2563eb{% elseif loop.index == 2 %}#7c3aed{% elseif loop.index == 3 %}#059669{% else %}#d97706{% endif %};"></div>
-                </div>
-                <div style="font-size:.7rem;color:#475569;margin-top:.15rem;">
-                    {{ plan.mrr|number_format(2, ',', '.') }} €/Mo möglich ({{ pct }}%)
-                </div>
+        <div class="card h-100">
+            <div class="card-header px-4 py-3">
+                <span class="fw-600 fs-md">
+                    <svg class="sa-icon me-1"><use href="/sa/icons/sprite.svg#pie-chart"></use></svg>
+                    Prognose nach Tarif
+                </span>
             </div>
-            {% else %}
-            <p style="color:#475569;font-size:.8rem;">Noch keine aktiven Abonnements.</p>
-            {% endfor %}
+            <div class="card-body px-4 py-3">
+                {% set totalMrr = mrr > 0 ? mrr : 1 %}
+                {% set planColors = ['var(--bs-primary)', '#7c3aed', 'var(--bs-success)', 'var(--bs-warning)'] %}
+                {% for plan in by_plan %}
+                {% set pct = (plan.mrr / totalMrr * 100)|round %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between fs-sm mb-1">
+                        <span class="fw-600">{{ plan.plan_name }}</span>
+                        <span class="text-muted">{{ plan.sub_count }}×</span>
+                    </div>
+                    <div class="progress" style="height:7px;">
+                        <div class="progress-bar" role="progressbar"
+                             style="width:{{ pct }}%;background:{{ planColors[loop.index0] ?? 'var(--bs-secondary)' }};"></div>
+                    </div>
+                    <div class="text-muted fs-xs mt-1">
+                        {{ plan.mrr|number_format(2, ',', '.') }} €/Mo möglich ({{ pct }}%)
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted fs-sm mb-0">Noch keine aktiven Abonnements.</p>
+                {% endfor %}
+            </div>
         </div>
     </div>
 </div>
 
 {# ── Letzte bezahlte Rechnungen ──────────────────────────────────────────── #}
-<div class="chart-card">
-    <div class="chart-title"><i class="bi bi-receipt-cutoff me-1"></i>Zuletzt eingegangene Zahlungen (30 Tage)</div>
+<div class="card">
+    <div class="card-header px-4 py-3">
+        <span class="fw-600 fs-md">
+            <svg class="sa-icon me-1 sa-icon-success"><use href="/sa/icons/sprite.svg#dollar-sign"></use></svg>
+            Zuletzt eingegangene Zahlungen (30 Tage)
+        </span>
+    </div>
     {% if recent_paid %}
     <div class="table-responsive">
-        <table class="table mb-0">
-            <thead>
+        <table class="table table-hover table-sm mb-0">
+            <thead class="fs-xs text-muted">
                 <tr>
-                    <th style="font-size:.7rem;color:#475569;font-weight:600;">Datum</th>
-                    <th style="font-size:.7rem;color:#475569;font-weight:600;">Praxis</th>
-                    <th style="font-size:.7rem;color:#475569;font-weight:600;">Betrag</th>
-                    <th style="font-size:.7rem;color:#475569;font-weight:600;">Status</th>
+                    <th class="px-4">Datum</th>
+                    <th>Praxis</th>
+                    <th>Betrag</th>
+                    <th>Status</th>
                 </tr>
             </thead>
             <tbody>
                 {% for inv in recent_paid %}
-                <tr class="inv-row">
-                    <td style="color:#64748b;white-space:nowrap;">{{ inv.paid_at|date('d.m.Y') }}</td>
+                <tr>
+                    <td class="px-4 text-muted text-nowrap fs-sm">{{ inv.paid_at|date('d.m.Y') }}</td>
                     <td>
-                        <a href="/admin/tenants/{{ inv.tenant_id }}" style="color:#60a5fa;text-decoration:none;">
+                        <a href="/admin/tenants/{{ inv.tenant_id }}" class="text-info text-decoration-none fw-500 fs-sm">
                             {{ inv.practice_name }}
                         </a>
                     </td>
-                    <td style="font-weight:700;color:#34d399;">{{ inv.total_amount|number_format(2, ',', '.') }} €</td>
-                    <td>
-                        <span class="kpi-badge badge-paid">Bezahlt</span>
-                    </td>
+                    <td class="fw-700 text-success fs-sm">{{ inv.total_amount|number_format(2, ',', '.') }} €</td>
+                    <td><span class="badge bg-success bg-opacity-15 text-success fs-nano">Bezahlt</span></td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
     {% else %}
-    <p style="color:#475569;font-size:.85rem;margin:.5rem 0 0;">
-        <i class="bi bi-info-circle me-1"></i>Keine bezahlten Rechnungen in den letzten 30 Tagen.
+    <div class="card-body text-muted fs-sm px-4 py-3">
+        <svg class="sa-icon me-1"><use href="/sa/icons/sprite.svg#info"></use></svg>
+        Keine bezahlten Rechnungen in den letzten 30 Tagen.
         Zahlungen erscheinen hier sobald sie als <em>bezahlt</em> markiert sind.
-    </p>
+    </div>
     {% endif %}
 </div>
 

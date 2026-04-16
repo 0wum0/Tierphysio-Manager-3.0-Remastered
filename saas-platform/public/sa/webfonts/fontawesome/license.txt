@@ -1,0 +1,30 @@
+
+----------------------------------------------------------------------------------------------------
+
+# Font Awesome Pro 5.0 Theme License
+
+**License ID:** FA5T-DBGH-GBWT-KEHK-6886  
+**Order/Invoice ID:** 6587546  
+**License Fee:** $900 USD (Paid)  
+
+----------------------------------------------------------------------------------------------------
+
+## Disclaimer  
+
+This theme includes a licensed version of **Font Awesome Pro 5.0**. A **separate** Font Awesome 
+Pro 5 license **is not required** for your use of this theme, as the necessary rights have been 
+obtained for its integration.  
+
+However, **redistribution, resale, or standalone use** of Font Awesome Pro **outside of this 
+theme** is **strictly prohibited**. The Font Awesome Pro assets **must remain embedded** within 
+the template as originally provided.  
+
+### **Upgrading Font Awesome Pro**  
+If you wish to use a **newer version** of Font Awesome Pro **beyond** what is included in this 
+template, this theme’s license **does not** extend to such upgrades. In that case, you must obtain 
+an independent **Font Awesome Pro license** from the official source.  
+
+For more information on Font Awesome Pro licensing, visit:  
+**[Font Awesome Kickstarter Page](https://www.kickstarter.com/projects/232193852/font-awesome-5)**  
+
+----------------------------------------------------------------------------------------------------

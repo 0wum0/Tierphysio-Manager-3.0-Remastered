@@ -1,5 +1,4 @@
 {% extends 'layouts/base.twig' %}
-{% set active_nav = 'feedback' %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -19,32 +18,32 @@
                             {{ catIcon[item.category] ?? '💬' }} {{ item.category|capitalize }}
                         </span>
                         {% if item.rating %}
-                        <span style="color:#fde68a;">{% for s in 1..item.rating %}★{% endfor %}<span style="color:#334155;font-size:.85rem;">{% for s in 1..(5 - item.rating) %}★{% endfor %}</span></span>
+                        <span class="text-warning">{% for s in 1..item.rating %}★{% endfor %}<span class="text-muted">{% for s in 1..(5 - item.rating) %}★{% endfor %}</span></span>
                         {% endif %}
                     </div>
-                    <span style="font-size:.78rem;color:#64748b;">{{ item.created_at|date('d.m.Y H:i') }}</span>
+                    <span class="text-muted fs-sm">{{ item.created_at|date('d.m.Y H:i') }}</span>
                 </div>
             </div>
             <div class="card-body px-4 py-3">
-                <div class="row g-3 mb-3" style="font-size:.83rem;">
+                <div class="row g-3 mb-3">
                     <div class="col-sm-6">
-                        <div style="color:#64748b;margin-bottom:.2rem;">Von</div>
-                        <div style="color:#e2e8f0;font-weight:600;">{{ item.practice_name ?? item.tenant_name ?? 'Anonym' }}</div>
+                        <div class="text-muted fs-xs mb-1">Von</div>
+                        <div class="fw-600 fs-sm">{{ item.practice_name ?? item.tenant_name ?? 'Anonym' }}</div>
                         {% if item.tenant_email or item.email %}
-                        <div style="color:#64748b;font-size:.75rem;">{{ item.tenant_email ?? item.email }}</div>
+                        <div class="text-muted fs-xs">{{ item.tenant_email ?? item.email }}</div>
                         {% endif %}
                     </div>
                     <div class="col-sm-3">
-                        <div style="color:#64748b;margin-bottom:.2rem;">Plattform</div>
-                        <div style="color:#e2e8f0;">{{ item.platform ?? 'web' }}</div>
+                        <div class="text-muted fs-xs mb-1">Plattform</div>
+                        <div class="fs-sm">{{ item.platform ?? 'web' }}</div>
                     </div>
                     <div class="col-sm-3">
-                        <div style="color:#64748b;margin-bottom:.2rem;">App Version</div>
-                        <div style="color:#e2e8f0;">{{ item.app_version ?? '–' }}</div>
+                        <div class="text-muted fs-xs mb-1">App Version</div>
+                        <div class="fs-sm">{{ item.app_version ?? '–' }}</div>
                     </div>
                 </div>
-                <hr style="border-color:#334155;">
-                <div style="color:#94a3b8;line-height:1.7;white-space:pre-wrap;">{{ item.message }}</div>
+                <hr class="border-secondary">
+                <div class="text-muted lh-lg" style="white-space:pre-wrap;">{{ item.message }}</div>
             </div>
         </div>
 
@@ -57,11 +56,4 @@
     </div>
 </div>
 
-<style>
-.cat-badge{font-size:.65rem;padding:.15rem .45rem;border-radius:999px;font-weight:600;}
-.cat-bug{background:rgba(239,68,68,.15);color:#fca5a5;}
-.cat-feature{background:rgba(37,99,235,.15);color:#93c5fd;}
-.cat-praise{background:rgba(16,185,129,.15);color:#6ee7b7;}
-.cat-other{background:rgba(100,116,139,.15);color:#94a3b8;}
-</style>
 {% endblock %}
