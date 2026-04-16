@@ -95,8 +95,7 @@ class InviteController extends Controller
             'created_at' => date('Y-m-d H:i:s'),
         ]);
 
-        $appUrl    = rtrim($_ENV['APP_URL'] ?? '', '/');
-        $inviteUrl = $appUrl . '/einladung/' . $token;
+        $inviteUrl = $this->buildInviteUrl($token);
 
         /* Send */
         if (in_array($via, ['email', 'both'], true) && !empty($email)) {
@@ -121,8 +120,7 @@ class InviteController extends Controller
             return;
         }
 
-        $appUrl    = rtrim($_ENV['APP_URL'] ?? '', '/');
-        $inviteUrl = $appUrl . '/einladung/' . $invite['token'];
+        $inviteUrl = $this->buildInviteUrl((string)$invite['token']);
         $appName   = $this->settingsRepository->get('company_name', 'Tierphysio Manager');
         $waUrl     = $this->mailer->buildWhatsAppUrl($invite['phone'], $inviteUrl, $appName);
 
@@ -136,8 +134,7 @@ class InviteController extends Controller
             $this->json(['ok' => false, 'error' => 'Nicht gefunden'], 404);
             return;
         }
-        $appUrl    = rtrim($_ENV['APP_URL'] ?? '', '/');
-        $inviteUrl = $appUrl . '/einladung/' . $invite['token'];
+        $inviteUrl = $this->buildInviteUrl((string)$invite['token']);
         $this->json(['ok' => true, 'url' => $inviteUrl]);
     }
 
@@ -231,6 +228,7 @@ class InviteController extends Controller
     public function landing(array $params = []): void
     {
         $token  = $params['token'] ?? '';
+        $this->applyTenantContextForToken($token);
         $invite = $this->repo->findByToken($token);
 
         /* Expired or not found */
@@ -266,6 +264,7 @@ class InviteController extends Controller
             || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json');
 
         $token  = $params['token'] ?? '';
+        $this->applyTenantContextForToken($token);
         error_log('[PatientInvite] submit() called, token=' . substr($token, 0, 8) . '... wantsJson=' . ($wantsJson ? 'yes' : 'no') . ' method=' . ($_SERVER['REQUEST_METHOD'] ?? '?'));
         $invite = $this->repo->findByToken($token);
 
@@ -417,6 +416,7 @@ class InviteController extends Controller
     public function testSubmit(array $params = []): void
     {
         $token  = $params['token'] ?? '';
+        $this->applyTenantContextForToken($token);
         $invite = $this->repo->findByToken($token);
         $valid  = $this->repo->isTokenValid($token);
 
@@ -473,6 +473,7 @@ class InviteController extends Controller
     public function thankYou(array $params = []): void
     {
         $token  = $params['token'] ?? '';
+        $this->applyTenantContextForToken($token);
         $invite = $this->repo->findByToken($token);
 
         $this->renderPublic('@patient-invite/thankyou.twig', [
@@ -551,6 +552,71 @@ class InviteController extends Controller
         if (move_uploaded_file($file['tmp_name'], $dir . '/' . $filename)) {
             return $filename;
         }
+        return '';
+    }
+
+    private function buildInviteUrl(string $token): string
+    {
+        $appUrl = rtrim($_ENV['APP_URL'] ?? '', '/');
+        $tid    = $this->currentTenantTid();
+        $query  = $tid !== '' ? ('?tid=' . rawurlencode($tid)) : '';
+        return $appUrl . '/einladung/' . $token . $query;
+    }
+
+    private function currentTenantTid(): string
+    {
+        $db = Application::getInstance()->getContainer()->get(Database::class);
+        $prefix = $db->getPrefix();
+        if ($prefix === '' || !str_starts_with($prefix, 't_')) {
+            return '';
+        }
+        return trim(substr($prefix, 2), '_');
+    }
+
+    private function applyTenantContextForToken(string $token): void
+    {
+        $db = Application::getInstance()->getContainer()->get(Database::class);
+        $tid = trim((string)($_GET['tid'] ?? ''));
+
+        if ($tid !== '') {
+            $db->setPrefix('t_' . trim($tid, '_') . '_');
+            return;
+        }
+
+        $prefix = $this->findTenantPrefixByInviteToken($token);
+        if ($prefix !== '') {
+            $db->setPrefix($prefix);
+        }
+    }
+
+    private function findTenantPrefixByInviteToken(string $token): string
+    {
+        if ($token === '') {
+            return '';
+        }
+
+        try {
+            $db  = Application::getInstance()->getContainer()->get(Database::class);
+            $pdo = $db->getPdo();
+
+            $stmt = $pdo->prepare(
+                "SELECT table_name FROM information_schema.tables
+                  WHERE table_schema = DATABASE()
+                    AND table_name LIKE 't\\_%\\_patient_invite_tokens'
+                  ORDER BY table_name ASC"
+            );
+            $stmt->execute();
+            $tables = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+
+            foreach ($tables as $table) {
+                $s = $pdo->prepare("SELECT id FROM `{$table}` WHERE token = ? LIMIT 1");
+                $s->execute([$token]);
+                if ($s->fetch(\PDO::FETCH_ASSOC)) {
+                    return substr((string)$table, 0, -strlen('patient_invite_tokens'));
+                }
+            }
+        } catch (\Throwable) {}
+
         return '';
     }
 }
