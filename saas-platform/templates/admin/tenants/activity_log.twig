@@ -1,0 +1,80 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'tenants' %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="d-flex align-items-center gap-3">
+        <a href="/admin/tenants/{{ tenant.id }}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Zurück zur Praxis
+        </a>
+        <div>
+            <h5 class="mb-0">Aktivitätslog</h5>
+            <div style="font-size:.8rem;color:#64748b;">{{ tenant.practice_name }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header px-4 py-3 d-flex align-items-center justify-content-between">
+        <span class="fw-semibold"><i class="bi bi-clock-history me-2" style="color:#60a5fa;"></i>Letzte Aktivitäten</span>
+        <span class="badge bg-secondary">{{ logs|length }} Einträge</span>
+    </div>
+
+    {% if logs %}
+    <div class="table-responsive">
+        <table class="table mb-0" style="font-size:.82rem;">
+            <thead>
+                <tr>
+                    <th class="px-4" style="width:150px;">Zeitpunkt</th>
+                    <th style="width:100px;">Kategorie</th>
+                    <th>Aktion</th>
+                    <th>Details</th>
+                    <th style="width:120px;">IP</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                {% set catColor = {
+                    'login':   '#6ee7b7',
+                    'logout':  '#94a3b8',
+                    'cron':    '#60a5fa',
+                    'data':    '#fde68a',
+                    'system':  '#c4b5fd',
+                    'general': '#94a3b8'
+                } %}
+                <tr>
+                    <td class="px-4 text-secondary">
+                        {{ log.created_at|date('d.m.Y') }}<br>
+                        <span style="font-size:.75rem;">{{ log.created_at|date('H:i:s') }}</span>
+                    </td>
+                    <td>
+                        <span class="badge" style="background:{{ catColor[log.category] ?? '#475569' }}20;color:{{ catColor[log.category] ?? '#94a3b8' }};font-size:.7rem;">
+                            {{ log.category ?? 'general' }}
+                        </span>
+                    </td>
+                    <td class="fw-medium">{{ log.action }}</td>
+                    <td class="text-secondary" style="max-width:300px;word-break:break-word;">
+                        {{ log.details ?? '–' }}
+                    </td>
+                    <td class="font-monospace text-secondary" style="font-size:.72rem;">
+                        {{ log.ip_address ?? '–' }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body px-4 py-5 text-center">
+        {% if tenant.db_name %}
+        <i class="bi bi-clock-history" style="font-size:2rem;color:#334155;display:block;margin-bottom:.75rem;"></i>
+        <div style="color:#64748b;font-size:.9rem;">Noch keine Aktivitäten aufgezeichnet.</div>
+        <div style="color:#475569;font-size:.78rem;margin-top:.25rem;">Einträge erscheinen sobald Benutzer sich anmelden oder Aktionen durchführen.</div>
+        {% else %}
+        <i class="bi bi-database-x" style="font-size:2rem;color:#334155;display:block;margin-bottom:.75rem;"></i>
+        <div style="color:#64748b;font-size:.9rem;">Datenbank noch nicht eingerichtet.</div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

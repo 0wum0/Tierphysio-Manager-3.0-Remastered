@@ -49,6 +49,9 @@ $router->post('/admin/tenants/{id}/set-grandfathered', [TenantController::class,
 $router->post('/admin/tenants/{id}/delete',     [TenantController::class, 'delete']);
 $router->post('/admin/tenants/{id}/repair',      [DataMigrationController::class, 'repairDatabase']);
 $router->post('/admin/tenants/fix-storage',     [TenantController::class, 'fixStorage']);
+$router->get('/admin/tenants/{id}/health-api',  [TenantController::class, 'healthApi']);
+$router->get('/admin/tenants/{id}/activity',    [TenantController::class, 'activityLog']);
+$router->post('/admin/tenants/{id}/features',   [TenantController::class, 'setFeature']);
 
 // ── Plans Management ───────────────────────────────────────────────────────
 $router->get('/admin/plans',               [PlansController::class, 'index']);

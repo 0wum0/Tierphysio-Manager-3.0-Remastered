@@ -6,6 +6,7 @@ namespace Saas\Controllers;
 
 use Saas\Core\Config;
 use Saas\Core\Controller;
+use Saas\Core\Database;
 use Saas\Core\View;
 use Saas\Core\Session;
 use Saas\Repositories\TenantRepository;
@@ -14,6 +15,9 @@ use Saas\Repositories\PlanRepository;
 use Saas\Repositories\LicenseRepository;
 use Saas\Services\TenantProvisioningService;
 use Saas\Services\LicenseService;
+use Saas\Services\TenantHealthService;
+use Saas\Services\TenantActivityService;
+use Saas\Services\FeatureFlagService;
 use Saas\Services\SubscriptionService;
 
 class TenantController extends Controller
@@ -22,6 +26,7 @@ class TenantController extends Controller
         View                          $view,
         Session                       $session,
         private Config                $config,
+        private Database              $db,
         private TenantRepository       $tenantRepo,
         private SubscriptionRepository $subRepo,
         private PlanRepository         $planRepo,
@@ -76,12 +81,21 @@ class TenantController extends Controller
         $plans        = $this->planRepo->allActive();
         $subEvents    = $this->subscriptionService->getEventsForTenant((int)$tenant['id'], 20);
 
+        // Feature flags (loaded inline so the page shows them immediately)
+        $flags = [];
+        $prefix = (string)($tenant['db_name'] ?? '');
+        if ($prefix !== '') {
+            $planFeatures = $this->parsePlanFeatures((string)($tenant['plan_features'] ?? ''));
+            $flags = (new FeatureFlagService($this->db, $prefix, $planFeatures))->getAll();
+        }
+
         $this->render('admin/tenants/show.twig', [
             'tenant'       => $tenant,
             'subscription' => $subscription,
             'all_subs'     => $allSubs,
             'licenses'     => $licenses,
             'plans'        => $plans,
+            'flags'        => $flags,
             'sub_events'   => $subEvents,
             'page_title'   => $tenant['practice_name'],
         ]);
@@ -428,6 +442,87 @@ class TenantController extends Controller
         $this->redirect('/admin/tenants');
     }
 
+    /* ── Health Check ──────────────────────────────────────────── */
+
+    public function healthApi(array $params = []): void
+    {
+        $this->requireAuth();
+
+        $tenant = $this->tenantRepo->find((int)($params['id'] ?? 0));
+        if (!$tenant) {
+            $this->json(['error' => 'Nicht gefunden'], 404);
+            return;
+        }
+
+        $prefix = (string)($tenant['db_name'] ?? '');
+        if ($prefix === '') {
+            $this->json([
+                'status' => 'warning',
+                'issues' => ['Kein Datenbank-Präfix konfiguriert'],
+                'checks' => [],
+                'tid'    => (string)($tenant['tid'] ?? ''),
+            ]);
+            return;
+        }
+
+        $result = (new TenantHealthService($this->db))
+            ->check($prefix, (string)($tenant['tid'] ?? ''));
+        $this->json($result);
+    }
+
+    /* ── Tenant Activity Log ───────────────────────────────────── */
+
+    public function activityLog(array $params = []): void
+    {
+        $this->requireAuth();
+
+        $tenant = $this->tenantRepo->find((int)($params['id'] ?? 0));
+        if (!$tenant) {
+            $this->notFound();
+        }
+
+        $prefix = (string)($tenant['db_name'] ?? '');
+        $logs   = [];
+        if ($prefix !== '') {
+            $logs = (new TenantActivityService($this->db, $prefix))->getRecent(100);
+        }
+
+        $this->render('admin/tenants/activity_log.twig', [
+            'tenant'     => $tenant,
+            'logs'       => $logs,
+            'page_title' => 'Aktivitätslog – ' . $tenant['practice_name'],
+        ]);
+    }
+
+    /* ── Feature Flags ─────────────────────────────────────────── */
+
+    public function setFeature(array $params = []): void
+    {
+        $this->requireAuth();
+        $this->verifyCsrf();
+
+        $tenant = $this->tenantRepo->find((int)($params['id'] ?? 0));
+        if (!$tenant) {
+            $this->json(['error' => 'Nicht gefunden'], 404);
+            return;
+        }
+
+        $prefix  = (string)($tenant['db_name'] ?? '');
+        $feature = trim((string)$this->post('feature', ''));
+        $enabled = $this->post('enabled', '0') === '1';
+
+        if ($prefix !== '' && $feature !== '') {
+            (new FeatureFlagService($this->db, $prefix))->setFeature($feature, $enabled);
+        }
+
+        if ($this->isAjax()) {
+            $this->json(['ok' => true, 'feature' => $feature, 'enabled' => $enabled]);
+            return;
+        }
+        $this->session->flash('success', 'Feature-Flag aktualisiert.');
+        $this->redirect('/admin/tenants/' . ($params['id'] ?? 0));
+    }
+
     private function validateTenantData(array $data): array
     {
         $errors = [];
@@ -439,6 +534,41 @@ class TenantController extends Controller
             $errors[] = 'Diese E-Mail-Adresse ist bereits registriert.';
         }
         return $errors;
+    }
+
+    private function isAjax(): bool
+    {
+        return strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'xmlhttprequest'
+            || str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json');
+    }
+
+    /**
+     * Convert plan_features JSON (["calendar_enabled","google_sync_enabled"]) to
+     * the bool-map format FeatureFlagService expects.
+     *
+     * @return array<string, bool>
+     */
+    private function parsePlanFeatures(string $json): array
+    {
+        if ($json === '') {
+            return [];
+        }
+        $decoded = json_decode($json, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+        $map = [];
+        foreach ($decoded as $item) {
+            if (is_string($item)) {
+                $map[$item] = true;
+            } elseif (is_array($item)) {
+                // Support {"feature": true/false} format too
+                foreach ($item as $k => $v) {
+                    $map[(string)$k] = (bool)$v;
+                }
+            }
+        }
+        return $map;
     }
 
     private function generatePassword(): string

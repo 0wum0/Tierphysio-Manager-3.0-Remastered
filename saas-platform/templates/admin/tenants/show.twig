@@ -364,6 +364,53 @@
             </div>
         </div>
 
+        {# Health Check #}
+        {% if tenant.db_name %}
+        <div class="card mb-3" id="health-card">
+            <div class="card-header px-4 py-3 d-flex align-items-center justify-content-between">
+                <span class="fw-semibold"><i class="bi bi-heart-pulse me-2 text-success"></i>System-Health</span>
+                <button id="health-check-btn" class="btn btn-xs btn-outline-secondary" style="font-size:.75rem;padding:.2rem .6rem;">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Prüfen
+                </button>
+            </div>
+            <div class="card-body px-4 py-3" id="health-body">
+                <div style="font-size:.8rem;color:#64748b;text-align:center;padding:.5rem 0;">
+                    <i class="bi bi-info-circle me-1"></i>Auf "Prüfen" klicken um Health-Status zu laden.
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# Feature Flags #}
+        {% if tenant.db_name %}
+        <div class="card mb-3">
+            <div class="card-header px-4 py-3 d-flex align-items-center justify-content-between">
+                <span class="fw-semibold"><i class="bi bi-toggles me-2" style="color:#a78bfa;"></i>Feature-Flags</span>
+                <a href="/admin/tenants/{{ tenant.id }}/activity" class="btn btn-xs btn-outline-secondary" style="font-size:.75rem;padding:.2rem .6rem;">
+                    <i class="bi bi-clock-history me-1"></i>Aktivitätslog
+                </a>
+            </div>
+            <div class="card-body px-4 py-2">
+                {% if flags %}
+                {% for feature, enabled in flags %}
+                <div class="d-flex align-items-center justify-content-between py-2" style="border-bottom:1px solid #1e293b;">
+                    <span style="font-size:.8rem;color:#cbd5e1;">{{ feature|replace({'_enabled': '', '_': ' '})|title }}</span>
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input feature-toggle" type="checkbox"
+                               data-tenant="{{ tenant.id }}"
+                               data-feature="{{ feature }}"
+                               {% if enabled %}checked{% endif %}
+                               style="cursor:pointer;">
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div style="font-size:.8rem;color:#64748b;padding:.5rem 0;">Keine Feature-Flags verfügbar (DB noch nicht eingerichtet).</div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
         {# Meta #}
         <div class="card">
             <div class="card-body px-4 py-3" style="font-size:.8rem;color:#64748b;">
@@ -377,4 +424,82 @@
         </div>
     </div>
 </div>
+
+<script>
+(function() {
+    // ── Health Check ───────────────────────────────────────────────────────
+    const btn    = document.getElementById('health-check-btn');
+    const body   = document.getElementById('health-body');
+    const tenantId = {{ tenant.id }};
+
+    if (btn && body) {
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            body.innerHTML = '<div style="text-align:center;padding:.75rem;font-size:.8rem;color:#64748b;"><span class="spinner-border spinner-border-sm me-2"></span>Prüfe…</div>';
+            try {
+                const res  = await fetch('/admin/tenants/' + tenantId + '/health-api', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                const data = await res.json();
+                const statusColor = data.status === 'ok' ? '#6ee7b7' : (data.status === 'warning' ? '#fde68a' : '#fca5a5');
+                const statusIcon  = data.status === 'ok' ? 'bi-check-circle-fill' : (data.status === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-x-circle-fill');
+                let html = `<div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bi ${statusIcon}" style="color:${statusColor};font-size:1.2rem;"></i>
+                    <span class="fw-semibold" style="color:${statusColor};text-transform:uppercase;font-size:.75rem;">${data.status}</span>
+                </div>`;
+                // Individual checks
+                if (data.checks) {
+                    for (const [key, chk] of Object.entries(data.checks)) {
+                        const ok   = chk.ok;
+                        const icon = ok ? 'bi-check-circle text-success' : 'bi-x-circle text-danger';
+                        const label = key.replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+                        html += `<div class="d-flex justify-content-between align-items-center mb-1" style="font-size:.78rem;">
+                            <span style="color:#94a3b8;">${label}</span>
+                            <span><i class="bi ${icon}"></i></span>
+                        </div>`;
+                    }
+                }
+                // Issues list
+                if (data.issues && data.issues.length > 0) {
+                    html += '<hr style="border-color:#1e293b;margin:.5rem 0;">';
+                    html += '<div style="font-size:.75rem;color:#f87171;">';
+                    data.issues.forEach(i => { html += `<div><i class="bi bi-dot me-1"></i>${i}</div>`; });
+                    html += '</div>';
+                }
+                body.innerHTML = html;
+            } catch (e) {
+                body.innerHTML = '<div style="font-size:.8rem;color:#f87171;">Fehler beim Laden des Health-Status.</div>';
+            } finally {
+                btn.disabled = false;
+            }
+        });
+    }
+
+    // ── Feature Flag Toggles ───────────────────────────────────────────────
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
+                   || '{{ csrf_token() }}';
+
+    document.querySelectorAll('.feature-toggle').forEach(toggle => {
+        toggle.addEventListener('change', async function() {
+            const feature = this.dataset.feature;
+            const enabled = this.checked ? '1' : '0';
+            const tid     = this.dataset.tenant;
+            this.disabled = true;
+            try {
+                const body = new URLSearchParams({ feature, enabled, _csrf: csrfToken });
+                await fetch('/admin/tenants/' + tid + '/features', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: body.toString(),
+                });
+            } catch (e) {
+                this.checked = !this.checked; // revert on error
+            } finally {
+                this.disabled = false;
+            }
+        });
+    });
+})();
+</script>
 {% endblock %}
