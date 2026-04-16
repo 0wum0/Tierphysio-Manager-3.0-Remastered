@@ -43,19 +43,63 @@
                     <label class="form-label">Max. Benutzer (-1 = unbegrenzt)</label>
                     <input type="number" name="max_users" class="form-control" value="{{ plan.max_users }}">
                 </div>
+                <div class="col-sm-4">
+                    <label class="form-label">Testzeitraum (Tage)</label>
+                    <input type="number" name="trial_days" class="form-control" value="{{ plan.trial_days }}">
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label" style="font-size:.75rem;color:#94a3b8;">Stripe Price ID (monatlich)</label>
+                    <input type="text" name="stripe_price_id" class="form-control"
+                           placeholder="price_1ABC…" value="{{ plan.stripe_price_id ?? '' }}">
+                </div>
+                <div class="col-sm-6">
+                    <label class="form-label" style="font-size:.75rem;color:#94a3b8;">Stripe Price ID (jährlich)</label>
+                    <input type="text" name="stripe_price_id_yearly" class="form-control"
+                           placeholder="price_1DEF…" value="{{ plan.stripe_price_id_yearly ?? '' }}">
+                </div>
+                <div class="col-sm-6">
+                    <div class="form-check form-switch mt-2">
+                        <input class="form-check-input" type="checkbox" name="is_public" value="1" id="is_public"
+                               {{ plan.is_public ? 'checked' : '' }}>
+                        <label class="form-check-label" for="is_public">Öffentlich (im Registrierungsdialog)</label>
+                    </div>
+                </div>
             </div>
 
             <hr style="border-color:#334155;">
             <h6 class="text-secondary mb-3 mt-3" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;">Features (freigeschaltete Module)</h6>
             <div class="mb-3">
-                {% set allFeatures = ['invoices','appointments','patients','owners','dashboard','waitlist','intake','staff','reports','premium'] %}
+                <label class="form-label">Features</label>
                 <div class="row g-2">
-                    {% for f in allFeatures %}
-                    <div class="col-sm-4 col-6">
+                    {% set allFeatures = {
+                        'invoices':        'Rechnungen',
+                        'appointments':    'Termine',
+                        'patients':        'Patienten',
+                        'owners':          'Besitzer',
+                        'dashboard':       'Dashboard',
+                        'waitlist':        'Warteliste',
+                        'intake':          'Patientenanmeldung',
+                        'staff':           'Mitarbeiterverwaltung',
+                        'reports':         'Berichte',
+                        'calendar':        'Kalender',
+                        'google_sync':     'Google Sync',
+                        'therapy_care':    'Therapie-Dokumentation',
+                        'messaging':       'Nachrichten',
+                        'file_uploads':    'Datei-Uploads',
+                        'advanced_reports':'Erweiterte Berichte',
+                        'owner_portal':    'Besitzer-Portal',
+                        'reminders':       'Erinnerungen',
+                        'premium_support': 'Premium Support',
+                        'ai_features':     'KI-Features',
+                        'premium':         'Premium'
+                    } %}
+                    {% for key, label in allFeatures %}
+                    <div class="col-sm-4">
                         <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="features[]" value="{{ f }}" id="feat_{{ f }}"
-                                {% if f in features %}checked{% endif %}>
-                            <label class="form-check-label" for="feat_{{ f }}" style="font-size:.875rem;">{{ f }}</label>
+                            <input class="form-check-input" type="checkbox" name="features[]"
+                                   value="{{ key }}" id="feat_{{ key }}"
+                                   {% if key in features %}checked{% endif %}>
+                            <label class="form-check-label" for="feat_{{ key }}" style="font-size:.85rem;">{{ label }}</label>
                         </div>
                     </div>
                     {% endfor %}

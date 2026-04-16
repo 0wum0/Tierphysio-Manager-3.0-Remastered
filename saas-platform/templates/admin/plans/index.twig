@@ -2,6 +2,12 @@
 {% set active_nav = 'plans' %}
 
 {% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <h5 class="mb-0 fw-semibold">Abo-Pläne</h5>
+    <a href="/admin/plans/create" class="btn btn-sm btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>Neuen Plan erstellen
+    </a>
+</div>
 <div class="card">
     <div class="card-header px-4 py-3">
         <span class="fw-semibold">Abo-Pläne</span>
@@ -13,6 +19,7 @@
                     <th class="px-4">Plan</th>
                     <th>Preis / Monat</th>
                     <th>Preis / Jahr</th>
+                    <th>Trial</th>
                     <th>Max. Benutzer</th>
                     <th>Features</th>
                     <th>Status</th>
@@ -29,6 +36,13 @@
                     </td>
                     <td class="fw-medium">{{ plan.price_month|number_format(2,',','.') }} €</td>
                     <td class="fw-medium">{{ plan.price_year|number_format(2,',','.') }} €</td>
+                    <td style="font-size:.8rem;">
+                        {% if plan.trial_days is defined and plan.trial_days > 0 %}
+                            <span class="badge bg-info bg-opacity-25 text-info">{{ plan.trial_days }}d</span>
+                        {% else %}
+                            <span class="text-secondary">–</span>
+                        {% endif %}
+                    </td>
                     <td>{{ plan.max_users == -1 ? 'Unbegrenzt' : plan.max_users }}</td>
                     <td>
                         <div class="d-flex flex-wrap gap-1">
@@ -43,11 +57,23 @@
                         {% else %}
                             <span class="badge badge-cancelled">Inaktiv</span>
                         {% endif %}
+                        {% if plan.is_public is defined and not plan.is_public %}
+                            <span class="badge bg-secondary ms-1" title="Nicht öffentlich">intern</span>
+                        {% endif %}
                     </td>
                     <td>
-                        <a href="/admin/plans/{{ plan.id }}/edit" class="btn btn-sm btn-outline-secondary">
-                            <i class="bi bi-pencil"></i>
-                        </a>
+                        <div class="d-flex gap-1">
+                            <a href="/admin/plans/{{ plan.id }}/edit" class="btn btn-sm btn-outline-secondary">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form method="POST" action="/admin/plans/{{ plan.id }}/toggle" class="d-inline">
+                                {{ csrf_field()|raw }}
+                                <button type="submit" class="btn btn-sm {{ plan.is_active ? 'btn-outline-warning' : 'btn-outline-success' }}"
+                                        title="{{ plan.is_active ? 'Deaktivieren' : 'Aktivieren' }}">
+                                    <i class="bi bi-{{ plan.is_active ? 'pause' : 'play' }}"></i>
+                                </button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
