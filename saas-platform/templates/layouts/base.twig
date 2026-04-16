@@ -16,6 +16,7 @@
             --saas-primary: #2563eb;
             --saas-primary-hover: #1d4ed8;
             --saas-sidebar-width: 260px;
+            --saas-topbar-height: 60px;
         }
         [data-bs-theme="dark"] {
             --bs-body-bg: #0f172a;
@@ -28,13 +29,13 @@
         /* Sidebar */
         .sidebar {
             width: var(--saas-sidebar-width);
-            min-height: 100vh;
             background: #1e293b;
             border-right: 1px solid #334155;
             position: fixed;
-            top: 0; left: 0; bottom: 0;
+            top: var(--saas-topbar-height); left: 0; bottom: 0;
             display: flex; flex-direction: column;
             z-index: 1000;
+            overflow-y: auto;
             transition: transform .3s ease;
         }
         .sidebar-brand {
@@ -83,21 +84,26 @@
             color: #64748b;
         }
 
-        /* Main content */
-        .main-content {
-            margin-left: var(--saas-sidebar-width);
-            min-height: 100vh;
-            display: flex; flex-direction: column;
-        }
+        /* Topbar – fixed full-width */
         .topbar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: var(--saas-topbar-height);
             background: #1e293b;
             border-bottom: 1px solid #334155;
-            padding: .75rem 1.5rem;
+            padding: 0 1.5rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            position: sticky; top: 0;
-            z-index: 999;
+            z-index: 1050;
+        }
+
+        /* Main content */
+        .main-content {
+            margin-left: var(--saas-sidebar-width);
+            padding-top: var(--saas-topbar-height);
+            min-height: 100vh;
+            display: flex; flex-direction: column;
         }
         .page-content { padding: 1.5rem; flex: 1; }
 
@@ -143,7 +149,7 @@
 
         /* Responsive */
         @media (max-width: 768px) {
-            .sidebar { transform: translateX(-100%); }
+            .sidebar { transform: translateX(-100%); top: var(--saas-topbar-height); }
             .sidebar.open { transform: translateX(0); }
             .main-content { margin-left: 0; }
         }
@@ -153,6 +159,63 @@
 <body>
 
 {% block body %}
+<header class="topbar">
+    <div class="d-flex align-items-center gap-3">
+        <button class="btn btn-sm btn-outline-secondary d-md-none" onclick="document.getElementById('sidebar').classList.toggle('open')">
+            <i class="bi bi-list"></i>
+        </button>
+        <a href="/admin" style="text-decoration:none;display:flex;align-items:center;gap:.5rem;">
+            <span style="font-weight:700;font-size:1rem;color:#fff;">Thera<span style="color:var(--saas-primary);">Pano</span></span>
+        </a>
+        <h6 class="mb-0 fw-semibold ms-2 d-none d-md-block" style="color:#94a3b8;font-size:.85rem;">
+            {{ (page_title is defined and page_title) ? '/ ' ~ page_title : '' }}
+        </h6>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+
+        {# ── Update-Badge ───────────────────────────────────── #}
+        <a href="/admin/updates" id="topbar-update-btn" class="btn btn-sm btn-outline-secondary position-relative" style="display:none;" title="Update verfügbar">
+            <i class="bi bi-arrow-repeat"></i>
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill" style="background:#22c55e;font-size:.6rem;">NEU</span>
+        </a>
+
+        {# ── Benachrichtigungs-Glocke ────────────────────────── #}
+        <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary position-relative" id="notifDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false" title="Benachrichtigungen">
+                <i class="bi bi-bell"></i>
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notif-badge" style="font-size:.6rem;display:none;"></span>
+            </button>
+            <div class="dropdown-menu dropdown-menu-end p-0" style="width:340px;background:#1e293b;border:1px solid #334155;border-radius:.75rem;overflow:hidden;" id="notif-dropdown">
+                <div style="padding:.75rem 1rem;border-bottom:1px solid #334155;display:flex;align-items:center;justify-content:space-between;">
+                    <span style="font-weight:600;font-size:.875rem;color:#e2e8f0;">Benachrichtigungen</span>
+                    <a href="/admin/notifications" style="font-size:.75rem;color:#60a5fa;">Alle anzeigen</a>
+                </div>
+                <div id="notif-list" style="max-height:320px;overflow-y:auto;">
+                    <div style="padding:2rem;text-align:center;color:#475569;font-size:.8rem;">
+                        <i class="bi bi-bell-slash" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>Keine neuen Benachrichtigungen
+                    </div>
+                </div>
+                <div style="padding:.5rem 1rem;border-top:1px solid #334155;" id="notif-footer">
+                    <form method="POST" action="/admin/notifications/mark-all-read" style="margin:0;">
+                        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                        <button type="submit" class="btn btn-sm btn-outline-secondary w-100" style="font-size:.75rem;"><i class="bi bi-check2-all me-1"></i>Alle als gelesen markieren</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {# ── Einstellungen ────────────────────────────────────── #}
+        <a href="/admin/settings" class="btn btn-sm btn-outline-secondary" title="Einstellungen">
+            <i class="bi bi-gear"></i>
+        </a>
+
+        {# ── User-Avatar ──────────────────────────────────────── #}
+        <div style="width:2rem;height:2rem;background:var(--saas-primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:#fff;flex-shrink:0;" title="{{ auth_user ?? 'Admin' }} ({{ auth_role ?? '' }})">
+            {{ (auth_user ?? 'A')|slice(0,1)|upper }}
+        </div>
+    </div>
+</header>
+
 <div class="sidebar" id="sidebar">
     <a href="/admin" class="sidebar-brand">
         <h5>Thera<span>Pano</span></h5>
@@ -228,55 +291,6 @@
 </div>
 
 <div class="main-content">
-    <div class="topbar">
-        <div class="d-flex align-items-center gap-3">
-            <button class="btn btn-sm btn-outline-secondary d-md-none" onclick="document.getElementById('sidebar').classList.toggle('open')">
-                <i class="bi bi-list"></i>
-            </button>
-            <h6 class="mb-0 fw-semibold">{{ (page_title is defined and page_title) ? page_title : '' }}</h6>
-        </div>
-        <div class="d-flex align-items-center gap-2">
-
-            {# ── Update-Badge ───────────────────────────────────── #}
-            <a href="/admin/updates" id="topbar-update-btn" class="btn btn-sm btn-outline-secondary position-relative" style="display:none;" title="Update verfügbar">
-                <i class="bi bi-arrow-repeat"></i>
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill" style="background:#22c55e;font-size:.6rem;">NEU</span>
-            </a>
-
-            {# ── Benachrichtigungs-Glocke ────────────────────────── #}
-            <div class="dropdown">
-                <button class="btn btn-sm btn-outline-secondary position-relative" id="notifDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false" title="Benachrichtigungen">
-                    <i class="bi bi-bell"></i>
-                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notif-badge" style="font-size:.6rem;display:none;"></span>
-                </button>
-                <div class="dropdown-menu dropdown-menu-end p-0" style="width:340px;background:#1e293b;border:1px solid #334155;border-radius:.75rem;overflow:hidden;" id="notif-dropdown">
-                    <div style="padding:.75rem 1rem;border-bottom:1px solid #334155;display:flex;align-items:center;justify-content:space-between;">
-                        <span style="font-weight:600;font-size:.875rem;color:#e2e8f0;">Benachrichtigungen</span>
-                        <a href="/admin/notifications" style="font-size:.75rem;color:#60a5fa;">Alle anzeigen</a>
-                    </div>
-                    <div id="notif-list" style="max-height:320px;overflow-y:auto;">
-                        <div style="padding:2rem;text-align:center;color:#475569;font-size:.8rem;">
-                            <i class="bi bi-bell-slash" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>Keine neuen Benachrichtigungen
-                        </div>
-                    </div>
-                    <div style="padding:.5rem 1rem;border-top:1px solid #334155;" id="notif-footer" style="display:none;">
-                        <form method="POST" action="/admin/notifications/mark-all-read" style="margin:0;">
-                            <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-sm btn-outline-secondary w-100" style="font-size:.75rem;"><i class="bi bi-check2-all me-1"></i>Alle als gelesen markieren</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            {# ── Schnellzugriff Einstellungen ─────────────────────── #}
-            <a href="/admin/settings" class="btn btn-sm btn-outline-secondary" title="Einstellungen">
-                <i class="bi bi-gear"></i>
-            </a>
-
-            <span class="badge" style="background:rgba(37,99,235,.2);color:#60a5fa;border:1px solid rgba(37,99,235,.3);">{{ (auth_role is defined and auth_role) ? auth_role : '' }}</span>
-        </div>
-    </div>
-
     <div class="page-content">
         {% if flash_success %}
             <div class="alert alert-success alert-dismissible fade show" role="alert">
