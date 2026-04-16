@@ -148,6 +148,14 @@ class OwnerPortalMailService
         return $scheme . '://' . $host;
     }
 
+        /* Keep dedicated portal subdomain for owner links */
+        if (str_starts_with($host, 'app.')) {
+            $host = 'portal.' . substr($host, 4);
+        }
+        $tid = trim(substr($prefix, 2), '_');
+        return $tid !== '' ? ('?tid=' . rawurlencode($tid)) : '';
+    }
+
     private function tenantQuery(): string
     {
         $prefix = (string)($_SESSION['tenant_table_prefix'] ?? $_SESSION['portal_tenant_prefix'] ?? '');
