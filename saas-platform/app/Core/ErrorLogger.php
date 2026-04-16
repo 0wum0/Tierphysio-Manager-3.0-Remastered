@@ -2,16 +2,15 @@
 
 declare(strict_types=1);
 
-namespace App\Core;
+namespace Saas\Core;
 
 /**
- * Centralized error logger.
+ * Centralized error logger for the SaaS platform.
  *
  * Writes structured entries to logs/error.log.
  * Format: [DATE] [LEVEL] tenant=xyz file=... line=N message=...
  *
- * All methods are static and fire-and-forget.
- * This class NEVER throws – logging must never crash the application.
+ * Static, fire-and-forget. NEVER throws.
  *
  * Feature #7: Error Logging System
  */
@@ -19,49 +18,29 @@ class ErrorLogger
 {
     private static string $resolvedPath = '';
 
-    /* ──────────────────────────────────────────────────────────
-       Public API
-    ────────────────────────────────────────────────────────── */
-
-    /**
-     * Log an error with optional tenant, file, and line context.
-     */
     public static function log(
         string $message,
-        string $file   = '',
-        int    $line   = 0,
-        string $tid    = ''
+        string $file = '',
+        int    $line = 0,
+        string $tid  = ''
     ): void {
         self::write('ERROR', $message, $tid, $file, $line);
     }
 
-    /**
-     * Log a warning (non-fatal).
-     */
     public static function warn(string $message, string $tid = ''): void
     {
         self::write('WARN', $message, $tid);
     }
 
-    /**
-     * Log an informational message.
-     */
     public static function info(string $message, string $tid = ''): void
     {
         self::write('INFO', $message, $tid);
     }
 
-    /**
-     * Log any Throwable with full context.
-     */
     public static function logThrowable(\Throwable $e, string $tid = ''): void
     {
         self::write('ERROR', $e->getMessage(), $tid, $e->getFile(), $e->getLine());
     }
-
-    /* ──────────────────────────────────────────────────────────
-       Internal helpers
-    ────────────────────────────────────────────────────────── */
 
     private static function write(
         string $level,
@@ -71,9 +50,9 @@ class ErrorLogger
         int    $line = 0
     ): void {
         try {
-            $tenantPart = $tid  !== '' ? " tenant={$tid}"          : '';
-            $filePart   = $file !== '' ? " file={$file}"           : '';
-            $linePart   = $line >  0   ? " line={$line}"           : '';
+            $tenantPart = $tid  !== '' ? " tenant={$tid}"  : '';
+            $filePart   = $file !== '' ? " file={$file}"   : '';
+            $linePart   = $line >  0   ? " line={$line}"   : '';
 
             $entry = sprintf(
                 "[%s] [%s]%s%s%s message=%s\n",
@@ -87,8 +66,7 @@ class ErrorLogger
 
             @file_put_contents(self::logFile(), $entry, FILE_APPEND | LOCK_EX);
         } catch (\Throwable) {
-            // Absolute fallback – write to PHP error log so nothing is lost silently
-            @error_log("[ErrorLogger] {$level}: {$message}");
+            @error_log("[SaasErrorLogger] {$level}: {$message}");
         }
     }
 
@@ -97,10 +75,10 @@ class ErrorLogger
         if (self::$resolvedPath !== '') {
             return self::$resolvedPath;
         }
-
+        // saas-platform/app/Core/ → 3 levels up = project root
         $dir = defined('ROOT_PATH')
             ? ROOT_PATH . '/logs'
-            : dirname(__DIR__, 2) . '/logs';
+            : dirname(__DIR__, 3) . '/logs';
 
         if (!is_dir($dir)) {
             @mkdir($dir, 0755, true);

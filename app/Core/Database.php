@@ -41,8 +41,6 @@ class Database
      * If a table prefix is set (e.g. "t_abc123_"), the storage is isolated under
      * STORAGE_PATH/tenants/{prefix_without_trailing_underscore}/
      * Falls back to plain STORAGE_PATH when no prefix is set (single-tenant / dev).
-     *
-     * Feature #4: Storage path is auto-created if missing (self-healing).
      */
     public function storagePath(string $subPath = ''): string
     {
@@ -54,7 +52,6 @@ class Database
             $base = $base . '/tenants/' . $slug;
 
             /* Auto-recreate the base tenant directory if it was deleted externally.
-             * Feature #4: Tenant storage auto-creation – self-healing on every access.
              * Individual sub-directories (patients/, uploads/, …) are created by
              * the respective upload handlers via mkdir($path, 0755, true).
              * This single @mkdir here ensures the root is always present so that
@@ -66,14 +63,7 @@ class Database
         }
 
         if ($subPath !== '') {
-            $fullPath = $base . '/' . ltrim($subPath, '/');
-
-            /* Feature #4: Also auto-create sub-directories on access. */
-            if (!is_dir($fullPath)) {
-                @mkdir($fullPath, 0755, true);
-            }
-
-            return $fullPath;
+            return $base . '/' . ltrim($subPath, '/');
         }
 
         return $base;
@@ -125,10 +115,6 @@ class Database
 
         return $pdo;
     }
-
-    /* ──────────────────────────────────────────────────────────
-       Standard DB access (throw on error – existing behaviour)
-    ────────────────────────────────────────────────────────── */
 
     public function query(string $sql, array $params = []): PDOStatement
     {
@@ -213,88 +199,5 @@ class Database
     public function lastInsertId(): string
     {
         return $this->pdo->lastInsertId();
-    }
-
-    /* ──────────────────────────────────────────────────────────
-       Feature #10 – Safe DB Access Layer
-       These methods wrap the standard access methods with try-catch.
-       They return safe defaults instead of throwing, making them
-       ideal for resilient background tasks and health-check code.
-       All exceptions are silently swallowed here; callers that need
-       to inspect the error should use the standard throwing methods.
-    ────────────────────────────────────────────────────────── */
-
-    /**
-     * Like fetch() but returns null on any exception instead of throwing.
-     */
-    public function safeFetch(string $sql, array $params = []): ?array
-    {
-        try {
-            $result = $this->fetch($sql, $params);
-            return $result !== false ? $result : null;
-        } catch (\Throwable) {
-            return null;
-        }
-    }
-
-    /**
-     * Like fetchAll() but returns [] on any exception instead of throwing.
-     */
-    public function safeFetchAll(string $sql, array $params = []): array
-    {
-        try {
-            return $this->fetchAll($sql, $params);
-        } catch (\Throwable) {
-            return [];
-        }
-    }
-
-    /**
-     * Like fetchColumn() but returns null on any exception instead of throwing.
-     */
-    public function safeFetchColumn(string $sql, array $params = []): mixed
-    {
-        try {
-            return $this->fetchColumn($sql, $params);
-        } catch (\Throwable) {
-            return null;
-        }
-    }
-
-    /**
-     * Like execute() but returns false on any exception instead of throwing.
-     * Returns the row count on success, false on failure.
-     */
-    public function safeExecute(string $sql, array $params = []): int|false
-    {
-        try {
-            return $this->execute($sql, $params);
-        } catch (\Throwable) {
-            return false;
-        }
-    }
-
-    /**
-     * Like insert() but returns null on any exception instead of throwing.
-     */
-    public function safeInsert(string $sql, array $params = []): ?string
-    {
-        try {
-            return $this->insert($sql, $params);
-        } catch (\Throwable) {
-            return null;
-        }
-    }
-
-    /**
-     * Like query() but returns null on any exception instead of throwing.
-     */
-    public function safeQuery(string $sql, array $params = []): ?PDOStatement
-    {
-        try {
-            return $this->query($sql, $params);
-        } catch (\Throwable) {
-            return null;
-        }
     }
 }
