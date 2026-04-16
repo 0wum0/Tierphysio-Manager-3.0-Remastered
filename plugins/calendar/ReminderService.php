@@ -31,6 +31,12 @@ class ReminderService
 
         foreach ($appointments as $a) {
             $apptLabel = '"' . ($a['title'] ?? 'Termin') . '" am ' . ($a['start_at'] ?? '?');
+            /* DIAGNOSE: zeigt exakt was die DB zurückgibt */
+            error_log('[ReminderService] DIAGNOSE id=' . ($a['id'] ?? '?')
+                . ' owner_id=' . ($a['owner_id'] ?? 'NULL')
+                . ' owner_email=' . ($a['owner_email'] ?? 'NULL')
+                . ' first_name=' . ($a['first_name'] ?? 'NULL')
+                . ' title=' . ($a['title'] ?? '?'));
 
             /* Erinnerung an Tierhalter; Fallback auf Praxis-E-Mail wenn keine vorhanden */
             if (empty($a['owner_email'])) {

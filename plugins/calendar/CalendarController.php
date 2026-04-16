@@ -605,6 +605,14 @@ class CalendarController extends Controller
     private function parseAppointmentData(): array
     {
         $user = $this->session->get('user');
+        /* DIAGNOSE: zeigt was das Formular submitted */
+        $rawOwnerId    = $_POST['owner_id'] ?? '(nicht gesetzt)';
+        $rawPatientId  = $_POST['patient_id'] ?? '(nicht gesetzt)';
+        $rawReminder   = $_POST['reminder_minutes'] ?? '(nicht gesetzt)';
+        error_log('[CalendarController] parseAppointmentData: raw owner_id=' . $rawOwnerId
+            . ' patient_id=' . $rawPatientId
+            . ' reminder_minutes=' . $rawReminder
+            . ' title=' . ($_POST['title'] ?? '?'));
         return [
             'title'             => $this->sanitize($this->post('title', '')),
             'description'       => $this->post('description', ''),
