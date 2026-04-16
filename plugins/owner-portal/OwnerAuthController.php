@@ -31,6 +31,13 @@ class OwnerAuthController extends Controller
     /* ── GET /portal/login ── */
     public function showLogin(array $params = []): void
     {
+        $tid = trim((string)($_GET['tid'] ?? ''));
+        if ($tid !== '') {
+            $prefix = $this->prefixFromTid($tid);
+            $this->session->set('portal_tenant_prefix', $prefix);
+            $this->session->set('tenant_table_prefix', $prefix);
+        }
+
         if ($this->session->get('owner_portal_user_id')) {
             $this->redirect('/portal/dashboard');
             return;
@@ -40,6 +47,7 @@ class OwnerAuthController extends Controller
             'csrf_token' => $this->session->generateCsrfToken(),
             'error'      => $this->session->getFlash('error'),
             'success'    => $this->session->getFlash('success'),
+            'tid'        => $tid,
         ]);
     }
 
@@ -56,9 +64,21 @@ class OwnerAuthController extends Controller
         $email    = strtolower(trim($this->post('email', '')));
         $password = $this->post('password', '');
         $ip       = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+        $tid      = trim((string)$this->post('tid', ($_GET['tid'] ?? '')));
 
-        /* ── Multi-tenant login: find user first, THEN use tenant-prefixed tables ── */
-        [$user, $tenantPrefix] = $this->findUserAcrossAllTenants($email);
+        if ($tid !== '') {
+            $forcedPrefix = $this->prefixFromTid($tid);
+            $this->session->set('portal_tenant_prefix', $forcedPrefix);
+            $this->session->set('tenant_table_prefix', $forcedPrefix);
+        }
+
+        /* ── Tenant-safe login: prefer active tenant context; fallback scan with ambiguity check ── */
+        [$user, $tenantPrefix, $ambiguous] = $this->findUserAcrossAllTenants($email);
+        if ($ambiguous) {
+            $this->session->flash('error', 'Diese E-Mail ist in mehreren Praxen vorhanden. Bitte verwenden Sie den Einladungslink Ihrer Praxis.');
+            $this->redirect('/portal/login' . ($tid !== '' ? ('?tid=' . urlencode($tid)) : ''));
+            return;
+        }
 
         /* Apply prefix to repo BEFORE rate-limit checks so table names are correct */
         if ($tenantPrefix !== '') {
@@ -73,7 +93,7 @@ class OwnerAuthController extends Controller
         try {
             if ($this->repo->countRecentAttempts($email, $ip, 15) >= 5) {
                 $this->session->flash('error', 'Zu viele Anmeldeversuche. Bitte warte 15 Minuten.');
-                $this->redirect('/portal/login');
+                $this->redirect('/portal/login' . ($tid !== '' ? ('?tid=' . urlencode($tid)) : ''));
                 return;
             }
         } catch (\Throwable) {}
@@ -82,7 +102,7 @@ class OwnerAuthController extends Controller
 
         if (!$user || !$user['is_active'] || !$user['password_hash'] || !password_verify($password, $user['password_hash'])) {
             $this->session->flash('error', 'E-Mail oder Passwort ist falsch.');
-            $this->redirect('/portal/login');
+            $this->redirect('/portal/login' . ($tid !== '' ? ('?tid=' . urlencode($tid)) : ''));
             return;
         }
 
@@ -132,6 +152,13 @@ class OwnerAuthController extends Controller
      */
     private function findUserAcrossAllTenants(string $email): array
     {
+        $contextPrefix = (string)$this->session->get('portal_tenant_prefix', '');
+        if ($contextPrefix !== '') {
+            $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $db->setPrefix($contextPrefix);
+            return [$this->repo->findUserByEmail($email), $contextPrefix, false];
+        }
+
         try {
             $db  = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
             $pdo = $db->getPdo();
@@ -146,6 +173,7 @@ class OwnerAuthController extends Controller
             $stmt->execute();
             $tables = $stmt->fetchAll(\PDO::FETCH_COLUMN);
 
+            $matches = [];
             foreach ($tables as $table) {
                 /* Derive prefix: strip trailing "owner_portal_users" */
                 $prefix = substr($table, 0, -strlen('owner_portal_users'));
@@ -155,15 +183,22 @@ class OwnerAuthController extends Controller
                 $row = $s->fetch(\PDO::FETCH_ASSOC);
 
                 if ($row) {
-                    return [$row, $prefix];
+                    $matches[] = [$row, $prefix];
                 }
+            }
+
+            if (count($matches) > 1) {
+                return [null, '', true];
+            }
+            if (count($matches) === 1) {
+                return [$matches[0][0], $matches[0][1], false];
             }
         } catch (\Throwable) {
             /* Fall through to single-tenant lookup */
         }
 
         /* Fallback: use the already-configured repo (single-tenant / dev) */
-        return [$this->repo->findUserByEmail($email), ''];
+        return [$this->repo->findUserByEmail($email), '', false];
     }
 
     /* ── POST /portal/logout ── */
@@ -185,6 +220,14 @@ class OwnerAuthController extends Controller
     public function showSetPassword(array $params = []): void
     {
         $token = $params['token'] ?? '';
+        $tid = trim((string)($_GET['tid'] ?? ''));
+        if ($tid !== '') {
+            $prefix = $this->prefixFromTid($tid);
+            $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $db->setPrefix($prefix);
+            $this->session->set('portal_tenant_prefix', $prefix);
+            $this->session->set('tenant_table_prefix', $prefix);
+        }
         [$user, $tenantPrefix] = $this->findTokenAcrossAllTenants($token);
 
         if ($tenantPrefix !== '') {
@@ -202,6 +245,7 @@ class OwnerAuthController extends Controller
         $this->render('@owner-portal/owner_set_password.twig', [
             'page_title' => 'Passwort festlegen',
             'token'      => $token,
+            'tid'        => $tid !== '' ? $tid : trim(substr($tenantPrefix, 2), '_'),
             'csrf_token' => $this->session->generateCsrfToken(),
             'error'      => $this->session->getFlash('error'),
         ]);
@@ -211,11 +255,12 @@ class OwnerAuthController extends Controller
     public function setPassword(array $params = []): void
     {
         $token = $params['token'] ?? '';
+        $tid = trim((string)($this->post('tid', ($_GET['tid'] ?? ''))));
 
         $csrfToken = $this->post('_csrf_token', '');
         if (!$this->session->validateCsrfToken($csrfToken)) {
             $this->session->flash('error', 'Ungültiges Sicherheitstoken.');
-            $this->redirect('/portal/einladung/' . urlencode($token));
+            $this->redirect('/portal/einladung/' . urlencode($token) . ($tid !== '' ? ('?tid=' . urlencode($tid)) : ''));
             return;
         }
 
@@ -238,12 +283,12 @@ class OwnerAuthController extends Controller
 
         if (strlen($password) < 8) {
             $this->session->flash('error', 'Das Passwort muss mindestens 8 Zeichen lang sein.');
-            $this->redirect('/portal/einladung/' . urlencode($token));
+            $this->redirect('/portal/einladung/' . urlencode($token) . ($tid !== '' ? ('?tid=' . urlencode($tid)) : ''));
             return;
         }
         if ($password !== $confirm) {
             $this->session->flash('error', 'Die Passwörter stimmen nicht überein.');
-            $this->redirect('/portal/einladung/' . urlencode($token));
+            $this->redirect('/portal/einladung/' . urlencode($token) . ($tid !== '' ? ('?tid=' . urlencode($tid)) : ''));
             return;
         }
 
@@ -255,6 +300,11 @@ class OwnerAuthController extends Controller
         ]);
 
         $this->session->flash('success', 'Passwort wurde gesetzt. Du kannst dich jetzt einloggen.');
-        $this->redirect('/portal/login');
+        $this->redirect('/portal/login' . ($tid !== '' ? ('?tid=' . urlencode($tid)) : ''));
+    }
+
+    private function prefixFromTid(string $tid): string
+    {
+        return 't_' . trim($tid, '_') . '_';
     }
 }
