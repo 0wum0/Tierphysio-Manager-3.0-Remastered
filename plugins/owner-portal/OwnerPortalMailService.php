@@ -16,7 +16,7 @@ class OwnerPortalMailService
 
     public function sendInvite(string $email, string $token): void
     {
-        $inviteUrl   = $this->getBaseUrl() . '/portal/einladung/' . $token;
+        $inviteUrl   = $this->getBaseUrl() . '/portal/einladung/' . $token . $this->tenantQuery();
         $companyName = $this->settings->get('company_name', 'Tierphysio Praxis');
 
         $subject   = 'Ihr Zugang zum Besitzerportal — ' . $companyName;
@@ -136,16 +136,31 @@ class OwnerPortalMailService
     private function getBaseUrl(): string
     {
         $configured = $this->settings->get('portal_base_url', '');
-        if ($configured !== '') return rtrim($configured, '/');
+        if ($configured !== '') {
+            return rtrim($configured, '/');
+        }
 
         $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
         $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
 
-        /* If running on app.* subdomain, derive portal.* automatically */
-        if (str_starts_with($host, 'app.')) {
+        /* Keep dedicated portal subdomain for owner links */
+        if (substr($host, 0, 4) === 'app.') {
             $host = 'portal.' . substr($host, 4);
         }
 
         return $scheme . '://' . $host;
+    }
+
+    private function tenantQuery(): string
+    {
+        $prefix = (string)($_SESSION['tenant_table_prefix'] ?? $_SESSION['portal_tenant_prefix'] ?? '');
+        if ($prefix === '' || substr($prefix, 0, 2) !== 't_') {
+            return '';
+        }
+        $tid = trim(substr($prefix, 2), '_');
+        if ($tid === '') {
+            return '';
+        }
+        return '?tid=' . rawurlencode($tid);
     }
 }
