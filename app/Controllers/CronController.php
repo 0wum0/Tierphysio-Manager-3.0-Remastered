@@ -104,7 +104,7 @@ class CronController extends Controller
 
     /* ─────────────────────────────────────────────────────────
        GET /cron/geburtstag
-       Protected by birthday_cron_token from settings.
+       Protected by Bearer token from settings.
        Self-healing: token is auto-created on first run.
     ───────────────────────────────────────────────────────── */
     public function birthday(): void
@@ -174,7 +174,7 @@ class CronController extends Controller
 
     /* ─────────────────────────────────────────────────────────
        GET /cron/dispatcher
-       Zentraler Dispatcher – führt fällige Jobs basierend auf Zeitplänen aus.
+       Zentraler Dispatcher - führt fällige Jobs basierend auf Zeitplänen aus
        Protected by cron_dispatcher_token from settings.
        Self-healing: all tokens are auto-created on first run.
        Läuft alle 10 Minuten via Hosting-Panel.
@@ -189,7 +189,7 @@ class CronController extends Controller
             // Tenant-Identifikation über tid-Parameter
             $tid = (string)($_GET['tid'] ?? '');
             if ($tid !== '') {
-                // Prefix aus tid setzen (z.B. praxis-wenzel → t_praxis_wenzel_)
+                // Prefix aus tid setzen (z.B. praxis-wenzel -> t_praxis_wenzel_)
                 $prefix = $this->prefixFromTid($tid);
                 $this->db->setPrefix($prefix);
 
@@ -229,30 +229,30 @@ class CronController extends Controller
             // Job-Konfiguration mit Zeitplänen
             $jobs = [
                 'birthday' => [
-                    'schedule'         => '0 8 * * *',    // Täglich um 08:00
-                    'interval_seconds' => 86400,           // 24 Stunden
-                    'endpoint'         => '/cron/geburtstag',
+                    'schedule' => '0 8 * * *', // Täglich um 08:00
+                    'interval_seconds' => 86400, // 24 Stunden
+                    'endpoint' => '/cron/geburtstag'
                 ],
                 'calendar_reminders' => [
-                    'schedule'         => '*/15 * * * *', // Alle 15 Minuten
+                    'schedule' => '*/15 * * * *', // Alle 15 Minuten
                     'interval_seconds' => 900,
-                    'endpoint'         => '/kalender/cron/erinnerungen',
+                    'endpoint' => '/kalender/cron/erinnerungen'
                 ],
                 'google_sync' => [
-                    'schedule'         => '0 * * * *',    // Stündlich
+                    'schedule' => '0 * * * *', // Stündlich
                     'interval_seconds' => 3600,
-                    'endpoint'         => '/google-kalender/cron',
+                    'endpoint' => '/google-kalender/cron'
                 ],
                 'tcp_reminders' => [
-                    'schedule'         => '*/15 * * * *', // Alle 15 Minuten
+                    'schedule' => '*/15 * * * *', // Alle 15 Minuten
                     'interval_seconds' => 900,
-                    'endpoint'         => '/tcp/cron/erinnerungen',
+                    'endpoint' => '/tcp/cron/erinnerungen'
                 ],
                 'holiday_greetings' => [
-                    'schedule'         => '0 8 * * *',    // Täglich um 08:00
+                    'schedule' => '0 8 * * *', // Täglich um 08:00
                     'interval_seconds' => 86400,
-                    'endpoint'         => '/api/holiday-cron',
-                ],
+                    'endpoint' => '/api/holiday-cron'
+                ]
             ];
 
             $results = [];
@@ -285,15 +285,14 @@ class CronController extends Controller
                     $jobResult = $this->executeJob($jobKey, (string)$config['endpoint'], $tid);
                     $results[$jobKey] = $jobResult;
 
-                    $status  = !empty($jobResult['success']) ? 'success' : 'error';
+                    $status = !empty($jobResult['success']) ? 'success' : 'error';
                     $message = $jobResult['message'] ?? (!empty($jobResult['success']) ? 'Executed successfully' : 'Execution failed');
                     $this->dispatcherLog($jobKey, $status, $message, $jobStart);
-
                 } catch (\Throwable $e) {
                     $errorMessage = 'Job failed: ' . $e->getMessage();
                     $results[$jobKey] = [
                         'success' => false,
-                        'status'  => 'error',
+                        'status' => 'error',
                         'message' => $errorMessage,
                     ];
                     $this->cronLog("[JOB EXCEPTION] {$jobKey}: " . $e->getMessage());
@@ -302,18 +301,18 @@ class CronController extends Controller
             }
 
             $executedCount = count(array_filter($results, fn($r) => isset($r['status']) && $r['status'] !== 'skipped'));
-            $skippedCount  = count(array_filter($results, fn($r) => isset($r['status']) && $r['status'] === 'skipped'));
+            $skippedCount = count(array_filter($results, fn($r) => isset($r['status']) && $r['status'] === 'skipped'));
 
             $msg = "executed={$executedCount}, skipped={$skippedCount}";
             $this->cronLog("SUCCESS dispatcher: {$msg}");
             $this->dispatcherLog('dispatcher', 'success', $msg, $start);
 
             $this->jsonCron([
-                'ok'        => true,
+                'ok' => true,
                 'timestamp' => $startTime,
-                'executed'  => $executedCount,
-                'skipped'   => $skippedCount,
-                'results'   => $results,
+                'executed' => $executedCount,
+                'skipped' => $skippedCount,
+                'results' => $results
             ]);
 
         } catch (\Throwable $e) {
@@ -324,28 +323,23 @@ class CronController extends Controller
         }
     }
 
-    /**
-     * Executes a single cron job via internal cURL call.
-     * Token is retrieved via ensureCronToken() – auto-created if missing.
-     * The tenant id (tid) is always forwarded in the query string.
-     */
     private function executeJob(string $jobKey, string $endpoint, string $tid = ''): array
     {
-        $start   = hrtime(true);
+        $start = hrtime(true);
         $baseUrl = 'https://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
-        $url     = $baseUrl . $endpoint;
+        $url = $baseUrl . $endpoint;
 
         // Token für den spezifischen Job – self-healing: auto-create if missing
         $tokenKeys = [
-            'birthday'           => 'birthday_cron_token',
+            'birthday' => 'birthday_cron_token',
             'calendar_reminders' => 'calendar_cron_secret',
-            'google_sync'        => 'google_sync_cron_secret',
-            'tcp_reminders'      => 'tcp_cron_token',
-            'holiday_greetings'  => 'cron_secret',
+            'google_sync' => 'google_sync_cron_secret',
+            'tcp_reminders' => 'tcp_cron_token',
+            'holiday_greetings' => 'cron_secret'
         ];
 
         $tokenKey = $tokenKeys[$jobKey] ?? '';
-        $token    = $tokenKey !== '' ? $this->ensureCronToken($tokenKey) : '';
+        $token = $tokenKey !== '' ? $this->ensureCronToken($tokenKey) : '';
 
         $query = [];
         if ($token !== '') {
@@ -360,7 +354,7 @@ class CronController extends Controller
             $url .= $separator . http_build_query($query);
         }
 
-        // Internen Aufruf via cURL
+        // Internen Aufruf via curl
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -370,32 +364,28 @@ class CronController extends Controller
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['X-Internal-Cron: true']);
         $response = curl_exec($ch);
         $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error    = curl_error($ch);
+        $error = curl_error($ch);
         curl_close($ch);
 
         $duration = (int)((hrtime(true) - $start) / 1_000_000);
 
         if ($error) {
             return [
-                'success'     => false,
-                'status'      => 'error',
-                'message'     => 'CURL Error: ' . $error,
-                'duration_ms' => $duration,
+                'success' => false,
+                'status' => 'error',
+                'message' => 'CURL Error: ' . $error,
+                'duration_ms' => $duration
             ];
         }
 
         return [
-            'success'     => $httpCode >= 200 && $httpCode < 300,
-            'status'      => ($httpCode >= 200 && $httpCode < 300) ? 'success' : 'error',
-            'message'     => "HTTP {$httpCode}",
+            'success' => $httpCode >= 200 && $httpCode < 300,
+            'status' => ($httpCode >= 200 && $httpCode < 300) ? 'success' : 'error',
+            'message' => "HTTP {$httpCode}",
             'duration_ms' => $duration,
-            'response'    => substr((string)$response, 0, 500),
+            'response' => substr((string)$response, 0, 500)
         ];
     }
-
-    /* ─────────────────────────────────────────────────────────
-       Internal helpers
-    ───────────────────────────────────────────────────────── */
 
     private function dispatcherLog(string $jobKey, string $status, string $message, int $startHrtime): void
     {
@@ -416,6 +406,9 @@ class CronController extends Controller
         \App\Controllers\CronAdminController::logRun($this->db, $jobKey, $status, $message, $ms, 'cron');
     }
 
+    /* ─────────────────────────────────────────────────────────
+       Write to logs/cron.log
+    ───────────────────────────────────────────────────────── */
     private function cronLog(string $message): void
     {
         try {
@@ -430,7 +423,7 @@ class CronController extends Controller
                 FILE_APPEND | LOCK_EX
             );
         } catch (\Throwable) {
-            // Logging must never crash the cron
+            /* Logging must never crash the cron */
         }
     }
 
