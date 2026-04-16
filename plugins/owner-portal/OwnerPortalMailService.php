@@ -140,32 +140,15 @@ class OwnerPortalMailService
             return rtrim($configured, '/');
         }
 
-        $envAppUrl = rtrim((string)($_ENV['APP_URL'] ?? ''), '/');
-        if ($envAppUrl !== '') {
-            return $envAppUrl;
-        }
-
         $scheme = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http';
         $host   = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        return $scheme . '://' . $host;
-    }
 
         /* Keep dedicated portal subdomain for owner links */
-        if (str_starts_with($host, 'app.')) {
+        if (substr($host, 0, 4) === 'app.') {
             $host = 'portal.' . substr($host, 4);
         }
-        $tid = trim(substr($prefix, 2), '_');
-        return $tid !== '' ? ('?tid=' . rawurlencode($tid)) : '';
-    }
 
-    private function tenantQuery(): string
-    {
-        $prefix = (string)($_SESSION['tenant_table_prefix'] ?? $_SESSION['portal_tenant_prefix'] ?? '');
-        if ($prefix === '' || !str_starts_with($prefix, 't_')) {
-            return '';
-        }
-        $tid = trim(substr($prefix, 2), '_');
-        return $tid !== '' ? ('?tid=' . rawurlencode($tid)) : '';
+        return $scheme . '://' . $host;
     }
 
     private function tenantQuery(): string
