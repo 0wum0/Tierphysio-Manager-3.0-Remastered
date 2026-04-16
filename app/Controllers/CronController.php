@@ -52,24 +52,39 @@ class CronController extends Controller
     {
         $existing = $this->settings->get($key, '');
 
-        if ($existing !== '' && $existing !== null) {
+        // A valid token is exactly 64 lowercase hex characters (bin2hex(random_bytes(32))).
+        // If the stored value is missing OR structurally invalid, regenerate it.
+        // A valid token that simply doesn't match the caller's value is still a 401 –
+        // only DB corruption or absence triggers a new token here.
+        if ($existing !== '' && $existing !== null && $this->isValidCronToken((string)$existing)) {
             return (string)$existing;
         }
 
-        // Token missing – generate, persist, and track
+        // Token missing or corrupted – generate, persist, and track
+        $reason = ($existing !== '' && $existing !== null) ? 'corrupted' : 'missing';
         $newToken = bin2hex(random_bytes(32));
 
         try {
             $this->settings->set($key, $newToken);
             $this->newlyCreatedTokens[$key] = true;
             $tid = (string)($_GET['tid'] ?? '');
-            $this->cronLog("[CRON TOKEN] created: {$key} for tenant {$tid}");
+            $this->cronLog("[CRON TOKEN] {$reason}, regenerated: {$key} for tenant {$tid}");
         } catch (\Throwable $e) {
             // Storage failure must not stop cron execution
             $this->cronLog("[CRON TOKEN] WARNING: could not persist {$key}: " . $e->getMessage());
         }
 
         return $newToken;
+    }
+
+    /**
+     * A cron token is valid if it is exactly 64 lowercase hex characters.
+     * This is the format produced by bin2hex(random_bytes(32)).
+     * Any other value (empty, truncated, wrong encoding, null bytes, etc.) is considered corrupted.
+     */
+    private function isValidCronToken(string $token): bool
+    {
+        return strlen($token) === 64 && ctype_xdigit($token);
     }
 
     /**
