@@ -23,11 +23,23 @@ class ReminderService
         $skipped   = 0;
         $lastError = '';
 
+        /* Practice fallback e-mail (used when owner has no e-mail) */
+        $practiceEmail = $this->settingsRepository->get('mail_from', '');
+        if ($practiceEmail === '') {
+            $practiceEmail = $this->settingsRepository->get('smtp_user', '');
+        }
+
         foreach ($appointments as $a) {
-            /* Erinnerung an Praxisinhaber (verbindlich) */
+            /* Erinnerung an Tierhalter; Fallback auf Praxis-E-Mail wenn keine vorhanden */
             if (empty($a['owner_email'])) {
-                $skipped++;
-                continue;
+                if ($practiceEmail === '') {
+                    $skipped++;
+                    continue;
+                }
+                /* Send to practice as fallback so the reminder is not lost */
+                $a['owner_email'] = $practiceEmail;
+                $a['first_name']  = 'Praxis';
+                $a['last_name']   = '';
             }
 
             $ownerSent = $this->mailService->sendReminder($a);
