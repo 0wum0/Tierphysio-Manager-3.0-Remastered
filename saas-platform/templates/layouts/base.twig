@@ -1,157 +1,128 @@
 <!DOCTYPE html>
-<html lang="de" data-bs-theme="dark">
+<html lang="de" data-bs-theme="dark" class="set-nav-dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{{ (page_title is defined and page_title) ? page_title : 'Tierphysio SaaS' }}{% endblock %} – {{ app_name }}</title>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, maximum-scale=5">
+    <title>{% block title %}{{ (page_title is defined and page_title) ? page_title : 'TheraPano Admin' }}{% endblock %}</title>
     <meta name="robots" content="noindex, nofollow">
 
+    {# SmartAdmin: saveloadscript must be in <head> #}
+    <script src="/sa/scripts/core/saveloadscript.js"></script>
+
+    {# SmartAdmin Core CSS #}
+    <link rel="stylesheet" href="/sa/plugins/waves/waves.min.css">
+    <link rel="stylesheet" href="/sa/css/smartapp.min.css">
+    <link rel="stylesheet" href="/sa/webfonts/smartadmin/sa-icons.css">
+    <link rel="stylesheet" href="/sa/webfonts/fontawesome/fontawesome.css">
+
+    {# Bootstrap Icons – für bi-* Klassen in Content-Templates #}
+    <link rel="stylesheet" href="/css/bootstrap-icons.min.css">
+
+    {# Inter Font #}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
     <style>
-        :root {
-            --saas-primary: #2563eb;
-            --saas-primary-hover: #1d4ed8;
-            --saas-sidebar-width: 260px;
-            --saas-topbar-height: 60px;
-        }
-        [data-bs-theme="dark"] {
-            --bs-body-bg: #0f172a;
-            --bs-body-color: #e2e8f0;
-            --bs-card-bg: #1e293b;
-            --bs-border-color: #334155;
-        }
-        body { font-family: 'Inter', sans-serif; }
+        body, .app-sidebar, .app-header { font-family: 'Inter', sans-serif !important; }
 
-        /* Sidebar */
-        .sidebar {
-            width: var(--saas-sidebar-width);
-            background: #1e293b;
-            border-right: 1px solid #334155;
-            position: fixed;
-            top: var(--saas-topbar-height); left: 0; bottom: 0;
-            display: flex; flex-direction: column;
-            z-index: 1000;
-            overflow-y: auto;
-            transition: transform .3s ease;
-        }
-        .sidebar-brand {
-            padding: 1.25rem 1.5rem;
-            border-bottom: 1px solid #334155;
-            text-decoration: none;
-        }
-        .sidebar-brand h5 {
-            color: #fff;
-            font-weight: 700;
-            margin: 0;
-            font-size: 1rem;
-        }
-        .sidebar-brand span { color: var(--saas-primary); }
-        .sidebar-nav { flex: 1; padding: 1rem 0; overflow-y: auto; }
-        .sidebar-section {
-            padding: .25rem 1rem .25rem;
-            font-size: .7rem;
-            font-weight: 600;
-            letter-spacing: .08em;
-            color: #64748b;
-            text-transform: uppercase;
-            margin-top: .75rem;
-        }
-        .sidebar-link {
-            display: flex;
-            align-items: center;
-            gap: .75rem;
-            padding: .5rem 1.5rem;
-            color: #94a3b8;
-            text-decoration: none;
-            font-size: .875rem;
-            transition: all .15s;
-            border-left: 3px solid transparent;
-        }
-        .sidebar-link:hover, .sidebar-link.active {
-            color: #fff;
-            background: rgba(255,255,255,.05);
-        }
-        .sidebar-link.active { border-left-color: var(--saas-primary); color: #fff; }
-        .sidebar-link i { font-size: 1rem; width: 1.25rem; text-align: center; }
-        .sidebar-footer {
-            padding: 1rem 1.5rem;
-            border-top: 1px solid #334155;
-            font-size: .8rem;
-            color: #64748b;
-        }
+        /* Status-Badges (layout-style) */
+        .badge-active    { background: rgba(6,78,59,.6);  color: #6ee7b7; }
+        .badge-trial     { background: rgba(46,16,101,.6); color: #c4b5fd; }
+        .badge-pending   { background: rgba(59,26,8,.6);   color: #fdba74; }
+        .badge-suspended { background: rgba(31,22,53,.6);  color: #a78bfa; }
+        .badge-cancelled { background: rgba(28,28,28,.6);  color: #94a3b8; }
+        .badge-paused    { background: rgba(12,42,74,.6);  color: #7dd3fc; }
 
-        /* Topbar – fixed full-width */
-        .topbar {
-            position: fixed;
-            top: 0; left: 0; right: 0;
-            height: var(--saas-topbar-height);
-            background: #1e293b;
-            border-bottom: 1px solid #334155;
-            padding: 0 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            z-index: 1050;
-        }
+        /* Status-Badges (inline pill style – alle Templates) */
+        .s-badge      { font-size:.65rem; padding:.15rem .45rem; border-radius:999px; font-weight:700; display:inline-block; }
+        .s-aktiv      { background:rgba(52,211,153,.15);  color:#34d399; }
+        .s-testphase  { background:rgba(196,181,253,.15); color:#c4b5fd; }
+        .s-ausstehend { background:rgba(253,186,116,.15); color:#fdba74; }
+        .s-gesperrt   { background:rgba(248,113,113,.15); color:#fca5a5; }
+        .s-gekuendigt { background:rgba(148,163,184,.15); color:#94a3b8; }
+        .s-pausiert   { background:rgba(125,211,252,.15); color:#7dd3fc; }
 
-        /* Main content */
-        .main-content {
-            margin-left: var(--saas-sidebar-width);
-            padding-top: var(--saas-topbar-height);
-            min-height: 100vh;
-            display: flex; flex-direction: column;
-        }
-        .page-content { padding: 1.5rem; flex: 1; }
+        /* Feedback-Kategorie-Badges */
+        .cat-badge    { font-size:.65rem; padding:.15rem .45rem; border-radius:999px; font-weight:600; display:inline-block; }
+        .cat-bug      { background:rgba(239,68,68,.15);   color:#fca5a5; }
+        .cat-feature  { background:rgba(37,99,235,.15);   color:#93c5fd; }
+        .cat-praise   { background:rgba(16,185,129,.15);  color:#6ee7b7; }
+        .cat-other    { background:rgba(100,116,139,.15); color:#94a3b8; }
 
-        /* Cards */
-        .card { border: 1px solid #334155; background: #1e293b; }
-        .card-header { background: rgba(255,255,255,.03); border-bottom: 1px solid #334155; }
+        /* Rechnungs-Status-Badges */
+        .badge-inv           { font-size:.7rem; padding:.25rem .6rem; border-radius:1rem; font-weight:700; display:inline-block; }
+        .badge-inv-draft     { background:#1e293b; color:#64748b; border:1px solid #334155; }
+        .badge-inv-open      { background:#0c2a4a; color:#7dd3fc; }
+        .badge-inv-paid      { background:#064e3b; color:#6ee7b7; }
+        .badge-inv-overdue   { background:#3b1a08; color:#fb923c; }
+        .badge-inv-cancelled { background:#1c1c1c; color:#94a3b8; }
+        .finalized-badge     { display:inline-flex; align-items:center; gap:.35rem; background:rgba(16,185,129,.1); border:1px solid rgba(16,185,129,.3); color:#34d399; border-radius:.5rem; padding:.25rem .75rem; font-size:.75rem; font-weight:600; }
 
-        /* Stat cards */
-        .stat-card { border-radius: .75rem; padding: 1.25rem 1.5rem; }
-        .stat-value { font-size: 2rem; font-weight: 700; line-height: 1; }
-        .stat-label { font-size: .8rem; color: #94a3b8; margin-top: .25rem; }
+        /* Notification items */
+        .notif-item { background:var(--bg-card,#1e293b); border:1px solid var(--bg-elevated,#334155); border-radius:.75rem; padding:1rem 1.25rem; margin-bottom:.5rem; transition:border-color .15s; display:flex; align-items:flex-start; gap:1rem; }
+        .notif-item.unread { border-left:3px solid #2563eb; }
+        .notif-icon { width:2.5rem; height:2.5rem; border-radius:.5rem; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:1rem; }
+        .notif-type-new_tenant   { background:rgba(16,185,129,.12); color:#34d399; }
+        .notif-type-payment      { background:rgba(37,99,235,.12);  color:#60a5fa; }
+        .notif-type-overdue      { background:rgba(239,68,68,.12);  color:#f87171; }
+        .notif-type-trial_expiry { background:rgba(245,158,11,.12); color:#fbbf24; }
+        .notif-type-system_update{ background:rgba(139,92,246,.12); color:#c4b5fd; }
+        .notif-type-default      { background:rgba(100,116,139,.12);color:#94a3b8; }
 
-        /* Badges */
-        .badge-active    { background: #064e3b; color: #6ee7b7; }
-        .badge-trial     { background: #2e1065; color: #c4b5fd; }
-        .badge-pending   { background: #3b1a08; color: #fdba74; }
-        .badge-suspended { background: #1f1635; color: #a78bfa; }
-        .badge-cancelled { background: #1c1c1c; color: #94a3b8; }
-        .badge-paused    { background: #0c2a4a; color: #7dd3fc; }
+        /* Activity log action badges */
+        .action-badge { display:inline-block; padding:.15rem .5rem; border-radius:.3rem; font-size:.7rem; font-weight:600; }
+        .action-settings  { background:rgba(37,99,235,.12); color:#60a5fa; }
+        .action-tenant    { background:rgba(16,185,129,.12); color:#34d399; }
+        .action-invoice   { background:rgba(245,158,11,.12); color:#fbbf24; }
+        .action-system    { background:rgba(139,92,246,.12); color:#c4b5fd; }
+        .action-auth      { background:rgba(239,68,68,.12);  color:#f87171; }
+        .action-default   { background:rgba(100,116,139,.12);color:#94a3b8; }
 
-        /* Table */
-        .table { color: #e2e8f0; }
-        .table thead th { color: #94a3b8; border-color: #334155; font-weight: 500; font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
-        .table td { border-color: #1e293b; vertical-align: middle; }
-        .table tbody tr:hover { background: rgba(255,255,255,.02); }
+        /* Version badges (updates page) */
+        .v-badge          { display:inline-flex; align-items:center; gap:.4rem; padding:.35rem .9rem; border-radius:2rem; font-size:.8rem; font-weight:700; }
+        .v-badge-current  { background:rgba(37,99,235,.15);  color:#60a5fa; border:1px solid rgba(37,99,235,.3); }
+        .v-badge-new      { background:rgba(16,185,129,.15); color:#34d399; border:1px solid rgba(16,185,129,.3); }
+        .v-badge-uptodate { background:rgba(100,116,139,.15);color:#94a3b8; border:1px solid rgba(100,116,139,.3); }
 
-        /* Forms */
-        .form-control, .form-select {
-            background: #0f172a;
-            border-color: #334155;
-            color: #e2e8f0;
-        }
-        .form-control:focus, .form-select:focus {
-            background: #0f172a;
-            border-color: var(--saas-primary);
-            color: #e2e8f0;
-            box-shadow: 0 0 0 3px rgba(37,99,235,.15);
-        }
-        .form-label { color: #94a3b8; font-size: .875rem; font-weight: 500; }
+        /* Release / Changelog cards */
+        .release-body { background:#0f172a; border-radius:.5rem; padding:1rem; font-size:.825rem; color:#94a3b8; line-height:1.7; white-space:pre-wrap; margin-top:.75rem; overflow-y:auto; }
 
-        /* Alerts */
-        .alert { border-radius: .5rem; }
+        /* Settings sidebar nav */
+        .settings-nav .nav-link { color:#94a3b8; border-radius:.5rem; padding:.5rem 1rem; font-size:.875rem; transition:all .15s; }
+        .settings-nav .nav-link:hover { color:#e2e8f0; background:rgba(255,255,255,.04); }
+        .settings-nav .nav-link.active { color:#fff; background:rgba(37,99,235,.18); font-weight:600; }
+        .settings-nav .nav-link i { width:1.2rem; text-align:center; }
 
-        /* Responsive */
-        @media (max-width: 768px) {
-            .sidebar { transform: translateX(-100%); top: var(--saas-topbar-height); }
-            .sidebar.open { transform: translateX(0); }
-            .main-content { margin-left: 0; }
+        /* Setup steps */
+        .ps-step { display:flex; gap:.875rem; margin-bottom:1rem; align-items:flex-start; }
+        .ps-step-num { width:1.6rem; height:1.6rem; background:rgba(37,99,235,.15); border:1px solid rgba(37,99,235,.5); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.72rem; font-weight:800; color:#60a5fa; flex-shrink:0; margin-top:.05rem; }
+        .ps-step-content { font-size:.82rem; color:#94a3b8; line-height:1.6; }
+        .ps-step-content strong { color:#e2e8f0; }
+        .ps-step-content code { background:#1e293b; border:1px solid #334155; border-radius:.3rem; padding:.1rem .35rem; font-family:monospace; font-size:.8rem; color:#7dd3fc; }
+
+        /* Code / Cron blocks */
+        .code-block { background:#0a0f1a; border:1px solid rgba(37,99,235,.3); border-radius:.6rem; padding:1rem 1.25rem; font-family:monospace; font-size:.8rem; color:#7dd3fc; line-height:1.8; overflow-x:auto; }
+        .code-block .comment { color:#475569; }
+        .code-block .cmd { color:#86efac; }
+
+        /* Payment provider status badges + test results */
+        .ps-badge { font-size:.65rem; padding:.2rem .55rem; border-radius:999px; font-weight:700; letter-spacing:.03em; }
+        .ps-badge-on  { background:rgba(34,197,94,.15);  color:#86efac; }
+        .ps-badge-off { background:rgba(100,116,139,.15); color:#94a3b8; }
+        .test-result { font-size:.78rem; margin-top:.5rem; padding:.4rem .75rem; border-radius:.4rem; display:none; }
+        .test-result.ok  { background:rgba(34,197,94,.1);  color:#86efac; border:1px solid rgba(34,197,94,.2); }
+        .test-result.err { background:rgba(239,68,68,.1);  color:#fca5a5; border:1px solid rgba(239,68,68,.2); }
+
+        /* Subheader override: consistent padding */
+        .subheader { padding: .75rem 1.5rem; }
+        .page-inner { padding: 1.25rem 1.5rem 2rem; }
+
+        /* Sticky header: stays at top on scroll, no layout disruption */
+        .app-header {
+            position: sticky;
+            top: 0;
+            z-index: 1020;
         }
     </style>
     {% block styles %}{% endblock %}
@@ -159,239 +130,487 @@
 <body>
 
 {% block body %}
-<header class="topbar">
-    <div class="d-flex align-items-center gap-3">
-        <button class="btn btn-sm btn-outline-secondary d-md-none" onclick="document.getElementById('sidebar').classList.toggle('open')">
-            <i class="bi bi-list"></i>
-        </button>
-        <a href="/admin" style="text-decoration:none;display:flex;align-items:center;gap:.5rem;">
-            <span style="font-weight:700;font-size:1rem;color:#fff;">Thera<span style="color:var(--saas-primary);">Pano</span></span>
-        </a>
-        <h6 class="mb-0 fw-semibold ms-2 d-none d-md-block" style="color:#94a3b8;font-size:.85rem;">
-            {{ (page_title is defined and page_title) ? '/ ' ~ page_title : '' }}
-        </h6>
-    </div>
-    <div class="d-flex align-items-center gap-2">
+<div class="app-wrap">
 
-        {# ── Update-Badge ───────────────────────────────────── #}
-        <a href="/admin/updates" id="topbar-update-btn" class="btn btn-sm btn-outline-secondary position-relative" style="display:none;" title="Update verfügbar">
-            <i class="bi bi-arrow-repeat"></i>
-            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill" style="background:#22c55e;font-size:.6rem;">NEU</span>
-        </a>
+    {# ── App Header ──────────────────────────────────────────────────────── #}
+    <header class="app-header">
+        <div class="d-flex flex-grow-1 w-100 me-auto align-items-center">
 
-        {# ── Benachrichtigungs-Glocke ────────────────────────── #}
-        <div class="dropdown">
-            <button class="btn btn-sm btn-outline-secondary position-relative" id="notifDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false" title="Benachrichtigungen">
-                <i class="bi bi-bell"></i>
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notif-badge" style="font-size:.6rem;display:none;"></span>
-            </button>
-            <div class="dropdown-menu dropdown-menu-end p-0" style="width:340px;background:#1e293b;border:1px solid #334155;border-radius:.75rem;overflow:hidden;" id="notif-dropdown">
-                <div style="padding:.75rem 1rem;border-bottom:1px solid #334155;display:flex;align-items:center;justify-content:space-between;">
-                    <span style="font-weight:600;font-size:.875rem;color:#e2e8f0;">Benachrichtigungen</span>
-                    <a href="/admin/notifications" style="font-size:.75rem;color:#60a5fa;">Alle anzeigen</a>
-                </div>
-                <div id="notif-list" style="max-height:320px;overflow-y:auto;">
-                    <div style="padding:2rem;text-align:center;color:#475569;font-size:.8rem;">
-                        <i class="bi bi-bell-slash" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>Keine neuen Benachrichtigungen
+            {# App-Logo (sichtbar in der Header-Leiste) #}
+            <a href="/admin" class="app-logo flex-shrink-0">
+                <svg class="custom-logo">
+                    <use href="/sa/img/app-logo.svg#custom-logo"></use>
+                </svg>
+                <div class="logo-backdrop">
+                    <div class="blobs">
+                        <svg viewBox="0 0 1200 1200">
+                            <g class="blob blob-1"><path d="M 100 600 q 0 -700, 500 -500 t 500 500 t -500 500 T 100 600 z"/></g>
+                            <g class="blob blob-2"><path d="M 100 600 q -50 -400, 500 -500 t 450 550 t -500 500 T 100 600 z"/></g>
+                            <g class="blob blob-3"><path d="M 100 600 q 0 -400, 500 -500 t 400 500 t -500 500 T 100 600 z"/></g>
+                            <g class="blob blob-4"><path d="M 150 600 q 0 -600, 500 -500 t 500 550 t -500 500 T 150 600 z"/></g>
+                            <g class="blob blob-1 alt"><path d="M 150 600 q 0 -600, 500 -500 t 500 550 t -500 500 T 150 600 z"/></g>
+                            <g class="blob blob-2 alt"><path d="M 100 600 q 100 -600, 500 -500 t 400 500 t -500 500 T 100 600 z"/></g>
+                            <g class="blob blob-3 alt"><path d="M 100 600 q 0 -400, 500 -500 t 400 500 t -500 500 T 100 600 z"/></g>
+                            <g class="blob blob-4 alt"><path d="M 150 600 q 0 -600, 500 -500 t 500 550 t -500 500 T 150 600 z"/></g>
+                        </svg>
                     </div>
                 </div>
-                <div style="padding:.5rem 1rem;border-top:1px solid #334155;" id="notif-footer">
-                    <form method="POST" action="/admin/notifications/mark-all-read" style="margin:0;">
-                        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
-                        <button type="submit" class="btn btn-sm btn-outline-secondary w-100" style="font-size:.75rem;"><i class="bi bi-check2-all me-1"></i>Alle als gelesen markieren</button>
-                    </form>
+            </a>
+
+            {# Mobile hamburger #}
+            <button class="mobile-menu-icon me-2 d-flex d-lg-none flex-shrink-0"
+                    data-action="toggle-swap" data-toggleclass="app-mobile-menu-open" aria-label="Menü">
+                <svg class="sa-icon"><use href="/sa/icons/sprite.svg#menu"></use></svg>
+            </button>
+
+            {# Collapse sidebar (desktop) #}
+            <button type="button" class="collapse-icon me-3 d-none d-lg-inline-flex"
+                    data-action="toggle" data-class="set-nav-minified" aria-label="Navigation minimieren">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 5 8">
+                    <polygon fill="#878787" points="4.5,1 3.8,0.2 0,4 3.8,7.8 4.5,7 1.5,4"/>
+                </svg>
+            </button>
+
+        </div>
+
+        {# Update-Hinweis #}
+        <a href="/admin/updates" id="topbar-update-btn" class="btn btn-system me-1 position-relative" style="display:none;" title="Update verfügbar">
+            <span class="badge badge-icon pos-top pos-end bg-success" style="font-size:.5rem;">NEU</span>
+            <svg class="sa-icon"><use href="/sa/icons/sprite.svg#refresh-cw"></use></svg>
+        </a>
+
+        {# Benachrichtigungen #}
+        <button type="button" class="btn btn-system dropdown-toggle no-arrow"
+                data-bs-toggle="dropdown" aria-expanded="false" aria-label="Benachrichtigungen">
+            <span class="badge badge-icon pos-top pos-end bg-danger" id="notif-badge" style="display:none;font-size:.5rem;"></span>
+            <svg class="sa-icon sa-icon-2x"><use href="/sa/icons/sprite.svg#bell"></use></svg>
+        </button>
+        <div class="dropdown-menu dropdown-menu-animated dropdown-xl dropdown-menu-end p-0">
+            <div class="notification-header rounded-top mb-2">
+                <h4 class="m-0">Benachrichtigungen
+                    <small class="mb-0 opacity-80">TheraPano Admin</small>
+                </h4>
+            </div>
+            <div class="custom-scroll" style="max-height:300px;" id="notif-list">
+                <div class="d-flex flex-column align-items-center justify-content-center p-4">
+                    <svg class="sa-icon sa-icon-5x sa-icon-primary">
+                        <use href="/sa/icons/sprite.svg#bell"></use>
+                    </svg>
+                    <span class="mt-2 fs-sm text-muted">Keine neuen Benachrichtigungen</span>
                 </div>
             </div>
+            <div class="py-2 px-3 rounded-bottom border-top" id="notif-footer" style="display:none;">
+                <form method="POST" action="/admin/notifications/mark-all-read">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary w-100 fs-xs">
+                        Alle als gelesen markieren
+                    </button>
+                </form>
+            </div>
         </div>
 
-        {# ── Einstellungen ────────────────────────────────────── #}
-        <a href="/admin/settings" class="btn btn-sm btn-outline-secondary" title="Einstellungen">
-            <i class="bi bi-gear"></i>
-        </a>
+        {# Einstellungen-Drawer #}
+        <button type="button" class="btn btn-system hidden-mobile"
+                data-action="toggle-swap" data-toggleclass="open" data-target="aside.js-drawer-settings"
+                aria-label="Einstellungen">
+            <svg class="sa-icon sa-icon-2x"><use href="/sa/icons/sprite.svg#settings"></use></svg>
+        </button>
 
-        {# ── User-Avatar ──────────────────────────────────────── #}
-        <div style="width:2rem;height:2rem;background:var(--saas-primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:#fff;flex-shrink:0;" title="{{ auth_user ?? 'Admin' }} ({{ auth_role ?? '' }})">
-            {{ (auth_user ?? 'A')|slice(0,1)|upper }}
-        </div>
-    </div>
-</header>
+        {# Dark/Light #}
+        <button type="button" class="btn btn-system" data-action="toggle-theme" aria-label="Dark Mode">
+            <svg class="sa-icon sa-icon-2x sa-mode-light"><use href="/sa/icons/sprite.svg#sun"></use></svg>
+            <svg class="sa-icon sa-icon-2x sa-mode-dark"><use href="/sa/icons/sprite.svg#moon"></use></svg>
+        </button>
 
-<div class="sidebar" id="sidebar">
-    <a href="/admin" class="sidebar-brand">
-        <h5>Thera<span>Pano</span></h5>
-        <small style="color:#64748b;font-size:.7rem;">Verwaltungsplattform</small>
-    </a>
-
-    <nav class="sidebar-nav">
-        <div class="sidebar-section">Übersicht</div>
-        <a href="/admin" class="sidebar-link {% if active_nav == 'dashboard' %}active{% endif %}">
-            <i class="bi bi-speedometer2"></i> Dashboard
-        </a>
-
-        <div class="sidebar-section">Verwaltung</div>
-        <a href="/admin/tenants" class="sidebar-link {% if active_nav == 'tenants' %}active{% endif %}">
-            <i class="bi bi-building"></i> Praxen
-        </a>
-        <a href="/admin/plans" class="sidebar-link {% if active_nav == 'plans' %}active{% endif %}">
-            <i class="bi bi-collection"></i> Abo-Pläne
-        </a>
-        <a href="/admin/invoices" class="sidebar-link {% if active_nav == 'invoices' %}active{% endif %}">
-            <i class="bi bi-receipt"></i> Rechnungen
-        </a>
-        <a href="/admin/migration" class="sidebar-link {% if active_nav == 'migration' %}active{% endif %}">
-            <i class="bi bi-database-up"></i> Daten-Import
-        </a>
-
-        <div class="sidebar-section">Rechtliches</div>
-        <a href="/admin/legal" class="sidebar-link {% if active_nav == 'legal' %}active{% endif %}">
-            <i class="bi bi-file-earmark-text"></i> Dokumente
-        </a>
-
-        <div class="sidebar-section">System</div>
-        <a href="/admin/settings" class="sidebar-link {% if active_nav == 'settings' %}active{% endif %}">
-            <i class="bi bi-gear"></i> Einstellungen
-        </a>
-        <a href="/admin/payment-settings" class="sidebar-link {% if active_nav == 'payment_settings' %}active{% endif %}">
-            <i class="bi bi-credit-card-2-front"></i> Zahlungen
-        </a>
-        <a href="/admin/google-settings" class="sidebar-link {% if active_nav == 'google_settings' %}active{% endif %}">
-            <i class="bi bi-google"></i> Google Kalender API
-        </a>
-        <a href="/admin/praxis-cron" class="sidebar-link {% if active_nav == 'praxis_cron' %}active{% endif %}">
-            <i class="bi bi-clock"></i> Praxis Cronjobs
-        </a>
-        <a href="/admin/feedback" class="sidebar-link {% if active_nav == 'feedback' %}active{% endif %}">
-            <i class="bi bi-chat-square-text"></i> Feedback
-            {# badge injected by JS #}
-        </a>
-        <a href="/admin/notifications" class="sidebar-link {% if active_nav == 'notifications' %}active{% endif %}" id="sidebar-notif-link">
-            <i class="bi bi-bell"></i> Benachrichtigungen
-            <span class="ms-auto badge bg-primary" id="sidebar-notif-count" style="display:none;font-size:.65rem;"></span>
-        </a>
-        <a href="/admin/updates" class="sidebar-link {% if active_nav == 'updates' %}active{% endif %}" id="sidebar-update-link">
-            <i class="bi bi-arrow-repeat"></i> Updates
-            <span class="ms-auto badge" id="sidebar-update-badge" style="display:none;font-size:.65rem;background:#22c55e;color:#fff;">NEU</span>
-        </a>
-        <a href="/admin/logout" class="sidebar-link" style="color:#f87171;margin-top:auto;">
-            <i class="bi bi-box-arrow-left"></i> Abmelden
-        </a>
-    </nav>
-
-    <div class="sidebar-footer">
-        <div style="display:flex;align-items:center;gap:.5rem;">
-            <div style="width:1.75rem;height:1.75rem;background:var(--saas-primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff;flex-shrink:0;">
+        {# Profil-Dropdown #}
+        <button type="button" data-bs-toggle="dropdown"
+                class="btn-system bg-transparent d-flex flex-shrink-0 align-items-center justify-content-center"
+                style="border:none;cursor:pointer;" aria-label="Profil">
+            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center fw-700"
+                 style="width:2rem;height:2rem;font-size:.75rem;color:#fff;">
                 {{ (auth_user ?? 'A')|slice(0,1)|upper }}
             </div>
-            <div>
-                <div style="color:#e2e8f0;font-size:.8rem;font-weight:600;">{{ (auth_user is defined and auth_user) ? auth_user : 'Admin' }}</div>
-                <div style="color:#475569;font-size:.7rem;">{{ (auth_role is defined and auth_role) ? auth_role : '' }}</div>
+        </button>
+        <div class="dropdown-menu dropdown-menu-animated dropdown-menu-end">
+            <div class="notification-header rounded-top mb-2">
+                <div class="info-card-text">
+                    <div class="fs-lg fw-500">{{ auth_user ?? 'Admin' }}</div>
+                    <span class="opacity-80 fs-sm">{{ auth_role ?? 'Administrator' }}</span>
+                </div>
+            </div>
+            <div class="dropdown-divider m-0"></div>
+            <a href="/admin/settings" class="dropdown-item">
+                <svg class="sa-icon me-2"><use href="/sa/icons/sprite.svg#settings"></use></svg>
+                Einstellungen
+            </a>
+            <div class="dropdown-divider m-0"></div>
+            <a href="/admin/logout" class="dropdown-item text-danger">
+                <svg class="sa-icon me-2"><use href="/sa/icons/sprite.svg#log-out"></use></svg>
+                Abmelden
+            </a>
+        </div>
+    </header>
+
+    {# ── Sidebar ─────────────────────────────────────────────────────────── #}
+    <aside class="app-sidebar d-flex flex-column">
+
+        <a href="/admin" class="app-logo flex-shrink-0">
+            <svg class="custom-logo"><use href="/sa/img/app-logo.svg#custom-logo"></use></svg>
+            <div class="logo-backdrop">
+                <div class="blobs">
+                    <svg viewBox="0 0 1200 1200">
+                        <g class="blob blob-1"><path d="M 100 600 q 0 -700, 500 -500 t 500 500 t -500 500 T 100 600 z"/></g>
+                        <g class="blob blob-2"><path d="M 100 600 q -50 -400, 500 -500 t 450 550 t -500 500 T 100 600 z"/></g>
+                        <g class="blob blob-3"><path d="M 100 600 q 0 -400, 500 -500 t 400 500 t -500 500 T 100 600 z"/></g>
+                        <g class="blob blob-4"><path d="M 150 600 q 0 -600, 500 -500 t 500 550 t -500 500 T 150 600 z"/></g>
+                    </svg>
+                </div>
+            </div>
+        </a>
+
+        <form class="app-menu-filter-container px-4">
+            <input type="text" class="form-control" id="searchInput"
+                   placeholder="Suchen…" autocomplete="off">
+            <div class="js-filter-message nav-filter-msg badge bg-secondary btn"
+                 data-bs-toggle="tooltip" data-bs-placement="top"
+                 data-bs-original-title="Filter löschen"></div>
+        </form>
+
+        <nav id="js-primary-nav" class="primary-nav flex-grow-1 custom-scroll">
+            <ul id="js-nav-menu" class="nav-menu">
+
+                <li class="nav-title"><span>Übersicht</span></li>
+                <li>
+                    <a href="/admin">
+                        <svg class="sa-icon"><use href="/sa/icons/sprite.svg#home"></use></svg>
+                        <span class="nav-link-text">Dashboard</span>
+                    </a>
+                </li>
+
+                <li class="nav-title"><span>Verwaltung</span></li>
+                <li>
+                    <a href="/admin/tenants">
+                        <svg class="sa-icon"><use href="/sa/icons/sprite.svg#briefcase"></use></svg>
+                        <span class="nav-link-text">Praxen</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/plans">
+                        <svg class="sa-icon"><use href="/sa/icons/sprite.svg#layers"></use></svg>
+                        <span class="nav-link-text">Abo-Pläne</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/invoices">
+                        <svg class="sa-icon"><use href="/sa/icons/sprite.svg#file-text"></use></svg>
+                        <span class="nav-link-text">Rechnungen</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/revenue">
+                        <svg class="sa-icon"><use href="/sa/icons/sprite.svg#trending-up"></use></svg>
+                        <span class="nav-link-text">Umsatz & Revenue</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/migration">
+                        <svg class="sa-icon"><use href="/sa/icons/sprite.svg#database"></use></svg>
+                        <span class="nav-link-text">Daten-Import</span>
+                    </a>
+                </li>
+
+                <li class="nav-title"><span>Kommunikation</span></li>
+                <li>
+                    <a href="/admin/feedback">
+                        <svg class="sa-icon"><use href="/sa/icons/sprite.svg#message-square"></use></svg>
+                        <span class="nav-link-text">
+                            Feedback
+                            <span class="badge bg-danger badge-end" id="nav-feedback-badge" style="display:none;"></span>
+                        </span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/notifications">
+                        <svg class="sa-icon"><use href="/sa/icons/sprite.svg#bell"></use></svg>
+                        <span class="nav-link-text">
+                            Benachrichtigungen
+                            <span class="badge bg-primary badge-end" id="sidebar-notif-count" style="display:none;"></span>
+                        </span>
+                    </a>
+                </li>
+
+                <li class="nav-title"><span>Rechtliches</span></li>
+                <li>
+                    <a href="/admin/legal">
+                        <svg class="sa-icon"><use href="/sa/icons/sprite.svg#file-text"></use></svg>
+                        <span class="nav-link-text">Dokumente</span>
+                    </a>
+                </li>
+
+                <li class="nav-title"><span>System</span></li>
+                <li>
+                    <a href="/admin/settings">
+                        <svg class="sa-icon"><use href="/sa/icons/sprite.svg#settings"></use></svg>
+                        <span class="nav-link-text">Einstellungen</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/payment-settings">
+                        <svg class="sa-icon"><use href="/sa/icons/sprite.svg#credit-card"></use></svg>
+                        <span class="nav-link-text">Zahlungen</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/google-settings">
+                        <svg class="sa-icon"><use href="/sa/icons/sprite.svg#calendar"></use></svg>
+                        <span class="nav-link-text">Google Kalender API</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/praxis-cron">
+                        <svg class="sa-icon"><use href="/sa/icons/sprite.svg#clock"></use></svg>
+                        <span class="nav-link-text">Praxis-Cronjobs</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/updates" id="sidebar-update-link">
+                        <svg class="sa-icon"><use href="/sa/icons/sprite.svg#refresh-cw"></use></svg>
+                        <span class="nav-link-text">
+                            Updates
+                            <span class="badge bg-success badge-end" id="sidebar-update-badge" style="display:none;">NEU</span>
+                        </span>
+                    </a>
+                </li>
+
+                <li class="nav-title"><span>Konto</span></li>
+                <li>
+                    <a href="/admin/logout">
+                        <svg class="sa-icon sa-icon-danger"><use href="/sa/icons/sprite.svg#log-out"></use></svg>
+                        <span class="nav-link-text" style="color:var(--bs-danger);">Abmelden</span>
+                    </a>
+                </li>
+
+            </ul>
+        </nav>
+
+        {# Sidebar-Footer: eingeloggter User #}
+        <div class="d-flex align-items-center gap-2 px-3 py-2 border-top">
+            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 fw-700"
+                 style="width:2rem;height:2rem;font-size:.7rem;color:#fff;">
+                {{ (auth_user ?? 'A')|slice(0,1)|upper }}
+            </div>
+            <div class="overflow-hidden">
+                <div class="fw-600 fs-sm text-truncate">{{ auth_user ?? 'Admin' }}</div>
+                <div class="text-muted fs-nano">{{ auth_role ?? '' }}</div>
             </div>
         </div>
-    </div>
-</div>
+    </aside>
 
-<div class="main-content">
-    <div class="page-content">
-        {% if flash_success %}
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="bi bi-check-circle me-2"></i>{{ flash_success }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        {% endif %}
-        {% if flash_error %}
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="bi bi-exclamation-triangle me-2"></i>{{ flash_error }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        {% endif %}
-        {% if flash_info %}
-            <div class="alert alert-info alert-dismissible fade show" role="alert">
-                <i class="bi bi-info-circle me-2"></i>{{ flash_info }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        {% endif %}
+    {# ── Main Content ─────────────────────────────────────────────────────── #}
+    <main class="app-main">
+        <div class="page-wrapper">
 
-        {% block content %}{% endblock %}
-    </div>
-</div>
+            {# Subheader / Page Title #}
+            <div class="subheader">
+                <div class="subheader-block d-flex align-items-center flex-grow-1">
+                    <h4 class="fw-500 mb-0 fs-xl">{{ page_title ?? '' }}</h4>
+                </div>
+                {% block subheader_actions %}{% endblock %}
+            </div>
+
+            {# Page Content #}
+            <div class="page-inner">
+
+                {# Flash Messages #}
+                {% if flash_success %}
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <svg class="sa-icon me-2 align-middle">
+                        <use href="/sa/icons/sprite.svg#check-circle"></use>
+                    </svg>
+                    {{ flash_success }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endif %}
+                {% if flash_error %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <svg class="sa-icon me-2 align-middle">
+                        <use href="/sa/icons/sprite.svg#alert-triangle"></use>
+                    </svg>
+                    {{ flash_error }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endif %}
+                {% if flash_info %}
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    <svg class="sa-icon me-2 align-middle">
+                        <use href="/sa/icons/sprite.svg#info"></use>
+                    </svg>
+                    {{ flash_info }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endif %}
+
+                {% block content %}{% endblock %}
+            </div>
+        </div>
+
+        <footer class="app-footer">
+            <div class="app-footer-content flex-grow-1">
+                TheraPano SaaS Admin &copy; {{ "now"|date("Y") }}
+                &nbsp;·&nbsp; <span class="text-muted fs-nano">Tierphysio Manager 3.0</span>
+            </div>
+        </footer>
+    </main>
+
+    {# ── Settings Drawer ─────────────────────────────────────────────────── #}
+    <aside class="app-drawer js-drawer-settings">
+        <div class="app-drawer-header">
+            <div class="h4 mb-0">Layout-Einstellungen</div>
+            <button type="button" class="btn btn-system ms-auto"
+                    data-action="toggle-swap" data-toggleclass="open" data-target="aside.js-drawer-settings">
+                <svg class="sa-icon sa-icon-2x"><use href="/sa/icons/sprite.svg#x"></use></svg>
+            </button>
+        </div>
+        <div class="custom-scrollbar h-100">
+            <div class="info-container">
+                Layout & Farbthema für TheraPano SaaS Admin anpassen.
+            </div>
+            <div class="mod-status primary-mod" data-prefix="Layout">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="actionHeaderFixed"
+                           data-action="toggle" data-class="set-header-fixed">
+                    <label class="form-check-label" for="actionHeaderFixed">Header fixiert</label>
+                </div>
+                <div class="form-check d-none d-lg-block">
+                    <input class="form-check-input" type="checkbox" id="actionNavFull"
+                           data-action="toggle" data-class="set-nav-full">
+                    <label class="form-check-label" for="actionNavFull">Navigation volle Höhe</label>
+                </div>
+            </div>
+            <div class="mod-status d-none d-lg-block" data-prefix="Navigation">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="actionNavFixed"
+                           data-action="toggle" data-class="set-nav-fixed">
+                    <label class="form-check-label" for="actionNavFixed">Navigation fixiert</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="actionNavMinified"
+                           data-action="toggle" data-class="set-nav-minified">
+                    <label class="form-check-label" for="actionNavMinified">Navigation minimiert</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="darkNavigation"
+                           data-action="toggle" data-class="set-nav-dark" checked>
+                    <label class="form-check-label" for="darkNavigation">Dunkle Navigation</label>
+                </div>
+            </div>
+            <div class="mod-status app-themes" data-prefix="Farbthema">
+                <div class="clickable-boxes">
+                    <input type="radio" id="sa-t0" name="options" data-action="theme-style" data-theme-style="" checked>
+                    <label for="sa-t0" data-prefix="Standard" style="background:linear-gradient(135deg,#FF6A00,#F6A2D5,#4C91BF,#7A8B92);"></label>
+                    <input type="radio" id="sa-t1" name="options" data-action="theme-style" data-theme-style="nebula">
+                    <label for="sa-t1" data-prefix="Nebula" style="background:linear-gradient(135deg,#2a7dbf,#2a9d8f,#766cbc,#f4a261);"></label>
+                    <input type="radio" id="sa-t2" name="options" data-action="theme-style" data-theme-style="night">
+                    <label for="sa-t2" data-prefix="Night" style="background:linear-gradient(135deg,#1e2a47,#2b3654,#363d6c,#717b91);"></label>
+                    <input type="radio" id="sa-t3" name="options" data-action="theme-style" data-theme-style="aurora">
+                    <label for="sa-t3" data-prefix="Aurora" style="background:linear-gradient(135deg,#337e7e,#527a4a,#63279b,#87CEFA);"></label>
+                    <input type="radio" id="sa-t4" name="options" data-action="theme-style" data-theme-style="storm">
+                    <label for="sa-t4" data-prefix="Storm" style="background:linear-gradient(135deg,#2F4F4F,#3B5360,#5A7980,#FFD700);"></label>
+                    <input type="radio" id="sa-t5" name="options" data-action="theme-style" data-theme-style="flare">
+                    <label for="sa-t5" data-prefix="Flare" style="background:linear-gradient(135deg,#FF4500,#FF6347,#D32F2F,#B71C1C);"></label>
+                </div>
+            </div>
+            <div class="p-3">
+                <button type="button" onclick="appDOM.resetStyle();"
+                        class="btn btn-outline-danger w-100">
+                    <i class="sa sa-reload align-base me-1"></i> Zurücksetzen
+                </button>
+            </div>
+        </div>
+    </aside>
+    <div class="backdrop" data-action="toggle-swap"
+         data-toggleclass="open" data-target="aside.js-drawer-settings"></div>
+
+</div>{# end .app-wrap #}
 {% endblock %}
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+{# ── SmartAdmin Core Scripts ──────────────────────────────────────────────── #}
+<script src="/sa/plugins/bootstrap/bootstrap.bundle.min.js"></script>
+<script src="/sa/scripts/core/smartNavigation.js"></script>
+<script src="/sa/scripts/core/smartFilter.js"></script>
+<script src="/sa/scripts/core/smartSlimscroll.js"></script>
+<script src="/sa/plugins/sortablejs/Sortable.min.js"></script>
+<script src="/sa/plugins/waves/waves.min.js"></script>
+<script src="/sa/scripts/core/smartApp.js"></script>
+
 {% block scripts %}{% endblock %}
 
 <script>
-// ── Benachrichtigungs-Polling ─────────────────────────────────────────────
-const NOTIF_ICONS = {
-    new_tenant:   'bi-building-add',
-    payment:      'bi-credit-card-2-front',
-    overdue:      'bi-exclamation-triangle',
-    trial_expiry: 'bi-hourglass-split',
-    system_update:'bi-arrow-repeat',
-};
+(function() {
+    'use strict';
 
-async function loadNotifications() {
-    try {
-        const res  = await fetch('/admin/notifications/api/unread', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-        if (!res.ok) return;
-        const data = await res.json();
+    // ── Benachrichtigungen ─────────────────────────────────────────────────
+    async function loadNotifications() {
+        try {
+            const res  = await fetch('/admin/notifications/api/unread', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!res.ok) return;
+            const data = await res.json();
 
-        const badge       = document.getElementById('notif-badge');
-        const sidebarCount= document.getElementById('sidebar-notif-count');
-        const list        = document.getElementById('notif-list');
-        const footer      = document.getElementById('notif-footer');
+            const badge        = document.getElementById('notif-badge');
+            const sidebarCount = document.getElementById('sidebar-notif-count');
+            const list         = document.getElementById('notif-list');
+            const footer       = document.getElementById('notif-footer');
 
-        if (data.count > 0) {
-            badge.textContent  = data.count > 99 ? '99+' : data.count;
-            badge.style.display = '';
-            if (sidebarCount) { sidebarCount.textContent = data.count; sidebarCount.style.display = ''; }
+            if (data.count > 0) {
+                badge.textContent   = data.count > 99 ? '99+' : data.count;
+                badge.style.display = '';
+                if (sidebarCount) { sidebarCount.textContent = data.count; sidebarCount.style.display = ''; }
 
-            if (list && data.items && data.items.length > 0) {
-                list.innerHTML = data.items.map(n => {
-                    const icon = NOTIF_ICONS[n.type] ?? 'bi-bell';
-                    const time = new Date(n.created_at).toLocaleString('de-DE', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
-                    return `<div style="padding:.75rem 1rem;border-bottom:1px solid #0f172a;display:flex;gap:.75rem;align-items:flex-start;">
-                        <div style="width:2rem;height:2rem;border-radius:.4rem;background:rgba(37,99,235,.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#60a5fa;font-size:.85rem;">
-                            <i class="bi ${icon}"></i>
-                        </div>
-                        <div style="flex:1;min-width:0;">
-                            <div style="font-size:.8rem;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${n.title}</div>
-                            <div style="font-size:.72rem;color:#64748b;margin-top:.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${n.message}</div>
-                            <div style="font-size:.68rem;color:#475569;margin-top:.2rem;">${time}</div>
-                        </div>
-                    </div>`;
-                }).join('');
-                if (footer) footer.style.display = '';
+                if (list && data.items?.length > 0) {
+                    list.innerHTML = `<ul class="notification">${data.items.map(n => {
+                        const time = new Date(n.created_at).toLocaleString('de-DE', {
+                            day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                        });
+                        return `<li class="unread alert alert-dismissable">
+                            <div class="d-flex flex-column flex-1">
+                                <span class="name">${n.title}</span>
+                                <span class="msg-a fs-sm">${n.message}</span>
+                                <span class="fs-nano text-muted mt-1">${time}</span>
+                            </div>
+                        </li>`;
+                    }).join('')}</ul>`;
+                    if (footer) footer.style.display = '';
+                }
+            } else {
+                badge.style.display = 'none';
+                if (sidebarCount) sidebarCount.style.display = 'none';
             }
-        } else {
-            badge.style.display = 'none';
-            if (sidebarCount) sidebarCount.style.display = 'none';
-            if (list) list.innerHTML = '<div style="padding:2rem;text-align:center;color:#475569;font-size:.8rem;"><i class="bi bi-bell-slash" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>Keine neuen Benachrichtigungen</div>';
-            if (footer) footer.style.display = 'none';
-        }
-    } catch (e) {}
-}
+        } catch (e) {}
+    }
 
-// ── Update-Check ──────────────────────────────────────────────────────────
-async function checkForUpdate() {
-    try {
-        const res  = await fetch('/admin/updates/check', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.has_update) {
-            const btn   = document.getElementById('topbar-update-btn');
-            const badge = document.getElementById('sidebar-update-badge');
-            if (btn)   btn.style.display = '';
-            if (badge) badge.style.display = '';
-        }
-    } catch (e) {}
-}
+    // ── Update-Check ──────────────────────────────────────────────────────
+    async function checkForUpdate() {
+        try {
+            const res  = await fetch('/admin/updates/check', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.has_update) {
+                const btn   = document.getElementById('topbar-update-btn');
+                const badge = document.getElementById('sidebar-update-badge');
+                if (btn)   btn.style.display = '';
+                if (badge) badge.style.display = '';
+            }
+        } catch (e) {}
+    }
 
-// Sofort + alle 60s Benachrichtigungen laden
-loadNotifications();
-setInterval(loadNotifications, 60000);
-
-// Update-Check einmal beim Laden (mit Verzögerung)
-setTimeout(checkForUpdate, 4000);
+    loadNotifications();
+    setInterval(loadNotifications, 60000);
+    setTimeout(checkForUpdate, 4000);
+})();
 </script>
 </body>
 </html>

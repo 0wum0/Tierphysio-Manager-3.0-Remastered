@@ -1,18 +1,4 @@
 {% extends 'layouts/base.twig' %}
-{% set active_nav = 'invoices' %}
-
-{% block styles %}
-<style>
-.pos-row td { vertical-align:middle; }
-.pos-row .form-control, .pos-row .form-select { background:#0f172a; border-color:#334155; color:#e2e8f0; }
-.pos-row .form-control:focus, .pos-row .form-select:focus { border-color:#2563eb; box-shadow:0 0 0 2px rgba(37,99,235,.15); }
-.totals-box { background:#0f172a; border:1px solid #334155; border-radius:.75rem; padding:1.25rem; }
-.totals-row { display:flex; justify-content:space-between; align-items:center; padding:.35rem 0; font-size:.9rem; }
-.totals-row.gross { border-top:2px solid #334155; margin-top:.5rem; padding-top:.75rem; font-size:1.05rem; font-weight:700; }
-.section-card { background:#1e293b; border:1px solid #334155; border-radius:.75rem; padding:1.5rem; margin-bottom:1.25rem; }
-.section-title { font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#64748b; margin-bottom:1rem; }
-</style>
-{% endblock %}
 
 {% block content %}
 <div class="d-flex align-items-center justify-content-between mb-4">
@@ -20,7 +6,7 @@
 </div>
 
 <form method="POST" action="/admin/invoices" id="invoiceForm">
-    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    {{ csrf_field()|raw }}
 
     <div class="row g-4">
 
@@ -28,8 +14,9 @@
         <div class="col-lg-8">
 
             {# Kundenauswahl #}
-            <div class="section-card">
-                <div class="section-title"><i class="bi bi-person-circle me-1"></i>Kunde</div>
+            <div class="card mb-3">
+                <div class="card-header px-4 py-3 text-muted fs-xs fw-700 text-uppercase" style="letter-spacing:.08em;"><i class="bi bi-person-circle me-1"></i>Kunde</div>
+                <div class="card-body px-4 py-3">
                 <div class="row g-3">
                     <div class="col-12">
                         <label class="form-label">Kunde / Praxis <span class="text-danger">*</span></label>
@@ -43,11 +30,13 @@
                         </select>
                     </div>
                 </div>
+                </div>
             </div>
 
             {# Positionen #}
-            <div class="section-card">
-                <div class="section-title"><i class="bi bi-list-ul me-1"></i>Rechnungspositionen</div>
+            <div class="card mb-3">
+                <div class="card-header px-4 py-3 text-muted fs-xs fw-700 text-uppercase" style="letter-spacing:.08em;"><i class="bi bi-list-ul me-1"></i>Rechnungspositionen</div>
+                <div class="card-body px-4 py-3">
                 <div class="table-responsive">
                     <table class="table mb-3" id="positionsTable">
                         <thead>
@@ -72,7 +61,7 @@
                                         <option value="19" selected>19 %</option>
                                     </select>
                                 </td>
-                                <td class="text-end pos-total" style="white-space:nowrap;color:#e2e8f0;font-weight:600;">0,00 €</td>
+                                <td class="text-end pos-total text-nowrap fw-600">0,00 €</td>
                                 <td><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 remove-pos" tabindex="-1"><i class="bi bi-trash3"></i></button></td>
                             </tr>
                         </tbody>
@@ -81,11 +70,13 @@
                 <button type="button" class="btn btn-sm btn-outline-primary" id="addPosition">
                     <i class="bi bi-plus-lg me-1"></i>Position hinzufügen
                 </button>
+                </div>
             </div>
 
             {# Notizen #}
-            <div class="section-card">
-                <div class="section-title"><i class="bi bi-chat-text me-1"></i>Hinweise & Zahlungsbedingungen</div>
+            <div class="card mb-3">
+                <div class="card-header px-4 py-3 text-muted fs-xs fw-700 text-uppercase" style="letter-spacing:.08em;"><i class="bi bi-chat-text me-1"></i>Hinweise &amp; Zahlungsbedingungen</div>
+                <div class="card-body px-4 py-3">
                 <div class="row g-3">
                     <div class="col-12">
                         <label class="form-label">Hinweis (erscheint auf der Rechnung)</label>
@@ -96,6 +87,7 @@
                         <input type="text" name="payment_terms" class="form-control" placeholder="z.B. Zahlbar innerhalb 14 Tagen ohne Abzug">
                     </div>
                 </div>
+                </div>
             </div>
         </div>
 
@@ -103,8 +95,9 @@
         <div class="col-lg-4">
 
             {# Rechnungsdetails #}
-            <div class="section-card">
-                <div class="section-title"><i class="bi bi-info-circle me-1"></i>Rechnungsdetails</div>
+            <div class="card mb-3">
+                <div class="card-header px-4 py-3 text-muted fs-xs fw-700 text-uppercase" style="letter-spacing:.08em;"><i class="bi bi-info-circle me-1"></i>Rechnungsdetails</div>
+                <div class="card-body px-4 py-3">
                 <div class="d-flex flex-column gap-3">
                     <div>
                         <label class="form-label">Rechnungsnummer</label>
@@ -135,30 +128,25 @@
                         <input type="date" name="due_date" class="form-control" value="{{ due_date }}">
                     </div>
                 </div>
+                </div>
             </div>
 
             {# Summen #}
-            <div class="totals-box mb-3">
-                <div class="totals-row">
-                    <span class="text-secondary">Nettobetrag</span>
-                    <span id="sumNet">0,00 €</span>
-                </div>
-                <div class="totals-row">
-                    <span class="text-secondary">Mehrwertsteuer</span>
-                    <span id="sumTax">0,00 €</span>
-                </div>
-                <div class="totals-row gross">
-                    <span>Gesamtbetrag</span>
-                    <span id="sumGross" style="color:#34d399;">0,00 €</span>
+            <div class="card mb-3">
+                <div class="card-body px-4 py-3">
+                    <div class="d-flex justify-content-between border-bottom py-2 fs-sm"><span class="text-muted">Nettobetrag</span><span id="sumNet">0,00 €</span></div>
+                    <div class="d-flex justify-content-between border-bottom py-2 fs-sm"><span class="text-muted">Mehrwertsteuer</span><span id="sumTax">0,00 €</span></div>
+                    <div class="d-flex justify-content-between pt-3 fw-700 fs-md"><span>Gesamtbetrag</span><span id="sumGross" class="text-success">0,00 €</span></div>
                 </div>
             </div>
 
             {# Aktionen #}
-            <div class="section-card">
-                <div class="section-title"><i class="bi bi-send me-1"></i>Aktionen</div>
+            <div class="card">
+                <div class="card-header px-4 py-3 text-muted fs-xs fw-700 text-uppercase" style="letter-spacing:.08em;"><i class="bi bi-send me-1"></i>Aktionen</div>
+                <div class="card-body px-4 py-3">
                 <div class="form-check mb-3">
                     <input class="form-check-input" type="checkbox" name="_send_email" value="1" id="sendEmailCheck">
-                    <label class="form-check-label text-secondary" for="sendEmailCheck" style="font-size:.875rem;">
+                    <label class="form-check-label text-muted fs-sm" for="sendEmailCheck">
                         Rechnung direkt per E-Mail senden
                     </label>
                 </div>
@@ -167,6 +155,7 @@
                         <i class="bi bi-check-lg me-1"></i>Rechnung erstellen
                     </button>
                     <a href="/admin/invoices" class="btn btn-outline-secondary">Abbrechen</a>
+                </div>
                 </div>
             </div>
         </div>

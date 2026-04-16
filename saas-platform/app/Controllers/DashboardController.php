@@ -10,15 +10,17 @@ use Saas\Core\Session;
 use Saas\Core\Database;
 use Saas\Repositories\TenantRepository;
 use Saas\Repositories\SubscriptionRepository;
+use Saas\Services\SaasPlatformMigrationService;
 
 class DashboardController extends Controller
 {
     public function __construct(
-        View                          $view,
-        Session                       $session,
-        private TenantRepository       $tenantRepo,
-        private SubscriptionRepository $subRepo,
-        private Database               $db
+        View                               $view,
+        Session                            $session,
+        private TenantRepository            $tenantRepo,
+        private SubscriptionRepository      $subRepo,
+        private Database                    $db,
+        private SaasPlatformMigrationService $saasMigrations
     ) {
         parent::__construct($view, $session);
     }
@@ -60,6 +62,12 @@ class DashboardController extends Controller
         // Recent payments
         $recentPayments = $this->getRecentPayments(8);
 
+        $trialExpiring   = $this->getTrialExpiringSoonList(7);
+        $recentActivity  = $this->getRecentActivity(10);
+        $lifecycleStats  = $this->getLifecycleStats();
+        $pendingMig      = $this->saasMigrations->status()['pending'] ?? 0;
+        $revenueThisMonth = $this->getRevenueThisMonth();
+
         $this->render('admin/dashboard.twig', [
             'stats'              => $stats,
             'recent_tenants'     => $recentTenants,
@@ -71,6 +79,11 @@ class DashboardController extends Controller
             'forecast'           => $forecast,
             'top_tenants'        => $topTenants,
             'recent_payments'    => $recentPayments,
+            'trial_expiring'     => $trialExpiring,
+            'recent_activity'    => $recentActivity,
+            'lifecycle_stats'    => $lifecycleStats,
+            'pending_migrations' => $pendingMig,
+            'revenue_this_month' => $revenueThisMonth,
             'page_title'         => 'Dashboard',
         ]);
     }
@@ -252,6 +265,72 @@ class DashboardController extends Controller
             );
         } catch (\Throwable) {
             return [];
+        }
+    }
+
+    private function getTrialExpiringSoonList(int $days = 7): array
+    {
+        try {
+            return $this->db->fetchAll(
+                "SELECT t.id, t.practice_name, t.owner_name, t.email, t.trial_ends_at,
+                        DATEDIFF(t.trial_ends_at, NOW()) AS days_left,
+                        p.name AS plan_name
+                 FROM tenants t
+                 LEFT JOIN plans p ON p.id = t.plan_id
+                 WHERE t.status = 'trial'
+                   AND t.trial_ends_at IS NOT NULL
+                   AND t.trial_ends_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL ? DAY)
+                 ORDER BY t.trial_ends_at ASC",
+                [$days]
+            );
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    private function getRecentActivity(int $limit = 10): array
+    {
+        try {
+            return $this->db->fetchAll(
+                "SELECT * FROM activity_log ORDER BY created_at DESC LIMIT ?",
+                [$limit]
+            );
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    private function getLifecycleStats(): array
+    {
+        try {
+            $rows = $this->db->fetchAll(
+                "SELECT email_key,
+                        COUNT(*) AS total,
+                        SUM(status = 'sent')   AS sent,
+                        SUM(status = 'failed') AS failed
+                 FROM tenant_lifecycle_emails
+                 GROUP BY email_key
+                 ORDER BY FIELD(email_key,'welcome','trial_warning','trial_expired','activated')"
+            );
+            $map = [];
+            foreach ($rows as $r) {
+                $map[$r['email_key']] = $r;
+            }
+            return $map;
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    private function getRevenueThisMonth(): float
+    {
+        try {
+            return round((float)($this->db->fetchColumn(
+                "SELECT COALESCE(SUM(total_amount),0) FROM saas_invoices
+                 WHERE status='paid' AND paid_at >= DATE_FORMAT(NOW(),'%Y-%m-01')"
+            ) ?? 0), 2);
+        } catch (\Throwable) {
+            return 0.0;
         }
     }
 }

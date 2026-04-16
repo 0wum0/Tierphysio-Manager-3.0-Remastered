@@ -1,0 +1,262 @@
+{% extends 'layouts/base.twig' %}
+
+{% block content %}
+
+{# ── Header ─────────────────────────────────────────────────────────────── #}
+<div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+    <div>
+        <h5 class="fw-700 mb-0">Umsatz-Übersicht</h5>
+        <div class="text-muted fs-xs">Nur tatsächlich eingegangene Zahlungen werden als Umsatz gezählt.</div>
+    </div>
+    <button class="btn btn-sm btn-outline-secondary" onclick="refreshKPIs()">
+        <i class="bi bi-arrow-clockwise me-1"></i>Aktualisieren
+    </button>
+</div>
+
+{# ── Tatsächlicher Umsatz ────────────────────────────────────────────────── #}
+<div class="d-flex align-items-center gap-2 mb-2 mt-1">
+    <svg class="sa-icon sa-icon-success"><use href="/sa/icons/sprite.svg#check-circle"></use></svg>
+    <span class="text-muted fs-xs fw-700 text-uppercase" style="letter-spacing:.08em;">Tatsächlicher Umsatz – nur bezahlte Rechnungen</span>
+</div>
+<div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+        <div class="card h-100">
+            <div class="card-body p-3">
+                <span class="badge bg-success bg-opacity-15 text-success fs-nano mb-2 d-inline-block">Bezahlt</span>
+                <div class="text-muted fs-xs fw-700 text-uppercase mb-1" style="letter-spacing:.06em;">Umsatz diesen Monat</div>
+                <div class="h3 fw-700 mb-0 text-success" id="kpi-month">{{ month_rev|number_format(2, ',', '.') }} €</div>
+                <div class="text-muted fs-xs mt-1">Eingegangene Zahlungen im {{ "now"|date('F Y') }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100">
+            <div class="card-body p-3">
+                <span class="badge bg-success bg-opacity-15 text-success fs-nano mb-2 d-inline-block">Bezahlt</span>
+                <div class="text-muted fs-xs fw-700 text-uppercase mb-1" style="letter-spacing:.06em;">Zahlende Kunden</div>
+                <div class="h3 fw-700 mb-0" id="kpi-active">{{ active }}</div>
+                <div class="text-muted fs-xs mt-1">Aktive Abonnements · {{ churned }} Kündigungen diesen Monat</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100">
+            <div class="card-body p-3">
+                <span class="badge bg-success bg-opacity-15 text-success fs-nano mb-2 d-inline-block">Bezahlt</span>
+                <div class="text-muted fs-xs fw-700 text-uppercase mb-1" style="letter-spacing:.06em;">Ø pro Kunde / Monat</div>
+                <div class="h3 fw-700 mb-0" id="kpi-arpu">{{ arpu|number_format(2, ',', '.') }} €</div>
+                <div class="text-muted fs-xs mt-1">Durchschnittlicher Betrag je zahlendem Kunden</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card h-100">
+            <div class="card-body p-3">
+                <span class="badge bg-secondary bg-opacity-25 text-muted fs-nano mb-2 d-inline-block">Analyse</span>
+                <div class="text-muted fs-xs fw-700 text-uppercase mb-1" style="letter-spacing:.06em;">Trial-zu-Kunde Quote</div>
+                <div class="h3 fw-700 mb-0 {% if conversion >= 20 %}text-success{% elseif conversion >= 10 %}text-warning{% else %}text-danger{% endif %}" id="kpi-conv">
+                    {{ conversion }} %
+                </div>
+                <div class="text-muted fs-xs mt-1">{{ trials }} Testkonten aktiv · Berechnung: 90 Tage</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Möglicher Umsatz / Prognose ─────────────────────────────────────────── #}
+<div class="d-flex align-items-center gap-2 mb-2 mt-2">
+    <svg class="sa-icon sa-icon-info"><use href="/sa/icons/sprite.svg#trending-up"></use></svg>
+    <span class="text-muted fs-xs fw-700 text-uppercase" style="letter-spacing:.08em;">Möglicher Umsatz – Prognose bei gleichbleibenden Abonnements</span>
+</div>
+<div class="row g-3 mb-3">
+    <div class="col-6 col-md-4">
+        <div class="card h-100">
+            <div class="card-body p-3">
+                <span class="badge bg-info bg-opacity-15 text-info fs-nano mb-2 d-inline-block">Prognose</span>
+                <div class="text-muted fs-xs fw-700 text-uppercase mb-1" style="letter-spacing:.06em;">Möglicher Monatsumsatz</div>
+                <div class="h3 fw-700 mb-0 text-info" id="kpi-mrr">{{ mrr|number_format(2, ',', '.') }} €</div>
+                <div class="text-muted fs-xs mt-1">Wenn alle {{ active }} aktiven Abos diesen Monat zahlen</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4">
+        <div class="card h-100">
+            <div class="card-body p-3">
+                <span class="badge bg-info bg-opacity-15 text-info fs-nano mb-2 d-inline-block">Prognose</span>
+                <div class="text-muted fs-xs fw-700 text-uppercase mb-1" style="letter-spacing:.06em;">Möglicher Jahresumsatz</div>
+                <div class="h3 fw-700 mb-0 text-info" id="kpi-arr">{{ arr|number_format(2, ',', '.') }} €</div>
+                <div class="text-muted fs-xs mt-1">Hochrechnung: Monatlicher Betrag × 12</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body p-3">
+                <div class="text-muted fs-xs fw-700 text-uppercase mb-2" style="letter-spacing:.06em;">Hinweis</div>
+                <p class="text-muted fs-sm mb-0 lh-base">
+                    Die Prognosewerte basieren auf aktiven Abonnements und zeigen den <strong>maximal möglichen Umsatz</strong>.
+                    Sie sind erst Umsatz, wenn die Zahlung tatsächlich eingegangen ist.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Charts & Details ────────────────────────────────────────────────────── #}
+<div class="d-flex align-items-center gap-2 mb-2 mt-2">
+    <svg class="sa-icon"><use href="/sa/icons/sprite.svg#bar-chart-2"></use></svg>
+    <span class="text-muted fs-xs fw-700 text-uppercase" style="letter-spacing:.08em;">Verlauf &amp; Aufschlüsselung</span>
+</div>
+<div class="row g-3 mb-3">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header px-4 py-3">
+                <span class="fw-600 fs-md">
+                    <svg class="sa-icon me-1"><use href="/sa/icons/sprite.svg#bar-chart-2"></use></svg>
+                    Neukunden &amp; Abgänge pro Monat (12 Monate)
+                </span>
+            </div>
+            <div class="card-body px-4 py-3">
+                <canvas id="tenantsChart" height="90"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header px-4 py-3">
+                <span class="fw-600 fs-md">
+                    <svg class="sa-icon me-1"><use href="/sa/icons/sprite.svg#pie-chart"></use></svg>
+                    Prognose nach Tarif
+                </span>
+            </div>
+            <div class="card-body px-4 py-3">
+                {% set totalMrr = mrr > 0 ? mrr : 1 %}
+                {% set planColors = ['var(--bs-primary)', '#7c3aed', 'var(--bs-success)', 'var(--bs-warning)'] %}
+                {% for plan in by_plan %}
+                {% set pct = (plan.mrr / totalMrr * 100)|round %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between fs-sm mb-1">
+                        <span class="fw-600">{{ plan.plan_name }}</span>
+                        <span class="text-muted">{{ plan.sub_count }}×</span>
+                    </div>
+                    <div class="progress" style="height:7px;">
+                        <div class="progress-bar" role="progressbar"
+                             style="width:{{ pct }}%;background:{{ planColors[loop.index0] ?? 'var(--bs-secondary)' }};"></div>
+                    </div>
+                    <div class="text-muted fs-xs mt-1">
+                        {{ plan.mrr|number_format(2, ',', '.') }} €/Mo möglich ({{ pct }}%)
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-muted fs-sm mb-0">Noch keine aktiven Abonnements.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Letzte bezahlte Rechnungen ──────────────────────────────────────────── #}
+<div class="card">
+    <div class="card-header px-4 py-3">
+        <span class="fw-600 fs-md">
+            <svg class="sa-icon me-1 sa-icon-success"><use href="/sa/icons/sprite.svg#dollar-sign"></use></svg>
+            Zuletzt eingegangene Zahlungen (30 Tage)
+        </span>
+    </div>
+    {% if recent_paid %}
+    <div class="table-responsive">
+        <table class="table table-hover table-sm mb-0">
+            <thead class="fs-xs text-muted">
+                <tr>
+                    <th class="px-4">Datum</th>
+                    <th>Praxis</th>
+                    <th>Betrag</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in recent_paid %}
+                <tr>
+                    <td class="px-4 text-muted text-nowrap fs-sm">{{ inv.paid_at|date('d.m.Y') }}</td>
+                    <td>
+                        <a href="/admin/tenants/{{ inv.tenant_id }}" class="text-info text-decoration-none fw-500 fs-sm">
+                            {{ inv.practice_name }}
+                        </a>
+                    </td>
+                    <td class="fw-700 text-success fs-sm">{{ inv.total_amount|number_format(2, ',', '.') }} €</td>
+                    <td><span class="badge bg-success bg-opacity-15 text-success fs-nano">Bezahlt</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card-body text-muted fs-sm px-4 py-3">
+        <svg class="sa-icon me-1"><use href="/sa/icons/sprite.svg#info"></use></svg>
+        Keine bezahlten Rechnungen in den letzten 30 Tagen.
+        Zahlungen erscheinen hier sobald sie als <em>bezahlt</em> markiert sind.
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    'use strict';
+
+    Chart.defaults.color = '#64748b';
+    Chart.defaults.borderColor = '#334155';
+
+    const ntLabels  = {{ new_tenants|map(r => r.month)|json_encode|raw }};
+    const ntValues  = {{ new_tenants|map(r => r.count)|json_encode|raw }};
+    const churnVals = {{ churn_data|map(r => r.count)|json_encode|raw }};
+
+    new Chart(document.getElementById('tenantsChart'), {
+        type: 'bar',
+        data: {
+            labels: ntLabels,
+            datasets: [
+                {
+                    label: 'Neukunden',
+                    data: ntValues,
+                    backgroundColor: 'rgba(37,99,235,.75)',
+                    borderRadius: 4,
+                },
+                {
+                    label: 'Abgänge',
+                    data: churnVals,
+                    backgroundColor: 'rgba(248,113,113,.6)',
+                    borderRadius: 4,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 }, color: '#64748b' } }
+            },
+            scales: {
+                x: { grid: { display: false } },
+                y: { grid: { color: '#334155' }, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+
+    window.refreshKPIs = async function() {
+        try {
+            const res = await fetch('/admin/revenue/api', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!res.ok) return;
+            const d   = await res.json();
+            const fmt = v => Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('kpi-mrr').textContent    = fmt(d.mrr)    + ' €';
+            document.getElementById('kpi-arr').textContent    = fmt(d.arr)    + ' €';
+            document.getElementById('kpi-active').textContent = d.active;
+            document.getElementById('kpi-conv').textContent   = d.conversion  + ' %';
+        } catch {}
+    };
+})();
+</script>
+{% endblock %}

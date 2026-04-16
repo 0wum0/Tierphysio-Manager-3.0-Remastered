@@ -11,6 +11,7 @@ use Saas\Core\Database;
 use Saas\Repositories\SettingsRepository;
 use Saas\Repositories\ActivityLogRepository;
 use Saas\Repositories\NotificationRepository;
+use Saas\Services\SaasPlatformMigrationService;
 
 class UpdateController extends Controller
 {
@@ -20,10 +21,11 @@ class UpdateController extends Controller
     public function __construct(
         View $view,
         Session $session,
-        private readonly SettingsRepository    $settings,
-        private readonly ActivityLogRepository $log,
-        private readonly NotificationRepository $notifications,
-        private readonly Database              $db
+        private readonly SettingsRepository           $settings,
+        private readonly ActivityLogRepository        $log,
+        private readonly NotificationRepository       $notifications,
+        private readonly Database                     $db,
+        private readonly SaasPlatformMigrationService $saasMigrations
     ) {
         parent::__construct($view, $session);
     }
@@ -46,18 +48,19 @@ class UpdateController extends Controller
         $available = $this->fetchLatestRelease($channel);
 
         $this->render('admin/updates/index.twig', [
-            'page_title'    => 'Updates & Versionsverwaltung',
-            'current'       => $current,
-            'channel'       => $channel,
-            'available'     => $available,
-            'update_log'    => $updateLog,
-            'php_version'   => PHP_VERSION,
-            'php_sapi'      => PHP_SAPI,
-            'server_soft'   => $_SERVER['SERVER_SOFTWARE'] ?? 'unbekannt',
-            'extensions'    => $this->checkExtensions(),
-            'disk_free'     => disk_free_space('/'),
-            'disk_total'    => disk_total_space('/'),
-            'sysinfo'       => $this->getSystemInfo(),
+            'page_title'      => 'Updates & Versionsverwaltung',
+            'current'         => $current,
+            'channel'         => $channel,
+            'available'       => $available,
+            'update_log'      => $updateLog,
+            'php_version'     => PHP_VERSION,
+            'php_sapi'        => PHP_SAPI,
+            'server_soft'     => $_SERVER['SERVER_SOFTWARE'] ?? 'unbekannt',
+            'extensions'      => $this->checkExtensions(),
+            'disk_free'       => disk_free_space('/'),
+            'disk_total'      => disk_total_space('/'),
+            'sysinfo'         => $this->getSystemInfo(),
+            'db_migration'    => $this->saasMigrations->status(),
         ]);
     }
 
@@ -166,6 +169,50 @@ class UpdateController extends Controller
             'disk_free'    => disk_free_space('/'),
             'disk_total'   => disk_total_space('/'),
         ]);
+    }
+
+    // ── SaaS Platform DB Migrations ───────────────────────────────────────────
+
+    /**
+     * POST /admin/updates/run-db-migrations
+     * Applies all pending global SaaS platform database migrations.
+     */
+    public function runPlatformMigrations(array $params = []): void
+    {
+        $this->requireAuth();
+        $this->verifyCsrf();
+
+        $result = $this->saasMigrations->runPending();
+        $actor  = $this->session->get('saas_user') ?? 'admin';
+
+        if ($result['success']) {
+            if ($result['ran'] > 0) {
+                $this->log->log('system.db_migration', $actor, 'saas_migrations', null,
+                    "{$result['ran']} SaaS-DB-Migration(en) erfolgreich angewandt.");
+                $this->notifications->create('system_update', 'DB-Migrationen angewandt',
+                    "{$result['ran']} SaaS-Platform-Migration(en) erfolgreich.");
+                $this->session->flash('success',
+                    "{$result['ran']} SaaS-Datenbank-Migration(en) erfolgreich angewandt. "
+                    . "{$result['skipped']} bereits vorhanden.");
+            } else {
+                $this->session->flash('success', 'Datenbank ist bereits aktuell. Keine ausstehenden Migrationen.');
+            }
+        } else {
+            $errorList = implode(' | ', array_slice($result['errors'], 0, 3));
+            $this->session->flash('error', 'Migration fehlgeschlagen: ' . $errorList);
+        }
+
+        $this->redirect('/admin/updates');
+    }
+
+    /**
+     * GET /admin/updates/db-migration-status (AJAX)
+     * Returns JSON status of pending global migrations.
+     */
+    public function migrationStatus(array $params = []): void
+    {
+        $this->requireAuth();
+        $this->json($this->saasMigrations->status());
     }
 
     // ── Privat ────────────────────────────────────────────────────────────────

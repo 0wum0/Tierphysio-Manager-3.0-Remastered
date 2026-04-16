@@ -336,6 +336,7 @@
     function openNewModal(start, end, allDay) {
         currentAptId = null;
         form.reset();
+        form.dataset.submitting = '0';
         document.getElementById('apt-id').value = '';
         document.getElementById('modal-apt-title').textContent = 'Neuer Termin';
         document.getElementById('btn-apt-delete').style.display = 'none';
@@ -349,6 +350,7 @@
 
     function openEditModal(event) {
         currentAptId = event.id;
+        form.dataset.submitting = '0';
         const p = event.extendedProps;
 
         document.getElementById('apt-id').value               = event.id;
@@ -616,20 +618,34 @@
     /* ── Form submit ── */
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
-        const data = new FormData(this);
-        if (document.getElementById('apt-allday').checked) data.set('all_day', '1');
-        if (document.getElementById('apt-recurrence').value === 'custom') {
-            data.set('recurrence_rule', document.getElementById('apt-recurrence-custom').value);
-        }
-        const id  = document.getElementById('apt-id').value;
-        const url = id ? '/api/kalender/events/' + id : '/api/kalender/events';
-        const res  = await fetch(url, { method: 'POST', body: data });
-        const json = await res.json();
-        if (json.success) {
-            calendar.refetchEvents();
-            closeModal();
-        } else {
-            alert(json.error || 'Fehler beim Speichern.');
+        /* Double-submit guard: block concurrent requests */
+        if (form.dataset.submitting === '1') return;
+        form.dataset.submitting = '1';
+        const saveBtn = document.querySelector('[type="submit"][form="form-appointment"]');
+        const origLabel = saveBtn ? saveBtn.textContent : 'Speichern';
+        if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'Speichern...'; }
+        try {
+            const data = new FormData(this);
+            if (document.getElementById('apt-allday').checked) data.set('all_day', '1');
+            if (document.getElementById('apt-recurrence').value === 'custom') {
+                data.set('recurrence_rule', document.getElementById('apt-recurrence-custom').value);
+            }
+            const id  = document.getElementById('apt-id').value;
+            const url = id ? '/api/kalender/events/' + id : '/api/kalender/events';
+            const res  = await fetch(url, { method: 'POST', body: data });
+            const json = await res.json();
+            if (json.success) {
+                calendar.refetchEvents();
+                closeModal();
+            } else {
+                alert(json.error || 'Fehler beim Speichern.');
+            }
+        } catch (err) {
+            console.error('[Calendar] Submit error:', err);
+            alert('Netzwerkfehler. Bitte erneut versuchen.');
+        } finally {
+            form.dataset.submitting = '0';
+            if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = origLabel; }
         }
     });
 

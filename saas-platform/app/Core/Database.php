@@ -40,6 +40,18 @@ class Database
         }
     }
 
+    /**
+     * Wrap an already-open PDO connection in a Database instance.
+     * Useful in CLI scripts / cron runners that bootstrap PDO themselves.
+     */
+    public static function fromPdo(PDO $pdo): self
+    {
+        $obj  = (new \ReflectionClass(self::class))->newInstanceWithoutConstructor();
+        $prop = (new \ReflectionClass(self::class))->getProperty('pdo');
+        $prop->setValue($obj, $pdo);
+        return $obj;
+    }
+
     public static function createBare(string $host, int $port, string $username, string $password): self
     {
         $tmp = new \stdClass();

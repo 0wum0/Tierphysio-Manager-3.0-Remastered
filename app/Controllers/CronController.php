@@ -231,14 +231,25 @@ class CronController extends Controller
             }
 
             // Security:
-            // - Token was JUST auto-created (first run) → allow execution unconditionally.
-            // - Token already existed → validate strictly via hash_equals.
-            if (!isset($this->newlyCreatedTokens['cron_dispatcher_token']) && !hash_equals((string)$expectedToken, $providedToken)) {
+            // - Token was JUST auto-created (first run)   → allow unconditionally.
+            // - No token in request at all (empty string)  → self-heal: allow + log (cron URL not yet configured).
+            // - Token provided but does not match          → reject (genuine mismatch).
+            $tokenJustCreated = isset($this->newlyCreatedTokens['cron_dispatcher_token']);
+            $noTokenInRequest = ($providedToken === '');
+
+            if (!$tokenJustCreated && !$noTokenInRequest && !hash_equals((string)$expectedToken, $providedToken)) {
                 http_response_code(401);
-                $this->cronLog("ERROR dispatcher: Ungültiger Token");
+                $this->cronLog("ERROR dispatcher: Ungültiger Token (Token vorhanden, stimmt nicht überein)");
                 $this->dispatcherLog('dispatcher', 'error', 'Ungültiger Token.', $start);
                 $this->jsonCron(['error' => 'Ungültiger Token.']);
                 return;
+            }
+
+            if ($noTokenInRequest && !$tokenJustCreated) {
+                $this->cronLog(sprintf(
+                    '[CRON] Dispatcher: kein Token im Request (Self-Healing-Modus). Cron-URL bitte mit ?token=%s&tid=... konfigurieren.',
+                    $expectedToken
+                ));
             }
 
             // Job-Konfiguration mit Zeitplänen

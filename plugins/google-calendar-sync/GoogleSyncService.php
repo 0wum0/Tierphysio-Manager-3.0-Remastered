@@ -32,8 +32,20 @@ class GoogleSyncService
         $connection = $this->repo->getConnection();
         if (!$this->shouldSync($connection)) return;
 
+        /* Idempotency: skip if this appointment is already synced to Google */
+        $existingSync = $this->repo->getSyncEntryByAppointment($appointmentId);
+        if ($existingSync && $existingSync['sync_status'] === 'synced' && !empty($existingSync['google_event_id'])) {
+            return;
+        }
+
         $appointment = $this->fetchAppointmentFull($appointmentId);
         if (!$appointment) return;
+
+        /* Skip Google-imported appointments to prevent circular sync:
+         * These entries were written by pullFromGoogle() and already live in Google. */
+        if (!empty($appointment['google_event_id'])) {
+            return;
+        }
 
         if ($connection['skip_waitlist'] && ($appointment['status'] ?? '') === 'waitlist') return;
 
@@ -160,6 +172,7 @@ class GoogleSyncService
              WHERE m.id IS NULL
                AND a.status NOT IN ('cancelled','noshow')
                AND a.start_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+               AND (a.google_event_id IS NULL OR a.google_event_id = '')
              LIMIT 20"
         );
         $unsynced = $stmt->fetchAll(PDO::FETCH_ASSOC);
