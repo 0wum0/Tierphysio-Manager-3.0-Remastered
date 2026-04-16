@@ -136,7 +136,9 @@ class OwnerPortalMailService
     private function getBaseUrl(): string
     {
         $configured = $this->settings->get('portal_base_url', '');
-        if ($configured !== '') return rtrim($configured, '/');
+        if ($configured !== '') {
+            return rtrim($configured, '/');
+        }
 
         $envAppUrl = rtrim((string)($_ENV['APP_URL'] ?? ''), '/');
         if ($envAppUrl !== '') {
@@ -164,5 +166,18 @@ class OwnerPortalMailService
         }
         $tid = trim(substr($prefix, 2), '_');
         return $tid !== '' ? ('?tid=' . rawurlencode($tid)) : '';
+    }
+
+    private function tenantQuery(): string
+    {
+        $prefix = (string)($_SESSION['tenant_table_prefix'] ?? $_SESSION['portal_tenant_prefix'] ?? '');
+        if ($prefix === '' || substr($prefix, 0, 2) !== 't_') {
+            return '';
+        }
+        $tid = trim(substr($prefix, 2), '_');
+        if ($tid === '') {
+            return '';
+        }
+        return '?tid=' . rawurlencode($tid);
     }
 }
