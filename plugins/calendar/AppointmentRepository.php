@@ -71,11 +71,20 @@ class AppointmentRepository
 
     public function findPendingReminders(): array
     {
-        /* NOTE: intentionally no email filter in SQL.
-         * Appointments without owner email are returned and counted as 'skipped'
-         * in ReminderService so the cron log shows accurate skipped counts. */
+        /* owner_email: owners.email first, then portal-user email as fallback.
+         * This covers the case where only a portal invitation was accepted
+         * but the owner's main record has no email filled in. */
         $stmt = $this->db->query(
-            "SELECT a.*, o.email AS owner_email, o.first_name, o.last_name,
+            "SELECT a.*,
+                    COALESCE(
+                        NULLIF(o.email, ''),
+                        (SELECT opu.email
+                         FROM `{$this->t('owner_portal_users')}` opu
+                         WHERE opu.owner_id = a.owner_id
+                           AND opu.is_active = 1
+                         LIMIT 1)
+                    ) AS owner_email,
+                    o.first_name, o.last_name,
                     p.name AS patient_name
              FROM `{$this->t('appointments')}` a
              LEFT JOIN `{$this->t('owners')}` o ON o.id = a.owner_id
