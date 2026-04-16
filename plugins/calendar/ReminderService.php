@@ -18,9 +18,10 @@ class ReminderService
     public function processPending(): array
     {
         $appointments = $this->appointmentRepository->findPendingReminders();
-        $sent   = 0;
-        $failed = 0;
-        $skipped = 0;
+        $sent      = 0;
+        $failed    = 0;
+        $skipped   = 0;
+        $lastError = '';
 
         foreach ($appointments as $a) {
             /* Erinnerung an Praxisinhaber (verbindlich) */
@@ -32,6 +33,7 @@ class ReminderService
             $ownerSent = $this->mailService->sendReminder($a);
             if (!$ownerSent) {
                 $failed++;
+                $lastError = $this->mailService->getLastError();
                 continue;
             }
             $sent++;
@@ -46,7 +48,13 @@ class ReminderService
             $this->appointmentRepository->markReminderSent((int)$a['id']);
         }
 
-        return ['sent' => $sent, 'failed' => $failed, 'skipped' => $skipped, 'total' => count($appointments)];
+        return [
+            'sent'       => $sent,
+            'failed'     => $failed,
+            'skipped'    => $skipped,
+            'total'      => count($appointments),
+            'last_error' => $lastError,
+        ];
     }
 
 }

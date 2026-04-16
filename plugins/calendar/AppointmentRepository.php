@@ -71,6 +71,9 @@ class AppointmentRepository
 
     public function findPendingReminders(): array
     {
+        /* NOTE: intentionally no email filter in SQL.
+         * Appointments without owner email are returned and counted as 'skipped'
+         * in ReminderService so the cron log shows accurate skipped counts. */
         $stmt = $this->db->query(
             "SELECT a.*, o.email AS owner_email, o.first_name, o.last_name,
                     p.name AS patient_name
@@ -81,9 +84,7 @@ class AppointmentRepository
                AND a.status IN ('scheduled','confirmed')
                AND COALESCE(a.reminder_minutes, 1440) > 0
                AND a.start_at > NOW()
-               AND DATE_SUB(a.start_at, INTERVAL COALESCE(a.reminder_minutes, 1440) MINUTE) <= NOW()
-               AND o.email IS NOT NULL
-               AND o.email <> ''",
+               AND DATE_SUB(a.start_at, INTERVAL COALESCE(a.reminder_minutes, 1440) MINUTE) <= NOW()",
             []
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

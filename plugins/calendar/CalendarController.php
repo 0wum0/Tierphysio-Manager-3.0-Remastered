@@ -476,7 +476,7 @@ class CalendarController extends Controller
         }
 
         $start = hrtime(true);
-        $this->calCronLog('START calendar reminder cron at ' . date('Y-m-d H:i:s'));
+        $this->calCronLog('START calendar reminder cron at ' . date('Y-m-d H:i:s') . ' | tid=' . ($tid ?: 'NONE'));
 
         try {
             $secret = $this->settingsRepository->get('calendar_cron_secret', '');
@@ -501,9 +501,16 @@ class CalendarController extends Controller
 
             $result = $reminderService->processPending();
 
-            $msg = 'sent=' . ($result['sent'] ?? 0) . ', skipped=' . ($result['skipped'] ?? 0);
+            $total   = $result['total']   ?? 0;
+            $sent    = $result['sent']    ?? 0;
+            $failed  = $result['failed']  ?? 0;
+            $skipped = $result['skipped'] ?? 0;
+            $msg = "sent={$sent}, skipped={$skipped}, failed={$failed}, total_due={$total}";
+            if ($failed > 0 && !empty($result['last_error'])) {
+                $msg .= ' | mail_error=' . mb_substr($result['last_error'], 0, 120);
+            }
             $this->calCronLog('SUCCESS calendar cron: ' . $msg);
-            $this->calDbLog('calendar_reminders', 'success', $msg, $start);
+            $this->calDbLog('calendar_reminders', $failed > 0 ? 'error' : 'success', $msg, $start);
 
             header('Content-Type: application/json');
             echo json_encode(array_merge($result, ['ok' => true, 'time' => date('c')]));
