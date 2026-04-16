@@ -1,0 +1,251 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'revenue' %}
+
+{% block styles %}
+<style>
+.kpi-card       { background:#1e293b; border:1px solid #334155; border-radius:.75rem; padding:1.25rem 1.5rem; }
+.kpi-label      { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#64748b; margin-bottom:.35rem; }
+.kpi-value      { font-size:1.9rem; font-weight:800; letter-spacing:-.03em; color:#e2e8f0; line-height:1; }
+.kpi-sub        { font-size:.75rem; color:#475569; margin-top:.3rem; }
+.kpi-delta-up   { color:#34d399; font-size:.75rem; font-weight:600; }
+.kpi-delta-down { color:#f87171; font-size:.75rem; font-weight:600; }
+.chart-card     { background:#1e293b; border:1px solid #334155; border-radius:.75rem; padding:1.25rem; }
+.chart-title    { font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#64748b; margin-bottom:1rem; }
+.plan-bar       { height:8px; border-radius:4px; background:#334155; overflow:hidden; margin-top:.3rem; }
+.plan-fill      { height:100%; border-radius:4px; background:#2563eb; }
+.inv-row td     { font-size:.8rem; vertical-align:middle; }
+.live-dot       { width:8px;height:8px;border-radius:50%;background:#34d399;display:inline-block;animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Header ─────────────────────────────────────────────────────────────── #}
+<div class="d-flex align-items-center gap-3 mb-4 flex-wrap">
+    <span class="live-dot" title="Live-Daten"></span>
+    <h4 class="mb-0 fw-bold" style="color:#e2e8f0;">Revenue Dashboard</h4>
+    <div class="ms-auto d-flex gap-2">
+        <button class="btn btn-sm btn-outline-secondary" onclick="refreshKPIs()">
+            <i class="bi bi-arrow-clockwise me-1"></i>Aktualisieren
+        </button>
+        <a href="/admin/tenants" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-people me-1"></i>Tenants
+        </a>
+    </div>
+</div>
+
+{# ── KPI Row ─────────────────────────────────────────────────────────────── #}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-label"><i class="bi bi-graph-up-arrow me-1"></i>MRR</div>
+            <div class="kpi-value" id="kpi-mrr">{{ mrr|number_format(2, ',', '.') }} €</div>
+            <div class="kpi-sub">Monthly Recurring Revenue</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-label"><i class="bi bi-calendar-check me-1"></i>ARR</div>
+            <div class="kpi-value" id="kpi-arr">{{ arr|number_format(2, ',', '.') }} €</div>
+            <div class="kpi-sub">Annual Recurring Revenue</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-label"><i class="bi bi-people-fill me-1"></i>Aktive Kunden</div>
+            <div class="kpi-value" id="kpi-active" style="color:#34d399;">{{ active }}</div>
+            <div class="kpi-sub">{{ trials }} im Trial · ARPU {{ arpu|number_format(2, ',', '.') }} €</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-label"><i class="bi bi-percent me-1"></i>Trial → Paid</div>
+            <div class="kpi-value" id="kpi-conv" style="color:{% if conversion >= 20 %}#34d399{% elseif conversion >= 10 %}#fbbf24{% else %}#f87171{% endif %};">{{ conversion }}%</div>
+            <div class="kpi-sub">Conversion (90 Tage) · {{ churned }} Churn/Monat</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="kpi-card">
+            <div class="kpi-label"><i class="bi bi-cash-coin me-1"></i>Umsatz gesamt</div>
+            <div class="kpi-value" style="font-size:1.4rem;">{{ total_rev|number_format(2, ',', '.') }} €</div>
+            <div class="kpi-sub">{{ month_rev|number_format(2, ',', '.') }} € diesen Monat</div>
+        </div>
+    </div>
+    <div class="col-md-9">
+        {# Spacer – Plan-Aufschlüsselung kommt unten #}
+    </div>
+</div>
+
+{# ── Charts Row ──────────────────────────────────────────────────────────── #}
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="chart-card">
+            <div class="chart-title"><i class="bi bi-bar-chart-line me-1"></i>MRR-Entwicklung (12 Monate)</div>
+            <canvas id="mrrChart" height="90"></canvas>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="chart-card">
+            <div class="chart-title"><i class="bi bi-people me-1"></i>Neue Tenants / Monat</div>
+            <canvas id="tenantsChart" height="180"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-5">
+        {# ── Revenue by Plan ──────────────────────────────────────────── #}
+        <div class="chart-card h-100">
+            <div class="chart-title"><i class="bi bi-pie-chart me-1"></i>MRR nach Plan</div>
+            {% set totalMrr = mrr > 0 ? mrr : 1 %}
+            {% for plan in by_plan %}
+            {% set pct = (plan.mrr / totalMrr * 100)|round %}
+            <div class="mb-3">
+                <div class="d-flex justify-content-between" style="font-size:.8rem;">
+                    <span style="color:#e2e8f0;font-weight:600;">{{ plan.plan_name }}</span>
+                    <span style="color:#94a3b8;">{{ plan.sub_count }} Kunden · {{ plan.mrr|number_format(2, ',', '.') }} €/Mo</span>
+                </div>
+                <div class="plan-bar">
+                    <div class="plan-fill" style="width:{{ pct }}%;background:{% if loop.index == 1 %}#2563eb{% elseif loop.index == 2 %}#7c3aed{% elseif loop.index == 3 %}#059669{% else %}#d97706{% endif %};"></div>
+                </div>
+                <div style="font-size:.7rem;color:#475569;margin-top:.2rem;">{{ pct }}% des MRR</div>
+            </div>
+            {% else %}
+            <p style="color:#475569;font-size:.8rem;">Noch keine aktiven Abonnements.</p>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="col-lg-7">
+        {# ── Recent Paid Invoices ──────────────────────────────────────── #}
+        <div class="chart-card h-100">
+            <div class="chart-title"><i class="bi bi-receipt me-1"></i>Letzte Zahlungen (30 Tage)</div>
+            {% if recent_paid %}
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead>
+                        <tr>
+                            <th style="font-size:.7rem;color:#475569;font-weight:600;">Datum</th>
+                            <th style="font-size:.7rem;color:#475569;font-weight:600;">Praxis</th>
+                            <th style="font-size:.7rem;color:#475569;font-weight:600;">Betrag</th>
+                            <th style="font-size:.7rem;color:#475569;font-weight:600;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for inv in recent_paid %}
+                        <tr class="inv-row">
+                            <td style="color:#64748b;white-space:nowrap;">{{ inv.paid_at|date('d.m.Y') }}</td>
+                            <td>
+                                <a href="/admin/tenants/{{ inv.tenant_id }}" style="color:#60a5fa;text-decoration:none;">
+                                    {{ inv.practice_name }}
+                                </a>
+                            </td>
+                            <td style="font-weight:600;color:#34d399;">{{ inv.total_amount|number_format(2, ',', '.') }} €</td>
+                            <td><span style="font-size:.7rem;font-weight:600;color:#34d399;background:rgba(52,211,153,.1);padding:.15rem .5rem;border-radius:.25rem;">Bezahlt</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p style="color:#475569;font-size:.8rem;margin-top:.5rem;">Keine bezahlten Rechnungen in den letzten 30 Tagen.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+(function() {
+    'use strict';
+
+    Chart.defaults.color = '#64748b';
+    Chart.defaults.borderColor = '#1e293b';
+
+    const mrrLabels  = {{ mrr_trend|map(r => r.month)|json_encode|raw }};
+    const mrrValues  = {{ mrr_trend|map(r => r.mrr)|json_encode|raw }};
+    const ntLabels   = {{ new_tenants|map(r => r.month)|json_encode|raw }};
+    const ntValues   = {{ new_tenants|map(r => r.count)|json_encode|raw }};
+    const churnVals  = {{ churn_data|map(r => r.count)|json_encode|raw }};
+
+    // ── MRR Chart ──────────────────────────────────────────────────────────
+    new Chart(document.getElementById('mrrChart'), {
+        type: 'line',
+        data: {
+            labels: mrrLabels,
+            datasets: [{
+                label: 'MRR (€)',
+                data: mrrValues,
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37,99,235,.1)',
+                fill: true,
+                tension: .4,
+                pointRadius: 4,
+                pointBackgroundColor: '#2563eb',
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { grid: { color: '#1e293b' } },
+                y: {
+                    grid: { color: '#1e293b' },
+                    ticks: { callback: v => v.toLocaleString('de-DE') + ' €' }
+                }
+            }
+        }
+    });
+
+    // ── Neue Tenants Chart ─────────────────────────────────────────────────
+    new Chart(document.getElementById('tenantsChart'), {
+        type: 'bar',
+        data: {
+            labels: ntLabels,
+            datasets: [
+                {
+                    label: 'Neu',
+                    data: ntValues,
+                    backgroundColor: 'rgba(37,99,235,.7)',
+                    borderRadius: 4,
+                },
+                {
+                    label: 'Churn',
+                    data: churnVals,
+                    backgroundColor: 'rgba(248,113,113,.6)',
+                    borderRadius: 4,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } },
+            scales: {
+                x: { grid: { display: false } },
+                y: { grid: { color: '#1e293b' }, ticks: { stepSize: 1 } }
+            }
+        }
+    });
+
+    // ── Live KPI Refresh ───────────────────────────────────────────────────
+    window.refreshKPIs = async function() {
+        try {
+            const res  = await fetch('/admin/revenue/api', { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            if (!res.ok) return;
+            const d    = await res.json();
+            const fmt  = v => Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2 });
+            document.getElementById('kpi-mrr').textContent    = fmt(d.mrr)        + ' €';
+            document.getElementById('kpi-arr').textContent    = fmt(d.arr)        + ' €';
+            document.getElementById('kpi-active').textContent = d.active;
+            document.getElementById('kpi-conv').textContent   = d.conversion      + '%';
+        } catch {}
+    };
+})();
+</script>
+{% endblock %}

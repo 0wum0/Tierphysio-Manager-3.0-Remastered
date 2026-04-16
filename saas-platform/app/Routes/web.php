@@ -17,6 +17,7 @@ use Saas\Controllers\FeedbackController;
 use Saas\Controllers\PaymentSettingsController;
 use Saas\Controllers\GoogleSettingsController;
 use Saas\Controllers\PraxisCronController;
+use Saas\Controllers\RevenueController;
 
 // ── License API (called by Praxissoftware) ─────────────────────────────────
 $router->post('/api/license/verify',  [LicenseApiController::class, 'verify']);
@@ -94,7 +95,10 @@ $router->post('/admin/notifications/delete-read',             [NotificationContr
 $router->post('/admin/notifications/{id}/read',               [NotificationController::class, 'markRead']);
 $router->post('/admin/notifications/{id}/delete',             [NotificationController::class, 'delete']);
 
-// ── Updates & Versionsverwaltung ───────────────────────────────────────────
+// ── Revenue Dashboard ──────────────────────────────────────────────────────
+$router->get('/admin/revenue',     [RevenueController::class, 'index']);
+$router->get('/admin/revenue/api', [RevenueController::class, 'api']);
+
 $router->get('/admin/updates',                         [UpdateController::class, 'index']);
 $router->get('/admin/updates/check',                   [UpdateController::class, 'checkUpdate']);
 $router->get('/admin/updates/changelog',               [UpdateController::class, 'changelog']);

@@ -385,6 +385,26 @@ function dispatchTenants(PDO $pdo): void
     }
 }
 
+// ── 7. Lifecycle-E-Mails ──────────────────────────────────────────────────
+function sendLifecycleMails(PDO $pdo): void
+{
+    echo "[" . date('H:i:s') . "] sendLifecycleMails gestartet...\n";
+
+    // Bootstrap LifecycleMailService via Saas\Core\Database wrapper
+    try {
+        $db      = \Saas\Core\Database::fromPdo($pdo);
+        $service = new \Saas\Services\LifecycleMailService($db);
+        $result  = $service->processAll();
+
+        echo "  Gesendet: {$result['sent']}, Fehler: {$result['failed']}, Übersprungen: {$result['skipped']}\n";
+        foreach ($result['log'] as $line) {
+            echo "  {$line}\n";
+        }
+    } catch (\Throwable $e) {
+        echo "  [ERROR] Lifecycle-Mails fehlgeschlagen: " . $e->getMessage() . "\n";
+    }
+}
+
 // ── Ausführen ─────────────────────────────────────────────────────────────
 try {
     checkTrialExpiry($pdo);
@@ -396,6 +416,7 @@ try {
         cleanOldNotifications($pdo);
         summarizeFeedback($pdo);
         syncStripeSubscriptions($pdo);
+        sendLifecycleMails($pdo);
     }
 
     echo "[" . date('Y-m-d H:i:s') . "] Cron abgeschlossen ✓\n";
