@@ -313,7 +313,7 @@
                     <tbody>
                         {% set statusMap = {'active':'badge-active','trial':'badge-trial','pending':'badge-pending','suspended':'badge-suspended','cancelled':'badge-cancelled','paused':'badge-paused'} %}
                         {% for tenant in recent_tenants %}
-                        <tr>
+                        <tr data-tid="{{ tenant.id }}">
                             <td class="px-3">
                                 <div class="fw-medium" style="color:#e2e8f0;">{{ tenant.practice_name }}</div>
                                 <div style="font-size:.72rem;color:#64748b;">{{ tenant.owner_name }}</div>
@@ -362,7 +362,26 @@
     </div>
 </div>
 
-{# ── Row 5: Top Tenants + Feedback ── #}
+{# ── Row 5: System-Health Overview ── #}
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title"><i class="bi bi-heart-pulse me-2" style="color:#6ee7b7;"></i>System-Health Übersicht</div>
+                <button id="dash-health-btn" class="btn btn-sm btn-outline-success" style="font-size:.75rem;">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Alle prüfen
+                </button>
+            </div>
+            <div id="dash-health-body" style="padding:1rem;">
+                <div style="font-size:.8rem;color:#64748b;text-align:center;padding:.5rem 0;">
+                    <i class="bi bi-shield-check me-1"></i>Auf "Alle prüfen" klicken um den Health-Status aller aktiven Praxen zu laden.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Row 6: Top Tenants + Feedback ── #}
 <div class="row g-3">
     <div class="col-lg-6">
         <div class="chart-card">
@@ -534,6 +553,87 @@ const CHART_COLORS = ['#6EA8FE','#a78bfa','#6ee7b7','#fde68a','#f87171','#7dd3fc
             cutout: '70%',
             plugins: { legend: { display: false } }
         }
+    });
+})();
+
+// Dashboard Health Overview
+(function() {
+    const btn  = document.getElementById('dash-health-btn');
+    const body = document.getElementById('dash-health-body');
+    if (!btn || !body) return;
+
+    btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Prüfe…';
+        body.innerHTML = '<div style="font-size:.8rem;color:#64748b;text-align:center;padding:.5rem 0;"><span class="spinner-border spinner-border-sm me-2"></span>Prüfe alle Praxen…</div>';
+
+        // Collect all tenant ids from the recent tenants table on the page
+        const rows = document.querySelectorAll('table tbody tr[data-tid]');
+        let tenantIds = Array.from(rows).map(r => r.dataset.tid).filter(Boolean);
+
+        // Fallback: gather from recent_tenants links
+        if (!tenantIds.length) {
+            document.querySelectorAll('a[href^="/admin/tenants/"]').forEach(a => {
+                const m = a.href.match(/\/admin\/tenants\/(\d+)$/);
+                if (m) tenantIds.push(m[1]);
+            });
+            tenantIds = [...new Set(tenantIds)].slice(0, 8);
+        }
+
+        if (!tenantIds.length) {
+            body.innerHTML = '<div style="font-size:.8rem;color:#64748b;text-align:center;padding:.5rem 0;">Keine Praxen gefunden.</div>';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Alle prüfen';
+            return;
+        }
+
+        const results = await Promise.allSettled(
+            tenantIds.map(id =>
+                fetch('/admin/tenants/' + id + '/health-api', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(r => r.json())
+                    .then(d => ({ id, ...d }))
+                    .catch(() => ({ id, status: 'error', issues: ['Request fehlgeschlagen'], checks: {} }))
+            )
+        );
+
+        const items = results.map(r => r.status === 'fulfilled' ? r.value : { id: '?', status: 'error', issues: [], checks: {} });
+        const ok      = items.filter(i => i.status === 'ok').length;
+        const warn    = items.filter(i => i.status === 'warning').length;
+        const critical = items.filter(i => i.status === 'critical' || i.status === 'error').length;
+
+        const statusIcon  = critical > 0 ? '🔴' : (warn > 0 ? '🟡' : '🟢');
+        let html = `<div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+            <span style="font-size:1.5rem;">${statusIcon}</span>
+            <span class="text-success fw-semibold">${ok} OK</span>
+            ${warn > 0 ? `<span class="text-warning fw-semibold">${warn} Warnung${warn > 1 ? 'en' : ''}</span>` : ''}
+            ${critical > 0 ? `<span class="text-danger fw-semibold">${critical} Kritisch</span>` : ''}
+            <span style="font-size:.75rem;color:#64748b;">(${items.length} Praxen geprüft)</span>
+        </div>`;
+
+        html += '<div class="row g-2">';
+        items.forEach(item => {
+            const sc = item.status === 'ok' ? '#6ee7b7' : (item.status === 'warning' ? '#fde68a' : '#fca5a5');
+            const si = item.status === 'ok' ? 'bi-check-circle-fill' : (item.status === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-x-circle-fill');
+            html += `<div class="col-md-3 col-sm-4 col-6">
+                <a href="/admin/tenants/${item.id}" style="text-decoration:none;">
+                    <div style="background:#0f172a;border:1px solid #334155;border-radius:.4rem;padding:.5rem .75rem;display:flex;align-items:center;gap:.5rem;">
+                        <i class="bi ${si}" style="color:${sc};font-size:.85rem;"></i>
+                        <div style="min-width:0;">
+                            <div style="font-size:.75rem;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                                ${item.tid || ('Tenant ' + item.id)}
+                            </div>
+                            ${item.issues && item.issues.length > 0
+                                ? `<div style="font-size:.65rem;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.issues[0]}</div>`
+                                : `<div style="font-size:.65rem;color:#6ee7b7;">Alles in Ordnung</div>`}
+                        </div>
+                    </div>
+                </a>
+            </div>`;
+        });
+        html += '</div>';
+        body.innerHTML = html;
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Erneut prüfen';
     });
 })();
 </script>
