@@ -408,6 +408,12 @@ class CronController extends Controller
                 // Prefix aus tid setzen (z.B. praxis-wenzel -> t_praxis-wenzel_)
                 $prefix = 't_' . $tid . '_';
                 $this->db->setPrefix($prefix);
+                $this->cronLog(sprintf(
+                    'DISPATCHER tenant context: tid="%s" prefix="%s" table="%s"',
+                    (string)$tid,
+                    $prefix,
+                    $this->db->prefix('settings')
+                ));
             }
 
             $expectedToken = $this->settings->get('cron_dispatcher_token', '');
@@ -622,5 +628,14 @@ class CronController extends Controller
         echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
         echo "\nCron completed\n";
         exit;
+    }
+
+    private function prefixFromTid(string $tid): string
+    {
+        $normalized = strtolower(trim($tid));
+        $normalized = preg_replace('/[^a-z0-9]/', '_', $normalized) ?? $normalized;
+        $normalized = preg_replace('/_+/', '_', $normalized) ?? $normalized;
+        $normalized = trim($normalized, '_');
+        return 't_' . $normalized . '_';
     }
 }
