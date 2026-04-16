@@ -1,5 +1,8 @@
 # Environment
 .env
+.env.local
+saas-platform/.env
+saas-platform/.env.local
 
 # Storage (keep structure, ignore contents)
 /storage/cache/
@@ -11,6 +14,11 @@
 !/storage/patients/.gitkeep
 !/storage/logs/.gitkeep
 
+# SaaS-Platform Storage
+/saas-platform/storage/logs/*.log
+/saas-platform/storage/uploads/
+/saas-platform/storage/tenants/
+
 # Plugin enabled list (generated at runtime)
 /plugins/enabled.json
 
@@ -21,10 +29,46 @@
 *.swo
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # PHP
 *.phar
 
+# Scratch / Debug files
+scratch/
+scratch_debug_tenants.php
+check_db.php
+check_twig.php
+debug_homework.php
+test_error_log.php
+test_migration.php
+repair_all_tenants.php
+
 # Node (if ever used for asset building)
 node_modules/
-npm-debug.log
+npm-debug.log*
+package-lock.json
+
+# Dart / Flutter
+flutter_app/build/
+flutter_app/.dart_tool/
+flutter_app/.flutter-plugins
+flutter_app/.flutter-plugins-dependencies
+flutter_app/.pub-cache/
+flutter_app/windows/flutter/ephemeral/
+flutter_app/android/.gradle/
+flutter_app/android/app/build/
+flutter_app/android/local.properties
+flutter_app/android/key.properties
+
+# Flutter release builds (tracked separately)
+flutter_app/releases/*.exe
+flutter_app/releases/*.apk
+flutter_app/releases/*.aab
+
+# PHP Composer lock (keep for reproducible builds, but listed for reference)
+# composer.lock  ← intentionally tracked
+
+# SSL certs / signing keys
+flutter_app/therapano_cert.pfx
+

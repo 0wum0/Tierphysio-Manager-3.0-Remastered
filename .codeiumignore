@@ -1,0 +1,80 @@
+# Codeium / Windsurf Indexing Exclusions
+# Build-Artefakte, Abhängigkeiten und temporäre Dateien
+
+# ── PHP Composer ──────────────────────────────────────────────
+vendor/
+vendor/**
+
+# SaaS-Platform eigener Vendor (falls vorhanden)
+saas-platform/vendor/
+
+# ── Dart / Flutter ────────────────────────────────────────────
+flutter_app/build/
+flutter_app/.dart_tool/
+flutter_app/.flutter-plugins
+flutter_app/.flutter-plugins-dependencies
+flutter_app/.pub-cache/
+flutter_app/.pub/
+flutter_app/windows/flutter/ephemeral/
+flutter_app/android/.gradle/
+flutter_app/android/app/build/
+flutter_app/releases/
+
+# ── Design-Referenz (kein Quellcode) ──────────────────────────
+# dist/ enthält das SmartAdmin HTML-Template – viele HTML-Dateien
+# die nicht zum eigenen Code gehören
+dist/scripts/
+dist/plugins/
+dist/css/
+dist/webfonts/
+dist/icons/
+
+# ── Storage & Uploads ─────────────────────────────────────────
+storage/
+storage/**
+saas-platform/storage/
+
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+storage/logs/
+saas-platform/storage/logs/
+
+# ── Caches ────────────────────────────────────────────────────
+storage/cache/
+**/cache/**
+
+# ── Scratch / Debug ───────────────────────────────────────────
+scratch/
+scratch_debug_tenants.php
+check_db.php
+check_twig.php
+debug_homework.php
+test_error_log.php
+test_migration.php
+repair_all_tenants.php
+
+# ── Lock-Dateien (kein Quellcode) ─────────────────────────────
+composer.lock
+flutter_app/pubspec.lock
+
+# ── IDE-Konfigurationen ───────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── Betriebssystem ────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Binärdateien ──────────────────────────────────────────────
+*.exe
+*.dll
+*.so
+*.dylib
+*.pdf
+*.zip
+*.tar.gz
+flutter_app/therapano_cert.cer
+flutter_app/therapano_cert.pfx

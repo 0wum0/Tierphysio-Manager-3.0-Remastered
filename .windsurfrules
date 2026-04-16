@@ -1,0 +1,180 @@
+# TheraPano / Tierphysio Manager 3.0 – Windsurf Rules
+# Gültig für das gesamte Mono-Repo
+
+## Projekt-Übersicht
+Mehrschichtiges SaaS-System für Tierphysio-Praxen.
+- PHP 8.3 · Twig 3 · Bootstrap 5.3 · Vanilla JS · Dart/Flutter (Desktop-App)
+- Multi-Tenant mit Tabellenprefix-Isolation (t_{id}_tablename)
+- Zwei separate PHP-Apps im selben Repo: /app/ und /saas-platform/
+
+---
+
+## Verzeichnis-Struktur & Beschreibungen
+
+| Verzeichnis | Beschreibung |
+|---|---|
+| `/app/` | Praxis-Software Backend – PHP 8.3, Namespace `App\`, PSR-4 |
+| `/app/Controllers/` | HTTP-Controller (one action per method, thin, no business logic) |
+| `/app/Core/` | Framework-Kern: Router, Database, Config, Container, Repository-Base |
+| `/app/Repositories/` | DB-Zugriff, benannte Queries – kein roher SQL in Controllern |
+| `/app/Services/` | Business-Logik: Mail, PDF, Invoice, Patient, Migration etc. |
+| `/app/Routes/` | Route-Definitionen (web.php, api.php) |
+| `/app/Middleware/` | Auth- und Request-Middleware |
+| `/templates/` | Twig 3 Templates der Praxis-App (Layouts, Partials, Feature-Views) |
+| `/templates/layouts/` | Base-Layout (base.twig) – IMMER als Basis verwenden |
+| `/templates/partials/` | Wiederverwendbare Komponenten (nav, sidebar, modals) |
+| `/public/` | Web-Root der Praxis-App (index.php, assets/, plugin-assets/) |
+| `/public/assets/` | CSS, JS, Bilder – produktiv eingebundene Assets |
+| `/dist/` | SmartAdmin HTML-Template – **READ-ONLY Design-Referenz** für neue UI-Ideen und Komponenten |
+| `/plugins/` | Modulares Plugin-System – jedes Plugin ist ein eigenständiges PHP-Paket unter `Plugins\` |
+| `/saas-platform/` | SaaS-Verwaltungs-App – separates PHP-Projekt, Namespace `Saas\` |
+| `/saas-platform/app/` | SaaS Backend (Controllers, Core, Repositories, Services, Routes) |
+| `/saas-platform/app/Services/` | TenantHealthService, FeatureFlagService, SelfHealingService etc. |
+| `/saas-platform/templates/` | Twig 3 Templates der SaaS-Admin-UI |
+| `/saas-platform/public/` | Web-Root der SaaS-Plattform |
+| `/saas-platform/migrations/` | SQL-Migrations für die SaaS-Datenbank |
+| `/saas-platform/cron/` | Cron-Jobs der SaaS-Plattform |
+| `/saas-platform/provisioning/` | Tenant-Provisionierungs-Skripte |
+| `/flutter_app/` | Dart/Flutter Desktop- & Mobile-App (Windows, Android) |
+| `/flutter_app/lib/` | Dart-Quellcode: main.dart, screens/, services/, models/, widgets/ |
+| `/flutter_app/assets/` | App-Assets (Bilder, Fonts) |
+| `/database/migrations/` | SQL-Migrationsdateien der Praxis-App |
+| `/migrations/` | Weitere SQL-Patches und Schema-Updates |
+| `/lang/` | Übersetzungsdateien (de.php, en.php) |
+| `/storage/` | Laufzeit-Dateien (Logs, Uploads, Themes) – NICHT in Git |
+| `/storage/tenants/` | Per-Tenant isolierter Storage (auto-erstellt) |
+| `/vendor/` | Composer-Abhängigkeiten – NIEMALS manuell bearbeiten |
+| `/scripts/` | Deployment- und Utility-Skripte |
+| `/docs/` | Projekt-Dokumentation |
+| `/scratch/` | Debug-Skripte – nicht deployen, nicht in Git |
+| `/.windsurf/workflows/` | Windsurf Workflow-Definitionen |
+
+---
+
+## Architektur-Regeln
+
+### PHP (App & SaaS-Platform)
+- `declare(strict_types=1)` in JEDER PHP-Datei
+- PHP 8.3 Features nutzen: readonly, match, first-class callables, Fibers erlaubt
+- PSR-4 Autoloading: `App\` → `/app/`, `Saas\` → `/saas-platform/app/`, `Plugins\` → `/plugins/`
+- Controller: dünn – nur Request/Response, keine Business-Logik direkt
+- Business-Logik → Services, DB-Zugriff → Repositories
+- Kein roher SQL in Controllern oder Services – immer über Repository oder `$db->query()`
+- Exceptions mit `declare(strict_types=1)` + typisierte Parameter überall
+
+### Multi-Tenant (KRITISCH)
+- Tabellen-Prefix-Muster: `t_{tenant_id}_tablename`
+- In `/app/`: Prefix via `$db->setPrefix()` und `$db->prefix('table')` – nie hardcoded
+- In `/saas-platform/`: Prefix als `$prefix`-String-Parameter an Services übergeben
+- `$db->prefix()` NIEMALS in SaaS-Platform verwenden (andere DB-Klasse ohne prefix())
+- Storage-Isolation: `$db->storagePath('subdir')` in /app/, direkt `STORAGE_PATH/tenants/{prefix}/` in SaaS
+
+### Twig Templates
+- Alle Templates erben von `layouts/base.twig` via `{% extends %}`
+- Design-Referenz: `/dist/*.html` (SmartAdmin) – bei neuen UI-Komponenten IMMER dort nachschauen
+- Bootstrap 5.3 dark-mode via `data-bs-theme="dark"` – CSS-Variablen nutzen
+- Bootstrap-Icons (bi-*) für alle Icons, kein Font-Awesome in neuen Komponenten
+- Inline-Styles nur für spezifische Farben/Größen, keine Layout-Logik inline
+- CSRF-Token: `{{ csrf_field()|raw }}` in jedem POST-Formular
+
+### JavaScript
+- Vanilla JS, kein Framework (kein React/Vue/Alpine)
+- Module als IIFE: `(function() { ... })();`
+- Fetch-API für AJAX, Header `X-Requested-With: XMLHttpRequest`
+- `async/await` bevorzugen – kein `.then().catch()` ohne triftigen Grund
+- Keine `var`, nur `const` und `let`
+- Event-Listener: `addEventListener`, kein `onclick="..."` im HTML
+
+### CSS
+- Bootstrap 5.3 Utility-Classes zuerst – custom CSS nur wenn nötig
+- Custom Properties (CSS-Variablen) für wiederkehrende Farben/Größen
+- Dark-Mode-Palette: Hintergrund #0f172a, Cards #1e293b, Border #334155, Text #e2e8f0
+- Primärfarbe: #2563eb (SaaS), keine festen Farbwerte in neuem Code ohne Variable
+
+### Dart/Flutter
+- `flutter_lints` aktiviert (analysis_options.yaml)
+- Services in `/flutter_app/lib/services/` für API-Calls
+- Models in `/flutter_app/lib/models/` mit `fromJson`/`toJson`
+- Provider für State-Management
+- `go_router` für Navigation
+- API-Endpunkt immer aus gespeicherter Base-URL, nie hardcoded
+
+---
+
+## Design-System (SmartAdmin Referenz)
+Der Ordner `/dist/` enthält das SmartAdmin HTML-Template als **Design-Referenz**.
+- `dist/index.html` – Haupt-Dashboard-Referenz
+- `dist/ui-*.html` – UI-Komponenten (Cards, Buttons, Modals, Tables)
+- `dist/forms-*.html` – Formular-Styles
+- `dist/icons-*.html` – Icon-Referenz
+- Bei neuen Features: ZUERST passende Komponente in /dist/ suchen, dann anpassen
+- Bootstrap 5.3 + Bootstrap-Icons sind die gemeinsame Basis
+
+---
+
+## Coding-Style
+
+```php
+// PHP: 4 Spaces, keine Tabs
+// Geschweifte Klammern auf gleicher Zeile (K&R)
+public function methodName(string $param): void
+{
+    // Body
+}
+
+// Kurze If-Ausdrücke auf einer Zeile erlaubt
+if ($condition) { return; }
+
+// Match statt switch bei einfachen Mappings
+$result = match($status) {
+    'active' => 'Aktiv',
+    'trial'  => 'Test',
+    default  => 'Unbekannt',
+};
+```
+
+```js
+// JS: 4 Spaces, Semikolons, Single-Quotes
+const fetchData = async (url) => {
+    const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    return res.json();
+};
+```
+
+```twig
+{# Twig: 4 Spaces, Kommentare mit {# #} #}
+{% block content %}
+    <div class="card mb-3">
+        <div class="card-header px-4 py-3">
+            <span class="fw-semibold">{{ title }}</span>
+        </div>
+    </div>
+{% endblock %}
+```
+
+---
+
+## Was NICHT geändert werden darf ohne explizite Anweisung
+- `/vendor/` – Composer-Abhängigkeiten
+- `/dist/` – Design-Referenz (read-only)
+- `/storage/` – Runtime-Dateien
+- `composer.json` `require`-Block ohne Absprache
+- Datenbank-Migrationsdateien die bereits committed sind
+- `/flutter_app/releases/` – fertige Builds
+
+---
+
+## Git-Branches
+- `main` – Production, kein direktes Pushen
+- `claude/auto-cron-tokens-0nT84` – PR #35: Cron-Token Self-Healing
+- `claude/saas-platform-upgrade` – PR #36: SaaS Platform Features + UI
+- Feature-Branches: `feature/beschreibung` oder `claude/task-name`
+
+---
+
+## Bekannte Eigenheiten
+- SaaS-Platform hat KEINE `prefix()` Methode in Database.php → Prefix immer als String-Parameter
+- `$db->storagePath()` existiert NUR in `/app/Core/Database.php`, nicht in SaaS
+- Tenant-Prefix-Format: `t_{uuid_short}_` mit abschließendem Unterstrich
+- Plugin-System: aktivierte Plugins in `/plugins/enabled.json`
+- Cron-Tokens: 64-Zeichen Hex, auto-generiert via `bin2hex(random_bytes(32))`
