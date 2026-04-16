@@ -59,36 +59,68 @@ class PlanRepository
      */
     public function allPublic(): array
     {
-        return $this->db->fetchAll(
-            "SELECT * FROM plans WHERE is_active = 1 AND is_public = 1 ORDER BY sort_order ASC"
-        );
+        try {
+            return $this->db->fetchAll(
+                "SELECT * FROM plans WHERE is_active = 1 AND is_public = 1 ORDER BY sort_order ASC"
+            );
+        } catch (\Throwable) {
+            return $this->db->fetchAll(
+                "SELECT * FROM plans WHERE is_active = 1 ORDER BY sort_order ASC"
+            );
+        }
     }
 
     /**
      * Create a new plan record. Returns the new plan ID.
+     * Self-healing: only inserts columns that actually exist in the DB.
      */
     public function create(array $data): int
     {
         $data = array_merge([
-            'trial_days'           => 14,
-            'is_public'            => 1,
-            'currency'             => 'EUR',
-            'stripe_price_id'      => null,
+            'trial_days'             => 14,
+            'is_public'              => 1,
+            'currency'               => 'EUR',
+            'stripe_price_id'        => null,
             'stripe_price_id_yearly' => null,
-            'is_active'            => 1,
-            'sort_order'           => $this->nextSortOrder(),
-            'description'          => null,
+            'is_active'              => 1,
+            'sort_order'             => $this->nextSortOrder(),
+            'description'            => null,
         ], $data);
 
+        $existing = $this->getExistingColumns();
+
+        $allCols = [
+            'slug', 'name', 'description', 'price_month', 'price_year', 'max_users',
+            'features', 'is_active', 'sort_order',
+            'is_public', 'trial_days', 'currency', 'stripe_price_id', 'stripe_price_id_yearly',
+        ];
+
+        $cols   = array_filter($allCols, fn($c) => in_array($c, $existing, true));
+        $params = array_intersect_key($data, array_flip($cols));
+
+        $colList    = implode(', ', $cols);
+        $namedList  = implode(', ', array_map(fn($c) => ':' . $c, $cols));
+
         return (int)$this->db->insert(
-            "INSERT INTO plans
-             (slug, name, description, price_month, price_year, max_users, features,
-              is_active, is_public, trial_days, currency, stripe_price_id, stripe_price_id_yearly, sort_order)
-             VALUES
-             (:slug, :name, :description, :price_month, :price_year, :max_users, :features,
-              :is_active, :is_public, :trial_days, :currency, :stripe_price_id, :stripe_price_id_yearly, :sort_order)",
-            $data
+            "INSERT INTO plans ({$colList}) VALUES ({$namedList})",
+            $params
         );
+    }
+
+    /** @return list<string> */
+    private function getExistingColumns(): array
+    {
+        static $cache = null;
+        if ($cache !== null) {
+            return $cache;
+        }
+        try {
+            $rows  = $this->db->fetchAll("SHOW COLUMNS FROM plans");
+            $cache = array_column($rows, 'Field');
+        } catch (\Throwable) {
+            $cache = ['slug','name','description','price_month','price_year','max_users','features','is_active','sort_order'];
+        }
+        return $cache;
     }
 
     /**

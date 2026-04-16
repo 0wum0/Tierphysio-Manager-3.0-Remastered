@@ -135,6 +135,53 @@
 
     <div class="col-lg-5">
 
+        {# ── SaaS Platform DB-Migrationen ────────────────────────────── #}
+        {% set dbm = db_migration ?? {} %}
+        {% set pendingCount = dbm.pending ?? 0 %}
+        <div class="section-card {% if pendingCount > 0 %}" style="border-color:rgba(234,179,8,.35);background:linear-gradient(135deg,rgba(234,179,8,.04),#1e293b){% endif %}">
+            <div class="section-title d-flex align-items-center gap-2">
+                <i class="bi bi-database-gear me-1 {% if pendingCount > 0 %}text-warning{% else %}text-success{% endif %}"></i>
+                Datenbank-Migrationen (Global)
+                {% if pendingCount > 0 %}
+                <span class="badge bg-warning text-dark ms-1" style="font-size:.65rem;">{{ pendingCount }} ausstehend</span>
+                {% else %}
+                <span class="badge" style="background:rgba(16,185,129,.15);color:#34d399;font-size:.65rem;border:1px solid rgba(16,185,129,.3);">Aktuell</span>
+                {% endif %}
+            </div>
+
+            {% if pendingCount > 0 %}
+            <div class="alert" style="background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.3);border-radius:.5rem;padding:.75rem 1rem;margin-bottom:1rem;font-size:.8rem;color:#fde68a;">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>{{ pendingCount }} ausstehende Migration(en)</strong> müssen auf der Produktionsdatenbank angewandt werden. Dies behebt aktuelle 500-Fehler durch fehlende Spalten.
+            </div>
+            {% endif %}
+
+            <div class="d-flex justify-content-between py-1 mb-1" style="border-bottom:1px solid #1e293b;font-size:.825rem;">
+                <span style="color:#64748b;">Angewandt</span>
+                <span style="color:#e2e8f0;font-weight:500;">{{ dbm.applied ?? 0 }} / {{ (dbm.applied ?? 0) + pendingCount }}</span>
+            </div>
+
+            {% if dbm.files is defined and dbm.files %}
+            <div style="max-height:140px;overflow-y:auto;margin:.75rem 0;">
+                {% for f in dbm.files %}
+                <div class="d-flex align-items-center gap-2 py-1" style="font-size:.75rem;border-bottom:1px solid rgba(51,65,85,.5);">
+                    <i class="bi bi-{{ f.applied ? 'check-circle-fill text-success' : 'clock text-warning' }}" style="font-size:.8rem;flex-shrink:0;"></i>
+                    <span style="color:{{ f.applied ? '#94a3b8' : '#fde68a' }};font-family:monospace;">{{ f.filename }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <form method="POST" action="/admin/updates/run-db-migrations" class="mt-2"
+                  onsubmit="return confirm('SaaS-Datenbank-Migrationen anwenden? Dies ändert die globale Datenbank (plans, subscriptions, …).')">
+                {{ csrf_field()|raw }}
+                <button type="submit" class="btn btn-sm w-100 {% if pendingCount > 0 %}btn-warning{% else %}btn-outline-secondary{% endif %}">
+                    <i class="bi bi-database-fill-up me-1"></i>
+                    {% if pendingCount > 0 %}{{ pendingCount }} Migration(en) anwenden{% else %}Migrationen prüfen / neu ausführen{% endif %}
+                </button>
+            </form>
+        </div>
+
         {# ── System-Übersicht ───────────────────────────────────────── #}
         <div class="section-card">
             <div class="section-title"><i class="bi bi-info-circle me-2"></i>Systemübersicht</div>

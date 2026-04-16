@@ -95,11 +95,13 @@ $router->post('/admin/notifications/{id}/read',               [NotificationContr
 $router->post('/admin/notifications/{id}/delete',             [NotificationController::class, 'delete']);
 
 // ── Updates & Versionsverwaltung ───────────────────────────────────────────
-$router->get('/admin/updates',             [UpdateController::class, 'index']);
-$router->get('/admin/updates/check',       [UpdateController::class, 'checkUpdate']);
-$router->get('/admin/updates/changelog',   [UpdateController::class, 'changelog']);
-$router->get('/admin/updates/system-info', [UpdateController::class, 'systemInfo']);
-$router->post('/admin/updates/apply',      [UpdateController::class, 'applyUpdate']);
+$router->get('/admin/updates',                         [UpdateController::class, 'index']);
+$router->get('/admin/updates/check',                   [UpdateController::class, 'checkUpdate']);
+$router->get('/admin/updates/changelog',               [UpdateController::class, 'changelog']);
+$router->get('/admin/updates/system-info',             [UpdateController::class, 'systemInfo']);
+$router->post('/admin/updates/apply',                  [UpdateController::class, 'applyUpdate']);
+$router->post('/admin/updates/run-db-migrations',      [UpdateController::class, 'runPlatformMigrations']);
+$router->get('/admin/updates/db-migration-status',     [UpdateController::class, 'migrationStatus']);
 
 
 
