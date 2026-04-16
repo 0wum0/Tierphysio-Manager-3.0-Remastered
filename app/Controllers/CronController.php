@@ -175,33 +175,40 @@ class CronController extends Controller
             foreach ($jobs as $jobKey => $config) {
                 $jobStart = hrtime(true);
 
-                // Prüfen, ob Job fällig ist
-                $lastRun = $this->db->fetchColumn(
-                    "SELECT created_at FROM cron_dispatcher_log WHERE job_key = ? ORDER BY created_at DESC LIMIT 1",
-                    [$jobKey]
-                );
+                try {
+                    // Prüfen, ob Job fällig ist
+                    $lastRun = $this->db->fetchColumn(
+                        "SELECT created_at FROM cron_dispatcher_log WHERE job_key = ? ORDER BY created_at DESC LIMIT 1",
+                        [$jobKey]
+                    );
 
-                $isDue = true;
-                if ($lastRun) {
-                    $lastRunTime = strtotime($lastRun);
-                    $nextRunTime = $lastRunTime + $config['interval_seconds'];
-                    $isDue = time() >= $nextRunTime;
+                    $isDue = true;
+                    if ($lastRun) {
+                        $lastRunTime = strtotime($lastRun);
+                        $nextRunTime = $lastRunTime + $config['interval_seconds'];
+                        $isDue = time() >= $nextRunTime;
+                    }
+
+                    if (!$isDue) {
+                        $results[$jobKey] = ['status' => 'skipped', 'reason' => 'Not due yet'];
+                        $this->dispatcherLog($jobKey, 'skipped', 'Not due yet', $jobStart);
+                        continue;
+                    }
+
+                    // Job ausführen via internen Aufruf
+                    $this->cronLog("EXECUTING job: {$jobKey}");
+                    $jobResult = $this->executeJob($jobKey, $config['endpoint']);
+                    $results[$jobKey] = $jobResult;
+
+                    $status = $jobResult['success'] ? 'success' : 'error';
+                    $message = $jobResult['message'] ?? ($jobResult['success'] ? 'Executed successfully' : 'Execution failed');
+                    $this->dispatcherLog($jobKey, $status, $message, $jobStart);
+                } catch (\Throwable $e) {
+                    $errorMessage = 'Job failed: ' . $e->getMessage();
+                    $results[$jobKey] = ['success' => false, 'status' => 'error', 'message' => $errorMessage];
+                    $this->cronLog("[CRON ERROR] {$jobKey}: " . $e->getMessage());
+                    $this->dispatcherLog($jobKey, 'error', $errorMessage, $jobStart);
                 }
-
-                if (!$isDue) {
-                    $results[$jobKey] = ['status' => 'skipped', 'reason' => 'Not due yet'];
-                    $this->dispatcherLog($jobKey, 'skipped', 'Not due yet', $jobStart);
-                    continue;
-                }
-
-                // Job ausführen via internen Aufruf
-                $this->cronLog("EXECUTING job: {$jobKey}");
-                $jobResult = $this->executeJob($jobKey, $config['endpoint']);
-                $results[$jobKey] = $jobResult;
-
-                $status = $jobResult['success'] ? 'success' : 'error';
-                $message = $jobResult['message'] ?? ($jobResult['success'] ? 'Executed successfully' : 'Execution failed');
-                $this->dispatcherLog($jobKey, $status, $message, $jobStart);
             }
 
             $executedCount = count(array_filter($results, fn($r) => isset($r['status']) && $r['status'] !== 'skipped'));
@@ -252,6 +259,91 @@ class CronController extends Controller
         // Internen Aufruf via curl
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 120);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['X-Internal-Cron: true']);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        curl_close($ch);
+
+        $duration = (int)((hrtime(true) - $start) / 1_000_000);
+
+        if ($error) {
+            return [
+                'success' => false,
+                'message' => 'CURL Error: ' . $error,
+                'duration_ms' => $duration
+            ];
+        }
+
+        return [
+            'success' => $httpCode >= 200 && $httpCode < 300,
+            'message' => "HTTP {$httpCode}",
+            'duration_ms' => $duration,
+            'response' => substr($response, 0, 500)
+        ];
+    }
+
+    private function dispatcherLog(string $jobKey, string $status, string $message, int $startHrtime): void
+    {
+        $ms = (int)((hrtime(true) - $startHrtime) / 1_000_000);
+        try {
+            $this->db->query(
+                "INSERT INTO cron_dispatcher_log (job_key, status, message, duration_ms) VALUES (?, ?, ?, ?)",
+                [$jobKey, $status, $message, $ms]
+            );
+        } catch (\Throwable) {
+            // Logging must never crash the dispatcher
+        }
+    }
+
+    private function dbLog(string $jobKey, string $status, string $message, int $startHrtime): void
+    {
+        $ms = (int)((hrtime(true) - $startHrtime) / 1_000_000);
+        \App\Controllers\CronAdminController::logRun($this->db, $jobKey, $status, $message, $ms, 'cron');
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       Write to logs/cron.log
+    ───────────────────────────────────────────────────────── */
+    private function cronLog(string $message): void
+    {
+        try {
+            $logDir  = defined('ROOT_PATH') ? ROOT_PATH . '/logs' : dirname(__DIR__, 2) . '/logs';
+            $logFile = $logDir . '/cron.log';
+            if (!is_dir($logDir)) {
+                @mkdir($logDir, 0755, true);
+            }
+            @file_put_contents(
+                $logFile,
+                '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n",
+                FILE_APPEND | LOCK_EX
+            );
+        } catch (\Throwable) {
+            /* Logging must never crash the cron */
+        }
+    }
+
+    private function jsonCron(mixed $data): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        echo "\nCron completed\n";
+        exit;
+    }
+
+    private function prefixFromTid(string $tid): string
+    {
+        $normalized = strtolower(trim($tid));
+        $normalized = preg_replace('/[^a-z0-9]/', '_', $normalized) ?? $normalized;
+        $normalized = preg_replace('/_+/', '_', $normalized) ?? $normalized;
+        $normalized = trim($normalized, '_');
+        return 't_' . $normalized . '_';
+    }
+}t($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 120);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
