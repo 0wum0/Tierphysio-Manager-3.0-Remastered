@@ -118,6 +118,22 @@
         .subheader { padding: .75rem 1.5rem; }
         .page-inner { padding: 1.25rem 1.5rem 2rem; }
 
+        /* Fix: assign app-main to the SmartAdmin grid area 'main'
+         * SmartAdmin uses .app-body for grid-area:main – our template uses .app-main.
+         * Without this, the main content is auto-placed in the wrong column on mobile. */
+        .app-main {
+            grid-area: main;
+            display: flex;
+            flex-flow: column;
+            min-width: 0;
+            max-width: 100%;
+            overflow-x: hidden;
+        }
+        /* Prevent the off-screen mobile sidebar (translateX -18rem) from creating
+         * a horizontal scroll area that shifts page content visually. */
+        .app-wrap {
+            overflow-x: hidden;
+        }
         /* Sticky header: stays at top on scroll, no layout disruption */
         .app-header {
             position: sticky;
@@ -134,7 +150,7 @@
 
     {# ── App Header ──────────────────────────────────────────────────────── #}
     <header class="app-header">
-        <div class="d-flex flex-grow-1 w-100 me-auto align-items-center">
+            <div class="d-flex flex-grow-1 me-auto align-items-center">
 
             {# App-Logo (sichtbar in der Header-Leiste) #}
             <a href="/admin" class="app-logo flex-shrink-0">
