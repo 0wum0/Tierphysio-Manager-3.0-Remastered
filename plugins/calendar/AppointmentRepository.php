@@ -79,9 +79,11 @@ class AppointmentRepository
              LEFT JOIN `{$this->t('patients')}` p ON p.id = a.patient_id
              WHERE a.reminder_sent = 0
                AND a.status IN ('scheduled','confirmed')
-               AND COALESCE(a.reminder_minutes, 0) > 0
-               AND a.start_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL COALESCE(a.reminder_minutes, 60) MINUTE)
-               AND (o.email IS NOT NULL AND o.email != '' OR a.patient_email IS NOT NULL AND a.patient_email != '')",
+               AND COALESCE(a.reminder_minutes, 1440) > 0
+               AND a.start_at > NOW()
+               AND DATE_SUB(a.start_at, INTERVAL COALESCE(a.reminder_minutes, 1440) MINUTE) <= NOW()
+               AND o.email IS NOT NULL
+               AND o.email <> ''",
             []
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
