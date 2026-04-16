@@ -466,6 +466,15 @@ class CalendarController extends Controller
     /* ── Cron: send pending reminders ── */
     public function cronReminders(array $params = []): void
     {
+        /* Tenant-Prefix setzen, BEVOR jeder DB-Zugriff stattfindet.
+         * Der Dispatcher übergibt ?tid= in der URL, ohne das würden alle
+         * Queries gegen die globale (leere) Tabelle laufen → sent=0 immer. */
+        $tid = (string)($_GET['tid'] ?? '');
+        if ($tid !== '') {
+            $normalized = preg_replace('/[^a-z0-9_]/', '_', strtolower($tid));
+            $this->db->setPrefix('t_' . $normalized . '_');
+        }
+
         $start = hrtime(true);
         $this->calCronLog('START calendar reminder cron at ' . date('Y-m-d H:i:s'));
 
@@ -580,6 +589,7 @@ class CalendarController extends Controller
                 'recurrence_rule'      => $a['recurrence_rule'],
                 'recurrence_parent'    => $a['recurrence_parent'],
                 'reminder_minutes'     => $a['reminder_minutes'],
+                'reminder_sent'        => (bool)($a['reminder_sent'] ?? false),
                 'invoice_id'           => $a['invoice_id'],
             ],
         ];
