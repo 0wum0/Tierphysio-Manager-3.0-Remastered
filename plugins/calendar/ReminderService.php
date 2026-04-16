@@ -30,22 +30,29 @@ class ReminderService
         }
 
         foreach ($appointments as $a) {
+            $apptLabel = '"' . ($a['title'] ?? 'Termin') . '" am ' . ($a['start_at'] ?? '?');
+
             /* Erinnerung an Tierhalter; Fallback auf Praxis-E-Mail wenn keine vorhanden */
             if (empty($a['owner_email'])) {
                 if ($practiceEmail === '') {
+                    error_log('[ReminderService] SKIP ' . $apptLabel . ' — kein owner_email und keine Praxis-E-Mail in Einstellungen konfiguriert');
                     $skipped++;
                     continue;
                 }
                 /* Send to practice as fallback so the reminder is not lost */
+                error_log('[ReminderService] FALLBACK ' . $apptLabel . ' — kein Tierhalter verknüpft → sende an Praxis: ' . $practiceEmail);
                 $a['owner_email'] = $practiceEmail;
                 $a['first_name']  = 'Praxis';
                 $a['last_name']   = '';
+            } else {
+                error_log('[ReminderService] SEND ' . $apptLabel . ' → ' . $a['owner_email']);
             }
 
             $ownerSent = $this->mailService->sendReminder($a);
             if (!$ownerSent) {
                 $failed++;
                 $lastError = $this->mailService->getLastError();
+                error_log('[ReminderService] FAILED ' . $apptLabel . ' — ' . $lastError);
                 continue;
             }
             $sent++;
