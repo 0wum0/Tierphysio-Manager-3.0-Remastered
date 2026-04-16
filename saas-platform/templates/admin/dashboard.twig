@@ -1,288 +1,371 @@
-{% extends 'layouts/base.twig' %}
+﻿{% extends 'layouts/base.twig' %}
 {% set active_nav = 'dashboard' %}
+{# ═══════════════════════════════════════════════════════════════════════════
+   TheraPano SaaS – Admin Dashboard
+   Alle Kennzahlen und Funktionen auf Deutsch.
+   ═══════════════════════════════════════════════════════════════════════════ #}
 
 {% block styles %}
 <style>
+/* ── KPI Cards ────────────────────────────────────────────────────── */
 .kpi-card {
-    border-radius: .875rem;
-    padding: 1.25rem 1.5rem;
-    border: 1px solid #334155;
-    background: #1e293b;
-    position: relative;
-    overflow: hidden;
+    border-radius: .875rem; padding: 1.1rem 1.35rem;
+    border: 1px solid #334155; background: #1e293b;
+    position: relative; overflow: hidden;
     transition: transform .15s, box-shadow .15s;
 }
 .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,.3); }
-.kpi-card .kpi-icon {
-    width: 2.75rem; height: 2.75rem; border-radius: .6rem;
-    display: flex; align-items: center; justify-content: center; font-size: 1.25rem;
-    flex-shrink: 0;
+.kpi-icon {
+    width: 2.5rem; height: 2.5rem; border-radius: .55rem;
+    display: flex; align-items: center; justify-content: center; font-size: 1.15rem; flex-shrink: 0;
 }
-.kpi-card .kpi-value { font-size: 1.85rem; font-weight: 800; line-height: 1; }
-.kpi-card .kpi-label { font-size: .75rem; color: #64748b; margin-top: .2rem; }
-.kpi-card .kpi-badge { font-size: .65rem; padding: .15rem .45rem; border-radius: 999px; font-weight: 600; }
-.kpi-glow-blue  { background: rgba(37,99,235,.08); }
-.kpi-glow-green { background: rgba(16,185,129,.08); }
-.kpi-glow-amber { background: rgba(245,158,11,.08); }
-.kpi-glow-purple{ background: rgba(167,139,250,.08); }
-.kpi-glow-rose  { background: rgba(244,63,94,.08); }
-.kpi-glow-cyan  { background: rgba(6,182,212,.08); }
-.chart-card { border-radius: .875rem; border: 1px solid #334155; background: #1e293b; }
-.chart-card .chart-header {
-    padding: 1rem 1.25rem .75rem;
-    border-bottom: 1px solid #1f2d3d;
+.kpi-value  { font-size: 1.8rem; font-weight: 800; line-height: 1; }
+.kpi-label  { font-size: .72rem; color: #64748b; margin-top: .2rem; }
+.kpi-sub    { font-size: .7rem; color: #475569; margin-top: .2rem; }
+.kpi-trend  { font-size: .7rem; font-weight: 600; margin-top: .15rem; }
+.trend-up   { color: #34d399; }
+.trend-down { color: #f87171; }
+.trend-neu  { color: #60a5fa; }
+
+/* ── Chart / Section Cards ────────────────────────────────────────── */
+.dash-card { border-radius: .875rem; border: 1px solid #334155; background: #1e293b; }
+.dash-header {
+    padding: .9rem 1.25rem .7rem; border-bottom: 1px solid #1f2d3d;
     display: flex; align-items: center; justify-content: space-between;
 }
-.chart-card .chart-body { padding: 1rem 1.25rem 1.25rem; }
-.chart-title { font-size: .875rem; font-weight: 600; color: #e2e8f0; }
-.chart-sub   { font-size: .72rem; color: #64748b; margin-top: .1rem; }
-.flip-card-outer { perspective: 1000px; }
-.flip-card-inner {
-    position: relative; width: 100%; height: 120px;
-    transform-style: preserve-3d; transition: transform .6s ease;
+.dash-body  { padding: 1rem 1.25rem 1.25rem; }
+.dash-title { font-size: .875rem; font-weight: 600; color: #e2e8f0; }
+.dash-sub   { font-size: .7rem; color: #64748b; margin-top: .1rem; }
+
+/* ── Quick Actions ────────────────────────────────────────────────── */
+.qa-btn {
+    display: flex; align-items: center; gap: .5rem;
+    padding: .55rem 1rem; border-radius: .5rem; font-size: .8rem; font-weight: 600;
+    text-decoration: none; border: 1px solid #334155; background: #1e293b; color: #94a3b8;
+    transition: all .15s; white-space: nowrap;
 }
-.flip-card-outer:hover .flip-card-inner { transform: rotateY(180deg); }
-.flip-front, .flip-back {
-    position: absolute; width: 100%; height: 100%;
-    backface-visibility: hidden; border-radius: .875rem;
-    border: 1px solid #334155; background: #1e293b;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .25rem;
+.qa-btn:hover { background: #0f172a; color: #e2e8f0; border-color: #475569; }
+.qa-btn i     { font-size: .95rem; }
+
+/* ── Alert Banner ─────────────────────────────────────────────────── */
+.alert-banner {
+    border-radius: .6rem; padding: .75rem 1rem;
+    display: flex; align-items: center; gap: .75rem; font-size: .8rem;
 }
-.flip-back { transform: rotateY(180deg); background: #0f1b2d; }
-.fb-value { font-size: 1.6rem; font-weight: 800; }
-.fb-label { font-size: .7rem; color: #64748b; }
-.feedback-item {
-    padding: .75rem 1rem; border-bottom: 1px solid #1f2d3d;
-    display: flex; gap: .75rem; align-items: flex-start;
-}
-.feedback-item:last-child { border-bottom: none; }
-.cat-badge { font-size: .65rem; padding: .15rem .45rem; border-radius: 999px; font-weight: 600; }
-.cat-bug     { background: rgba(239,68,68,.15);  color: #fca5a5; }
-.cat-feature { background: rgba(37,99,235,.15);  color: #93c5fd; }
-.cat-praise  { background: rgba(16,185,129,.15); color: #6ee7b7; }
-.cat-other   { background: rgba(100,116,139,.15);color: #94a3b8; }
+.alert-warn  { background: rgba(234,179,8,.08); border: 1px solid rgba(234,179,8,.25); color: #fde68a; }
+.alert-info  { background: rgba(96,165,250,.08); border: 1px solid rgba(96,165,250,.2); color: #93c5fd; }
+.alert-danger{ background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.2); color: #fca5a5; }
+
+/* ── Status Badges ────────────────────────────────────────────────── */
+.s-aktiv     { background:rgba(52,211,153,.15); color:#34d399; }
+.s-testphase { background:rgba(196,181,253,.15);color:#c4b5fd; }
+.s-ausstehend{ background:rgba(253,186,116,.15);color:#fdba74; }
+.s-gesperrt  { background:rgba(248,113,113,.15);color:#fca5a5; }
+.s-gekuendigt{ background:rgba(148,163,184,.15);color:#94a3b8; }
+.s-badge { font-size:.65rem; padding:.15rem .45rem; border-radius:999px; font-weight:700; }
+
+/* ── Feedback ─────────────────────────────────────────────────────── */
+.fb-item { padding:.7rem 1rem; border-bottom:1px solid #1f2d3d; display:flex; gap:.65rem; align-items:flex-start; }
+.fb-item:last-child { border-bottom:none; }
+.cat-badge { font-size:.62rem; padding:.12rem .4rem; border-radius:999px; font-weight:700; }
+.cat-bug     { background:rgba(239,68,68,.15);  color:#fca5a5; }
+.cat-feature { background:rgba(37,99,235,.15);  color:#93c5fd; }
+.cat-praise  { background:rgba(16,185,129,.15); color:#6ee7b7; }
+.cat-other   { background:rgba(100,116,139,.15);color:#94a3b8; }
+
+/* ── Activity Feed ────────────────────────────────────────────────── */
+.act-item { padding:.55rem 1rem; border-bottom:1px solid #1f2d3d; display:flex; gap:.65rem; align-items:center; font-size:.78rem; }
+.act-item:last-child { border-bottom:none; }
+.act-dot  { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+
+/* ── Trial Expiry List ────────────────────────────────────────────── */
+.trial-row { padding:.5rem 1rem; border-bottom:1px solid #1f2d3d; display:flex; align-items:center; gap:.75rem; font-size:.8rem; }
+.trial-row:last-child { border-bottom:none; }
+.days-badge { font-size:.65rem; font-weight:700; padding:.2rem .5rem; border-radius:999px; min-width:3.5rem; text-align:center; }
+
+/* ── Lifecycle Mail Table ─────────────────────────────────────────── */
+.lc-row { display:flex; align-items:center; justify-content:space-between; padding:.5rem 0; border-bottom:1px solid #1f2d3d; font-size:.8rem; }
+.lc-row:last-child { border-bottom:none; }
 </style>
 {% endblock %}
 
 {% block content %}
-{# ── Row 1: KPI Flipcards (hover to flip) ── #}
+{# ══════════════════════════════════════════════════════════════════════════ #}
+{# SCHNELLAKTIONEN                                                           #}
+{# ══════════════════════════════════════════════════════════════════════════ #}
+<div class="d-flex align-items-center gap-2 flex-wrap mb-4 p-3 dash-card">
+    <span style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#475569;margin-right:.25rem;">Schnellaktionen:</span>
+    <a href="/admin/tenants/create" class="qa-btn" style="border-color:rgba(37,99,235,.3);color:#6EA8FE;">
+        <i class="bi bi-building-add"></i>Neue Praxis
+    </a>
+    <a href="/admin/plans" class="qa-btn" style="border-color:rgba(167,139,250,.3);color:#c4b5fd;">
+        <i class="bi bi-collection"></i>Tarife verwalten
+    </a>
+    <a href="/admin/revenue" class="qa-btn" style="border-color:rgba(52,211,153,.3);color:#34d399;">
+        <i class="bi bi-graph-up-arrow"></i>Umsatz-Übersicht
+    </a>
+    <a href="/admin/invoices" class="qa-btn">
+        <i class="bi bi-receipt"></i>Rechnungen
+    </a>
+    <a href="/admin/feedback" class="qa-btn" {% if stats.unread_feedback > 0 %}style="border-color:rgba(167,139,250,.4);color:#c4b5fd;"{% endif %}>
+        <i class="bi bi-chat-square-text"></i>Feedback
+        {% if stats.unread_feedback > 0 %}<span class="badge" style="background:#7c3aed;font-size:.6rem;">{{ stats.unread_feedback }}</span>{% endif %}
+    </a>
+    <a href="/admin/updates" class="qa-btn" {% if pending_migrations > 0 %}style="border-color:rgba(234,179,8,.4);color:#fde68a;"{% endif %}>
+        <i class="bi bi-database-gear"></i>Migrationen
+        {% if pending_migrations > 0 %}<span class="badge bg-warning text-dark" style="font-size:.6rem;">{{ pending_migrations }}</span>{% endif %}
+    </a>
+    <div class="ms-auto" style="font-size:.75rem;color:#475569;">
+        <i class="bi bi-clock me-1"></i>{{ "now"|date('d.m.Y H:i') }} Uhr
+    </div>
+</div>
+
+{# ══════════════════════════════════════════════════════════════════════════ #}
+{# ALERT-BANNER: Warnungen & Handlungsbedarf                                 #}
+{# ══════════════════════════════════════════════════════════════════════════ #}
+{% if trial_expiring|length > 0 or pending_migrations > 0 or stats.pending > 0 %}
+<div class="d-flex flex-column gap-2 mb-4">
+    {% if trial_expiring|length > 0 %}
+    <div class="alert-banner alert-warn">
+        <i class="bi bi-hourglass-split" style="font-size:1.1rem;flex-shrink:0;"></i>
+        <strong>{{ trial_expiring|length }} Praxis/Praxen</strong> beenden die Testphase in den nächsten 7 Tagen.
+        <a href="#trial-expiry" class="ms-2" style="color:#fde68a;font-weight:700;">↓ Anzeigen</a>
+    </div>
+    {% endif %}
+    {% if pending_migrations > 0 %}
+    <div class="alert-banner alert-warn">
+        <i class="bi bi-database-exclamation" style="font-size:1.1rem;flex-shrink:0;"></i>
+        <strong>{{ pending_migrations }} ausstehende Datenbank-Migration(en)</strong> – Kann zu Fehlern führen.
+        <a href="/admin/updates" class="ms-2" style="color:#fde68a;font-weight:700;">Jetzt beheben →</a>
+    </div>
+    {% endif %}
+    {% if stats.pending > 0 %}
+    <div class="alert-banner alert-info">
+        <i class="bi bi-person-plus" style="font-size:1.1rem;flex-shrink:0;"></i>
+        <strong>{{ stats.pending }} ausstehende Praxis-Registrierung(en)</strong> warten auf Freigabe.
+        <a href="/admin/tenants?status=pending" class="ms-2" style="color:#93c5fd;font-weight:700;">Freigeben →</a>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+
+{# ══════════════════════════════════════════════════════════════════════════ #}
+{# KPI-REIHE – TATSÄCHLICHE ZAHLEN                                           #}
+{# ══════════════════════════════════════════════════════════════════════════ #}
 <div class="row g-3 mb-4">
-    {# Flip: Gesamt / Neu diesen Monat #}
     <div class="col-6 col-md-4 col-xl-2">
-        <div class="flip-card-outer">
-            <div class="flip-card-inner">
-                <div class="flip-front">
-                    <div class="fb-value text-white">{{ stats.total }}</div>
-                    <div class="fb-label">Praxen gesamt</div>
+        <div class="kpi-card">
+            <div class="d-flex align-items-start justify-content-between mb-2">
+                <div>
+                    <div class="kpi-value text-white">{{ stats.total }}</div>
+                    <div class="kpi-label">Praxen gesamt</div>
                 </div>
-                <div class="flip-back">
-                    <div class="fb-value" style="color:#6EA8FE;">+{{ stats.new_this_month }}</div>
-                    <div class="fb-label">Neu diesen Monat</div>
+                <div class="kpi-icon" style="background:rgba(110,168,254,.12);color:#6EA8FE;">
+                    <i class="bi bi-building"></i>
                 </div>
+            </div>
+            <div class="kpi-trend trend-neu">+{{ stats.new_this_month }} diesen Monat</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="kpi-card">
+            <div class="d-flex align-items-start justify-content-between mb-2">
+                <div>
+                    <div class="kpi-value" style="color:#6ee7b7;">{{ stats.active }}</div>
+                    <div class="kpi-label">Zahlende Kunden</div>
+                </div>
+                <div class="kpi-icon" style="background:rgba(110,231,183,.12);color:#6ee7b7;">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+            </div>
+            <div class="kpi-trend" style="color:#94a3b8;">{{ stats.trial }} in Testphase</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="kpi-card">
+            <div class="d-flex align-items-start justify-content-between mb-2">
+                <div>
+                    <div class="kpi-value" style="color:#34d399;">{{ revenue_this_month|number_format(2,',','.') }} €</div>
+                    <div class="kpi-label">Bezahlter Umsatz (Monat)</div>
+                </div>
+                <div class="kpi-icon" style="background:rgba(52,211,153,.1);color:#34d399;">
+                    <i class="bi bi-cash-coin"></i>
+                </div>
+            </div>
+            <div class="kpi-sub">Nur tatsächlich bezahlte Rechnungen</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="kpi-card">
+            <div class="d-flex align-items-start justify-content-between mb-2">
+                <div>
+                    <div class="kpi-value" style="color:#fde68a;">{{ stats.monthly_revenue|number_format(0,',','.') }} €</div>
+                    <div class="kpi-label">Mögl. Monatsumsatz</div>
+                </div>
+                <div class="kpi-icon" style="background:rgba(253,230,138,.1);color:#fde68a;">
+                    <i class="bi bi-graph-up-arrow"></i>
+                </div>
+            </div>
+            <div class="kpi-sub" style="color:#64748b;">Prognose – wenn alle Abos zahlen</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="kpi-card">
+            <div class="d-flex align-items-start justify-content-between mb-2">
+                <div>
+                    <div class="kpi-value" style="color:{% if stats.trial_expiring_soon > 0 %}#fdba74{% else %}#94a3b8{% endif %};">
+                        {{ stats.trial_expiring_soon }}
+                    </div>
+                    <div class="kpi-label">Testphase endet (7 Tage)</div>
+                </div>
+                <div class="kpi-icon" style="background:rgba(253,186,116,.12);color:#fdba74;">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+            </div>
+            <div class="kpi-trend {% if stats.churn_this_month > 0 %}trend-down{% else %}trend-up{% endif %}">
+                {{ stats.churn_this_month }} Kündigungen diesen Monat
             </div>
         </div>
     </div>
-    {# Flip: Aktiv / Trial #}
     <div class="col-6 col-md-4 col-xl-2">
-        <div class="flip-card-outer">
-            <div class="flip-card-inner">
-                <div class="flip-front">
-                    <div class="fb-value" style="color:#6ee7b7;">{{ stats.active }}</div>
-                    <div class="fb-label">Aktive Praxen</div>
+        <div class="kpi-card">
+            <div class="d-flex align-items-start justify-content-between mb-2">
+                <div>
+                    <div class="kpi-value" style="color:#a78bfa;">{{ stats.unread_feedback }}</div>
+                    <div class="kpi-label">Neues Feedback</div>
                 </div>
-                <div class="flip-back">
-                    <div class="fb-value" style="color:#c4b5fd;">{{ stats.trial }}</div>
-                    <div class="fb-label">In Testphase</div>
+                <div class="kpi-icon" style="background:rgba(167,139,250,.12);color:#a78bfa;">
+                    <i class="bi bi-chat-square-text"></i>
                 </div>
             </div>
-        </div>
-    </div>
-    {# Flip: MRR / ARR #}
-    <div class="col-6 col-md-4 col-xl-2">
-        <div class="flip-card-outer">
-            <div class="flip-card-inner">
-                <div class="flip-front">
-                    <div class="fb-value" style="color:#fde68a;">{{ stats.monthly_revenue|number_format(0, ',', '.') }}€</div>
-                    <div class="fb-label">MRR</div>
-                </div>
-                <div class="flip-back">
-                    <div class="fb-value" style="color:#f59e0b;">{{ stats.yearly_revenue|number_format(0, ',', '.') }}€</div>
-                    <div class="fb-label">ARR (Hochrechnung)</div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {# Flip: Aktive Abos / Abonnenten #}
-    <div class="col-6 col-md-4 col-xl-2">
-        <div class="flip-card-outer">
-            <div class="flip-card-inner">
-                <div class="flip-front">
-                    <div class="fb-value" style="color:#7dd3fc;">{{ stats.active_subscriptions }}</div>
-                    <div class="fb-label">Aktive Abos</div>
-                </div>
-                <div class="flip-back">
-                    <div class="fb-value" style="color:#38bdf8;">{{ stats.churn_this_month }}</div>
-                    <div class="fb-label">Churn diesen Monat</div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {# Flip: Trial läuft ab / Feedback ungelesen #}
-    <div class="col-6 col-md-4 col-xl-2">
-        <div class="flip-card-outer">
-            <div class="flip-card-inner">
-                <div class="flip-front">
-                    <div class="fb-value" style="color:#fdba74;">{{ stats.trial_expiring_soon }}</div>
-                    <div class="fb-label">Trial läuft ab (7 Tage)</div>
-                </div>
-                <div class="flip-back">
-                    <div class="fb-value" style="color:#f87171;">{{ stats.pending }}</div>
-                    <div class="fb-label">Ausstehend</div>
-                </div>
-            </div>
-        </div>
-    </div>
-    {# Flip: Feedback ungelesen / Suspended #}
-    <div class="col-6 col-md-4 col-xl-2">
-        <div class="flip-card-outer">
-            <div class="flip-card-inner">
-                <div class="flip-front">
-                    <div class="fb-value" style="color:#a78bfa;">{{ stats.unread_feedback }}</div>
-                    <div class="fb-label">Feedback ungelesen</div>
-                </div>
-                <div class="flip-back">
-                    <div class="fb-value" style="color:#94a3b8;">{{ stats.suspended }}</div>
-                    <div class="fb-label">Gesperrt</div>
-                </div>
-            </div>
+            <div class="kpi-trend" style="color:#94a3b8;">{{ stats.suspended }} Praxen gesperrt</div>
         </div>
     </div>
 </div>
 
-{# ── Row 2: Revenue Chart + Registrations Chart ── #}
+{# ══════════════════════════════════════════════════════════════════════════ #}
+{# CHARTS: Umsatzverlauf + Neuregistrierungen                                #}
+{# ══════════════════════════════════════════════════════════════════════════ #}
 <div class="row g-3 mb-4">
     <div class="col-lg-7">
-        <div class="chart-card">
-            <div class="chart-header">
+        <div class="dash-card">
+            <div class="dash-header">
                 <div>
-                    <div class="chart-title"><i class="bi bi-graph-up-arrow me-2" style="color:#6EA8FE;"></i>Monatlicher Umsatz (MRR)</div>
-                    <div class="chart-sub">Letzte 12 Monate</div>
+                    <div class="dash-title"><i class="bi bi-graph-up-arrow me-2" style="color:#6EA8FE;"></i>Mögl. Umsatzverlauf (Prognose)</div>
+                    <div class="dash-sub">Letzte 12 Monate – basierend auf aktiven Abonnements</div>
                 </div>
-                <span class="badge" style="background:rgba(110,168,254,.15);color:#6EA8FE;font-size:.7rem;">{{ stats.monthly_revenue|number_format(2,',','.') }} € aktuell</span>
+                <span class="badge" style="background:rgba(110,168,254,.12);color:#6EA8FE;font-size:.68rem;">
+                    Prognose {{ stats.monthly_revenue|number_format(2,',','.') }} €/Mo
+                </span>
             </div>
-            <div class="chart-body">
+            <div class="dash-body">
                 <canvas id="revenueChart" height="90"></canvas>
             </div>
         </div>
     </div>
     <div class="col-lg-5">
-        <div class="chart-card">
-            <div class="chart-header">
+        <div class="dash-card">
+            <div class="dash-header">
                 <div>
-                    <div class="chart-title"><i class="bi bi-person-plus me-2" style="color:#6ee7b7;"></i>Neuregistrierungen</div>
-                    <div class="chart-sub">Letzte 12 Monate</div>
+                    <div class="dash-title"><i class="bi bi-person-plus me-2" style="color:#6ee7b7;"></i>Neuregistrierungen</div>
+                    <div class="dash-sub">Letzte 12 Monate</div>
                 </div>
-                <span class="badge" style="background:rgba(110,231,183,.15);color:#6ee7b7;font-size:.7rem;">+{{ stats.new_this_month }} diesen Monat</span>
+                <span class="badge" style="background:rgba(110,231,183,.12);color:#6ee7b7;font-size:.68rem;">
+                    +{{ stats.new_this_month }} diesen Monat
+                </span>
             </div>
-            <div class="chart-body">
+            <div class="dash-body">
                 <canvas id="regChart" height="90"></canvas>
             </div>
         </div>
     </div>
 </div>
 
-{# ── Row 3: Jahresprognose + Plan Donut + Status Donut ── #}
+{# ══════════════════════════════════════════════════════════════════════════ #}
+{# JAHRESPROGNOSE + PLAN-VERTEILUNG + STATUS-VERTEILUNG                      #}
+{# ══════════════════════════════════════════════════════════════════════════ #}
 <div class="row g-3 mb-4">
-    {# Jahresprognose #}
     <div class="col-lg-4">
-        <div class="chart-card h-100">
-            <div class="chart-header">
+        <div class="dash-card h-100">
+            <div class="dash-header">
                 <div>
-                    <div class="chart-title"><i class="bi bi-lightning-charge me-2" style="color:#fde68a;"></i>Jahresprognose {{ "now"|date("Y") }}</div>
-                    <div class="chart-sub">Basierend auf aktuellem MRR</div>
+                    <div class="dash-title"><i class="bi bi-lightning-charge me-2" style="color:#fde68a;"></i>Jahresprognose {{ "now"|date("Y") }}</div>
+                    <div class="dash-sub">Basierend auf mögl. Monatsumsatz</div>
                 </div>
             </div>
-            <div class="chart-body">
-                <div class="row g-2">
+            <div class="dash-body">
+                <div class="row g-2 mb-3">
                     <div class="col-6">
-                        <div style="background:rgba(37,99,235,.08);border-radius:.6rem;padding:.75rem;text-align:center;">
-                            <div style="font-size:1.3rem;font-weight:800;color:#6EA8FE;">{{ forecast.ytd|number_format(0,',','.') }}€</div>
-                            <div style="font-size:.68rem;color:#64748b;">YTD Umsatz</div>
+                        <div style="background:rgba(37,99,235,.08);border-radius:.55rem;padding:.7rem;text-align:center;">
+                            <div style="font-size:1.2rem;font-weight:800;color:#6EA8FE;">{{ forecast.ytd|number_format(0,',','.') }} €</div>
+                            <div style="font-size:.65rem;color:#64748b;">Bisher dieses Jahr</div>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div style="background:rgba(16,185,129,.08);border-radius:.6rem;padding:.75rem;text-align:center;">
-                            <div style="font-size:1.3rem;font-weight:800;color:#6ee7b7;">{{ forecast.projected|number_format(0,',','.') }}€</div>
-                            <div style="font-size:.68rem;color:#64748b;">Prognose gesamt</div>
+                        <div style="background:rgba(16,185,129,.08);border-radius:.55rem;padding:.7rem;text-align:center;">
+                            <div style="font-size:1.2rem;font-weight:800;color:#6ee7b7;">{{ forecast.projected|number_format(0,',','.') }} €</div>
+                            <div style="font-size:.65rem;color:#64748b;">Prognose Gesamt</div>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div style="background:rgba(245,158,11,.08);border-radius:.6rem;padding:.75rem;text-align:center;">
-                            <div style="font-size:1.3rem;font-weight:800;color:#fde68a;">{{ forecast.yearly_if_same|number_format(0,',','.') }}€</div>
-                            <div style="font-size:.68rem;color:#64748b;">ARR bei konst. MRR</div>
+                        <div style="background:rgba(245,158,11,.08);border-radius:.55rem;padding:.7rem;text-align:center;">
+                            <div style="font-size:1.2rem;font-weight:800;color:#fde68a;">{{ forecast.yearly_if_same|number_format(0,',','.') }} €</div>
+                            <div style="font-size:.65rem;color:#64748b;">Mögl. Jahresumsatz</div>
                         </div>
                     </div>
                     <div class="col-6">
-                        <div style="background:{% if forecast.growth_pct >= 0 %}rgba(16,185,129,.08){% else %}rgba(239,68,68,.08){% endif %};border-radius:.6rem;padding:.75rem;text-align:center;">
-                            <div style="font-size:1.3rem;font-weight:800;color:{% if forecast.growth_pct >= 0 %}#6ee7b7{% else %}#fca5a5{% endif %};">{{ forecast.growth_pct > 0 ? '+' : '' }}{{ forecast.growth_pct }}%</div>
-                            <div style="font-size:.68rem;color:#64748b;">Wachstum vs. Vorjahr</div>
+                        <div style="background:{% if forecast.growth_pct >= 0 %}rgba(16,185,129,.08){% else %}rgba(239,68,68,.08){% endif %};border-radius:.55rem;padding:.7rem;text-align:center;">
+                            <div style="font-size:1.2rem;font-weight:800;color:{% if forecast.growth_pct >= 0 %}#6ee7b7{% else %}#fca5a5{% endif %};">
+                                {{ forecast.growth_pct > 0 ? '+' : '' }}{{ forecast.growth_pct }}%
+                            </div>
+                            <div style="font-size:.65rem;color:#64748b;">Wachstum ggü. Vorjahr</div>
                         </div>
                     </div>
                 </div>
-                {# Progress bar: YTD vs projected #}
                 {% set pct = forecast.projected > 0 ? ((forecast.ytd / forecast.projected) * 100)|round : 0 %}
-                <div class="mt-3">
-                    <div style="display:flex;justify-content:space-between;font-size:.7rem;color:#64748b;margin-bottom:.3rem;">
-                        <span>Jahresfortschritt</span><span>{{ pct }}%</span>
-                    </div>
-                    <div style="height:6px;background:#1f2d3d;border-radius:3px;overflow:hidden;">
-                        <div style="height:100%;width:{{ pct }}%;background:linear-gradient(90deg,#6EA8FE,#a78bfa);border-radius:3px;transition:width .6s;"></div>
-                    </div>
+                <div style="font-size:.7rem;color:#64748b;display:flex;justify-content:space-between;margin-bottom:.3rem;">
+                    <span>Jahresfortschritt</span><span>{{ pct }}%</span>
+                </div>
+                <div style="height:6px;background:#1f2d3d;border-radius:3px;overflow:hidden;">
+                    <div style="height:100%;width:{{ pct }}%;background:linear-gradient(90deg,#6EA8FE,#a78bfa);border-radius:3px;"></div>
                 </div>
             </div>
         </div>
     </div>
-
-    {# Plan Donut #}
     <div class="col-lg-4">
-        <div class="chart-card h-100">
-            <div class="chart-header">
-                <div>
-                    <div class="chart-title"><i class="bi bi-pie-chart me-2" style="color:#c4b5fd;"></i>Abo-Pläne Verteilung</div>
-                    <div class="chart-sub">Aktive & Testphase Praxen</div>
-                </div>
+        <div class="dash-card h-100">
+            <div class="dash-header">
+                <div class="dash-title"><i class="bi bi-pie-chart me-2" style="color:#c4b5fd;"></i>Tarif-Verteilung</div>
+                <div class="dash-sub">Aktive & Testphase</div>
             </div>
-            <div class="chart-body d-flex flex-column align-items-center">
-                <canvas id="planDonut" width="160" height="160" style="max-width:160px;"></canvas>
+            <div class="dash-body d-flex flex-column align-items-center">
+                <canvas id="planDonut" width="150" height="150" style="max-width:150px;"></canvas>
                 <div class="mt-3 w-100">
                     {% for i, label in plan_distribution.labels %}
                     <div class="d-flex align-items-center justify-content-between mb-1" style="font-size:.75rem;">
-                        <span><span class="donut-legend-dot" data-idx="{{ i }}">●</span> {{ label }}</span>
-                        <span class="fw-600" style="color:#e2e8f0;">{{ plan_distribution.data[i] ?? 0 }}</span>
+                        <span><span class="donut-legend-dot" data-idx="{{ i }}">●</span> {{ label ?? '(ohne Tarif)' }}</span>
+                        <span style="color:#e2e8f0;font-weight:600;">{{ plan_distribution.data[i] ?? 0 }}</span>
                     </div>
                     {% endfor %}
                 </div>
             </div>
         </div>
     </div>
-
-    {# Status Donut #}
     <div class="col-lg-4">
-        <div class="chart-card h-100">
-            <div class="chart-header">
-                <div>
-                    <div class="chart-title"><i class="bi bi-circle-half me-2" style="color:#7dd3fc;"></i>Status-Verteilung</div>
-                    <div class="chart-sub">Alle Mandanten</div>
-                </div>
+        <div class="dash-card h-100">
+            <div class="dash-header">
+                <div class="dash-title"><i class="bi bi-circle-half me-2" style="color:#7dd3fc;"></i>Status-Verteilung</div>
+                <div class="dash-sub">Alle Praxen</div>
             </div>
-            <div class="chart-body d-flex flex-column align-items-center">
-                <canvas id="statusDonut" width="160" height="160" style="max-width:160px;"></canvas>
+            <div class="dash-body d-flex flex-column align-items-center">
+                <canvas id="statusDonut" width="150" height="150" style="max-width:150px;"></canvas>
                 <div class="mt-3 w-100">
-                    {% for i, label in status_distribution.labels %}
+                    {% set statusDe = {'active':'Aktiv','trial':'Testphase','pending':'Ausstehend','cancelled':'Gekündigt','paused':'Pausiert','suspended':'Gesperrt'} %}
                     {% set statusColors = {'active':'#6ee7b7','trial':'#c4b5fd','pending':'#fdba74','cancelled':'#94a3b8','paused':'#7dd3fc','suspended':'#fca5a5'} %}
+                    {% for i, label in status_distribution.labels %}
                     <div class="d-flex align-items-center justify-content-between mb-1" style="font-size:.75rem;">
-                        <span><span style="color:{{ statusColors[label] ?? '#94a3b8' }};">●</span> {{ label }}</span>
-                        <span class="fw-600" style="color:#e2e8f0;">{{ status_distribution.data[i] ?? 0 }}</span>
+                        <span><span style="color:{{ statusColors[label] ?? '#94a3b8' }};">●</span> {{ statusDe[label] ?? label }}</span>
+                        <span style="color:#e2e8f0;font-weight:600;">{{ status_distribution.data[i] ?? 0 }}</span>
                     </div>
                     {% endfor %}
                 </div>
@@ -291,37 +374,124 @@
     </div>
 </div>
 
-{# ── Row 4: Neueste Praxen + Letzte Zahlungen ── #}
+{# ══════════════════════════════════════════════════════════════════════════ #}
+{# TESTPHASE-ABLAUF-WARNUNG (detaillierte Liste)                             #}
+{# ══════════════════════════════════════════════════════════════════════════ #}
+<div class="row g-3 mb-4" id="trial-expiry">
+    <div class="col-lg-6">
+        <div class="dash-card h-100">
+            <div class="dash-header">
+                <div>
+                    <div class="dash-title">
+                        <i class="bi bi-hourglass-split me-2" style="color:#fdba74;"></i>Testphase läuft bald ab
+                        {% if trial_expiring|length > 0 %}
+                        <span class="badge ms-1" style="background:rgba(253,186,116,.2);color:#fdba74;font-size:.62rem;">{{ trial_expiring|length }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="dash-sub">Praxen, deren Testphase in 7 Tagen endet</div>
+                </div>
+                <a href="/admin/tenants?status=trial" class="btn btn-sm btn-outline-secondary" style="font-size:.72rem;">Alle Trials →</a>
+            </div>
+            {% if trial_expiring %}
+            {% for t in trial_expiring %}
+            <div class="trial-row">
+                <div style="flex:1;min-width:0;">
+                    <div style="font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ t.practice_name }}</div>
+                    <div style="font-size:.7rem;color:#64748b;">{{ t.owner_name }} · {{ t.email }}</div>
+                </div>
+                <div class="days-badge {% if t.days_left <= 2 %}alert-danger{% else %}alert-warn{% endif %}">
+                    {% if t.days_left <= 0 %}heute{% elseif t.days_left == 1 %}morgen{% else %}{{ t.days_left }} Tage{% endif %}
+                </div>
+                <a href="/admin/tenants/{{ t.id }}" class="btn btn-xs btn-outline-secondary" style="font-size:.7rem;padding:.15rem .4rem;white-space:nowrap;">
+                    <i class="bi bi-eye"></i>
+                </a>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div style="padding:2rem;text-align:center;color:#475569;font-size:.8rem;">
+                <i class="bi bi-check-circle" style="font-size:1.5rem;display:block;margin-bottom:.5rem;color:#34d399;"></i>
+                Keine Testphasen laufen in den nächsten 7 Tagen ab.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ── Lifecycle-Mail Status ────────────────────────────────────────── #}
+    <div class="col-lg-6">
+        <div class="dash-card h-100">
+            <div class="dash-header">
+                <div class="dash-title"><i class="bi bi-envelope-check me-2" style="color:#6ee7b7;"></i>Automatische E-Mails</div>
+                <div class="dash-sub">Versandstatus Lifecycle-Sequenz</div>
+            </div>
+            <div class="dash-body">
+                {% set lcMap = {
+                    'welcome':       {'label':'Willkommens-Mail',       'icon':'bi-envelope-heart', 'color':'#6ee7b7'},
+                    'trial_warning': {'label':'Testphase endet bald',   'icon':'bi-envelope-exclamation','color':'#fde68a'},
+                    'trial_expired': {'label':'Testphase abgelaufen',   'icon':'bi-envelope-x',   'color':'#fca5a5'},
+                    'activated':     {'label':'Abo aktiviert – Danke!', 'icon':'bi-envelope-check','color':'#a78bfa'}
+                } %}
+                {% for key, meta in lcMap %}
+                {% set row = lifecycle_stats[key] ?? null %}
+                <div class="lc-row">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi {{ meta.icon }}" style="color:{{ meta.color }};font-size:1rem;width:1.2rem;text-align:center;"></i>
+                        <span style="color:#94a3b8;">{{ meta.label }}</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        {% if row %}
+                        <span style="color:#34d399;font-weight:600;">{{ row.sent }} versendet</span>
+                        {% if row.failed > 0 %}<span style="color:#f87171;font-size:.7rem;">{{ row.failed }} Fehler</span>{% endif %}
+                        {% else %}
+                        <span style="color:#334155;font-size:.75rem;">Noch keine</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                <div class="mt-3 pt-2" style="border-top:1px solid #1f2d3d;">
+                    <div style="font-size:.72rem;color:#475569;">
+                        <i class="bi bi-info-circle me-1"></i>
+                        E-Mails werden täglich durch den Cron-Job versendet (<code>cron_runner.php daily</code>).
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ══════════════════════════════════════════════════════════════════════════ #}
+{# NEUESTE PRAXEN + LETZTE ZAHLUNGEN                                         #}
+{# ══════════════════════════════════════════════════════════════════════════ #}
 <div class="row g-3 mb-4">
     <div class="col-lg-7">
-        <div class="chart-card">
-            <div class="chart-header">
-                <div class="chart-title"><i class="bi bi-building-add me-2" style="color:#6EA8FE;"></i>Neueste Registrierungen</div>
-                <a href="/admin/tenants" class="btn btn-sm btn-outline-primary" style="font-size:.75rem;">Alle →</a>
+        <div class="dash-card">
+            <div class="dash-header">
+                <div class="dash-title"><i class="bi bi-building-add me-2" style="color:#6EA8FE;"></i>Neueste Registrierungen</div>
+                <a href="/admin/tenants" class="btn btn-sm btn-outline-primary" style="font-size:.72rem;">Alle anzeigen →</a>
             </div>
             <div class="table-responsive">
-                <table class="table mb-0" style="font-size:.82rem;">
+                <table class="table mb-0" style="font-size:.8rem;">
                     <thead>
                         <tr>
                             <th class="px-3">Praxis</th>
-                            <th>Plan</th>
+                            <th>Tarif</th>
                             <th>Status</th>
                             <th>Registriert</th>
                             <th></th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% set statusMap = {'active':'badge-active','trial':'badge-trial','pending':'badge-pending','suspended':'badge-suspended','cancelled':'badge-cancelled','paused':'badge-paused'} %}
+                        {% set statusDe = {'active':'Aktiv','trial':'Testphase','pending':'Ausstehend','suspended':'Gesperrt','cancelled':'Gekündigt','paused':'Pausiert'} %}
+                        {% set statusClass = {'active':'s-aktiv','trial':'s-testphase','pending':'s-ausstehend','suspended':'s-gesperrt','cancelled':'s-gekuendigt'} %}
                         {% for tenant in recent_tenants %}
                         <tr data-tid="{{ tenant.id }}">
                             <td class="px-3">
                                 <div class="fw-medium" style="color:#e2e8f0;">{{ tenant.practice_name }}</div>
-                                <div style="font-size:.72rem;color:#64748b;">{{ tenant.owner_name }}</div>
+                                <div style="font-size:.7rem;color:#64748b;">{{ tenant.owner_name }}</div>
                             </td>
-                            <td><span class="badge bg-secondary" style="font-size:.68rem;">{{ tenant.plan_name ?? 'N/A' }}</span></td>
-                            <td><span class="badge {{ statusMap[tenant.status] ?? 'bg-secondary' }}" style="font-size:.68rem;">{{ tenant.status }}</span></td>
+                            <td><span class="badge bg-secondary" style="font-size:.65rem;">{{ tenant.plan_name ?? '–' }}</span></td>
+                            <td><span class="s-badge {{ statusClass[tenant.status] ?? '' }}">{{ statusDe[tenant.status] ?? tenant.status }}</span></td>
                             <td style="color:#64748b;white-space:nowrap;">{{ tenant.created_at|date('d.m.Y') }}</td>
-                            <td><a href="/admin/tenants/{{ tenant.id }}" class="btn btn-xs btn-outline-secondary" style="font-size:.7rem;padding:.15rem .4rem;"><i class="bi bi-eye"></i></a></td>
+                            <td><a href="/admin/tenants/{{ tenant.id }}" class="btn btn-sm btn-outline-secondary" style="font-size:.68rem;padding:.15rem .4rem;"><i class="bi bi-eye"></i></a></td>
                         </tr>
                         {% else %}
                         <tr><td colspan="5" class="text-center text-secondary py-4" style="font-size:.8rem;">Noch keine Praxen registriert.</td></tr>
@@ -331,71 +501,101 @@
             </div>
         </div>
     </div>
-
     <div class="col-lg-5">
-        <div class="chart-card">
-            <div class="chart-header">
-                <div class="chart-title"><i class="bi bi-credit-card-2-front me-2" style="color:#6ee7b7;"></i>Letzte Zahlungen</div>
-                <a href="/admin/invoices" class="btn btn-sm btn-outline-secondary" style="font-size:.75rem;">Alle →</a>
+        <div class="dash-card h-100">
+            <div class="dash-header">
+                <div class="dash-title"><i class="bi bi-credit-card-2-front me-2" style="color:#6ee7b7;"></i>Letzte Zahlungen</div>
+                <a href="/admin/invoices" class="btn btn-sm btn-outline-secondary" style="font-size:.72rem;">Alle →</a>
             </div>
             {% if recent_payments %}
-            <div style="max-height:310px;overflow-y:auto;">
+            <div style="max-height:300px;overflow-y:auto;">
                 {% for pay in recent_payments %}
-                <div style="padding:.6rem 1rem;border-bottom:1px solid #1f2d3d;display:flex;align-items:center;justify-content:space-between;gap:.5rem;">
+                <div style="padding:.55rem 1rem;border-bottom:1px solid #1f2d3d;display:flex;align-items:center;justify-content:space-between;gap:.5rem;">
                     <div style="min-width:0;flex:1;">
                         <div style="font-size:.8rem;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ pay.practice_name ?? 'Unbekannt' }}</div>
-                        <div style="font-size:.7rem;color:#64748b;">{{ pay.created_at|date('d.m.Y H:i') }} · {{ pay.method ?? 'manuell' }}</div>
+                        <div style="font-size:.7rem;color:#64748b;">{{ pay.created_at|date('d.m.Y H:i') }}</div>
                     </div>
                     <div style="text-align:right;flex-shrink:0;">
-                        <div style="font-size:.875rem;font-weight:700;color:{% if pay.status == 'paid' %}#6ee7b7{% elseif pay.status == 'failed' %}#fca5a5{% else %}#fdba74{% endif %};">{{ pay.amount|number_format(2,',','.') }} €</div>
-                        <div style="font-size:.65rem;color:#64748b;">{{ pay.status }}</div>
+                        <div style="font-size:.875rem;font-weight:700;color:{% if pay.status == 'paid' %}#6ee7b7{% elseif pay.status == 'failed' %}#fca5a5{% else %}#fdba74{% endif %};">
+                            {{ pay.amount|number_format(2,',','.') }} €
+                        </div>
+                        <div style="font-size:.65rem;color:#64748b;">
+                            {% set payDe = {'paid':'Bezahlt','failed':'Fehlgeschlagen','pending':'Ausstehend','refunded':'Erstattet'} %}
+                            {{ payDe[pay.status] ?? pay.status }}
+                        </div>
                     </div>
                 </div>
                 {% endfor %}
             </div>
             {% else %}
             <div style="padding:2rem;text-align:center;color:#475569;font-size:.8rem;">
-                <i class="bi bi-credit-card" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>Noch keine Zahlungen
+                <i class="bi bi-credit-card" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>Noch keine Zahlungen vorhanden.
             </div>
             {% endif %}
         </div>
     </div>
 </div>
 
-{# ── Row 5: System-Health Overview ── #}
+{# ══════════════════════════════════════════════════════════════════════════ #}
+{# SYSTEM-HEALTH + AKTIVITÄTSPROTOKOLL                                       #}
+{# ══════════════════════════════════════════════════════════════════════════ #}
 <div class="row g-3 mb-4">
-    <div class="col-12">
-        <div class="chart-card">
-            <div class="chart-header">
-                <div class="chart-title"><i class="bi bi-heart-pulse me-2" style="color:#6ee7b7;"></i>System-Health Übersicht</div>
-                <button id="dash-health-btn" class="btn btn-sm btn-outline-success" style="font-size:.75rem;">
+    <div class="col-lg-7">
+        <div class="dash-card">
+            <div class="dash-header">
+                <div class="dash-title"><i class="bi bi-heart-pulse me-2" style="color:#6ee7b7;"></i>Systemstatus Prüfung</div>
+                <button id="dash-health-btn" class="btn btn-sm btn-outline-success" style="font-size:.72rem;">
                     <i class="bi bi-arrow-clockwise me-1"></i>Alle prüfen
                 </button>
             </div>
             <div id="dash-health-body" style="padding:1rem;">
                 <div style="font-size:.8rem;color:#64748b;text-align:center;padding:.5rem 0;">
-                    <i class="bi bi-shield-check me-1"></i>Auf "Alle prüfen" klicken um den Health-Status aller aktiven Praxen zu laden.
+                    <i class="bi bi-shield-check me-1"></i>Auf "Alle prüfen" klicken um den Systemstatus aller aktiven Praxen zu laden.
                 </div>
             </div>
         </div>
     </div>
+    <div class="col-lg-5">
+        <div class="dash-card h-100">
+            <div class="dash-header">
+                <div class="dash-title"><i class="bi bi-activity me-2" style="color:#60a5fa;"></i>Letzte Admin-Aktivitäten</div>
+            </div>
+            {% if recent_activity %}
+            {% for act in recent_activity %}
+            <div class="act-item">
+                <div class="act-dot" style="background:{% if act.action starts with 'system' %}#60a5fa{% elseif act.action starts with 'tenant' %}#6ee7b7{% elseif act.action starts with 'payment' %}#fde68a{% else %}#94a3b8{% endif %};"></div>
+                <div style="flex:1;min-width:0;">
+                    <div style="color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ act.description ?? act.action }}</div>
+                </div>
+                <div style="font-size:.68rem;color:#475569;white-space:nowrap;flex-shrink:0;">{{ act.created_at|date('d.m H:i') }}</div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div style="padding:2rem;text-align:center;color:#475569;font-size:.8rem;">
+                <i class="bi bi-journal" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>Noch keine Aktivitäten protokolliert.
+            </div>
+            {% endif %}
+        </div>
+    </div>
 </div>
 
-{# ── Row 6: Top Tenants + Feedback ── #}
+{# ══════════════════════════════════════════════════════════════════════════ #}
+{# TOP-KUNDEN + NEUESTES FEEDBACK                                            #}
+{# ══════════════════════════════════════════════════════════════════════════ #}
 <div class="row g-3">
     <div class="col-lg-6">
-        <div class="chart-card">
-            <div class="chart-header">
-                <div class="chart-title"><i class="bi bi-trophy me-2" style="color:#fde68a;"></i>Top Kunden (nach MRR)</div>
+        <div class="dash-card">
+            <div class="dash-header">
+                <div class="dash-title"><i class="bi bi-trophy me-2" style="color:#fde68a;"></i>Top-Kunden nach Betrag</div>
             </div>
             {% for t in top_tenants %}
-            <div style="padding:.65rem 1rem;border-bottom:1px solid #1f2d3d;display:flex;align-items:center;gap:.75rem;">
-                <div style="width:1.75rem;height:1.75rem;border-radius:50%;background:linear-gradient(135deg,#6EA8FE,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;color:#fff;flex-shrink:0;">
+            <div style="padding:.6rem 1rem;border-bottom:1px solid #1f2d3d;display:flex;align-items:center;gap:.75rem;">
+                <div style="width:1.6rem;height:1.6rem;border-radius:50%;background:linear-gradient(135deg,#6EA8FE,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;color:#fff;flex-shrink:0;">
                     {{ loop.index }}
                 </div>
                 <div style="flex:1;min-width:0;">
                     <div style="font-size:.82rem;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ t.practice_name }}</div>
-                    <div style="font-size:.7rem;color:#64748b;">{{ t.plan_name ?? '–' }} · {{ t.billing_cycle ?? '' }}</div>
+                    <div style="font-size:.7rem;color:#64748b;">{{ t.plan_name ?? '–' }} · {% if t.billing_cycle == 'yearly' %}Jährlich{% else %}Monatlich{% endif %}</div>
                 </div>
                 <div style="font-size:.9rem;font-weight:700;color:#fde68a;flex-shrink:0;">{{ t.amount ? t.amount|number_format(2,',','.') ~ ' €' : '–' }}</div>
             </div>
@@ -406,32 +606,31 @@
     </div>
 
     <div class="col-lg-6">
-        <div class="chart-card">
-            <div class="chart-header">
-                <div class="chart-title">
+        <div class="dash-card">
+            <div class="dash-header">
+                <div class="dash-title">
                     <i class="bi bi-chat-square-text me-2" style="color:#a78bfa;"></i>Neuestes Feedback
                     {% if stats.unread_feedback > 0 %}
-                    <span class="badge ms-1" style="background:rgba(167,139,250,.2);color:#c4b5fd;font-size:.65rem;">{{ stats.unread_feedback }} neu</span>
+                    <span class="badge ms-1" style="background:rgba(167,139,250,.2);color:#c4b5fd;font-size:.62rem;">{{ stats.unread_feedback }} ungelesen</span>
                     {% endif %}
                 </div>
-                <a href="/admin/feedback" class="btn btn-sm btn-outline-secondary" style="font-size:.75rem;">Alle →</a>
+                <a href="/admin/feedback" class="btn btn-sm btn-outline-secondary" style="font-size:.72rem;">Alle →</a>
             </div>
             {% if recent_feedback %}
             {% for fb in recent_feedback %}
-            <div class="feedback-item {% if not fb.is_read %}border-start border-3{% endif %}" style="{% if not fb.is_read %}border-color:#a78bfa !important;{% endif %}">
-                <div style="flex-shrink:0;margin-top:.1rem;">
-                    {% set catClass = {'bug':'cat-bug','feature':'cat-feature','praise':'cat-praise','other':'cat-other'} %}
-                    {% set catIcon  = {'bug':'🐛','feature':'💡','praise':'⭐','other':'💬'} %}
-                    <span style="font-size:1.1rem;">{{ catIcon[fb.category] ?? '💬' }}</span>
-                </div>
+            {% set catClass = {'bug':'cat-bug','feature':'cat-feature','praise':'cat-praise','other':'cat-other'} %}
+            {% set catDe    = {'bug':'Fehler','feature':'Wunsch','praise':'Lob','other':'Sonstiges'} %}
+            {% set catIcon  = {'bug':'🐛','feature':'💡','praise':'⭐','other':'💬'} %}
+            <div class="fb-item {% if not fb.is_read %}border-start border-3{% endif %}" style="{% if not fb.is_read %}border-color:#a78bfa !important;{% endif %}">
+                <span style="font-size:1.05rem;">{{ catIcon[fb.category] ?? '💬' }}</span>
                 <div style="flex:1;min-width:0;">
                     <div style="display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;">
-                        <span style="font-size:.78rem;font-weight:600;color:#e2e8f0;">{{ fb.practice_name ?? fb.tenant_name ?? 'Anonym' }}</span>
-                        <span class="cat-badge {{ catClass[fb.category] ?? 'cat-other' }}">{{ fb.category }}</span>
-                        {% if fb.rating %}<span style="font-size:.7rem;color:#fde68a;">{% for s in 1..fb.rating %}★{% endfor %}</span>{% endif %}
+                        <span style="font-size:.78rem;font-weight:600;color:#e2e8f0;">{{ fb.practice_name ?? 'Anonym' }}</span>
+                        <span class="cat-badge {{ catClass[fb.category] ?? 'cat-other' }}">{{ catDe[fb.category] ?? fb.category }}</span>
+                        {% if fb.rating %}<span style="font-size:.68rem;color:#fde68a;">{% for s in 1..fb.rating %}★{% endfor %}</span>{% endif %}
                     </div>
-                    <div style="font-size:.78rem;color:#94a3b8;margin-top:.15rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ fb.message }}</div>
-                    <div style="font-size:.68rem;color:#475569;margin-top:.2rem;">{{ fb.created_at|date('d.m.Y H:i') }}{% if fb.platform %} · {{ fb.platform }}{% endif %}</div>
+                    <div style="font-size:.78rem;color:#94a3b8;margin-top:.1rem;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ fb.message }}</div>
+                    <div style="font-size:.67rem;color:#475569;margin-top:.15rem;">{{ fb.created_at|date('d.m.Y H:i') }}</div>
                 </div>
             </div>
             {% endfor %}
@@ -444,7 +643,6 @@
     </div>
 </div>
 {% endblock %}
-
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
@@ -454,7 +652,7 @@ Chart.defaults.font.family = "'Inter', sans-serif";
 
 const CHART_COLORS = ['#6EA8FE','#a78bfa','#6ee7b7','#fde68a','#f87171','#7dd3fc','#fdba74','#c4b5fd'];
 
-// Revenue Line Chart
+// Umsatz-Verlauf (Prognose)
 (function() {
     const labels = {{ revenue_chart.labels|json_encode|raw }};
     const data   = {{ revenue_chart.data|json_encode|raw }};
@@ -463,7 +661,7 @@ const CHART_COLORS = ['#6EA8FE','#a78bfa','#6ee7b7','#fde68a','#f87171','#7dd3fc
         data: {
             labels,
             datasets: [{
-                label: 'MRR (€)',
+                label: 'Mögl. Monatsumsatz (€)',
                 data,
                 borderColor: '#6EA8FE',
                 backgroundColor: 'rgba(110,168,254,.12)',
@@ -477,16 +675,19 @@ const CHART_COLORS = ['#6EA8FE','#a78bfa','#6ee7b7','#fde68a','#f87171','#7dd3fc
         options: {
             responsive: true,
             maintainAspectRatio: true,
-            plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + ctx.parsed.y.toLocaleString('de-DE',{minimumFractionDigits:2}) + ' €' } } },
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => ' ' + ctx.parsed.y.toLocaleString('de-DE',{minimumFractionDigits:2}) + ' €' } }
+            },
             scales: {
                 x: { grid: { color: '#1f2d3d' }, ticks: { font: { size: 10 } } },
-                y: { grid: { color: '#1f2d3d' }, ticks: { font: { size: 10 }, callback: v => v + ' €' } }
+                y: { grid: { color: '#1f2d3d' }, ticks: { font: { size: 10 }, callback: v => v.toLocaleString('de-DE') + ' €' } }
             }
         }
     });
 })();
 
-// Registrations Bar Chart
+// Neuregistrierungen
 (function() {
     const labels = {{ reg_chart.labels|json_encode|raw }};
     const data   = {{ reg_chart.data|json_encode|raw }};
@@ -495,7 +696,7 @@ const CHART_COLORS = ['#6EA8FE','#a78bfa','#6ee7b7','#fde68a','#f87171','#7dd3fc
         data: {
             labels,
             datasets: [{
-                label: 'Registrierungen',
+                label: 'Neue Praxen',
                 data,
                 backgroundColor: 'rgba(110,231,183,.5)',
                 borderColor: '#6ee7b7',
@@ -556,8 +757,9 @@ const CHART_COLORS = ['#6EA8FE','#a78bfa','#6ee7b7','#fde68a','#f87171','#7dd3fc
     });
 })();
 
-// Dashboard Health Overview
+// Systemstatus-Prüfung
 (function() {
+    'use strict';
     const btn  = document.getElementById('dash-health-btn');
     const body = document.getElementById('dash-health-body');
     if (!btn || !body) return;
@@ -565,66 +767,59 @@ const CHART_COLORS = ['#6EA8FE','#a78bfa','#6ee7b7','#fde68a','#f87171','#7dd3fc
     btn.addEventListener('click', async () => {
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Prüfe…';
-        body.innerHTML = '<div style="font-size:.8rem;color:#64748b;text-align:center;padding:.5rem 0;"><span class="spinner-border spinner-border-sm me-2"></span>Prüfe alle Praxen…</div>';
+        body.innerHTML = '<div style="font-size:.8rem;color:#64748b;text-align:center;padding:.5rem 0;"><span class="spinner-border spinner-border-sm me-2"></span>Prüfe alle aktiven Praxen…</div>';
 
-        // Collect all tenant ids from the recent tenants table on the page
         const rows = document.querySelectorAll('table tbody tr[data-tid]');
-        let tenantIds = Array.from(rows).map(r => r.dataset.tid).filter(Boolean);
+        let ids = [...new Set(Array.from(rows).map(r => r.dataset.tid).filter(Boolean))];
 
-        // Fallback: gather from recent_tenants links
-        if (!tenantIds.length) {
+        if (!ids.length) {
             document.querySelectorAll('a[href^="/admin/tenants/"]').forEach(a => {
                 const m = a.href.match(/\/admin\/tenants\/(\d+)$/);
-                if (m) tenantIds.push(m[1]);
+                if (m) ids.push(m[1]);
             });
-            tenantIds = [...new Set(tenantIds)].slice(0, 8);
+            ids = [...new Set(ids)].slice(0, 10);
         }
 
-        if (!tenantIds.length) {
-            body.innerHTML = '<div style="font-size:.8rem;color:#64748b;text-align:center;padding:.5rem 0;">Keine Praxen gefunden.</div>';
+        if (!ids.length) {
+            body.innerHTML = '<div style="font-size:.8rem;color:#64748b;text-align:center;padding:.5rem 0;">Keine Praxen auf dieser Seite gefunden.</div>';
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Alle prüfen';
             return;
         }
 
         const results = await Promise.allSettled(
-            tenantIds.map(id =>
+            ids.map(id =>
                 fetch('/admin/tenants/' + id + '/health-api', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                    .then(r => r.json())
-                    .then(d => ({ id, ...d }))
-                    .catch(() => ({ id, status: 'error', issues: ['Request fehlgeschlagen'], checks: {} }))
+                    .then(r => r.json()).then(d => ({ id, ...d }))
+                    .catch(() => ({ id, status: 'error', issues: ['Anfrage fehlgeschlagen'], checks: {} }))
             )
         );
 
-        const items = results.map(r => r.status === 'fulfilled' ? r.value : { id: '?', status: 'error', issues: [], checks: {} });
-        const ok      = items.filter(i => i.status === 'ok').length;
-        const warn    = items.filter(i => i.status === 'warning').length;
+        const items    = results.map(r => r.status === 'fulfilled' ? r.value : { id: '?', status: 'error', issues: [], checks: {} });
+        const ok       = items.filter(i => i.status === 'ok').length;
+        const warn     = items.filter(i => i.status === 'warning').length;
         const critical = items.filter(i => i.status === 'critical' || i.status === 'error').length;
 
-        const statusIcon  = critical > 0 ? '🔴' : (warn > 0 ? '🟡' : '🟢');
+        const statusIcon = critical > 0 ? '🔴' : (warn > 0 ? '🟡' : '🟢');
         let html = `<div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
-            <span style="font-size:1.5rem;">${statusIcon}</span>
-            <span class="text-success fw-semibold">${ok} OK</span>
-            ${warn > 0 ? `<span class="text-warning fw-semibold">${warn} Warnung${warn > 1 ? 'en' : ''}</span>` : ''}
-            ${critical > 0 ? `<span class="text-danger fw-semibold">${critical} Kritisch</span>` : ''}
-            <span style="font-size:.75rem;color:#64748b;">(${items.length} Praxen geprüft)</span>
-        </div>`;
+            <span style="font-size:1.4rem;">${statusIcon}</span>
+            <span style="color:#6ee7b7;font-weight:600;">${ok} in Ordnung</span>
+            ${warn > 0    ? `<span style="color:#fde68a;font-weight:600;">${warn} Warnung${warn > 1 ? 'en' : ''}</span>` : ''}
+            ${critical > 0 ? `<span style="color:#fca5a5;font-weight:600;">${critical} Kritisch</span>` : ''}
+            <span style="font-size:.72rem;color:#64748b;">${items.length} Praxen geprüft</span>
+        </div><div class="row g-2">`;
 
-        html += '<div class="row g-2">';
         items.forEach(item => {
             const sc = item.status === 'ok' ? '#6ee7b7' : (item.status === 'warning' ? '#fde68a' : '#fca5a5');
             const si = item.status === 'ok' ? 'bi-check-circle-fill' : (item.status === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-x-circle-fill');
+            const msg = item.issues?.length > 0 ? item.issues[0] : 'Alles in Ordnung';
             html += `<div class="col-md-3 col-sm-4 col-6">
                 <a href="/admin/tenants/${item.id}" style="text-decoration:none;">
                     <div style="background:#0f172a;border:1px solid #334155;border-radius:.4rem;padding:.5rem .75rem;display:flex;align-items:center;gap:.5rem;">
-                        <i class="bi ${si}" style="color:${sc};font-size:.85rem;"></i>
+                        <i class="bi ${si}" style="color:${sc};font-size:.85rem;flex-shrink:0;"></i>
                         <div style="min-width:0;">
-                            <div style="font-size:.75rem;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                                ${item.tid || ('Tenant ' + item.id)}
-                            </div>
-                            ${item.issues && item.issues.length > 0
-                                ? `<div style="font-size:.65rem;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.issues[0]}</div>`
-                                : `<div style="font-size:.65rem;color:#6ee7b7;">Alles in Ordnung</div>`}
+                            <div style="font-size:.75rem;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.tid || ('Praxis #' + item.id)}</div>
+                            <div style="font-size:.65rem;color:${item.status === 'ok' ? '#6ee7b7' : '#94a3b8'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${msg}</div>
                         </div>
                     </div>
                 </a>
