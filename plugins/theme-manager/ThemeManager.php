@@ -269,7 +269,13 @@ class ThemeManager
         if (!file_exists($cssFile)) {
             return null;
         }
-        $data = json_decode(file_get_contents($jsonFile), true);
+        $raw = file_get_contents($jsonFile);
+        if ($raw === false) {
+            return null;
+        }
+        /* Strip UTF-8 / UTF-16 BOM which would break json_decode() */
+        $raw = preg_replace('/^(\xEF\xBB\xBF|\xFE\xFF|\xFF\xFE)/', '', $raw);
+        $data = json_decode($raw, true);
         if (!is_array($data)) {
             return null;
         }
