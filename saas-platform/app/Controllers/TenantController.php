@@ -19,6 +19,7 @@ use Saas\Services\TenantHealthService;
 use Saas\Services\TenantActivityService;
 use Saas\Services\FeatureFlagService;
 use Saas\Services\SubscriptionService;
+use Saas\Services\MigrationService;
 
 class TenantController extends Controller
 {
@@ -440,6 +441,47 @@ class TenantController extends Controller
 
         $this->session->flash('success', $msg);
         $this->redirect('/admin/tenants');
+    }
+
+    /* ── Migrations nachholen ──────────────────────────────────── */
+
+    public function runMigrations(array $params = []): void
+    {
+        $this->requireAuth();
+        $this->verifyCsrf();
+
+        $tenant = $this->tenantRepo->find((int)($params['id'] ?? 0));
+        if (!$tenant) {
+            $this->json(['error' => 'Nicht gefunden'], 404);
+            return;
+        }
+
+        $prefix = (string)($tenant['db_name'] ?? '');
+        if ($prefix === '') {
+            $this->session->flash('error', 'Kein Datenbank-Präfix für diesen Tenant konfiguriert.');
+            $this->redirect('/admin/tenants/' . ($params['id'] ?? 0));
+            return;
+        }
+
+        try {
+            $migService = new MigrationService($this->config, $this->db);
+            $result     = $migService->migrateTenant($prefix);
+
+            if ($result['ran_count'] === 0) {
+                $this->session->flash('success', 'Alle Migrationen bereits auf dem aktuellen Stand (Version ' . $result['to'] . ').');
+            } else {
+                $this->session->flash('success', sprintf(
+                    '%d Migration(en) nachgezogen (v%d → v%d).',
+                    $result['ran_count'],
+                    $result['from'],
+                    $result['to']
+                ));
+            }
+        } catch (\Throwable $e) {
+            $this->session->flash('error', 'Migrations-Fehler: ' . $e->getMessage());
+        }
+
+        $this->redirect('/admin/tenants/' . ($params['id'] ?? 0));
     }
 
     /* ── Health Check ──────────────────────────────────────────── */

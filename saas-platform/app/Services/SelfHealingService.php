@@ -7,6 +7,7 @@ namespace Saas\Services;
 use Saas\Core\Database;
 use Saas\Core\ErrorLogger;
 use Saas\Core\StructuredLogger;
+use Saas\Services\MigrationService;
 
 /**
  * Self-healing orchestrator (SaaS platform).
@@ -22,6 +23,8 @@ use Saas\Core\StructuredLogger;
  */
 class SelfHealingService
 {
+    private const MAX_MIGRATION_VERSION = 48;
+
     private const DEFAULT_SETTINGS = [
         'timezone'          => 'Europe/Berlin',
         'language'          => 'de',
@@ -44,7 +47,19 @@ class SelfHealingService
         'exports',
     ];
 
-    public function __construct(private readonly Database $db) {}
+    private const CRON_TOKEN_KEYS = [
+        'cron_dispatcher_token',
+        'birthday_cron_token',
+        'calendar_cron_secret',
+        'google_sync_cron_secret',
+        'tcp_cron_token',
+        'cron_secret',
+    ];
+
+    public function __construct(
+        private readonly Database         $db,
+        private readonly ?MigrationService $migrationService = null
+    ) {}
 
     /**
      * Run all self-healing for one tenant.
@@ -57,7 +72,14 @@ class SelfHealingService
     {
         $report = ['tid' => $tid, 'healed' => [], 'failed' => []];
 
-        foreach ([$this->healSettings($prefix, $tid), $this->healStorageDirs($prefix, $tid)] as $part) {
+        $parts = [
+            $this->healSettings($prefix, $tid),
+            $this->healCronTokens($prefix, $tid),
+            $this->healStorageDirs($prefix, $tid),
+            $this->healMigrations($prefix, $tid),
+        ];
+
+        foreach ($parts as $part) {
             $report['healed'] = array_merge($report['healed'], $part['healed']);
             $report['failed'] = array_merge($report['failed'], $part['failed']);
         }
@@ -110,6 +132,84 @@ class SelfHealingService
                 $failed[] = "setting:{$key}";
                 ErrorLogger::log("SelfHeal: setting '{$key}' failed: " . $e->getMessage(), '', 0, $tid);
             }
+        }
+
+        return compact('healed', 'failed');
+    }
+
+    /**
+     * Ensure all 6 cron tokens exist. NEVER overwrites existing non-empty values.
+     *
+     * @return array{healed: list<string>, failed: list<string>}
+     */
+    public function healCronTokens(string $prefix, string $tid = ''): array
+    {
+        $healed = [];
+        $failed = [];
+        $table  = $prefix . 'settings';
+
+        foreach (self::CRON_TOKEN_KEYS as $key) {
+            try {
+                $row = $this->db->fetch(
+                    "SELECT `value` FROM `{$table}` WHERE `key` = ?",
+                    [$key]
+                );
+                $existing = ($row !== false) ? $row['value'] : null;
+
+                if ($existing === null || $existing === '') {
+                    $token = bin2hex(random_bytes(32));
+                    $this->db->execute(
+                        "INSERT INTO `{$table}` (`key`, `value`) VALUES (?, ?)
+                         ON DUPLICATE KEY UPDATE `value` = IF(`value` = '' OR `value` IS NULL, VALUES(`value`), `value`)",
+                        [$key, $token]
+                    );
+                    $healed[] = "cron_token:{$key}";
+                    StructuredLogger::system('cron_token.healed', 'ok', $tid, ['key' => $key]);
+                }
+            } catch (\Throwable $e) {
+                $failed[] = "cron_token:{$key}";
+                ErrorLogger::log("SelfHeal: cron token '{$key}' failed: " . $e->getMessage(), '', 0, $tid);
+            }
+        }
+
+        return compact('healed', 'failed');
+    }
+
+    /**
+     * Run any pending tenant migrations (db version < MAX_MIGRATION_VERSION).
+     *
+     * @return array{healed: list<string>, failed: list<string>}
+     */
+    public function healMigrations(string $prefix, string $tid = ''): array
+    {
+        $healed = [];
+        $failed = [];
+
+        if ($this->migrationService === null) {
+            return compact('healed', 'failed');
+        }
+
+        try {
+            $currentVersion = $this->migrationService->getTenantVersion($prefix);
+            $latestVersion  = $this->migrationService->getLatestVersion();
+
+            if ($currentVersion < $latestVersion) {
+                $result = $this->migrationService->migrateTenant($prefix);
+                if ($result['ran_count'] > 0) {
+                    $healed[] = "migrations:v{$result['from']}→v{$result['to']} ({$result['ran_count']} ran)";
+                    StructuredLogger::system('migrations.healed', 'ok', $tid, [
+                        'from'      => $result['from'],
+                        'to'        => $result['to'],
+                        'ran_count' => $result['ran_count'],
+                    ]);
+                }
+                if (!$result['success']) {
+                    $failed[] = "migrations:v{$result['from']}→v{$result['to']} (errors)";
+                }
+            }
+        } catch (\Throwable $e) {
+            $failed[] = 'migrations:' . $e->getMessage();
+            ErrorLogger::log('SelfHeal: migrations failed: ' . $e->getMessage(), '', 0, $tid);
         }
 
         return compact('healed', 'failed');

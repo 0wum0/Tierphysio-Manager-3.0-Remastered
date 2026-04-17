@@ -236,6 +236,7 @@
                     
                     <div class="d-flex gap-2 align-items-center">
                         <form action="/admin/praxis-cron/update-token" method="POST" class="m-0">
+                            {{ csrf_field()|raw }}
                             <input type="hidden" name="tenant_id" value="{{ tenant.id }}">
                             <input type="hidden" name="cron_job_key" value="dispatcher">
                             <input type="hidden" name="token" id="input-token-{{ tenant.id }}">
