@@ -108,12 +108,18 @@ class OwnerPortalController extends Controller
             : [];
 
         /* ── TherapyCare Pro: collect TCP data across all pets ── */
-        $tcpDashboard = null;
+        $tcpDashboard  = null;
+        $progressChart = null;     /* Line chart: progress history (last 90 days) */
         try {
             if (!empty($pets) && class_exists('\Plugins\TherapyCarePro\TherapyCareRepository')) {
                 $db      = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
                 $tcpRepo = new \Plugins\TherapyCarePro\TherapyCareRepository($db);
                 $tcpPets = [];
+
+                $chartPets      = [];                                                    /* per-pet chart datasets */
+                $dateFrom       = date('Y-m-d', strtotime('-90 days'));
+                $dateTo         = date('Y-m-d');
+
                 foreach ($pets as $pet) {
                     $petId      = (int)$pet['id'];
                     $visibility = $tcpRepo->getPortalVisibility($petId);
@@ -125,10 +131,54 @@ class OwnerPortalController extends Controller
                             'latest'     => $visibility['show_progress'] ? $tcpRepo->getLatestProgressForPatient($petId) : [],
                         ];
                     }
+
+                    /* Build progress-history chart dataset if this pet has progress visible */
+                    if (!empty($visibility['show_progress'])) {
+                        $categories = $tcpRepo->getActiveProgressCategories();
+                        $entries    = $tcpRepo->getProgressEntriesForPatient($petId, $dateFrom, $dateTo);
+                        if (!empty($entries)) {
+                            $chartPets[] = [
+                                'pet_id'   => $petId,
+                                'pet_name' => $pet['name'] ?? '',
+                                'chart'    => $this->buildProgressChartData($categories, $entries),
+                            ];
+                        }
+                    }
                 }
-                if (!empty($tcpPets)) {
-                    $tcpDashboard = $tcpPets;
+                if (!empty($tcpPets))   { $tcpDashboard  = $tcpPets; }
+                if (!empty($chartPets)) { $progressChart = $chartPets; }
+            }
+        } catch (\Throwable) {}
+
+        /* ── Homework completion statistics (per plan) ── */
+        $homeworkStats = null;
+        try {
+            if (!empty($homeworkPlans)) {
+                $stats = [];
+                foreach ($homeworkPlans as $plan) {
+                    $pid    = (int)$plan['id'];
+                    $tasks  = $this->repo->getTasksByPlan($pid);
+                    $checks = $this->repo->getChecksForPlan($pid, $ownerId);
+
+                    $total   = count($tasks);
+                    if ($total === 0) { continue; }
+                    $checked = 0;
+                    foreach ($tasks as $task) {
+                        if (!empty($checks[(int)$task['id']])) { $checked++; }
+                    }
+                    $pct = $total > 0 ? (int)round(($checked / $total) * 100) : 0;
+
+                    $stats[] = [
+                        'plan_id'      => $pid,
+                        'plan_date'    => $plan['plan_date'] ?? '',
+                        'patient_name' => $plan['patient_name'] ?? '',
+                        'patient_id'   => (int)($plan['patient_id'] ?? 0),
+                        'total'        => $total,
+                        'checked'      => $checked,
+                        'pct'          => $pct,
+                    ];
                 }
+                if (!empty($stats)) { $homeworkStats = $stats; }
             }
         } catch (\Throwable) {}
 
@@ -141,7 +191,49 @@ class OwnerPortalController extends Controller
             'homework_plans'        => $homeworkPlans,
             'show_homework'         => $this->isHomeworkEnabled(),
             'tcp_dashboard'         => $tcpDashboard,
+            'progress_chart'        => $progressChart,
+            'homework_stats'        => $homeworkStats,
         ]));
+    }
+
+    /**
+     * Build Chart.js-ready line-chart dataset for a pet's progress entries.
+     * Mirrors the structure used inside the TherapyCare Pro plugin so the
+     * owner dashboard chart stays visually consistent with the detail page.
+     */
+    private function buildProgressChartData(array $categories, array $entries): array
+    {
+        $labels = [];
+        $byDate = [];
+
+        foreach ($entries as $e) {
+            $date = substr((string)$e['entry_date'], 0, 10);
+            if (!in_array($date, $labels, true)) { $labels[] = $date; }
+            $byDate[(int)$e['category_id']][$date] = (int)$e['score'];
+        }
+        sort($labels);
+
+        $datasets = [];
+        foreach ($categories as $cat) {
+            $catId = (int)$cat['id'];
+            if (!isset($byDate[$catId])) { continue; }
+            $points = [];
+            foreach ($labels as $date) {
+                $points[] = $byDate[$catId][$date] ?? null;
+            }
+            $datasets[] = [
+                'label'           => $cat['name'],
+                'data'            => $points,
+                'borderColor'     => $cat['color'],
+                'backgroundColor' => $cat['color'] . '33',
+                'tension'         => 0.4,
+                'spanGaps'        => true,
+                'borderWidth'     => 2,
+                'pointRadius'     => 3,
+            ];
+        }
+
+        return ['labels' => $labels, 'datasets' => $datasets];
     }
 
     /* ── GET /portal/tiere ── */

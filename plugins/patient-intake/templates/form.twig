@@ -1,111 +1,305 @@
 <!DOCTYPE html>
-<html lang="de" data-theme="dark">
+<html lang="de" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ page_title }} — {{ app_name }}</title>
-    <script>!function(){try{var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}catch(e){}}();</script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/app.css">
-    <link rel="stylesheet" href="/assets/css/liquid-glass.css">
+    <link rel="stylesheet" href="/themes/smart-tierphysio/css/smartapp.min.css">
+    <link rel="stylesheet" href="/themes/smart-tierphysio/webfonts/smartadmin/sa-icons.css">
+    <link rel="stylesheet" href="/themes/smart-tierphysio/bridge.css?v=20260308f">
     <style>
-        body { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 2rem 1rem 4rem; }
+        body {
+            min-height: 100vh;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: flex-start;
+            padding: 2rem 1rem 4rem;
+            background: var(--bs-body-bg);
+        }
 
         .intake-wrapper { width: 100%; max-width: 680px; }
 
+        /* ── Brand header (matches Praxis-App login) ── */
         .intake-header { text-align: center; margin-bottom: 2.5rem; }
-        .intake-logo { width: 64px; height: 64px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1rem; filter: drop-shadow(0 0 12px rgba(110,168,254,0.55)); }
-        .intake-title { font-size: 1.75rem; font-weight: 800; margin: 0 0 0.5rem; }
-        .intake-subtitle { color: var(--text-muted); font-size: 0.95rem; margin: 0; }
+        .intake-logo {
+            display: inline-flex; align-items: center; justify-content: center;
+            margin-bottom: 1rem;
+            filter: drop-shadow(0 0 10px rgba(110,168,254,0.5));
+            animation: tp-paw-pulse 3s ease-in-out infinite;
+        }
+        .intake-title {
+            font-size: 1.85rem; font-weight: 700;
+            margin: 0 0 0.5rem;
+            letter-spacing: -0.02em;
+            background: linear-gradient(90deg, #6EA8FE, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .intake-subtitle {
+            color: var(--bs-secondary-color);
+            font-size: 0.95rem; margin: 0;
+        }
+        @keyframes tp-paw-pulse {
+            0%, 100% { transform: scale(1);    filter: drop-shadow(0 0 0px #6EA8FE); }
+            50%      { transform: scale(1.08); filter: drop-shadow(0 0 12px #a78bfa); }
+        }
 
-        /* Progress Steps */
-        .steps-bar { display: flex; align-items: center; justify-content: center; gap: 0; margin-bottom: 2.5rem; }
-        .step-item { display: flex; align-items: center; gap: 0; }
-        .step-circle { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--glass-border); background: var(--glass-bg); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); transition: all 0.3s ease; flex-shrink: 0; }
-        .step-circle.active { border-color: var(--accent); background: var(--accent); color: #fff; box-shadow: 0 0 16px rgba(79,124,255,0.4); }
+        /* ── Progress Steps ── */
+        .steps-bar { display: flex; align-items: flex-start; justify-content: center; gap: 0; margin-bottom: 2.5rem; }
+        .step-circle {
+            width: 38px; height: 38px; border-radius: 50%;
+            border: 2px solid var(--bs-border-color);
+            background: var(--bs-tertiary-bg);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.82rem; font-weight: 700;
+            color: var(--bs-secondary-color);
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+        .step-circle.active {
+            border-color: var(--bs-primary); background: var(--bs-primary);
+            color: #fff;
+            box-shadow: 0 0 0 4px color-mix(in srgb, var(--bs-primary) 20%, transparent);
+        }
         .step-circle.done { border-color: #22c55e; background: #22c55e; color: #fff; }
-        .step-label { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.35rem; white-space: nowrap; }
-        .step-label.active { color: var(--accent); font-weight: 600; }
-        .step-label.done { color: #22c55e; }
-        .step-connector { width: 48px; height: 2px; background: var(--glass-border); flex-shrink: 0; transition: background 0.3s; }
+        .step-label { font-size: 0.72rem; color: var(--bs-secondary-color); margin-top: 0.4rem; white-space: nowrap; }
+        .step-label.active { color: var(--bs-primary); font-weight: 600; }
+        .step-label.done { color: #22c55e; font-weight: 600; }
+        .step-connector {
+            width: 48px; height: 2px; margin-top: 18px;
+            background: var(--bs-border-color);
+            flex-shrink: 0; transition: background 0.3s;
+        }
         .step-connector.done { background: #22c55e; }
         .step-wrap { display: flex; flex-direction: column; align-items: center; }
 
-        /* Card */
-        .intake-card { position: relative; overflow: visible; }
+        /* ── Card (Praxis-Login-Style glass card) ── */
+        .intake-card,
+        .lg-card.intake-card {
+            position: relative; overflow: visible;
+            background: var(--bs-tertiary-bg);
+            border: 1px solid var(--bs-border-color);
+            border-radius: 16px;
+            padding: 2rem 1.75rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,.18);
+        }
 
-        /* Form Steps */
+        /* ── Form Steps ── */
         .form-step { display: none; }
         .form-step.active { display: block; animation: fadeSlideIn 0.35s ease; }
         @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
         .step-heading { font-size: 1.1rem; font-weight: 700; margin: 0 0 1.5rem; display: flex; align-items: center; gap: 0.6rem; }
-        .step-heading-icon { width: 32px; height: 32px; border-radius: 10px; background: linear-gradient(135deg, var(--accent), #8b5cf6); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 0.9rem; }
+        .step-heading-icon {
+            width: 32px; height: 32px; border-radius: 10px;
+            background: linear-gradient(135deg, #6EA8FE, #a78bfa);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; font-size: 0.9rem;
+            box-shadow: 0 4px 12px color-mix(in srgb, var(--bs-primary) 30%, transparent);
+        }
 
         .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
         @media (max-width: 500px) { .form-grid-2 { grid-template-columns: 1fr; } }
 
+        /* ── Form fields ── */
         .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
-        .form-group label { font-size: 0.82rem; font-weight: 600; color: var(--text-muted); }
+        .form-group label {
+            font-size: 0.82rem; font-weight: 600;
+            color: var(--bs-secondary-color);
+        }
         .form-group label .req { color: #ef4444; margin-left: 2px; }
         .form-group input,
         .form-group select,
-        .form-group textarea { background: var(--glass-bg); border: 1.5px solid var(--glass-border); border-radius: 10px; padding: 0.65rem 0.9rem; font-size: 0.9rem; color: var(--text-primary); font-family: inherit; transition: border-color 0.2s, box-shadow 0.2s; width: 100%; box-sizing: border-box; }
+        .form-group textarea {
+            background: var(--bs-body-bg);
+            border: 1px solid var(--bs-border-color);
+            border-radius: 10px;
+            padding: 0.65rem 0.9rem;
+            font-size: 0.9rem;
+            color: var(--bs-body-color);
+            font-family: inherit;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            width: 100%; box-sizing: border-box;
+        }
         .form-group input:focus,
         .form-group select:focus,
-        .form-group textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,124,255,0.15); }
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--bs-primary);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--bs-primary) 20%, transparent);
+        }
         .form-group textarea { resize: vertical; min-height: 100px; }
-        .form-group select option { background: #1e1e2e; }
 
-        /* Photo Upload */
-        .photo-upload-area { border: 2px dashed var(--glass-border); border-radius: 14px; padding: 2rem 1rem; text-align: center; cursor: pointer; transition: all 0.25s; background: var(--glass-bg); }
-        .photo-upload-area:hover, .photo-upload-area.dragover { border-color: var(--accent); background: rgba(79,124,255,0.08); }
+        /* ── Photo Upload ── */
+        .photo-upload-area {
+            border: 2px dashed var(--bs-border-color);
+            border-radius: 14px;
+            padding: 2rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s;
+            background: var(--bs-body-bg);
+        }
+        .photo-upload-area:hover, .photo-upload-area.dragover {
+            border-color: var(--bs-primary);
+            background: color-mix(in srgb, var(--bs-primary) 8%, var(--bs-body-bg));
+        }
         .photo-upload-area .upload-icon { font-size: 2rem; margin-bottom: 0.5rem; }
-        .photo-upload-area .upload-text { font-size: 0.85rem; color: var(--text-muted); }
-        .photo-upload-area .upload-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; opacity: 0.6; }
+        .photo-upload-area .upload-text { font-size: 0.85rem; color: var(--bs-secondary-color); }
+        .photo-upload-area .upload-hint { font-size: 0.75rem; color: var(--bs-secondary-color); margin-top: 0.25rem; opacity: 0.7; }
         .photo-preview { margin-top: 1rem; display: none; }
-        .photo-preview img { width: 120px; height: 120px; object-fit: cover; border-radius: 14px; border: 2px solid var(--glass-border); }
+        .photo-preview img {
+            width: 120px; height: 120px;
+            object-fit: cover;
+            border-radius: 14px;
+            border: 2px solid var(--bs-border-color);
+        }
         .photo-remove { display: inline-block; margin-top: 0.5rem; font-size: 0.78rem; color: #ef4444; cursor: pointer; }
 
-        /* Appointment options */
+        /* ── Appointment options ── */
         .apt-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
         @media (max-width: 500px) { .apt-options { grid-template-columns: 1fr 1fr; } }
         .apt-option { display: none; }
-        .apt-option + label { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; padding: 0.9rem 0.5rem; border: 2px solid var(--glass-border); border-radius: 12px; cursor: pointer; transition: all 0.2s; font-size: 0.82rem; color: var(--text-muted); background: var(--glass-bg); text-align: center; }
-        .apt-option + label:hover { border-color: var(--accent); color: var(--text-primary); }
-        .apt-option:checked + label { border-color: var(--accent); background: rgba(79,124,255,0.1); color: var(--accent); font-weight: 600; }
+        .apt-option + label {
+            display: flex; flex-direction: column; align-items: center;
+            gap: 0.4rem; padding: 0.9rem 0.5rem;
+            border: 2px solid var(--bs-border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.82rem;
+            color: var(--bs-secondary-color);
+            background: var(--bs-body-bg);
+            text-align: center;
+        }
+        .apt-option + label:hover {
+            border-color: var(--bs-primary);
+            color: var(--bs-body-color);
+        }
+        .apt-option:checked + label {
+            border-color: var(--bs-primary);
+            background: color-mix(in srgb, var(--bs-primary) 12%, var(--bs-body-bg));
+            color: var(--bs-primary);
+            font-weight: 600;
+        }
         .apt-option + label .apt-icon { font-size: 1.4rem; }
 
-        /* Navigation */
-        .form-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--glass-border); }
-        .btn-prev { background: var(--glass-bg); border: 1.5px solid var(--glass-border); color: var(--text-primary); padding: 0.65rem 1.4rem; border-radius: 100px; font-size: 0.88rem; font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit; }
-        .btn-prev:hover { border-color: var(--accent); color: var(--accent); }
-        .btn-next, .btn-submit { background: linear-gradient(135deg, var(--accent), #8b5cf6); border: none; color: #fff; padding: 0.65rem 1.8rem; border-radius: 100px; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: all 0.2s; font-family: inherit; display: flex; align-items: center; gap: 0.5rem; }
-        .btn-next:hover, .btn-submit:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(79,124,255,0.35); }
+        /* ── Navigation (buttons) ── */
+        .form-nav {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-top: 2rem; padding-top: 1.5rem;
+            border-top: 1px solid var(--bs-border-color);
+        }
+        .btn-prev {
+            background: transparent;
+            border: 1px solid var(--bs-border-color);
+            color: var(--bs-body-color);
+            padding: 0.65rem 1.4rem;
+            border-radius: 10px;
+            font-size: 0.88rem; font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        .btn-prev:hover {
+            border-color: var(--bs-primary);
+            color: var(--bs-primary);
+            background: color-mix(in srgb, var(--bs-primary) 5%, transparent);
+        }
+        .btn-next, .btn-submit {
+            background: var(--bs-primary);
+            border: none;
+            color: #fff;
+            padding: 0.7rem 1.8rem;
+            border-radius: 10px;
+            font-size: 0.9rem; font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            display: flex; align-items: center; gap: 0.5rem;
+            box-shadow: 0 0 0 0 var(--bs-primary);
+        }
+        .btn-next:hover, .btn-submit:hover {
+            background: color-mix(in srgb, var(--bs-primary) 88%, white);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px color-mix(in srgb, var(--bs-primary) 40%, transparent);
+        }
+        .btn-next:active, .btn-submit:active { transform: translateY(0); }
         .btn-next:disabled, .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-        /* Error/info messages */
+        /* ── Error / info messages ── */
         .field-error { font-size: 0.78rem; color: #ef4444; margin-top: 0.2rem; display: none; }
         .field-error.visible { display: block; }
-        .form-errors { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; font-size: 0.85rem; color: #ef4444; display: none; }
+        .form-errors {
+            background: rgba(239,68,68,0.1);
+            border: 1px solid rgba(239,68,68,0.3);
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.85rem;
+            color: #fca5a5;
+            display: none;
+        }
         .form-errors.visible { display: block; }
         .form-errors ul { margin: 0.5rem 0 0; padding-left: 1.2rem; }
         .form-errors ul li { margin-bottom: 0.25rem; }
 
-        /* Loading overlay */
-        .submit-loading { display: none; align-items: center; gap: 0.75rem; font-size: 0.9rem; color: var(--text-muted); }
+        /* ── Loading overlay ── */
+        .submit-loading { display: none; align-items: center; gap: 0.75rem; font-size: 0.9rem; color: var(--bs-secondary-color); }
         .submit-loading.visible { display: flex; }
-        .spinner { width: 20px; height: 20px; border: 2px solid var(--glass-border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+        .spinner {
+            width: 20px; height: 20px;
+            border: 2px solid var(--bs-border-color);
+            border-top-color: var(--bs-primary);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Disclaimer */
-        .intake-disclaimer { font-size: 0.78rem; color: var(--text-muted); text-align: center; margin-top: 1.5rem; line-height: 1.5; }
+        /* ── Disclaimer ── */
+        .intake-disclaimer {
+            font-size: 0.78rem;
+            color: var(--bs-secondary-color);
+            text-align: center;
+            margin-top: 1.5rem;
+            line-height: 1.5;
+        }
 
-        /* Info note */
-        .info-note { background: rgba(79,124,255,0.08); border: 1px solid rgba(79,124,255,0.2); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 1.25rem; display: flex; gap: 0.5rem; }
-        .info-note svg { flex-shrink: 0; margin-top: 1px; color: var(--accent); }
+        /* ── Info note ── */
+        .info-note {
+            background: color-mix(in srgb, var(--bs-primary) 8%, transparent);
+            border: 1px solid color-mix(in srgb, var(--bs-primary) 22%, transparent);
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            font-size: 0.82rem;
+            color: var(--bs-secondary-color);
+            margin-bottom: 1.25rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+        .info-note svg { flex-shrink: 0; margin-top: 1px; color: var(--bs-primary); }
+
+        /* ── Focus-visible ring (a11y) ── */
+        *:focus-visible {
+            outline: 2px solid var(--bs-primary);
+            outline-offset: 2px;
+            border-radius: inherit;
+        }
+        .form-group input:focus-visible,
+        .form-group select:focus-visible,
+        .form-group textarea:focus-visible,
+        .btn-next:focus-visible,
+        .btn-prev:focus-visible,
+        .btn-submit:focus-visible { outline: 0; }
+
+        /* ── Reduced-motion support ── */
+        @media (prefers-reduced-motion: reduce) {
+            .intake-logo { animation: none; }
+            .btn-next:hover, .btn-submit:hover { transform: none; }
+        }
     </style>
 </head>
 <body>
@@ -117,24 +311,18 @@
             {% if global_settings is defined and global_settings.company_logo is defined and global_settings.company_logo %}
                 <img src="/uploads/{{ global_settings.company_logo }}" alt="{{ app_name }}" style="width:64px;height:64px;border-radius:16px;object-fit:contain;">
             {% else %}
-                <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <g transform="translate(32,32)">
-                        <ellipse cx="0" cy="0" rx="24" ry="9" fill="url(#if0)" opacity="0.9">
-                            <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="3s" repeatCount="indefinite"/>
-                        </ellipse>
-                        <ellipse cx="0" cy="0" rx="24" ry="9" fill="url(#if1)" opacity="0.9">
-                            <animateTransform attributeName="transform" type="rotate" from="60" to="420" dur="3s" repeatCount="indefinite"/>
-                        </ellipse>
-                        <ellipse cx="0" cy="0" rx="24" ry="9" fill="url(#if2)" opacity="0.9">
-                            <animateTransform attributeName="transform" type="rotate" from="120" to="480" dur="3s" repeatCount="indefinite"/>
-                        </ellipse>
-                        <circle cx="0" cy="0" r="8" fill="white" opacity="0.95"/>
-                    </g>
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <defs>
-                        <linearGradient id="if0" x1="-24" y1="0" x2="24" y2="0" gradientUnits="userSpaceOnUse"><stop stop-color="#A8ECF9"/><stop offset="1" stop-color="#6EA8FE"/></linearGradient>
-                        <linearGradient id="if1" x1="-24" y1="0" x2="24" y2="0" gradientUnits="userSpaceOnUse"><stop stop-color="#6EA8FE"/><stop offset="1" stop-color="#a78bfa"/></linearGradient>
-                        <linearGradient id="if2" x1="-24" y1="0" x2="24" y2="0" gradientUnits="userSpaceOnUse"><stop stop-color="#a78bfa"/><stop offset="1" stop-color="#A8ECF9"/></linearGradient>
+                        <linearGradient id="intakePaw" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0%" stop-color="#6EA8FE"/>
+                            <stop offset="100%" stop-color="#a78bfa"/>
+                        </linearGradient>
                     </defs>
+                    <ellipse fill="url(#intakePaw)" cx="9" cy="3.5" rx="2" ry="2.5"/>
+                    <ellipse fill="url(#intakePaw)" cx="15" cy="3.5" rx="2" ry="2.5"/>
+                    <ellipse fill="url(#intakePaw)" cx="4.5" cy="8" rx="2" ry="2.5"/>
+                    <ellipse fill="url(#intakePaw)" cx="19.5" cy="8" rx="2" ry="2.5"/>
+                    <path fill="url(#intakePaw)" d="M12 10c-3.5 0-6.5 2-6.5 5.5 0 2 1 3.5 2.5 4.5h8c1.5-1 2.5-2.5 2.5-4.5C18.5 12 15.5 10 12 10z"/>
                 </svg>
             {% endif %}
         </div>
@@ -364,21 +552,21 @@
                 </div>
 
                 <!-- Summary preview -->
-                <div style="background: rgba(79,124,255,0.07); border: 1px solid rgba(79,124,255,0.2); border-radius: 14px; padding: 1.25rem; margin-top: 0.5rem;">
-                    <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 1rem;">Zusammenfassung</div>
+                <div style="background: color-mix(in srgb, var(--bs-primary) 8%, transparent); border: 1px solid color-mix(in srgb, var(--bs-primary) 22%, transparent); border-radius: 14px; padding: 1.25rem; margin-top: 0.5rem;">
+                    <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--bs-secondary-color); margin-bottom: 1rem;">Zusammenfassung</div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1.5rem; font-size: 0.85rem;">
-                        <div><span style="color:var(--text-muted);">Besitzer:</span><br><strong id="sum-owner">—</strong></div>
-                        <div><span style="color:var(--text-muted);">Tier:</span><br><strong id="sum-patient">—</strong></div>
-                        <div><span style="color:var(--text-muted);">E-Mail:</span><br><span id="sum-email" style="color:var(--text-muted);">—</span></div>
-                        <div><span style="color:var(--text-muted);">Telefon:</span><br><span id="sum-phone" style="color:var(--text-muted);">—</span></div>
+                        <div><span style="color:var(--bs-secondary-color);">Besitzer:</span><br><strong id="sum-owner">—</strong></div>
+                        <div><span style="color:var(--bs-secondary-color);">Tier:</span><br><strong id="sum-patient">—</strong></div>
+                        <div><span style="color:var(--bs-secondary-color);">E-Mail:</span><br><span id="sum-email" style="color:var(--bs-secondary-color);">—</span></div>
+                        <div><span style="color:var(--bs-secondary-color);">Telefon:</span><br><span id="sum-phone" style="color:var(--bs-secondary-color);">—</span></div>
                     </div>
                 </div>
 
                 <!-- Consent -->
                 <div class="form-group" style="margin-top:1.5rem; flex-direction:row; align-items:flex-start; gap:0.75rem;">
                     <input type="checkbox" id="consent" name="consent" style="margin-top:3px; flex-shrink:0; width:18px; height:18px; cursor:pointer;" required>
-                    <label for="consent" style="font-size:0.83rem; color:var(--text-muted); cursor:pointer; line-height:1.5;">
-                        Ich habe die <a href="/datenschutz" target="_blank" style="color:var(--accent);">Datenschutzerklärung</a> gelesen und stimme der Verarbeitung meiner Daten zu. <span class="req">*</span>
+                    <label for="consent" style="font-size:0.83rem; color:var(--bs-secondary-color); cursor:pointer; line-height:1.5;">
+                        Ich habe die <a href="/datenschutz" target="_blank" style="color:var(--bs-primary);">Datenschutzerklärung</a> gelesen und stimme der Verarbeitung meiner Daten zu. <span class="req">*</span>
                     </label>
                 </div>
 

@@ -163,6 +163,70 @@
 {% endif %}
 
 
+{# ── Therapiefortschritt-Verlauf (Chart) ── #}
+{% if progress_chart is not null and progress_chart|length > 0 %}
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 class="h5 mb-0">📈 Fortschritts-Verlauf</h2>
+        <span class="small text-secondary">Letzte 90 Tage</span>
+    </div>
+    {% for petChart in progress_chart %}
+    <div class="mb-3{% if not loop.last %} pb-3{% endif %}"
+         {% if not loop.last %}style="border-bottom:1px solid var(--bs-border-color);"{% endif %}>
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="fw-600 small">🐾 {{ petChart.pet_name }}</div>
+            <a href="/portal/tcp/tiere/{{ petChart.pet_id }}/fortschritt"
+               class="portal-btn portal-btn-secondary portal-btn-sm">Details →</a>
+        </div>
+        <div style="position:relative;height:220px;">
+            <canvas id="progressChart-{{ petChart.pet_id }}"
+                    data-chart='{{ petChart.chart|json_encode|e('html_attr') }}'></canvas>
+        </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{# ── Hausaufgaben-Fortschritt (Bar Chart) ── #}
+{% if homework_stats is not null and homework_stats|length > 0 %}
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 class="h5 mb-0">✅ Hausaufgaben-Fortschritt</h2>
+        <span class="small text-secondary">{{ homework_stats|length }} aktive Pläne</span>
+    </div>
+    <div class="homework-stats-list" style="display:flex;flex-direction:column;gap:0.85rem;">
+        {% for stat in homework_stats %}
+        <a href="/portal/tiere/{{ stat.patient_id }}/hausaufgaben"
+           class="text-decoration-none"
+           style="color:inherit;display:block;padding:0.55rem 0.65rem;border-radius:10px;transition:background 0.18s ease;"
+           onmouseover="this.style.background='var(--bs-tertiary-bg)'" onmouseout="this.style.background=''">
+            <div class="d-flex align-items-center justify-content-between mb-1" style="gap:.75rem;">
+                <div class="small fw-600" style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                    🐾 {{ stat.patient_name }}
+                    <span class="text-secondary" style="font-weight:400;">· {{ stat.plan_date|date('d.m.Y') }}</span>
+                </div>
+                <div class="small fw-700" style="flex-shrink:0;min-width:92px;text-align:right;">
+                    {{ stat.checked }} / {{ stat.total }}
+                    <span style="color:{% if stat.pct >= 80 %}#22c55e{% elseif stat.pct >= 40 %}#f59e0b{% else %}#94a3b8{% endif %};margin-left:0.4rem;">{{ stat.pct }}%</span>
+                </div>
+            </div>
+            <div style="height:8px;background:var(--bs-tertiary-bg);border-radius:999px;overflow:hidden;">
+                <div style="height:100%;width:{{ stat.pct }}%;border-radius:999px;transition:width 0.6s ease;
+                            background:linear-gradient(90deg,
+                                {% if stat.pct >= 80 %}#22c55e,#4ade80
+                                {% elseif stat.pct >= 40 %}#f59e0b,#fbbf24
+                                {% else %}#94a3b8,#cbd5e1{% endif %});"></div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
 {# ── TherapyCare Pro: Therapiefortschritt ── #}
 {% if tcp_dashboard is not null and tcp_dashboard|length > 0 %}
 <div class="card mb-3">
@@ -203,4 +267,71 @@
 </div>
 {% endif %}
 
+{% endblock %}
+
+{% block scripts %}
+{% if progress_chart is not null and progress_chart|length > 0 %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    'use strict';
+    if (typeof Chart === 'undefined') return;
+
+    /* Chart.js global defaults matching portal theme */
+    var cs = getComputedStyle(document.documentElement);
+    var textMuted  = cs.getPropertyValue('--bs-secondary-color').trim() || '#94a3b8';
+    var borderCol  = cs.getPropertyValue('--bs-border-color').trim()    || '#334155';
+    Chart.defaults.color       = textMuted;
+    Chart.defaults.borderColor = borderCol;
+    Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+
+    document.querySelectorAll('canvas[id^="progressChart-"]').forEach(function (canvas) {
+        var raw;
+        try { raw = JSON.parse(canvas.dataset.chart || '{}'); }
+        catch (e) { return; }
+        if (!raw.datasets || raw.datasets.length === 0) return;
+
+        /* Format labels as "DD.MM." for compact display */
+        var labels = (raw.labels || []).map(function (d) {
+            if (!d || d.length < 10) return d;
+            return d.substr(8, 2) + '.' + d.substr(5, 2) + '.';
+        });
+
+        new Chart(canvas, {
+            type: 'line',
+            data: { labels: labels, datasets: raw.datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { boxWidth: 10, font: { size: 11 }, padding: 12, usePointStyle: true }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15,23,42,0.95)',
+                        borderColor: borderCol,
+                        borderWidth: 1,
+                        titleColor: '#fff',
+                        bodyColor: '#e2e8f0',
+                        padding: 10,
+                        cornerRadius: 8
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+                    y: {
+                        beginAtZero: true,
+                        suggestedMax: 10,
+                        grid: { color: borderCol },
+                        ticks: { stepSize: 2, font: { size: 10 } }
+                    }
+                }
+            }
+        });
+    });
+})();
+</script>
+{% endif %}
 {% endblock %}
