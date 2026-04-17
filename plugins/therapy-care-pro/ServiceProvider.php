@@ -335,10 +335,10 @@ class ServiceProvider
             foreach ($files as $file) {
                 $sql = file_get_contents($file);
 
-                /* Replace all bare table references with prefixed names.
-                   TCP-own tables (tcp_*) get prefixed.
-                   Core tables referenced in FK REFERENCES also get prefixed. */
-                $sql = $this->applyPrefixToSql($sql, $prefix);
+                /* Replace {{PREFIX}} placeholder with tenant prefix.
+                   Affects BOTH table names AND FK-constraint names
+                   so multi-tenant installs never collide on constraint names. */
+                $sql = str_replace('{{PREFIX}}', $prefix, $sql);
 
                 $statements = $this->splitSql($sql);
                 foreach ($statements as $stmt) {
@@ -346,9 +346,11 @@ class ServiceProvider
                         $db->getPdo()->exec($stmt);
                     } catch (\Throwable $e) {
                         $msg = $e->getMessage();
-                        if (stripos($msg, 'already exists') === false
-                            && stripos($msg, 'Duplicate') === false) {
-                            error_log('[TherapyCare Pro migration] ' . $msg . ' — SQL: ' . substr($stmt, 0, 120));
+                        /* Suppress only "already exists" — duplicate/FK-name errors
+                           must now be visible because constraint names are prefixed
+                           per tenant and should never collide. */
+                        if (stripos($msg, 'already exists') === false) {
+                            error_log('[TherapyCare Pro migration] ' . $msg . ' — SQL: ' . substr($stmt, 0, 200));
                         }
                     }
                 }
@@ -356,36 +358,6 @@ class ServiceProvider
         } catch (\Throwable $e) {
             error_log('[TherapyCare Pro runMigrations] ' . $e->getMessage());
         }
-    }
-
-    /**
-     * Apply tenant prefix to table names in a SQL migration string.
-     * Only replaces table names that appear after known SQL keywords
-     * (CREATE TABLE, INSERT INTO, UPDATE, FROM, JOIN, REFERENCES).
-     * CONSTRAINT names, column names and other identifiers are NOT touched.
-     */
-    private function applyPrefixToSql(string $sql, string $prefix): string
-    {
-        if ($prefix === '') {
-            return $sql;
-        }
-
-        /* Keywords after which a bare table name (in backticks) follows */
-        $pattern = '/\b(CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS|CREATE\s+TABLE|INSERT\s+INTO|UPDATE|FROM|JOIN|REFERENCES)\s+`([^`]+)`/i';
-
-        return preg_replace_callback(
-            $pattern,
-            function (array $m) use ($prefix): string {
-                $keyword   = $m[1];
-                $tableName = $m[2];
-                /* Skip if already prefixed */
-                if (str_starts_with($tableName, $prefix)) {
-                    return $keyword . ' `' . $tableName . '`';
-                }
-                return $keyword . ' `' . $prefix . $tableName . '`';
-            },
-            $sql
-        );
     }
 
     /**
