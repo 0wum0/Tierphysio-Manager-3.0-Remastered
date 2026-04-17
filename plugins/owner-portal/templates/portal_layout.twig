@@ -16,36 +16,81 @@
         /* ── Portal-specific overrides ── */
         body { min-height: 100vh; }
 
+        /* Consistent focus ring for keyboard users (a11y) */
+        *:focus-visible {
+            outline: 2px solid var(--bs-primary);
+            outline-offset: 2px;
+            border-radius: inherit;
+        }
+        .btn:focus-visible,
+        .form-control:focus-visible,
+        .form-select:focus-visible {
+            outline: 0;
+        }
+
+        @keyframes portal-paw-pulse {
+            0%, 100% { transform: scale(1);    filter: drop-shadow(0 0 0px #6EA8FE); }
+            50%      { transform: scale(1.12); filter: drop-shadow(0 0 8px #a78bfa); }
+        }
+
         .portal-topbar {
             position: sticky; top: 0; z-index: 1030;
             background: var(--bs-body-bg);
             border-bottom: 1px solid var(--bs-border-color);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
             padding: 0 1.25rem;
             height: 56px;
             display: flex; align-items: center; gap: 0.5rem;
+            backdrop-filter: saturate(180%) blur(8px);
         }
         .portal-topbar-brand {
-            font-weight: 700; font-size: 0.95rem;
+            font-weight: 700; font-size: 1rem;
             color: var(--bs-body-color); text-decoration: none;
-            display: flex; align-items: center; gap: 0.5rem;
+            display: flex; align-items: center; gap: 0.55rem;
             margin-right: auto;
+            letter-spacing: -0.01em;
         }
         .portal-topbar-brand:hover { color: var(--bs-body-color); }
+        .portal-topbar-brand-icon {
+            display: inline-flex; align-items: center; justify-content: center;
+            animation: portal-paw-pulse 3s ease-in-out infinite;
+        }
+        .portal-topbar-brand-text {
+            background: linear-gradient(90deg, #6EA8FE, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
         .portal-topbar-nav { display: flex; align-items: center; gap: 0.15rem; }
         .portal-topbar-nav .nav-link {
-            font-size: 0.82rem; padding: 0.35rem 0.65rem;
-            border-radius: 6px; white-space: nowrap;
+            font-size: 0.82rem; padding: 0.4rem 0.7rem;
+            border-radius: 8px; white-space: nowrap;
             color: var(--bs-secondary-color);
-            display: flex; align-items: center; gap: 0.35rem;
+            display: flex; align-items: center; gap: 0.4rem;
+            transition: color 0.18s ease, background 0.18s ease, transform 0.12s ease;
         }
-        .portal-topbar-nav .nav-link:hover { color: var(--bs-body-color); background: var(--bs-tertiary-bg); }
-        .portal-topbar-nav .nav-link.active { color: var(--bs-primary); background: var(--bs-tertiary-bg); }
+        .portal-topbar-nav .nav-link:hover {
+            color: var(--bs-body-color);
+            background: var(--bs-tertiary-bg);
+        }
+        .portal-topbar-nav .nav-link:active { transform: scale(0.97); }
+        .portal-topbar-nav .nav-link.active {
+            color: var(--bs-primary); background: var(--bs-tertiary-bg);
+            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bs-primary) 25%, transparent);
+        }
         .portal-topbar-nav .nav-link-logout { color: var(--bs-danger) !important; }
+        .portal-topbar-nav .nav-link-logout:hover {
+            background: color-mix(in srgb, var(--bs-danger) 10%, transparent) !important;
+        }
 
         .portal-body { max-width: 960px; margin: 0 auto; padding: 1.75rem 1rem 3rem; }
 
         /* Portal cards use Bootstrap card style */
         .portal-card { margin-bottom: 1rem; }
+        .card {
+            transition: border-color 0.18s ease, box-shadow 0.18s ease;
+        }
 
         /* Badges */
         .badge-status {
@@ -62,15 +107,40 @@
         /* Portal buttons */
         .portal-btn {
             display: inline-flex; align-items: center; gap: 0.4rem;
-            padding: 0.45rem 1rem; border-radius: 8px; font-size: 0.85rem;
-            font-weight: 500; text-decoration: none; border: none; cursor: pointer;
-            transition: opacity 0.15s;
+            padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.85rem;
+            font-weight: 500; text-decoration: none; border: 1px solid transparent; cursor: pointer;
+            transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease,
+                        box-shadow 0.18s ease, transform 0.1s ease;
+            line-height: 1.25;
         }
-        .portal-btn:hover { opacity: 0.85; }
-        .portal-btn-primary   { background: var(--bs-primary); color: #fff; }
-        .portal-btn-secondary { background: var(--bs-tertiary-bg); color: var(--bs-body-color); }
-        .portal-btn-danger    { background: var(--bs-danger); color: #fff; }
-        .portal-btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
+        .portal-btn:active { transform: scale(0.97); }
+        .portal-btn-primary {
+            background: var(--bs-primary); color: #fff;
+            box-shadow: 0 0 0 0 var(--bs-primary);
+        }
+        .portal-btn-primary:hover {
+            background: color-mix(in srgb, var(--bs-primary) 88%, white);
+            color: #fff;
+            box-shadow: 0 4px 16px color-mix(in srgb, var(--bs-primary) 30%, transparent);
+        }
+        .portal-btn-secondary {
+            background: var(--bs-tertiary-bg); color: var(--bs-body-color);
+            border-color: var(--bs-border-color);
+        }
+        .portal-btn-secondary:hover {
+            background: color-mix(in srgb, var(--bs-body-color) 8%, var(--bs-tertiary-bg));
+            border-color: color-mix(in srgb, var(--bs-primary) 40%, var(--bs-border-color));
+            color: var(--bs-body-color);
+        }
+        .portal-btn-danger {
+            background: var(--bs-danger); color: #fff;
+        }
+        .portal-btn-danger:hover {
+            background: color-mix(in srgb, var(--bs-danger) 88%, white);
+            color: #fff;
+            box-shadow: 0 4px 16px color-mix(in srgb, var(--bs-danger) 30%, transparent);
+        }
+        .portal-btn-sm { padding: 0.32rem 0.75rem; font-size: 0.78rem; }
 
         /* Alerts */
         .portal-alert { padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.875rem; }
@@ -82,9 +152,15 @@
         .pet-card {
             background: var(--bs-secondary-bg); border: 1px solid var(--bs-border-color);
             border-radius: 12px; overflow: hidden; text-decoration: none; color: var(--bs-body-color);
-            transition: border-color 0.15s, transform 0.15s; display: block;
+            transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+            display: block;
         }
-        .pet-card:hover { border-color: var(--bs-primary); transform: translateY(-2px); }
+        .pet-card:hover {
+            border-color: color-mix(in srgb, var(--bs-primary) 50%, var(--bs-border-color));
+            transform: translateY(-3px);
+            box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+        }
+        .pet-card:active { transform: translateY(-1px); }
         .pet-card-img { width: 100%; height: 140px; object-fit: cover; background: var(--bs-tertiary-bg); display: flex; align-items: center; justify-content: center; }
         .pet-card-body { padding: 0.85rem; }
         .pet-card-name { font-weight: 600; margin-bottom: 0.2rem; }
@@ -103,16 +179,42 @@
         table.portal-table td { padding: 0.65rem 0.75rem; border-top: 1px solid var(--bs-border-color); font-size: 0.875rem; vertical-align: middle; }
 
         /* Exercises */
-        .exercise-card { padding: 1rem; border: 1px solid var(--bs-border-color); border-radius: 10px; margin-bottom: 0.75rem; background: var(--bs-secondary-bg); }
+        .exercise-card {
+            padding: 1rem; border: 1px solid var(--bs-border-color);
+            border-radius: 10px; margin-bottom: 0.75rem; background: var(--bs-secondary-bg);
+            transition: border-color 0.18s ease, box-shadow 0.18s ease;
+        }
+        .exercise-card:hover {
+            border-color: color-mix(in srgb, var(--bs-primary) 40%, var(--bs-border-color));
+            box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+        }
         .exercise-title { font-weight: 600; margin-bottom: 0.4rem; }
         .exercise-desc  { font-size: 0.85rem; color: var(--bs-secondary-color); white-space: pre-line; }
         .exercise-video { margin-top: 0.75rem; }
 
         /* Page title */
-        .portal-page-title { font-size: 1.4rem; font-weight: 700; margin: 0 0 1.25rem; }
+        .portal-page-title {
+            font-size: 1.5rem; font-weight: 700; margin: 0 0 1.25rem;
+            letter-spacing: -0.01em;
+        }
+        /* Opt-in gradient variant — add class .portal-page-title-gradient to page-title */
+        .portal-page-title-gradient {
+            background: linear-gradient(90deg, var(--bs-body-color), color-mix(in srgb, var(--bs-primary) 70%, var(--bs-body-color)));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
 
         /* Modal */
         .portal-modal { overflow-y: auto !important; -webkit-overflow-scrolling: touch; }
+
+        /* Respect user's reduced-motion preference */
+        @media (prefers-reduced-motion: reduce) {
+            .portal-topbar-brand-icon { animation: none; }
+            .pet-card:hover,
+            .portal-btn:hover,
+            .nav-link:hover { transform: none !important; }
+        }
 
         @media(max-width:600px) {
             .portal-topbar-nav .nav-link span { display: none; }
@@ -132,8 +234,22 @@
 {# ── Top Navigation Bar ── #}
 <header class="portal-topbar">
     <a href="/portal/dashboard" class="portal-topbar-brand">
-        <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="var(--bs-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-        Mein Tierportal
+        <span class="portal-topbar-brand-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="portalPaw" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stop-color="#6EA8FE"/>
+                        <stop offset="100%" stop-color="#a78bfa"/>
+                    </linearGradient>
+                </defs>
+                <ellipse fill="url(#portalPaw)" cx="9" cy="3.5" rx="2" ry="2.5"/>
+                <ellipse fill="url(#portalPaw)" cx="15" cy="3.5" rx="2" ry="2.5"/>
+                <ellipse fill="url(#portalPaw)" cx="4.5" cy="8" rx="2" ry="2.5"/>
+                <ellipse fill="url(#portalPaw)" cx="19.5" cy="8" rx="2" ry="2.5"/>
+                <path fill="url(#portalPaw)" d="M12 10c-3.5 0-6.5 2-6.5 5.5 0 2 1 3.5 2.5 4.5h8c1.5-1 2.5-2.5 2.5-4.5C18.5 12 15.5 10 12 10z"/>
+            </svg>
+        </span>
+        <span class="portal-topbar-brand-text">Mein Tierportal</span>
     </a>
     {% if portal_user is defined and portal_user %}
     <nav class="portal-topbar-nav">

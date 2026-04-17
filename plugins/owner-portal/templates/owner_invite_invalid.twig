@@ -1,23 +1,78 @@
 <!DOCTYPE html>
-<html lang="de" data-bs-theme="dark" class="set-nav-dark">
+<html lang="de" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Link ungültig — Besitzerportal</title>
+    <title>Link ungültig — {{ app_name ?? 'Besitzerportal' }}</title>
     <link rel="stylesheet" href="/themes/smart-tierphysio/css/smartapp.min.css">
-    <link rel="stylesheet" href="/themes/smart-tierphysio/bridge.css?v=20260308f">
+    <link rel="stylesheet" href="/themes/smart-tierphysio/webfonts/smartadmin/sa-icons.css">
     <script src="/themes/smart-tierphysio/scripts/core/saveloadscript.js"></script>
     <style>
-        body { min-height:100vh; display:flex; align-items:center; justify-content:center; }
+        body { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bs-body-bg); }
+        .wrap { width:100%; max-width:420px; padding:1rem; text-align:center; }
+        .err-icon {
+            width:72px; height:72px;
+            margin:0 auto 1.25rem;
+            display:flex; align-items:center; justify-content:center;
+            border-radius:50%;
+            background:rgba(239,68,68,0.12);
+            border:1px solid rgba(239,68,68,0.25);
+            color:#ef4444;
+        }
+        .err-card {
+            background: var(--bs-tertiary-bg);
+            border: 1px solid var(--bs-border-color);
+            border-radius: 16px;
+            padding: 2rem 1.75rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,.18);
+        }
+        .err-title {
+            font-size: 1.35rem; font-weight: 700; margin: 0 0 .5rem;
+            letter-spacing: -0.01em;
+        }
+        .err-text {
+            color: var(--bs-secondary-color);
+            font-size: .88rem;
+            line-height: 1.5;
+            margin: 0 0 1.5rem;
+        }
+        .btn-back {
+            display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+            padding: .65rem 1.4rem;
+            border-radius: 10px; border: none;
+            background: var(--bs-primary); color: #fff;
+            font-size: .9rem; font-weight: 600; text-decoration: none;
+            transition: background .2s, box-shadow .2s, transform .1s;
+        }
+        .btn-back:hover {
+            background: color-mix(in srgb, var(--bs-primary) 88%, white);
+            color: #fff;
+            box-shadow: 0 4px 18px color-mix(in srgb, var(--bs-primary) 40%, transparent);
+            transform: translateY(-1px);
+        }
+        .btn-back:active { transform: translateY(0); }
     </style>
 </head>
 <body>
-<div class="text-center p-4" style="max-width:400px;margin:0 auto;">
-    <div class="fs-1 mb-3">⛔</div>
-    <h1 class="h4 mb-2">Link ungültig oder abgelaufen</h1>
-    <p class="text-secondary">Dieser Einladungslink ist nicht mehr gültig. Er wurde bereits verwendet oder ist abgelaufen.</p>
-    <a href="/portal/login" class="btn btn-primary mt-2">→ Zum Login</a>
+<div class="wrap">
+    <div class="err-card">
+        <div class="err-icon">
+            <svg width="36" height="36" fill="none" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                <line x1="15" y1="9" x2="9" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <line x1="9" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </div>
+        <h1 class="err-title">Link ungültig oder abgelaufen</h1>
+        <p class="err-text">Dieser Einladungslink ist nicht mehr gültig. Er wurde bereits verwendet oder ist abgelaufen.</p>
+        <a href="/portal/login" class="btn-back">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24">
+                <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                      d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>
+            </svg>
+            Zum Login
+        </a>
+    </div>
 </div>
-<script src="/themes/smart-tierphysio/scripts/bootstrap.bundle.min.js"></script>
 </body>
 </html>
