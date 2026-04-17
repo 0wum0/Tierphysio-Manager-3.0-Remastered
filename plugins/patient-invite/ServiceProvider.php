@@ -87,6 +87,15 @@ class ServiceProvider
     {
         try {
             $db           = Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $prefix       = $db->getPrefix();
+
+            // No tenant context (e.g. on /login before auth) → skip silently.
+            // Without the prefix we would create unprefixed tables that are
+            // invisible to the tenant-scoped repository.
+            if ($prefix === '') {
+                return;
+            }
+
             $migrationDir = __DIR__ . '/migrations';
             if (!is_dir($migrationDir)) return;
 
@@ -95,7 +104,10 @@ class ServiceProvider
             sort($files);
 
             foreach ($files as $file) {
-                $sql        = file_get_contents($file);
+                $sql = (string)file_get_contents($file);
+                // Apply tenant prefix placeholder — matches SaaS migration convention.
+                $sql = str_replace(['{{prefix}}', '{{ prefix }}'], $prefix, $sql);
+
                 $statements = array_filter(array_map('trim', explode(';', $sql)));
                 foreach ($statements as $stmt) {
                     if (!empty($stmt)) {

@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS `patient_invite_tokens` (
+CREATE TABLE IF NOT EXISTS `{{prefix}}patient_invite_tokens` (
     `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `token`         VARCHAR(64)  NOT NULL,
     `email`         VARCHAR(255) NOT NULL DEFAULT '',
