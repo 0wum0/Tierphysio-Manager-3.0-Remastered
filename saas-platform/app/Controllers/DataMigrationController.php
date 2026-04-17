@@ -660,9 +660,11 @@ class DataMigrationController extends Controller
             
             $this->session->flash('success', $msg);
         } else {
-            $lastFileReport = end($result['report']) ?: [];
-            $error = $lastFileReport['errors'][0] ?? ['msg' => 'Unbekannter Fehler'];
-            $this->session->flash('error', "Fehler bei der Reparatur: {$error['msg']} (bei Statement: " . mb_substr($error['stmt'] ?? '', 0, 100) . "...)");
+            $reports        = is_array($result['report'] ?? null) ? $result['report'] : [];
+            $lastFileReport = !empty($reports) ? end($reports) : [];
+            $error          = (is_array($lastFileReport) ? ($lastFileReport['errors'][0] ?? null) : null)
+                              ?? ['msg' => $result['message'] ?? 'Unbekannter Fehler', 'stmt' => ''];
+            $this->session->flash('error', "Fehler bei der Reparatur: {$error['msg']}" . (($error['stmt'] ?? '') !== '' ? " (bei Statement: " . mb_substr($error['stmt'], 0, 100) . "...)" : ''));
         }
 
         $this->redirect('/admin/tenants/' . $tenantId);

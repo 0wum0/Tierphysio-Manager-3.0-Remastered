@@ -61,12 +61,19 @@ class MigrationService
         $migTbl = $prefix . 'migrations';
 
         try {
-            $check = $pdo->query("SHOW TABLES LIKE '{$migTbl}'")->fetchColumn();
+            $stCheck = $pdo->query("SHOW TABLES LIKE '{$migTbl}'");
+            $check   = $stCheck->fetchColumn();
+            $stCheck->closeCursor();
+
             if (!$check) {
                 return 0;
             }
 
-            return (int)($pdo->query("SELECT MAX(version) FROM `{$migTbl}`")->fetchColumn() ?? 0);
+            $stVer   = $pdo->query("SELECT MAX(version) FROM `{$migTbl}`");
+            $version = (int)($stVer->fetchColumn() ?? 0);
+            $stVer->closeCursor();
+
+            return $version;
         } catch (\Throwable $e) {
             return 0;
         }
@@ -138,6 +145,9 @@ class MigrationService
         } catch (\Throwable $e) {
             return [
                 'success' => false,
+                'from'    => 0,
+                'to'      => 0,
+                'report'  => [],
                 'message' => 'Reset fehlgeschlagen: ' . $e->getMessage()
             ];
         }
@@ -277,8 +287,9 @@ class MigrationService
         $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
 
         if (empty($report['errors'])) {
-            $pdo->prepare("INSERT IGNORE INTO `{$migTbl}` (version, applied_at) VALUES (?, NOW())")
-                ->execute([$version]);
+            $stIns = $pdo->prepare("INSERT IGNORE INTO `{$migTbl}` (version, applied_at) VALUES (?, NOW())");
+            $stIns->execute([$version]);
+            $stIns->closeCursor();
             return ['success' => true, 'report' => $report];
         }
 
