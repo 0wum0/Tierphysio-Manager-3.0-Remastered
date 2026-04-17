@@ -1,0 +1,18 @@
+{# ═══════════════════════════════════════════════════════════════════
+   Material Pro — Layout
+   Extends the SmartAdmin layout (sidebar, topbar, full JS/CSS stack)
+   and overlays Material Design 3 styling via theme.css.
+   This guarantees the app keeps all functionality (navigation, topbar,
+   widgets, JS) and only the VISUAL look changes to Material You.
+   ═══════════════════════════════════════════════════════════════════ #}
+{% extends "@smart-tierphysio/layout.twig" %}
+
+{# Append Material Pro theme.css AFTER all SmartAdmin styles so its cascades win #}
+{% block head %}
+{{ parent() }}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="/theme-assets/material-pro/theme.css?v={{ "now"|date("YmdHi") }}">
+{# Force Material 3 typography onto <html> so variable font kicks in immediately #}
+<style id="material-pro-bootstrap">html,body{font-family:"Roboto Flex","Google Sans","Roboto",system-ui,-apple-system,sans-serif!important;}</style>
+{% endblock %}

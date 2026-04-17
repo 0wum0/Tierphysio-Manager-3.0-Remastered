@@ -31,11 +31,13 @@ class ServiceProvider
         $view->addGlobal('active_theme_slug',   $activeSlug);
         $view->addGlobal('active_theme_css',    $themeManager->activeCssUrl());
 
-        /* Register active theme directory as Twig namespace so layout.twig is usable.
-           themeDir() checks storage/ first, then plugin bundled-themes/. */
-        $themeDir = $themeManager->themeDir($activeSlug);
-        if ($themeDir !== null) {
-            $view->addTemplatePath($themeDir, $activeSlug);
+        /* Register ALL theme directories as Twig namespaces so any theme's layout.twig
+           can extend another theme's layout.twig (e.g. material-pro extends smart-tierphysio). */
+        foreach ($themeManager->all() as $t) {
+            $dir = $themeManager->themeDir($t['slug']);
+            if ($dir !== null) {
+                $view->addTemplatePath($dir, $t['slug']);
+            }
         }
 
         /* Tell base.twig which layout to extend (null = base.twig itself) */
