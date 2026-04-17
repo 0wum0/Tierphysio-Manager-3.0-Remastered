@@ -449,6 +449,7 @@ class TenantController extends Controller
     {
         $this->requireAuth();
         $this->verifyCsrf();
+        $this->db->getPdo()->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
 
         $tenant = $this->tenantRepo->find((int)($params['id'] ?? 0));
         if (!$tenant) {
