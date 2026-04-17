@@ -455,10 +455,10 @@
                         <div class="pd-tab-panel" id="pd-panel-befunde">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
                                 <div class="pd-section-label" style="margin: 0;">Befundbögen</div>
-                                <a id="pd-befunde-new-link" href="#" class="btn btn-primary btn-sm">
+                                <button type="button" id="pd-befunde-new-link" class="btn btn-primary btn-sm">
                                     <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                                    Neuer Befundbogen
-                                </a>
+                                    Befundung starten
+                                </button>
                             </div>
                             <div id="pd-befunde-list">
                                 <div style="text-align: center; padding: 2rem; color: var(--bs-secondary-color);">
@@ -899,6 +899,109 @@
         </div>
     </div></div>
 </div>
+
+{# ── Befund-Tierauswahl Modal (gestackt über Patienten-Modal) ─ #}
+<div class="modal fade" id="modal-pd-befund-species" tabindex="-1" aria-hidden="true" style="z-index: 1070;">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content" style="border:none;box-shadow:0 20px 50px rgba(0,0,0,0.35);">
+            <div class="modal-header" style="border-bottom:1px solid var(--bs-border-color);">
+                <div>
+                    <h5 class="modal-title mb-1" style="font-weight:700;">Welches Tier wirst du untersuchen?</h5>
+                    <div class="text-muted small" id="pd-bs-subtitle">Patient: –</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            </div>
+            <div class="modal-body" style="padding:1.5rem;">
+                <div class="row g-3" id="pd-bs-grid">
+                    {# 3 Tier-Kacheln, werden per JS in Links verwandelt #}
+                    {% for sp in [
+                        {'key':'dog',   'label':'Hund',  'hint':'Canine Anatomie'},
+                        {'key':'cat',   'label':'Katze', 'hint':'Feline Anatomie'},
+                        {'key':'horse', 'label':'Pferd', 'hint':'Equine Anatomie'}
+                    ] %}
+                    <div class="col-md-4">
+                        <a href="#" data-species="{{ sp.key }}"
+                           class="befund-species-card d-flex flex-column align-items-center justify-content-center text-decoration-none p-3">
+                            <svg width="80" height="80" viewBox="0 0 500 300" preserveAspectRatio="xMidYMid meet" style="margin-bottom:.5rem;">
+                                {% if sp.key == 'dog' %}
+                                <g fill="#c7cdd4" stroke="#6b7280" stroke-width="3">
+                                    <ellipse cx="220" cy="170" rx="130" ry="55"/>
+                                    <ellipse cx="95" cy="140" rx="45" ry="40"/>
+                                    <rect x="62" y="100" width="8" height="22" rx="2"/>
+                                    <rect x="82" y="100" width="8" height="22" rx="2"/>
+                                    <path d="M140 220 L140 260 L150 260 L155 225 Z"/>
+                                    <path d="M200 225 L200 265 L212 265 L215 228 Z"/>
+                                    <path d="M270 225 L270 265 L282 265 L283 228 Z"/>
+                                    <path d="M320 222 L318 262 L330 262 L333 225 Z"/>
+                                    <path d="M345 145 Q370 125 365 170" fill="none"/>
+                                </g>
+                                {% elseif sp.key == 'cat' %}
+                                <g fill="#c7cdd4" stroke="#6b7280" stroke-width="3">
+                                    <ellipse cx="230" cy="175" rx="115" ry="48"/>
+                                    <circle cx="115" cy="155" r="36"/>
+                                    <path d="M95 125 L105 105 L112 130 Z"/>
+                                    <path d="M125 125 L132 105 L140 130 Z"/>
+                                    <path d="M155 225 L155 262 L163 262 L168 228 Z"/>
+                                    <path d="M210 228 L210 265 L220 265 L223 230 Z"/>
+                                    <path d="M275 228 L275 265 L285 265 L287 230 Z"/>
+                                    <path d="M320 225 L320 263 L330 263 L333 228 Z"/>
+                                    <path d="M345 150 Q390 130 380 180" fill="none"/>
+                                </g>
+                                {% else %}
+                                <g fill="#c7cdd4" stroke="#6b7280" stroke-width="3">
+                                    <ellipse cx="240" cy="155" rx="145" ry="55"/>
+                                    <ellipse cx="95" cy="115" rx="28" ry="48"/>
+                                    <rect x="90" y="70" width="8" height="22" rx="2"/>
+                                    <rect x="103" y="70" width="8" height="22" rx="2"/>
+                                    <rect x="130" y="210" width="12" height="75" rx="3"/>
+                                    <rect x="180" y="210" width="12" height="75" rx="3"/>
+                                    <rect x="295" y="210" width="12" height="75" rx="3"/>
+                                    <rect x="345" y="210" width="12" height="75" rx="3"/>
+                                    <path d="M380 130 Q410 150 395 200" fill="none"/>
+                                </g>
+                                {% endif %}
+                            </svg>
+                            <div class="fw-700" style="font-size:1.02rem;">{{ sp.label }}</div>
+                            <div class="text-muted small">{{ sp.hint }}</div>
+                            <span class="badge bg-primary mt-2 pd-bs-suggested-badge" style="font-size:.65rem;display:none;">empfohlen</span>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+                <p class="text-muted small mt-3 mb-0 text-center">
+                    Die Auswahl bestimmt die anatomische Silhouette im Befundbogen. Du kannst sie später jederzeit wechseln.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{# Backdrop-Stacking-Fix für gestackte Modals #}
+<style>
+.befund-species-card {
+    border: 2px solid var(--bs-border-color, #dee2e6);
+    border-radius: 12px;
+    background: var(--bs-body-bg, #fff);
+    transition: all .15s ease;
+    color: var(--bs-body-color, #111);
+    min-height: 190px;
+    cursor: pointer;
+}
+.befund-species-card:hover {
+    border-color: var(--bs-primary, #2563eb);
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(37,99,235,.15);
+    color: var(--bs-body-color, #111);
+}
+.befund-species-card.is-suggested {
+    border-color: var(--bs-primary, #2563eb);
+    background: rgba(37,99,235,.04);
+}
+.befund-species-card.is-suggested .pd-bs-suggested-badge {
+    display: inline-block !important;
+}
+/* Stacked-Modal Backdrop darker */
+.modal-backdrop.show + .modal-backdrop.show { z-index: 1069; }
+</style>
 
 {# ── Global Patient Modal JS ───────────────────────────── #}
 <script>
@@ -1693,9 +1796,13 @@ function openPatientModal(patientId) {
             var pdForm = document.getElementById('pd-timeline-form');
             if (pdForm) { pdForm.action='/patienten/'+patientId+'/timeline'; pdForm.dataset.patientId=patientId; }
 
-            /* Befund new link */
+            /* Befund new button → öffnet Tierauswahl-Modal */
             var bfnl = document.getElementById('pd-befunde-new-link');
-            if (bfnl) bfnl.href = '/patienten/'+patientId+'/befunde/neu';
+            if (bfnl) {
+                bfnl.dataset.patientId      = patientId;
+                bfnl.dataset.patientSpecies = (data.patient && data.patient.species) ? data.patient.species : '';
+                bfnl.dataset.patientName    = (data.patient && data.patient.name)    ? data.patient.name    : '';
+            }
 
             /* Vet report links */
             var vrl = document.getElementById('pd-vet-report-btn');
@@ -2458,6 +2565,73 @@ window.deleteVetReport = function(patientId, reportId, btn) {
     })
     .catch(function() { alert('Netzwerkfehler.'); });
 };
+
+/* ═══════════════════════════════════════════════════════
+   BEFUND-TIERAUSWAHL — öffnet sich beim Klick auf
+   "Befundung starten" im Patienten-Modal.
+   Self-Heal: fällt zurück auf direkte Navigation falls
+   Bootstrap-Modal nicht verfügbar ist.
+═══════════════════════════════════════════════════════ */
+document.addEventListener('click', function(ev) {
+    var btn = ev.target.closest('#pd-befunde-new-link');
+    if (!btn) return;
+    ev.preventDefault();
+
+    var patientId      = btn.dataset.patientId      || '';
+    var patientSpecies = btn.dataset.patientSpecies || '';
+    var patientName    = btn.dataset.patientName    || '';
+
+    if (!patientId) {
+        console.warn('[pd-befund-species] kein patientId — abort');
+        return;
+    }
+
+    var modalEl = document.getElementById('modal-pd-befund-species');
+    if (!modalEl || typeof bootstrap === 'undefined' || !bootstrap.Modal) {
+        // Fallback: direkt navigieren
+        window.location.href = '/patienten/' + patientId + '/befunde/neu';
+        return;
+    }
+
+    // Subtitle
+    var sub = document.getElementById('pd-bs-subtitle');
+    if (sub) {
+        sub.innerHTML = 'Patient: <strong>' + escapeHtmlPd(patientName || '–') + '</strong>'
+                      + (patientSpecies ? ' · ' + escapeHtmlPd(patientSpecies) : '');
+    }
+
+    // Empfehlung berechnen
+    var suggested = resolveSpeciesSuggestion(patientSpecies);
+
+    // Alle Kacheln konfigurieren
+    modalEl.querySelectorAll('.befund-species-card').forEach(function(card) {
+        var sp = card.getAttribute('data-species');
+        card.setAttribute('href', '/patienten/' + patientId + '/befunde/neu?species=' + encodeURIComponent(sp));
+        card.classList.toggle('is-suggested', sp === suggested);
+    });
+
+    try {
+        bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: true }).show();
+    } catch (e) {
+        console.error('[pd-befund-species] Modal konnte nicht geöffnet werden:', e);
+        window.location.href = '/patienten/' + patientId + '/befunde/neu';
+    }
+});
+
+function resolveSpeciesSuggestion(raw) {
+    var s = String(raw || '').toLowerCase();
+    if (!s) return 'dog';
+    if (/katz|cat/.test(s))                    return 'cat';
+    if (/pferd|horse|pony|equin/.test(s))      return 'horse';
+    if (/hund|dog|canin/.test(s))              return 'dog';
+    return 'dog';
+}
+
+function escapeHtmlPd(s) {
+    return String(s).replace(/[&<>"']/g, function(c) {
+        return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+}
 
 })();
 </script>
