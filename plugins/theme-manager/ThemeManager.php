@@ -15,13 +15,15 @@ namespace Plugins\ThemeManager;
  */
 class ThemeManager
 {
-    private string $themesPath;
+    private string $themesPath;     /* writable user-installed themes (gitignored) */
+    private string $bundledPath;    /* themes shipped with the plugin (deployed via git) */
     private string $activeFile;
 
     public function __construct()
     {
-        $this->themesPath = STORAGE_PATH . '/themes';
-        $this->activeFile = STORAGE_PATH . '/themes/.active';
+        $this->themesPath  = STORAGE_PATH . '/themes';
+        $this->bundledPath = __DIR__ . '/bundled-themes';
+        $this->activeFile  = STORAGE_PATH . '/themes/.active';
         if (!is_dir($this->themesPath)) {
             mkdir($this->themesPath, 0755, true);
         }
@@ -33,11 +35,17 @@ class ThemeManager
     {
         if (file_exists($this->activeFile)) {
             $slug = trim(file_get_contents($this->activeFile));
-            if ($slug && is_dir($this->themesPath . '/' . $slug)) {
+            if ($slug && $this->themeDir($slug) !== null) {
                 return $slug;
             }
         }
-        return 'default';
+        /* Sensible default: prefer smart-tierphysio (the SmartAdmin layout) if available */
+        if ($this->themeDir('smart-tierphysio') !== null) {
+            return 'smart-tierphysio';
+        }
+        /* Fallback: first available theme (storage or bundled) */
+        $all = $this->all();
+        return $all[0]['slug'] ?? 'smart-tierphysio';
     }
 
     public function setActive(string $slug): void
@@ -51,15 +59,23 @@ class ThemeManager
     {
         $themes = [];
 
-        /* Built-in default theme is always available */
-        $themes['default'] = $this->builtinDefaultMeta();
+        /* Bundled themes shipped with the plugin (can't be deleted) */
+        if (is_dir($this->bundledPath)) {
+            foreach (new \DirectoryIterator($this->bundledPath) as $item) {
+                if ($item->isDot() || !$item->isDir()) continue;
+                $slug = $item->getFilename();
+                $meta = $this->loadMeta($item->getPathname());
+                if ($meta !== null) {
+                    $meta['builtin'] = true;
+                    $themes[$slug]   = $meta;
+                }
+            }
+        }
 
-        /* Installed themes from storage */
+        /* User-installed themes in storage/ override bundled themes of the same slug */
         if (is_dir($this->themesPath)) {
             foreach (new \DirectoryIterator($this->themesPath) as $item) {
-                if ($item->isDot() || !$item->isDir()) {
-                    continue;
-                }
+                if ($item->isDot() || !$item->isDir()) continue;
                 $slug = $item->getFilename();
                 $meta = $this->loadMeta($item->getPathname());
                 if ($meta !== null) {
@@ -70,9 +86,9 @@ class ThemeManager
 
         $active = $this->getActive();
         foreach ($themes as $slug => &$t) {
-            $t['slug']      = $slug;
-            $t['active']    = ($slug === $active);
-            $t['css_url']   = $this->cssUrl($slug);
+            $t['slug']        = $slug;
+            $t['active']      = ($slug === $active);
+            $t['css_url']     = $this->cssUrl($slug);
             $t['preview_url'] = $this->previewUrl($slug);
         }
 
@@ -94,29 +110,43 @@ class ThemeManager
     public function activeCssUrl(): ?string
     {
         $active = $this->getActive();
-        if ($active === 'default') {
-            return null; /* base.twig loads default CSS anyway */
-        }
-        $path = $this->themesPath . '/' . $active . '/theme.css';
-        if (file_exists($path)) {
-            return '/theme-assets/' . $active . '/theme.css';
-        }
-        return null;
+        $dir    = $this->themeDir($active);
+        if ($dir === null) return null;
+        return file_exists($dir . '/theme.css')
+            ? '/theme-assets/' . $active . '/theme.css'
+            : null;
     }
 
     public function activeHasCustomLayout(): bool
     {
-        $active = $this->getActive();
-        if ($active === 'default') return false;
-        return file_exists($this->themesPath . '/' . $active . '/layout.twig');
+        return $this->activeLayoutPath() !== null;
     }
 
     public function activeLayoutPath(): ?string
     {
-        $active = $this->getActive();
-        if ($active === 'default') return null;
-        $path = $this->themesPath . '/' . $active . '/layout.twig';
+        $dir = $this->themeDir($this->getActive());
+        if ($dir === null) return null;
+        $path = $dir . '/layout.twig';
         return file_exists($path) ? $path : null;
+    }
+
+    /**
+     * Returns the on-disk directory for a theme slug, checking storage/ first
+     * (user-installed), then bundled-themes/. Returns null if not found.
+     */
+    public function themeDir(string $slug): ?string
+    {
+        $storage = $this->themesPath . '/' . $slug;
+        if (is_dir($storage)) return $storage;
+        $bundled = $this->bundledPath . '/' . $slug;
+        if (is_dir($bundled)) return $bundled;
+        return null;
+    }
+
+    public function isBundled(string $slug): bool
+    {
+        return !is_dir($this->themesPath . '/' . $slug)
+            && is_dir($this->bundledPath . '/' . $slug);
     }
 
     /* ── ZIP upload & extraction ──────────────────────────── */
@@ -215,8 +245,8 @@ class ThemeManager
 
     public function delete(string $slug): void
     {
-        if ($slug === 'default') {
-            throw new \RuntimeException('Das Standard-Theme kann nicht gelöscht werden.');
+        if ($this->isBundled($slug)) {
+            throw new \RuntimeException('Gebündelte Themes (Material Pro, SmartAdmin etc.) können nicht gelöscht werden.');
         }
         if ($this->getActive() === $slug) {
             throw new \RuntimeException('Das aktive Theme kann nicht gelöscht werden. Bitte zuerst ein anderes Theme aktivieren.');
@@ -246,33 +276,19 @@ class ThemeManager
         return $data;
     }
 
-    private function builtinDefaultMeta(): array
-    {
-        return [
-            'name'        => 'SmartAdmin (Standard)',
-            'slug'        => 'default',
-            'version'     => '3.0.0',
-            'description' => 'Das Standard-Design der Praxis-App — SmartAdmin v5 basierend auf Bootstrap 5 mit Dark/Light-Modus, Sidebar-Navigation und professioneller Enterprise-Optik.',
-            'author'      => 'Tierphysio Manager',
-            'builtin'     => true,
-        ];
-    }
-
     private function cssUrl(string $slug): ?string
     {
-        if ($slug === 'default') return null;
-        $path = $this->themesPath . '/' . $slug . '/theme.css';
-        return file_exists($path) ? '/theme-assets/' . $slug . '/theme.css' : null;
+        $dir = $this->themeDir($slug);
+        if ($dir === null) return null;
+        return file_exists($dir . '/theme.css') ? '/theme-assets/' . $slug . '/theme.css' : null;
     }
 
     private function previewUrl(string $slug): ?string
     {
-        if ($slug === 'default') {
-            return '/assets/img/theme-default-preview.png';
-        }
+        $dir = $this->themeDir($slug);
+        if ($dir === null) return null;
         foreach (['preview.png', 'preview.jpg', 'preview.svg'] as $f) {
-            $path = $this->themesPath . '/' . $slug . '/' . $f;
-            if (file_exists($path)) {
+            if (file_exists($dir . '/' . $f)) {
                 return '/theme-assets/' . $slug . '/' . $f;
             }
         }

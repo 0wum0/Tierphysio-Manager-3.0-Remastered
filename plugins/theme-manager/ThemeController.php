@@ -155,7 +155,13 @@ class ThemeController extends Controller
             return;
         }
 
-        $path = STORAGE_PATH . '/themes/' . $slug . '/' . $file;
+        $themeDir = $this->themeManager->themeDir($slug);
+        if ($themeDir === null) {
+            http_response_code(404);
+            echo 'Not found';
+            return;
+        }
+        $path = $themeDir . '/' . $file;
         if (!file_exists($path)) {
             http_response_code(404);
             echo 'Not found';

@@ -1,0 +1,95 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" preserveAspectRatio="xMidYMid slice" style="background:#F7F4FB;font-family:Roboto Flex,Roboto,sans-serif;">
+  <defs>
+    <linearGradient id="m3bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F7F4FB"/>
+      <stop offset="1" stop-color="#EBE7EF"/>
+    </linearGradient>
+    <linearGradient id="m3primary" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1B6FE8"/>
+      <stop offset="1" stop-color="#4F8FF0"/>
+    </linearGradient>
+    <filter id="m3shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.10"/>
+    </filter>
+  </defs>
+  <rect width="640" height="360" fill="url(#m3bg)"/>
+
+  <!-- Top App Bar -->
+  <rect x="0" y="0" width="640" height="56" fill="#FDFCFF"/>
+  <rect x="0" y="55" width="640" height="1" fill="#C4C6CF"/>
+  <circle cx="28" cy="28" r="9" fill="#1B6FE8"/>
+  <text x="50" y="34" font-size="16" font-weight="500" fill="#1A1C1E">Material Pro</text>
+  <circle cx="590" cy="28" r="16" fill="#D5E4FF"/>
+  <text x="583" y="33" font-size="13" font-weight="600" fill="#001B3F">FK</text>
+
+  <!-- Navigation Drawer left -->
+  <rect x="0" y="56" width="168" height="304" fill="#F7F4FB"/>
+  <rect x="167" y="56" width="1" height="304" fill="#C4C6CF"/>
+
+  <!-- Nav items -->
+  <rect x="8" y="80"  width="152" height="40" rx="20" fill="#D5E4FF"/>
+  <circle cx="24" cy="100" r="5" fill="#001B3F"/>
+  <text x="40" y="105" font-size="13" font-weight="600" fill="#1A1C1E">Dashboard</text>
+
+  <rect x="8" y="128" width="152" height="40" rx="20" fill="transparent"/>
+  <circle cx="24" cy="148" r="5" fill="#44474F"/>
+  <text x="40" y="153" font-size="13" fill="#44474F">Patienten</text>
+
+  <rect x="8" y="176" width="152" height="40" rx="20" fill="transparent"/>
+  <circle cx="24" cy="196" r="5" fill="#44474F"/>
+  <text x="40" y="201" font-size="13" fill="#44474F">Termine</text>
+
+  <rect x="8" y="224" width="152" height="40" rx="20" fill="transparent"/>
+  <circle cx="24" cy="244" r="5" fill="#44474F"/>
+  <text x="40" y="249" font-size="13" fill="#44474F">Rechnungen</text>
+
+  <!-- Main content area - Title -->
+  <text x="192" y="96" font-family="Google Sans,Roboto" font-size="22" font-weight="400" fill="#1A1C1E">Übersicht</text>
+
+  <!-- KPI Cards row (3 elevated cards) -->
+  <g filter="url(#m3shadow)">
+    <rect x="192" y="112" width="136" height="80" rx="16" fill="#F1EDF5"/>
+    <text x="206" y="138" font-size="11" fill="#44474F">Patienten</text>
+    <text x="206" y="170" font-size="28" font-weight="400" fill="#1A1C1E">127</text>
+  </g>
+  <g filter="url(#m3shadow)">
+    <rect x="340" y="112" width="136" height="80" rx="16" fill="#F1EDF5"/>
+    <text x="354" y="138" font-size="11" fill="#44474F">Termine heute</text>
+    <text x="354" y="170" font-size="28" font-weight="400" fill="#1B6FE8">8</text>
+  </g>
+  <g filter="url(#m3shadow)">
+    <rect x="488" y="112" width="136" height="80" rx="16" fill="#F1EDF5"/>
+    <text x="502" y="138" font-size="11" fill="#44474F">Umsatz</text>
+    <text x="502" y="170" font-size="28" font-weight="400" fill="#1A1C1E">4.2k</text>
+  </g>
+
+  <!-- Data card bottom -->
+  <g filter="url(#m3shadow)">
+    <rect x="192" y="208" width="432" height="136" rx="16" fill="#FDFCFF"/>
+    <text x="208" y="234" font-size="14" font-weight="500" fill="#1A1C1E">Kommende Termine</text>
+
+    <!-- Row 1 -->
+    <rect x="192" y="252" width="432" height="1" fill="#C4C6CF"/>
+    <circle cx="216" cy="272" r="8" fill="#3EAA75"/>
+    <text x="232" y="276" font-size="12" fill="#1A1C1E">Bello - Physiotherapie</text>
+    <text x="580" y="276" font-size="11" text-anchor="end" fill="#44474F">14:30</text>
+
+    <!-- Row 2 -->
+    <rect x="192" y="288" width="432" height="1" fill="#C4C6CF"/>
+    <circle cx="216" cy="308" r="8" fill="#1B6FE8"/>
+    <text x="232" y="312" font-size="12" fill="#1A1C1E">Luna - Kontrolle</text>
+    <text x="580" y="312" font-size="11" text-anchor="end" fill="#44474F">15:15</text>
+
+    <!-- Row 3 -->
+    <rect x="192" y="324" width="432" height="1" fill="#C4C6CF"/>
+    <circle cx="216" cy="344" r="8" fill="#E5754F"/>
+    <text x="232" y="348" font-size="12" fill="#1A1C1E">Rex - Erstberatung</text>
+    <text x="580" y="348" font-size="11" text-anchor="end" fill="#44474F">16:00</text>
+  </g>
+
+  <!-- FAB -->
+  <g filter="url(#m3shadow)">
+    <rect x="574" y="288" width="42" height="42" rx="12" fill="url(#m3primary)"/>
+    <text x="589" y="316" font-size="24" font-weight="400" fill="#FFFFFF">+</text>
+  </g>
+</svg>

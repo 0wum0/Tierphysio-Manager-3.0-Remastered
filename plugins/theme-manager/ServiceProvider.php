@@ -31,12 +31,11 @@ class ServiceProvider
         $view->addGlobal('active_theme_slug',   $activeSlug);
         $view->addGlobal('active_theme_css',    $themeManager->activeCssUrl());
 
-        /* Register active theme directory as Twig namespace so layout.twig is usable */
-        if ($activeSlug !== 'default') {
-            $themeDir = STORAGE_PATH . '/themes/' . $activeSlug;
-            if (is_dir($themeDir)) {
-                $view->addTemplatePath($themeDir, $activeSlug);
-            }
+        /* Register active theme directory as Twig namespace so layout.twig is usable.
+           themeDir() checks storage/ first, then plugin bundled-themes/. */
+        $themeDir = $themeManager->themeDir($activeSlug);
+        if ($themeDir !== null) {
+            $view->addTemplatePath($themeDir, $activeSlug);
         }
 
         /* Tell base.twig which layout to extend (null = base.twig itself) */
