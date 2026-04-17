@@ -273,6 +273,30 @@ class MailService
         }
     }
 
+    public function sendPasswordReset(string $toEmail, string $name, string $resetUrl): bool
+    {
+        try {
+            $companyName = $this->settingsRepository->get('company_name', 'Tierphysio Manager');
+
+            $bodyText = "Hallo {$name},\n\ndu hast eine Anfrage zum Zurücksetzen deines Passworts gestellt.\n\nKlicke auf den folgenden Link, um dein Passwort zurückzusetzen:\n{$resetUrl}\n\nDieser Link ist 2 Stunden gültig.\n\nFalls du diese Anfrage nicht gestellt hast, kannst du diese E-Mail ignorieren.\n\nLiebe Grüße\n{$companyName}";
+
+            $extraHtml = '<div style="text-align:center;margin:28px 0;"><a href="' . htmlspecialchars($resetUrl) . '" style="display:inline-block;background:linear-gradient(135deg,#4f7cff,#8b5cf6);color:#fff;text-decoration:none;padding:14px 36px;border-radius:100px;font-size:0.95rem;font-weight:700;">Passwort zurücksetzen →</a></div><p style="font-size:0.78rem;color:rgba(255,255,255,0.35);text-align:center;">Dieser Link ist 2 Stunden gültig. Falls du diese Anfrage nicht gestellt hast, ignoriere diese E-Mail.</p>';
+
+            $mailer = $this->createMailer();
+            $mailer->addAddress($toEmail, $name);
+            $mailer->Subject = 'Passwort zurücksetzen — ' . $companyName;
+            $mailer->isHTML(true);
+            $mailer->Body    = $this->wrapInEmailLayout('Passwort zurücksetzen', $bodyText, '🔑', $extraHtml);
+            $mailer->AltBody = $bodyText;
+
+            return $mailer->send();
+        } catch (\Throwable $e) {
+            $this->lastError = $e->getMessage();
+            error_log('[MailService::sendPasswordReset] ' . $e->getMessage());
+            return false;
+        }
+    }
+
     public function testConnection(array $config, string $toEmail): bool
     {
         try {

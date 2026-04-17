@@ -382,6 +382,10 @@ $router->get('/datenschutz', function() use ($router) {
 $router->get('/login', [AuthController::class, 'showLogin'], ['guest']);
 $router->post('/login', [AuthController::class, 'login'], ['guest']);
 $router->post('/logout', [AuthController::class, 'logout'], ['auth']);
+$router->get('/forgot-password', [AuthController::class, 'showForgotPassword'], ['guest']);
+$router->post('/forgot-password', [AuthController::class, 'forgotPasswordSubmit'], ['guest']);
+$router->get('/reset-password/{token}', [AuthController::class, 'showResetPassword'], ['guest']);
+$router->post('/reset-password/{token}', [AuthController::class, 'resetPasswordSubmit'], ['guest']);
 
 $router->get('/profil', [ProfileController::class, 'show'], ['auth']);
 $router->post('/profil', [ProfileController::class, 'update'], ['auth']);

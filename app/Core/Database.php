@@ -125,7 +125,10 @@ class Database
 
     public function fetch(string $sql, array $params = []): array|false
     {
-        return $this->query($sql, $params)->fetch();
+        $stmt   = $this->query($sql, $params);
+        $result = $stmt->fetch();
+        $stmt->closeCursor();
+        return $result;
     }
 
     public function fetchAll(string $sql, array $params = []): array
@@ -135,13 +138,18 @@ class Database
 
     public function fetchColumn(string $sql, array $params = []): mixed
     {
-        return $this->query($sql, $params)->fetchColumn();
+        $stmt   = $this->query($sql, $params);
+        $result = $stmt->fetchColumn();
+        $stmt->closeCursor();
+        return $result;
     }
 
     public function execute(string $sql, array $params = []): int
     {
-        $stmt = $this->query($sql, $params);
-        return $stmt->rowCount();
+        $stmt  = $this->query($sql, $params);
+        $count = $stmt->rowCount();
+        $stmt->closeCursor();
+        return $count;
     }
 
     public function insert(string $sql, array $params = []): string
