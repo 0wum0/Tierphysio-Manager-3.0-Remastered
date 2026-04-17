@@ -222,13 +222,26 @@
         if (!stage) return;
         stage.innerHTML = '';
 
-        // Silhouette
+        // Silhouette — DOMParser ist zuverlässiger als innerHTML auf SVGElement
         const silSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         silSvg.setAttribute('class', 'anatomy-silhouette');
         silSvg.setAttribute('viewBox', '0 0 500 300');
         silSvg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
         try {
-            silSvg.innerHTML = SILHOUETTES[state.species] || SILHOUETTES.dog;
+            const svgSource = SILHOUETTES[state.species] || SILHOUETTES.dog;
+            const parser    = new DOMParser();
+            const doc       = parser.parseFromString(
+                '<svg xmlns="http://www.w3.org/2000/svg">' + svgSource + '</svg>',
+                'image/svg+xml'
+            );
+            const parsed = doc.documentElement;
+            if (parsed && parsed.tagName !== 'parsererror' && !parsed.querySelector('parsererror')) {
+                Array.from(parsed.childNodes).forEach(n => silSvg.appendChild(document.importNode(n, true)));
+            } else {
+                // DOMParser-Fallback: direktes innerHTML
+                silSvg.innerHTML = svgSource;
+            }
+            stage.appendChild(silSvg);
         } catch (e) {
             console.warn('[Befund Anatomy] Silhouette-Fehler, Fallback aktiv:', e);
             const fb = document.createElement('div');
@@ -236,7 +249,6 @@
             fb.innerHTML = '<strong>Silhouette nicht verfügbar</strong><br>Klick-Markierungen funktionieren trotzdem.';
             stage.appendChild(fb);
         }
-        stage.appendChild(silSvg);
 
         // Overlay (interaktiv)
         const overlay = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
