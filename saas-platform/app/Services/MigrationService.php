@@ -192,7 +192,13 @@ class MigrationService
             }
 
             try {
-                $pdo->exec($stmt);
+                // Same rationale as executeMigration(): use query()+closeCursor()
+                // so any accidental result set is consumed and the cursor released.
+                $sth = $pdo->query($stmt);
+                if ($sth instanceof \PDOStatement) {
+                    $sth->closeCursor();
+                    $sth = null;
+                }
             } catch (\PDOException $e) {
                 $code = (int)($e->errorInfo[1] ?? 0);
 
@@ -263,7 +269,16 @@ class MigrationService
             if ($stmt === '' || $stmt === ';') continue;
             
             try {
-                $pdo->exec($stmt);
+                // Use query()+closeCursor() instead of exec() to safely handle
+                // statements that may return a result set (e.g. EXECUTE stmt with
+                // a SELECT fallback inside idempotent migrations like 032_gdpr_consent).
+                // exec() leaves the server-side cursor open on SELECT, which causes
+                // the next query on the same connection to fail with SQLSTATE 2014.
+                $sth = $pdo->query($stmt);
+                if ($sth instanceof \PDOStatement) {
+                    $sth->closeCursor();
+                    $sth = null;
+                }
                 $report['applied'][] = mb_substr($stmt, 0, 100) . '...';
             } catch (\PDOException $e) {
                 $code = (int)($e->errorInfo[1] ?? 0);
