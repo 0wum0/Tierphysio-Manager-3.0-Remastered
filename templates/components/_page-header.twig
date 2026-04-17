@@ -1,0 +1,32 @@
+{#
+═══════════════════════════════════════════════════════════════════════════
+  COMPONENT: Page Header
+═══════════════════════════════════════════════════════════════════════════
+
+  Consistent top header block for every page: title on the left, actions
+  (buttons etc.) on the right, optional subtitle under the title.
+
+  Parameters:
+    title      (string)            — main page title
+    subtitle   (string, optional)  — small descriptor under title
+    actions    (html,   optional)  — raw html for right-side actions
+
+  Usage:
+    {% include 'components/_page-header.twig' with {
+        title: 'Patienten',
+        subtitle: '24 aktive Patienten',
+        actions: '<a href="/patienten/neu" class="btn btn-primary">Neu</a>'
+    } %}
+═══════════════════════════════════════════════════════════════════════════
+#}
+<div class="tp-page-header">
+    <div>
+        <h1 class="tp-page-header-title">{{ title ?? '' }}</h1>
+        {% if subtitle is defined %}
+        <div class="tp-page-header-sub">{{ subtitle }}</div>
+        {% endif %}
+    </div>
+    {% if actions is defined %}
+    <div class="d-flex align-items-center gap-2">{{ actions|raw }}</div>
+    {% endif %}
+</div>

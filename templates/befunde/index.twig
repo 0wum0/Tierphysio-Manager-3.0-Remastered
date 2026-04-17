@@ -64,14 +64,13 @@
 </div>
 {% else %}
 <div class="card">
-    <div class="card-body text-center py-5">
-        <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="opacity:.15;margin-bottom:16px;color:var(--bs-secondary-color,#6c757d);"><path stroke="currentColor" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"/></svg>
-        <h5 class="text-muted">Noch keine Befundbögen</h5>
-        <p class="text-muted mb-4">Erstelle den ersten Befundbogen für {{ patient.name }}.</p>
-        <a href="/patienten/{{ patient.id }}/befunde/neu" class="btn btn-primary">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            Neuer Befundbogen
-        </a>
+    <div class="card-body">
+        {% include 'components/_empty-state.twig' with {
+            icon:  '<svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"/></svg>',
+            title: 'Noch keine Befundbögen',
+            text:  'Erstelle den ersten Befundbogen für ' ~ patient.name ~ '.',
+            cta:   '<a href="/patienten/' ~ patient.id ~ '/befunde/neu" class="btn btn-primary"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" class="me-1"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Neuer Befundbogen</a>'
+        } only %}
     </div>
 </div>
 {% endif %}

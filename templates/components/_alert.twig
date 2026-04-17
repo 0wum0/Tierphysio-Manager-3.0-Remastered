@@ -1,0 +1,52 @@
+{#
+═══════════════════════════════════════════════════════════════════════════
+  COMPONENT: Alert (BS-standard, with optional icon)
+═══════════════════════════════════════════════════════════════════════════
+
+  Consistent alert block using Bootstrap .alert .alert-{variant} classes.
+  Matches the pattern already used in auth pages after the UI consistency
+  round. DB-driven themes color it via --bs-* variables.
+
+  Parameters:
+    variant   (string)   — "success" | "danger" | "info" | "warning"
+    message   (string)   — text content (escaped automatically)
+    message_html (string, optional) — raw html if needed (USE WITH CARE)
+    dismiss_ms (int, optional)      — auto-dismiss delay for app.js handler
+    class      (string, optional)   — extra classes
+
+  Usage:
+    {% include 'components/_alert.twig' with { variant: 'danger', message: 'Fehler' } %}
+═══════════════════════════════════════════════════════════════════════════
+#}
+{% set _variant = variant|default('info') %}
+<div class="alert alert-{{ _variant }} d-flex align-items-center gap-2{{ class is defined ? ' ' ~ class : '' }}"
+     {% if dismiss_ms is defined %}data-auto-dismiss="{{ dismiss_ms }}"{% endif %}>
+    {% if _variant == 'success' %}
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" style="flex-shrink:0">
+            <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/>
+        </svg>
+    {% elseif _variant == 'danger' %}
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" style="flex-shrink:0">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+            <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+    {% elseif _variant == 'warning' %}
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" style="flex-shrink:0">
+            <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        </svg>
+    {% else %}
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" style="flex-shrink:0">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+            <line x1="12" y1="16" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <line x1="12" y1="8" x2="12.01" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+    {% endif %}
+    <span>
+        {%- if message_html is defined -%}
+            {{ message_html|raw }}
+        {%- else -%}
+            {{ message ?? '' }}
+        {%- endif -%}
+    </span>
+</div>

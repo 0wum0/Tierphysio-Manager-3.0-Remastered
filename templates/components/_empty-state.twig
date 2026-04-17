@@ -1,0 +1,37 @@
+{#
+═══════════════════════════════════════════════════════════════════════════
+  COMPONENT: Empty State
+═══════════════════════════════════════════════════════════════════════════
+
+  Consistent empty-state block for empty lists, no-data screens, etc.
+  Much more professional than plain text "Keine Einträge".
+
+  Parameters:
+    icon    (html,   optional) — raw SVG icon html (centered, 24px usually)
+    title   (string, optional) — headline ("Noch keine Patienten")
+    text    (string, optional) — body copy
+    cta     (html,   optional) — raw button html for call-to-action
+
+  Usage:
+    {% include 'components/_empty-state.twig' with {
+        icon:  '<svg width="24" height="24">…</svg>',
+        title: 'Noch keine Patienten',
+        text:  'Lege deinen ersten Patienten an, um loszulegen.',
+        cta:   '<a href="/patienten/neu" class="btn btn-primary">Patient anlegen</a>'
+    } %}
+═══════════════════════════════════════════════════════════════════════════
+#}
+<div class="tp-empty-state">
+    {% if icon is defined %}
+    <div class="tp-empty-state-icon">{{ icon|raw }}</div>
+    {% endif %}
+    {% if title is defined %}
+    <div class="tp-empty-state-title">{{ title }}</div>
+    {% endif %}
+    {% if text is defined %}
+    <div class="tp-empty-state-text">{{ text }}</div>
+    {% endif %}
+    {% if cta is defined %}
+    {{ cta|raw }}
+    {% endif %}
+</div>

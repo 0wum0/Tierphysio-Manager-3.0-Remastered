@@ -1,0 +1,51 @@
+{#
+═══════════════════════════════════════════════════════════════════════════
+  COMPONENT: Card (tp-card)
+═══════════════════════════════════════════════════════════════════════════
+
+  Reusable card surface. Mirrors the inline pattern used ~47 times across
+  the app (dark background + 1px border + 16px radius + lg shadow).
+
+  Parameters:
+    title        (string, optional)  — card header title
+    subtitle     (string, optional)  — small subtitle under title
+    icon         (html,   optional)  — raw SVG icon html for header
+    actions      (html,   optional)  — raw html rendered in top-right
+    body_class   (string, optional)  — extra classes on .card-body
+    size         (string, optional)  — "sm" | "default"
+    hover        (bool,   optional)  — true → add hover-lift
+    class        (string, optional)  — extra classes on outer card
+
+  Usage:
+    {% embed 'components/_card.twig' with { title: 'Patienten', icon: icon_html } %}
+      {% block body %}
+        ... your card body markup ...
+      {% endblock %}
+    {% endembed %}
+
+  Or inline (no body slot):
+    {% include 'components/_card.twig' with { title: 'X', body_html: '<p>…</p>' } %}
+═══════════════════════════════════════════════════════════════════════════
+#}
+<div class="card {{ size == 'sm' ? 'tp-card-sm' : '' }}{{ hover ? ' tp-hover-lift' : '' }}{{ class ? ' ' ~ class : '' }}">
+    {% if title is defined or actions is defined %}
+    <div class="card-header px-4 py-3 d-flex align-items-center justify-content-between gap-2">
+        <span class="d-flex align-items-center gap-2 fw-semibold">
+            {% if icon is defined %}{{ icon|raw }}{% endif %}
+            <span>
+                {{ title ?? '' }}
+                {% if subtitle is defined %}
+                <div class="tp-page-header-sub">{{ subtitle }}</div>
+                {% endif %}
+            </span>
+        </span>
+        {% if actions is defined %}
+        <span class="d-flex align-items-center gap-2">{{ actions|raw }}</span>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="card-body px-4 py-3 {{ body_class ?? '' }}">
+        {% block body %}{{ body_html|default('')|raw }}{% endblock %}
+    </div>
+</div>

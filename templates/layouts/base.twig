@@ -15,6 +15,10 @@
     {% if active_theme_css is defined and active_theme_css %}
     <link rel="stylesheet" href="{{ active_theme_css }}?v={{ 'now'|date('YmdHi') }}">
     {% endif %}
+
+    {# Design tokens — additive, loaded AFTER theme so DB-themes keep priority. #}
+    <link rel="stylesheet" href="/assets/css/design-tokens.css?v=1">
+
     {% block head %}{% endblock %}
 </head>
 <body>

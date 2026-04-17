@@ -1,0 +1,241 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   DESIGN TOKENS — Tierphysio Manager
+   ═══════════════════════════════════════════════════════════════════════════
+
+   Purpose:
+     Central source of truth for spacing, radii, shadows, motion and component
+     utility classes. These tokens are purely ADDITIVE — they introduce no new
+     visual design, only name-capture the values that already exist throughout
+     the codebase as inline styles.
+
+   Rules:
+     - No overrides of existing styles.
+     - No new colors (uses --bs-* variables for theme compatibility).
+     - Values mirror what is already used 100+ times in inline styles.
+     - Templates opt-in by using tokens / utility classes.
+     - DB-driven theme system remains the primary source of color/branding.
+
+   Load order:
+     This file is loaded AFTER the theme CSS so its utility classes win only
+     when explicitly used (no bleed into existing components).
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+
+/* ═══════════════════════════════════════════════
+   1. TOKENS
+   ═══════════════════════════════════════════════ */
+
+:root {
+    /* ── Spacing scale (4-pt grid) ──────────────────────────── */
+    --tp-space-0:  0;
+    --tp-space-1:  0.25rem;   /*  4px */
+    --tp-space-2:  0.5rem;    /*  8px */
+    --tp-space-3:  0.75rem;   /* 12px */
+    --tp-space-4:  1rem;      /* 16px */
+    --tp-space-5:  1.25rem;   /* 20px */
+    --tp-space-6:  1.5rem;    /* 24px */
+    --tp-space-8:  2rem;      /* 32px */
+    --tp-space-10: 2.5rem;    /* 40px */
+    --tp-space-12: 3rem;      /* 48px */
+
+    /* ── Radius scale ───────────────────────────────────────── */
+    --tp-radius-sm:  6px;
+    --tp-radius-md:  10px;
+    --tp-radius-lg:  14px;
+    --tp-radius-xl:  16px;    /* matches existing .login-card */
+    --tp-radius-2xl: 20px;
+    --tp-radius-pill: 999px;
+
+    /* ── Shadow / depth ─────────────────────────────────────── */
+    --tp-shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
+    --tp-shadow-sm: 0 2px 6px rgba(0,0,0,0.06);
+    --tp-shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --tp-shadow-lg: 0 8px 32px rgba(0,0,0,0.18);   /* matches existing .login-card */
+    --tp-shadow-xl: 0 16px 48px rgba(0,0,0,0.22);
+    --tp-shadow-glow: 0 0 24px color-mix(in srgb, var(--bs-primary, #2563eb) 30%, transparent);
+
+    /* ── Motion ─────────────────────────────────────────────── */
+    --tp-ease-out:  cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --tp-ease-ios:  cubic-bezier(0.34, 1.56, 0.64, 1);
+    --tp-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+    --tp-dur-fast:  120ms;
+    --tp-dur-base:  200ms;
+    --tp-dur-slow:  320ms;
+
+    /* ── Typography ─────────────────────────────────────────── */
+    --tp-fs-nano: 0.68rem;    /* badges, tiny labels */
+    --tp-fs-xs:   0.72rem;
+    --tp-fs-sm:   0.82rem;
+    --tp-fs-md:   0.92rem;
+    --tp-fs-lg:   1.05rem;
+    --tp-fs-xl:   1.2rem;
+    --tp-fs-2xl:  1.5rem;
+
+    --tp-fw-normal:  400;
+    --tp-fw-medium:  500;
+    --tp-fw-semi:    600;
+    --tp-fw-bold:    700;
+    --tp-fw-heavy:   800;
+
+    /* ── Z-index scale ──────────────────────────────────────── */
+    --tp-z-dropdown: 1000;
+    --tp-z-sticky:   1020;
+    --tp-z-modal-backdrop: 1040;
+    --tp-z-modal:    1050;
+    --tp-z-toast:    1080;
+}
+
+
+/* ═══════════════════════════════════════════════
+   2. GLOBAL ACCESSIBILITY — focus-visible ring
+   (keyboard users only; mouse users don't see it)
+   ═══════════════════════════════════════════════ */
+
+*:focus-visible {
+    outline: 2px solid var(--bs-primary, #2563eb);
+    outline-offset: 2px;
+    border-radius: inherit;
+}
+
+/* Skip default focus ring on buttons/links that already have bootstrap focus */
+.btn:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible {
+    outline: 0;    /* BS has its own focus ring via box-shadow */
+}
+
+
+/* ═══════════════════════════════════════════════
+   3. OPT-IN UTILITY CLASSES (prefix: tp-)
+   These are NOT required; they mirror inline
+   styles used hundreds of times, so new/migrated
+   templates can pick them up for consistency.
+   ═══════════════════════════════════════════════ */
+
+/* ── Card surface (matches existing inline card pattern) ── */
+.tp-card {
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--tp-radius-xl);
+    padding: var(--tp-space-8);
+    box-shadow: var(--tp-shadow-lg);
+}
+
+.tp-card-sm {
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--tp-radius-lg);
+    padding: var(--tp-space-5);
+    box-shadow: var(--tp-shadow-sm);
+}
+
+/* ── Section header used above card groups ── */
+.tp-section-label {
+    font-size: var(--tp-fs-xs);
+    font-weight: var(--tp-fw-bold);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--bs-secondary-color);
+    display: flex;
+    align-items: center;
+    gap: var(--tp-space-2);
+    margin-bottom: var(--tp-space-2);
+}
+
+/* ── Empty state block ── */
+.tp-empty-state {
+    text-align: center;
+    padding: var(--tp-space-10) var(--tp-space-4);
+    color: var(--bs-secondary-color);
+}
+
+.tp-empty-state-icon {
+    width: 48px;
+    height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--tp-radius-pill);
+    background: var(--bs-tertiary-bg);
+    margin-bottom: var(--tp-space-3);
+    opacity: 0.6;
+}
+
+.tp-empty-state-title {
+    font-size: var(--tp-fs-md);
+    font-weight: var(--tp-fw-semi);
+    color: var(--bs-body-color);
+    margin-bottom: var(--tp-space-1);
+}
+
+.tp-empty-state-text {
+    font-size: var(--tp-fs-sm);
+    color: var(--bs-secondary-color);
+    max-width: 32ch;
+    margin: 0 auto var(--tp-space-4);
+    line-height: 1.5;
+}
+
+/* ── Skeleton loader (shimmer) ── */
+.tp-skeleton {
+    display: inline-block;
+    background: linear-gradient(
+        90deg,
+        var(--bs-tertiary-bg) 0%,
+        color-mix(in srgb, var(--bs-tertiary-bg) 60%, var(--bs-body-color) 10%) 50%,
+        var(--bs-tertiary-bg) 100%
+    );
+    background-size: 200% 100%;
+    animation: tp-skeleton-shimmer 1.4s ease-in-out infinite;
+    border-radius: var(--tp-radius-sm);
+    min-height: 1em;
+}
+
+@keyframes tp-skeleton-shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position:  200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tp-skeleton { animation: none; }
+}
+
+/* ── Soft hover lift for interactive cards ── */
+.tp-hover-lift {
+    transition: transform var(--tp-dur-base) var(--tp-ease-out),
+                box-shadow var(--tp-dur-base) var(--tp-ease-out);
+}
+
+.tp-hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--tp-shadow-xl);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .tp-hover-lift:hover {
+        transform: none;
+    }
+}
+
+/* ── Page header (consistent top bar above content) ── */
+.tp-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--tp-space-3);
+    margin-bottom: var(--tp-space-5);
+}
+
+.tp-page-header-title {
+    font-size: var(--tp-fs-xl);
+    font-weight: var(--tp-fw-bold);
+    letter-spacing: -0.01em;
+    margin: 0;
+}
+
+.tp-page-header-sub {
+    font-size: var(--tp-fs-sm);
+    color: var(--bs-secondary-color);
+    margin-top: 2px;
+}
