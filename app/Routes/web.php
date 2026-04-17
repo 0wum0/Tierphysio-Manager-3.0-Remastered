@@ -382,13 +382,12 @@ $router->get('/datenschutz', function() use ($router) {
 $router->get('/login', [AuthController::class, 'showLogin'], ['guest']);
 $router->post('/login', [AuthController::class, 'login'], ['guest']);
 $router->post('/logout', [AuthController::class, 'logout'], ['auth']);
-$router->get('/forgot-password', [AuthController::class, 'showForgotPassword'], ['guest']);
-$router->post('/forgot-password', [AuthController::class, 'forgotPasswordSubmit'], ['guest']);
-$router->get('/reset-password/{token}', [AuthController::class, 'showResetPassword'], ['guest']);
-$router->post('/reset-password/{token}', [AuthController::class, 'resetPasswordSubmit'], ['guest']);
-
-// Password reset flow
-$router->get('/passwort-vergessen',               [AuthController::class, 'showForgotPassword'],    ['guest']);
+// Password reset flow (both URL styles resolve to same methods)
+$router->get('/forgot-password',                  [AuthController::class, 'showForgotPassword'],   ['guest']);
+$router->post('/forgot-password',                 [AuthController::class, 'requestPasswordReset'], ['guest']);
+$router->get('/reset-password/{token}',           [AuthController::class, 'showResetPassword'],    ['guest']);
+$router->post('/reset-password/{token}',          [AuthController::class, 'resetPassword'],        ['guest']);
+$router->get('/passwort-vergessen',               [AuthController::class, 'showForgotPassword'],   ['guest']);
 $router->post('/passwort-vergessen',              [AuthController::class, 'requestPasswordReset'], ['guest']);
 $router->get('/passwort-zuruecksetzen/{token}',   [AuthController::class, 'showResetPassword'],    ['guest']);
 $router->post('/passwort-zuruecksetzen/{token}',  [AuthController::class, 'resetPassword'],        ['guest']);
