@@ -1,56 +1,196 @@
 <!DOCTYPE html>
-<html lang="de" data-bs-theme="dark" class="set-nav-dark">
+<html lang="de" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Besitzerportal — Login</title>
+    <title>Besitzerportal — {{ app_name ?? 'Tierphysio Manager' }}</title>
     <link rel="stylesheet" href="/themes/smart-tierphysio/css/smartapp.min.css">
-    <link rel="stylesheet" href="/themes/smart-tierphysio/bridge.css?v=20260308f">
+    <link rel="stylesheet" href="/themes/smart-tierphysio/webfonts/smartadmin/sa-icons.css">
     <script src="/themes/smart-tierphysio/scripts/core/saveloadscript.js"></script>
     <style>
-        body { min-height:100vh; display:flex; align-items:center; justify-content:center; }
-        .login-wrap { width:100%; max-width:420px; padding:1.5rem; }
+        body { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bs-body-bg); }
+
+        .login-wrap {
+            width: 100%;
+            max-width: 420px;
+            padding: 1rem;
+        }
+
+        .login-brand {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .login-brand-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.75rem;
+            filter: drop-shadow(0 0 10px rgba(110,168,254,0.5));
+        }
+
+        .login-brand-name {
+            font-size: 1.45rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--bs-body-color);
+            margin-bottom: 0.2rem;
+        }
+
+        .login-brand-sub {
+            font-size: 0.8rem;
+            color: var(--bs-secondary-color);
+        }
+
+        .login-card {
+            background: var(--bs-tertiary-bg);
+            border: 1px solid var(--bs-border-color);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,.18);
+        }
+
+        /* ── Glow Button (SmartAdmin style) ── */
+        .btn-login {
+            width: 100%;
+            padding: .7rem 1rem;
+            font-size: .95rem;
+            font-weight: 600;
+            border-radius: 10px;
+            border: none;
+            background: var(--bs-primary);
+            color: #fff;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: background .2s, box-shadow .2s, transform .1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: .5rem;
+            box-shadow: 0 0 0 0 var(--bs-primary);
+        }
+
+        .btn-login:hover {
+            background: color-mix(in srgb, var(--bs-primary) 85%, white);
+            box-shadow: 0 0 18px 4px color-mix(in srgb, var(--bs-primary) 45%, transparent);
+            transform: translateY(-1px);
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+            box-shadow: 0 0 8px 2px color-mix(in srgb, var(--bs-primary) 35%, transparent);
+        }
+
+        .btn-login::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(255,255,255,.25) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity .3s;
+        }
+        .btn-login:hover::after { opacity: 1; }
+
+        .form-floating label { font-size: .85rem; }
+
+        .login-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: .78rem;
+            color: var(--bs-secondary-color);
+        }
+        @keyframes tp-paw-pulse {
+            0%   { transform: scale(1);    filter: drop-shadow(0 0 0px #6EA8FE); }
+            50%  { transform: scale(1.18); filter: drop-shadow(0 0 12px #a78bfa); }
+            100% { transform: scale(1);    filter: drop-shadow(0 0 0px #6EA8FE); }
+        }
     </style>
 </head>
 <body>
+
 <div class="login-wrap">
-    <div class="card">
-        <div class="card-body p-4">
-            <div class="text-center mb-4">
-                <svg width="40" height="40" fill="none" viewBox="0 0 24 24">
-                    <path stroke="var(--bs-primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                    <polyline stroke="var(--bs-primary)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" points="9 22 9 12 15 12 15 22"/>
-                </svg>
-            </div>
-            <h1 class="h4 text-center mb-1">Besitzerportal</h1>
-            <p class="text-secondary text-center small mb-4">Melden Sie sich an, um Ihre Tiere, Termine und Rechnungen zu sehen.</p>
 
-            {% if error %}
-                <div class="alert alert-danger">{{ error }}</div>
-            {% endif %}
-            {% if success %}
-                <div class="alert alert-success">{{ success }}</div>
-            {% endif %}
-
-            <form action="/portal/login" method="POST">
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-                {% if tid %}
-                    <input type="hidden" name="tid" value="{{ tid }}">
-                {% endif %}
-                <div class="mb-3">
-                    <label for="email" class="form-label small fw-semibold">E-Mail-Adresse</label>
-                    <input type="email" id="email" name="email" class="form-control" required autocomplete="email" autofocus>
-                </div>
-                <div class="mb-3">
-                    <label for="password" class="form-label small fw-semibold">Passwort</label>
-                    <input type="password" id="password" name="password" class="form-control" required autocomplete="current-password">
-                </div>
-                <button type="submit" class="btn btn-primary w-100 mt-1">Anmelden</button>
-            </form>
+    {# Brand #}
+    <div class="login-brand">
+        <div class="login-brand-icon mx-auto" style="animation:tp-paw-pulse 2s ease-in-out infinite;">
+            <svg width="52" height="52" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="lgPaw" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stop-color="#6EA8FE"/>
+                        <stop offset="100%" stop-color="#a78bfa"/>
+                    </linearGradient>
+                </defs>
+                <ellipse fill="url(#lgPaw)" cx="9" cy="3.5" rx="2" ry="2.5"/>
+                <ellipse fill="url(#lgPaw)" cx="15" cy="3.5" rx="2" ry="2.5"/>
+                <ellipse fill="url(#lgPaw)" cx="4.5" cy="8" rx="2" ry="2.5"/>
+                <ellipse fill="url(#lgPaw)" cx="19.5" cy="8" rx="2" ry="2.5"/>
+                <path fill="url(#lgPaw)" d="M12 10c-3.5 0-6.5 2-6.5 5.5 0 2 1 3.5 2.5 4.5h8c1.5-1 2.5-2.5 2.5-4.5C18.5 12 15.5 10 12 10z"/>
+            </svg>
         </div>
+        <div class="login-brand-name" style="background:linear-gradient(90deg,#6EA8FE,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:1.8rem;">Besitzerportal</div>
+        <div class="login-brand-sub">Melden Sie sich an, um Ihre Tiere, Termine und Rechnungen zu sehen.</div>
     </div>
-    <p class="text-center text-secondary small mt-3">Tierphysio Praxis &mdash; Besitzerportal</p>
+
+    {# Card #}
+    <div class="login-card">
+
+        {% if error %}
+        <div class="alert alert-danger d-flex align-items-center gap-2 mb-4 py-2" style="font-size:.85rem;">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" style="flex-shrink:0">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                <line x1="12" y1="8" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <line x1="12" y1="16" x2="12.01" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            {{ error }}
+        </div>
+        {% endif %}
+
+        {% if success %}
+        <div class="alert alert-success d-flex align-items-center gap-2 mb-4 py-2" style="font-size:.85rem;">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" style="flex-shrink:0">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                <path d="M8 12l2.5 2.5L16 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            {{ success }}
+        </div>
+        {% endif %}
+
+        <form action="/portal/login" method="POST" autocomplete="on">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            {% if tid %}
+                <input type="hidden" name="tid" value="{{ tid }}">
+            {% endif %}
+
+            <div class="form-floating mb-3">
+                <input type="email" id="email" name="email" class="form-control"
+                       placeholder="name@example.com" autocomplete="email" required autofocus>
+                <label for="email">E-Mail-Adresse</label>
+            </div>
+
+            <div class="form-floating mb-4">
+                <input type="password" id="password" name="password" class="form-control"
+                       placeholder="••••••••" autocomplete="current-password" required>
+                <label for="password">Passwort</label>
+            </div>
+
+            <button type="submit" class="btn-login">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24">
+                    <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                          d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/>
+                </svg>
+                Anmelden
+            </button>
+        </form>
+
+    </div>
+
+    <div class="login-footer">
+        &copy; {{ "now"|date("Y") }} {{ app_name ?? 'Tierphysio Manager' }} &mdash; Besitzerportal
+    </div>
+
 </div>
-<script src="/themes/smart-tierphysio/scripts/bootstrap.bundle.min.js"></script>
+
+<script src="/themes/smart-tierphysio/scripts/vendors/bootstrap.bundle.min.js"></script>
 </body>
 </html>
