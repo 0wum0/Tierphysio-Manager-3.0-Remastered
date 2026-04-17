@@ -218,4 +218,88 @@ class Database
     {
         return $this->pdo->lastInsertId();
     }
+
+    /* ══════════════════════════════════════════════════════
+       SELF-HEAL / SAFE METHODS
+       Resilient Wrapper — werfen keine Exceptions, loggen via error_log.
+       Verwenden für Hintergrund-/Nicht-kritische Reads.
+    ══════════════════════════════════════════════════════ */
+
+    public function safeFetch(string $sql, array $params = []): ?array
+    {
+        try {
+            $res = $this->fetch($sql, $params);
+            return $res === false ? null : $res;
+        } catch (\Throwable $e) {
+            error_log('[DB safeFetch] ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function safeFetchAll(string $sql, array $params = []): array
+    {
+        try {
+            return $this->fetchAll($sql, $params);
+        } catch (\Throwable $e) {
+            error_log('[DB safeFetchAll] ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function safeFetchColumn(string $sql, array $params = []): mixed
+    {
+        try {
+            return $this->fetchColumn($sql, $params);
+        } catch (\Throwable $e) {
+            error_log('[DB safeFetchColumn] ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function safeExecute(string $sql, array $params = []): int|false
+    {
+        try {
+            return $this->execute($sql, $params);
+        } catch (\Throwable $e) {
+            error_log('[DB safeExecute] ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Prüft ob eine Spalte (ohne Prefix-Auflösung) in einer vollqualifizierten Tabelle existiert.
+     * Parameter: schon aufgelöster Tabellenname (inkl. Prefix).
+     */
+    public function columnExists(string $fullTableName, string $column): bool
+    {
+        try {
+            $res = $this->fetchColumn(
+                "SELECT COUNT(*) FROM information_schema.columns
+                 WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ?",
+                [$fullTableName, $column]
+            );
+            return (int)$res > 0;
+        } catch (\Throwable $e) {
+            error_log('[DB columnExists] ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Fügt eine Spalte idempotent hinzu (Migration Self-Heal).
+     * $columnDefinition muss gültige MySQL-Syntax sein, z.B. "TEXT NULL".
+     */
+    public function ensureColumn(string $fullTableName, string $column, string $columnDefinition): bool
+    {
+        if ($this->columnExists($fullTableName, $column)) {
+            return true;
+        }
+        try {
+            $this->execute("ALTER TABLE `{$fullTableName}` ADD COLUMN `{$column}` {$columnDefinition}");
+            return true;
+        } catch (\Throwable $e) {
+            error_log('[DB ensureColumn] ' . $e->getMessage());
+            return false;
+        }
+    }
 }

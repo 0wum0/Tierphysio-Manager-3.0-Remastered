@@ -213,6 +213,44 @@
             'verlauf_notizen': 'Verlaufsnotizen'
         }, felder) }}
 
+        {# ── Physio-Bereiche (read-only) ────────────────────────── #}
+        {% if felder.physio_bereiche is defined and felder.physio_bereiche is not empty %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Physio-Bereiche</h5>
+            </div>
+            <div class="card-body">
+                {% set bereiche = felder.physio_bereiche is iterable ? felder.physio_bereiche : [felder.physio_bereiche] %}
+                {% for b in bereiche %}
+                    <span class="badge bg-primary-subtle text-primary me-1 mb-1" style="font-size:.8rem;padding:.4rem .7rem;">{{ b }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Anatomie-Markierungen (read-only) ──────────────────── #}
+        {% if felder.anatomy_markers is defined and felder.anatomy_markers is not empty %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Anatomische Markierungen ({{ felder.anatomy_species|default('—') }})</h5>
+            </div>
+            <div class="card-body">
+                {% set markers = felder.anatomy_markers is iterable ? felder.anatomy_markers : [] %}
+                <dl class="row mb-0" style="row-gap:.4rem;">
+                {% for m in markers %}
+                    <dt class="col-sm-2">
+                        <span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:{{ m.color|default('#ef4444') }};vertical-align:middle;"></span>
+                    </dt>
+                    <dd class="col-sm-10 mb-0" style="font-size:.9rem;">
+                        {{ m.note|default('(ohne Notiz)') }}
+                        <span class="text-muted small">· x={{ m.x|default('?') }}, y={{ m.y|default('?') }}</span>
+                    </dd>
+                {% endfor %}
+                </dl>
+            </div>
+        </div>
+        {% endif %}
+
         {% if felder is empty %}
         <div class="card">
             <div class="card-body text-center py-5 text-muted">

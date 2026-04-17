@@ -416,6 +416,13 @@ $router->get('/patienten/{id}/dokumente/{file}', [PatientController::class, 'dow
 $router->get('/patienten/{id}/foto/{file}', [PatientController::class, 'servePhoto'], ['auth']);
 $router->post('/patienten/{id}/dokumente', [PatientController::class, 'uploadDocument'], ['auth']);
 
+// ── Befundbögen — Textbausteine & Vorlagen & KI (Erweiterung) ────────
+$router->get ('/api/befund/textbausteine',       [BefundbogenController::class, 'apiTextbausteine'],      ['auth']);
+$router->post('/api/befund/textbausteine',       [BefundbogenController::class, 'apiTextbausteineStore'], ['auth']);
+$router->get ('/api/befund/vorlagen',            [BefundbogenController::class, 'apiVorlagen'],           ['auth']);
+$router->get ('/api/befund/vorlagen/{id}',       [BefundbogenController::class, 'apiVorlagenShow'],       ['auth']);
+$router->post('/api/befund/ki/strukturieren',    [BefundbogenController::class, 'apiKiStrukturieren'],    ['auth']);
+
 // ── Befundbögen — per Patient ─────────────────────────────────────────
 $router->get('/api/patienten/{patient_id}/befunde',                        [BefundbogenController::class, 'apiByPatient'], ['auth']);
 $router->get('/patienten/{patient_id}/befunde',                            [BefundbogenController::class, 'index'],  ['auth']);

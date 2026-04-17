@@ -11,6 +11,7 @@ use App\Core\Session;
 use App\Core\Translator;
 use App\Core\View;
 use App\Repositories\BefundbogenRepository;
+use App\Repositories\BefundTemplateRepository;
 use App\Repositories\SettingsRepository;
 use App\Services\BefundbogenPdfService;
 use App\Services\MailService;
@@ -25,7 +26,8 @@ class BefundbogenController extends Controller
         private readonly BefundbogenRepository $repo,
         private readonly SettingsRepository $settings,
         private readonly BefundbogenPdfService $pdfService,
-        private readonly MailService $mailService
+        private readonly MailService $mailService,
+        private readonly BefundTemplateRepository $templates
     ) {
         parent::__construct($view, $session, $config, $translator);
     }
@@ -59,11 +61,13 @@ class BefundbogenController extends Controller
         $owner     = $this->fetchOwner((int)$patient['owner_id']);
 
         $this->render('befunde/form.twig', [
-            'page_title' => 'Neuer Befundbogen — ' . $patient['name'],
-            'patient'    => $patient,
-            'owner'      => $owner,
-            'befundbogen' => null,
-            'felder'      => [],
+            'page_title'    => 'Neuer Befundbogen — ' . $patient['name'],
+            'patient'       => $patient,
+            'owner'         => $owner,
+            'befundbogen'   => null,
+            'felder'        => [],
+            'textbausteine' => $this->safeTextbausteine(),
+            'vorlagen'      => $this->safeVorlagen(),
         ]);
     }
 
@@ -125,11 +129,13 @@ class BefundbogenController extends Controller
         $owner   = $this->fetchOwner((int)$befundbogen['owner_id']);
 
         $this->render('befunde/form.twig', [
-            'page_title'  => 'Befundbogen bearbeiten — ' . ($patient['name'] ?? ''),
-            'befundbogen' => $befundbogen,
-            'felder'      => $befundbogen['felder'],
-            'patient'     => $patient,
-            'owner'       => $owner,
+            'page_title'    => 'Befundbogen bearbeiten — ' . ($patient['name'] ?? ''),
+            'befundbogen'   => $befundbogen,
+            'felder'        => $befundbogen['felder'],
+            'patient'       => $patient,
+            'owner'         => $owner,
+            'textbausteine' => $this->safeTextbausteine(),
+            'vorlagen'      => $this->safeVorlagen(),
         ]);
     }
 
@@ -407,6 +413,9 @@ class BefundbogenController extends Controller
             'schuesslersalze', 'weitere_naturheilmittel',
             'pt_methoden', 'therapieziele', 'hausaufgaben', 'therapiefrequenz',
             'therapiedauer', 'kontrolltermin', 'verlauf_notizen',
+            // ── Erweiterung: Interaktive Anatomie + Physio-Bereiche ──
+            'anatomy_species', 'anatomy_markers', 'anatomy_drawings',
+            'physio_bereiche',
         ];
 
         $felder = [];
@@ -507,5 +516,144 @@ class BefundbogenController extends Controller
             'csrf_token'          => $this->session->generateCsrfToken(),
             'show_homework_nav'   => true,
         ];
+    }
+
+    /* ══════════════════════════════════════════════════════
+       TEXTBAUSTEINE / VORLAGEN — Self-Heal Accessor + API
+    ══════════════════════════════════════════════════════ */
+
+    /** Self-Heal: liefert immer ein Array, nie eine Exception. */
+    private function safeTextbausteine(): array
+    {
+        try {
+            return $this->templates->allTextbausteine();
+        } catch (\Throwable $e) {
+            error_log('[Befund safeTextbausteine] ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /** Self-Heal: liefert immer ein Array, nie eine Exception. */
+    private function safeVorlagen(): array
+    {
+        try {
+            return $this->templates->allVorlagen();
+        } catch (\Throwable $e) {
+            error_log('[Befund safeVorlagen] ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /** GET /api/befund/textbausteine */
+    public function apiTextbausteine(array $params = []): void
+    {
+        header('Content-Type: application/json');
+        try {
+            echo json_encode([
+                'items' => $this->templates->allTextbausteine($this->get('scope', '')),
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[Befund apiTextbausteine] ' . $e->getMessage());
+            echo json_encode(['items' => [], 'error' => 'unavailable']);
+        }
+        exit;
+    }
+
+    /** POST /api/befund/textbausteine */
+    public function apiTextbausteineStore(array $params = []): void
+    {
+        header('Content-Type: application/json');
+        $this->validateCsrf();
+        $authUser = $this->session->getUser();
+        try {
+            $id = $this->templates->createTextbaustein(
+                (string)$this->post('scope', 'allgemein'),
+                trim((string)$this->post('title', '')),
+                trim((string)$this->post('content', '')),
+                $authUser['id'] ?? null
+            );
+            echo json_encode(['id' => $id, 'ok' => true]);
+        } catch (\Throwable $e) {
+            error_log('[Befund apiTextbausteineStore] ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'error' => 'save_failed']);
+        }
+        exit;
+    }
+
+    /** GET /api/befund/vorlagen */
+    public function apiVorlagen(array $params = []): void
+    {
+        header('Content-Type: application/json');
+        try {
+            echo json_encode([
+                'items' => $this->templates->allVorlagen($this->get('species', '')),
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[Befund apiVorlagen] ' . $e->getMessage());
+            echo json_encode(['items' => [], 'error' => 'unavailable']);
+        }
+        exit;
+    }
+
+    /** GET /api/befund/vorlagen/{id} */
+    public function apiVorlagenShow(array $params = []): void
+    {
+        header('Content-Type: application/json');
+        try {
+            $row = $this->templates->findVorlage((int)($params['id'] ?? 0));
+            if (!$row) { http_response_code(404); echo json_encode(['error' => 'not_found']); exit; }
+            echo json_encode($row);
+        } catch (\Throwable $e) {
+            error_log('[Befund apiVorlagenShow] ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'unavailable']);
+        }
+        exit;
+    }
+
+    /* ══════════════════════════════════════════════════════
+       KI-LIGHT — Placeholder (lokal, ohne externe API)
+       Strukturiert eingegebene Notizen als einfache Zusammenfassung.
+       Kann später durch echte KI-Integration ersetzt werden.
+    ══════════════════════════════════════════════════════ */
+
+    /** POST /api/befund/ki/strukturieren */
+    public function apiKiStrukturieren(array $params = []): void
+    {
+        header('Content-Type: application/json');
+        try {
+            $raw      = trim((string)$this->post('text', ''));
+            $markers  = (string)$this->post('markers', '');
+            $bereiche = (string)$this->post('bereiche', '');
+
+            $lines = array_filter(array_map('trim', preg_split('/\r?\n/', $raw) ?: []), fn($l) => $l !== '');
+            $out   = "## Zusammenfassung\n\n";
+
+            if ($bereiche !== '') {
+                $out .= "**Betrachtete Bereiche:** {$bereiche}\n\n";
+            }
+            if ($markers !== '') {
+                $out .= "**Markierungen:** {$markers}\n\n";
+            }
+            if (!empty($lines)) {
+                $out .= "**Notizen:**\n";
+                foreach ($lines as $l) {
+                    $out .= '- ' . $l . "\n";
+                }
+            }
+
+            echo json_encode([
+                'ok'            => true,
+                'summary'       => $out,
+                'mode'          => 'local-stub',
+                'hint'          => 'KI-Integration vorbereitet — aktuell lokale Strukturierung.',
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[Befund apiKiStrukturieren] ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'error' => 'ki_unavailable']);
+        }
+        exit;
     }
 }

@@ -1,0 +1,223 @@
+/* ═══════════════════════════════════════════════════════════════
+   Befund Anatomie — Interaktive Körperdarstellung
+   Bootstrap-5-kompatibel, dark-theme aware.
+   ═══════════════════════════════════════════════════════════════ */
+
+.anatomy-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto;
+    user-select: none;
+}
+
+.anatomy-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    align-items: center;
+    margin-bottom: .75rem;
+    padding: .5rem;
+    background: rgba(128, 128, 128, .06);
+    border-radius: 8px;
+}
+
+.anatomy-toolbar .anatomy-species-btn {
+    padding: .35rem .75rem;
+    font-size: .8rem;
+    border-radius: 6px;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    background: transparent;
+    cursor: pointer;
+    transition: all .15s;
+}
+
+.anatomy-toolbar .anatomy-species-btn.active {
+    background: var(--bs-primary, #2563eb);
+    color: #fff;
+    border-color: var(--bs-primary, #2563eb);
+}
+
+.anatomy-tool-group {
+    display: flex;
+    gap: .25rem;
+    padding: .15rem;
+    background: rgba(0, 0, 0, .04);
+    border-radius: 6px;
+}
+
+.anatomy-tool-btn {
+    padding: .3rem .6rem;
+    font-size: .78rem;
+    border: none;
+    background: transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--bs-body-color, #333);
+}
+
+.anatomy-tool-btn.active {
+    background: var(--bs-body-bg, #fff);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .1);
+    font-weight: 600;
+}
+
+.anatomy-color-swatch {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform .1s;
+}
+
+.anatomy-color-swatch:hover {
+    transform: scale(1.12);
+}
+
+.anatomy-color-swatch.active {
+    border-color: var(--bs-body-color, #111);
+    transform: scale(1.12);
+}
+
+.anatomy-stage {
+    position: relative;
+    width: 100%;
+    padding-top: 60%; /* 5:3 aspect ratio */
+    background: #fafafa;
+    border-radius: 10px;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    overflow: hidden;
+    cursor: crosshair;
+}
+
+[data-bs-theme="dark"] .anatomy-stage,
+body.dark .anatomy-stage {
+    background: #1b1f26;
+}
+
+.anatomy-stage svg.anatomy-silhouette,
+.anatomy-stage svg.anatomy-overlay {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.anatomy-stage svg.anatomy-silhouette {
+    z-index: 1;
+    pointer-events: none;
+    opacity: .9;
+}
+
+.anatomy-stage svg.anatomy-overlay {
+    z-index: 2;
+}
+
+.anatomy-marker {
+    cursor: pointer;
+    transition: r .1s ease;
+}
+
+.anatomy-marker:hover {
+    r: 12;
+}
+
+.anatomy-fallback {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    color: var(--bs-secondary-color, #888);
+    font-size: .85rem;
+    text-align: center;
+    padding: 1rem;
+    z-index: 3;
+}
+
+.anatomy-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-top: .75rem;
+    font-size: .8rem;
+    color: var(--bs-secondary-color, #666);
+}
+
+.anatomy-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+}
+
+.anatomy-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.anatomy-marker-list {
+    max-height: 240px;
+    overflow-y: auto;
+    margin-top: .5rem;
+}
+
+.anatomy-marker-list .marker-row {
+    display: grid;
+    grid-template-columns: 14px 1fr auto;
+    gap: .5rem;
+    align-items: center;
+    padding: .35rem .5rem;
+    border-bottom: 1px solid var(--bs-border-color, #eee);
+    font-size: .8rem;
+}
+
+.anatomy-marker-list .marker-row:last-child {
+    border-bottom: none;
+}
+
+.anatomy-marker-list .marker-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.anatomy-marker-list .marker-remove {
+    color: var(--bs-danger, #dc3545);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    padding: 0 .25rem;
+}
+
+.physio-bereich-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: .35rem;
+    padding: .4rem .75rem;
+    margin: .2rem;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 18px;
+    cursor: pointer;
+    font-size: .82rem;
+    transition: all .15s;
+    background: transparent;
+}
+
+.physio-bereich-chip:hover {
+    border-color: var(--bs-primary, #2563eb);
+}
+
+.physio-bereich-chip input[type="checkbox"] {
+    margin: 0;
+}
+
+.physio-bereich-chip.checked {
+    background: rgba(37, 99, 235, .08);
+    border-color: var(--bs-primary, #2563eb);
+    color: var(--bs-primary, #2563eb);
+    font-weight: 600;
+}
