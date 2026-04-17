@@ -84,6 +84,7 @@ class MigrationService
      */
     public function migrateTenant(string $prefix): array
     {
+        $this->db->getPdo()->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
         $this->ensureTenantBaseSchema($prefix);
         $this->ensureMigrationsTable($prefix);
         $currentVersion = $this->getTenantVersion($prefix);
@@ -132,6 +133,7 @@ class MigrationService
     public function forceSyncTenant(string $prefix): array
     {
         $pdo = $this->db->getPdo();
+        $pdo->setAttribute(\PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
         $migTbl = $prefix . 'migrations';
         $setTbl = $prefix . 'settings';
 
