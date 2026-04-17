@@ -194,7 +194,7 @@ class ThemeManager
             if (preg_match('/\.\./', $relName)) {
                 continue;
             }
-            $allowed = ['theme.json', 'theme.css', 'preview.png', 'preview.jpg', 'layout.twig', 'README.md'];
+            $allowed = ['theme.json', 'theme.css', 'preview.png', 'preview.jpg', 'preview.svg', 'layout.twig', 'README.md'];
             if (!in_array($relName, $allowed, true) && !str_starts_with($relName, 'assets/')) {
                 continue;
             }
@@ -249,10 +249,10 @@ class ThemeManager
     private function builtinDefaultMeta(): array
     {
         return [
-            'name'        => 'Liquid Glass (Standard)',
+            'name'        => 'SmartAdmin (Standard)',
             'slug'        => 'default',
             'version'     => '3.0.0',
-            'description' => 'Das eingebaute Liquid-Glass-Design mit Nebula-Hintergrund, Glaseffekten und Dark/Light-Modus.',
+            'description' => 'Das Standard-Design der Praxis-App — SmartAdmin v5 basierend auf Bootstrap 5 mit Dark/Light-Modus, Sidebar-Navigation und professioneller Enterprise-Optik.',
             'author'      => 'Tierphysio Manager',
             'builtin'     => true,
         ];
@@ -270,7 +270,7 @@ class ThemeManager
         if ($slug === 'default') {
             return '/assets/img/theme-default-preview.png';
         }
-        foreach (['preview.png', 'preview.jpg'] as $f) {
+        foreach (['preview.png', 'preview.jpg', 'preview.svg'] as $f) {
             $path = $this->themesPath . '/' . $slug . '/' . $f;
             if (file_exists($path)) {
                 return '/theme-assets/' . $slug . '/' . $f;

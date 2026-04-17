@@ -147,7 +147,7 @@ class ThemeController extends Controller
         $file = str_replace(['..', "\0"], '', $file);
         $file = ltrim($file, '/');
 
-        $allowed = ['theme.css', 'preview.png', 'preview.jpg'];
+        $allowed = ['theme.css', 'preview.png', 'preview.jpg', 'preview.svg'];
         $isSubAsset = str_starts_with($file, 'assets/');
         if (!in_array($file, $allowed, true) && !$isSubAsset) {
             http_response_code(404);
@@ -167,6 +167,7 @@ class ThemeController extends Controller
             'css'  => 'text/css',
             'png'  => 'image/png',
             'jpg', 'jpeg' => 'image/jpeg',
+            'svg'  => 'image/svg+xml',
             'js'   => 'application/javascript',
             'woff' => 'font/woff',
             'woff2'=> 'font/woff2',

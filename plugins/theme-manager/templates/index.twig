@@ -17,7 +17,7 @@
 {# Theme Grid #}
 <div class="theme-grid">
     {% for theme in themes %}
-    <div class="theme-card glass {% if theme.active %}theme-card--active{% endif %}">
+    <div class="theme-card card {% if theme.active %}theme-card--active{% endif %}">
 
         {# Preview Image #}
         <div class="theme-preview">
@@ -25,7 +25,7 @@
                 <img src="{{ theme.preview_url }}" alt="{{ theme.name }} Vorschau" loading="lazy">
             {% else %}
                 <div class="theme-preview-placeholder">
-                    <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="color:var(--text-muted)">
+                    <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="color:var(--bs-secondary-color)">
                         <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
                         <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.5"/>
                         <path stroke="currentColor" stroke-width="1.5" stroke-linecap="round" d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
@@ -101,15 +101,15 @@
                     <label class="form-label">Theme-Paket (.zip)</label>
                     <div class="upload-dropzone" id="upload-dropzone">
                         <input type="file" name="theme_zip" id="theme-zip-input" accept=".zip" style="display:none;" required>
-                        <svg width="36" height="36" fill="none" viewBox="0 0 24 24" style="color:var(--accent);margin-bottom:0.75rem;"><path stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                        <svg width="36" height="36" fill="none" viewBox="0 0 24 24" style="color:var(--bs-primary);margin-bottom:0.75rem;"><path stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
                         <div id="dropzone-label">ZIP-Datei hier ablegen oder klicken</div>
-                        <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.35rem;">Maximal 10 MB</div>
+                        <div style="font-size:0.78rem;color:var(--bs-secondary-color);margin-top:0.35rem;">Maximal 10 MB</div>
                     </div>
                 </div>
 
-                <div class="glass-card" style="padding:1rem;font-size:0.82rem;color:var(--text-muted);margin-bottom:1.25rem;">
-                    <strong style="color:var(--text-secondary);display:block;margin-bottom:0.5rem;">📦 Paketstruktur:</strong>
-                    <code style="color:var(--accent-light);">mein-theme.zip</code><br>
+                <div class="card" style="padding:1rem;font-size:0.82rem;color:var(--bs-secondary-color);margin-bottom:1.25rem;background:var(--bs-tertiary-bg);">
+                    <strong style="color:var(--bs-body-color);display:block;margin-bottom:0.5rem;">📦 Paketstruktur:</strong>
+                    <code style="color:var(--bs-primary);">mein-theme.zip</code><br>
                     <code style="padding-left:1rem;">├── theme.json</code> <em>(Pflicht)</em><br>
                     <code style="padding-left:1rem;">├── theme.css</code> <em>(Pflicht)</em><br>
                     <code style="padding-left:1rem;">├── preview.png</code> <em>(Optional)</em><br>
@@ -141,19 +141,25 @@
 .theme-card {
     display: flex;
     flex-direction: column;
-    border-radius: var(--radius-lg);
+    border-radius: 12px;
     overflow: hidden;
-    transition: var(--transition);
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+}
+.theme-card:hover {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
 }
 .theme-card--active {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px var(--accent-glow), var(--glass-shadow);
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--bs-primary) 25%, transparent), 0 6px 20px rgba(0,0,0,0.10);
 }
 .theme-preview {
     position: relative;
     width: 100%;
     aspect-ratio: 16/9;
-    background: var(--bg-elevated);
+    background: var(--bs-body-bg);
     overflow: hidden;
 }
 .theme-preview img {
@@ -170,13 +176,13 @@
     justify-content: center;
     gap: 0.5rem;
     font-size: 0.78rem;
-    color: var(--text-muted);
+    color: var(--bs-secondary-color);
 }
 .theme-active-badge {
     position: absolute;
     top: 0.6rem;
     right: 0.6rem;
-    background: var(--accent);
+    background: var(--bs-primary);
     color: #fff;
     font-size: 0.72rem;
     font-weight: 700;
@@ -197,36 +203,37 @@
 }
 .theme-meta {
     font-size: 0.78rem;
-    color: var(--text-muted);
+    color: var(--bs-secondary-color);
     margin-bottom: 0.5rem;
 }
 .theme-desc {
     font-size: 0.82rem;
-    color: var(--text-secondary);
+    color: var(--bs-body-color);
+    opacity: 0.85;
     line-height: 1.5;
 }
 .theme-actions {
     padding: 0.75rem 1rem;
     display: flex;
     gap: 0.5rem;
-    border-top: 1px solid var(--glass-border);
+    border-top: 1px solid var(--bs-border-color);
 }
 .upload-dropzone {
-    border: 2px dashed var(--glass-border);
-    border-radius: var(--radius-md);
+    border: 2px dashed var(--bs-border-color);
+    border-radius: 10px;
     padding: 2rem 1rem;
     text-align: center;
     cursor: pointer;
-    transition: var(--transition);
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
     margin-bottom: 1rem;
     font-size: 0.88rem;
-    color: var(--text-secondary);
+    color: var(--bs-body-color);
 }
 .upload-dropzone:hover,
 .upload-dropzone.drag-over {
-    border-color: var(--accent);
-    background: rgba(79,124,255,0.06);
-    color: var(--accent);
+    border-color: var(--bs-primary);
+    background: color-mix(in srgb, var(--bs-primary) 8%, transparent);
+    color: var(--bs-primary);
 }
 .modal-backdrop { display:none; position:fixed; inset:0; z-index:9000; background:rgba(0,0,0,0.55); backdrop-filter:blur(4px); align-items:center; justify-content:center; }
 .modal-backdrop.open { display:flex; }
@@ -259,7 +266,7 @@ fileInput.addEventListener('change', () => {
 
 function updateDropzone(file) {
     label.textContent = '✅ ' + file.name + ' (' + (file.size / 1024).toFixed(0) + ' KB)';
-    label.style.color = 'var(--success)';
+    label.style.color = 'var(--bs-success)';
     submitBtn.disabled = false;
 }
 
