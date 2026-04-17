@@ -383,6 +383,12 @@ $router->get('/login', [AuthController::class, 'showLogin'], ['guest']);
 $router->post('/login', [AuthController::class, 'login'], ['guest']);
 $router->post('/logout', [AuthController::class, 'logout'], ['auth']);
 
+// Password reset flow
+$router->get('/passwort-vergessen',               [AuthController::class, 'showForgotPassword'],    ['guest']);
+$router->post('/passwort-vergessen',              [AuthController::class, 'requestPasswordReset'], ['guest']);
+$router->get('/passwort-zuruecksetzen/{token}',   [AuthController::class, 'showResetPassword'],    ['guest']);
+$router->post('/passwort-zuruecksetzen/{token}',  [AuthController::class, 'resetPassword'],        ['guest']);
+
 $router->get('/profil', [ProfileController::class, 'show'], ['auth']);
 $router->post('/profil', [ProfileController::class, 'update'], ['auth']);
 $router->post('/profil/password', [ProfileController::class, 'updatePassword'], ['auth']);

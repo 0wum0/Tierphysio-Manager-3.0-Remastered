@@ -158,6 +158,16 @@
         </div>
         {% endif %}
 
+        {% if flash.success is defined %}
+        <div class="alert alert-success d-flex align-items-center gap-2 mb-4 py-2" style="font-size:.85rem;">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" style="flex-shrink:0">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+                <path d="M8 12l2.5 2.5L16 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            {{ flash.success }}
+        </div>
+        {% endif %}
+
         <form action="/login" method="POST" autocomplete="on">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
 
@@ -180,6 +190,13 @@
                 </svg>
                 {{ t('auth.login_btn') }}
             </button>
+
+            <div class="text-center mt-3">
+                <a href="/passwort-vergessen"
+                   style="font-size:.82rem;color:var(--bs-secondary-color);text-decoration:none;border-bottom:1px dashed var(--bs-border-color);padding-bottom:1px;">
+                    Passwort vergessen?
+                </a>
+            </div>
         </form>
 
     </div>

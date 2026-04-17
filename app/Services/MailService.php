@@ -310,6 +310,45 @@ class MailService
         }
     }
 
+    public function sendPasswordReset(array $user, string $resetUrl): bool
+    {
+        try {
+            $companyName = $this->settingsRepository->get('company_name', 'Tierphysio Manager');
+            $name        = trim((string)($user['name'] ?? ''));
+            $subject     = 'Passwort zurücksetzen — ' . $companyName;
+
+            $bodyText = "Hallo " . ($name !== '' ? $name : 'zusammen') . ",\n\n"
+                      . "für dein Konto wurde eine Passwort-Zurücksetzung angefordert.\n\n"
+                      . "Klicke auf den folgenden Link, um ein neues Passwort zu vergeben. "
+                      . "Der Link ist 60 Minuten gültig und kann nur einmal verwendet werden:\n\n"
+                      . $resetUrl . "\n\n"
+                      . "Falls du die Zurücksetzung nicht angefordert hast, kannst du diese E-Mail ignorieren — "
+                      . "dein Passwort bleibt unverändert.\n\n"
+                      . "Liebe Grüße\n"
+                      . $companyName;
+
+            $extraHtml = '<div style="text-align:center;margin:24px 0;">'
+                       . '<a href="' . htmlspecialchars($resetUrl, ENT_QUOTES, 'UTF-8') . '" '
+                       . 'style="display:inline-block;padding:12px 28px;background:#6EA8FE;color:#fff;'
+                       . 'text-decoration:none;border-radius:10px;font-weight:600;">'
+                       . 'Passwort zurücksetzen'
+                       . '</a></div>';
+
+            $mailer = $this->createMailer();
+            $mailer->addAddress($user['email'], $name);
+            $mailer->Subject = $subject;
+            $mailer->isHTML(true);
+            $mailer->Body    = $this->wrapInEmailLayout($subject, $bodyText, '🔐', $extraHtml);
+            $mailer->AltBody = $bodyText;
+
+            return $mailer->send();
+        } catch (\Throwable $e) {
+            $this->lastError = $e->getMessage();
+            error_log('[MailService::sendPasswordReset] ' . $e->getMessage());
+            return false;
+        }
+    }
+
     public function sendRaw(string $to, string $toName, string $subject, string $body, array $attachments = []): bool
     {
         try {
