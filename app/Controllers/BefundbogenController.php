@@ -39,10 +39,12 @@ class BefundbogenController extends Controller
     /** GET /patienten/{patient_id}/befunde */
     public function index(array $params = []): void
     {
+        $this->ensureBefundSchema(); // Self-Heal
+
         $patientId = (int)$params['patient_id'];
         $patient   = $this->fetchPatient($patientId);
         $owner     = $patient ? $this->fetchOwner((int)$patient['owner_id']) : null;
-        $befunde   = $this->repo->findByPatient($patientId);
+        $befunde   = $this->safeFindByPatient($patientId);
 
         $this->render('befunde/index.twig', [
             'page_title' => 'Befundbögen — ' . ($patient['name'] ?? ''),
@@ -52,22 +54,31 @@ class BefundbogenController extends Controller
         ]);
     }
 
-    /** GET /patienten/{patient_id}/befunde/neu */
+    /** GET /patienten/{patient_id}/befunde/neu?species=dog */
     public function create(array $params = []): void
     {
+        $this->ensureBefundSchema(); // Self-Heal: Tabellen anlegen falls nicht vorhanden
+
         $patientId = (int)$params['patient_id'];
         $patient   = $this->fetchPatient($patientId);
         if (!$patient) { $this->abort(404); }
         $owner     = $this->fetchOwner((int)$patient['owner_id']);
 
+        // Vorausgewähltes Tier: Query-Param > Patient-Species-Mapping > 'dog'
+        $preselectSpecies = $this->resolveSpecies(
+            (string)($this->get('species', '') ?: ''),
+            (string)($patient['species'] ?? '')
+        );
+
         $this->render('befunde/form.twig', [
-            'page_title'    => 'Neuer Befundbogen — ' . $patient['name'],
-            'patient'       => $patient,
-            'owner'         => $owner,
-            'befundbogen'   => null,
-            'felder'        => [],
-            'textbausteine' => $this->safeTextbausteine(),
-            'vorlagen'      => $this->safeVorlagen(),
+            'page_title'        => 'Neuer Befundbogen — ' . $patient['name'],
+            'patient'           => $patient,
+            'owner'             => $owner,
+            'befundbogen'       => null,
+            'felder'            => ['anatomy_species' => $preselectSpecies],
+            'textbausteine'     => $this->safeTextbausteine(),
+            'vorlagen'          => $this->safeVorlagen(),
+            'preselect_species' => $preselectSpecies,
         ]);
     }
 
@@ -75,6 +86,7 @@ class BefundbogenController extends Controller
     public function store(array $params = []): void
     {
         $this->validateCsrf();
+        $this->ensureBefundSchema(); // Self-Heal
         $patientId = (int)$params['patient_id'];
         $patient   = $this->fetchPatient($patientId);
         if (!$patient) { $this->abort(404); }
@@ -100,6 +112,7 @@ class BefundbogenController extends Controller
     /** GET /patienten/{patient_id}/befunde/{id} */
     public function show(array $params = []): void
     {
+        $this->ensureBefundSchema(); // Self-Heal
         $befundbogen = $this->repo->findWithFelder((int)$params['id']);
         if (!$befundbogen || (int)$befundbogen['patient_id'] !== (int)$params['patient_id']) {
             $this->abort(404);
@@ -120,6 +133,7 @@ class BefundbogenController extends Controller
     /** GET /patienten/{patient_id}/befunde/{id}/bearbeiten */
     public function edit(array $params = []): void
     {
+        $this->ensureBefundSchema(); // Self-Heal
         $befundbogen = $this->repo->findWithFelder((int)$params['id']);
         if (!$befundbogen || (int)$befundbogen['patient_id'] !== (int)$params['patient_id']) {
             $this->abort(404);
@@ -143,6 +157,7 @@ class BefundbogenController extends Controller
     public function update(array $params = []): void
     {
         $this->validateCsrf();
+        $this->ensureBefundSchema(); // Self-Heal
         $befundbogen = $this->repo->findById((int)$params['id']);
         if (!$befundbogen || (int)$befundbogen['patient_id'] !== (int)$params['patient_id']) {
             $this->abort(404);
@@ -244,8 +259,9 @@ class BefundbogenController extends Controller
     /** GET /api/patienten/{patient_id}/befunde — JSON list for web patient page */
     public function apiByPatient(array $params = []): void
     {
+        $this->ensureBefundSchema(); // Self-Heal
         $patientId = (int)$params['patient_id'];
-        $items = $this->repo->findByPatient($patientId);
+        $items     = $this->safeFindByPatient($patientId);
         header('Content-Type: application/json');
         echo json_encode(['items' => $items, 'total' => count($items)]);
         exit;
@@ -516,6 +532,131 @@ class BefundbogenController extends Controller
             'csrf_token'          => $this->session->generateCsrfToken(),
             'show_homework_nav'   => true,
         ];
+    }
+
+    /* ══════════════════════════════════════════════════════
+       SELF-HEAL — Schema idempotent sicherstellen
+       Wird bei jedem Befund-Einstiegspunkt aufgerufen.
+       Erzeugt fehlende Tabellen auf Basis des aktuellen Tenant-Prefix.
+    ══════════════════════════════════════════════════════ */
+
+    /**
+     * Legt alle für die Befundung nötigen Tabellen idempotent an.
+     * Nutzt bestehende Datenbank-Verbindung mit korrektem Tenant-Prefix.
+     */
+    private function ensureBefundSchema(): void
+    {
+        try {
+            $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+
+            $tBefunde   = $db->prefix('befundboegen');
+            $tFelder    = $db->prefix('befundbogen_felder');
+            $tBaust     = $db->prefix('befund_textbausteine');
+            $tVorlagen  = $db->prefix('befund_vorlagen');
+
+            // Haupttabelle (falls Alt-Tenant die Migration 029 nie gesehen hat)
+            $db->safeExecute("
+                CREATE TABLE IF NOT EXISTS `{$tBefunde}` (
+                    `id`               INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    `patient_id`       INT UNSIGNED NOT NULL,
+                    `owner_id`         INT UNSIGNED DEFAULT NULL,
+                    `created_by`       INT UNSIGNED DEFAULT NULL,
+                    `status`           ENUM('entwurf','abgeschlossen','versendet') NOT NULL DEFAULT 'entwurf',
+                    `datum`            DATE NOT NULL,
+                    `naechster_termin` DATE DEFAULT NULL,
+                    `notizen`          TEXT DEFAULT NULL,
+                    `pdf_path`         VARCHAR(500) DEFAULT NULL,
+                    `pdf_sent_at`      DATETIME DEFAULT NULL,
+                    `pdf_sent_to`      VARCHAR(255) DEFAULT NULL,
+                    `created_at`       DATETIME NOT NULL DEFAULT current_timestamp(),
+                    `updated_at`       DATETIME NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+                    PRIMARY KEY (`id`),
+                    KEY `idx_patient` (`patient_id`),
+                    KEY `idx_owner`   (`owner_id`),
+                    KEY `idx_status`  (`status`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            ");
+
+            // KV-Store für Felder — ohne FK auf prefixed Tabelle (bewusst, da Cross-Prefix-FKs riskant)
+            $db->safeExecute("
+                CREATE TABLE IF NOT EXISTS `{$tFelder}` (
+                    `id`             INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    `befundbogen_id` INT UNSIGNED NOT NULL,
+                    `feldname`       VARCHAR(100) NOT NULL,
+                    `feldwert`       MEDIUMTEXT DEFAULT NULL,
+                    `created_at`     DATETIME NOT NULL DEFAULT current_timestamp(),
+                    PRIMARY KEY (`id`),
+                    KEY `idx_befundbogen` (`befundbogen_id`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            ");
+
+            // Textbausteine
+            $db->safeExecute("
+                CREATE TABLE IF NOT EXISTS `{$tBaust}` (
+                    `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    `scope`       VARCHAR(50)  NOT NULL DEFAULT 'allgemein',
+                    `title`       VARCHAR(200) NOT NULL,
+                    `content`     TEXT NOT NULL,
+                    `created_by`  INT UNSIGNED DEFAULT NULL,
+                    `created_at`  DATETIME NOT NULL DEFAULT current_timestamp(),
+                    `updated_at`  DATETIME NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+                    PRIMARY KEY (`id`),
+                    KEY `idx_scope` (`scope`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            ");
+
+            // Vorlagen
+            $db->safeExecute("
+                CREATE TABLE IF NOT EXISTS `{$tVorlagen}` (
+                    `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+                    `name`        VARCHAR(200) NOT NULL,
+                    `species`     VARCHAR(50)  DEFAULT NULL,
+                    `felder`      MEDIUMTEXT DEFAULT NULL,
+                    `created_by`  INT UNSIGNED DEFAULT NULL,
+                    `created_at`  DATETIME NOT NULL DEFAULT current_timestamp(),
+                    `updated_at`  DATETIME NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+                    PRIMARY KEY (`id`),
+                    KEY `idx_species` (`species`)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            ");
+        } catch (\Throwable $e) {
+            error_log('[Befund ensureBefundSchema] ' . $e->getMessage());
+            // Nicht werfen — der Controller läuft mit degradierter Funktionalität weiter.
+        }
+    }
+
+    /**
+     * Resolved die zu verwendende Tier-Art:
+     *   1. expliziter Query-Param ('dog'|'cat'|'horse')
+     *   2. Patient-Species-Heuristik (dt. Begriffe → Kürzel)
+     *   3. Fallback 'dog'
+     */
+    private function resolveSpecies(string $explicit, string $patientSpecies): string
+    {
+        $explicit = strtolower(trim($explicit));
+        if (in_array($explicit, ['dog', 'cat', 'horse'], true)) {
+            return $explicit;
+        }
+        $ps = strtolower(trim($patientSpecies));
+        if ($ps === '') return 'dog';
+
+        // Deutsche/englische Mapping-Heuristik
+        if (preg_match('/katz|cat/u', $ps)) return 'cat';
+        if (preg_match('/pferd|horse|pony|equin/u', $ps)) return 'horse';
+        if (preg_match('/hund|dog|canin/u', $ps)) return 'dog';
+
+        return 'dog';
+    }
+
+    /** Self-Heal Repository-Wrapper — liefert [] bei fehlender Tabelle statt Exception. */
+    private function safeFindByPatient(int $patientId): array
+    {
+        try {
+            return $this->repo->findByPatient($patientId);
+        } catch (\Throwable $e) {
+            error_log('[Befund safeFindByPatient] ' . $e->getMessage());
+            return [];
+        }
     }
 
     /* ══════════════════════════════════════════════════════
