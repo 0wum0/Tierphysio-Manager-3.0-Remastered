@@ -24,7 +24,8 @@ class TenantProvisioningService
         private PlanRepository         $planRepo,
         private LicenseService         $licenseService,
         private MailService            $mailService,
-        private MigrationService       $migrationService
+        private MigrationService       $migrationService,
+        private Config                 $config
     ) {}
 
     /**
