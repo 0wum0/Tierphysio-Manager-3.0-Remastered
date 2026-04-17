@@ -276,9 +276,53 @@ class ServiceProvider
             $db     = Application::getInstance()->getContainer()->get(\App\Core\Database::class);
             $prefix = $db->getPrefix();
 
-            /* Fast-path: if sentinel table already exists, migration has run */
-            if ($db->tableExists($prefix . 'tcp_progress_categories')) {
-                return;
+            /* Self-heal: check ALL expected tcp_* tables in a single information_schema query.
+               If any is missing, run migrations (CREATE TABLE IF NOT EXISTS + INSERT IGNORE
+               makes re-running idempotent and safe). This ensures older installations
+               automatically receive new tables added in later plugin versions. */
+            $expectedTables = [
+                'tcp_progress_categories',
+                'tcp_progress_entries',
+                'tcp_exercise_feedback',
+                'tcp_reminder_templates',
+                'tcp_reminder_queue',
+                'tcp_reminder_logs',
+                'tcp_therapy_reports',
+                'tcp_exercise_library',
+                'tcp_natural_therapy_types',
+                'tcp_natural_therapy_entries',
+                'tcp_timeline_meta',
+                'tcp_portal_visibility',
+            ];
+
+            try {
+                $existing = $db->fetchAll(
+                    "SELECT TABLE_NAME FROM information_schema.TABLES
+                     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE ?",
+                    [$prefix . 'tcp_%']
+                );
+                $existingSet = [];
+                foreach ($existing as $row) {
+                    $name = $row['TABLE_NAME'] ?? $row['table_name'] ?? null;
+                    if ($name !== null) {
+                        $existingSet[$name] = true;
+                    }
+                }
+
+                $missing = false;
+                foreach ($expectedTables as $t) {
+                    if (!isset($existingSet[$prefix . $t])) {
+                        $missing = true;
+                        error_log('[TherapyCare Pro self-heal] missing table: ' . $prefix . $t);
+                        break;
+                    }
+                }
+                if (!$missing) {
+                    return; /* All good — fast path */
+                }
+            } catch (\Throwable $e) {
+                /* information_schema query failed for some reason — fall through to full migration run */
+                error_log('[TherapyCare Pro self-heal check] ' . $e->getMessage());
             }
 
             $migrationDir = __DIR__ . '/migrations';
