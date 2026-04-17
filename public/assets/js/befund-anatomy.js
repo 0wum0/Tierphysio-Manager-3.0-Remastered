@@ -9,8 +9,33 @@
 (function () {
     'use strict';
 
-    const ROOT = document.getElementById('befund-anatomy');
-    if (!ROOT) return; // nicht auf dieser Seite
+    // Doppel-Init-Schutz: falls Script versehentlich mehrfach geladen wird
+    if (window.__befundAnatomyBooted) {
+        return;
+    }
+
+    function boot() {
+        const ROOT = document.getElementById('befund-anatomy');
+        if (!ROOT) {
+            // Nicht auf dieser Seite — einfach abbrechen
+            return;
+        }
+        if (ROOT.dataset.booted === '1') {
+            return; // schon initialisiert
+        }
+        ROOT.dataset.booted = '1';
+        window.__befundAnatomyBooted = true;
+        initAnatomy(ROOT);
+    }
+
+    // Warten bis DOM fertig ist (Script kann vor/nach DOMContentLoaded laden)
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', boot);
+    } else {
+        boot();
+    }
+
+    function initAnatomy(ROOT) {
 
     // ── Config ─────────────────────────────────────────────────
     const COLORS = [
@@ -459,4 +484,6 @@
             }
         });
     }
+
+    } // end initAnatomy
 })();

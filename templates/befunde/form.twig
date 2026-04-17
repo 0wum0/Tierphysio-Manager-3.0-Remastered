@@ -1,7 +1,12 @@
 {% extends active_theme_layout ?? 'layouts/base.twig' %}
 
+{% block styles %}
+<link rel="stylesheet" href="/assets/css/befund-anatomy.css?v={{ 'now'|date('YmdHi') }}">
+{% endblock %}
+
 {% block content %}
-<link rel="stylesheet" href="/assets/css/befund-anatomy.css">
+{# Fallback: CSS direkt einbinden, falls das Theme den styles-Block nicht rendert #}
+<link rel="stylesheet" href="/assets/css/befund-anatomy.css?v={{ 'now'|date('YmdHi') }}">
 <div class="page-header">
     <div class="flex items-center gap-3">
         <a href="/patienten/{{ patient.id }}/befunde" class="btn btn-secondary btn-sm">
@@ -457,5 +462,22 @@
     </div>{# end row #}
 </form>
 
-<script src="/assets/js/befund-anatomy.js" defer></script>
+{# Minimal-Fallback-CSS: sorgt dafür dass die Stage auch ohne externe CSS eine Höhe hat #}
+<style>
+#befund-anatomy .anatomy-wrap { position: relative; width: 100%; max-width: 640px; margin: 0 auto; }
+#befund-anatomy .anatomy-stage {
+    position: relative; width: 100%; padding-top: 60%;
+    background: rgba(128,128,128,.08); border-radius: 10px;
+    border: 1px solid rgba(128,128,128,.2); overflow: hidden;
+    cursor: crosshair;
+}
+#befund-anatomy .anatomy-stage svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+#befund-anatomy .anatomy-stage svg.anatomy-silhouette { z-index: 1; pointer-events: none; opacity: .9; }
+#befund-anatomy .anatomy-stage svg.anatomy-overlay    { z-index: 2; }
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="/assets/js/befund-anatomy.js?v={{ 'now'|date('YmdHi') }}"></script>
 {% endblock %}
