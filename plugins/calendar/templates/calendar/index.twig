@@ -103,6 +103,10 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modal-apt-title">Neuer Termin</h5>
+                <span id="badge-reminder-sent" class="badge bg-success me-2" style="display:none;font-size:0.72rem;">
+                    <svg width="11" height="11" fill="none" viewBox="0 0 24 24" style="margin-right:3px;vertical-align:-1px;"><path stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M20 6L9 17l-5-5"/></svg>
+                    Erinnerung versendet
+                </span>
                 <button type="button" class="btn-close" id="modal-apt-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
             </div>
             <div class="modal-body">
@@ -341,6 +345,8 @@
         document.getElementById('modal-apt-title').textContent = 'Neuer Termin';
         document.getElementById('btn-apt-delete').style.display = 'none';
         document.getElementById('btn-apt-invoice').style.display = 'none';
+        const reminderBadge = document.getElementById('badge-reminder-sent');
+        if (reminderBadge) reminderBadge.style.display = 'none';
         if (start) document.getElementById('apt-start').value = start.slice(0,16);
         if (end)   document.getElementById('apt-end').value   = end.slice(0,16);
         document.getElementById('apt-allday').checked = !!allDay;
@@ -371,6 +377,8 @@
 
         document.getElementById('btn-apt-delete').style.display  = '';
         document.getElementById('btn-apt-invoice').style.display = '';
+        const reminderBadge = document.getElementById('badge-reminder-sent');
+        if (reminderBadge) reminderBadge.style.display = p.reminder_sent ? '' : 'none';
         bsAptModal().show();
     }
 

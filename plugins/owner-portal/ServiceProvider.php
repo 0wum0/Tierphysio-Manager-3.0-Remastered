@@ -51,6 +51,7 @@ class ServiceProvider
             'badge' => $badgeHtml,
         ];
         $view->addGlobal('plugin_nav_items', $navItems);
+        $view->addGlobal('portal_msg_unread_count', $unreadCount);
 
         $pluginManager->hook('navItems', [$this, 'navItem']);
     }

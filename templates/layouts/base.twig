@@ -188,6 +188,39 @@
                 </div>
                 {% endif %}
 
+                {# ── Portal-Nachrichten (Tierhalter ↔ Praxis) ── #}
+                {% if portal_msg_unread_count is defined %}
+                <div class="dropdown" id="msg-dropdown-wrap">
+                    <button class="header-btn msg-bell-btn" data-dropdown="msg-menu" aria-label="Nachrichten vom Besitzerportal"
+                            style="position:relative;">
+                        <svg width="17" height="17" fill="none" viewBox="0 0 24 24">
+                            <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                  d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                        <span class="notif-badge" id="msg-badge"
+                              style="display:{% if portal_msg_unread_count > 0 %}flex{% else %}none{% endif %};background:#2563eb;">
+                            {{ portal_msg_unread_count > 9 ? '9+' : portal_msg_unread_count }}
+                        </span>
+                    </button>
+                    <div class="dropdown-menu notif-menu" id="msg-menu" style="width:320px;right:0;left:auto;">
+                        <div style="padding:0.75rem 1rem 0.5rem;border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;">
+                            <span style="font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Besitzerportal — Nachrichten</span>
+                            <span id="msg-unread-pill" style="display:{% if portal_msg_unread_count > 0 %}inline-block{% else %}none{% endif %};background:rgba(37,99,235,0.15);color:#2563eb;border:1px solid rgba(37,99,235,0.3);border-radius:100px;padding:0.1rem 0.5rem;font-size:0.72rem;font-weight:700;">{{ portal_msg_unread_count }} neu</span>
+                        </div>
+                        <div id="msg-list">
+                            <div style="padding:1.25rem 1rem;text-align:center;font-size:0.85rem;color:var(--text-muted);">
+                                Lade…
+                            </div>
+                        </div>
+                        <div style="padding:0.5rem 0.75rem;border-top:1px solid var(--glass-border);">
+                            <a href="/portal-admin/nachrichten" class="dropdown-item" style="justify-content:center;color:var(--accent);font-size:0.82rem;font-weight:600;">
+                                Alle Nachrichten →
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
                 <button class="header-btn" id="theme-toggle" title="Design wechseln" aria-label="Design wechseln">
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24">
                         <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -358,6 +391,81 @@
             bellBtn.classList.add('has-new');
         }, 800);
     }
+})();
+</script>
+{% endif %}
+
+{% if portal_msg_unread_count is defined %}
+<script>
+(function () {
+    'use strict';
+    const badge    = document.getElementById('msg-badge');
+    const pill     = document.getElementById('msg-unread-pill');
+    const listEl   = document.getElementById('msg-list');
+    const menuBtn  = document.querySelector('[data-dropdown="msg-menu"]');
+    if (!badge) return;
+
+    function esc(s) {
+        return String(s || '').replace(/[&<>"']/g, function (c) {
+            return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+        });
+    }
+
+    function updateBadge(count) {
+        if (count > 0) {
+            badge.textContent = count > 9 ? '9+' : count;
+            badge.style.display = 'flex';
+            if (pill) { pill.textContent = count + ' neu'; pill.style.display = 'inline-block'; }
+        } else {
+            badge.style.display = 'none';
+            if (pill) pill.style.display = 'none';
+        }
+    }
+
+    function renderList(data) {
+        if (!listEl) return;
+        const threads = data.threads || [];
+        const unread  = threads.filter(function (t) { return t.unread > 0; }).slice(0, 6);
+        if (unread.length > 0) {
+            listEl.innerHTML = unread.map(function (t) {
+                return '<a href="/portal-admin/nachrichten/' + parseInt(t.id) + '" class="dropdown-item" '
+                    + 'style="flex-direction:column;align-items:flex-start;gap:0.15rem;padding:0.65rem 1rem;">'
+                    + '<div style="display:flex;align-items:center;gap:0.5rem;width:100%;">'
+                    + '<span style="width:7px;height:7px;border-radius:50%;background:#2563eb;flex-shrink:0;"></span>'
+                    + '<strong style="font-size:0.85rem;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
+                    + esc(t.owner_name) + '</strong>'
+                    + '<span style="font-size:0.72rem;color:var(--text-muted);flex-shrink:0;">' + t.unread + ' neu</span>'
+                    + '</div>'
+                    + '<span style="font-size:0.78rem;color:var(--text-muted);padding-left:1.1rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;">'
+                    + esc(t.subject) + '</span>'
+                    + '</a>';
+            }).join('');
+        } else if (threads.length > 0) {
+            listEl.innerHTML = '<div style="padding:1.25rem 1rem;text-align:center;font-size:0.85rem;color:var(--text-muted);">Keine ungelesenen Nachrichten 💬</div>';
+        } else {
+            listEl.innerHTML = '<div style="padding:1.25rem 1rem;text-align:center;font-size:0.85rem;color:var(--text-muted);">Noch keine Nachrichten</div>';
+        }
+    }
+
+    function poll() {
+        fetch('/api/portal-admin/nachrichten-drawer', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                updateBadge(data.total_unread || 0);
+                renderList(data);
+            })
+            .catch(function () { /* network error — ignore silently */ });
+    }
+
+    let loaded = false;
+    if (menuBtn) {
+        menuBtn.addEventListener('click', function () {
+            if (!loaded) { poll(); loaded = true; }
+        });
+    }
+
+    setTimeout(poll, 3000);
+    setInterval(poll, 30000);
 })();
 </script>
 {% endif %}

@@ -227,10 +227,16 @@
                 </div>
                 
                 <hr style="border-color:#334155;">
+                <form method="POST" action="/admin/tenants/{{ tenant.id }}/run-migrations" class="mb-2">
+                    {{ csrf_field()|raw }}
+                    <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+                        <i class="bi bi-arrow-up-circle me-1"></i>Migrationen nachholen
+                    </button>
+                </form>
                 <form method="POST" action="/admin/tenants/{{ tenant.id }}/repair" onsubmit="return confirm('ACHTUNG: Dies erzwingt eine Neusynchronisation ALLER Datenbank-Tabellen für diese Praxis. Vorhandene Daten bleiben erhalten, aber die Struktur wird auf v48 aktualisiert. Fortfahren?')">
                     {{ csrf_field()|raw }}
                     <button type="submit" class="btn btn-sm btn-outline-warning w-100">
-                        <i class="bi bi-tools me-1"></i>Tabellen reparieren
+                        <i class="bi bi-tools me-1"></i>Tabellen reparieren (Force)
                     </button>
                 </form>
             </div>

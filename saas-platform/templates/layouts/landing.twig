@@ -70,6 +70,47 @@
             font-size: 0.85rem;
             text-decoration: none;
         }
+        .tp-hamburger {
+            display: none;
+            background: transparent;
+            border: 1px solid var(--tp-border);
+            color: #fff;
+            padding: 0.4rem 0.6rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            line-height: 1;
+        }
+        @media (max-width: 575.98px) {
+            .tp-hamburger { display: inline-flex; align-items: center; justify-content: center; }
+        }
+        .tp-mobile-menu {
+            display: none;
+            background: rgba(3, 7, 18, 0.97);
+            border-top: 1px solid var(--tp-border);
+            padding: 1rem 1.5rem;
+        }
+        .tp-mobile-menu.open { display: block; }
+        .tp-mobile-menu a {
+            display: block;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .tp-mobile-menu a:last-child { border-bottom: none; }
+        .tp-mobile-menu a:hover { color: #fff; }
+        .tp-mobile-menu a.btn-login {
+            margin-top: 0.75rem;
+            text-align: center;
+            border: 1px solid var(--tp-border);
+            border-radius: 10px;
+            padding: 0.6rem 1rem;
+            color: #fff;
+            border-bottom: 1px solid var(--tp-border);
+        }
     </style>
     {% block styles %}{% endblock %}
 </head>
@@ -85,13 +126,22 @@
                 <a href="#pricing" class="nav-link-custom">Preise</a>
                 <a href="#faq" class="nav-link-custom">FAQ</a>
             </div>
-            <div class="d-flex gap-2">
-                <a href="/login" class="btn-nav-outline d-none d-sm-inline-flex">Login</a>
+            <div class="d-flex gap-2 align-items-center">
+                <a href="/login" class="btn-nav-outline">Login</a>
                 <a href="/register" class="btn-nav-primary">Kostenlos testen</a>
+                <button class="tp-hamburger d-lg-none" id="tp-menu-toggle" aria-label="Menü öffnen">
+                    <i class="bi bi-list"></i>
+                </button>
             </div>
         </div>
     </div>
 </nav>
+<div class="tp-mobile-menu" id="tp-mobile-menu">
+    <a href="#features">Funktionen</a>
+    <a href="#pricing">Preise</a>
+    <a href="#faq">FAQ</a>
+    <a href="/login" class="btn-login">Login</a>
+</div>
 
 {% if flash_success or flash_error %}
 <div class="container mt-4">
@@ -116,6 +166,20 @@
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+<script>
+(function() {
+    const toggle = document.getElementById('tp-menu-toggle');
+    const menu   = document.getElementById('tp-mobile-menu');
+    if (toggle && menu) {
+        toggle.addEventListener('click', () => {
+            menu.classList.toggle('open');
+        });
+        document.querySelectorAll('#tp-mobile-menu a').forEach(link => {
+            link.addEventListener('click', () => menu.classList.remove('open'));
+        });
+    }
+})();
+</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 {% block scripts %}{% endblock %}

@@ -46,6 +46,7 @@ class DataMigrationController extends Controller
     {
         $this->requireAuth();
         $this->verifyCsrf();
+        $this->db->getPdo()->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
 
         $tenantId        = (int)($this->post('tenant_id') ?? 0);
         $mode            = $this->post('mode') ?? 'smart';
@@ -599,6 +600,7 @@ class DataMigrationController extends Controller
     public function migrateSingle(array $params = []): void
     {
         $this->requireAuth();
+        $this->db->getPdo()->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
         $tenantId = (int)($params['tenant_id'] ?? $_GET['tenant_id'] ?? 0);
         if (!$tenantId) $this->jsonError('Tenant ID erforderlich');
 
@@ -633,6 +635,7 @@ class DataMigrationController extends Controller
     {
         $this->requireAuth();
         $this->verifyCsrf();
+        $this->db->getPdo()->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
 
         $tenantId = (int)($params['id'] ?? 0);
         $tenant   = $this->tenantRepo->find($tenantId);
@@ -660,9 +663,11 @@ class DataMigrationController extends Controller
             
             $this->session->flash('success', $msg);
         } else {
-            $lastFileReport = end($result['report']) ?: [];
-            $error = $lastFileReport['errors'][0] ?? ['msg' => 'Unbekannter Fehler'];
-            $this->session->flash('error', "Fehler bei der Reparatur: {$error['msg']} (bei Statement: " . mb_substr($error['stmt'] ?? '', 0, 100) . "...)");
+            $reports        = is_array($result['report'] ?? null) ? $result['report'] : [];
+            $lastFileReport = !empty($reports) ? end($reports) : [];
+            $error          = (is_array($lastFileReport) ? ($lastFileReport['errors'][0] ?? null) : null)
+                              ?? ['msg' => $result['message'] ?? 'Unbekannter Fehler', 'stmt' => ''];
+            $this->session->flash('error', "Fehler bei der Reparatur: {$error['msg']}" . (($error['stmt'] ?? '') !== '' ? " (bei Statement: " . mb_substr($error['stmt'], 0, 100) . "...)" : ''));
         }
 
         $this->redirect('/admin/tenants/' . $tenantId);
@@ -675,6 +680,7 @@ class DataMigrationController extends Controller
     public function checkAllVersions(array $params = []): void
     {
         $this->requireAuth();
+        $this->db->getPdo()->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
         header('Content-Type: application/json; charset=utf-8');
 
         try {

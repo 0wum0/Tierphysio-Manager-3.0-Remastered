@@ -29,6 +29,18 @@ class UserRepository extends Repository
         );
     }
 
+    /**
+     * Set a new password hash for a user.
+     * The hash MUST already be produced via password_hash().
+     */
+    public function updatePassword(int|string $id, string $passwordHash): void
+    {
+        $this->db->execute(
+            "UPDATE `{$this->t()}` SET password = ? WHERE id = ?",
+            [$passwordHash, $id]
+        );
+    }
+
     public function findAll(string $orderBy = 'name', string $direction = 'ASC'): array
     {
         return $this->db->fetchAll(

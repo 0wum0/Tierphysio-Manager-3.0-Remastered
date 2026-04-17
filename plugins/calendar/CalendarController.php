@@ -466,8 +466,17 @@ class CalendarController extends Controller
     /* ── Cron: send pending reminders ── */
     public function cronReminders(array $params = []): void
     {
+        /* Tenant-Prefix setzen, BEVOR jeder DB-Zugriff stattfindet.
+         * Der Dispatcher übergibt ?tid= in der URL, ohne das würden alle
+         * Queries gegen die globale (leere) Tabelle laufen → sent=0 immer. */
+        $tid = (string)($_GET['tid'] ?? '');
+        if ($tid !== '') {
+            $normalized = preg_replace('/[^a-z0-9_]/', '_', strtolower($tid));
+            $this->db->setPrefix('t_' . $normalized . '_');
+        }
+
         $start = hrtime(true);
-        $this->calCronLog('START calendar reminder cron at ' . date('Y-m-d H:i:s'));
+        $this->calCronLog('START calendar reminder cron at ' . date('Y-m-d H:i:s') . ' | tid=' . ($tid ?: 'NONE'));
 
         try {
             $secret = $this->settingsRepository->get('calendar_cron_secret', '');
@@ -492,9 +501,16 @@ class CalendarController extends Controller
 
             $result = $reminderService->processPending();
 
-            $msg = 'sent=' . ($result['sent'] ?? 0) . ', skipped=' . ($result['skipped'] ?? 0);
+            $total   = $result['total']   ?? 0;
+            $sent    = $result['sent']    ?? 0;
+            $failed  = $result['failed']  ?? 0;
+            $skipped = $result['skipped'] ?? 0;
+            $msg = "sent={$sent}, skipped={$skipped}, failed={$failed}, total_due={$total}";
+            if ($failed > 0 && !empty($result['last_error'])) {
+                $msg .= ' | mail_error=' . mb_substr($result['last_error'], 0, 120);
+            }
             $this->calCronLog('SUCCESS calendar cron: ' . $msg);
-            $this->calDbLog('calendar_reminders', 'success', $msg, $start);
+            $this->calDbLog('calendar_reminders', $failed > 0 ? 'error' : 'success', $msg, $start);
 
             header('Content-Type: application/json');
             echo json_encode(array_merge($result, ['ok' => true, 'time' => date('c')]));
@@ -580,6 +596,7 @@ class CalendarController extends Controller
                 'recurrence_rule'      => $a['recurrence_rule'],
                 'recurrence_parent'    => $a['recurrence_parent'],
                 'reminder_minutes'     => $a['reminder_minutes'],
+                'reminder_sent'        => (bool)($a['reminder_sent'] ?? false),
                 'invoice_id'           => $a['invoice_id'],
             ],
         ];
@@ -588,6 +605,14 @@ class CalendarController extends Controller
     private function parseAppointmentData(): array
     {
         $user = $this->session->get('user');
+        /* DIAGNOSE: zeigt was das Formular submitted */
+        $rawOwnerId    = $_POST['owner_id'] ?? '(nicht gesetzt)';
+        $rawPatientId  = $_POST['patient_id'] ?? '(nicht gesetzt)';
+        $rawReminder   = $_POST['reminder_minutes'] ?? '(nicht gesetzt)';
+        error_log('[CalendarController] parseAppointmentData: raw owner_id=' . $rawOwnerId
+            . ' patient_id=' . $rawPatientId
+            . ' reminder_minutes=' . $rawReminder
+            . ' title=' . ($_POST['title'] ?? '?'));
         return [
             'title'             => $this->sanitize($this->post('title', '')),
             'description'       => $this->post('description', ''),

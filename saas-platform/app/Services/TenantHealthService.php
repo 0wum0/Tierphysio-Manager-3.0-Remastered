@@ -25,12 +25,24 @@ use Saas\Core\StructuredLogger;
  */
 class TenantHealthService
 {
+    private const MAX_MIGRATION_VERSION = 48;
+
     private const REQUIRED_KEYS = [
         'cron_dispatcher_token',
         'birthday_cron_token',
         'calendar_cron_secret',
+        'google_sync_cron_secret',
         'tcp_cron_token',
         'cron_secret',
+    ];
+
+    private const STORAGE_SUBDIRS = [
+        'patients',
+        'uploads',
+        'vet-reports',
+        'intake',
+        'invoices',
+        'exports',
     ];
 
     public function __construct(private readonly Database $db) {}
@@ -76,12 +88,37 @@ class TenantHealthService
             }
         }
 
-        // 4. Storage directory
+        // 4. DB version
+        $versionCheck = $this->checkDbVersion($prefix);
+        $result['checks']['db_version'] = $versionCheck;
+        if (!$versionCheck['ok'] && $result['status'] === 'ok') {
+            $result['status'] = 'warning';
+            $result['issues'][] = 'DB version outdated: v' . $versionCheck['current'] . ' (latest: v' . self::MAX_MIGRATION_VERSION . ')';
+        }
+
+        // 5. Storage directory + subdirs
         $storageCheck = $this->checkStorage($prefix);
         $result['checks']['storage'] = $storageCheck;
         if (!$storageCheck['ok'] && $result['status'] === 'ok') {
             $result['status'] = 'warning';
             $result['issues'][] = 'Storage directory unavailable';
+        }
+
+        $subdirsCheck = $this->checkStorageSubdirs($prefix);
+        $result['checks']['storage_subdirs'] = $subdirsCheck;
+        if (!$subdirsCheck['ok'] && $result['status'] === 'ok') {
+            $result['status'] = 'warning';
+            foreach ($subdirsCheck['missing'] as $dir) {
+                $result['issues'][] = "Missing storage dir: {$dir}";
+            }
+        }
+
+        // 6. Admin user
+        $adminCheck = $this->checkAdminUser($prefix);
+        $result['checks']['admin_user'] = $adminCheck;
+        if (!$adminCheck['ok'] && $result['status'] !== 'critical') {
+            $result['status'] = 'warning';
+            $result['issues'][] = 'No admin user found in tenant tables';
         }
 
         StructuredLogger::health('tenant_health_check', $result['status'], $tid, [
@@ -153,6 +190,38 @@ class TenantHealthService
         ];
     }
 
+    private function checkDbVersion(string $prefix): array
+    {
+        try {
+            $migTbl = $prefix . 'migrations';
+            $exists = (int)$this->db->fetchColumn(
+                "SELECT COUNT(*) FROM information_schema.TABLES
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?",
+                [$migTbl]
+            );
+            if (!$exists) {
+                return [
+                    'ok'      => false,
+                    'current' => 0,
+                    'latest'  => self::MAX_MIGRATION_VERSION,
+                    'message' => 'Migrations table missing',
+                ];
+            }
+            $current = (int)($this->db->fetchColumn("SELECT COALESCE(MAX(version),0) FROM `{$migTbl}`") ?? 0);
+            $ok      = $current >= self::MAX_MIGRATION_VERSION;
+            return [
+                'ok'      => $ok,
+                'current' => $current,
+                'latest'  => self::MAX_MIGRATION_VERSION,
+                'message' => $ok
+                    ? "DB version OK (v{$current})"
+                    : "DB outdated: v{$current} / latest v" . self::MAX_MIGRATION_VERSION,
+            ];
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'current' => 0, 'latest' => self::MAX_MIGRATION_VERSION, 'message' => $e->getMessage()];
+        }
+    }
+
     private function checkStorage(string $prefix): array
     {
         try {
@@ -171,6 +240,57 @@ class TenantHealthService
             ];
         } catch (\Throwable $e) {
             return ['ok' => false, 'path' => '', 'message' => $e->getMessage()];
+        }
+    }
+
+    private function checkStorageSubdirs(string $prefix): array
+    {
+        try {
+            $base    = defined('STORAGE_PATH') ? STORAGE_PATH : dirname(__DIR__, 3) . '/storage';
+            $slug    = rtrim($prefix, '_');
+            $root    = $base . '/tenants/' . $slug;
+            $missing = [];
+
+            foreach (self::STORAGE_SUBDIRS as $dir) {
+                if (!is_dir($root . '/' . $dir)) {
+                    $missing[] = $dir;
+                }
+            }
+
+            return [
+                'ok'      => empty($missing),
+                'missing' => $missing,
+                'message' => empty($missing)
+                    ? 'All storage subdirs present'
+                    : 'Missing: ' . implode(', ', $missing),
+            ];
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'missing' => [], 'message' => $e->getMessage()];
+        }
+    }
+
+    private function checkAdminUser(string $prefix): array
+    {
+        try {
+            $usersTable = $prefix . 'users';
+            $exists = (int)$this->db->fetchColumn(
+                "SELECT COUNT(*) FROM information_schema.TABLES
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?",
+                [$usersTable]
+            );
+            if (!$exists) {
+                return ['ok' => false, 'message' => 'Users table not found'];
+            }
+            $count = (int)($this->db->fetchColumn(
+                "SELECT COUNT(*) FROM `{$usersTable}` WHERE role = 'admin' AND active = 1"
+            ) ?? 0);
+            return [
+                'ok'      => $count > 0,
+                'count'   => $count,
+                'message' => $count > 0 ? "{$count} admin user(s) found" : 'No active admin user',
+            ];
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'count' => 0, 'message' => $e->getMessage()];
         }
     }
 }

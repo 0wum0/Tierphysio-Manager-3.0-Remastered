@@ -18,6 +18,7 @@ use Saas\Controllers\PaymentSettingsController;
 use Saas\Controllers\GoogleSettingsController;
 use Saas\Controllers\PraxisCronController;
 use Saas\Controllers\RevenueController;
+use Saas\Controllers\RegistrationController;
 
 // ── License API (called by Praxissoftware) ─────────────────────────────────
 $router->post('/api/license/verify',  [LicenseApiController::class, 'verify']);
@@ -48,7 +49,8 @@ $router->post('/admin/tenants/{id}/license',    [TenantController::class, 'issue
 $router->post('/admin/tenants/{id}/set-trial',        [TenantController::class, 'setTrial']);
 $router->post('/admin/tenants/{id}/set-grandfathered', [TenantController::class, 'setGrandfatheredPrice']);
 $router->post('/admin/tenants/{id}/delete',     [TenantController::class, 'delete']);
-$router->post('/admin/tenants/{id}/repair',      [DataMigrationController::class, 'repairDatabase']);
+$router->post('/admin/tenants/{id}/repair',          [DataMigrationController::class, 'repairDatabase']);
+$router->post('/admin/tenants/{id}/run-migrations',  [TenantController::class, 'runMigrations']);
 $router->post('/admin/tenants/fix-storage',     [TenantController::class, 'fixStorage']);
 $router->get('/admin/tenants/{id}/health-api',  [TenantController::class, 'healthApi']);
 $router->get('/admin/tenants/{id}/activity',    [TenantController::class, 'activityLog']);
@@ -180,6 +182,11 @@ $router->post('/admin/feedback/mark-all-read',     [FeedbackController::class, '
 
 // ── Public Feedback API (called by TierPhysio App) ──────────────────────────
 $router->post('/api/feedback',                     [FeedbackController::class, 'apiSubmit']);
+
+// ── Public Registration ─────────────────────────────────────────────────────
+$router->get('/register',           [RegistrationController::class, 'index']);
+$router->get('/register/{plan}',    [RegistrationController::class, 'form']);
+$router->post('/register/{plan}',   [RegistrationController::class, 'submit']);
 
 // ── Root redirect ──────────────────────────────────────────────────────────
 $router->get('/admin/dashboard', function (array $params): void {
