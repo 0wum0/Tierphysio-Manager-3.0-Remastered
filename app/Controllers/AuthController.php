@@ -322,6 +322,100 @@ class AuthController extends Controller
         $this->redirect('/login');
     }
 
+    public function showForgotPassword(array $params = []): void
+    {
+        $this->render('auth/forgot-password.twig', ['page_title' => 'Passwort vergessen']);
+    }
+
+    public function forgotPasswordSubmit(array $params = []): void
+    {
+        $this->validateCsrf();
+        $email = trim($this->post('email', ''));
+
+        if (empty($email)) {
+            $this->session->flash('error', 'Bitte gib deine E-Mail-Adresse ein.');
+            $this->redirect('/forgot-password');
+            return;
+        }
+
+        $prefix = $this->resolvePrefixForEmail($email);
+        if ($prefix === '') {
+            $prefix = $this->detectPrefixFromSchema();
+        }
+        if ($prefix !== '') {
+            $this->db->setPrefix($prefix);
+        }
+
+        // Always show success message to prevent user enumeration
+        $user = $this->userRepository->findByEmail($email);
+        if ($user) {
+            $token     = bin2hex(random_bytes(32));
+            $expiresAt = date('Y-m-d H:i:s', time() + 7200);
+            $this->userRepository->setPasswordResetToken((int)$user['id'], $token, $expiresAt);
+
+            $appUrl   = rtrim($this->config->get('app.url', ''), '/');
+            $resetUrl = $appUrl . '/reset-password/' . $token;
+            $this->mailService->sendPasswordReset($email, $user['name'] ?? '', $resetUrl);
+        }
+
+        $this->session->flash('success', 'Falls ein Konto mit dieser E-Mail-Adresse existiert, wurde eine E-Mail mit weiteren Anweisungen gesendet.');
+        $this->redirect('/forgot-password');
+    }
+
+    public function showResetPassword(array $params = []): void
+    {
+        $token = $params['token'] ?? '';
+        $prefix = $this->detectPrefixFromSchema();
+        if ($prefix !== '') {
+            $this->db->setPrefix($prefix);
+        }
+
+        $user = $this->userRepository->findByResetToken($token);
+        if (!$user) {
+            $this->session->flash('error', 'Dieser Link ist ungültig oder abgelaufen.');
+            $this->redirect('/forgot-password');
+            return;
+        }
+
+        $this->render('auth/reset-password.twig', ['token' => $token, 'page_title' => 'Neues Passwort setzen']);
+    }
+
+    public function resetPasswordSubmit(array $params = []): void
+    {
+        $this->validateCsrf();
+        $token    = $params['token'] ?? '';
+        $password = $this->post('password', '');
+        $confirm  = $this->post('password_confirm', '');
+
+        if (strlen($password) < 8) {
+            $this->session->flash('error', 'Das Passwort muss mindestens 8 Zeichen lang sein.');
+            $this->redirect("/reset-password/{$token}");
+            return;
+        }
+
+        if ($password !== $confirm) {
+            $this->session->flash('error', 'Die Passwörter stimmen nicht überein.');
+            $this->redirect("/reset-password/{$token}");
+            return;
+        }
+
+        $prefix = $this->detectPrefixFromSchema();
+        if ($prefix !== '') {
+            $this->db->setPrefix($prefix);
+        }
+
+        $user = $this->userRepository->findByResetToken($token);
+        if (!$user) {
+            $this->session->flash('error', 'Dieser Link ist ungültig oder abgelaufen.');
+            $this->redirect('/forgot-password');
+            return;
+        }
+
+        $this->userRepository->updatePasswordAndClearToken((int)$user['id'], password_hash($password, PASSWORD_BCRYPT));
+        $this->session->flash('success', 'Dein Passwort wurde erfolgreich geändert. Du kannst dich jetzt anmelden.');
+        $this->redirect('/login');
+    }
+
     /**
      * Auto-detect the tenant table prefix by looking for a prefixed `users` table
      * in INFORMATION_SCHEMA. Works when only one tenant exists in the database.
