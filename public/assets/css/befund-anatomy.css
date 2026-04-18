@@ -84,16 +84,17 @@
     position: relative;
     width: 100%;
     padding-top: 60%; /* 5:3 aspect ratio */
-    background: #fafafa;
+    background: #e8edf2;
     border-radius: 10px;
-    border: 1px solid var(--bs-border-color, #dee2e6);
+    border: 1px solid #c0cdd8;
     overflow: hidden;
     cursor: crosshair;
 }
 
 [data-bs-theme="dark"] .anatomy-stage,
 body.dark .anatomy-stage {
-    background: #1b1f26;
+    background: #1b2230;
+    border-color: #2d3a4a;
 }
 
 .anatomy-stage svg.anatomy-silhouette,
