@@ -289,7 +289,7 @@
                     </button>
                 </li>
                 {% endif %}
-                {% if features.owner_portal ?? false %}
+                {% if features.patient_portal ?? false %}
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="portal-checks-tab" data-bs-toggle="tab" data-bs-target="#portal-checks" type="button" role="tab" aria-controls="portal-checks" aria-selected="false">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -383,7 +383,7 @@
                                 PDF
                             </a>
                             {# E-Mail-Versand benötigt zusätzlich das messaging-Feature #}
-                            {% if (features.messaging ?? false) and owner and owner.email %}
+                            {% if (features.bulk_mail ?? false) and owner and owner.email %}
                             <form action="/patienten/{{ patient.id }}/hausaufgaben/email" method="POST" style="margin:0;" onsubmit="return confirm('Hausaufgaben per E-Mail an {{ owner.email }} senden?');">
                                 <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                                 <button type="submit" class="btn btn-secondary btn-sm">
@@ -408,7 +408,7 @@
                 </div>
                 {% endif %}
 
-                {% if features.owner_portal ?? false %}
+                {% if features.patient_portal ?? false %}
                 <!-- Portal-Checkliste Tab -->
                 <div class="tab-pane fade" id="portal-checks" role="tabpanel" aria-labelledby="portal-checks-tab">
                     {% if portal_check_notifications is defined and portal_check_notifications|length > 0 %}
@@ -452,7 +452,7 @@
                     </div>
                     {% endif %}
                 </div>
-                {% endif %}{# features.owner_portal #}
+                {% endif %}{# features.patient_portal #}
 
                 {% if features.befunde ?? false %}
                 <!-- Befundbögen Tab -->

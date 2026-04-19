@@ -26,7 +26,7 @@ class ServiceProvider
         $navItems[] = [
             'label'    => 'Mailbox',
             'href'     => '/mailbox',
-            'feature'  => 'messaging',
+            'feature'  => 'bulk_mail',
             'icon'     => '<svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="22,6 12,13 2,6"/></svg>',
             'children' => [
                 ['label' => 'Posteingang',          'href' => '/mailbox'],

@@ -187,7 +187,7 @@
                    globale Variable setzt, darf die Bell nur sichtbar
                    sein wenn der aktuelle Plan das `intake`-Feature
                    freischaltet. #}
-                {% if (features.intake ?? false) and intake_unread_count is defined %}
+                {% if (features.patient_intake ?? false) and intake_unread_count is defined %}
                 <div class="dropdown" id="notif-dropdown-wrap">
                     <button class="header-btn notif-bell-btn" data-dropdown="notif-menu" aria-label="Benachrichtigungen"
                             style="position:relative;">
@@ -239,7 +239,7 @@
                 {# ── Portal-Nachrichten (Tierhalter ↔ Praxis) ──
                    Nur sichtbar wenn `owner_portal`-Feature im Plan
                    aktiv ist. #}
-                {% if (features.owner_portal ?? false) and portal_msg_unread_count is defined %}
+                {% if (features.patient_portal ?? false) and portal_msg_unread_count is defined %}
                 <div class="dropdown" id="msg-dropdown-wrap">
                     <button class="header-btn msg-bell-btn" data-dropdown="msg-menu" aria-label="Nachrichten vom Besitzerportal"
                             style="position:relative;">
@@ -446,7 +446,7 @@
 </script>
 {% endif %}
 
-{% if (features.owner_portal ?? false) and portal_msg_unread_count is defined %}
+{% if (features.patient_portal ?? false) and portal_msg_unread_count is defined %}
 <script>
 (function () {
     'use strict';

@@ -65,17 +65,17 @@ final class FeatureRouteMap
         //    Berechtigung per Direkt-URL auf gesperrte Module zugreifen,
         //    selbst wenn die Sidebar-Links ausgeblendet sind.
 
-        '/mailbox'                      => 'messaging',
-        '/api/mailbox'                  => 'messaging',
-        '/bulk-mail'                    => 'messaging',
+        '/mailbox'                      => 'bulk_mail',
+        '/api/mailbox'                  => 'bulk_mail',
+        '/bulk-mail'                    => 'bulk_mail',
 
-        '/eingangsmeldungen'            => 'intake',
+        '/eingangsmeldungen'            => 'patient_intake',
 
         '/einladungen'                  => 'patient_invite',
         // Public landing (/einladung/{token}) bleibt frei — dort werden
         // neue Besitzer angelegt, muss ohne Auth erreichbar sein.
 
-        '/portal-admin'                 => 'owner_portal',
+        '/portal-admin'                 => 'patient_portal',
 
         '/tcp'                          => 'therapy_care',
 
