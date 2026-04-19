@@ -25,6 +25,9 @@
     </div>
 </div>
 
+{# ── Billing-/Abo-Hinweis (nur Praxisinhaber, siehe Application.php) ── #}
+{% include 'partials/_billing_notice.twig' ignore missing %}
+
 {# ════════════════════════════════════════════════════════════════
    MODULAR DASHBOARD — server-persisted panel order per user
    saved_layout = array of panel IDs in saved order (from DB)

@@ -1,0 +1,28 @@
+{# ══════════════════════════════════════════════════════════════
+   Billing-Hinweis (nur für Praxisinhaber / role=admin)
+   Wird in Application.php ausschließlich für Admin-User gefüllt.
+   Bei Mitarbeitern ist billing_notice = null → NICHTS rendern.
+   ══════════════════════════════════════════════════════════════ #}
+{% if billing_notice %}
+    {% set sev = billing_notice.severity ?? 'info' %}
+    {% set icon = {
+        'trial'    : 'bi-hourglass-split',
+        'active'   : 'bi-calendar-check',
+        'past_due' : 'bi-exclamation-triangle-fill',
+        'canceled' : 'bi-x-octagon'
+    }[billing_notice.type] ?? 'bi-info-circle' %}
+
+    <div class="alert alert-{{ sev }} d-flex align-items-start gap-3 mb-3"
+         role="status" aria-live="polite">
+        <i class="bi {{ icon }} fs-4 mt-1" aria-hidden="true"></i>
+        <div class="flex-grow-1">
+            <div class="fw-semibold mb-1">{{ billing_notice.headline }}</div>
+            <div class="small">{{ billing_notice.message }}</div>
+        </div>
+        {% if billing_notice.type in ['past_due', 'canceled'] %}
+            <a href="/einstellungen" class="btn btn-sm btn-outline-{{ sev }} flex-shrink-0 align-self-center">
+                Verwalten
+            </a>
+        {% endif %}
+    </div>
+{% endif %}

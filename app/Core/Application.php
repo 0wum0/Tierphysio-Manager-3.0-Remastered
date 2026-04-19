@@ -169,7 +169,22 @@ class Application
                     $view->addGlobal('is_trainer', false);
                 }
 
-                // Load per-user UI layout settings (theme, fixed header, etc.)
+                /* ── Billing-Hinweis: nur für Praxisinhaber (role=admin) ────
+                 * Mitarbeiter sehen nie Billing-Infos. Bei Fehlern / unklaren
+                 * Daten wird bewusst NICHTS angezeigt (lieber zu restriktiv). */
+                try {
+                    $isOwner = ($session->get('user_role') === 'admin');
+                    if ($isOwner) {
+                        $billingSvc = new \App\Services\BillingNoticeService($db, $config);
+                        $view->addGlobal('billing_notice', $billingSvc->getNotice());
+                    } else {
+                        $view->addGlobal('billing_notice', null);
+                    }
+                } catch (\Throwable $e) {
+                    $view->addGlobal('billing_notice', null);
+                    error_log('[BillingNotice bootstrap] ' . $e->getMessage());
+                }
+
                 try {
                     $prefsRepo = new \App\Repositories\UserPreferencesRepository($db);
                     $userId    = (int)($session->get('user_id') ?? 0);
