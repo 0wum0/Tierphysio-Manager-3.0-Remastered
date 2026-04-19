@@ -1916,17 +1916,44 @@ document.addEventListener('submit', function(e) {
     }
 
     if (isVideo) {
-        setProgress(0,'Video wird hochgeladen…');
-        var xhr = new XMLHttpRequest();
-        xhr.open('POST','/patienten/'+patientId+'/attachment-upload',true);
-        xhr.upload.addEventListener('progress', function(ev){ if(ev.lengthComputable) setProgress(Math.round(ev.loaded/ev.total*100),'Video '+Math.round(ev.loaded/ev.total*100)+'%'); });
-        xhr.addEventListener('load', function(){
-            if (xhr.status===200) { try { var resp=JSON.parse(xhr.responseText); if(resp.ok){setProgress(100,'Speichern…');submitEntry(resp.filename);return;} } catch(ex){} }
-            hideProgress(); if(btn){btn.disabled=false;btn.innerHTML=origHtml;} alert('Upload fehlgeschlagen.');
-        });
-        xhr.addEventListener('error', function(){ hideProgress(); if(btn){btn.disabled=false;btn.innerHTML=origHtml;} });
-        var fd2=new FormData(); fd2.append('_csrf_token',form.querySelector('[name="_csrf_token"]').value); fd2.append('attachment',file);
-        xhr.send(fd2);
+        /* Client-seitige Pre-Compression via ffmpeg.wasm (wenn verfügbar).
+         * Großer Vorteil: spart Upload-Bandbreite UND läuft ohne Server-ffmpeg.
+         * Bei jedem Fehler → Original wird hochgeladen (niemals Upload blockieren). */
+        (async function() {
+            var uploadFile = file;
+            try {
+                if (window.MediaCompressor && window.MediaCompressor.shouldCompress(file)) {
+                    setProgress(0, 'Video wird lokal komprimiert…');
+                    uploadFile = await window.MediaCompressor.compress(file, function(p){
+                        /* Phase 1: Kompression (0–50 % der Progressbar) */
+                        setProgress(Math.round(p * 50), 'Komprimieren ' + Math.round(p*100) + '%');
+                    });
+                }
+            } catch (e) {
+                console.warn('[Timeline] compression fallback:', e);
+                uploadFile = file;
+            }
+
+            setProgress(50, 'Video wird hochgeladen…');
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST','/patienten/'+patientId+'/attachment-upload',true);
+            xhr.upload.addEventListener('progress', function(ev){
+                if(ev.lengthComputable) {
+                    /* Phase 2: Upload (50–100 %) */
+                    var pct = 50 + Math.round(ev.loaded/ev.total * 50);
+                    setProgress(pct,'Upload '+Math.round(ev.loaded/ev.total*100)+'%');
+                }
+            });
+            xhr.addEventListener('load', function(){
+                if (xhr.status===200) { try { var resp=JSON.parse(xhr.responseText); if(resp.ok){setProgress(100,'Speichern…');submitEntry(resp.filename);return;} } catch(ex){} }
+                hideProgress(); if(btn){btn.disabled=false;btn.innerHTML=origHtml;} alert('Upload fehlgeschlagen.');
+            });
+            xhr.addEventListener('error', function(){ hideProgress(); if(btn){btn.disabled=false;btn.innerHTML=origHtml;} });
+            var fd2=new FormData();
+            fd2.append('_csrf_token',form.querySelector('[name="_csrf_token"]').value);
+            fd2.append('attachment', uploadFile);
+            xhr.send(fd2);
+        })();
     } else {
         submitEntry(null);
     }

@@ -208,6 +208,26 @@ abstract class Controller
             return false;
         }
 
+        /* ── Media-Optimierung (write-then-optimize) ───────────────────────
+         * Komprimiert große Bilder/Videos in-place. Bei Fehler bleibt Original.
+         * Dateiname kann sich ändern (z.B. .mov → .mp4); wir geben dann den
+         * neuen Namen zurück, damit Controller ihn korrekt in DB ablegen. */
+        try {
+            /* MIME kann durch vorherige Validierung bereits bekannt sein — sonst jetzt ermitteln */
+            if (!isset($mimeType) || $mimeType === false) {
+                $finfo2    = new \finfo(FILEINFO_MIME_TYPE);
+                $mimeType  = $finfo2->file($fullPath) ?: 'application/octet-stream';
+            }
+            $optimizer = new \App\Services\MediaOptimizerService();
+            $result    = $optimizer->optimize($fullPath, $mimeType);
+            if ($result['optimized'] && $result['filename'] !== $filename) {
+                $filename = $result['filename'];
+            }
+        } catch (\Throwable $e) {
+            error_log('[Controller uploadFile optimize] ' . $e->getMessage());
+            /* Niemals den Upload scheitern lassen wegen Kompressionsfehler */
+        }
+
         return $filename;
     }
 }

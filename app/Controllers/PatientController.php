@@ -680,8 +680,27 @@ class PatientController extends Controller
             exit;
         }
 
+        /* ── Media-Optimierung (write-then-optimize) ────────────────────────
+         * Große Gangbild-Videos (typ. 30–200 MB) werden hier via ffmpeg auf
+         * H.264/720p CRF 28 transkodiert → 60–90 % Speicherersparnis bei
+         * praxistauglicher Qualität. Bei jedem Fehler bleibt das Original —
+         * die Timeline bekommt in jedem Fall einen gültigen Dateinamen.
+         * ACHTUNG: Dateiname kann sich ändern (z.B. .mov → .mp4). Der Client
+         * erhält den finalen Namen via JSON und speichert ihn so in der Timeline. */
+        $finalMime = $uploadMime;
+        try {
+            $optimizer = new \App\Services\MediaOptimizerService();
+            $optResult = $optimizer->optimize($fullPath, $uploadMime);
+            if ($optResult['optimized']) {
+                $filename  = $optResult['filename'];
+                $finalMime = $optResult['mime'];
+            }
+        } catch (\Throwable $e) {
+            error_log('[uploadAttachment optimize] Patient #' . (int)$params['id'] . ': ' . $e->getMessage());
+        }
+
         header('Content-Type: application/json');
-        echo json_encode(['ok' => true, 'filename' => $filename, 'mime' => $uploadMime]);
+        echo json_encode(['ok' => true, 'filename' => $filename, 'mime' => $finalMime]);
         exit;
     }
 
