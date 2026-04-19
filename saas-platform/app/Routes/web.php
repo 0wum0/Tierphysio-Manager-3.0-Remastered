@@ -19,6 +19,7 @@ use Saas\Controllers\GoogleSettingsController;
 use Saas\Controllers\PraxisCronController;
 use Saas\Controllers\RevenueController;
 use Saas\Controllers\RegistrationController;
+use Saas\Controllers\FeaturesController;
 
 // ── License API (called by Praxissoftware) ─────────────────────────────────
 $router->post('/api/license/verify',  [LicenseApiController::class, 'verify']);
@@ -55,6 +56,12 @@ $router->post('/admin/tenants/fix-storage',     [TenantController::class, 'fixSt
 $router->get('/admin/tenants/{id}/health-api',  [TenantController::class, 'healthApi']);
 $router->get('/admin/tenants/{id}/activity',    [TenantController::class, 'activityLog']);
 $router->post('/admin/tenants/{id}/features',   [TenantController::class, 'setFeature']);
+
+// ── Feature-Gating (zentrale Steuerung aller Praxis-Funktionen) ────────────
+$router->get ('/admin/features',                        [FeaturesController::class, 'index']);
+$router->post('/admin/features/toggle-global',          [FeaturesController::class, 'toggleGlobal']);
+$router->post('/admin/features/update-plan-matrix',     [FeaturesController::class, 'updatePlanMatrix']);
+$router->post('/admin/features/tenant-override',        [FeaturesController::class, 'setTenantOverride']);
 
 // ── Plans Management ───────────────────────────────────────────────────────
 $router->get('/admin/plans',               [PlansController::class, 'index']);

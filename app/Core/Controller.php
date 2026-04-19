@@ -102,6 +102,28 @@ abstract class Controller
         }
     }
 
+    /**
+     * Defense-in-depth: Prüft Feature-Gate auch innerhalb des Controllers.
+     * Stoppt die Request-Verarbeitung sofort wenn das Feature deaktiviert ist.
+     *
+     * Auch wenn das Feature-Middleware fehlt (z.B. vergessen bei neuem Endpoint),
+     * bleibt diese Prüfung die letzte Verteidigungslinie.
+     */
+    protected function requireFeature(string $key): void
+    {
+        try {
+            /** @var \App\Services\FeatureGateService $gate */
+            $gate = \App\Core\Application::getInstance()
+                ->getContainer()
+                ->get(\App\Services\FeatureGateService::class);
+            $gate->requireFeature($key);
+        } catch (\Throwable $e) {
+            /* Service nicht verfügbar → konservativ: weitermachen.
+             * Das Router-Middleware greift bereits — dies ist nur Backup. */
+            error_log('[Controller requireFeature] ' . $e->getMessage());
+        }
+    }
+
     protected function requireRole(string $role): void
     {
         $user = $this->session->getUser();

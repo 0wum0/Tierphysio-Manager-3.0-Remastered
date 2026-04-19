@@ -134,6 +134,23 @@ class Application
             $hasPrefix = $db && $db->getPrefix() !== '';
 
             if ($hasPrefix) {
+                /* ── Feature-Gate: zentrale Gating-Instanz registrieren + Twig-Global ── */
+                try {
+                    $gate = new \App\Services\FeatureGateService($db, $session, $config);
+                    $this->container->singleton(
+                        \App\Services\FeatureGateService::class,
+                        fn() => $gate
+                    );
+                    $view->addGlobal('features', $gate->all());
+                } catch (\Throwable $e) {
+                    /* Niemals blockieren — Defaults laden (alles AUS außer Core) */
+                    $view->addGlobal('features', array_fill_keys(
+                        \App\Services\FeatureGateService::CORE_FEATURES,
+                        true
+                    ));
+                    error_log('[FeatureGate bootstrap] ' . $e->getMessage());
+                }
+
                 // app_name is always the product name (TheraPano) — never overwritten by tenant data.
                 // company_name is exposed separately as tenant_name for display in the UI.
                 try {

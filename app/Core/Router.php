@@ -87,7 +87,19 @@ class Router
             if (preg_match($route['pattern'], $uri, $matches)) {
                 $params = array_filter($matches, fn($k) => is_string($k), ARRAY_FILTER_USE_KEY);
 
-                $this->runMiddleware($route['middleware'], function () use ($route, $params) {
+                /* Defense-in-Depth: URL-Präfix-basiertes Feature-Gating.
+                 * Greift automatisch für ALLE passenden Routen, selbst wenn
+                 * der Entwickler kein feature:*-Middleware gesetzt hat. */
+                $autoFeature = \App\Services\FeatureRouteMap::match($uri);
+                $middleware  = $route['middleware'];
+                if ($autoFeature !== null) {
+                    $marker = 'feature:' . $autoFeature;
+                    if (!in_array($marker, $middleware, true)) {
+                        $middleware[] = $marker;
+                    }
+                }
+
+                $this->runMiddleware($middleware, function () use ($route, $params) {
                     $this->callHandler($route['handler'], $params);
                 });
                 return;
@@ -104,9 +116,18 @@ class Router
             return;
         }
 
-        $middlewareName = array_shift($middleware);
+        $middlewareName  = array_shift($middleware);
         $middlewareClass = $this->resolveMiddleware($middlewareName);
-        $instance = $this->container->get($middlewareClass);
+        $instance        = $this->container->get($middlewareClass);
+
+        /* Spezialfall "feature:key" — Feature-Key an Middleware-Instanz übergeben.
+         * Da Middleware als Singleton im Container lebt, wird vor jedem Aufruf neu gesetzt. */
+        if (is_string($middlewareName) && str_starts_with($middlewareName, 'feature:')) {
+            $featureKey = substr($middlewareName, strlen('feature:'));
+            if (method_exists($instance, 'setFeatureKey')) {
+                $instance->setFeatureKey($featureKey);
+            }
+        }
 
         $instance->handle(function () use ($middleware, $next) {
             $this->runMiddleware($middleware, $next);
@@ -115,6 +136,11 @@ class Router
 
     private function resolveMiddleware(string $name): string
     {
+        /* Feature-Gating: "feature:patients" → FeatureMiddleware */
+        if (str_starts_with($name, 'feature:')) {
+            return \App\Middleware\FeatureMiddleware::class;
+        }
+
         $map = [
             'auth'  => \App\Middleware\AuthMiddleware::class,
             'guest' => \App\Middleware\GuestMiddleware::class,

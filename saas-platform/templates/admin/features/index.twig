@@ -1,0 +1,129 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'features' %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <h4 class="mb-0"><i class="bi bi-toggles2 me-2"></i>Feature-Gating</h4>
+    <span class="badge bg-secondary">Änderungen wirken innerhalb von 5 Minuten</span>
+</div>
+
+{# ─── 1. Globale Kill-Switches ─────────────────────────────────────── #}
+<div class="card mb-4">
+    <div class="card-header px-4 py-3 d-flex align-items-center justify-content-between">
+        <span class="fw-semibold"><i class="bi bi-power me-2"></i>Globale Kill-Switches</span>
+        <span class="text-secondary small">Rote Features sind für ALLE Tenants deaktiviert</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th class="px-4">Feature</th>
+                    <th>Key</th>
+                    <th>Benötigter Plan</th>
+                    <th>Beschreibung</th>
+                    <th class="text-end pe-4">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in features %}
+                <tr>
+                    <td class="px-4 fw-medium">{{ f.label }}</td>
+                    <td><code style="font-size:.8rem;">{{ f.feature_key }}</code></td>
+                    <td>
+                        {% if f.required_plan == 'basic' %}
+                            <span class="badge bg-success">Basic</span>
+                        {% elseif f.required_plan == 'pro' %}
+                            <span class="badge bg-primary">Pro</span>
+                        {% else %}
+                            <span class="badge" style="background:#a78bfa;">Ultra</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-secondary small">{{ f.description ?: '–' }}</td>
+                    <td class="text-end pe-4">
+                        <form method="POST" action="/admin/features/toggle-global" class="d-inline">
+                            {{ csrf_field()|raw }}
+                            <input type="hidden" name="feature_key" value="{{ f.feature_key }}">
+                            <input type="hidden" name="enabled" value="{{ f.global_enabled ? 0 : 1 }}">
+                            {% if f.global_enabled %}
+                                <button type="submit" class="btn btn-sm btn-success" title="Global deaktivieren">
+                                    <i class="bi bi-check-circle"></i> Aktiv
+                                </button>
+                            {% else %}
+                                <button type="submit" class="btn btn-sm btn-danger" title="Global aktivieren">
+                                    <i class="bi bi-x-circle"></i> AUS
+                                </button>
+                            {% endif %}
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center text-secondary py-4">
+                        Keine Features registriert. Migration <code>050_feature_gating.sql</code> ausführen.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# ─── 2. Plan-Feature-Matrix ────────────────────────────────────────── #}
+<form method="POST" action="/admin/features/update-plan-matrix">
+    {{ csrf_field()|raw }}
+    <div class="card mb-4">
+        <div class="card-header px-4 py-3 d-flex align-items-center justify-content-between">
+            <span class="fw-semibold"><i class="bi bi-grid-3x3-gap me-2"></i>Plan-Feature-Matrix</span>
+            <button type="submit" class="btn btn-sm btn-primary">
+                <i class="bi bi-save me-1"></i>Matrix speichern
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table class="table mb-0 align-middle">
+                <thead>
+                    <tr>
+                        <th class="px-4">Feature</th>
+                        {% for plan in plans %}
+                            <th class="text-center">
+                                {{ plan.name }}<br>
+                                <span class="badge bg-secondary" style="font-size:.65rem;">{{ plan.slug }}</span>
+                            </th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for f in features %}
+                    <tr class="{{ f.global_enabled ? '' : 'text-secondary' }}">
+                        <td class="px-4">
+                            <div class="fw-medium">{{ f.label }}</div>
+                            <code style="font-size:.7rem;">{{ f.feature_key }}</code>
+                            {% if not f.global_enabled %}
+                                <span class="badge bg-danger ms-2">GLOBAL AUS</span>
+                            {% endif %}
+                        </td>
+                        {% for plan in plans %}
+                            {% set matrix = plan_matrix[plan.id].features|default({}) %}
+                            <td class="text-center">
+                                <input type="checkbox"
+                                       class="form-check-input"
+                                       name="plan_features[{{ plan.id }}][]"
+                                       value="{{ f.feature_key }}"
+                                       {% if matrix[f.feature_key] is defined %}checked{% endif %}
+                                       {% if not f.global_enabled %}disabled title="Global deaktiviert"{% endif %}>
+                            </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</form>
+
+<div class="alert alert-info small">
+    <i class="bi bi-info-circle me-1"></i>
+    <strong>Per-Tenant-Override</strong> ist in der Tenant-Detailseite unter
+    <a href="/admin/tenants" class="alert-link">Tenants</a> → <em>Features</em> verfügbar.
+    Änderungen dort überschreiben die Plan-Matrix für einen einzelnen Tenant.
+</div>
+{% endblock %}

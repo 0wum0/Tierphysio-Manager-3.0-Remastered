@@ -316,6 +316,12 @@
                         <span class="nav-link-text">Abo-Pläne</span>
                     </a>
                 </li>
+                <li{% if active_nav == 'features' %} class="active"{% endif %}>
+                    <a href="/admin/features">
+                        <svg class="sa-icon"><use href="/sa/icons/sprite.svg#toggle-right"></use></svg>
+                        <span class="nav-link-text">Feature-Gating</span>
+                    </a>
+                </li>
                 <li>
                     <a href="/admin/invoices">
                         <svg class="sa-icon"><use href="/sa/icons/sprite.svg#file-text"></use></svg>
