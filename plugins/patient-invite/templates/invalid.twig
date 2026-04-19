@@ -1,40 +1,64 @@
 <!DOCTYPE html>
-<html lang="de" data-theme="dark">
+<html lang="de" data-bs-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>Link ungültig — {{ app_name }}</title>
-    <script>!function(){try{var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}catch(e){}}();</script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/app.css">
-    <link rel="stylesheet" href="/assets/css/liquid-glass.css">
+    {# SmartAdmin Praxis-Design — identisch zum Praxis-Login. #}
+    <link rel="stylesheet" href="/themes/smart-tierphysio/css/smartapp.min.css">
+    <link rel="stylesheet" href="/themes/smart-tierphysio/webfonts/smartadmin/sa-icons.css">
     <style>
-        body { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:2rem 1rem; }
-        .wrapper { max-width:440px; width:100%; text-align:center; }
+        body {
+            min-height: 100vh;
+            background: var(--bs-body-bg);
+            display: flex; align-items: center; justify-content: center;
+            padding: 2rem 1rem;
+        }
+        .wrapper { max-width: 440px; width: 100%; }
+        .status-icon {
+            width: 72px; height: 72px; border-radius: 50%;
+            background: rgba(var(--bs-warning-rgb), 0.15);
+            color: var(--bs-warning);
+            display: inline-flex; align-items: center; justify-content: center;
+            margin: 0 auto 1.25rem;
+        }
     </style>
 </head>
 <body>
+
 <div class="wrapper">
-    <div class="lg-card" style="padding:2.5rem 2rem;">
-        <div style="font-size:4rem;margin-bottom:1.25rem;">⚠️</div>
-        <h1 style="font-size:1.5rem;font-weight:800;margin:0 0 0.75rem;">Link ungültig</h1>
-        <p style="color:var(--text-muted);font-size:0.9rem;line-height:1.7;margin:0;">
-            {% if invite and invite.status == 'abgelaufen' %}
-                Dieser Einladungslink ist abgelaufen. Einladungslinks sind 7 Tage gültig.<br>
-                Bitte wenden Sie sich an uns, damit wir Ihnen einen neuen Link zusenden können.
-            {% elseif invite and invite.status == 'angenommen' %}
-                Dieser Einladungslink wurde bereits verwendet.
-            {% else %}
-                Dieser Einladungslink existiert nicht oder ist ungültig.<br>
-                Bitte prüfen Sie den Link und versuchen Sie es erneut.
-            {% endif %}
-        </p>
-        <div style="margin-top:1.75rem;padding-top:1.25rem;border-top:1px solid var(--glass-border);font-size:0.82rem;color:var(--text-muted);">
-            Bei Fragen wenden Sie sich bitte an<br>
-            <strong style="color:var(--text-primary);">{{ app_name }}</strong>
+    <div class="card">
+        <div class="card-body p-4 text-center">
+            <div class="status-icon">
+                <svg width="36" height="36" fill="none" viewBox="0 0 24 24">
+                    <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                          d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9"  x2="12" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+            </div>
+
+            <h1 class="fw-700 fs-lg mb-2">Link ungültig</h1>
+
+            <p class="text-muted fs-sm mb-0" style="line-height:1.7;">
+                {% if invite and invite.status == 'abgelaufen' %}
+                    Dieser Einladungslink ist abgelaufen. Einladungslinks sind 7 Tage gültig.<br>
+                    Bitte wenden Sie sich an uns, damit wir Ihnen einen neuen Link zusenden können.
+                {% elseif invite and invite.status == 'angenommen' %}
+                    Dieser Einladungslink wurde bereits verwendet.
+                {% else %}
+                    Dieser Einladungslink existiert nicht oder ist ungültig.<br>
+                    Bitte prüfen Sie den Link und versuchen Sie es erneut.
+                {% endif %}
+            </p>
+
+            <div class="mt-4 pt-3 border-top text-muted fs-xs">
+                Bei Fragen wenden Sie sich bitte an<br>
+                <strong class="text-body">{{ app_name }}</strong>
+            </div>
         </div>
     </div>
 </div>
+
 </body>
 </html>
