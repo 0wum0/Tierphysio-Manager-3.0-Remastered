@@ -62,6 +62,16 @@
 
             <div class="sidebar-nav-section">{{ t('common.entries') }}</div>
 
+            {# ── Feature-Gated Navigation ─────────────────────────────
+               Jeder Menüpunkt wird nur gerendert wenn das zugehörige
+               Feature im aktuellen Plan aktiv ist. Die `features`-Map
+               wird in Application.php als Twig-Global registriert und
+               kommt aus FeatureGateService::all(). Features die weder in
+               `plans.features` noch in `tenants.features_override` true
+               gesetzt sind, bleiben versteckt — konsistent mit dem
+               Route-Gating in FeatureRouteMap und FeatureMiddleware. #}
+
+            {% if features.patients ?? false %}
             <a href="/patienten" class="nav-item {{ is_active('/patienten') }}">
                 <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
                     <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -69,7 +79,9 @@
                 </svg>
                 {% if is_trainer ?? false %}Hunde{% else %}{{ t('nav.patients') }}{% endif %}
             </a>
+            {% endif %}
 
+            {% if features.owners ?? false %}
             <a href="/tierhalter" class="nav-item {{ is_active('/tierhalter') }}">
                 <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
                     <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -80,7 +92,9 @@
                 </svg>
                 {% if is_trainer ?? false %}Halter{% else %}{{ t('nav.owners') }}{% endif %}
             </a>
+            {% endif %}
 
+            {% if features.invoices ?? false %}
             <a href="/rechnungen" class="nav-item {{ is_active('/rechnungen') }}">
                 <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
                     <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -94,13 +108,31 @@
                 {{ t('nav.invoices') }}
             </a>
 
-            {% for item in plugin_nav_items ?? [] %}
-            {% if not (item.admin_only is defined and item.admin_only) or (current_user and current_user.role == 'admin') %}
-            <a href="{{ item.href }}" class="nav-item {{ is_active(item.href) }}">
-                {% if item.icon is defined %}{{ item.icon|raw }}{% endif %}
-                {{ item.label }}
+            {# Ausgaben-Teilmenü gehört logisch zu invoices — gleicher Feature-Key #}
+            {% if features.expenses ?? false %}
+            <a href="/ausgaben" class="nav-item {{ is_active('/ausgaben') }}">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
+                    <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                          d="M12 2v20M17 5H9.5a2.5 2.5 0 0 1 0-5H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3.5a2.5 2.5 0 0 1 0-5H17z"/>
+                </svg>
+                Ausgaben
             </a>
             {% endif %}
+            {% endif %}
+
+            {% for item in plugin_nav_items ?? [] %}
+                {# Feature-Gate: Plugin gibt 'feature' => 'KEY' mit;
+                   fehlt der Key (Legacy / always-on), wird der Eintrag
+                   gezeigt. So bleiben reine Admin-Tools wie Theme-Manager
+                   erreichbar. Admin-only kommt zusätzlich dazu. #}
+                {% set item_feature_ok = (item.feature is not defined) or (features[item.feature] ?? false) %}
+                {% set item_admin_ok   = not (item.admin_only is defined and item.admin_only) or (current_user and current_user.role == 'admin') %}
+                {% if item_feature_ok and item_admin_ok %}
+                <a href="{{ item.href }}" class="nav-item {{ is_active(item.href) }}">
+                    {% if item.icon is defined %}{{ item.icon|raw }}{% endif %}
+                    {{ item.label }}
+                </a>
+                {% endif %}
             {% endfor %}
 
             {% if current_user and current_user.role == 'admin' %}

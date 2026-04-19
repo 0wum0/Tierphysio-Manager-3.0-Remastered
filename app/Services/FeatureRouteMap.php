@@ -60,6 +60,26 @@ final class FeatureRouteMap
         '/api/kalender'                 => 'calendar',
         '/api/appointments'             => 'appointments',
         '/termine'                      => 'appointments',
+
+        // ── Plugin-Routen: ohne diese Einträge könnten Tenants ohne
+        //    Berechtigung per Direkt-URL auf gesperrte Module zugreifen,
+        //    selbst wenn die Sidebar-Links ausgeblendet sind.
+
+        '/mailbox'                      => 'messaging',
+        '/api/mailbox'                  => 'messaging',
+        '/bulk-mail'                    => 'messaging',
+
+        '/eingangsmeldungen'            => 'intake',
+
+        '/einladungen'                  => 'patient_invite',
+        // Public landing (/einladung/{token}) bleibt frei — dort werden
+        // neue Besitzer angelegt, muss ohne Auth erreichbar sein.
+
+        '/portal-admin'                 => 'owner_portal',
+
+        '/tcp'                          => 'therapy_care',
+
+        '/steuerexport'                 => 'tax_export',
     ];
 
     /**
