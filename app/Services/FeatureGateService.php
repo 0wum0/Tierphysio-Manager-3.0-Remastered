@@ -33,6 +33,17 @@ class FeatureGateService
     /** Features die IMMER an sind — sonst ist der Nutzer komplett ausgesperrt */
     public const CORE_FEATURES = ['dashboard', 'profile', 'auth', 'settings'];
 
+    /** Plugin-Feature-Keys, die der Code referenziert aber die (noch) nicht
+     *  zwingend in saas_feature_flags registriert sein müssen. Für Ultra-
+     *  Tier-Pläne werden diese automatisch als aktiv behandelt, damit neue
+     *  Plugins ohne manuelle Admin-Konfiguration nutzbar sind. */
+    private const TOP_TIER_AUTO_FEATURES = [
+        'patient_invite',
+        'therapy_care',
+        'tax_export',
+        'vet_report',
+    ];
+
     /** Cache-Lebensdauer in Sekunden.
      *
      *  Der SaaS-Admin invalidiert den Cache bei Plan-/Feature-Änderungen
@@ -47,6 +58,9 @@ class FeatureGateService
     /** In-Request-Cache (1 Request = 1 DB-Hit) */
     private ?array $featuresCache = null;
 
+    /** Plan-Slug des aktuellen Tenants, lazy geladen für isTopTierPlan() */
+    private ?string $planSlugCache = null;
+
     public function __construct(
         private readonly Database $db,
         private readonly Session $session,
@@ -58,6 +72,16 @@ class FeatureGateService
      *
      * Ist der gegebene Key ein Core-Feature (dashboard etc.), wird immer true
      * zurückgegeben, damit Nutzer nie komplett ausgesperrt sind.
+     *
+     * Self-Heal für Upgrade-Pläne:
+     *   Wird ein NEUER Feature-Key abgefragt, der (noch) nicht in
+     *   `saas_feature_flags` registriert ist — z.B. weil eine Plugin-
+     *   Migration beim Kunden noch nicht gelaufen ist —, wäre das
+     *   normale Verhalten `false`. Für Tenants auf einem Top-Tier-Plan
+     *   (Ultra / Praxis / Enterprise / Business) wird das jedoch als
+     *   „ja, du hast alles" interpretiert, damit ein Upgrade nicht durch
+     *   Seed-Lücken effektiv zum Downgrade wird.
+     *   Für Basic/Pro-Tenants bleibt der sichere Default `false`.
      */
     public function isEnabled(string $key): bool
     {
@@ -65,7 +89,35 @@ class FeatureGateService
             return true;
         }
         $map = $this->all();
-        return (bool)($map[$key] ?? false);
+
+        /* Key ist explizit registriert → harte Antwort zurückgeben */
+        if (array_key_exists($key, $map)) {
+            return (bool)$map[$key];
+        }
+
+        /* Unbekannter Key → Tier-Fallback nur für Top-Tier-Pläne */
+        return $this->isTopTierPlan();
+    }
+
+    /**
+     * True, wenn der aktuelle Tenant auf einem "Alles-inklusive"-Plan
+     * läuft. Wird benutzt, um unbekannte Feature-Keys (Plugin noch nicht
+     * in saas_feature_flags registriert) für Ultra-Tenants durchzulassen.
+     */
+    private function isTopTierPlan(): bool
+    {
+        $slug = strtolower((string)($this->planSlugCache ?? ''));
+        if ($slug === '') {
+            /* Cache noch nicht geladen → über loadFromTenantCache() nachziehen */
+            $cache = $this->loadFromTenantCache();
+            $slug  = strtolower((string)($cache['plan_slug'] ?? ''));
+            $this->planSlugCache = $slug;
+        }
+
+        return str_contains($slug, 'ultra')
+            || str_contains($slug, 'praxis')
+            || str_contains($slug, 'enterprise')
+            || str_contains($slug, 'business');
     }
 
     /**
@@ -93,9 +145,28 @@ class FeatureGateService
             }
         }
 
+        /* Plan-Slug aus dem geladenen/gesyncten Cache mitnehmen —
+         * verhindert einen zweiten DB-Hit in isTopTierPlan(). */
+        if (isset($map['plan_slug'])) {
+            $this->planSlugCache = strtolower((string)$map['plan_slug']);
+        }
+
         $flags = $map['flags'] ?? [];
         foreach (self::CORE_FEATURES as $core) {
             $flags[$core] = true;
+        }
+
+        /* Ultra-Self-Heal: Plugin-Keys die im Code verwendet werden, aber
+         * (noch) nicht in saas_feature_flags registriert sind, für Top-
+         * Tier-Tenants automatisch als aktiv injizieren. Damit sieht die
+         * Sidebar diese Features als freigeschaltet, und die Middleware
+         * lässt Zugriffe durch — konsistent zwischen UI und Backend. */
+        if ($this->isTopTierPlan()) {
+            foreach (self::TOP_TIER_AUTO_FEATURES as $key) {
+                if (!array_key_exists($key, $flags)) {
+                    $flags[$key] = true;
+                }
+            }
         }
 
         return $this->featuresCache = $flags;
@@ -315,6 +386,7 @@ class FeatureGateService
 
             $this->writeTenantCache($payload);
             $this->featuresCache = null; // re-materialize on next all()
+            $this->planSlugCache = strtolower($planSlug);
             return $payload;
         } catch (\Throwable $e) {
             error_log('[FeatureGate] syncFromSaas: ' . $e->getMessage());
