@@ -165,7 +165,7 @@ final class BillingNoticeService
         }
 
         $stmt = $pdo->prepare(
-            "SELECT status, billing_cycle, next_billing, trial_ends_at, amount, currency
+            "SELECT status, billing_cycle, next_billing, ends_at, trial_ends_at, amount, currency
                FROM subscriptions
               WHERE tenant_id = ?
               ORDER BY id DESC
@@ -185,10 +185,52 @@ final class BillingNoticeService
             'sub_status'           => (string)($sub['status']        ?? ''),
             'sub_billing_cycle'    => (string)($sub['billing_cycle'] ?? ''),
             'sub_next_billing'     => $sub['next_billing']  ?? null,
+            'sub_ends_at'          => $sub['ends_at']       ?? null,
             'sub_trial_ends_at'    => $sub['trial_ends_at'] ?? null,
             'sub_amount'           => isset($sub['amount']) ? (float)$sub['amount'] : null,
             'sub_currency'         => (string)($sub['currency'] ?? 'EUR'),
         ];
+    }
+
+    /**
+     * Erkennt Lifetime-Lizenzen.
+     *
+     * Im Bestands-System (siehe TenantController::setTrial, type='lifetime')
+     * werden Lifetime-Lizenzen ausschließlich über das Sentinel-Datum
+     * `2099-12-31 23:59:59` in next_billing / ends_at / trial_ends_at
+     * markiert. Es gibt kein dediziertes Flag.
+     *
+     * Zusätzlich defensiv: jedes Datum mit Jahr >= 2099 wird als Lifetime
+     * interpretiert (schützt gegen "nächste Zahlung in 26 919 Tagen"-Bug).
+     */
+    private function isLifetime(array $d): bool
+    {
+        $candidates = [
+            $d['sub_next_billing']     ?? null,
+            $d['sub_ends_at']          ?? null,
+            $d['sub_trial_ends_at']    ?? null,
+            $d['tenant_trial_ends_at'] ?? null,
+        ];
+        foreach ($candidates as $date) {
+            if (!$date) {
+                continue;
+            }
+            $s = (string)$date;
+            if (str_starts_with($s, '2099-12-31') || str_starts_with($s, '9999-')) {
+                return true;
+            }
+            try {
+                $year = (int)(new \DateTimeImmutable($s))->format('Y');
+                if ($year >= 2099) {
+                    return true;
+                }
+            } catch (\Throwable) {
+                /* ignore invalid date */
+            }
+        }
+        /* Expliziter Marker, falls künftig eingeführt */
+        $cycle = strtolower((string)($d['sub_billing_cycle'] ?? ''));
+        return in_array($cycle, ['lifetime', 'perpetual', 'onetime', 'one_time'], true);
     }
 
     /**
@@ -208,6 +250,31 @@ final class BillingNoticeService
             ?? ($cycle === 'yearly' ? $d['plan_price_year'] : $d['plan_price_month']);
         $currency = $d['sub_currency'] ?: 'EUR';
         $planName = $d['plan_name'] ?: null;
+
+        /* ───────── Lifetime (MUSS vor Trial/Active geprüft werden) ─────────
+         * Lifetime wird im SaaS-Admin über das Sentinel-Datum 2099-12-31
+         * in next_billing / ends_at / trial_ends_at markiert. Ohne diesen
+         * Early-Exit würde der Service "nächste Zahlung in 26919 Tagen"
+         * anzeigen, weil der Tenant-Status dabei auf 'active' steht. */
+        if ($this->isLifetime($d)) {
+            /* past_due schlägt Lifetime — falls jemand die Lizenz gesperrt hat */
+            if (!in_array($status, ['past_due', 'suspended', 'unpaid'], true)) {
+                return [
+                    'type'           => 'lifetime',
+                    'severity'       => 'success',
+                    'headline'       => 'Lifetime-Lizenz aktiv.',
+                    'message'        => $planName
+                        ? sprintf('Ihre Praxis nutzt eine dauerhafte Freischaltung (%s). Es fallen keine wiederkehrenden Zahlungen an.', $planName)
+                        : 'Ihre Praxis nutzt eine dauerhafte Freischaltung. Es fallen keine wiederkehrenden Zahlungen an.',
+                    'days_left'      => null,
+                    'date_formatted' => null,
+                    'cycle'          => null,
+                    'amount'         => null,
+                    'currency'       => $currency,
+                    'plan_name'      => $planName,
+                ];
+            }
+        }
 
         /* ───────── Trial ───────── */
         if ($status === 'trial') {
