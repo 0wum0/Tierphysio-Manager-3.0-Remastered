@@ -8,6 +8,7 @@ use Saas\Core\Database;
 use Saas\Repositories\TenantRepository;
 use Saas\Repositories\SubscriptionRepository;
 use Saas\Repositories\PlanRepository;
+use Saas\Services\TenantFeatureCacheInvalidator;
 
 /**
  * SubscriptionService — Central subscription lifecycle manager.
@@ -32,7 +33,8 @@ class SubscriptionService
         private Database               $db,
         private TenantRepository       $tenantRepo,
         private SubscriptionRepository $subRepo,
-        private PlanRepository         $planRepo
+        private PlanRepository         $planRepo,
+        private TenantFeatureCacheInvalidator $cacheInvalidator,
     ) {}
 
     // ── Feature Access ─────────────────────────────────────────────────────
@@ -259,6 +261,13 @@ class SubscriptionService
             'grandfathered_price' => $grandfatheredPrice,
             'grandfathered_reason'=> $grandfatheredReason,
         ], $actor);
+
+        /* KRITISCH: Feature-Cache des Tenants in der Praxis-DB sofort
+         * invalidieren. Sonst sieht der Tenant bis zu CACHE_TTL Sekunden
+         * lang noch seine alten (höheren) Feature-Flags — klassischer
+         * Downgrade-Bypass. Fehler werden hier geschluckt, damit ein
+         * Cache-Problem nicht den eigentlichen Plan-Change verhindert. */
+        $this->cacheInvalidator->invalidateForTenant($tenantId);
     }
 
     // ── Grandfathered / Special Pricing ───────────────────────────────────

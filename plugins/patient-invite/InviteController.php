@@ -359,9 +359,14 @@ class InviteController extends Controller
             if ($existingOwner) {
                 $ownerId = (int)$existingOwner['id'];
             } else {
+                /* 11 Spalten ↔ 11 Werte: 7 Platzhalter für die Besitzer-Daten
+                 * + 4 Literale (gdpr_consent=1, gdpr_consent_at=NOW(),
+                 *   created_at=NOW(), updated_at=NOW()).
+                 * Früher stand hier ein überzähliges `?` vor dem Literal `1`,
+                 * wodurch 12 Werte an 11 Spalten gegeben wurden → SQLSTATE 21S01. */
                 $ins = $pdo->prepare(
                     "INSERT INTO `{$db->prefix('owners')}` (first_name, last_name, email, phone, street, zip, city, gdpr_consent, gdpr_consent_at, created_at, updated_at)
-                     VALUES (?,?,?,?,?,?,?,?,1,NOW(),NOW(),NOW())"
+                     VALUES (?,?,?,?,?,?,?,1,NOW(),NOW(),NOW())"
                 );
                 $ins->execute([
                     $data['owner_first_name'],

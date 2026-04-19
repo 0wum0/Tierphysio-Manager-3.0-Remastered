@@ -20,6 +20,7 @@ use Saas\Services\TenantActivityService;
 use Saas\Services\FeatureFlagService;
 use Saas\Services\SubscriptionService;
 use Saas\Services\MigrationService;
+use Saas\Services\TenantFeatureCacheInvalidator;
 
 class TenantController extends Controller
 {
@@ -34,7 +35,8 @@ class TenantController extends Controller
         private LicenseRepository      $licenseRepo,
         private TenantProvisioningService $provisioningService,
         private LicenseService         $licenseService,
-        private SubscriptionService    $subscriptionService
+        private SubscriptionService    $subscriptionService,
+        private TenantFeatureCacheInvalidator $cacheInvalidator,
     ) {
         parent::__construct($view, $session);
     }
@@ -188,6 +190,9 @@ class TenantController extends Controller
         $planSlug = $this->post('plan_slug', '');
         $plan     = $this->planRepo->findBySlug($planSlug);
 
+        $newPlanId = $plan ? (int)$plan['id'] : (int)$tenant['plan_id'];
+        $planChanged = $newPlanId !== (int)$tenant['plan_id'];
+
         $this->tenantRepo->update($id, [
             'practice_name' => trim($this->post('practice_name', $tenant['practice_name'])),
             'owner_name'    => trim($this->post('owner_name', $tenant['owner_name'])),
@@ -196,9 +201,26 @@ class TenantController extends Controller
             'city'          => trim($this->post('city', '')),
             'zip'           => trim($this->post('zip', '')),
             'country'       => $this->post('country', 'DE'),
-            'plan_id'       => $plan ? (int)$plan['id'] : (int)$tenant['plan_id'],
+            'plan_id'       => $newPlanId,
             'notes'         => trim($this->post('notes', '')),
         ]);
+
+        /* KRITISCH: Wenn der Plan geändert wurde, MUSS die aktive
+         * Subscription-Zeile ebenfalls auf den neuen Plan gezogen werden
+         * (der FeatureGate liest via subRepo->findByTenant nur die aktuelle
+         * Subscription — bliebe die bei einem alten plan_id stecken, wäre das
+         * Downgrade unwirksam). Der zentrale assignPlan() erledigt Update +
+         * Event-Log + Cache-Invalidation in einem Schritt. */
+        if ($planChanged && $plan) {
+            try {
+                $this->subscriptionService->assignPlan($id, (int)$plan['id']);
+            } catch (\Throwable $e) {
+                error_log('[TenantController::update] assignPlan failed: ' . $e->getMessage());
+                /* Fallback: wenigstens den Cache platt machen, damit der
+                 * Sync beim nächsten Praxis-Request den neuen plan_id sieht. */
+                $this->cacheInvalidator->invalidateForTenant($id);
+            }
+        }
 
         $this->session->flash('success', 'Praxis-Daten aktualisiert.');
         $this->redirect('/admin/tenants/' . $id);
@@ -594,6 +616,10 @@ class TenantController extends Controller
                 "UPDATE tenants SET features_override = ? WHERE id = ?",
                 [empty($map) ? null : json_encode($map), $tenantId]
             );
+
+            /* Per-Tenant-Override geändert — Feature-Cache muss sofort raus,
+             * sonst greift die neue Regel erst nach CACHE_TTL. */
+            $this->cacheInvalidator->invalidateForTenant($tenantId);
         } catch (\Throwable $e) {
             error_log('[TenantController::setFeature] ' . $e->getMessage());
             if ($this->isAjax()) {

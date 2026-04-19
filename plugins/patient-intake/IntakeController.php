@@ -190,9 +190,13 @@ class IntakeController extends Controller
             if ($existingOwner) {
                 $ownerId = (int)$existingOwner['id'];
             } else {
+                /* 11 Spalten ↔ 11 Werte: 7 Platzhalter für die Besitzer-Daten
+                 * + 4 Literale (gdpr_consent=1, gdpr_consent_at=NOW(),
+                 *   created_at=NOW(), updated_at=NOW()).  Siehe identischen
+                 * Fix in plugins/patient-invite/InviteController.php. */
                 $ins = $pdo->prepare(
                     "INSERT INTO `{$db->prefix('owners')}` (first_name, last_name, email, phone, street, zip, city, gdpr_consent, gdpr_consent_at, created_at, updated_at)
-                     VALUES (?,?,?,?,?,?,?,?,1,NOW(),NOW(),NOW())"
+                     VALUES (?,?,?,?,?,?,?,1,NOW(),NOW(),NOW())"
                 );
                 $ins->execute([
                     $submission['owner_first_name'],

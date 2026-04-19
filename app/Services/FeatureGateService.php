@@ -33,8 +33,16 @@ class FeatureGateService
     /** Features die IMMER an sind — sonst ist der Nutzer komplett ausgesperrt */
     public const CORE_FEATURES = ['dashboard', 'profile', 'auth', 'settings'];
 
-    /** Cache-Lebensdauer in Sekunden (Änderungen im SaaS werden spätestens nach X Sek. sichtbar) */
-    private const CACHE_TTL = 60;
+    /** Cache-Lebensdauer in Sekunden.
+     *
+     *  Der SaaS-Admin invalidiert den Cache bei Plan-/Feature-Änderungen
+     *  explizit via TenantFeatureCacheInvalidator — der TTL ist der
+     *  Defense-in-Depth-Fallback, falls die Invalidation aus irgendeinem
+     *  Grund scheitert (DB-Timeout, Crash zwischen UPDATE und DELETE, …).
+     *
+     *  15 Sekunden: akzeptabler Kompromiss zwischen DB-Last und Zeit bis
+     *  Plan-Downgrades spätestens automatisch greifen. */
+    private const CACHE_TTL = 15;
 
     /** In-Request-Cache (1 Request = 1 DB-Hit) */
     private ?array $featuresCache = null;

@@ -11,6 +11,7 @@ use Saas\Core\Config;
 use Saas\Repositories\TenantRepository;
 use Saas\Repositories\SubscriptionRepository;
 use Saas\Repositories\PlanRepository;
+use Saas\Services\TenantFeatureCacheInvalidator;
 
 class TenantAccountController extends Controller
 {
@@ -20,7 +21,8 @@ class TenantAccountController extends Controller
         private Config                $config,
         private TenantRepository      $tenantRepo,
         private SubscriptionRepository $subRepo,
-        private PlanRepository        $planRepo
+        private PlanRepository        $planRepo,
+        private TenantFeatureCacheInvalidator $cacheInvalidator,
     ) {
         parent::__construct($view, $session);
     }
@@ -149,6 +151,11 @@ class TenantAccountController extends Controller
                 'amount'  => $amount,
             ]);
         }
+
+        /* Plan wurde geändert — Feature-Cache des Tenants in der Praxis-DB
+         * sofort invalidieren, damit Downgrades ohne Verzögerung greifen und
+         * keine alten (höheren) Feature-Flags weiter genutzt werden können. */
+        $this->cacheInvalidator->invalidateForTenant((int)$tenant['id']);
 
         $this->session->flash('success', 'Plan wurde auf „' . $plan['name'] . '" geändert.');
         $this->redirect('/account');

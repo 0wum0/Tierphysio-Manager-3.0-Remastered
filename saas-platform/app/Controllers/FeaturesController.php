@@ -8,6 +8,7 @@ use Saas\Core\Controller;
 use Saas\Core\Database;
 use Saas\Core\Session;
 use Saas\Core\View;
+use Saas\Services\TenantFeatureCacheInvalidator;
 
 /**
  * SaaS-Admin: Zentrales Feature-Gating-Dashboard.
@@ -27,6 +28,7 @@ class FeaturesController extends Controller
         View                     $view,
         Session                  $session,
         private readonly Database $db,
+        private readonly TenantFeatureCacheInvalidator $cacheInvalidator,
     ) {
         parent::__construct($view, $session);
     }
@@ -86,6 +88,11 @@ class FeaturesController extends Controller
                 "UPDATE saas_feature_flags SET global_enabled = ? WHERE feature_key = ?",
                 [$enabled, $key]
             );
+
+            /* Global-Kill-Switch betrifft ALLE Tenants — jeder Feature-Cache
+             * muss invalidiert werden, damit der Toggle sofort greift. */
+            $this->cacheInvalidator->invalidateAll();
+
             $state = $enabled ? 'aktiviert' : 'DEAKTIVIERT (global)';
             $this->session->flash('success', "Feature „{$key}" . '" ' . $state);
         } catch (\Throwable $e) {
@@ -116,6 +123,7 @@ class FeaturesController extends Controller
         );
 
         $updated = 0;
+        $updatedPlanIds = [];
         foreach ($matrix as $planId => $features) {
             if (!is_array($features)) {
                 $features = [];
@@ -128,9 +136,17 @@ class FeaturesController extends Controller
                     [json_encode($features), (int)$planId]
                 );
                 $updated++;
+                $updatedPlanIds[] = (int)$planId;
             } catch (\Throwable $e) {
                 error_log('[FeaturesController updatePlanMatrix] ' . $e->getMessage());
             }
+        }
+
+        /* Plan-Feature-Liste hat sich geändert — jeder Tenant auf einem der
+         * betroffenen Pläne muss seinen Feature-Cache neu aufbauen, sonst
+         * greift die neue Matrix erst nach TTL-Ablauf. */
+        foreach ($updatedPlanIds as $planId) {
+            $this->cacheInvalidator->invalidateForPlan($planId);
         }
 
         $this->session->flash('success', "Plan-Feature-Matrix aktualisiert ({$updated} Pläne).");
@@ -183,6 +199,10 @@ class FeaturesController extends Controller
                 "UPDATE tenants SET features_override = ? WHERE id = ?",
                 [empty($map) ? null : json_encode($map), $tenantId]
             );
+
+            /* Override für einen einzelnen Tenant — nur dessen Cache
+             * invalidieren, damit die Regel sofort greift. */
+            $this->cacheInvalidator->invalidateForTenant($tenantId);
 
             $this->session->flash('success', "Override für „{$key}" . '" gesetzt: ' . $mode);
         } catch (\Throwable $e) {
