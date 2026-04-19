@@ -410,14 +410,61 @@
 
 /* ═══════════════════════════════════════════
    MOBILE HEADER BUTTONS
+   -----------------------------------------------------------
+   Spiegelt die Pill-Optik der SmartAdmin .mobile-menu-icon
+   (/sa/css/smartapp.min.css) — die Praxis-App lädt smartapp.css
+   NICHT, deshalb hier die Kern-Metriken duplizieren, damit
+   derselbe Button in SaaS-Admin und Praxis identisch rendert.
+   Nur Praxis-only: bridge.css wird im SaaS-Admin nicht geladen.
    ═══════════════════════════════════════════ */
-.mobile-menu-icon, .collapse-icon {
+.mobile-menu-icon {
+  --mobile-menu-icon-width: 4rem;
+  --mobile-menu-icon-height: 2.5rem;
+  position: relative;
+  width: var(--mobile-menu-icon-width);
+  height: var(--mobile-menu-icon-height);
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--bs-border-color, rgba(255,255,255,0.12));
+  border-radius: 999px;
+  color: var(--bs-body-color);
+  line-height: 1;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+.mobile-menu-icon:hover {
+  background: var(--bs-tertiary-bg, rgba(255,255,255,0.06));
+}
+.mobile-menu-icon:active {
+  transform: scale(0.95);
+}
+.mobile-menu-icon .sa-icon {
+  width: 1.8rem;
+  height: 1.8rem;
+  display: block;
+  stroke: currentColor;
+  fill: none;
+}
+
+/* Light-Mode-Override: Kontrast für helle Theme-Variante */
+[data-theme="light"] .mobile-menu-icon {
+  border-color: rgba(0, 0, 0, 0.15);
+}
+[data-theme="light"] .mobile-menu-icon .sa-icon {
+  stroke: rgba(0, 0, 0, 0.65);
+}
+
+/* Collapse-Icon (Desktop-Minify) bleibt wie gehabt schlicht */
+.collapse-icon {
   background: transparent; border: none; cursor: pointer;
   color: var(--bs-body-color); padding: 0.35rem;
   border-radius: 8px; line-height: 1;
   display: flex; align-items: center; justify-content: center;
 }
-.mobile-menu-icon:hover, .collapse-icon:hover { background: var(--bs-tertiary-bg); }
+.collapse-icon:hover { background: var(--bs-tertiary-bg); }
 
 /* ═══════════════════════════════════════════
    APP DRAWER (Settings Panel)
