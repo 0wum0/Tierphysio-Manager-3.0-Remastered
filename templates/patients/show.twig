@@ -26,8 +26,8 @@
         <span class="badge badge-{{ patient.status|lower|replace({' ':'_', 'ä':'ae','ü':'ue','ö':'oe'}) }}">{{ patient.status }}</span>
     </div>
     <div class="flex gap-2 flex-wrap">
-        {# ── Rechnungs-Badge ──────────────────────────────────────────── #}
-        {% if invoice_stats is defined %}
+        {# ── Rechnungs-Badge (nur wenn invoices-Feature aktiv) ────────── #}
+        {% if (features.invoices ?? false) and invoice_stats is defined %}
             {% if invoice_stats.open_count > 0 %}
                 <a href="/rechnungen?search={{ patient.name|url_encode }}" class="btn btn-sm invoice-badge-open" style="background:rgba(220,53,69,0.15);color:#dc3545;border:1.5px solid #dc3545;font-weight:600;position:relative;overflow:visible;">
                     <span class="pulse-ring" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:100%;height:100%;border-radius:6px;border:2px solid #dc3545;animation:badgePulse 1.4s ease-out infinite;pointer-events:none;"></span>
@@ -41,14 +41,18 @@
                 </a>
             {% endif %}
         {% endif %}
+        {% if features.befunde ?? false %}
         <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-befund-species" title="Neuen Befund anlegen">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="7" r="3" stroke="currentColor" stroke-width="2"/><path stroke="currentColor" stroke-width="2" d="M6 22v-5a6 6 0 0 1 12 0v5"/></svg>
             <span class="d-none d-md-inline">Befund starten</span>
         </button>
+        {% endif %}
+        {% if features.invoices ?? false %}
         <button class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-create-invoice">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
             <span class="d-none d-md-inline">{{ t('patients.create_invoice') }}</span>
         </button>
+        {% endif %}
         <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-edit-patient">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             <span class="d-none d-md-inline">{{ t('common.edit') }}</span>
@@ -206,7 +210,8 @@
         </div>
         {% endif %}
 
-        {# Next Appointment Card #}
+        {# Next Appointment Card — nur bei aktivem Kalender-Feature #}
+        {% if features.calendar ?? false %}
         <div class="card"><div class="card-body">
             <h3 class="fw-semibold mb-2" style="font-size:0.9rem;color:var(--bs-secondary-color);text-transform:uppercase;letter-spacing:0.05em;">
                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/><line x1="16" y1="2" x2="16" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="8" y1="2" x2="8" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="3" y1="10" x2="21" y2="10" stroke="currentColor" stroke-width="1.5"/></svg>
@@ -249,6 +254,7 @@
             {% endif %}
         </div>
         </div>
+        {% endif %}{# features.calendar #}
 
         {# Delete #}
         <form action="/patienten/{{ patient.id }}/loeschen" method="POST">
@@ -275,12 +281,15 @@
                         {% if is_trainer ?? false %}Neuer Trainingseintrag{% else %}Neuer Akteneintrag{% endif %}
                     </button>
                 </li>
+                {% if features.homework ?? false %}
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="hausaufgaben-tab" data-bs-toggle="tab" data-bs-target="#hausaufgaben" type="button" role="tab" aria-controls="hausaufgaben" aria-selected="false">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><path stroke="currentColor" stroke-width="2" d="M9 11l3 3L22 4"/><path stroke="currentColor" stroke-width="2" d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
                         {% if is_trainer ?? false %}Übungen{% else %}Hausaufgaben{% endif %}
                     </button>
                 </li>
+                {% endif %}
+                {% if features.owner_portal ?? false %}
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="portal-checks-tab" data-bs-toggle="tab" data-bs-target="#portal-checks" type="button" role="tab" aria-controls="portal-checks" aria-selected="false">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -290,6 +299,8 @@
                         {% endif %}
                     </button>
                 </li>
+                {% endif %}
+                {% if features.befunde ?? false %}
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="befunde-tab" data-bs-toggle="tab" data-bs-target="#befunde" type="button" role="tab" aria-controls="befunde" aria-selected="false">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><path stroke="currentColor" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"/></svg>
@@ -299,13 +310,14 @@
                         {% endif %}
                     </button>
                 </li>
+                {% endif %}
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="historie-tab" data-bs-toggle="tab" data-bs-target="#historie" type="button" role="tab" aria-controls="historie" aria-selected="false">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><path stroke="currentColor" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         Historie
                     </button>
                 </li>
-                {% if tcp_progress is defined or tcp_natural is defined or tcp_reports is defined or tcp_feedback is defined %}
+                {% if (features.therapy_care ?? false) and (tcp_progress is defined or tcp_natural is defined or tcp_reports is defined or tcp_feedback is defined) %}
                 <li class="nav-item" role="presentation">
                     <button class="nav-link" id="tcp-fortschritt-tab" data-bs-toggle="tab" data-bs-target="#tcp-fortschritt" type="button" role="tab" aria-controls="tcp-fortschritt" aria-selected="false">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="margin-right:4px;vertical-align:text-bottom;"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -356,6 +368,7 @@
                     </form>
                 </div>
                 
+                {% if features.homework ?? false %}
                 <!-- Hausaufgaben Tab -->
                 <div class="tab-pane fade" id="hausaufgaben" role="tabpanel" aria-labelledby="hausaufgaben-tab">
                     <div class="d-flex justify-content-between align-items-center mb-3" style="flex-wrap:wrap;gap:0.5rem;">
@@ -369,7 +382,8 @@
                                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>
                                 PDF
                             </a>
-                            {% if owner and owner.email %}
+                            {# E-Mail-Versand benötigt zusätzlich das messaging-Feature #}
+                            {% if (features.messaging ?? false) and owner and owner.email %}
                             <form action="/patienten/{{ patient.id }}/hausaufgaben/email" method="POST" style="margin:0;" onsubmit="return confirm('Hausaufgaben per E-Mail an {{ owner.email }} senden?');">
                                 <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                                 <button type="submit" class="btn btn-secondary btn-sm">
@@ -392,7 +406,9 @@
                         </div>
                     </div>
                 </div>
-                
+                {% endif %}
+
+                {% if features.owner_portal ?? false %}
                 <!-- Portal-Checkliste Tab -->
                 <div class="tab-pane fade" id="portal-checks" role="tabpanel" aria-labelledby="portal-checks-tab">
                     {% if portal_check_notifications is defined and portal_check_notifications|length > 0 %}
@@ -436,7 +452,9 @@
                     </div>
                     {% endif %}
                 </div>
+                {% endif %}{# features.owner_portal #}
 
+                {% if features.befunde ?? false %}
                 <!-- Befundbögen Tab -->
                 <div class="tab-pane fade" id="befunde" role="tabpanel" aria-labelledby="befunde-tab">
                     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -452,9 +470,10 @@
                         </div>
                     </div>
                 </div>
+                {% endif %}
 
                 <!-- TherapyCare Pro Tab -->
-                {% if tcp_progress is defined or tcp_natural is defined or tcp_reports is defined or tcp_feedback is defined %}
+                {% if (features.therapy_care ?? false) and (tcp_progress is defined or tcp_natural is defined or tcp_reports is defined or tcp_feedback is defined) %}
                 <div class="tab-pane fade" id="tcp-fortschritt" role="tabpanel" aria-labelledby="tcp-fortschritt-tab">
                     {% include '@therapy-care-pro/patient_tab_progress.twig' ignore missing %}
                 </div>
