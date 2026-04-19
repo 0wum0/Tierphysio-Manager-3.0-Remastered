@@ -124,6 +124,28 @@ class PaymentService
         }
 
         $response = $this->stripeRequest('POST', '/v1/checkout/sessions', http_build_query($fields), $key);
+
+        /* Self-Heal: wenn die konfigurierte Price-ID in Stripe nicht existiert
+         * (z.B. Test-ID im Live-Mode, anderer Account, gelöschtes Price-Objekt),
+         * fallen wir automatisch einmalig auf inline price_data zurück — sofern
+         * wir einen positiven Betrag haben. Der Tenant bleibt nicht hängen,
+         * der Admin kann die Price-ID später in Ruhe korrigieren. */
+        $errCode = $response['error']['code'] ?? '';
+        $errMsg  = $response['error']['message'] ?? '';
+        $priceMissing = $priceId !== null && (
+            $errCode === 'resource_missing'
+            || stripos($errMsg, 'no such price') !== false
+        );
+        if (!isset($response['url']) && $priceMissing && $amount > 0) {
+            error_log("[PaymentService] Stripe price ID '{$priceId}' not found — falling back to inline price_data. Admin sollte die Price-ID im Plan korrigieren.");
+            unset($fields['line_items[0][price]']);
+            $fields['line_items[0][price_data][currency]']            = 'eur';
+            $fields['line_items[0][price_data][product_data][name]']  = 'TheraPano ' . $planName;
+            $fields['line_items[0][price_data][recurring][interval]'] = $interval;
+            $fields['line_items[0][price_data][unit_amount]']         = (int)round($amount * 100);
+            $response = $this->stripeRequest('POST', '/v1/checkout/sessions', http_build_query($fields), $key);
+        }
+
         if (!isset($response['url'])) {
             $err = $response['error']['message'] ?? 'unknown error';
             error_log("[PaymentService] Stripe checkout creation failed: {$err}");
