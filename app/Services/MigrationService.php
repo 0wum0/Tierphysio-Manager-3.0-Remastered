@@ -135,10 +135,12 @@ class MigrationService
     /**
      * Robuster SQL-Statement-Splitter.
      *
-     * Ersetzt das bisherige `explode(';', $sql)`, das Semikola in Kommentaren
-     * (`-- comment; more comment`) und in String-Literalen zerriss. Der Splitter
-     * versteht Line-Comments (`-- …`, `# …`), Block-Comments (`/* … */`),
-     * Single-/Double-Quoted-Strings und Backtick-Identifier.
+     * Ersetzt das bisherige explode-basierte Splitting, das Semikola in
+     * Kommentaren und String-Literalen zerriss. Der Splitter versteht:
+     *   - Line-Comments mit -- oder #
+     *   - Block-Comments (SQL-Style)
+     *   - Single-/Double-Quoted-Strings (inkl. Escape-Sequenzen)
+     *   - Backtick-Identifier
      *
      * @return array<int, string>
      */
@@ -162,7 +164,7 @@ class MigrationService
                         $i += ($ch === '#') ? 1 : 2;
                         break;
                     }
-                    /* Block-Comment /* … *\/ */
+                    /* Block-Comment Anfang (SQL-Style) */
                     if ($ch === '/' && $next === '*') {
                         $state = 'bc';
                         $i += 2;
