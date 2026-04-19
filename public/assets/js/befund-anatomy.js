@@ -280,37 +280,48 @@
     function renderStage() {
         const stage = ROOT.querySelector('.anatomy-stage');
         if (!stage) return;
-        stage.innerHTML = '';
 
-        // Silhouette — DOMParser ist zuverlässiger als innerHTML auf SVGElement
-        const silSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        silSvg.setAttribute('class', 'anatomy-silhouette');
-        silSvg.setAttribute('viewBox', '0 0 500 300');
-        silSvg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-        try {
-            const svgSource = SILHOUETTES[state.species] || SILHOUETTES.dog;
-            const parser    = new DOMParser();
-            const doc       = parser.parseFromString(
-                '<svg xmlns="http://www.w3.org/2000/svg">' + svgSource + '</svg>',
-                'image/svg+xml'
-            );
-            const parsed = doc.documentElement;
-            if (parsed && parsed.tagName !== 'parsererror' && !parsed.querySelector('parsererror')) {
-                Array.from(parsed.childNodes).forEach(n => silSvg.appendChild(document.importNode(n, true)));
-            } else {
-                // DOMParser-Fallback: direktes innerHTML
-                silSvg.innerHTML = svgSource;
+        // Server-seitig vorgerendertes SVG erhalten, falls Spezies übereinstimmt
+        const existingSil = stage.querySelector('.anatomy-silhouette');
+        const silMatches  = existingSil && existingSil.dataset.species === state.species;
+
+        if (!silMatches) {
+            // Alles neu aufbauen (Spezieswechsel oder kein server-seitiger Render)
+            stage.innerHTML = '';
+
+            const silSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            silSvg.setAttribute('class', 'anatomy-silhouette');
+            silSvg.setAttribute('viewBox', '0 0 500 300');
+            silSvg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+            silSvg.dataset.species = state.species;
+            try {
+                const svgSource = SILHOUETTES[state.species] || SILHOUETTES.dog;
+                const parser    = new DOMParser();
+                const doc       = parser.parseFromString(
+                    '<svg xmlns="http://www.w3.org/2000/svg">' + svgSource + '</svg>',
+                    'image/svg+xml'
+                );
+                const parsed = doc.documentElement;
+                if (parsed && parsed.tagName !== 'parsererror' && !parsed.querySelector('parsererror')) {
+                    Array.from(parsed.childNodes).forEach(n => silSvg.appendChild(document.importNode(n, true)));
+                } else {
+                    silSvg.innerHTML = svgSource;
+                }
+                stage.appendChild(silSvg);
+            } catch (e) {
+                console.warn('[Befund Anatomy] Silhouette-Fehler, Fallback aktiv:', e);
+                const fb = document.createElement('div');
+                fb.className = 'anatomy-fallback';
+                fb.innerHTML = '<strong>Silhouette nicht verfügbar</strong><br>Klick-Markierungen funktionieren trotzdem.';
+                stage.appendChild(fb);
             }
-            stage.appendChild(silSvg);
-        } catch (e) {
-            console.warn('[Befund Anatomy] Silhouette-Fehler, Fallback aktiv:', e);
-            const fb = document.createElement('div');
-            fb.className = 'anatomy-fallback';
-            fb.innerHTML = '<strong>Silhouette nicht verfügbar</strong><br>Klick-Markierungen funktionieren trotzdem.';
-            stage.appendChild(fb);
+        } else {
+            // Nur vorhandenes Overlay entfernen — Silhouette bleibt
+            const oldOverlay = stage.querySelector('.anatomy-overlay');
+            if (oldOverlay) oldOverlay.remove();
         }
 
-        // Overlay (interaktiv)
+        // Overlay (interaktiv) neu hinzufügen
         const overlay = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         overlay.setAttribute('class', 'anatomy-overlay');
         overlay.setAttribute('viewBox', '0 0 500 300');
