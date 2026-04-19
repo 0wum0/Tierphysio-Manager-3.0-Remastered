@@ -95,7 +95,7 @@ class MigrationService
         $sql = file_get_contents($file);
         $sql = $this->applyPrefixToSql($sql);
 
-        $statements = array_filter(array_map('trim', explode(';', $sql)));
+        $statements = $this->splitStatements($sql);
 
         foreach ($statements as $statement) {
             if (!empty($statement)) {
@@ -117,11 +117,142 @@ class MigrationService
                         $errno = (int)$e->errorInfo[1];
                     }
                     if (!in_array($errno, [1050, 1060, 1061, 1062, 1072, 1091, 1146, 1215], true)) {
+                        /* 1054 (Unknown column) in idempotenten INSERTs tolerieren:
+                         * Altbestand-Tenants haben manchmal schlankere Schemas;
+                         * Self-Healing-Migrationen (INSERT IGNORE ...) sollen
+                         * nicht die ganze Migration zum Scheitern bringen. */
+                        if ($errno === 1054 && preg_match('/^\s*INSERT\s+IGNORE\b/i', $statement)) {
+                            error_log('[MigrationService] tolerating 1054 on INSERT IGNORE: ' . $e->getMessage());
+                            continue;
+                        }
                         throw $e;
                     }
                 }
             }
         }
+    }
+
+    /**
+     * Robuster SQL-Statement-Splitter.
+     *
+     * Ersetzt das bisherige `explode(';', $sql)`, das Semikola in Kommentaren
+     * (`-- comment; more comment`) und in String-Literalen zerriss. Der Splitter
+     * versteht Line-Comments (`-- …`, `# …`), Block-Comments (`/* … */`),
+     * Single-/Double-Quoted-Strings und Backtick-Identifier.
+     *
+     * @return array<int, string>
+     */
+    private function splitStatements(string $sql): array
+    {
+        $statements = [];
+        $buffer     = '';
+        $len        = strlen($sql);
+        $state      = 'normal';
+        $i          = 0;
+
+        while ($i < $len) {
+            $ch   = $sql[$i];
+            $next = $i + 1 < $len ? $sql[$i + 1] : '';
+
+            switch ($state) {
+                case 'normal':
+                    /* Line-Comment -- … oder # … */
+                    if (($ch === '-' && $next === '-') || $ch === '#') {
+                        $state = 'lc';
+                        $i += ($ch === '#') ? 1 : 2;
+                        break;
+                    }
+                    /* Block-Comment /* … *\/ */
+                    if ($ch === '/' && $next === '*') {
+                        $state = 'bc';
+                        $i += 2;
+                        break;
+                    }
+                    /* String-Literale: Semikola DARIN sind keine Statement-Grenzen */
+                    if ($ch === "'" || $ch === '"') {
+                        $state    = ($ch === "'") ? 'sq' : 'dq';
+                        $buffer  .= $ch;
+                        $i++;
+                        break;
+                    }
+                    /* Backtick-Identifier — enthält eigentlich nie ';', aber sicher ist sicher */
+                    if ($ch === '`') {
+                        $state   = 'bt';
+                        $buffer .= $ch;
+                        $i++;
+                        break;
+                    }
+                    /* Statement-Ende */
+                    if ($ch === ';') {
+                        $trimmed = trim($buffer);
+                        if ($trimmed !== '') {
+                            $statements[] = $trimmed;
+                        }
+                        $buffer = '';
+                        $i++;
+                        break;
+                    }
+                    $buffer .= $ch;
+                    $i++;
+                    break;
+
+                case 'lc':
+                    /* Line-Comment endet am nächsten \n */
+                    if ($ch === "\n") {
+                        $state   = 'normal';
+                        $buffer .= ' '; // Whitespace erhalten, Tokens trennen
+                    }
+                    $i++;
+                    break;
+
+                case 'bc':
+                    if ($ch === '*' && $next === '/') {
+                        $state   = 'normal';
+                        $buffer .= ' ';
+                        $i += 2;
+                        break;
+                    }
+                    $i++;
+                    break;
+
+                case 'sq':
+                case 'dq':
+                    $buffer .= $ch;
+                    $quote   = ($state === 'sq') ? "'" : '"';
+                    /* Backslash-Escape (MySQL-Default) */
+                    if ($ch === '\\' && $next !== '') {
+                        $buffer .= $next;
+                        $i += 2;
+                        break;
+                    }
+                    /* Verdoppeltes Anführungszeichen = Escape */
+                    if ($ch === $quote && $next === $quote) {
+                        $buffer .= $next;
+                        $i += 2;
+                        break;
+                    }
+                    if ($ch === $quote) {
+                        $state = 'normal';
+                    }
+                    $i++;
+                    break;
+
+                case 'bt':
+                    $buffer .= $ch;
+                    if ($ch === '`') {
+                        $state = 'normal';
+                    }
+                    $i++;
+                    break;
+            }
+        }
+
+        $trimmed = trim($buffer);
+        if ($trimmed !== '') {
+            $statements[] = $trimmed;
+        }
+
+        return $statements;
     }
 
     /**
