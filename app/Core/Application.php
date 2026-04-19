@@ -97,6 +97,16 @@ class Application
                 }
 
                 $this->container->singleton(Database::class, fn() => $db);
+
+                /* Auto-Migration: führt ausstehende Migrationen tenant-sicher aus.
+                 * - nur wenn Prefix aufgelöst
+                 * - nur einmal pro Session je Migrations-Stand (filesystem version)
+                 * - schluckt alle Fehler → darf App NIE blockieren
+                 * - Einzel-Statement-Fehler sind bereits in MigrationService::runMigration() abgefangen
+                 */
+                if ($prefix !== '') {
+                    $this->runAutoMigrations($db, $session);
+                }
             } catch (\Throwable $dbEx) {
                 /* Log and rethrow so handleException can render a proper error page */
                 $logDir  = $this->rootPath . '/storage/logs';
@@ -187,6 +197,60 @@ class Application
     public function getContainer(): Container
     {
         return $this->container;
+    }
+
+    /**
+     * Runs pending migrations for the current tenant automatically.
+     *
+     * Safety guarantees:
+     * - Only runs when a tenant prefix is resolved (skips SaaS-admin-only requests).
+     * - Caches the last-checked filesystem migration version in the session so we
+     *   only hit the DB on a real change (fresh deploy or new migration file).
+     * - Skips silently for installer/CLI requests and AJAX uploads where a full
+     *   schema sync would be surprising.
+     * - Logs failures to storage/logs/error.log but NEVER throws — the app must
+     *   keep running even if a migration has a syntax error on one tenant.
+     */
+    private function runAutoMigrations(Database $db, Session $session): void
+    {
+        try {
+            /* Skip for AJAX/API requests — a fresh HTML page load will run them */
+            $isAjax = strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'xmlhttprequest';
+            if ($isAjax) {
+                return;
+            }
+
+            $svc    = new \App\Services\MigrationService($db);
+            $latest = $svc->getLatestVersion();
+            $cached = (int)($session->get('db_migration_checked', -1) ?? -1);
+
+            if ($cached === $latest) {
+                return;
+            }
+
+            $ran = $svc->runPending();
+            $session->set('db_migration_checked', $latest);
+
+            if (!empty($ran)) {
+                $logDir = $this->rootPath . '/storage/logs';
+                if (!is_dir($logDir)) { @mkdir($logDir, 0755, true); }
+                @file_put_contents(
+                    $logDir . '/migrations.log',
+                    '[' . date('Y-m-d H:i:s') . '] tenant=' . $db->getPrefix()
+                        . ' applied=' . implode(',', $ran) . "\n",
+                    FILE_APPEND
+                );
+            }
+        } catch (\Throwable $e) {
+            $logDir = $this->rootPath . '/storage/logs';
+            if (!is_dir($logDir)) { @mkdir($logDir, 0755, true); }
+            @file_put_contents(
+                $logDir . '/error.log',
+                '[' . date('Y-m-d H:i:s') . '] auto-migration: ' . $e->getMessage() . "\n",
+                FILE_APPEND
+            );
+            /* NEVER rethrow — app must stay up */
+        }
     }
 
     /**
