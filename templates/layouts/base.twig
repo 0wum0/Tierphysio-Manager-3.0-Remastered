@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300;1,400;1,500&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/themes/smart-tierphysio/bridge.css?v=4">
+    <link rel="stylesheet" href="/themes/smart-tierphysio/bridge.css?v=5">
 
     {% if active_theme_css is defined and active_theme_css %}
     <link rel="stylesheet" href="{{ active_theme_css }}?v={{ 'now'|date('YmdHi') }}">
@@ -131,13 +131,15 @@
     <div class="main-content">
         <header class="top-header">
             {# Identische Komponente wie im SaaS-Admin (mobile-menu-icon).
-               id="sidebar-toggle" bleibt erhalten, damit Sidebar.init() in app.js
-               den Button weiterhin findet. Inline-SVG statt Sprite-Reference,
-               weil das SmartAdmin-Sprite (/sa/icons/sprite.svg) in der Praxis
-               nicht ausgeliefert wird. Gestylt via bridge.css .mobile-menu-icon. #}
-            <button class="mobile-menu-icon" id="sidebar-toggle" style="display:none;" aria-label="Menü">
+               Sichtbarkeit über CSS @media (max-width: 768px) in bridge.css
+               — kein inline display:none, kein JS-Toggle. id="sidebar-toggle"
+               bleibt für Sidebar.init() in app.js erhalten. Inline-SVG statt
+               Sprite-Reference (SmartAdmin-Sprite /sa/icons/sprite.svg wird in
+               der Praxis nicht ausgeliefert). Stroke ist im CSS auf #fff fix,
+               damit der gefüllte Primary-Pill kontrastiert. #}
+            <button class="mobile-menu-icon" id="sidebar-toggle" aria-label="Menü">
                 <svg class="sa-icon" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                     stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="3" y1="6"  x2="21" y2="6"/>
                     <line x1="3" y1="12" x2="21" y2="12"/>
                     <line x1="3" y1="18" x2="21" y2="18"/>
@@ -482,14 +484,9 @@
 {% endif %}
 
 <script>
-// Show sidebar toggle on mobile - NEVER show overlay here, that's Sidebar.open()'s job
-function updateSidebarToggle() {
-    const t = document.getElementById('sidebar-toggle');
-    if (!t) return;
-    t.style.display = window.innerWidth <= 768 ? 'flex' : 'none';
-}
-updateSidebarToggle();
-window.addEventListener('resize', updateSidebarToggle);
+/* Sidebar-Toggle-Sichtbarkeit läuft jetzt rein über CSS (@media ≤768px in
+   bridge.css .mobile-menu-icon). Kein JS-Override mehr nötig — verhindert,
+   dass inline display:flex/none mit der CSS-Media-Query kollidiert. */
 
 /* ── Apple-style Pulse + Ripple ── */
 (function() {
