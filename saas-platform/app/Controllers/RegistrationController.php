@@ -126,18 +126,33 @@ class RegistrationController extends Controller
             // ── Stripe ──────────────────────────────────────────────────────
             if ($paymentMethod === 'stripe' && $this->paymentService->isStripeEnabled()) {
                 try {
+                    /* Trial-Dauer und Price-IDs kommen AUSSCHLIESSLICH aus dem Plan
+                     * — nie aus Form-Input, Query-String oder Konstanten.
+                     * Fallback trial_days = 0 statt hartem 14 (Phase-6-Regel:
+                     * lieber keine Trial als falsche Trial). */
+                    $trialDays = max(0, (int)($plan['trial_days'] ?? 0));
+                    $amount    = (float)(
+                        $data['billing_cycle'] === 'yearly'
+                            ? ($plan['price_year']  ?? 0)
+                            : ($plan['price_month'] ?? 0)
+                    );
+
                     $checkoutUrl = $this->paymentService->createStripeCheckoutSession(
-                        tenantId:     $tenantId,
-                        email:        $data['email'],
-                        planName:     $plan['name'],
-                        amount:       (float)($plan['price_monthly'] ?? $plan['price'] ?? 0),
-                        billingCycle: $data['billing_cycle'],
-                        successUrl:   $successUrl,
-                        cancelUrl:    $cancelUrl
+                        tenantId:        $tenantId,
+                        email:           $data['email'],
+                        planName:        $plan['name'],
+                        amount:          $amount,
+                        billingCycle:    $data['billing_cycle'],
+                        successUrl:      $successUrl,
+                        cancelUrl:       $cancelUrl,
+                        trialDays:       $trialDays,
+                        priceIdMonthly:  $plan['stripe_price_id']        ?? null,
+                        priceIdYearly:   $plan['stripe_price_id_yearly'] ?? null
                     );
                     header('Location: ' . $checkoutUrl);
                     exit;
                 } catch (\Throwable $e) {
+                    error_log('[RegistrationController] Stripe checkout failed: ' . $e->getMessage());
                     // Stripe failed → fall through to success page
                 }
             }
