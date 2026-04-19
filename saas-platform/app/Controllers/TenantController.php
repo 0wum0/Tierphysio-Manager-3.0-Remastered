@@ -544,26 +544,73 @@ class TenantController extends Controller
         $this->requireAuth();
         $this->verifyCsrf();
 
-        $tenant = $this->tenantRepo->find((int)($params['id'] ?? 0));
+        $tenantId = (int)($params['id'] ?? 0);
+        $tenant   = $this->tenantRepo->find($tenantId);
         if (!$tenant) {
             $this->json(['error' => 'Nicht gefunden'], 404);
             return;
         }
 
-        $prefix  = (string)($tenant['db_name'] ?? '');
         $feature = trim((string)$this->post('feature', ''));
-        $enabled = $this->post('enabled', '0') === '1';
+        $mode    = (string)$this->post('mode', '');
+        if ($mode === '') {
+            /* Legacy-Form: "enabled" = "0"/"1". "1" → on, "0" → off, nicht gesetzt → reset */
+            $raw  = $this->post('enabled', null);
+            $mode = $raw === null ? 'reset' : ($raw === '1' ? 'on' : 'off');
+        }
 
-        if ($prefix !== '' && $feature !== '') {
-            (new FeatureFlagService($this->db, $prefix))->setFeature($feature, $enabled);
+        if ($feature === '' || !in_array($mode, ['on', 'off', 'reset'], true)) {
+            if ($this->isAjax()) {
+                $this->json(['error' => 'Ungültige Parameter'], 400);
+                return;
+            }
+            $this->session->flash('error', 'Ungültige Feature-Parameter.');
+            $this->redirect('/admin/tenants/' . $tenantId);
+            return;
+        }
+
+        /* WICHTIG: Feature-Toggle schreibt in `tenants.features_override` —
+         * NICHT in {prefix}settings. Die Praxis-App (FeatureGateService::syncFromSaas)
+         * liest ausschließlich `tenants.features_override` + `plans.features`
+         * + `saas_feature_flags.global_enabled`. Ein Write ins Tenant-settings
+         * wäre wirkungslos. */
+        try {
+            $row = $this->db->fetch("SELECT features_override FROM tenants WHERE id = ?", [$tenantId]);
+            $map = [];
+            if ($row && !empty($row['features_override'])) {
+                $decoded = json_decode((string)$row['features_override'], true);
+                if (is_array($decoded)) {
+                    $map = $decoded;
+                }
+            }
+
+            match ($mode) {
+                'on'    => $map[$feature] = true,
+                'off'   => $map[$feature] = false,
+                'reset' => $map = array_diff_key($map, [$feature => null]),
+            };
+
+            $this->db->execute(
+                "UPDATE tenants SET features_override = ? WHERE id = ?",
+                [empty($map) ? null : json_encode($map), $tenantId]
+            );
+        } catch (\Throwable $e) {
+            error_log('[TenantController::setFeature] ' . $e->getMessage());
+            if ($this->isAjax()) {
+                $this->json(['error' => 'Fehler beim Speichern'], 500);
+                return;
+            }
+            $this->session->flash('error', 'Fehler beim Speichern: ' . $e->getMessage());
+            $this->redirect('/admin/tenants/' . $tenantId);
+            return;
         }
 
         if ($this->isAjax()) {
-            $this->json(['ok' => true, 'feature' => $feature, 'enabled' => $enabled]);
+            $this->json(['ok' => true, 'feature' => $feature, 'mode' => $mode]);
             return;
         }
-        $this->session->flash('success', 'Feature-Flag aktualisiert.');
-        $this->redirect('/admin/tenants/' . ($params['id'] ?? 0));
+        $this->session->flash('success', "Feature-Override „{$feature}" . '" gesetzt: ' . $mode);
+        $this->redirect('/admin/tenants/' . $tenantId);
     }
 
     private function validateTenantData(array $data): array

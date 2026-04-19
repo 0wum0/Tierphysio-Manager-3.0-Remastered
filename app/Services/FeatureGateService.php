@@ -34,7 +34,7 @@ class FeatureGateService
     public const CORE_FEATURES = ['dashboard', 'profile', 'auth', 'settings'];
 
     /** Cache-Lebensdauer in Sekunden (Änderungen im SaaS werden spätestens nach X Sek. sichtbar) */
-    private const CACHE_TTL = 300;
+    private const CACHE_TTL = 60;
 
     /** In-Request-Cache (1 Request = 1 DB-Hit) */
     private ?array $featuresCache = null;
@@ -232,13 +232,16 @@ class FeatureGateService
             }
 
             $planSlug = strtolower((string)($tenant['plan_slug'] ?? 'basic'));
-            /* Map Plan-Slug auf Tier-Rang — unbekannte Slugs → basic */
+            /* Map Plan-Slug auf Tier-Rang — unbekannte Slugs → basic (sicherster
+             * kleinster Umfang). Wird nur als Fallback genutzt, wenn der Plan
+             * keine explizite Feature-Liste hat. */
             $planRank = match (true) {
                 str_contains($planSlug, 'ultra')     => 3,
                 str_contains($planSlug, 'pro')       => 2,
                 str_contains($planSlug, 'plus')      => 2,
                 str_contains($planSlug, 'business')  => 3,
                 str_contains($planSlug, 'enterprise')=> 3,
+                str_contains($planSlug, 'praxis')    => 3,
                 default                              => 1,
             };
             $requiredRank = ['basic' => 1, 'pro' => 2, 'ultra' => 3];
@@ -251,22 +254,49 @@ class FeatureGateService
                 }
             }
 
-            /* 3. Finale Resolution je Feature */
+            /* Nur bekannte (registrierte) Feature-Keys aus der Plan-Liste ziehen —
+             * veraltete oder unbekannte Keys werden verworfen. */
+            $validPlanFeatures = array_values(array_intersect(
+                $planFeatures,
+                array_keys($flagsByKey)
+            ));
+            $hasExplicitPlanList = $validPlanFeatures !== [];
+
+            /* 3. Finale Resolution je Feature
+             *
+             *    feature_usable =
+             *        global_enabled
+             *      AND ( tenant_override bestimmt  (wenn gesetzt)
+             *            ODER  plan_explicit_list  (wenn gesetzt)
+             *            ODER  tier_rank_fallback  (nur wenn KEINE Plan-Liste) )
+             *
+             *    Sicherer Default: unbekanntes Feature / fehlende Zuordnung → AUS.
+             */
             $resolved = [];
             foreach ($flagsByKey as $key => $meta) {
+                /* Harter globaler Kill-Switch */
                 if (!$meta['global_enabled']) {
                     $resolved[$key] = false;
                     continue;
                 }
+
+                /* Per-Tenant-Override hat Vorrang (force on/off) */
                 if (array_key_exists($key, $override)) {
                     $resolved[$key] = (bool)$override[$key];
                     continue;
                 }
-                $needed = $requiredRank[$meta['required_plan']] ?? 1;
-                $planAllows = $planRank >= $needed;
-                /* plans.features kann zusätzlich eine explizite Liste enthalten */
-                $explicit = in_array($key, $planFeatures, true);
-                $resolved[$key] = $planAllows || $explicit;
+
+                if ($hasExplicitPlanList) {
+                    /* Plan-Matrix aus dem SaaS-Admin ist AUTHORITATIVE —
+                     * nur explizit freigeschaltete Keys sind an. */
+                    $resolved[$key] = in_array($key, $validPlanFeatures, true);
+                    continue;
+                }
+
+                /* Kein expliziter Plan-Eintrag → Tier-Rang entscheidet.
+                 * Unbekannter required_plan → höchste Stufe (= aus). */
+                $needed = $requiredRank[$meta['required_plan']] ?? 99;
+                $resolved[$key] = $planRank >= $needed;
             }
 
             $payload = [

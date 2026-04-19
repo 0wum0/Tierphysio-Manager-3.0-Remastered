@@ -70,8 +70,8 @@ class FeatureFlagService
             return (bool)$this->planFeatures[$feature];
         }
 
-        // 3. System default
-        return self::DEFAULTS[$feature] ?? true;
+        // 3. System default — unbekannte Features sind IMMER gesperrt (safe default).
+        return self::DEFAULTS[$feature] ?? false;
     }
 
     /**
