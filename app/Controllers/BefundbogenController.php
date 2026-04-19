@@ -86,24 +86,30 @@ class BefundbogenController extends Controller
     public function store(array $params = []): void
     {
         $this->validateCsrf();
-        $this->ensureBefundSchema(); // Self-Heal
+        $this->ensureBefundSchema();
         $patientId = (int)$params['patient_id'];
         $patient   = $this->fetchPatient($patientId);
         if (!$patient) { $this->abort(404); }
 
         $authUser = $this->session->getUser();
 
-        $id = $this->repo->createBefund([
-            'patient_id'       => $patientId,
-            'owner_id'         => $patient['owner_id'] ?? null,
-            'created_by'       => $authUser['id'] ?? null,
-            'status'           => $this->post('status', 'entwurf'),
-            'datum'            => $this->post('datum', date('Y-m-d')),
-            'naechster_termin' => $this->post('naechster_termin') ?: null,
-            'notizen'          => $this->post('notizen', ''),
-        ]);
-
-        $this->repo->saveFelder($id, $this->collectFelder());
+        try {
+            $id = $this->repo->createBefund([
+                'patient_id'       => $patientId,
+                'owner_id'         => $patient['owner_id'] ?? null,
+                'created_by'       => $authUser['id'] ?? null,
+                'status'           => $this->post('status', 'entwurf'),
+                'datum'            => $this->post('datum', date('Y-m-d')),
+                'naechster_termin' => $this->post('naechster_termin') ?: null,
+                'notizen'          => $this->post('notizen', ''),
+            ]);
+            $this->repo->saveFelder($id, $this->collectFelder());
+        } catch (\Throwable $e) {
+            error_log('[Befund store] ' . $e->getMessage());
+            $this->flash('error', 'Befundbogen konnte nicht gespeichert werden. Bitte versuche es erneut.');
+            $this->redirect('/patienten/' . $patientId . '/befunde/neu');
+            return;
+        }
 
         $this->flash('success', 'Befundbogen wurde gespeichert.');
         $this->redirect('/patienten/' . $patientId . '/befunde/' . $id);
@@ -112,8 +118,13 @@ class BefundbogenController extends Controller
     /** GET /patienten/{patient_id}/befunde/{id} */
     public function show(array $params = []): void
     {
-        $this->ensureBefundSchema(); // Self-Heal
-        $befundbogen = $this->repo->findWithFelder((int)$params['id']);
+        $this->ensureBefundSchema();
+        try {
+            $befundbogen = $this->repo->findWithFelder((int)$params['id']);
+        } catch (\Throwable $e) {
+            error_log('[Befund show] ' . $e->getMessage());
+            $befundbogen = null;
+        }
         if (!$befundbogen || (int)$befundbogen['patient_id'] !== (int)$params['patient_id']) {
             $this->abort(404);
         }
@@ -133,8 +144,13 @@ class BefundbogenController extends Controller
     /** GET /patienten/{patient_id}/befunde/{id}/bearbeiten */
     public function edit(array $params = []): void
     {
-        $this->ensureBefundSchema(); // Self-Heal
-        $befundbogen = $this->repo->findWithFelder((int)$params['id']);
+        $this->ensureBefundSchema();
+        try {
+            $befundbogen = $this->repo->findWithFelder((int)$params['id']);
+        } catch (\Throwable $e) {
+            error_log('[Befund edit] ' . $e->getMessage());
+            $befundbogen = null;
+        }
         if (!$befundbogen || (int)$befundbogen['patient_id'] !== (int)$params['patient_id']) {
             $this->abort(404);
         }
@@ -157,20 +173,31 @@ class BefundbogenController extends Controller
     public function update(array $params = []): void
     {
         $this->validateCsrf();
-        $this->ensureBefundSchema(); // Self-Heal
-        $befundbogen = $this->repo->findById((int)$params['id']);
+        $this->ensureBefundSchema();
+        try {
+            $befundbogen = $this->repo->findById((int)$params['id']);
+        } catch (\Throwable $e) {
+            error_log('[Befund update findById] ' . $e->getMessage());
+            $befundbogen = null;
+        }
         if (!$befundbogen || (int)$befundbogen['patient_id'] !== (int)$params['patient_id']) {
             $this->abort(404);
         }
 
-        $this->repo->updateBefund((int)$params['id'], [
-            'status'           => $this->post('status', $befundbogen['status']),
-            'datum'            => $this->post('datum', $befundbogen['datum']),
-            'naechster_termin' => $this->post('naechster_termin') ?: null,
-            'notizen'          => $this->post('notizen', ''),
-        ]);
-
-        $this->repo->saveFelder((int)$params['id'], $this->collectFelder());
+        try {
+            $this->repo->updateBefund((int)$params['id'], [
+                'status'           => $this->post('status', $befundbogen['status']),
+                'datum'            => $this->post('datum', $befundbogen['datum']),
+                'naechster_termin' => $this->post('naechster_termin') ?: null,
+                'notizen'          => $this->post('notizen', ''),
+            ]);
+            $this->repo->saveFelder((int)$params['id'], $this->collectFelder());
+        } catch (\Throwable $e) {
+            error_log('[Befund update] ' . $e->getMessage());
+            $this->flash('error', 'Befundbogen konnte nicht gespeichert werden. Bitte versuche es erneut.');
+            $this->redirect('/patienten/' . $params['patient_id'] . '/befunde/' . $params['id'] . '/bearbeiten');
+            return;
+        }
 
         $this->flash('success', 'Befundbogen wurde aktualisiert.');
         $this->redirect('/patienten/' . $params['patient_id'] . '/befunde/' . $params['id']);
@@ -549,12 +576,12 @@ class BefundbogenController extends Controller
         try {
             $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
 
-            $tBefunde   = $db->prefix('befundboegen');
-            $tFelder    = $db->prefix('befundbogen_felder');
-            $tBaust     = $db->prefix('befund_textbausteine');
-            $tVorlagen  = $db->prefix('befund_vorlagen');
+            $tBefunde  = $db->prefix('befundboegen');
+            $tFelder   = $db->prefix('befundbogen_felder');
+            $tBaust    = $db->prefix('befund_textbausteine');
+            $tVorlagen = $db->prefix('befund_vorlagen');
 
-            // Haupttabelle (falls Alt-Tenant die Migration 029 nie gesehen hat)
+            // ── Haupttabelle ──────────────────────────────────────
             $db->safeExecute("
                 CREATE TABLE IF NOT EXISTS `{$tBefunde}` (
                     `id`               INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -577,7 +604,27 @@ class BefundbogenController extends Controller
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             ");
 
-            // KV-Store für Felder — ohne FK auf prefixed Tabelle (bewusst, da Cross-Prefix-FKs riskant)
+            // Fehlende Spalten nachrüsten (für Tenants die die Migration nie sahen)
+            $existingCols = array_column(
+                $db->safeFetchAll("SHOW COLUMNS FROM `{$tBefunde}`"),
+                'Field'
+            );
+            if ($existingCols) {
+                $missing = [
+                    'pdf_path'         => "VARCHAR(500) DEFAULT NULL",
+                    'pdf_sent_at'      => "DATETIME DEFAULT NULL",
+                    'pdf_sent_to'      => "VARCHAR(255) DEFAULT NULL",
+                    'naechster_termin' => "DATE DEFAULT NULL",
+                    'notizen'          => "TEXT DEFAULT NULL",
+                ];
+                foreach ($missing as $col => $def) {
+                    if (!in_array($col, $existingCols, true)) {
+                        $db->safeExecute("ALTER TABLE `{$tBefunde}` ADD COLUMN `{$col}` {$def}");
+                    }
+                }
+            }
+
+            // ── KV-Felder-Tabelle ─────────────────────────────────
             $db->safeExecute("
                 CREATE TABLE IF NOT EXISTS `{$tFelder}` (
                     `id`             INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -590,7 +637,7 @@ class BefundbogenController extends Controller
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             ");
 
-            // Textbausteine
+            // ── Textbausteine ─────────────────────────────────────
             $db->safeExecute("
                 CREATE TABLE IF NOT EXISTS `{$tBaust}` (
                     `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -605,7 +652,7 @@ class BefundbogenController extends Controller
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             ");
 
-            // Vorlagen
+            // ── Vorlagen ──────────────────────────────────────────
             $db->safeExecute("
                 CREATE TABLE IF NOT EXISTS `{$tVorlagen}` (
                     `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -621,7 +668,6 @@ class BefundbogenController extends Controller
             ");
         } catch (\Throwable $e) {
             error_log('[Befund ensureBefundSchema] ' . $e->getMessage());
-            // Nicht werfen — der Controller läuft mit degradierter Funktionalität weiter.
         }
     }
 
