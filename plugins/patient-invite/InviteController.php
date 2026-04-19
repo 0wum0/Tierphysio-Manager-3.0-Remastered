@@ -58,32 +58,43 @@ class InviteController extends Controller
 
     public function send(array $params = []): void
     {
-        $email   = trim($this->post('email', ''));
-        $phone   = trim($this->post('phone', ''));
-        $note    = trim($this->post('note', ''));
-        $via     = $this->post('via', 'email'); /* email | whatsapp | both */
+        $email = trim($this->post('email', ''));
+        $phone = trim($this->post('phone', ''));
+        $note  = trim($this->post('note', ''));
+        $via   = $this->post('via', 'email'); /* email | whatsapp | both */
 
-        /* Validate */
+        $wantsWhatsApp = in_array($via, ['whatsapp', 'both'], true);
+        $wantsEmail    = in_array($via, ['email', 'both'], true);
+
+        /* ─── Validate ──────────────────────────────────────────
+         * E-Mail ist nur bei 'email' und 'both' Pflicht.
+         * Telefonnummer ist bei 'whatsapp' NICHT Pflicht — der universelle
+         * wa.me/?text=... Share-Link funktioniert auch ohne Nummer
+         * (User wählt Empfänger in WhatsApp selbst). */
         $errors = [];
-        if ($via !== 'whatsapp' && (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL))) {
+        if ($wantsEmail && (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL))) {
             $errors[] = 'Gültige E-Mail-Adresse erforderlich.';
         }
-        if (in_array($via, ['whatsapp', 'both'], true) && empty($phone)) {
-            $errors[] = 'Telefonnummer für WhatsApp erforderlich.';
+        if (!$wantsEmail && !$wantsWhatsApp) {
+            $errors[] = 'Ungültiger Versand-Kanal.';
         }
 
         if (!empty($errors)) {
+            if ($this->isAjax()) {
+                $this->json(['ok' => false, 'errors' => $errors], 422);
+                return;
+            }
             $this->session->flash('error', implode(' ', $errors));
             $this->redirect('/einladungen');
             return;
         }
 
-        /* Generate token */
+        /* Generate token + persist invite (bestehende Logik, unverändert) */
         $token     = bin2hex(random_bytes(32));
         $expiresAt = date('Y-m-d H:i:s', strtotime('+7 days'));
         $user      = $this->session->getUser();
 
-        $this->repo->create([
+        $inviteId = $this->repo->create([
             'token'      => $token,
             'email'      => $email,
             'phone'      => $phone,
@@ -97,21 +108,51 @@ class InviteController extends Controller
 
         $inviteUrl = $this->buildInviteUrl($token);
 
-        /* Send */
-        if (in_array($via, ['email', 'both'], true) && !empty($email)) {
+        /* E-Mail versenden, wenn gewählt */
+        $mailWarning = null;
+        if ($wantsEmail && !empty($email)) {
             $sent = $this->mailer->sendInviteEmail($email, $inviteUrl, $note);
             if (!$sent) {
-                $this->session->flash('warning', 'Einladung erstellt, aber E-Mail konnte nicht gesendet werden. Link: ' . $inviteUrl);
-                $this->redirect('/einladungen');
-                return;
+                $mailWarning = 'Einladung erstellt, aber E-Mail konnte nicht gesendet werden. Link: ' . $inviteUrl;
             }
         }
 
-        $this->session->flash('success', 'Einladung wurde erfolgreich versendet.');
+        /* WhatsApp-URL bauen, wenn gewählt. Phone darf leer sein → universeller
+         * wa.me-Share-Link. Der Einladungs-Datensatz existiert zu diesem
+         * Zeitpunkt bereits in der DB — er erscheint also sofort unter
+         * "Einladungen", unabhängig davon ob der User WhatsApp tatsächlich
+         * öffnet oder den Vorgang abbricht. */
+        $whatsappUrl = null;
+        if ($wantsWhatsApp) {
+            $appName     = (string)$this->settingsRepository->get('company_name', 'Tierphysio Manager');
+            $whatsappUrl = $this->mailer->buildWhatsAppUrl($phone, $inviteUrl, $appName, $note);
+        }
+
+        /* AJAX: JSON mit whatsapp_url zurückgeben, damit das Frontend
+         * WhatsApp direkt öffnen kann. Legacy-Form-Submit: Flash + Redirect. */
+        if ($this->isAjax()) {
+            $this->json([
+                'ok'           => true,
+                'id'           => $inviteId,
+                'invite_url'   => $inviteUrl,
+                'whatsapp_url' => $whatsappUrl,
+                'warning'      => $mailWarning,
+            ], 201);
+            return;
+        }
+
+        if ($mailWarning !== null) {
+            $this->session->flash('warning', $mailWarning);
+        } else {
+            $this->session->flash('success', 'Einladung wurde erfolgreich erstellt.');
+        }
         $this->redirect('/einladungen');
     }
 
-    /* Returns the WhatsApp URL as JSON for the UI to open */
+    /* Returns the WhatsApp URL as JSON for the UI to open.
+     * Funktioniert auch, wenn keine Telefonnummer gesetzt ist — der
+     * universelle wa.me/?text=...-Link öffnet WhatsApp und lässt den
+     * Empfänger vom User manuell auswählen. */
     public function whatsappUrl(array $params = []): void
     {
         $invite = $this->repo->findById((int)$params['id']);
@@ -121,8 +162,10 @@ class InviteController extends Controller
         }
 
         $inviteUrl = $this->buildInviteUrl((string)$invite['token']);
-        $appName   = $this->settingsRepository->get('company_name', 'Tierphysio Manager');
-        $waUrl     = $this->mailer->buildWhatsAppUrl($invite['phone'], $inviteUrl, $appName);
+        $appName   = (string)$this->settingsRepository->get('company_name', 'Tierphysio Manager');
+        $phone     = (string)($invite['phone'] ?? '');
+        $note      = (string)($invite['note']  ?? '');
+        $waUrl     = $this->mailer->buildWhatsAppUrl($phone, $inviteUrl, $appName, $note);
 
         $this->json(['ok' => true, 'url' => $waUrl]);
     }
