@@ -29,6 +29,22 @@
                 Ihre Zugangsdaten wurden sicher an <strong>{{ email }}</strong> gesendet.
             </div>
 
+            {% if payment_pending ?? false %}
+            <div class="alert alert-warning py-3 mb-4 text-start" style="background:rgba(245,158,11,.1);border-color:#92400e;color:#fde68a;">
+                <div class="fw-semibold mb-2"><i class="bi bi-exclamation-triangle me-2"></i>Zahlung noch ausstehend</div>
+                <div style="font-size:.85rem;">
+                    Die Weiterleitung zu Stripe ist fehlgeschlagen. Ihr Account ist angelegt, aber noch nicht bezahlt.
+                    Sie können die Zahlung nach dem Login in den Abo-Einstellungen nachholen.
+                </div>
+                {% if stripe_error is defined and stripe_error %}
+                <details class="mt-2" style="font-size:.75rem;color:#fcd34d;">
+                    <summary style="cursor:pointer;">Technische Details</summary>
+                    <code style="display:block;margin-top:.5rem;padding:.5rem;background:rgba(0,0,0,.3);border-radius:4px;color:#fca5a5;white-space:pre-wrap;">{{ stripe_error }}</code>
+                </details>
+                {% endif %}
+            </div>
+            {% endif %}
+
             <div class="d-flex gap-3 justify-content-center">
                 <a href="/login" class="btn-tp-primary btn-tp-lg"><i class="bi bi-box-arrow-in-right"></i> Jetzt einloggen</a>
                 <a href="/" class="btn-tp-outline btn-tp-lg">Zur Startseite</a>

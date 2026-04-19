@@ -103,7 +103,16 @@ class RegistrationController extends Controller
             $this->redirect('/register/' . $planSlug);
         }
 
-        $paymentMethod = $this->post('payment_method', 'manual');
+        /* Default auf 'stripe' wenn Stripe aktiv ist — sonst 'manual'.
+         * Schützt gegen Fälle, in denen das Form-Feld `payment_method` nicht
+         * übertragen wurde (alte Form-Version im Cache, JS-Fehler, Bot). */
+        $stripeActive  = $this->paymentService->isStripeEnabled();
+        $defaultMethod = $stripeActive ? 'stripe' : 'manual';
+        $paymentMethod = $this->post('payment_method', $defaultMethod);
+        if (!in_array($paymentMethod, ['manual', 'stripe', 'paypal'], true)) {
+            $paymentMethod = $defaultMethod;
+        }
+        error_log("[RegistrationController] payment_method={$paymentMethod} stripe_enabled=" . ($stripeActive ? '1' : '0'));
 
         try {
             $result = $this->provisioning->provision($data);
@@ -152,8 +161,20 @@ class RegistrationController extends Controller
                     header('Location: ' . $checkoutUrl);
                     exit;
                 } catch (\Throwable $e) {
-                    error_log('[RegistrationController] Stripe checkout failed: ' . $e->getMessage());
-                    // Stripe failed → fall through to success page
+                    /* Stripe-Fehler NICHT mehr stillschweigend zur Success-Seite durchreichen.
+                     * Tenant ist bereits provisioniert — User bekommt Hinweis + Möglichkeit
+                     * auf "Auf Rechnung" auszuweichen oder nochmal zu Stripe zu gehen. */
+                    error_log('[RegistrationController] Stripe checkout failed: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+                    $this->render('register/success.twig', [
+                        'owner_name'      => $data['owner_name'],
+                        'email'           => $data['email'],
+                        'practice_name'   => $data['practice_name'],
+                        'plan_name'       => $plan['name'],
+                        'page_title'      => 'Registrierung erfolgreich',
+                        'stripe_error'    => $e->getMessage(),
+                        'payment_pending' => true,
+                    ]);
+                    return;
                 }
             }
 
