@@ -1,18 +1,151 @@
 {# ═══════════════════════════════════════════════════════════════════
-   Material Pro — Layout
+   Material Pro — Layout (Material You 3 Expressive)
    Extends the SmartAdmin layout (sidebar, topbar, full JS/CSS stack)
    and overlays Material Design 3 styling via theme.css.
-   This guarantees the app keeps all functionality (navigation, topbar,
-   widgets, JS) and only the VISUAL look changes to Material You.
+
+   Additions vs plain theme.css:
+   • Preloads Google Sans + Roboto Flex + Material Symbols Rounded
+   • Forces Roboto Flex typography before CSS arrives (no FOUC)
+   • Syncs Chart.js defaults to Material palette
+   • Adds scroll-elevation to .topbar (M3 top-app-bar behaviour)
    ═══════════════════════════════════════════════════════════════════ #}
 {% extends "@smart-tierphysio/layout.twig" %}
 
-{# Append Material Pro theme.css AFTER all SmartAdmin styles so its cascades win #}
 {% block head %}
 {{ parent() }}
+
+{# Google Fonts — preconnect for faster font delivery #}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+{# Material Pro theme styles — loaded AFTER parent so its cascades win #}
 <link rel="stylesheet" href="/theme-assets/material-pro/theme.css?v={{ "now"|date("YmdHi") }}">
-{# Force Material 3 typography onto <html> so variable font kicks in immediately #}
-<style id="material-pro-bootstrap">html,body{font-family:"Roboto Flex","Google Sans","Roboto",system-ui,-apple-system,sans-serif!important;}</style>
+
+{# Force Material 3 typography immediately so there's no FOUC #}
+<style id="material-pro-bootstrap">
+    html, body {
+        font-family: "Google Sans", "Roboto Flex", "Roboto", system-ui, -apple-system, sans-serif !important;
+    }
+</style>
+
+{# ═══════════════════════════════════════════════════════════════════
+   Chart.js — sync defaults to Material palette + scroll-elevation
+   (Runs after DOMContentLoaded so Chart.js globals are defined.)
+   ═══════════════════════════════════════════════════════════════════ #}
+<script>
+(function() {
+    'use strict';
+
+    /* ── 1) Chart.js default palette sync ──────────────────────── */
+    function applyChartDefaults() {
+        if (typeof Chart === 'undefined' || !Chart.defaults) return;
+
+        var css = getComputedStyle(document.documentElement);
+        var palette = [
+            css.getPropertyValue('--chart-color-1').trim() || '#006A6A',
+            css.getPropertyValue('--chart-color-2').trim() || '#4B607C',
+            css.getPropertyValue('--chart-color-3').trim() || '#2E7D5B',
+            css.getPropertyValue('--chart-color-4').trim() || '#825500',
+            css.getPropertyValue('--chart-color-5').trim() || '#BA1A1A',
+            css.getPropertyValue('--chart-color-6').trim() || '#4CDADA',
+            css.getPropertyValue('--chart-color-7').trim() || '#B3C8E8',
+            css.getPropertyValue('--chart-color-8').trim() || '#9CD4AE',
+        ];
+
+        Chart.defaults.font.family = '"Google Sans", "Roboto Flex", "Roboto", system-ui, sans-serif';
+        Chart.defaults.font.size   = 12;
+        Chart.defaults.color       = css.getPropertyValue('--chart-axis-color').trim() || '#44474F';
+        Chart.defaults.borderColor = css.getPropertyValue('--chart-grid-color').trim() || 'rgba(0,0,0,0.08)';
+
+        /* Colour palette for new datasets */
+        if (Chart.defaults.datasets) {
+            ['line','bar','bubble','doughnut','pie','polarArea','radar','scatter'].forEach(function(t) {
+                Chart.defaults.datasets[t] = Chart.defaults.datasets[t] || {};
+                Chart.defaults.datasets[t].backgroundColor = palette;
+                Chart.defaults.datasets[t].borderColor     = palette[0];
+            });
+        }
+
+        /* Smooth curves everywhere (Material emphasised easing) */
+        if (Chart.defaults.elements && Chart.defaults.elements.line) {
+            Chart.defaults.elements.line.tension    = 0.4;
+            Chart.defaults.elements.line.borderWidth = 2.5;
+        }
+        if (Chart.defaults.elements && Chart.defaults.elements.point) {
+            Chart.defaults.elements.point.radius       = 4;
+            Chart.defaults.elements.point.hoverRadius  = 7;
+            Chart.defaults.elements.point.borderWidth  = 2;
+        }
+        if (Chart.defaults.elements && Chart.defaults.elements.bar) {
+            Chart.defaults.elements.bar.borderRadius   = 8;
+            Chart.defaults.elements.bar.borderSkipped  = false;
+        }
+
+        /* Tooltip — Material inverse-surface style */
+        if (Chart.defaults.plugins && Chart.defaults.plugins.tooltip) {
+            var tt = Chart.defaults.plugins.tooltip;
+            tt.backgroundColor = css.getPropertyValue('--chart-tooltip-bg').trim() || '#2B3232';
+            tt.titleColor      = css.getPropertyValue('--chart-tooltip-color').trim() || '#EFF1F0';
+            tt.bodyColor       = css.getPropertyValue('--chart-tooltip-color').trim() || '#EFF1F0';
+            tt.borderWidth     = 0;
+            tt.cornerRadius    = 4;
+            tt.padding         = 10;
+            tt.titleFont       = { family: '"Google Sans", sans-serif', weight: '500', size: 13 };
+            tt.bodyFont        = { family: '"Roboto Flex", sans-serif', size: 12 };
+            tt.displayColors   = true;
+            tt.boxPadding      = 6;
+        }
+
+        /* Legend — compact Material chips */
+        if (Chart.defaults.plugins && Chart.defaults.plugins.legend) {
+            Chart.defaults.plugins.legend.labels = Chart.defaults.plugins.legend.labels || {};
+            Chart.defaults.plugins.legend.labels.usePointStyle = true;
+            Chart.defaults.plugins.legend.labels.boxWidth      = 8;
+            Chart.defaults.plugins.legend.labels.boxHeight     = 8;
+            Chart.defaults.plugins.legend.labels.padding       = 16;
+            Chart.defaults.plugins.legend.labels.font          = {
+                family: '"Google Sans", sans-serif',
+                weight: '500',
+                size: 12
+            };
+        }
+    }
+
+    /* ── 2) Topbar scroll-elevation (M3 top-app-bar behaviour) ── */
+    function bindTopbarScroll() {
+        var topbar = document.querySelector('.topbar, header.topbar, .portal-topbar');
+        if (!topbar) return;
+        var scrollRoot = document.querySelector('.main-content, .app-main, main') || window;
+        var target = scrollRoot === window ? document.documentElement : scrollRoot;
+        function update() {
+            var y = target === document.documentElement ? window.scrollY : scrollRoot.scrollTop;
+            topbar.classList.toggle('is-scrolled', y > 4);
+        }
+        (scrollRoot === window ? window : scrollRoot).addEventListener('scroll', update, { passive: true });
+        update();
+    }
+
+    /* ── Boot ── */
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            applyChartDefaults();
+            bindTopbarScroll();
+        });
+    } else {
+        applyChartDefaults();
+        bindTopbarScroll();
+    }
+
+    /* Re-apply after Chart.js arrives late (dynamic dashboards) */
+    var chartDefaultsRetry = 0;
+    var chartDefaultsTimer = setInterval(function() {
+        if (typeof Chart !== 'undefined') {
+            applyChartDefaults();
+            clearInterval(chartDefaultsTimer);
+        } else if (++chartDefaultsRetry > 20) {
+            clearInterval(chartDefaultsTimer);
+        }
+    }, 250);
+})();
+</script>
 {% endblock %}

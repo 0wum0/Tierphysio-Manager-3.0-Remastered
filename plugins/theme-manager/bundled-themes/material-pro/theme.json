@@ -1,7 +1,7 @@
 {
     "name":        "Material Pro",
     "slug":        "material-pro",
-    "version":     "1.0.0",
-    "description": "Premium Material Design 3 Theme - Google Material You Palette, elevated cards, pill-shaped FAB-Buttons, Roboto Flex Typography. Modernes 4K-optimiertes Praxis-Design mit weichen Schatten, subtilen Ripple-Effekten und tonaler Farbharmonie.",
+    "version":     "2.0.0",
+    "description": "Material You 3 Expressive (2024/2025) — medizinisch-professionelles Praxis-Design mit Teal-Primary, Pill-Navigation, Material Symbols Rounded Icons, harmonisierten Chart-Farben und M3-Elevation. Google Sans + Roboto Flex Typography.",
     "author":      "Tierphysio Manager"
 }
