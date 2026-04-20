@@ -1,0 +1,66 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'attendance' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Anwesenheit</h1>
+        <p class="page-subtitle">Übersicht aller Kurstermine</p>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header px-4 py-3">
+                <span class="fw-semibold">Offene Termine ({{ open_sessions|length }})</span>
+                <span class="small" style="color:var(--bs-secondary-color);">Noch nicht markiert, heute/vergangen</span>
+            </div>
+            <div class="card-body px-0 py-0">
+                {% if open_sessions|length == 0 %}
+                    <div class="text-center py-4" style="color:var(--bs-secondary-color);font-size:0.9rem;">Alles erledigt.</div>
+                {% else %}
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Datum</th><th>Kurs</th><th></th></tr></thead>
+                        <tbody>
+                        {% for s in open_sessions %}
+                            <tr>
+                                <td>{{ s.session_date|date('d.m.Y') }}</td>
+                                <td>{{ s.course_name }}</td>
+                                <td class="text-end"><a href="/anwesenheit/session/{{ s.id }}" class="btn btn-sm btn-primary">Markieren</a></td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header px-4 py-3">
+                <span class="fw-semibold">Kommende Termine</span>
+            </div>
+            <div class="card-body px-0 py-0">
+                {% if upcoming|length == 0 %}
+                    <div class="text-center py-4" style="color:var(--bs-secondary-color);font-size:0.9rem;">Nichts geplant.</div>
+                {% else %}
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Datum</th><th>Kurs</th><th>Zeit</th></tr></thead>
+                        <tbody>
+                        {% for s in upcoming|slice(0, 30) %}
+                            <tr>
+                                <td>{{ s.session_date|date('d.m.') }}</td>
+                                <td><a href="/kurse/{{ s.course_id }}" style="color:var(--bs-body-color);text-decoration:none;">{{ s.course_name }}</a></td>
+                                <td>{{ s.start_time|slice(0, 5) }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

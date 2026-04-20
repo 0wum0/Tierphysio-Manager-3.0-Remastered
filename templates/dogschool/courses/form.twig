@@ -1,0 +1,136 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'courses' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="/kurse{% if not is_new %}/{{ course.id }}{% endif %}" class="btn btn-link btn-sm mb-2">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="vertical-align:-2px;"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="15 18 9 12 15 6"/></svg>
+            Zurück
+        </a>
+        <h1 class="page-title">{% if is_new %}Neuer Kurs{% else %}Kurs bearbeiten{% endif %}</h1>
+    </div>
+</div>
+
+<form method="POST" action="{% if is_new %}/kurse{% else %}/kurse/{{ course.id }}{% endif %}">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+    <div class="card mb-3">
+        <div class="card-header px-4 py-3">
+            <span class="fw-semibold">Grunddaten</span>
+        </div>
+        <div class="card-body px-4 py-3">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label">Kursname <span style="color:#ef4444;">*</span></label>
+                    <input type="text" name="name" value="{{ course.name|default('') }}" required class="form-control">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Kursart</label>
+                    <select name="type" class="form-select">
+                        {% for key, label in type_list %}
+                        <option value="{{ key }}" {% if course.type == key %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Beschreibung</label>
+                    <textarea name="description" rows="3" class="form-control">{{ course.description|default('') }}</textarea>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Level</label>
+                    <select name="level" class="form-select">
+                        <option value="">–</option>
+                        <option value="anfaenger"       {% if course.level == 'anfaenger' %}selected{% endif %}>Anfänger</option>
+                        <option value="fortgeschritten" {% if course.level == 'fortgeschritten' %}selected{% endif %}>Fortgeschritten</option>
+                        <option value="experte"         {% if course.level == 'experte' %}selected{% endif %}>Experte</option>
+                    </select>
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">Ort / Trainingsplatz</label>
+                    <input type="text" name="location" value="{{ course.location|default('') }}" class="form-control">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header px-4 py-3">
+            <span class="fw-semibold">Termine & Kapazität</span>
+        </div>
+        <div class="card-body px-4 py-3">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Startdatum</label>
+                    <input type="date" name="start_date" value="{{ course.start_date|default('') }}" class="form-control">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Wochentag</label>
+                    <select name="weekday" class="form-select">
+                        <option value="" {% if course.weekday is null %}selected{% endif %}>–</option>
+                        <option value="1" {% if course.weekday == 1 %}selected{% endif %}>Montag</option>
+                        <option value="2" {% if course.weekday == 2 %}selected{% endif %}>Dienstag</option>
+                        <option value="3" {% if course.weekday == 3 %}selected{% endif %}>Mittwoch</option>
+                        <option value="4" {% if course.weekday == 4 %}selected{% endif %}>Donnerstag</option>
+                        <option value="5" {% if course.weekday == 5 %}selected{% endif %}>Freitag</option>
+                        <option value="6" {% if course.weekday == 6 %}selected{% endif %}>Samstag</option>
+                        <option value="0" {% if course.weekday == 0 %}selected{% endif %}>Sonntag</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Uhrzeit</label>
+                    <input type="time" name="start_time" value="{{ course.start_time|default('18:00') }}" class="form-control">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Dauer (Minuten)</label>
+                    <input type="number" name="duration_minutes" min="15" step="5" value="{{ course.duration_minutes|default(60) }}" class="form-control">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Anzahl Einheiten</label>
+                    <input type="number" name="num_sessions" min="1" value="{{ course.num_sessions|default(1) }}" class="form-control">
+                    {% if is_new %}<div class="form-text">Termine werden automatisch generiert.</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Max. Teilnehmer</label>
+                    <input type="number" name="max_participants" min="1" value="{{ course.max_participants|default(8) }}" class="form-control">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header px-4 py-3">
+            <span class="fw-semibold">Preis & Status</span>
+        </div>
+        <div class="card-body px-4 py-3">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Kursgebühr (EUR)</label>
+                    <input type="number" step="0.01" min="0" name="price_eur" value="{{ ((course.price_cents|default(0)) / 100)|number_format(2, '.', '') }}" class="form-control">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="draft"     {% if course.status == 'draft' %}selected{% endif %}>Entwurf</option>
+                        <option value="active"    {% if course.status == 'active' %}selected{% endif %}>Aktiv</option>
+                        <option value="paused"    {% if course.status == 'paused' %}selected{% endif %}>Pausiert</option>
+                        <option value="completed" {% if course.status == 'completed' %}selected{% endif %}>Abgeschlossen</option>
+                        <option value="cancelled" {% if course.status == 'cancelled' %}selected{% endif %}>Abgesagt</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Notizen</label>
+                    <textarea name="notes" rows="3" class="form-control">{{ course.notes|default('') }}</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2 justify-content-end">
+        <a href="{% if is_new %}/kurse{% else %}/kurse/{{ course.id }}{% endif %}" class="btn btn-secondary">Abbrechen</a>
+        <button type="submit" class="btn btn-primary">
+            {% if is_new %}Kurs anlegen{% else %}Änderungen speichern{% endif %}
+        </button>
+    </div>
+</form>
+{% endblock %}

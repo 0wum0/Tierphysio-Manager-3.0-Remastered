@@ -1,0 +1,72 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'booking_admin' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Buchungsanfragen</h1>
+        <p class="page-subtitle">{{ rows|length }} Anfragen aus dem öffentlichen Portal</p>
+    </div>
+    <a href="/buchung" target="_blank" class="btn btn-secondary">→ Öffentliches Formular</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <div class="btn-group">
+            {% set statuses = {'pending': 'Offen', 'approved': 'Angenommen', 'declined': 'Abgelehnt', 'spam': 'Spam', 'all': 'Alle'} %}
+            {% for key, label in statuses %}
+                <a href="/anfragen?status={{ key }}" class="btn btn-sm {% if filter_status == key %}btn-primary{% else %}btn-outline-secondary{% endif %}">{{ label }}</a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr><th>Datum</th><th>Name</th><th>Kontakt</th><th>Hund</th><th>Anliegen</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody>
+            {% for r in rows %}
+                <tr>
+                    <td class="small">{{ r.created_at|date('d.m.Y H:i') }}</td>
+                    <td>
+                        <div class="fw-semibold">{{ r.first_name }} {{ r.last_name }}</div>
+                        {% if r.lead_id %}<a href="/interessenten/{{ r.lead_id }}" class="small">→ Lead #{{ r.lead_id }}</a>{% endif %}
+                    </td>
+                    <td class="small">
+                        {{ r.email }}<br>
+                        {% if r.phone %}{{ r.phone }}{% endif %}
+                    </td>
+                    <td class="small">
+                        {{ r.dog_name|default('–') }}
+                        {% if r.dog_breed %}<div style="color:var(--bs-secondary-color);">{{ r.dog_breed }}{% if r.dog_age_months %}, {{ r.dog_age_months }} Mon.{% endif %}</div>{% endif %}
+                    </td>
+                    <td class="small">
+                        {{ r.requested_for|default('—') }}
+                        {% if r.message %}<div style="color:var(--bs-secondary-color);" title="{{ r.message }}">{{ r.message|slice(0, 60) }}{% if r.message|length > 60 %}…{% endif %}</div>{% endif %}
+                    </td>
+                    <td>
+                        {% set sc = {'pending':'#fbbf24','approved':'#22c55e','declined':'#ef4444','spam':'#64748b'}[r.status] %}
+                        <span class="badge" style="background:{{ sc }}22;color:{{ sc }};border:1px solid {{ sc }}44;">{{ r.status }}</span>
+                    </td>
+                    <td class="text-end">
+                        <form action="/anfragen/{{ r.id }}/status" method="POST" class="d-inline" style="margin:0;">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                            <div class="btn-group btn-group-sm">
+                                <button type="submit" name="status" value="approved" class="btn btn-sm btn-outline-success" {% if r.status == 'approved' %}disabled{% endif %}>✓</button>
+                                <button type="submit" name="status" value="declined" class="btn btn-sm btn-outline-danger" {% if r.status == 'declined' %}disabled{% endif %}>✕</button>
+                                <button type="submit" name="status" value="spam" class="btn btn-sm btn-outline-secondary" title="Spam">S</button>
+                            </div>
+                        </form>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="7" class="text-center py-4" style="color:var(--bs-secondary-color);">Keine Anfragen.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,53 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'training_plans' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="/trainingsplaene" class="btn btn-link btn-sm mb-2">← Zurück</a>
+        <h1 class="page-title">{% if is_new %}Neuer Trainingsplan{% else %}Plan bearbeiten{% endif %}</h1>
+    </div>
+</div>
+
+<form method="POST" action="{% if is_new %}/trainingsplaene{% else %}/trainingsplaene/{{ plan.id }}{% endif %}" style="max-width:720px;">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+    <div class="card mb-3"><div class="card-body px-4 py-3">
+        <div class="row g-3">
+            <div class="col-12"><label class="form-label">Name <span style="color:#ef4444;">*</span></label>
+                <input type="text" name="name" required value="{{ plan.name|default('') }}" class="form-control"></div>
+            <div class="col-12"><label class="form-label">Beschreibung</label>
+                <textarea name="description" rows="3" class="form-control">{{ plan.description|default('') }}</textarea></div>
+            <div class="col-md-4"><label class="form-label">Zielgruppe</label>
+                <select name="target_audience" class="form-select">
+                    <option value="">—</option>
+                    <option value="welpen"    {% if plan.target_audience == 'welpen' %}selected{% endif %}>Welpen</option>
+                    <option value="junghunde" {% if plan.target_audience == 'junghunde' %}selected{% endif %}>Junghunde</option>
+                    <option value="adult"     {% if plan.target_audience == 'adult' %}selected{% endif %}>Erwachsen</option>
+                    <option value="senior"    {% if plan.target_audience == 'senior' %}selected{% endif %}>Senior</option>
+                    <option value="problem"   {% if plan.target_audience == 'problem' %}selected{% endif %}>Problemhunde</option>
+                </select></div>
+            <div class="col-md-4"><label class="form-label">Dauer (Wochen)</label>
+                <input type="number" name="duration_weeks" min="1" value="{{ plan.duration_weeks|default(8) }}" class="form-control"></div>
+            <div class="col-md-4"><label class="form-label">Einheiten/Woche</label>
+                <input type="number" name="sessions_per_week" min="1" value="{{ plan.sessions_per_week|default(1) }}" class="form-control"></div>
+            <div class="col-md-6"><label class="form-label">Schwierigkeit</label>
+                <select name="difficulty" class="form-select">
+                    <option value="easy"   {% if plan.difficulty == 'easy' %}selected{% endif %}>Einfach</option>
+                    <option value="medium" {% if plan.difficulty == 'medium' %}selected{% endif %}>Mittel</option>
+                    <option value="hard"   {% if plan.difficulty == 'hard' %}selected{% endif %}>Schwer</option>
+                    <option value="expert" {% if plan.difficulty == 'expert' %}selected{% endif %}>Experte</option>
+                </select></div>
+            <div class="col-md-6 d-flex align-items-end gap-3">
+                <div class="form-check"><input type="checkbox" name="is_template" value="1" {% if plan.is_template %}checked{% endif %} id="is_tpl" class="form-check-input">
+                    <label for="is_tpl" class="form-check-label">Vorlage (wiederverwendbar)</label></div>
+                <div class="form-check"><input type="checkbox" name="is_active" value="1" {% if plan.is_active %}checked{% endif %} id="is_act" class="form-check-input">
+                    <label for="is_act" class="form-check-label">Aktiv</label></div>
+            </div>
+        </div>
+    </div></div>
+    <div class="d-flex justify-content-end gap-2">
+        <a href="/trainingsplaene" class="btn btn-secondary">Abbrechen</a>
+        <button type="submit" class="btn btn-primary">Speichern</button>
+    </div>
+</form>
+{% endblock %}

@@ -1,0 +1,88 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'packages' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="/pakete" class="btn btn-link btn-sm mb-2">← Pakete</a>
+        <h1 class="page-title">Paket-Kontostand</h1>
+    </div>
+</div>
+
+{% set units_left = balance.units_total - balance.units_used %}
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="card"><div class="card-body">
+            <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);">Offen</div>
+            <div class="fw-bold" style="font-size:1.75rem;color:{% if units_left > 0 %}#22c55e{% else %}#ef4444{% endif %};">{{ units_left }}</div>
+            <div class="small" style="color:var(--bs-secondary-color);">von {{ balance.units_total }}</div>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card"><div class="card-body">
+            <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);">Eingelöst</div>
+            <div class="fw-bold" style="font-size:1.75rem;">{{ balance.units_used }}</div>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card"><div class="card-body">
+            <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);">Gekauft am</div>
+            <div class="fw-bold" style="font-size:1.2rem;">{{ balance.purchased_at|date('d.m.Y') }}</div>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card"><div class="card-body">
+            <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);">Gültig bis</div>
+            <div class="fw-bold" style="font-size:1.2rem;">{{ balance.expires_at ? balance.expires_at|date('d.m.Y') : 'unbegrenzt' }}</div>
+        </div></div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header px-4 py-3"><span class="fw-semibold">Einheit einlösen</span></div>
+            <div class="card-body px-4 py-3">
+                {% if balance.status != 'active' %}
+                    <div class="alert alert-warning" style="font-size:0.9rem;">Status: <strong>{{ balance.status }}</strong> — Einlösung nicht möglich.</div>
+                {% else %}
+                <form action="/pakete/balance/{{ balance.id }}/einloesen" method="POST">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                    <div class="mb-2"><label class="form-label small">Einheiten</label><input type="number" name="units" value="1" min="1" max="{{ units_left }}" class="form-control"></div>
+                    <div class="mb-2"><label class="form-label small">Einschreibung-ID (optional)</label><input type="number" name="enrollment_id" class="form-control"></div>
+                    <div class="mb-2"><label class="form-label small">Session-ID (optional)</label><input type="number" name="session_id" class="form-control"></div>
+                    <div class="mb-3"><label class="form-label small">Notiz</label><input type="text" name="notes" class="form-control"></div>
+                    <button type="submit" class="btn btn-primary w-100">Einlösen</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header px-4 py-3"><span class="fw-semibold">Verlauf ({{ redemptions|length }})</span></div>
+            <div class="card-body px-0 py-0">
+                {% if redemptions|length == 0 %}
+                    <div class="text-center py-4" style="color:var(--bs-secondary-color);font-size:0.9rem;">Noch keine Einlösungen.</div>
+                {% else %}
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Datum</th><th>Kurs/Termin</th><th>Einheiten</th><th>Notiz</th></tr></thead>
+                        <tbody>
+                        {% for r in redemptions %}
+                            <tr>
+                                <td class="small">{{ r.redeemed_at|date('d.m.Y H:i') }}</td>
+                                <td>{{ r.course_name ?? '–' }}{% if r.session_date %} · {{ r.session_date|date('d.m.') }}{% endif %}</td>
+                                <td>{{ r.units }}</td>
+                                <td class="small" style="color:var(--bs-secondary-color);">{{ r.notes }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

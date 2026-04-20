@@ -1,0 +1,44 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'exercises' %}
+
+{% block content %}
+{% set cat_color = categories[exercise.category][1]|default('#60a5fa') %}
+<div class="page-header">
+    <div>
+        <a href="/uebungen" class="btn btn-link btn-sm mb-2">← Katalog</a>
+        <h1 class="page-title">{{ exercise.name }}</h1>
+        <div class="d-flex gap-2 mt-2">
+            <span class="badge" style="background:{{ cat_color }}22;color:{{ cat_color }};border:1px solid {{ cat_color }}44;">{{ categories[exercise.category][0]|default(exercise.category) }}</span>
+            <span class="badge bg-secondary">{{ exercise.difficulty }}</span>
+            <span class="badge bg-secondary">{{ exercise.duration_minutes }} Min</span>
+            {% if exercise.is_system %}<span class="badge" style="background:#a78bfa22;color:#a78bfa;border:1px solid #a78bfa44;">Standard</span>{% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card mb-3"><div class="card-header px-4 py-3"><span class="fw-semibold">Beschreibung</span></div>
+            <div class="card-body px-4 py-3">{{ exercise.description|nl2br|default('—') }}</div></div>
+        <div class="card"><div class="card-header px-4 py-3"><span class="fw-semibold">Anleitung</span></div>
+            <div class="card-body px-4 py-3">{{ exercise.instructions|nl2br|default('—') }}</div></div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header px-4 py-3"><span class="fw-semibold">Details</span></div>
+            <div class="card-body px-4 py-3">
+                <dl class="row mb-0" style="font-size:0.9rem;">
+                    <dt class="col-6">Schwierigkeit</dt><dd class="col-6">{{ exercise.difficulty }}</dd>
+                    <dt class="col-6">Dauer</dt><dd class="col-6">{{ exercise.duration_minutes }} Min</dd>
+                    <dt class="col-6">Min. Alter</dt><dd class="col-6">{{ exercise.min_age_months ? exercise.min_age_months ~ ' Mon.' : '—' }}</dd>
+                    <dt class="col-6">Equipment</dt><dd class="col-6">{{ exercise.required_equipment ?? '—' }}</dd>
+                    {% if exercise.video_url %}
+                    <dt class="col-12 mt-2">Video</dt>
+                    <dd class="col-12"><a href="{{ exercise.video_url }}" target="_blank" rel="noopener">→ Video ansehen</a></dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

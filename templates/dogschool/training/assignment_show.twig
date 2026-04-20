@@ -1,0 +1,155 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'training_plans' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="/trainingsplaene" class="btn btn-link btn-sm mb-2">← Pläne</a>
+        <h1 class="page-title">{{ assignment.patient_name }}: {{ assignment.plan_name }}</h1>
+        <p class="page-subtitle">
+            Start {{ assignment.start_date|date('d.m.Y') }}
+            {% if assignment.target_end_date %} · Ziel {{ assignment.target_end_date|date('d.m.Y') }}{% endif %}
+            · {{ assignment.owner_first_name }} {{ assignment.owner_last_name }}
+        </p>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+        {% set status_color = {'active':'#22c55e','paused':'#fbbf24','completed':'#60a5fa','cancelled':'#ef4444'}[assignment.status] ?? '#64748b' %}
+        <span class="badge" style="background:{{ status_color }}22;color:{{ status_color }};border:1px solid {{ status_color }}44;font-size:0.85rem;">{{ assignment.status }}</span>
+        <form action="/trainingsplaene/zuweisung/{{ assignment.id }}/status" method="POST" style="margin:0;">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <select name="status" onchange="this.form.submit()" class="form-select form-select-sm" style="width:auto;">
+                <option value="active"    {% if assignment.status == 'active' %}selected{% endif %}>Aktiv</option>
+                <option value="paused"    {% if assignment.status == 'paused' %}selected{% endif %}>Pausiert</option>
+                <option value="completed" {% if assignment.status == 'completed' %}selected{% endif %}>Abgeschlossen</option>
+                <option value="cancelled" {% if assignment.status == 'cancelled' %}selected{% endif %}>Abgebrochen</option>
+            </select>
+        </form>
+    </div>
+</div>
+
+{# ── Fortschritt je Übung ── #}
+<div class="card mb-3">
+    <div class="card-header px-4 py-3"><span class="fw-semibold">Curriculum-Fortschritt</span></div>
+    <div class="card-body px-0 py-0">
+        {% if plan.curriculum is empty %}
+            <div class="text-center py-4" style="color:var(--bs-secondary-color);">Keine Übungen im Plan.</div>
+        {% else %}
+            <table class="table table-sm mb-0">
+                <thead><tr><th>Woche</th><th>Einheit</th><th>Übung</th><th>Stand</th><th>Erfassen</th></tr></thead>
+                <tbody>
+                {% for week, sessions in plan.curriculum %}
+                    {% for session, exs in sessions %}
+                        {% for ex in exs %}
+                            {% set cat_color = categories[ex.category][1]|default('#60a5fa') %}
+                            {% set current = mastery_map[ex.exercise_id] ?? null %}
+                            {% set level = current ? current.mastery_level : 0 %}
+                            {% set level_info = mastery_levels[level] %}
+                            <tr>
+                                <td>{{ week }}</td>
+                                <td>{{ session }}</td>
+                                <td>
+                                    <span style="display:inline-block;width:4px;height:14px;background:{{ cat_color }};margin-right:6px;vertical-align:middle;"></span>
+                                    {{ ex.exercise_name }}
+                                </td>
+                                <td style="min-width:180px;">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div style="flex:1;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;">
+                                            <div style="width:{{ (level / 5 * 100)|round }}%;height:100%;background:{{ level_info.color }};"></div>
+                                        </div>
+                                        <span class="small" style="color:{{ level_info.color }};min-width:90px;">{{ level_info.label }}</span>
+                                    </div>
+                                    {% if current %}<div class="small" style="color:var(--bs-secondary-color);">Zuletzt: {{ current.last_recorded|date('d.m.') }}</div>{% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modal-progress-{{ ex.exercise_id }}">Erfassen</button>
+                                </td>
+                            </tr>
+                            <div class="modal fade" id="modal-progress-{{ ex.exercise_id }}" tabindex="-1" aria-hidden="true">
+                                <div class="modal-dialog"><div class="modal-content">
+                                    <form action="/trainingsplaene/zuweisung/{{ assignment.id }}/fortschritt" method="POST">
+                                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                        <input type="hidden" name="exercise_id" value="{{ ex.exercise_id }}">
+                                        <div class="modal-header"><h5 class="modal-title">Fortschritt: {{ ex.exercise_name }}</h5><button type="button" class="modal-close" data-bs-dismiss="modal">×</button></div>
+                                        <div class="modal-body">
+                                            <div class="mb-3"><label class="form-label">Mastery-Level</label>
+                                                <select name="mastery_level" class="form-select">
+                                                    {% for lv, info in mastery_levels %}<option value="{{ lv }}" {% if level == lv %}selected{% endif %}>{{ lv }} — {{ info.label }}</option>{% endfor %}
+                                                </select></div>
+                                            <div class="row g-2">
+                                                <div class="col-4"><label class="form-label small">Wiederholungen</label><input type="number" name="repetitions" class="form-control form-control-sm"></div>
+                                                <div class="col-4"><label class="form-label small">Dauer (Min)</label><input type="number" name="duration_minutes" class="form-control form-control-sm"></div>
+                                                <div class="col-4"><label class="form-label small">Erfolg %</label><input type="number" name="success_rate_pct" min="0" max="100" class="form-control form-control-sm"></div>
+                                            </div>
+                                            <div class="mt-2"><label class="form-label small">Notizen</label><textarea name="notes" rows="2" class="form-control form-control-sm"></textarea></div>
+                                        </div>
+                                        <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button><button type="submit" class="btn btn-primary">Speichern</button></div>
+                                    </form>
+                                </div></div>
+                            </div>
+                        {% endfor %}
+                    {% endfor %}
+                {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+</div>
+
+{# ── Verlauf ── #}
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header px-4 py-3"><span class="fw-semibold">Fortschritts-Verlauf</span></div>
+            <div class="card-body px-0 py-0">
+                {% if progress|length == 0 %}
+                    <div class="text-center py-4" style="color:var(--bs-secondary-color);">Noch keine Einträge.</div>
+                {% else %}
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Datum</th><th>Übung</th><th>Level</th><th>Dauer</th><th>Notiz</th></tr></thead>
+                        <tbody>
+                        {% for p in progress|slice(0, 20) %}
+                            {% set lvl = mastery_levels[p.mastery_level] %}
+                            <tr>
+                                <td class="small">{{ p.recorded_at|date('d.m. H:i') }}</td>
+                                <td>{{ p.exercise_name }}</td>
+                                <td><span class="badge" style="background:{{ lvl.color }}22;color:{{ lvl.color }};border:1px solid {{ lvl.color }}44;">{{ lvl.label }}</span></td>
+                                <td class="small">{{ p.duration_minutes ? p.duration_minutes ~ ' Min' : '—' }}</td>
+                                <td class="small" style="color:var(--bs-secondary-color);">{{ p.notes|default('') }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header px-4 py-3 d-flex justify-content-between">
+                <span class="fw-semibold">Hausaufgaben</span>
+                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modal-homework">+ Neu</button>
+            </div>
+            <div class="card-body px-4 py-3">
+                <div class="small" style="color:var(--bs-secondary-color);">Hausaufgaben zur Übung zuhause — Halter bekommt sie im Portal.</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Modal: Hausaufgabe ── #}
+<div class="modal fade" id="modal-homework" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog"><div class="modal-content">
+        <form action="/trainingsplaene/zuweisung/{{ assignment.id }}/hausaufgabe" method="POST">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <div class="modal-header"><h5 class="modal-title">Neue Hausaufgabe</h5><button type="button" class="modal-close" data-bs-dismiss="modal">×</button></div>
+            <div class="modal-body">
+                <div class="mb-2"><label class="form-label small">Titel</label><input type="text" name="title" required class="form-control form-control-sm"></div>
+                <div class="mb-2"><label class="form-label small">Übungs-ID (optional)</label><input type="number" name="exercise_id" class="form-control form-control-sm"></div>
+                <div class="mb-2"><label class="form-label small">Fällig am</label><input type="date" name="due_date" class="form-control form-control-sm"></div>
+                <div class="mb-2"><label class="form-label small">Beschreibung</label><textarea name="description" rows="4" class="form-control form-control-sm"></textarea></div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button><button type="submit" class="btn btn-primary">Anlegen</button></div>
+        </form>
+    </div></div>
+</div>
+{% endblock %}

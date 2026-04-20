@@ -61,6 +61,13 @@ class FeatureGateService
     /** Plan-Slug des aktuellen Tenants, lazy geladen für isTopTierPlan() */
     private ?string $planSlugCache = null;
 
+    /** Praxis-Typ ('therapeut'|'trainer'), lazy aus settings geladen */
+    private ?string $practiceTypeCache = null;
+
+    /** Prefix `dogschool_` identifiziert Hundeschul-exklusive Features.
+     *  Diese sind nur sichtbar/nutzbar wenn practice_type='trainer'. */
+    private const DOGSCHOOL_PREFIX = 'dogschool_';
+
     public function __construct(
         private readonly Database $db,
         private readonly Session $session,
@@ -88,6 +95,14 @@ class FeatureGateService
         if (in_array($key, self::CORE_FEATURES, true)) {
             return true;
         }
+
+        /* Tenant-Typ-Gate: Hundeschul-Features nur für Trainer-Tenants.
+         * Eine Praxis (practice_type='therapeut') darf kein dogschool_*
+         * nutzen, selbst wenn der Plan es theoretisch freischaltet. */
+        if (str_starts_with($key, self::DOGSCHOOL_PREFIX) && !$this->isTrainerTenant()) {
+            return false;
+        }
+
         $map = $this->all();
 
         /* Key ist explizit registriert → harte Antwort zurückgeben */
@@ -97,6 +112,26 @@ class FeatureGateService
 
         /* Unbekannter Key → Tier-Fallback nur für Top-Tier-Pläne */
         return $this->isTopTierPlan();
+    }
+
+    /**
+     * True, wenn der Tenant auf "trainer" gesetzt ist (Hundeschule/
+     * Hundetrainer). Liest `settings.practice_type` lazily und cached.
+     */
+    public function isTrainerTenant(): bool
+    {
+        if ($this->practiceTypeCache === null) {
+            try {
+                $val = $this->db->safeFetchColumn(
+                    "SELECT `value` FROM `{$this->db->prefix('settings')}` WHERE `key` = ?",
+                    ['practice_type']
+                );
+                $this->practiceTypeCache = strtolower(trim((string)($val ?? 'therapeut')));
+            } catch (\Throwable $e) {
+                $this->practiceTypeCache = 'therapeut'; // sicherer Default
+            }
+        }
+        return $this->practiceTypeCache === 'trainer';
     }
 
     /**
@@ -154,6 +189,20 @@ class FeatureGateService
         $flags = $map['flags'] ?? [];
         foreach (self::CORE_FEATURES as $core) {
             $flags[$core] = true;
+        }
+
+        /* Tenant-Typ-Gate in der Map:
+         *   Alle `dogschool_*`-Keys werden für Nicht-Trainer-Tenants hart
+         *   auf false gesetzt. Damit sind Hundeschul-Funktionen in der
+         *   Praxis-App (Therapeut) in Sidebar, Modalen, Buttons einheitlich
+         *   versteckt — nicht nur via isEnabled() gegated. */
+        $isTrainer = $this->isTrainerTenant();
+        if (!$isTrainer) {
+            foreach ($flags as $k => $_v) {
+                if (str_starts_with((string)$k, self::DOGSCHOOL_PREFIX)) {
+                    $flags[$k] = false;
+                }
+            }
         }
 
         /* Ultra-Self-Heal: Plugin-Keys die im Code verwendet werden, aber
@@ -413,7 +462,9 @@ class FeatureGateService
      */
     public function forceSync(): ?array
     {
-        $this->featuresCache = null;
+        $this->featuresCache     = null;
+        $this->planSlugCache     = null;
+        $this->practiceTypeCache = null;
         return $this->syncFromSaas();
     }
 }

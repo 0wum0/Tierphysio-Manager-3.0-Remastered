@@ -1,0 +1,60 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'waitlist' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Warteliste</h1>
+        <p class="page-subtitle">{{ entries|length }} Einträge über alle Kurse</p>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body px-0 py-0">
+        {% if entries|length == 0 %}
+            <div class="text-center py-5" style="color:var(--bs-secondary-color);">Keine Warteliste-Einträge.</div>
+        {% else %}
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Kurs</th>
+                        <th>Position</th>
+                        <th>Name</th>
+                        <th>Kontakt</th>
+                        <th>Status</th>
+                        <th>Seit</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for w in entries %}
+                    <tr>
+                        <td><a href="/kurse/{{ w.course_id }}" style="color:var(--bs-body-color);text-decoration:none;font-weight:600;">{{ w.course_name }}</a></td>
+                        <td>{{ w.position }}</td>
+                        <td>
+                            {% if w.patient_id %}
+                                {{ w.patient_name }} ({{ w.owner_first_name }} {{ w.owner_last_name }})
+                            {% else %}
+                                {{ w.lead_name|default('–') }}
+                            {% endif %}
+                        </td>
+                        <td class="small" style="color:var(--bs-secondary-color);">
+                            {{ w.owner_email ?? w.lead_email }}
+                            {% if w.owner_phone or w.lead_phone %} · {{ w.owner_phone ?? w.lead_phone }}{% endif %}
+                        </td>
+                        <td>
+                            {% set sc = {'waiting':'#fbbf24','offered':'#60a5fa','accepted':'#22c55e','declined':'#ef4444','expired':'#94a3b8'}[w.status] ?? '#64748b' %}
+                            <span class="badge" style="background:{{ sc }}22;color:{{ sc }};border:1px solid {{ sc }}44;">{{ w.status }}</span>
+                        </td>
+                        <td class="small" style="color:var(--bs-secondary-color);">{{ w.created_at|date('d.m.Y') }}</td>
+                        <td class="text-end">
+                            <a href="/kurse/{{ w.course_id }}" class="btn btn-sm btn-link">Öffnen</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

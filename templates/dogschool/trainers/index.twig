@@ -1,0 +1,46 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'trainers' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Trainer-Team</h1>
+        <p class="page-subtitle">{{ trainers|length }} Team-Mitglieder</p>
+    </div>
+    <a href="/einstellungen/benutzer" class="btn btn-secondary">+ Neuen Benutzer anlegen</a>
+</div>
+
+<div class="row g-3">
+{% for t in trainers %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100" style="border-left:4px solid {{ t.color|default('#60a5fa') }};">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div style="width:48px;height:48px;border-radius:50%;background:{{ t.color|default('#60a5fa') }}22;border:2px solid {{ t.color|default('#60a5fa') }};display:flex;align-items:center;justify-content:center;font-weight:600;font-size:1.2rem;">
+                        {{ (t.display_name ?? t.user_name)|slice(0, 1)|upper }}
+                    </div>
+                    <div class="ms-3" style="flex:1;">
+                        <div class="fw-semibold">{{ t.display_name ?? t.user_name }}</div>
+                        <div class="small" style="color:var(--bs-secondary-color);">{{ t.role }} · {{ t.email }}</div>
+                    </div>
+                    {% if t.is_active %}<span class="badge" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e44;">aktiv</span>{% endif %}
+                </div>
+                {% if t.specializations %}
+                <div class="mb-2">
+                    {% for spec in t.specializations|split(',') %}
+                        <span class="badge bg-secondary">{{ spec|trim }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                <div class="small mb-2" style="color:var(--bs-secondary-color);">
+                    <strong>{{ t.active_courses }}</strong> aktive Kurse
+                </div>
+                <a href="/trainer/{{ t.user_id }}" class="btn btn-sm btn-outline-primary w-100">Profil bearbeiten</a>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="col-12"><div class="card"><div class="card-body text-center py-5" style="color:var(--bs-secondary-color);">Keine Team-Mitglieder gefunden.</div></div></div>
+{% endfor %}
+</div>
+{% endblock %}

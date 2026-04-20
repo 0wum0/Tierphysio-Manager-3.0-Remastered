@@ -1,0 +1,96 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'categories' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Kursarten</h1>
+        <p class="page-subtitle">Katalog für Kurs-Vorlagen und Default-Werte</p>
+    </div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal-new-cat">+ Neue Kursart</button>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr><th>Slug</th><th>Name</th><th>Default-Preis</th><th>Dauer</th><th>Max.</th><th>MwSt</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody>
+            {% for c in categories %}
+                <tr>
+                    <td>
+                        <span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:{{ c.color|default('#60a5fa') }};margin-right:6px;"></span>
+                        <code class="small">{{ c.slug }}</code>
+                    </td>
+                    <td>{{ c.icon }} {{ c.name }}</td>
+                    <td>{{ (c.default_price_cents / 100)|number_format(2, ',', '.') }} €</td>
+                    <td>{{ c.default_duration_min }} Min</td>
+                    <td>{{ c.default_max_participants }}</td>
+                    <td>{{ c.default_tax_rate|number_format(0) }} %</td>
+                    <td>{% if c.is_active %}<span class="badge" style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e44;">aktiv</span>{% else %}<span class="badge bg-secondary">inaktiv</span>{% endif %}</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-link" data-bs-toggle="modal" data-bs-target="#modal-edit-{{ c.id }}">Bearbeiten</button>
+                        <form action="/kursarten/{{ c.id }}/loeschen" method="POST" style="display:inline;margin:0;" onsubmit="return confirm('Löschen? Bestehende Kurse bleiben erhalten.');">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                            <button type="submit" class="btn btn-sm btn-link" style="color:#ef4444;">×</button>
+                        </form>
+                    </td>
+                </tr>
+                {# Edit Modal #}
+                <div class="modal fade" id="modal-edit-{{ c.id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog"><div class="modal-content">
+                        <form action="/kursarten/{{ c.id }}" method="POST">
+                            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                            <div class="modal-header"><h5 class="modal-title">{{ c.name }} bearbeiten</h5><button type="button" class="modal-close" data-bs-dismiss="modal">×</button></div>
+                            <div class="modal-body">
+                                <div class="row g-2">
+                                    <div class="col-8"><label class="form-label small">Name</label><input type="text" name="name" value="{{ c.name }}" class="form-control form-control-sm"></div>
+                                    <div class="col-4"><label class="form-label small">Icon</label><input type="text" name="icon" value="{{ c.icon }}" class="form-control form-control-sm"></div>
+                                    <div class="col-12"><label class="form-label small">Beschreibung</label><textarea name="description" rows="2" class="form-control form-control-sm">{{ c.description }}</textarea></div>
+                                    <div class="col-4"><label class="form-label small">Farbe</label><input type="color" name="color" value="{{ c.color|default('#60a5fa') }}" class="form-control form-control-sm form-control-color"></div>
+                                    <div class="col-4"><label class="form-label small">Dauer (Min)</label><input type="number" name="default_duration_min" value="{{ c.default_duration_min }}" class="form-control form-control-sm"></div>
+                                    <div class="col-4"><label class="form-label small">Max.TN</label><input type="number" name="default_max_participants" value="{{ c.default_max_participants }}" class="form-control form-control-sm"></div>
+                                    <div class="col-6"><label class="form-label small">Preis (€)</label><input type="number" step="0.01" name="default_price_eur" value="{{ (c.default_price_cents / 100)|number_format(2, '.', '') }}" class="form-control form-control-sm"></div>
+                                    <div class="col-6"><label class="form-label small">MwSt %</label><input type="number" step="0.01" name="default_tax_rate" value="{{ c.default_tax_rate }}" class="form-control form-control-sm"></div>
+                                    <div class="col-6"><label class="form-label small">Sortierung</label><input type="number" name="sort_order" value="{{ c.sort_order }}" class="form-control form-control-sm"></div>
+                                    <div class="col-6 d-flex align-items-end"><div class="form-check"><input type="checkbox" name="is_active" value="1" {% if c.is_active %}checked{% endif %} id="ca{{ c.id }}" class="form-check-input"><label for="ca{{ c.id }}" class="form-check-label">Aktiv</label></div></div>
+                                </div>
+                            </div>
+                            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button><button type="submit" class="btn btn-primary">Speichern</button></div>
+                        </form>
+                    </div></div>
+                </div>
+            {% else %}
+                <tr><td colspan="8" class="text-center py-4" style="color:var(--bs-secondary-color);">Keine Kursarten vorhanden. Standard-Katalog wird beim ersten Dashboard-Besuch geseedet.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# New Modal #}
+<div class="modal fade" id="modal-new-cat" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog"><div class="modal-content">
+        <form action="/kursarten" method="POST">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <div class="modal-header"><h5 class="modal-title">Neue Kursart</h5><button type="button" class="modal-close" data-bs-dismiss="modal">×</button></div>
+            <div class="modal-body">
+                <div class="row g-2">
+                    <div class="col-6"><label class="form-label small">Slug (eindeutig)</label><input type="text" name="slug" placeholder="z.b. rallye_obedience" required class="form-control form-control-sm"></div>
+                    <div class="col-6"><label class="form-label small">Icon (Emoji)</label><input type="text" name="icon" placeholder="🏆" class="form-control form-control-sm"></div>
+                    <div class="col-12"><label class="form-label small">Name</label><input type="text" name="name" required class="form-control form-control-sm"></div>
+                    <div class="col-12"><label class="form-label small">Beschreibung</label><textarea name="description" rows="2" class="form-control form-control-sm"></textarea></div>
+                    <div class="col-4"><label class="form-label small">Farbe</label><input type="color" name="color" value="#60a5fa" class="form-control form-control-sm form-control-color"></div>
+                    <div class="col-4"><label class="form-label small">Dauer (Min)</label><input type="number" name="default_duration_min" value="60" class="form-control form-control-sm"></div>
+                    <div class="col-4"><label class="form-label small">Max. Teilnehmer</label><input type="number" name="default_max_participants" value="8" class="form-control form-control-sm"></div>
+                    <div class="col-4"><label class="form-label small">Preis (€)</label><input type="number" step="0.01" name="default_price_eur" value="0" class="form-control form-control-sm"></div>
+                    <div class="col-4"><label class="form-label small">MwSt %</label><input type="number" step="0.01" name="default_tax_rate" value="19" class="form-control form-control-sm"></div>
+                    <div class="col-4 d-flex align-items-end"><div class="form-check"><input type="checkbox" name="is_active" value="1" checked id="new_active" class="form-check-input"><label for="new_active" class="form-check-label">Aktiv</label></div></div>
+                </div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button><button type="submit" class="btn btn-primary">Anlegen</button></div>
+        </form>
+    </div></div>
+</div>
+{% endblock %}

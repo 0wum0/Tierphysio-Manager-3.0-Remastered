@@ -1,0 +1,264 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'courses' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="/kurse" class="btn btn-link btn-sm mb-2">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="vertical-align:-2px;"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="15 18 9 12 15 6"/></svg>
+            Alle Kurse
+        </a>
+        <h1 class="page-title">{{ course.name }}</h1>
+        <p class="page-subtitle">
+            {{ type_list[course.type] ?? course.type }}
+            {% if course.location %} · {{ course.location }}{% endif %}
+            {% if course.start_date %} · Start {{ course.start_date|date('d.m.Y') }}{% endif %}
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/kurse/{{ course.id }}/bearbeiten" class="btn btn-secondary btn-sm">Bearbeiten</a>
+        <form action="/kurse/{{ course.id }}/loeschen" method="POST" style="margin:0;" onsubmit="return confirm('Kurs wirklich löschen? Alle Teilnehmerdaten gehen verloren.');">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="btn btn-danger btn-sm">Löschen</button>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3">
+        <div class="card"><div class="card-body">
+            <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);letter-spacing:0.05em;">Teilnehmer</div>
+            <div class="fw-bold" style="font-size:1.75rem;">{{ course.enrolled_count ?? 0 }}<span style="font-size:1rem;color:var(--bs-secondary-color);"> / {{ course.max_participants }}</span></div>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card"><div class="card-body">
+            <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);letter-spacing:0.05em;">Freie Plätze</div>
+            <div class="fw-bold" style="font-size:1.75rem;color:{% if free_spots > 0 %}#22c55e{% else %}#fbbf24{% endif %};">{{ free_spots }}</div>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card"><div class="card-body">
+            <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);letter-spacing:0.05em;">Warteliste</div>
+            <div class="fw-bold" style="font-size:1.75rem;">{{ course.waitlist_count ?? 0 }}</div>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card"><div class="card-body">
+            <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);letter-spacing:0.05em;">Kursgebühr</div>
+            <div class="fw-bold" style="font-size:1.75rem;">{{ ((course.price_cents ?? 0) / 100)|number_format(2, ',', '.') }} €</div>
+        </div></div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        {# ── Teilnehmer ── #}
+        <div class="card mb-3">
+            <div class="card-header px-4 py-3 d-flex align-items-center justify-content-between">
+                <span class="fw-semibold">Teilnehmer</span>
+                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#modal-enroll">
+                    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" style="vertical-align:-2px;"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    Einschreiben
+                </button>
+            </div>
+            <div class="card-body px-0 py-0">
+                {% if enrollments|length == 0 %}
+                    <div class="text-center py-5" style="color:var(--bs-secondary-color);">
+                        <div style="font-size:0.9rem;">Noch keine Teilnehmer.</div>
+                    </div>
+                {% else %}
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr><th>Hund</th><th>Halter</th><th>Status</th><th>Eingeschrieben</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                        {% for e in enrollments %}
+                            <tr>
+                                <td>
+                                    <a href="/patienten/{{ e.patient_id }}" style="color:var(--bs-body-color);text-decoration:none;font-weight:600;">{{ e.patient_name }}</a>
+                                    {% if e.patient_breed %}<div class="small" style="color:var(--bs-secondary-color);">{{ e.patient_breed }}</div>{% endif %}
+                                </td>
+                                <td>
+                                    {{ e.owner_first_name }} {{ e.owner_last_name }}
+                                    {% if e.owner_email %}<div class="small" style="color:var(--bs-secondary-color);">{{ e.owner_email }}</div>{% endif %}
+                                </td>
+                                <td>
+                                    {% set status_color = {
+                                        'active':     '#22c55e',
+                                        'completed':  '#64748b',
+                                        'cancelled':  '#ef4444',
+                                        'transferred':'#f97316',
+                                        'no_show':    '#94a3b8'
+                                    }[e.status] ?? '#64748b' %}
+                                    <span class="badge" style="background:{{ status_color }}22;color:{{ status_color }};border:1px solid {{ status_color }}44;">{{ e.status }}</span>
+                                </td>
+                                <td class="small" style="color:var(--bs-secondary-color);">{{ e.enrolled_at|date('d.m.Y') }}</td>
+                                <td class="text-end">
+                                    {% if (features.dogschool_invoicing ?? false) %}
+                                        {% if e.invoice_id %}
+                                            <a href="/rechnungen/{{ e.invoice_id }}" class="btn btn-sm btn-link" title="Rechnung ansehen">
+                                                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="vertical-align:-2px;"><path stroke="currentColor" stroke-width="1.5" d="M9 7h6m-6 4h6m-6 4h4m-7 5V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v16l-3-2-2 2-2-2-2 2-2-2-3 2Z"/></svg>
+                                                RE {{ e.invoice_id }}
+                                            </a>
+                                        {% else %}
+                                            <form action="/hundeschule/rechnungen/kurs/{{ e.id }}" method="POST" style="display:inline;margin:0;">
+                                                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                                <input type="hidden" name="return_to" value="/kurse/{{ course.id }}">
+                                                <button type="submit" class="btn btn-sm btn-outline-primary">RE erstellen</button>
+                                            </form>
+                                        {% endif %}
+                                    {% endif %}
+                                    <form action="/kurse/{{ course.id }}/teilnehmer/{{ e.id }}/entfernen" method="POST" style="display:inline;margin:0;" onsubmit="return confirm('Teilnehmer entfernen?');">
+                                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                        <button type="submit" class="btn btn-sm btn-link" style="color:#ef4444;">×</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            </div>
+        </div>
+
+        {# ── Warteliste ── #}
+        {% if (features.dogschool_waitlist ?? false) %}
+        <div class="card mb-3">
+            <div class="card-header px-4 py-3 d-flex align-items-center justify-content-between">
+                <span class="fw-semibold">Warteliste ({{ waitlist|length }})</span>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#modal-waitlist">+ Zur Warteliste</button>
+            </div>
+            <div class="card-body px-0 py-0">
+                {% if waitlist|length == 0 %}
+                    <div class="text-center py-4" style="color:var(--bs-secondary-color);font-size:0.9rem;">Keine Einträge.</div>
+                {% else %}
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>#</th><th>Name</th><th>Kontakt</th><th>Status</th><th></th></tr></thead>
+                        <tbody>
+                        {% for w in waitlist %}
+                            <tr>
+                                <td>{{ w.position }}</td>
+                                <td>
+                                    {% if w.patient_id %}{{ w.patient_name }} ({{ w.owner_first_name }} {{ w.owner_last_name }}){% else %}{{ w.lead_name }}{% endif %}
+                                </td>
+                                <td class="small" style="color:var(--bs-secondary-color);">
+                                    {{ w.owner_email ?? w.lead_email }}
+                                    {% if w.owner_phone or w.lead_phone %}· {{ w.owner_phone ?? w.lead_phone }}{% endif %}
+                                </td>
+                                <td><span class="badge bg-secondary">{{ w.status }}</span></td>
+                                <td class="text-end">
+                                    <form action="/kurse/{{ course.id }}/warteliste/{{ w.id }}/entfernen" method="POST" style="display:inline;margin:0;">
+                                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                        <button type="submit" class="btn btn-sm btn-link" style="color:#ef4444;">Entfernen</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-5">
+        {# ── Kurs-Termine ── #}
+        <div class="card">
+            <div class="card-header px-4 py-3">
+                <span class="fw-semibold">Termine</span>
+            </div>
+            <div class="card-body px-0 py-0">
+                {% if sessions|length == 0 %}
+                    <div class="text-center py-4" style="color:var(--bs-secondary-color);font-size:0.9rem;">Noch keine Termine generiert.</div>
+                {% else %}
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>#</th><th>Datum</th><th>Zeit</th><th>Status</th><th></th></tr></thead>
+                        <tbody>
+                        {% for s in sessions %}
+                            <tr>
+                                <td>{{ s.session_number }}</td>
+                                <td>{{ s.session_date|date('d.m.Y') }}</td>
+                                <td>{{ s.start_time|slice(0, 5) }}</td>
+                                <td>
+                                    {% set sc = {'planned':'#60a5fa','held':'#22c55e','cancelled':'#ef4444'}[s.status] ?? '#64748b' %}
+                                    <span class="badge" style="background:{{ sc }}22;color:{{ sc }};border:1px solid {{ sc }}44;">{{ s.status }}</span>
+                                </td>
+                                <td class="text-end">
+                                    {% if (features.dogschool_attendance ?? false) %}
+                                    <a href="/anwesenheit/session/{{ s.id }}" class="btn btn-sm btn-link">Anwesenheit</a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Modal: Einschreiben ── #}
+<div class="modal fade" id="modal-enroll" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="/kurse/{{ course.id }}/einschreiben" method="POST">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Teilnehmer einschreiben</h5>
+                    <button type="button" class="modal-close" data-bs-dismiss="modal">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2"/></svg>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Hund (Patient-ID)</label>
+                        <input type="number" name="patient_id" required class="form-control" placeholder="ID des Hundes">
+                        <div class="form-text">Der Halter wird automatisch ermittelt. Tipp: ID findest du in der Patientenliste.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notizen (optional)</label>
+                        <textarea name="notes" rows="2" class="form-control"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Einschreiben</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{# ── Modal: Warteliste ── #}
+{% if (features.dogschool_waitlist ?? false) %}
+<div class="modal fade" id="modal-waitlist" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="/kurse/{{ course.id }}/warteliste" method="POST">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Zur Warteliste hinzufügen</h5>
+                    <button type="button" class="modal-close" data-bs-dismiss="modal">×</button>
+                </div>
+                <div class="modal-body">
+                    <p class="small" style="color:var(--bs-secondary-color);">Entweder bestehenden Hund per ID eintragen, oder Interessent mit Name+Kontakt.</p>
+                    <div class="mb-2"><label class="form-label small">Hund-ID (optional)</label><input type="number" name="patient_id" class="form-control form-control-sm"></div>
+                    <hr>
+                    <div class="mb-2"><label class="form-label small">Name (Interessent)</label><input type="text" name="lead_name" class="form-control form-control-sm"></div>
+                    <div class="mb-2"><label class="form-label small">E-Mail</label><input type="email" name="lead_email" class="form-control form-control-sm"></div>
+                    <div class="mb-2"><label class="form-label small">Telefon</label><input type="text" name="lead_phone" class="form-control form-control-sm"></div>
+                    <div class="mb-2"><label class="form-label small">Notizen</label><textarea name="notes" rows="2" class="form-control form-control-sm"></textarea></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Hinzufügen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

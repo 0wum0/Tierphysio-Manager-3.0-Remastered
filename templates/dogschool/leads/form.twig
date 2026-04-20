@@ -1,0 +1,83 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'leads' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="/interessenten" class="btn btn-link btn-sm mb-2">← Zurück</a>
+        <h1 class="page-title">{% if is_new %}Neuer Interessent{% else %}{{ lead.first_name }} {{ lead.last_name }}{% endif %}</h1>
+    </div>
+    {% if not is_new and lead.status != 'converted' %}
+    <form action="/interessenten/{{ lead.id }}/konvertieren" method="POST" style="margin:0;" onsubmit="return confirm('Interessent jetzt als Kunden/Hund übernehmen?');">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn btn-success">→ In Kunden konvertieren</button>
+    </form>
+    {% endif %}
+</div>
+
+<form method="POST" action="{% if is_new %}/interessenten{% else %}/interessenten/{{ lead.id }}{% endif %}" style="max-width:900px;">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="card mb-3"><div class="card-header px-4 py-3"><span class="fw-semibold">Kontakt</span></div><div class="card-body px-4 py-3">
+                <div class="row g-2">
+                    <div class="col-md-6"><label class="form-label small">Vorname</label><input type="text" name="first_name" value="{{ lead.first_name|default('') }}" class="form-control form-control-sm"></div>
+                    <div class="col-md-6"><label class="form-label small">Nachname</label><input type="text" name="last_name" value="{{ lead.last_name|default('') }}" class="form-control form-control-sm"></div>
+                    <div class="col-12"><label class="form-label small">E-Mail</label><input type="email" name="email" value="{{ lead.email|default('') }}" class="form-control form-control-sm"></div>
+                    <div class="col-12"><label class="form-label small">Telefon</label><input type="text" name="phone" value="{{ lead.phone|default('') }}" class="form-control form-control-sm"></div>
+                    <div class="col-12"><label class="form-label small">Quelle</label><input type="text" name="source" value="{{ lead.source|default('') }}" placeholder="Google, Instagram, Empfehlung …" class="form-control form-control-sm"></div>
+                </div>
+            </div></div>
+        </div>
+        <div class="col-md-6">
+            <div class="card mb-3"><div class="card-header px-4 py-3"><span class="fw-semibold">Hund & Interesse</span></div><div class="card-body px-4 py-3">
+                <div class="row g-2">
+                    <div class="col-md-6"><label class="form-label small">Hundename</label><input type="text" name="dog_name" value="{{ lead.dog_name|default('') }}" class="form-control form-control-sm"></div>
+                    <div class="col-md-6"><label class="form-label small">Rasse</label><input type="text" name="dog_breed" value="{{ lead.dog_breed|default('') }}" class="form-control form-control-sm"></div>
+                    <div class="col-md-6"><label class="form-label small">Alter (Monate)</label><input type="number" name="dog_age_months" value="{{ lead.dog_age_months|default('') }}" class="form-control form-control-sm"></div>
+                    <div class="col-md-6"><label class="form-label small">Interesse an</label><input type="text" name="interest" value="{{ lead.interest|default('') }}" placeholder="z.B. Welpenkurs" class="form-control form-control-sm"></div>
+                    <div class="col-12"><label class="form-label small">Anliegen / Nachricht</label><textarea name="message" rows="2" class="form-control form-control-sm">{{ lead.message|default('') }}</textarea></div>
+                </div>
+            </div></div>
+        </div>
+        <div class="col-12">
+            <div class="card mb-3"><div class="card-header px-4 py-3"><span class="fw-semibold">Status & Follow-up</span></div><div class="card-body px-4 py-3">
+                <div class="row g-2">
+                    <div class="col-md-4"><label class="form-label small">Status</label>
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="new"             {% if lead.status == 'new' %}selected{% endif %}>Neu</option>
+                            <option value="contacted"       {% if lead.status == 'contacted' %}selected{% endif %}>Kontaktiert</option>
+                            <option value="trial_scheduled" {% if lead.status == 'trial_scheduled' %}selected{% endif %}>Probetraining geplant</option>
+                            <option value="trial_done"      {% if lead.status == 'trial_done' %}selected{% endif %}>Probetraining erledigt</option>
+                            <option value="converted"       {% if lead.status == 'converted' %}selected{% endif %}>Konvertiert</option>
+                            <option value="lost"            {% if lead.status == 'lost' %}selected{% endif %}>Verloren</option>
+                            <option value="archived"        {% if lead.status == 'archived' %}selected{% endif %}>Archiviert</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4"><label class="form-label small">Follow-up am</label>
+                        <input type="datetime-local" name="next_followup_at"
+                               value="{{ lead.next_followup_at ? lead.next_followup_at|date('Y-m-d\\TH:i') : '' }}" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-12"><label class="form-label small">Interne Notizen</label><textarea name="notes" rows="3" class="form-control form-control-sm">{{ lead.notes|default('') }}</textarea></div>
+                </div>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between">
+        <div>
+        {% if not is_new %}
+            <form action="/interessenten/{{ lead.id }}/loeschen" method="POST" style="display:inline;" onsubmit="return confirm('Interessent löschen?');">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="btn btn-outline-danger btn-sm">Löschen</button>
+            </form>
+        {% endif %}
+        </div>
+        <div>
+            <a href="/interessenten" class="btn btn-secondary">Abbrechen</a>
+            <button type="submit" class="btn btn-primary">Speichern</button>
+        </div>
+    </div>
+</form>
+{% endblock %}

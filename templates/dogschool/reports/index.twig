@@ -1,0 +1,89 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'reports' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Auswertungen</h1>
+        <p class="page-subtitle">Kurse, Anwesenheit, Umsatz, Konversion</p>
+    </div>
+</div>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-3"><div class="card"><div class="card-body">
+        <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);">Umsatz Kurse</div>
+        <div class="fw-bold" style="font-size:1.75rem;">{{ (revenue_courses / 100)|number_format(2, ',', '.') }} €</div>
+    </div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body">
+        <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);">Umsatz Pakete</div>
+        <div class="fw-bold" style="font-size:1.75rem;">{{ (revenue_packages / 100)|number_format(2, ',', '.') }} €</div>
+    </div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body">
+        <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);">Interessenten</div>
+        <div class="fw-bold" style="font-size:1.75rem;">{{ lead_total }}</div>
+        <div class="small" style="color:var(--bs-secondary-color);">davon {{ lead_converted }} konvertiert</div>
+    </div></div></div>
+    <div class="col-md-3"><div class="card"><div class="card-body">
+        <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);">Konversionsrate</div>
+        <div class="fw-bold" style="font-size:1.75rem;color:#22c55e;">{{ conversion_pct }} %</div>
+    </div></div></div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header px-4 py-3"><span class="fw-semibold">Kurs-Auslastung</span></div>
+            <div class="card-body px-0 py-0">
+                {% if utilization|length == 0 %}
+                    <div class="text-center py-4" style="color:var(--bs-secondary-color);font-size:0.9rem;">Keine Daten.</div>
+                {% else %}
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Kurs</th><th>Teilnehmer</th><th>Auslastung</th></tr></thead>
+                        <tbody>
+                        {% for u in utilization %}
+                            <tr>
+                                <td><a href="/kurse/{{ u.id }}" style="color:var(--bs-body-color);text-decoration:none;">{{ u.name }}</a></td>
+                                <td>{{ u.enrolled }}/{{ u.max_participants }}</td>
+                                <td style="min-width:140px;">
+                                    <div class="progress" style="height:6px;">
+                                        <div class="progress-bar" role="progressbar" style="width:{{ u.pct|default(0) }}%;background:{% if u.pct|default(0) >= 100 %}#fbbf24{% elseif u.pct|default(0) >= 75 %}#22c55e{% else %}#60a5fa{% endif %};"></div>
+                                    </div>
+                                    <div class="small mt-1" style="color:var(--bs-secondary-color);">{{ u.pct|default(0) }} %</div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header px-4 py-3"><span class="fw-semibold">Anwesenheits-Quote</span></div>
+            <div class="card-body px-0 py-0">
+                {% if attendance|length == 0 %}
+                    <div class="text-center py-4" style="color:var(--bs-secondary-color);font-size:0.9rem;">Noch keine Anwesenheitsdaten.</div>
+                {% else %}
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Kurs</th><th>Anwesend</th><th>Abwesend</th><th>Quote</th></tr></thead>
+                        <tbody>
+                        {% for a in attendance %}
+                            <tr>
+                                <td><a href="/kurse/{{ a.id }}" style="color:var(--bs-body-color);text-decoration:none;">{{ a.name }}</a></td>
+                                <td>{{ a.present }}</td>
+                                <td>{{ a.absent }}</td>
+                                <td>
+                                    <span class="badge" style="background:{% if a.pct_present >= 80 %}#22c55e22;color:#22c55e{% else %}#fbbf2422;color:#fbbf24{% endif %};">{{ a.pct_present|default(0) }} %</span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

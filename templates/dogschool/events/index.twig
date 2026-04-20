@@ -1,0 +1,52 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'events' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Events & Workshops</h1>
+        <p class="page-subtitle">{{ events|length }} Veranstaltungen</p>
+    </div>
+    <a href="/kurse/neu" class="btn btn-primary">+ Event anlegen</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <div class="btn-group">
+            <a href="/events?filter=upcoming" class="btn btn-sm {% if filter == 'upcoming' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Kommende</a>
+            <a href="/events?filter=past"     class="btn btn-sm {% if filter == 'past' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Vergangene</a>
+            <a href="/events?filter=all"      class="btn btn-sm {% if filter == 'all' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Alle</a>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3">
+{% for ev in events %}
+    {% set type_color = {'event':'#f43f5e','workshop':'#0ea5e9','seminar':'#d946ef','social_walk':'#14b8a6'}[ev.type] ?? '#60a5fa' %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100" style="border-top:3px solid {{ type_color }};">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="badge" style="background:{{ type_color }}22;color:{{ type_color }};border:1px solid {{ type_color }}44;">{{ type_labels[ev.type] ?? ev.type }}</span>
+                    {% if ev.start_date %}<span class="small" style="color:var(--bs-secondary-color);">{{ ev.start_date|date('d.m.Y') }}</span>{% endif %}
+                </div>
+                <h5><a href="/kurse/{{ ev.id }}" style="color:var(--bs-body-color);text-decoration:none;">{{ ev.name }}</a></h5>
+                {% if ev.location %}<div class="small mb-2" style="color:var(--bs-secondary-color);">📍 {{ ev.location }}</div>{% endif %}
+                {% if ev.description %}<p class="small" style="color:var(--bs-secondary-color);">{{ ev.description|slice(0, 120) }}{% if ev.description|length > 120 %}…{% endif %}</p>{% endif %}
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                    <span class="small">{{ ev.enrolled_count }}/{{ ev.max_participants }} Teilnehmer</span>
+                    {% if ev.price_cents > 0 %}<span class="fw-semibold">{{ (ev.price_cents / 100)|number_format(2, ',', '.') }} €</span>{% else %}<span class="badge bg-success">kostenlos</span>{% endif %}
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0">
+                <a href="/kurse/{{ ev.id }}" class="btn btn-sm btn-outline-primary w-100">Details</a>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="col-12"><div class="card"><div class="card-body text-center py-5" style="color:var(--bs-secondary-color);">
+        Keine Events im gewählten Zeitraum.
+    </div></div></div>
+{% endfor %}
+</div>
+{% endblock %}

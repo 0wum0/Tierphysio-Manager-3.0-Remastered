@@ -1,0 +1,73 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'dogschool_invoices' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Hundeschul-Rechnungen</h1>
+        <p class="page-subtitle">{{ invoices|length }} Rechnungen aus Kursen + Paketen</p>
+    </div>
+    <a href="/steuerexport?from={{ filter_from }}&to={{ filter_to }}" class="btn btn-secondary">→ Steuerexport</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="GET" action="/hundeschule/rechnungen" class="d-flex gap-2 align-items-end flex-wrap">
+            <div><label class="form-label small">Von</label><input type="date" name="from" value="{{ filter_from }}" class="form-control form-control-sm"></div>
+            <div><label class="form-label small">Bis</label><input type="date" name="to" value="{{ filter_to }}" class="form-control form-control-sm"></div>
+            <div>
+                <label class="form-label small">Status</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">Alle</option>
+                    <option value="draft"     {% if filter_status == 'draft' %}selected{% endif %}>Entwurf</option>
+                    <option value="open"      {% if filter_status == 'open' %}selected{% endif %}>Offen</option>
+                    <option value="paid"      {% if filter_status == 'paid' %}selected{% endif %}>Bezahlt</option>
+                    <option value="overdue"   {% if filter_status == 'overdue' %}selected{% endif %}>Überfällig</option>
+                    <option value="cancelled" {% if filter_status == 'cancelled' %}selected{% endif %}>Storniert</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-secondary btn-sm">Filtern</button>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Rechnungsnr.</th>
+                    <th>Datum</th>
+                    <th>Kunde</th>
+                    <th>Quelle</th>
+                    <th>Brutto</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for i in invoices %}
+                <tr>
+                    <td><a href="/rechnungen/{{ i.id }}" style="color:var(--bs-body-color);text-decoration:none;font-weight:600;">{{ i.invoice_number }}</a></td>
+                    <td class="small">{{ i.issue_date|date('d.m.Y') }}</td>
+                    <td>{{ i.owner_name }}</td>
+                    <td>
+                        {% set src_color = {'course':'#60a5fa','package':'#a78bfa','other':'#64748b'}[i.source_type] %}
+                        {% set src_label = {'course':'Kurs','package':'Paket','other':'Sonstige'}[i.source_type] %}
+                        <span class="badge" style="background:{{ src_color }}22;color:{{ src_color }};border:1px solid {{ src_color }}44;">{{ src_label }}</span>
+                    </td>
+                    <td>{{ (i.total_gross ?? 0)|number_format(2, ',', '.') }} €</td>
+                    <td>
+                        {% set sc = {'paid':'#22c55e','open':'#60a5fa','overdue':'#ef4444','draft':'#94a3b8','cancelled':'#64748b'}[i.status] ?? '#64748b' %}
+                        <span class="badge" style="background:{{ sc }}22;color:{{ sc }};border:1px solid {{ sc }}44;">{{ i.status }}</span>
+                    </td>
+                    <td class="text-end"><a href="/rechnungen/{{ i.id }}" class="btn btn-sm btn-link">Öffnen</a></td>
+                </tr>
+            {% else %}
+                <tr><td colspan="7" class="text-center py-4" style="color:var(--bs-secondary-color);">Keine Rechnungen im Zeitraum.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,232 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'consents' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="/einwilligungen" class="btn btn-link btn-sm mb-2">← Zurück</a>
+        <h1 class="page-title">{% if is_new %}Neue Einwilligung{% else %}{{ consent.name }}{% endif %}</h1>
+        {% if not is_new %}<p class="page-subtitle">Version {{ consent.version }}</p>{% endif %}
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <form method="POST" action="{% if is_new %}/einwilligungen{% else %}/einwilligungen/{{ consent.id }}{% endif %}">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <div class="card mb-3"><div class="card-body px-4 py-3">
+                <div class="row g-3">
+                    <div class="col-md-8"><label class="form-label">Name</label><input type="text" name="name" required value="{{ consent.name|default('') }}" class="form-control"></div>
+                    <div class="col-md-2"><label class="form-label">Version</label><input type="text" name="version" value="{{ consent.version|default('1.0') }}" class="form-control"></div>
+                    <div class="col-md-2"><label class="form-label">Typ</label>
+                        <select name="type" class="form-select">
+                            <option value="participation"    {% if consent.type == 'participation' %}selected{% endif %}>Teilnahme</option>
+                            <option value="photo_video"      {% if consent.type == 'photo_video' %}selected{% endif %}>Foto/Video</option>
+                            <option value="liability"        {% if consent.type == 'liability' %}selected{% endif %}>Haftung</option>
+                            <option value="data_protection"  {% if consent.type == 'data_protection' %}selected{% endif %}>DSGVO</option>
+                            <option value="vaccination"      {% if consent.type == 'vaccination' %}selected{% endif %}>Impfstatus</option>
+                            <option value="other"            {% if consent.type == 'other' %}selected{% endif %}>Sonstiges</option>
+                        </select>
+                    </div>
+                    <div class="col-12"><label class="form-label">Inhalt (wird dem Halter angezeigt)</label>
+                        <textarea name="content" rows="12" class="form-control" required>{{ consent.content|default('') }}</textarea>
+                    </div>
+                    <div class="col-md-6"><div class="form-check">
+                        <input type="checkbox" name="is_required" value="1" {% if consent.is_required %}checked{% endif %} id="is_req" class="form-check-input">
+                        <label for="is_req" class="form-check-label">Pflicht-Einwilligung</label>
+                    </div></div>
+                    <div class="col-md-6"><div class="form-check">
+                        <input type="checkbox" name="is_active" value="1" {% if consent.is_active %}checked{% endif %} id="is_act" class="form-check-input">
+                        <label for="is_act" class="form-check-label">Aktiv (einsammelbar)</label>
+                    </div></div>
+                </div>
+            </div></div>
+
+            <div class="d-flex gap-2 justify-content-end">
+                {% if not is_new %}
+                <form action="/einwilligungen/{{ consent.id }}/loeschen" method="POST" style="margin:0;" onsubmit="return confirm('Löschen?');">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="btn btn-outline-danger">Löschen</button>
+                </form>
+                {% endif %}
+                <a href="/einwilligungen" class="btn btn-secondary">Abbrechen</a>
+                <button type="submit" class="btn btn-primary">Speichern</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="col-lg-4">
+        {% if not is_new and signatures is defined %}
+        <div class="card">
+            <div class="card-header px-4 py-3"><span class="fw-semibold">Signaturen ({{ signatures|length }})</span></div>
+            <div class="card-body px-0 py-0">
+                {% if signatures|length == 0 %}
+                    <div class="text-center py-4" style="color:var(--bs-secondary-color);font-size:0.9rem;">Noch keine Signaturen.</div>
+                {% else %}
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Halter</th><th>Status</th><th>Datum</th></tr></thead>
+                        <tbody>
+                        {% for s in signatures %}
+                            <tr>
+                                <td class="small">{{ s.owner_first_name }} {{ s.owner_last_name }}{% if s.patient_name %}<br><em>{{ s.patient_name }}</em>{% endif %}</td>
+                                <td>
+                                    {% set sc = {'pending':'#fbbf24','signed':'#22c55e','revoked':'#ef4444'}[s.status] ?? '#64748b' %}
+                                    <span class="badge" style="background:{{ sc }}22;color:{{ sc }};border:1px solid {{ sc }}44;">{{ s.status }}</span>
+                                </td>
+                                <td class="small">{{ s.signed_at ? s.signed_at|date('d.m.Y') : (s.created_at|date('d.m.Y')) }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# ══════════════════════════════════════════════════════════
+           Signatur-Pad — Interessenten/Halter unterschreibt digital.
+           Canvas speichert als PNG-Base64 in signature_data.
+           ══════════════════════════════════════════════════════════ #}
+        {% if not is_new %}
+        <div class="card mt-3">
+            <div class="card-header px-4 py-3"><span class="fw-semibold">Neue Signatur einholen</span></div>
+            <div class="card-body px-4 py-3">
+                <form id="sig-form" action="/einwilligungen/{{ consent.id }}/signieren" method="POST">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="signature_id" id="sig-id" value="">
+                    <input type="hidden" name="signature_data" id="sig-data" value="">
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6"><label class="form-label small">Halter-ID</label>
+                            <input type="number" id="sig-owner" placeholder="Owner-ID" class="form-control form-control-sm"></div>
+                        <div class="col-md-6"><label class="form-label small">Hund-ID (optional)</label>
+                            <input type="number" id="sig-patient" placeholder="Patient-ID" class="form-control form-control-sm"></div>
+                        <div class="col-12"><label class="form-label small">Name des Unterzeichners (wie gedruckt)</label>
+                            <input type="text" name="signature_name" required class="form-control form-control-sm"></div>
+                    </div>
+
+                    <label class="form-label small mt-2">Unterschrift hier zeichnen</label>
+                    <div style="border:1px dashed var(--bs-border-color);border-radius:6px;background:#ffffff;">
+                        <canvas id="sig-canvas" width="600" height="200" style="width:100%;height:200px;cursor:crosshair;touch-action:none;"></canvas>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <button type="button" id="sig-clear" class="btn btn-sm btn-outline-secondary">Löschen</button>
+                        <button type="submit" id="sig-submit" class="btn btn-primary" disabled>Unterschrift speichern</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <script>
+        (function() {
+            'use strict';
+
+            var canvas = document.getElementById('sig-canvas');
+            if (!canvas) return;
+            var ctx = canvas.getContext('2d');
+            var drawing = false;
+            var hasDrawn = false;
+            var lastX = 0, lastY = 0;
+
+            /* Canvas-Auflösung ans physische Display anpassen */
+            function resize() {
+                var rect = canvas.getBoundingClientRect();
+                var dpr = window.devicePixelRatio || 1;
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                ctx.scale(dpr, dpr);
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = '#1e293b';
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            function getPos(evt) {
+                var rect = canvas.getBoundingClientRect();
+                var t = evt.touches ? evt.touches[0] : evt;
+                return { x: t.clientX - rect.left, y: t.clientY - rect.top };
+            }
+
+            function start(evt) {
+                evt.preventDefault();
+                drawing = true;
+                var p = getPos(evt);
+                lastX = p.x;
+                lastY = p.y;
+            }
+            function move(evt) {
+                if (!drawing) return;
+                evt.preventDefault();
+                var p = getPos(evt);
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(p.x, p.y);
+                ctx.stroke();
+                lastX = p.x;
+                lastY = p.y;
+                hasDrawn = true;
+                document.getElementById('sig-submit').disabled = false;
+            }
+            function end(evt) { drawing = false; }
+
+            canvas.addEventListener('mousedown', start);
+            canvas.addEventListener('mousemove', move);
+            canvas.addEventListener('mouseup', end);
+            canvas.addEventListener('mouseleave', end);
+            canvas.addEventListener('touchstart', start, { passive: false });
+            canvas.addEventListener('touchmove', move, { passive: false });
+            canvas.addEventListener('touchend', end);
+
+            document.getElementById('sig-clear').addEventListener('click', function() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                hasDrawn = false;
+                document.getElementById('sig-submit').disabled = true;
+            });
+
+            /* Vor Submit: 1) Signature-Row anlegen (AJAX), 2) PNG anhängen */
+            document.getElementById('sig-form').addEventListener('submit', function(e) {
+                if (!hasDrawn) {
+                    e.preventDefault();
+                    alert('Bitte erst eine Unterschrift zeichnen.');
+                    return;
+                }
+                var ownerId = parseInt(document.getElementById('sig-owner').value, 10) || 0;
+                var patientId = parseInt(document.getElementById('sig-patient').value, 10) || 0;
+                if (!ownerId) {
+                    e.preventDefault();
+                    alert('Halter-ID ist erforderlich.');
+                    return;
+                }
+
+                /* PNG als Base64 ins hidden field schreiben */
+                document.getElementById('sig-data').value = canvas.toDataURL('image/png');
+
+                /* Signature-Row erstellen und ID setzen — synchron mit fetch über ein promise-wrap */
+                e.preventDefault();
+                var csrf = document.querySelector('input[name="_csrf_token"]').value;
+                fetch('/api/consents/{{ consent.id }}/signature-row', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+                    body: new URLSearchParams({
+                        _csrf_token: csrf,
+                        owner_id: ownerId.toString(),
+                        patient_id: patientId.toString(),
+                    }).toString()
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(j) {
+                    if (!j || !j.signature_id) throw new Error('Keine Signature-ID erhalten');
+                    document.getElementById('sig-id').value = j.signature_id.toString();
+                    document.getElementById('sig-form').submit();
+                })
+                .catch(function(err) {
+                    alert('Fehler beim Anlegen: ' + (err.message || err));
+                });
+            });
+        })();
+        </script>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -80,6 +80,43 @@ final class FeatureRouteMap
         '/tcp'                          => 'therapy_care',
 
         '/steuerexport'                 => 'tax_export',
+
+        // ── Hundeschul-/Hundetrainer-Modul (practice_type = 'trainer') ──
+        //    Alle dogschool_* Features werden zusätzlich über den
+        //    Tenant-Typ-Gate im FeatureGateService::isEnabled() abgesichert:
+        //    Praxis-Tenants (therapeut) bekommen 403 selbst wenn der Plan
+        //    die Keys theoretisch freischaltet.
+
+        '/hundeschule'                  => 'dogschool_dashboard',
+        '/api/hundeschule'              => 'dogschool_dashboard',
+        '/kurse'                        => 'dogschool_courses',
+        '/api/kurse'                    => 'dogschool_courses',
+        '/kurstermine'                  => 'dogschool_group_training',
+        '/teilnehmer'                   => 'dogschool_courses',
+        '/warteliste'                   => 'dogschool_waitlist',
+        '/anwesenheit'                  => 'dogschool_attendance',
+        '/api/anwesenheit'              => 'dogschool_attendance',
+        '/pakete'                       => 'dogschool_packages',
+        '/api/pakete'                   => 'dogschool_packages',
+        '/mehrfachkarten'               => 'dogschool_packages',
+        '/einwilligungen'               => 'dogschool_consents',
+        '/trainer'                      => 'dogschool_trainers',
+        '/trainer-team'                 => 'dogschool_trainers',
+        '/events'                       => 'dogschool_events',
+        '/social-walks'                 => 'dogschool_events',
+        '/interessenten'                => 'dogschool_leads',
+        '/leads'                        => 'dogschool_leads',
+        '/buchung'                      => null,    /* öffentlich — kein Gate */
+        '/anfragen'                     => 'dogschool_online_booking',
+        '/fortschritt'                  => 'dogschool_progress_tracking',
+        '/auswertungen'                 => 'dogschool_reports',
+        '/berichte'                     => 'dogschool_reports',
+        '/trainingsplaene'              => 'dogschool_training_plans',
+        '/uebungen'                     => 'dogschool_exercises',
+        '/kursarten'                    => 'dogschool_categories',
+        '/hundeschule/rechnungen'       => 'dogschool_invoicing',
+        '/steuerexport'                 => 'dogschool_datev_export',
+        '/api/consents'                 => 'dogschool_consents',
     ];
 
     /**

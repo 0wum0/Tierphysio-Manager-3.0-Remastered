@@ -1,0 +1,60 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'training_plans' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Trainingspläne</h1>
+        <p class="page-subtitle">{{ templates|length }} Pläne verfügbar</p>
+    </div>
+    <a href="/trainingsplaene/neu" class="btn btn-primary">+ Eigener Plan</a>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <form method="GET" action="/trainingsplaene" class="d-flex gap-2 align-items-center">
+            <label class="form-label mb-0 me-2 small">Zielgruppe:</label>
+            {% for key, label in audiences %}
+                <a href="/trainingsplaene{% if key %}?audience={{ key }}{% endif %}"
+                   class="btn btn-sm {% if filter_audience == key %}btn-primary{% else %}btn-outline-secondary{% endif %}">{{ label }}</a>
+            {% endfor %}
+        </form>
+    </div>
+</div>
+
+<div class="row g-3">
+{% for p in templates %}
+    {% set diff_color = {'easy':'#22c55e','medium':'#60a5fa','hard':'#f97316','expert':'#ef4444'}[p.difficulty] ?? '#64748b' %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="mb-0" style="font-size:1.05rem;">
+                        <a href="/trainingsplaene/{{ p.id }}" style="color:var(--bs-body-color);text-decoration:none;">{{ p.name }}</a>
+                    </h5>
+                    {% if p.is_system %}<span class="badge bg-secondary" title="System-Vorlage">★</span>{% endif %}
+                </div>
+                <div class="d-flex flex-wrap gap-1 mb-2">
+                    <span class="badge" style="background:{{ diff_color }}22;color:{{ diff_color }};border:1px solid {{ diff_color }}44;">{{ p.difficulty }}</span>
+                    {% if p.target_audience %}<span class="badge bg-secondary">{{ p.target_audience }}</span>{% endif %}
+                    <span class="badge" style="background:#60a5fa22;color:#60a5fa;border:1px solid #60a5fa44;">{{ p.duration_weeks }} Wo.</span>
+                </div>
+                <p class="small mb-2" style="color:var(--bs-secondary-color);min-height:3em;">{{ p.description|slice(0, 120) }}{% if p.description|length > 120 %}…{% endif %}</p>
+                <div class="small" style="color:var(--bs-secondary-color);">
+                    <strong>{{ p.exercise_count }}</strong> Übungen · {{ p.sessions_per_week }}×/Woche
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0 pt-0">
+                <a href="/trainingsplaene/{{ p.id }}" class="btn btn-sm btn-outline-primary w-100">Ansehen & Zuweisen</a>
+            </div>
+        </div>
+    </div>
+{% else %}
+    <div class="col-12">
+        <div class="card"><div class="card-body text-center py-5" style="color:var(--bs-secondary-color);">
+            Keine Pläne vorhanden. System-Pläne werden beim ersten Besuch des Dashboards automatisch angelegt.
+        </div></div>
+    </div>
+{% endfor %}
+</div>
+{% endblock %}

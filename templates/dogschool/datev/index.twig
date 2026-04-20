@@ -1,0 +1,146 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'datev' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Steuerexport</h1>
+        <p class="page-subtitle">DATEV-kompatible CSV-Exporte für den Steuerberater</p>
+    </div>
+</div>
+
+<form method="GET" action="/steuerexport" class="mb-3">
+    <div class="card"><div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Zeitraum von</label>
+                <input type="date" name="from" value="{{ from }}" class="form-control">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">bis</label>
+                <input type="date" name="to" value="{{ to }}" class="form-control">
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-secondary">Aktualisieren</button>
+                <div class="btn-group ms-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setQuickRange('month')">Monat</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setQuickRange('quarter')">Quartal</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setQuickRange('year')">Jahr</button>
+                </div>
+            </div>
+        </div>
+    </div></div>
+</form>
+
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="card"><div class="card-body">
+            <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);">Umsatz Netto</div>
+            <div class="fw-bold" style="font-size:1.75rem;">{{ total_net|number_format(2, ',', '.') }} €</div>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card"><div class="card-body">
+            <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);">Umsatzsteuer</div>
+            <div class="fw-bold" style="font-size:1.75rem;">{{ total_tax|number_format(2, ',', '.') }} €</div>
+        </div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card"><div class="card-body">
+            <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);">Brutto</div>
+            <div class="fw-bold" style="font-size:1.75rem;">{{ total_gross|number_format(2, ',', '.') }} €</div>
+        </div></div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header px-4 py-3"><span class="fw-semibold">Umsatz nach Steuersatz</span></div>
+            <div class="card-body px-0 py-0">
+                {% if summary|length == 0 %}
+                    <div class="text-center py-4" style="color:var(--bs-secondary-color);">Keine Umsätze im Zeitraum.</div>
+                {% else %}
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>MwSt-Satz</th><th>Buchungen</th><th>Netto</th><th>USt.</th><th>Brutto</th></tr></thead>
+                    <tbody>
+                    {% for s in summary %}
+                        <tr>
+                            <td><strong>{{ s.rate|number_format(0) }} %</strong></td>
+                            <td>{{ s.count }}</td>
+                            <td>{{ s.net|number_format(2, ',', '.') }} €</td>
+                            <td>{{ s.tax|number_format(2, ',', '.') }} €</td>
+                            <td><strong>{{ s.gross|number_format(2, ',', '.') }} €</strong></td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header px-4 py-3"><span class="fw-semibold">CSV-Export</span></div>
+            <div class="card-body">
+                <p class="small" style="color:var(--bs-secondary-color);">Drei Formate verfügbar:</p>
+                <form action="/steuerexport/download" method="POST" class="mb-2">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="from" value="{{ from }}">
+                    <input type="hidden" name="to" value="{{ to }}">
+                    <input type="hidden" name="mode" value="simple">
+                    <button type="submit" class="btn btn-primary w-100 text-start">
+                        <div class="fw-semibold">Steuerberater-CSV</div>
+                        <div class="small">Alle Rechnungen, eine Zeile pro Position, für Lexware/BuchhaltungsButler/sevDesk</div>
+                    </button>
+                </form>
+                <form action="/steuerexport/download" method="POST" class="mb-2">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="from" value="{{ from }}">
+                    <input type="hidden" name="to" value="{{ to }}">
+                    <input type="hidden" name="mode" value="datev">
+                    <button type="submit" class="btn btn-outline-primary w-100 text-start">
+                        <div class="fw-semibold">DATEV Format 7</div>
+                        <div class="small">EXTF-Import für DATEV Unternehmen online / Kanzlei-Rewe</div>
+                    </button>
+                </form>
+                <form action="/steuerexport/download" method="POST">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="from" value="{{ from }}">
+                    <input type="hidden" name="to" value="{{ to }}">
+                    <input type="hidden" name="mode" value="kassenbuch">
+                    <button type="submit" class="btn btn-outline-secondary w-100 text-start">
+                        <div class="fw-semibold">Kassenbuch</div>
+                        <div class="small">Nur Barzahlungen (§146 AO / §147 AO)</div>
+                    </button>
+                </form>
+                <div class="alert alert-warning mt-3" style="font-size:0.82rem;">
+                    <strong>Hinweis:</strong> Die Exporte sind unverbindliche Hilfen. Für die UStVA
+                    und GoBD-konforme Buchhaltung prüfe bitte mit deinem Steuerberater.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function setQuickRange(mode) {
+    var from = document.querySelector('input[name="from"]');
+    var to   = document.querySelector('input[name="to"]');
+    var now  = new Date();
+    var y = now.getFullYear(), m = now.getMonth();
+    if (mode === 'month') {
+        from.value = new Date(y, m, 1).toISOString().substring(0, 10);
+        to.value   = now.toISOString().substring(0, 10);
+    } else if (mode === 'quarter') {
+        var qStart = Math.floor(m / 3) * 3;
+        from.value = new Date(y, qStart, 1).toISOString().substring(0, 10);
+        to.value   = now.toISOString().substring(0, 10);
+    } else if (mode === 'year') {
+        from.value = new Date(y, 0, 1).toISOString().substring(0, 10);
+        to.value   = now.toISOString().substring(0, 10);
+    }
+}
+</script>
+{% endblock %}

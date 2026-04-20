@@ -1,0 +1,140 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'dashboard' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Hundeschul-Übersicht</h1>
+        <p class="page-subtitle">{{ 'now'|date('l, d. F Y') }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        {% if features.dogschool_courses ?? false %}
+        <a href="/kurse/neu" class="btn btn-primary btn-sm">+ Neuer Kurs</a>
+        {% endif %}
+    </div>
+</div>
+
+{# ── Kennzahlen ── #}
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card"><div class="card-body">
+            <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);letter-spacing:0.05em;">Aktive Kurse</div>
+            <div class="fw-bold" style="font-size:1.75rem;">{{ stats.active_courses }}</div>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card"><div class="card-body">
+            <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);letter-spacing:0.05em;">Freie Plätze</div>
+            <div class="fw-bold" style="font-size:1.75rem;color:#22c55e;">{{ stats.free_spots_total }}</div>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card"><div class="card-body">
+            <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);letter-spacing:0.05em;">Volle Kurse</div>
+            <div class="fw-bold" style="font-size:1.75rem;color:#fbbf24;">{{ stats.full_courses }}</div>
+        </div></div>
+    </div>
+    <div class="col-md-3">
+        <div class="card"><div class="card-body">
+            <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);letter-spacing:0.05em;">Warteliste</div>
+            <div class="fw-bold" style="font-size:1.75rem;">{{ stats.waitlist_total }}</div>
+        </div></div>
+    </div>
+</div>
+
+<div class="row g-3">
+    {# ── Heute ── #}
+    <div class="col-lg-6">
+        <div class="card mb-3">
+            <div class="card-header px-4 py-3">
+                <span class="fw-semibold">Heute ({{ today_sessions|length }})</span>
+            </div>
+            <div class="card-body px-0 py-0">
+                {% if today_sessions|length == 0 %}
+                    <div class="text-center py-4" style="color:var(--bs-secondary-color);font-size:0.9rem;">Keine Termine heute.</div>
+                {% else %}
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Zeit</th><th>Kurs</th><th>Teilnehmer</th><th></th></tr></thead>
+                        <tbody>
+                        {% for s in today_sessions %}
+                            <tr>
+                                <td class="fw-semibold">{{ s.start_time|slice(0, 5) }}</td>
+                                <td>
+                                    <a href="/kurse/{{ s.course_id }}" style="color:var(--bs-body-color);text-decoration:none;font-weight:500;">{{ s.course_name }}</a>
+                                    {% if s.topic %}<div class="small" style="color:var(--bs-secondary-color);">{{ s.topic }}</div>{% endif %}
+                                    {% if s.location %}<div class="small" style="color:var(--bs-secondary-color);">{{ s.location }}</div>{% endif %}
+                                </td>
+                                <td>{{ s.enrolled_count }}/{{ s.max_participants }}</td>
+                                <td class="text-end">
+                                    {% if features.dogschool_attendance ?? false %}
+                                    <a href="/anwesenheit/session/{{ s.id }}" class="btn btn-sm btn-link">Anwesenheit</a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# ── Nächste 7 Tage ── #}
+    <div class="col-lg-6">
+        <div class="card mb-3">
+            <div class="card-header px-4 py-3">
+                <span class="fw-semibold">Nächste 7 Tage</span>
+            </div>
+            <div class="card-body px-0 py-0">
+                {% if upcoming_sessions|length == 0 %}
+                    <div class="text-center py-4" style="color:var(--bs-secondary-color);font-size:0.9rem;">Keine anstehenden Termine.</div>
+                {% else %}
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Datum</th><th>Zeit</th><th>Kurs</th><th>Teilnehmer</th></tr></thead>
+                        <tbody>
+                        {% for s in upcoming_sessions|slice(0, 15) %}
+                            <tr>
+                                <td class="small">{{ s.session_date|date('D, d.m.') }}</td>
+                                <td>{{ s.start_time|slice(0, 5) }}</td>
+                                <td><a href="/kurse/{{ s.course_id }}" style="color:var(--bs-body-color);text-decoration:none;">{{ s.course_name }}</a></td>
+                                <td>{{ s.enrolled_count }}/{{ s.max_participants }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# ── Offene Anwesenheiten ── #}
+    {% if features.dogschool_attendance ?? false %}
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header px-4 py-3">
+                <span class="fw-semibold">Anwesenheit noch offen ({{ open_sessions|length }})</span>
+            </div>
+            <div class="card-body px-0 py-0">
+                {% if open_sessions|length == 0 %}
+                    <div class="text-center py-4" style="color:var(--bs-secondary-color);font-size:0.9rem;">Keine offenen Einträge.</div>
+                {% else %}
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Datum</th><th>Kurs</th><th>Zeit</th><th></th></tr></thead>
+                        <tbody>
+                        {% for s in open_sessions %}
+                            <tr>
+                                <td>{{ s.session_date|date('d.m.Y') }}</td>
+                                <td>{{ s.course_name }}</td>
+                                <td>{{ s.start_time|slice(0, 5) }}</td>
+                                <td class="text-end"><a href="/anwesenheit/session/{{ s.id }}" class="btn btn-sm btn-primary">Jetzt markieren</a></td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

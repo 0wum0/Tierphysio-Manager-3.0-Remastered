@@ -172,6 +172,23 @@ class SettingsController extends Controller
             $this->settingsService->set($key, $value);
         }
 
+        /* Wechselt der Praxis-Typ (therapeut ↔ trainer), muss der lokale
+         * Feature-Gate-Cache geleert werden. Sonst sieht die Praxis-App
+         * bis zum TTL-Ablauf (15s) noch die alte Tenant-Typ-Zuordnung
+         * — Hundeschul-Features würden im UI verzögert auftauchen bzw.
+         * verschwinden. Das DELETE triggert beim nächsten Request ein
+         * frisches syncFromSaas() inkl. neuer practiceTypeCache-Lesung. */
+        if (array_key_exists('practice_type', $data)) {
+            try {
+                \App\Core\Application::getInstance()->getContainer()
+                    ->get(\App\Services\FeatureGateService::class)
+                    ->forceSync();
+            } catch (\Throwable $e) {
+                /* Cache-Reset ist best-effort — Setting-Save bleibt gültig */
+                error_log('[SettingsController] feature cache reset: ' . $e->getMessage());
+            }
+        }
+
         $this->session->flash('success', $this->translator->trans('settings.saved'));
         $this->redirect('/einstellungen');
     }

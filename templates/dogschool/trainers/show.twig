@@ -1,0 +1,91 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'trainers' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="/trainer" class="btn btn-link btn-sm mb-2">← Team</a>
+        <h1 class="page-title">{{ profile.display_name ?? user.name }}</h1>
+        <p class="page-subtitle">{{ user.email }} · {{ user.role }}</p>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <form action="/trainer/{{ user.id }}" method="POST">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <div class="card mb-3">
+                <div class="card-header px-4 py-3"><span class="fw-semibold">Profil</span></div>
+                <div class="card-body px-4 py-3">
+                    <div class="row g-3">
+                        <div class="col-md-8"><label class="form-label">Anzeigename (optional)</label>
+                            <input type="text" name="display_name" value="{{ profile.display_name|default('') }}" class="form-control" placeholder="{{ user.name }}"></div>
+                        <div class="col-md-4"><label class="form-label">Farbe</label>
+                            <input type="color" name="color" value="{{ profile.color|default('#60a5fa') }}" class="form-control form-control-color"></div>
+                        <div class="col-12"><label class="form-label">Kurzbeschreibung / Bio</label>
+                            <textarea name="bio" rows="3" class="form-control">{{ profile.bio|default('') }}</textarea></div>
+                        <div class="col-12"><label class="form-label">Qualifikationen</label>
+                            <textarea name="qualifications" rows="2" class="form-control" placeholder="z.B. IHK-Hundetrainer, Dogs Point Ausbildung…">{{ profile.qualifications|default('') }}</textarea></div>
+                        <div class="col-12"><label class="form-label">Spezialisierungen (kommagetrennt)</label>
+                            <input type="text" name="specializations" value="{{ profile.specializations|default('') }}" class="form-control" placeholder="welpen, problem, agility"></div>
+                        <div class="col-md-6"><label class="form-label">Telefon</label>
+                            <input type="text" name="phone" value="{{ profile.phone|default('') }}" class="form-control"></div>
+                        <div class="col-md-6"><label class="form-label">Öffentliche E-Mail</label>
+                            <input type="email" name="email_public" value="{{ profile.email_public|default('') }}" class="form-control"></div>
+                        <div class="col-12"><label class="form-label">Avatar-URL</label>
+                            <input type="url" name="avatar_url" value="{{ profile.avatar_url|default('') }}" class="form-control"></div>
+                        <div class="col-md-6"><div class="form-check">
+                            <input type="checkbox" name="public_profile" value="1" {% if profile.public_profile %}checked{% endif %} id="pub" class="form-check-input">
+                            <label for="pub" class="form-check-label">Auf öffentlicher Website zeigen</label>
+                        </div></div>
+                        <div class="col-md-6"><div class="form-check">
+                            <input type="checkbox" name="is_active" value="1" {% if profile.is_active %}checked{% endif %} id="act" class="form-check-input">
+                            <label for="act" class="form-check-label">Aktiv im Team</label>
+                        </div></div>
+                    </div>
+                </div>
+                <div class="card-footer text-end"><button type="submit" class="btn btn-primary">Profil speichern</button></div>
+            </div>
+        </form>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header px-4 py-3"><span class="fw-semibold">Verfügbarkeiten</span></div>
+            <div class="card-body px-0 py-0">
+                {% if availability|length == 0 %}
+                    <div class="text-center py-3 px-3" style="color:var(--bs-secondary-color);font-size:0.9rem;">Keine Verfügbarkeiten definiert.</div>
+                {% else %}
+                <table class="table table-sm mb-0">
+                    <tbody>
+                    {% for a in availability %}
+                        <tr>
+                            <td class="fw-semibold">{{ weekdays[a.weekday] ?? '?' }}</td>
+                            <td>{{ a.start_time|slice(0, 5) }} – {{ a.end_time|slice(0, 5) }}</td>
+                            <td class="text-end">
+                                <form action="/trainer/{{ user.id }}/verfuegbarkeit/{{ a.id }}/loeschen" method="POST" style="margin:0;">
+                                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                    <button type="submit" class="btn btn-sm btn-link" style="color:#ef4444;">×</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <form action="/trainer/{{ user.id }}/verfuegbarkeit" method="POST" class="row g-2">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                    <div class="col-4"><select name="weekday" class="form-select form-select-sm">
+                        {% for w, l in weekdays %}<option value="{{ w }}">{{ l }}</option>{% endfor %}
+                    </select></div>
+                    <div class="col-3"><input type="time" name="start_time" value="09:00" class="form-control form-control-sm"></div>
+                    <div class="col-3"><input type="time" name="end_time" value="18:00" class="form-control form-control-sm"></div>
+                    <div class="col-2"><button type="submit" class="btn btn-primary btn-sm w-100">+</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

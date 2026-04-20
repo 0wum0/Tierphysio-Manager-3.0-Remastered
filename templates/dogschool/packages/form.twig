@@ -1,0 +1,73 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'packages' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <a href="/pakete" class="btn btn-link btn-sm mb-2">← Zurück</a>
+        <h1 class="page-title">{% if is_new %}Neues Paket{% else %}Paket bearbeiten{% endif %}</h1>
+    </div>
+</div>
+
+<form method="POST" action="{% if is_new %}/pakete{% else %}/pakete/{{ package.id }}{% endif %}" style="max-width:720px;">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+    <div class="card mb-3">
+        <div class="card-body px-4 py-3">
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label">Name <span style="color:#ef4444;">*</span></label>
+                    <input type="text" name="name" value="{{ package.name|default('') }}" required class="form-control">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Beschreibung</label>
+                    <textarea name="description" rows="2" class="form-control">{{ package.description|default('') }}</textarea>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Typ</label>
+                    <select name="type" class="form-select">
+                        <option value="single"       {% if package.type == 'single' %}selected{% endif %}>Einzelstunde</option>
+                        <option value="multi"        {% if package.type == 'multi' %}selected{% endif %}>Mehrfachkarte</option>
+                        <option value="subscription" {% if package.type == 'subscription' %}selected{% endif %}>Abo</option>
+                        <option value="unlimited"    {% if package.type == 'unlimited' %}selected{% endif %}>Flatrate</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Einheiten</label>
+                    <input type="number" name="total_units" min="1" value="{{ package.total_units|default(10) }}" class="form-control">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Gültigkeit (Tage)</label>
+                    <input type="number" name="valid_days" min="0" value="{{ package.valid_days|default(365) }}" class="form-control">
+                    <div class="form-text">0 = unbegrenzt</div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Preis (EUR)</label>
+                    <input type="number" step="0.01" name="price_eur" value="{{ ((package.price_cents|default(0)) / 100)|number_format(2, '.', '') }}" class="form-control">
+                </div>
+                <div class="col-md-6 d-flex align-items-end">
+                    <div class="form-check">
+                        <input type="checkbox" name="is_active" value="1" {% if package.is_active %}checked{% endif %} id="is_active" class="form-check-input">
+                        <label for="is_active" class="form-check-label">Aktiv (zum Verkauf anbieten)</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between">
+        <div>
+        {% if not is_new %}
+            <form action="/pakete/{{ package.id }}/loeschen" method="POST" style="display:inline;" onsubmit="return confirm('Paket wirklich löschen? Bestehende Kontostände bleiben erhalten.');">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="btn btn-outline-danger btn-sm">Paket löschen</button>
+            </form>
+        {% endif %}
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/pakete" class="btn btn-secondary">Abbrechen</a>
+            <button type="submit" class="btn btn-primary">Speichern</button>
+        </div>
+    </div>
+</form>
+{% endblock %}

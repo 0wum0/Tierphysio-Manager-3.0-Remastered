@@ -19,6 +19,20 @@ use App\Controllers\ReminderDunningController;
 use App\Controllers\MobileApiController;
 use App\Controllers\BefundbogenController;
 use App\Controllers\ExpenseController;
+use App\Controllers\CourseController;
+use App\Controllers\DogschoolDashboardController;
+use App\Controllers\AttendanceController;
+use App\Controllers\PackageController;
+use App\Controllers\LeadController;
+use App\Controllers\ConsentController;
+use App\Controllers\DogschoolReportController;
+use App\Controllers\TrainingPlanController;
+use App\Controllers\CourseCategoryController;
+use App\Controllers\TrainerController;
+use App\Controllers\OnlineBookingController;
+use App\Controllers\DogschoolInvoiceController;
+use App\Controllers\DatevExportController;
+use App\Controllers\EventController;
 
 /** @var \App\Core\Router $router */
 
@@ -592,3 +606,130 @@ $router->get('/patient-photos/{id}/{file}', function(array $p) {
 $router->get('/patient-timeline/{id}/{file}', function(array $p) {
     serveStorageFile('patients/' . (int)($p['id'] ?? 0) . '/timeline', $p['file'] ?? '');
 });
+
+// ══════════════════════════════════════════════════════════════════════
+//  HUNDESCHUL-/HUNDETRAINER-MODUL
+//  Zusätzlich durch FeatureRouteMap + FeatureGateService (Tenant-Typ-Gate)
+//  abgesichert. `feature:dogschool_*` wird vom Router automatisch
+//  gesetzt — die explizite Angabe hier dient nur der Lesbarkeit.
+// ══════════════════════════════════════════════════════════════════════
+
+// Dashboard (Hundeschul-Startseite)
+$router->get('/hundeschule',                          [DogschoolDashboardController::class, 'index'], ['auth', 'feature:dogschool_dashboard']);
+
+// Kurse
+$router->get('/kurse',                                [CourseController::class, 'index'],      ['auth', 'feature:dogschool_courses']);
+$router->get('/kurse/neu',                            [CourseController::class, 'create'],     ['auth', 'feature:dogschool_courses']);
+$router->post('/kurse',                               [CourseController::class, 'store'],      ['auth', 'feature:dogschool_courses']);
+$router->get('/kurse/{id}',                           [CourseController::class, 'show'],       ['auth', 'feature:dogschool_courses']);
+$router->get('/kurse/{id}/bearbeiten',                [CourseController::class, 'edit'],       ['auth', 'feature:dogschool_courses']);
+$router->post('/kurse/{id}',                          [CourseController::class, 'update'],     ['auth', 'feature:dogschool_courses']);
+$router->post('/kurse/{id}/loeschen',                 [CourseController::class, 'delete'],     ['auth', 'feature:dogschool_courses']);
+
+// Teilnehmer (Enrollments)
+$router->post('/kurse/{id}/einschreiben',             [CourseController::class, 'enroll'],           ['auth', 'feature:dogschool_courses']);
+$router->post('/kurse/{id}/teilnehmer/{enrollment_id}/status',   [CourseController::class, 'setEnrollmentStatus'], ['auth', 'feature:dogschool_courses']);
+$router->post('/kurse/{id}/teilnehmer/{enrollment_id}/entfernen',[CourseController::class, 'unenroll'],             ['auth', 'feature:dogschool_courses']);
+
+// Warteliste (pro Kurs)
+$router->post('/kurse/{id}/warteliste',               [CourseController::class, 'waitlistAdd'],    ['auth', 'feature:dogschool_waitlist']);
+$router->post('/kurse/{id}/warteliste/{wait_id}/entfernen', [CourseController::class, 'waitlistRemove'], ['auth', 'feature:dogschool_waitlist']);
+
+// Warteliste (globale Übersicht)
+$router->get('/warteliste',                           [CourseController::class, 'waitlistIndex'], ['auth', 'feature:dogschool_waitlist']);
+
+// Anwesenheit
+$router->get('/anwesenheit',                          [AttendanceController::class, 'index'],     ['auth', 'feature:dogschool_attendance']);
+$router->get('/anwesenheit/session/{session_id}',     [AttendanceController::class, 'sessionMatrix'], ['auth', 'feature:dogschool_attendance']);
+$router->post('/anwesenheit/session/{session_id}',    [AttendanceController::class, 'saveMatrix'],    ['auth', 'feature:dogschool_attendance']);
+
+// Pakete / Mehrfachkarten
+$router->get('/pakete',                               [PackageController::class, 'index'],   ['auth', 'feature:dogschool_packages']);
+$router->get('/pakete/neu',                           [PackageController::class, 'create'],  ['auth', 'feature:dogschool_packages']);
+$router->post('/pakete',                              [PackageController::class, 'store'],   ['auth', 'feature:dogschool_packages']);
+$router->get('/pakete/{id}/bearbeiten',               [PackageController::class, 'edit'],    ['auth', 'feature:dogschool_packages']);
+$router->post('/pakete/{id}',                         [PackageController::class, 'update'],  ['auth', 'feature:dogschool_packages']);
+$router->post('/pakete/{id}/loeschen',                [PackageController::class, 'delete'],  ['auth', 'feature:dogschool_packages']);
+$router->post('/pakete/verkaufen',                    [PackageController::class, 'sell'],    ['auth', 'feature:dogschool_packages']);
+$router->get('/pakete/balance/{balance_id}',          [PackageController::class, 'showBalance'], ['auth', 'feature:dogschool_packages']);
+$router->post('/pakete/balance/{balance_id}/einloesen', [PackageController::class, 'redeem'], ['auth', 'feature:dogschool_packages']);
+
+// Interessenten / Leads
+$router->get('/interessenten',                        [LeadController::class, 'index'],      ['auth', 'feature:dogschool_leads']);
+$router->get('/interessenten/neu',                    [LeadController::class, 'create'],     ['auth', 'feature:dogschool_leads']);
+$router->post('/interessenten',                       [LeadController::class, 'store'],      ['auth', 'feature:dogschool_leads']);
+$router->get('/interessenten/{id}',                   [LeadController::class, 'show'],       ['auth', 'feature:dogschool_leads']);
+$router->post('/interessenten/{id}',                  [LeadController::class, 'update'],     ['auth', 'feature:dogschool_leads']);
+$router->post('/interessenten/{id}/konvertieren',     [LeadController::class, 'convert'],    ['auth', 'feature:dogschool_leads']);
+$router->post('/interessenten/{id}/loeschen',         [LeadController::class, 'delete'],     ['auth', 'feature:dogschool_leads']);
+
+// Einwilligungen
+$router->get('/einwilligungen',                       [ConsentController::class, 'index'],   ['auth', 'feature:dogschool_consents']);
+$router->get('/einwilligungen/neu',                   [ConsentController::class, 'create'],  ['auth', 'feature:dogschool_consents']);
+$router->post('/einwilligungen',                      [ConsentController::class, 'store'],   ['auth', 'feature:dogschool_consents']);
+$router->get('/einwilligungen/{id}',                  [ConsentController::class, 'show'],    ['auth', 'feature:dogschool_consents']);
+$router->post('/einwilligungen/{id}/signieren',       [ConsentController::class, 'sign'],    ['auth', 'feature:dogschool_consents']);
+$router->post('/einwilligungen/{id}/loeschen',        [ConsentController::class, 'delete'],  ['auth', 'feature:dogschool_consents']);
+$router->post('/api/consents/{id}/signature-row',     [ConsentController::class, 'apiCreateSignatureRow'], ['auth', 'feature:dogschool_consents']);
+
+// Auswertungen / Reports
+$router->get('/auswertungen',                         [DogschoolReportController::class, 'index'], ['auth', 'feature:dogschool_reports']);
+$router->get('/berichte',                             [DogschoolReportController::class, 'index'], ['auth', 'feature:dogschool_reports']);
+
+// ═══════════════════════════════════════════════════════════════
+//  TCP — Trainingspläne / Übungen / Fortschritt / Hausaufgaben
+// ═══════════════════════════════════════════════════════════════
+$router->get('/trainingsplaene',                                     [TrainingPlanController::class, 'index'],       ['auth', 'feature:dogschool_training_plans']);
+$router->get('/trainingsplaene/neu',                                 [TrainingPlanController::class, 'create'],      ['auth', 'feature:dogschool_training_plans']);
+$router->post('/trainingsplaene',                                    [TrainingPlanController::class, 'store'],       ['auth', 'feature:dogschool_training_plans']);
+$router->get('/trainingsplaene/{id}',                                [TrainingPlanController::class, 'show'],        ['auth', 'feature:dogschool_training_plans']);
+$router->get('/trainingsplaene/{id}/bearbeiten',                     [TrainingPlanController::class, 'edit'],        ['auth', 'feature:dogschool_training_plans']);
+$router->post('/trainingsplaene/{id}',                               [TrainingPlanController::class, 'update'],      ['auth', 'feature:dogschool_training_plans']);
+$router->post('/trainingsplaene/{id}/loeschen',                      [TrainingPlanController::class, 'delete'],      ['auth', 'feature:dogschool_training_plans']);
+$router->post('/trainingsplaene/{id}/uebungen',                      [TrainingPlanController::class, 'addExercise'], ['auth', 'feature:dogschool_training_plans']);
+$router->post('/trainingsplaene/{id}/uebungen/{plan_exercise_id}/entfernen', [TrainingPlanController::class, 'removeExercise'], ['auth', 'feature:dogschool_training_plans']);
+$router->post('/trainingsplaene/{id}/zuweisen',                      [TrainingPlanController::class, 'assignToPatient'], ['auth', 'feature:dogschool_training_plans']);
+
+// Plan-Zuweisungen (individuelle Hunde)
+$router->get('/trainingsplaene/zuweisung/{id}',                      [TrainingPlanController::class, 'assignmentShow'],   ['auth', 'feature:dogschool_training_plans']);
+$router->post('/trainingsplaene/zuweisung/{id}/status',              [TrainingPlanController::class, 'assignmentStatus'], ['auth', 'feature:dogschool_training_plans']);
+$router->post('/trainingsplaene/zuweisung/{id}/fortschritt',         [TrainingPlanController::class, 'recordProgress'],   ['auth', 'feature:dogschool_training_plans']);
+$router->post('/trainingsplaene/zuweisung/{id}/hausaufgabe',         [TrainingPlanController::class, 'createHomework'],   ['auth', 'feature:dogschool_training_plans']);
+$router->post('/trainingsplaene/zuweisung/{id}/hausaufgabe/{homework_id}', [TrainingPlanController::class, 'updateHomework'], ['auth', 'feature:dogschool_training_plans']);
+
+// Übungs-Katalog
+$router->get('/uebungen',                                            [TrainingPlanController::class, 'exercisesIndex'], ['auth', 'feature:dogschool_exercises']);
+$router->post('/uebungen',                                           [TrainingPlanController::class, 'exerciseCreate'], ['auth', 'feature:dogschool_exercises']);
+$router->get('/uebungen/{id}',                                       [TrainingPlanController::class, 'exerciseShow'],   ['auth', 'feature:dogschool_exercises']);
+
+// Kursarten-Editor
+$router->get('/kursarten',                                           [CourseCategoryController::class, 'index'],  ['auth', 'feature:dogschool_courses']);
+$router->post('/kursarten',                                          [CourseCategoryController::class, 'store'],  ['auth', 'feature:dogschool_courses']);
+$router->post('/kursarten/{id}',                                     [CourseCategoryController::class, 'update'], ['auth', 'feature:dogschool_courses']);
+$router->post('/kursarten/{id}/loeschen',                            [CourseCategoryController::class, 'delete'], ['auth', 'feature:dogschool_courses']);
+
+// Trainer-Team
+$router->get('/trainer',                                             [TrainerController::class, 'index'],  ['auth', 'feature:dogschool_trainers']);
+$router->get('/trainer/{id}',                                        [TrainerController::class, 'show'],   ['auth', 'feature:dogschool_trainers']);
+$router->post('/trainer/{id}',                                       [TrainerController::class, 'update'], ['auth', 'feature:dogschool_trainers']);
+$router->post('/trainer/{id}/verfuegbarkeit',                        [TrainerController::class, 'addAvailability'],    ['auth', 'feature:dogschool_trainers']);
+$router->post('/trainer/{id}/verfuegbarkeit/{avail_id}/loeschen',    [TrainerController::class, 'removeAvailability'], ['auth', 'feature:dogschool_trainers']);
+
+// Hundeschul-Rechnungen (Shortcuts auf bestehendes Invoice-System)
+$router->get('/hundeschule/rechnungen',                              [DogschoolInvoiceController::class, 'index'],        ['auth', 'feature:dogschool_invoicing']);
+$router->post('/hundeschule/rechnungen/kurs/{enrollment_id}',        [DogschoolInvoiceController::class, 'createForEnrollment'], ['auth', 'feature:dogschool_invoicing']);
+$router->post('/hundeschule/rechnungen/paket/{balance_id}',          [DogschoolInvoiceController::class, 'createForPackage'],    ['auth', 'feature:dogschool_invoicing']);
+
+// DATEV-Export
+$router->get('/steuerexport',                                        [DatevExportController::class, 'index'],     ['auth', 'feature:dogschool_datev_export']);
+$router->post('/steuerexport/download',                              [DatevExportController::class, 'download'],  ['auth', 'feature:dogschool_datev_export']);
+
+// Online-Buchung — ÖFFENTLICH (kein auth!) + interne Verwaltung
+$router->get('/anfragen',                                            [OnlineBookingController::class, 'adminIndex'],  ['auth', 'feature:dogschool_online_booking']);
+$router->post('/anfragen/{id}/status',                               [OnlineBookingController::class, 'adminUpdate'], ['auth', 'feature:dogschool_online_booking']);
+$router->get('/buchung',                                             [OnlineBookingController::class, 'publicForm']);
+$router->post('/buchung',                                            [OnlineBookingController::class, 'publicSubmit']);
+$router->get('/buchung/danke',                                       [OnlineBookingController::class, 'publicThanks']);
+
+// Events / Workshops / Social Walks (Filter auf courses.type)
+$router->get('/events',                                              [EventController::class, 'index'], ['auth', 'feature:dogschool_events']);

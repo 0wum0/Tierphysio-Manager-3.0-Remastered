@@ -1,0 +1,136 @@
+{% extends 'layouts/base.twig' %}
+{% set active_nav = 'packages' %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Pakete / Mehrfachkarten</h1>
+        <p class="page-subtitle">Katalog & verkaufte Kontostände</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-sell">Paket verkaufen</button>
+        <a href="/pakete/neu" class="btn btn-primary btn-sm">+ Neues Paket</a>
+    </div>
+</div>
+
+<div class="row g-3">
+    {# ── Katalog ── #}
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header px-4 py-3"><span class="fw-semibold">Katalog</span></div>
+            <div class="card-body px-0 py-0">
+                {% if catalog|length == 0 %}
+                    <div class="text-center py-4" style="color:var(--bs-secondary-color);font-size:0.9rem;">Noch keine Pakete definiert.</div>
+                {% else %}
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Name</th><th>Typ</th><th>Einheiten</th><th>Preis</th><th></th></tr></thead>
+                        <tbody>
+                        {% for p in catalog %}
+                            <tr>
+                                <td class="fw-semibold">
+                                    {{ p.name }}
+                                    {% if not p.is_active %}<span class="badge bg-secondary">inaktiv</span>{% endif %}
+                                </td>
+                                <td>{{ p.type }}</td>
+                                <td>{{ p.total_units }}{% if p.valid_days %} · {{ p.valid_days }}d{% endif %}</td>
+                                <td>{{ (p.price_cents / 100)|number_format(2, ',', '.') }} €</td>
+                                <td class="text-end">
+                                    <a href="/pakete/{{ p.id }}/bearbeiten" class="btn btn-sm btn-link">Bearbeiten</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# ── Verkaufte Kontostände ── #}
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header px-4 py-3 d-flex align-items-center justify-content-between">
+                <span class="fw-semibold">Verkaufte Kontostände</span>
+                <form method="GET" action="/pakete" style="margin:0;">
+                    <select name="status" class="form-select form-select-sm" onchange="this.form.submit()" style="width:auto;display:inline-block;">
+                        <option value="active"   {% if filter_status == 'active' %}selected{% endif %}>Aktiv</option>
+                        <option value="used_up"  {% if filter_status == 'used_up' %}selected{% endif %}>Aufgebraucht</option>
+                        <option value="expired"  {% if filter_status == 'expired' %}selected{% endif %}>Abgelaufen</option>
+                        <option value="refunded" {% if filter_status == 'refunded' %}selected{% endif %}>Erstattet</option>
+                        <option value="all"      {% if filter_status == 'all' %}selected{% endif %}>Alle</option>
+                    </select>
+                </form>
+            </div>
+            <div class="card-body px-0 py-0">
+                {% if balances.items|length == 0 %}
+                    <div class="text-center py-4" style="color:var(--bs-secondary-color);font-size:0.9rem;">Keine Einträge.</div>
+                {% else %}
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Halter</th><th>Paket</th><th>Offen</th><th>Gekauft</th><th>Gültig bis</th><th></th></tr></thead>
+                        <tbody>
+                        {% for b in balances.items %}
+                            <tr>
+                                <td>
+                                    {{ b.owner_first_name }} {{ b.owner_last_name }}
+                                    {% if b.patient_name %}<div class="small" style="color:var(--bs-secondary-color);">{{ b.patient_name }}</div>{% endif %}
+                                </td>
+                                <td>{{ b.package_name }}</td>
+                                <td>
+                                    <span class="fw-semibold">{{ b.units_left }}</span>
+                                    <span style="color:var(--bs-secondary-color);">/ {{ b.units_total }}</span>
+                                </td>
+                                <td class="small">{{ b.purchased_at|date('d.m.Y') }}</td>
+                                <td class="small">{{ b.expires_at ? b.expires_at|date('d.m.Y') : '–' }}</td>
+                                <td class="text-end"><a href="/pakete/balance/{{ b.id }}" class="btn btn-sm btn-link">Detail</a></td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── Modal: Paket verkaufen ── #}
+<div class="modal fade" id="modal-sell" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="/pakete/verkaufen" method="POST">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Paket verkaufen</h5>
+                    <button type="button" class="modal-close" data-bs-dismiss="modal">×</button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Paket</label>
+                        <select name="package_id" required class="form-select">
+                            <option value="">— bitte auswählen —</option>
+                            {% for p in catalog %}{% if p.is_active %}
+                            <option value="{{ p.id }}">{{ p.name }} ({{ p.total_units }} Einheiten · {{ (p.price_cents / 100)|number_format(2, ',', '.') }} €)</option>
+                            {% endif %}{% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Halter (Owner-ID)</label>
+                        <input type="number" name="owner_id" required class="form-control" placeholder="ID aus Halterliste">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Hund (optional, Patient-ID)</label>
+                        <input type="number" name="patient_id" class="form-control" placeholder="Leer = für alle Hunde des Halters">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notizen</label>
+                        <textarea name="notes" rows="2" class="form-control"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary">Verkaufen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -58,11 +58,28 @@ class FeaturesController extends Controller
             ];
         }
 
+        /* Gruppierung für die UI: Hundeschul-Features separieren, damit der
+         * Admin sie als eigenen Block sieht (nur für Tenants mit
+         * practice_type='trainer' relevant). */
+        $featureGroups = [
+            'core'      => [],
+            'dogschool' => [],
+        ];
+        foreach ($features as $f) {
+            $key = (string)($f['feature_key'] ?? '');
+            if (str_starts_with($key, 'dogschool_')) {
+                $featureGroups['dogschool'][] = $f;
+            } else {
+                $featureGroups['core'][] = $f;
+            }
+        }
+
         $this->render('admin/features/index.twig', [
-            'features'    => $features,
-            'plans'       => $plans,
-            'plan_matrix' => $planMatrix,
-            'page_title'  => 'Feature-Gating',
+            'features'       => $features,
+            'feature_groups' => $featureGroups,
+            'plans'          => $plans,
+            'plan_matrix'    => $planMatrix,
+            'page_title'     => 'Feature-Gating',
         ]);
     }
 

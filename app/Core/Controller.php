@@ -117,6 +117,25 @@ abstract class Controller
                 ->getContainer()
                 ->get(\App\Services\FeatureGateService::class);
             $gate->requireFeature($key);
+
+            /* ══════════════════════════════════════════════════════════
+             *  Self-Healing: Bei Hundeschul-Features wird das Schema
+             *  idempotent sichergestellt. Kostet ~0ms wenn Tabellen
+             *  bereits da sind (per-request cache in SchemaService).
+             *  Zerstört niemals Praxis-Daten — nur CREATE TABLE IF NOT
+             *  EXISTS für `dogschool_*`-Tabellen.
+             * ══════════════════════════════════════════════════════════ */
+            if (str_starts_with($key, 'dogschool_')) {
+                try {
+                    /** @var \App\Services\DogschoolSchemaService $schema */
+                    $schema = \App\Core\Application::getInstance()
+                        ->getContainer()
+                        ->get(\App\Services\DogschoolSchemaService::class);
+                    $schema->ensure();
+                } catch (\Throwable $se) {
+                    error_log('[Controller dogschool ensure] ' . $se->getMessage());
+                }
+            }
         } catch (\Throwable $e) {
             /* Service nicht verfügbar → konservativ: weitermachen.
              * Das Router-Middleware greift bereits — dies ist nur Backup. */
