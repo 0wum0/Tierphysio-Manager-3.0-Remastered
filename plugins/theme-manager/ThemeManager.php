@@ -110,9 +110,7 @@ class ThemeManager
     public function activeCssUrl(): ?string
     {
         $active = $this->getActive();
-        $dir    = $this->themeDir($active);
-        if ($dir === null) return null;
-        return file_exists($dir . '/theme.css')
+        return $this->resolveFile($active, 'theme.css') !== null
             ? '/theme-assets/' . $active . '/theme.css'
             : null;
     }
@@ -124,15 +122,16 @@ class ThemeManager
 
     public function activeLayoutPath(): ?string
     {
-        $dir = $this->themeDir($this->getActive());
-        if ($dir === null) return null;
-        $path = $dir . '/layout.twig';
-        return file_exists($path) ? $path : null;
+        return $this->resolveFile($this->getActive(), 'layout.twig');
     }
 
     /**
      * Returns the on-disk directory for a theme slug, checking storage/ first
      * (user-installed), then bundled-themes/. Returns null if not found.
+     *
+     * NOTE: Use resolveFile() for individual files — it resolves per-file
+     * with a bundled fallback, so that an incomplete storage theme directory
+     * (e.g. theme.css present but layout.twig missing) doesn't silently break.
      */
     public function themeDir(string $slug): ?string
     {
@@ -140,6 +139,21 @@ class ThemeManager
         if (is_dir($storage)) return $storage;
         $bundled = $this->bundledPath . '/' . $slug;
         if (is_dir($bundled)) return $bundled;
+        return null;
+    }
+
+    /**
+     * Resolve a single theme file by name, preferring the user-installed
+     * copy in storage/themes/{slug}/ and falling back to bundled-themes/{slug}/
+     * when missing. This keeps the "storage overrides bundled" principle
+     * intact at file-level instead of directory-level.
+     */
+    public function resolveFile(string $slug, string $filename): ?string
+    {
+        $storage = $this->themesPath . '/' . $slug . '/' . $filename;
+        if (file_exists($storage)) return $storage;
+        $bundled = $this->bundledPath . '/' . $slug . '/' . $filename;
+        if (file_exists($bundled)) return $bundled;
         return null;
     }
 
@@ -265,8 +279,14 @@ class ThemeManager
         if (!file_exists($jsonFile)) {
             return null;
         }
-        $cssFile = $dir . '/theme.css';
-        if (!file_exists($cssFile)) {
+        /* theme.css check is relaxed: if missing in this dir, it may still be
+         * resolvable via resolveFile() through the bundled fallback — so we
+         * only hard-fail if BOTH storage AND bundled have no theme.css. */
+        $slug     = basename($dir);
+        $cssHere  = file_exists($dir . '/theme.css');
+        $cssAlt   = file_exists($this->themesPath . '/' . $slug . '/theme.css')
+                  || file_exists($this->bundledPath . '/' . $slug . '/theme.css');
+        if (!$cssHere && !$cssAlt) {
             return null;
         }
         $raw = file_get_contents($jsonFile);
@@ -284,17 +304,15 @@ class ThemeManager
 
     private function cssUrl(string $slug): ?string
     {
-        $dir = $this->themeDir($slug);
-        if ($dir === null) return null;
-        return file_exists($dir . '/theme.css') ? '/theme-assets/' . $slug . '/theme.css' : null;
+        return $this->resolveFile($slug, 'theme.css') !== null
+            ? '/theme-assets/' . $slug . '/theme.css'
+            : null;
     }
 
     private function previewUrl(string $slug): ?string
     {
-        $dir = $this->themeDir($slug);
-        if ($dir === null) return null;
         foreach (['preview.png', 'preview.jpg', 'preview.svg'] as $f) {
-            if (file_exists($dir . '/' . $f)) {
+            if ($this->resolveFile($slug, $f) !== null) {
                 return '/theme-assets/' . $slug . '/' . $f;
             }
         }

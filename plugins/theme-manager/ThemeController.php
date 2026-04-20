@@ -155,14 +155,10 @@ class ThemeController extends Controller
             return;
         }
 
-        $themeDir = $this->themeManager->themeDir($slug);
-        if ($themeDir === null) {
-            http_response_code(404);
-            echo 'Not found';
-            return;
-        }
-        $path = $themeDir . '/' . $file;
-        if (!file_exists($path)) {
+        /* Resolve per-file with storage → bundled fallback so incomplete
+         * storage copies don't 404 for files only present in bundled-themes. */
+        $path = $this->themeManager->resolveFile($slug, $file);
+        if ($path === null) {
             http_response_code(404);
             echo 'Not found';
             return;

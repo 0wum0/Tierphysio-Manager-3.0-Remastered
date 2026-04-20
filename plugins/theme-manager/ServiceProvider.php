@@ -32,11 +32,20 @@ class ServiceProvider
         $view->addGlobal('active_theme_css',    $themeManager->activeCssUrl());
 
         /* Register ALL theme directories as Twig namespaces so any theme's layout.twig
-           can extend another theme's layout.twig (e.g. material-pro extends smart-tierphysio). */
+           can extend another theme's layout.twig (e.g. material-pro extends smart-tierphysio).
+           Register BOTH storage/ AND bundled-themes/ under the same namespace so that a
+           partially-copied storage theme (e.g. theme.css present but layout.twig missing)
+           still resolves layout.twig from the bundled fallback. Storage is added first and
+           therefore wins when both sides have the same file. */
         foreach ($themeManager->all() as $t) {
-            $dir = $themeManager->themeDir($t['slug']);
-            if ($dir !== null) {
-                $view->addTemplatePath($dir, $t['slug']);
+            $slug    = $t['slug'];
+            $storage = STORAGE_PATH . '/themes/' . $slug;
+            $bundled = __DIR__ . '/bundled-themes/' . $slug;
+            if (is_dir($storage)) {
+                $view->addTemplatePath($storage, $slug);
+            }
+            if (is_dir($bundled)) {
+                $view->addTemplatePath($bundled, $slug);
             }
         }
 
