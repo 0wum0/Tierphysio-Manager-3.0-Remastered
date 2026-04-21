@@ -75,8 +75,19 @@ class IntakeController extends Controller
         $history[] = $now;
         $_SESSION[$rateKey] = array_values($history);
 
-        $data = $this->buildSubmissionData();
-        $errors = $this->validateSubmission($data);
+        /* DSGVO-Pflicht-Haken: ohne aktives Häkchen keine Anmeldung */
+        if ((string)($_POST['consent'] ?? '') !== '1') {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'ok'     => false,
+                'errors' => ['Bitte bestätigen Sie die Datenschutzerklärung, um die Anmeldung abzuschließen.'],
+            ]);
+            exit;
+        }
+
+        $ownerData = $this->buildOwnerData();
+        $dogs      = $this->collectDogs();
+        $errors    = $this->validateOwnerAndDogs($ownerData, $dogs);
 
         if (!empty($errors)) {
             header('Content-Type: application/json');
@@ -84,27 +95,57 @@ class IntakeController extends Controller
             exit;
         }
 
-        /* Handle photo upload */
-        $photoFilename = '';
-        if (!empty($_FILES['patient_photo']['name']) && $_FILES['patient_photo']['error'] === UPLOAD_ERR_OK) {
-            $photoFilename = $this->handlePhotoUpload();
+        /* Pro Hund eine Submission-Zeile anlegen — Owner-Daten werden
+         * auf jeder Zeile dupliziert, damit Admin-Inbox & Accept/Reject
+         * pro Hund unverändert funktionieren. Reason & appointment_wish
+         * gehören zur Anmeldung insgesamt und werden ebenfalls gespiegelt. */
+        $reason          = $this->sanitize($this->post('reason', ''));
+        $appointmentWish = $this->sanitize($this->post('appointment_wish', ''));
+        $notes           = $this->sanitize($this->post('notes', ''));
+        $ip              = $_SERVER['REMOTE_ADDR'] ?? '';
+        $now             = date('Y-m-d H:i:s');
+
+        $ids = [];
+        foreach ($dogs as $idx => $dog) {
+            $photoFile = $this->handleDogPhotoUpload($idx);
+
+            $row = array_merge($ownerData, [
+                'patient_name'       => $dog['name'],
+                'patient_species'    => $dog['species'] ?: 'Hund',
+                'patient_breed'      => $dog['breed'],
+                'patient_gender'     => $dog['gender'],
+                'patient_birth_date' => $dog['birth_date'] ?: null,
+                'patient_color'      => $dog['color'],
+                'patient_chip'       => $dog['chip'],
+                'patient_photo'      => $photoFile,
+                'reason'             => $reason,
+                'appointment_wish'   => $appointmentWish,
+                'notes'              => $notes,
+                'status'             => 'neu',
+                'ip_address'         => $ip,
+                'created_at'         => $now,
+                'updated_at'         => $now,
+            ]);
+
+            $ids[] = $this->repo->create($row);
         }
-        $data['patient_photo'] = $photoFilename;
-        $data['ip_address']    = $_SERVER['REMOTE_ADDR'] ?? '';
-        $data['created_at']    = date('Y-m-d H:i:s');
-        $data['updated_at']    = date('Y-m-d H:i:s');
 
-        $id = $this->repo->create($data);
-        $submission = $this->repo->findById($id);
-
-        if ($submission) {
-            /* Fire-and-forget notifications */
-            try { $this->mailer->sendNewSubmissionNotification($submission); } catch (\Throwable) {}
-            try { $this->mailer->sendOwnerConfirmation($submission); } catch (\Throwable) {}
+        /* Fire-and-forget Notifications pro Anmeldung — für Mails reicht
+         * die erste Zeile, da Owner identisch ist. Admin bekommt weiter
+         * eine Mail pro Hund, damit die Badge-Zählung stimmt. */
+        foreach ($ids as $id) {
+            $submission = $this->repo->findById($id);
+            if ($submission) {
+                try { $this->mailer->sendNewSubmissionNotification($submission); } catch (\Throwable) {}
+            }
+        }
+        $firstSubmission = $this->repo->findById($ids[0] ?? 0);
+        if ($firstSubmission) {
+            try { $this->mailer->sendOwnerConfirmation($firstSubmission); } catch (\Throwable) {}
         }
 
         header('Content-Type: application/json');
-        echo json_encode(['ok' => true, 'id' => $id]);
+        echo json_encode(['ok' => true, 'ids' => $ids, 'count' => count($ids)]);
         exit;
     }
 
@@ -351,6 +392,132 @@ class IntakeController extends Controller
             'csrf_token' => $this->session->generateCsrfToken(),
         ], $data));
     }
+
+    /* ─────────────────────────────────────────────────────────
+       Multi-Hund-Helfer (neue Anmeldung)
+    ───────────────────────────────────────────────────────── */
+
+    /** Nur die Besitzer-Felder — werden pro Hund dupliziert. */
+    private function buildOwnerData(): array
+    {
+        return [
+            'owner_first_name' => $this->sanitize($this->post('owner_first_name', '')),
+            'owner_last_name'  => $this->sanitize($this->post('owner_last_name', '')),
+            'owner_email'      => filter_var($this->post('owner_email', ''), FILTER_SANITIZE_EMAIL),
+            'owner_phone'      => $this->sanitize($this->post('owner_phone', '')),
+            'owner_street'     => $this->sanitize($this->post('owner_street', '')),
+            'owner_zip'        => $this->sanitize($this->post('owner_zip', '')),
+            'owner_city'       => $this->sanitize($this->post('owner_city', '')),
+        ];
+    }
+
+    /**
+     * Liest alle übergebenen Hunde aus `$_POST['dogs']` (Array-Form),
+     * fällt auf Legacy-Felder `patient_name`/`patient_species` zurück
+     * wenn keine Array-Notation gesendet wurde. Filtert leere Karten.
+     */
+    private function collectDogs(): array
+    {
+        $raw = $_POST['dogs'] ?? null;
+
+        /* Legacy-Fallback: altes Formular ohne dogs[]-Array */
+        if (!is_array($raw) || $raw === []) {
+            $legacyName = trim((string)$this->post('patient_name', ''));
+            if ($legacyName === '') return [];
+            return [[
+                'name'       => $legacyName,
+                'species'    => $this->sanitize($this->post('patient_species', 'Hund')),
+                'breed'      => $this->sanitize($this->post('patient_breed', '')),
+                'gender'     => $this->sanitize($this->post('patient_gender', '')),
+                'birth_date' => $this->post('patient_birth_date') ?: null,
+                'color'      => $this->sanitize($this->post('patient_color', '')),
+                'chip'       => $this->sanitize($this->post('patient_chip', '')),
+            ]];
+        }
+
+        $dogs = [];
+        foreach ($raw as $idx => $d) {
+            if (!is_array($d)) continue;
+            $name = trim((string)($d['name'] ?? ''));
+            if ($name === '') continue; /* leere Karten überspringen */
+            $dogs[(int)$idx] = [
+                'name'       => $this->sanitize($name),
+                'species'    => $this->sanitize((string)($d['species']    ?? 'Hund')),
+                'breed'      => $this->sanitize((string)($d['breed']      ?? '')),
+                'gender'     => $this->sanitize((string)($d['gender']     ?? '')),
+                'birth_date' => ($d['birth_date'] ?? '') ?: null,
+                'color'      => $this->sanitize((string)($d['color']      ?? '')),
+                'chip'       => $this->sanitize((string)($d['chip']       ?? '')),
+            ];
+        }
+        return $dogs;
+    }
+
+    /**
+     * Validiert Owner + mindestens einen Hund + Anliegen.
+     * @return string[] Fehler-Strings (leer = alles ok)
+     */
+    private function validateOwnerAndDogs(array $owner, array $dogs): array
+    {
+        $errors = [];
+
+        if (empty($owner['owner_first_name'])) $errors[] = 'Vorname des Besitzers ist erforderlich.';
+        if (empty($owner['owner_last_name']))  $errors[] = 'Nachname des Besitzers ist erforderlich.';
+        if (empty($owner['owner_email']) || !filter_var($owner['owner_email'], FILTER_VALIDATE_EMAIL)) {
+            $errors[] = 'Gültige E-Mail-Adresse ist erforderlich.';
+        }
+        if (empty($owner['owner_phone'])) $errors[] = 'Telefonnummer ist erforderlich.';
+
+        if (count($dogs) === 0) {
+            $errors[] = 'Bitte geben Sie mindestens einen Hund an.';
+        }
+
+        if (empty(trim((string)$this->post('reason', '')))) {
+            $errors[] = 'Bitte beschreiben Sie Ihr Anliegen.';
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Verarbeitet ein Hund-Foto aus dem Multi-Upload-Array
+     * `$_FILES['dog_photos']`, das pro Hund-Index einen Slot hat.
+     * Liefert den generierten Dateinamen oder '' wenn kein Foto
+     * hochgeladen wurde / Validation fehlschlug.
+     */
+    private function handleDogPhotoUpload(int $idx): string
+    {
+        if (empty($_FILES['dog_photos']['name'][$idx])) return '';
+        if (($_FILES['dog_photos']['error'][$idx] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) return '';
+
+        $size = (int)($_FILES['dog_photos']['size'][$idx] ?? 0);
+        if ($size <= 0 || $size > 8 * 1024 * 1024) return '';
+
+        $tmp = (string)$_FILES['dog_photos']['tmp_name'][$idx];
+        $finfo    = new \finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($tmp) ?: '';
+
+        $allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        if (!in_array($mimeType, $allowed, true)) return '';
+
+        $ext = match($mimeType) {
+            'image/jpeg' => 'jpg',
+            'image/png'  => 'png',
+            'image/webp' => 'webp',
+            default      => 'gif',
+        };
+
+        $dir = tenant_storage_path('intake');
+        if (!is_dir($dir)) { mkdir($dir, 0755, true); }
+
+        $filename = 'intake_' . bin2hex(random_bytes(16)) . '.' . $ext;
+        if (!move_uploaded_file($tmp, $dir . '/' . $filename)) return '';
+        return $filename;
+    }
+
+    /* ─────────────────────────────────────────────────────────
+       Legacy-Helfer (einzel-Hund) — bleiben für Abwärtskompat.
+    ───────────────────────────────────────────────────────── */
 
     private function buildSubmissionData(): array
     {
