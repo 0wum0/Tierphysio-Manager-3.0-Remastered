@@ -11,6 +11,7 @@ use App\Core\Translator;
 use App\Core\View;
 use App\Core\PluginManager;
 use App\Services\DashboardService;
+use App\Services\FeatureGateService;
 
 class DashboardController extends Controller
 {
@@ -20,13 +21,23 @@ class DashboardController extends Controller
         Config $config,
         Translator $translator,
         private readonly DashboardService $dashboardService,
-        private readonly PluginManager $pluginManager
+        private readonly PluginManager $pluginManager,
+        private readonly FeatureGateService $featureGate
     ) {
         parent::__construct($view, $session, $config, $translator);
     }
 
     public function index(array $params = []): void
     {
+        /* Trainer-Tenants haben eine eigene, auf Kurse/Sessions zugeschnittene
+         * Startseite. Die Praxis-KPIs (Termine aus `appointments`, Invoice-
+         * Summen aus `invoices`) sind für eine Hundeschule inhaltlich leer und
+         * irreführend. Deshalb direkt auf das Hundeschul-Dashboard umleiten. */
+        if ($this->featureGate->isTrainerTenant()) {
+            $this->redirect('/hundeschule');
+            return;
+        }
+
         $stats   = $this->dashboardService->getStats();
         $user    = $this->session->getUser();
         $widgets = $this->pluginManager->getDashboardWidgets(['user' => $user]);
