@@ -45,9 +45,10 @@ class ServiceProvider
 
         $navItems   = $view->getTwig()->getGlobals()['plugin_nav_items'] ?? [];
         $navItems[] = [
-            'label'   => 'Besitzerportal',
-            'href'    => '/portal-admin',
-            'feature' => 'patient_portal',
+            'label'         => 'Besitzerportal',
+            'href'          => '/portal-admin',
+            'feature'       => 'patient_portal',
+            'practice_only' => true, // Tierhalter-Portal — Hundeschule hat ihr eigenes Online-Portal
             'icon'    => '<svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="9 22 9 12 15 12 15 22"/></svg>',
             'badge'   => $badgeHtml,
         ];

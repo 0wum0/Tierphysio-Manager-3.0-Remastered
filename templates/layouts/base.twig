@@ -94,7 +94,11 @@
             </a>
             {% endif %}
 
-            {% if features.invoices ?? false %}
+            {# Generische Praxis-Rechnungsliste: im Hundeschul-Modus ausblenden,
+               weil dort eine eigene „Rechnungen"-Ansicht unter /hundeschule/rechnungen
+               via `features.dogschool_invoicing` erscheint. Sonst hätte der Trainer
+               zwei „Rechnungen"-Einträge mit unterschiedlichen Listen. #}
+            {% if (features.invoices ?? false) and not (is_trainer ?? false) %}
             <a href="/rechnungen" class="nav-item {{ is_active('/rechnungen') }}">
                 <svg width="18" height="18" fill="none" viewBox="0 0 24 24">
                     <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -271,10 +275,22 @@
                 {# Feature-Gate: Plugin gibt 'feature' => 'KEY' mit;
                    fehlt der Key (Legacy / always-on), wird der Eintrag
                    gezeigt. So bleiben reine Admin-Tools wie Theme-Manager
-                   erreichbar. Admin-only kommt zusätzlich dazu. #}
+                   erreichbar. Admin-only kommt zusätzlich dazu.
+
+                   Tenant-Type-Gate:
+                     - 'practice_only' => true  ⇒ nur für Praxis (is_trainer=false)
+                     - 'trainer_only'  => true  ⇒ nur für Hundeschule (is_trainer=true)
+                   Ohne Flag bleibt das Verhalten wie bisher (für beide sichtbar).
+                   So verschwinden „TherapyCare Pro“, „Einladungslinks“,
+                   „Besitzerportal“ u.ä. aus der Hundeschul-Navigation ohne
+                   den bestehenden Plugin-Loop strukturell zu ändern. #}
                 {% set item_feature_ok = (item.feature is not defined) or (features[item.feature] ?? false) %}
                 {% set item_admin_ok   = not (item.admin_only is defined and item.admin_only) or (current_user and current_user.role == 'admin') %}
-                {% if item_feature_ok and item_admin_ok %}
+                {% set item_type_ok    = not (
+                        ((item.practice_only ?? false) and (is_trainer ?? false))
+                     or ((item.trainer_only ?? false) and not (is_trainer ?? false))
+                   ) %}
+                {% if item_feature_ok and item_admin_ok and item_type_ok %}
                 <a href="{{ item.href }}" class="nav-item {{ is_active(item.href) }}">
                     {% if item.icon is defined %}{{ item.icon|raw }}{% endif %}
                     {{ item.label }}
@@ -334,7 +350,7 @@
                    globale Variable setzt, darf die Bell nur sichtbar
                    sein wenn der aktuelle Plan das `intake`-Feature
                    freischaltet. #}
-                {% if (features.patient_intake ?? false) and intake_unread_count is defined %}
+                {% if (features.patient_intake ?? false) and not (is_trainer ?? false) and intake_unread_count is defined %}
                 <div class="dropdown" id="notif-dropdown-wrap">
                     <button class="header-btn notif-bell-btn" data-dropdown="notif-menu" aria-label="Benachrichtigungen"
                             style="position:relative;">
@@ -386,7 +402,7 @@
                 {# ── Portal-Nachrichten (Tierhalter ↔ Praxis) ──
                    Nur sichtbar wenn `owner_portal`-Feature im Plan
                    aktiv ist. #}
-                {% if (features.patient_portal ?? false) and portal_msg_unread_count is defined %}
+                {% if (features.patient_portal ?? false) and not (is_trainer ?? false) and portal_msg_unread_count is defined %}
                 <div class="dropdown" id="msg-dropdown-wrap">
                     <button class="header-btn msg-bell-btn" data-dropdown="msg-menu" aria-label="Nachrichten vom Besitzerportal"
                             style="position:relative;">
