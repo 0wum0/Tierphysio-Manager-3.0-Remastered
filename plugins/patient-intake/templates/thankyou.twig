@@ -83,7 +83,13 @@
                 <div class="ty-step-num">3</div>
                 <div class="ty-step-body">
                     <strong>Willkommen!</strong>
-                    <span>Beim ersten Besuch nehmen wir Ihren Patienten in unsere Kartei auf.</span>
+                    <span>
+                        {% if is_trainer ?? false %}
+                            Beim ersten Training nehmen wir Sie und Ihren Hund in unsere Kartei auf.
+                        {% else %}
+                            Beim ersten Besuch nehmen wir Ihren Patienten in unsere Kartei auf.
+                        {% endif %}
+                    </span>
                 </div>
             </div>
         </div>

@@ -47,58 +47,66 @@ class DashboardService
         return $this->invoiceRepository->getChartDataByStatus($type);
     }
 
+    /**
+     * Dashboard-Listen zeigen NUR praxis-eigene Termine — keine importierten
+     * Google-Kalender-Einträge. Im Kalender selbst (über Calendar-Plugin)
+     * sind die Google-Events weiterhin sichtbar; hier würden sie ohne
+     * Patient/Owner nur verwirren und die Statistik-KPIs verfälschen.
+     * Fallback-Query ohne google_event_id-Filter für Tenants, auf denen die
+     * Spalte noch nicht existiert (frische Installation ohne google-calendar-sync).
+     */
+    private function fetchAppointments(string $whereClause, array $params, ?int $limit = null): array
+    {
+        $limitClause = $limit !== null ? ' LIMIT ?' : '';
+        $paramsWithLimit = $limit !== null ? [...$params, $limit] : $params;
+
+        $select = "SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.notes,
+                          a.patient_id,
+                          p.name AS patient_name, p.species AS patient_species,
+                          CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
+                          tt.name AS treatment_type_name, tt.color AS treatment_color
+                   FROM `{$this->t('appointments')}` a
+                   LEFT JOIN `{$this->t('patients')}` p ON p.id = a.patient_id
+                   LEFT JOIN `{$this->t('owners')}` o ON o.id = a.owner_id
+                   LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id";
+
+        try {
+            return $this->db->fetchAll(
+                $select . " WHERE {$whereClause} AND COALESCE(a.google_event_id, '') = '' ORDER BY a.start_at ASC" . $limitClause,
+                $paramsWithLimit
+            );
+        } catch (\Throwable) {
+            /* Spalte google_event_id fehlt noch → ohne Filter ausliefern */
+            return $this->db->fetchAll(
+                $select . " WHERE {$whereClause} ORDER BY a.start_at ASC" . $limitClause,
+                $paramsWithLimit
+            );
+        }
+    }
+
     public function getUpcomingAppointments(int $limit = 8): array
     {
-        return $this->db->fetchAll(
-            "SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.notes,
-                    a.patient_id,
-                    p.name AS patient_name, p.species AS patient_species,
-                    CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
-                    tt.name AS treatment_type_name, tt.color AS treatment_color
-             FROM `{$this->t('appointments')}` a
-             LEFT JOIN `{$this->t('patients')}` p ON p.id = a.patient_id
-             LEFT JOIN `{$this->t('owners')}` o ON o.id = a.owner_id
-             LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
-             WHERE a.start_at >= NOW() AND a.status NOT IN ('cancelled','noshow')
-             ORDER BY a.start_at ASC
-             LIMIT ?",
-            [$limit]
+        return $this->fetchAppointments(
+            "a.start_at >= NOW() AND a.status NOT IN ('cancelled','noshow')",
+            [],
+            $limit
         );
     }
 
     public function getTodayAppointments(): array
     {
-        return $this->db->fetchAll(
-            "SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.notes,
-                    a.patient_id,
-                    p.name AS patient_name, p.species AS patient_species,
-                    CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
-                    tt.name AS treatment_type_name, tt.color AS treatment_color
-             FROM `{$this->t('appointments')}` a
-             LEFT JOIN `{$this->t('patients')}` p ON p.id = a.patient_id
-             LEFT JOIN `{$this->t('owners')}` o ON o.id = a.owner_id
-             LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
-             WHERE DATE(a.start_at) = CURDATE() AND a.status NOT IN ('cancelled','noshow')
-             ORDER BY a.start_at ASC"
+        return $this->fetchAppointments(
+            "DATE(a.start_at) = CURDATE() AND a.status NOT IN ('cancelled','noshow')",
+            []
         );
     }
 
     public function getNextUpcomingAppointments(int $limit = 3): array
     {
-        return $this->db->fetchAll(
-            "SELECT a.id, a.title, a.start_at, a.end_at, a.status, a.notes,
-                    a.patient_id,
-                    p.name AS patient_name, p.species AS patient_species,
-                    CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
-                    tt.name AS treatment_type_name, tt.color AS treatment_color
-             FROM `{$this->t('appointments')}` a
-             LEFT JOIN `{$this->t('patients')}` p ON p.id = a.patient_id
-             LEFT JOIN `{$this->t('owners')}` o ON o.id = a.owner_id
-             LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
-             WHERE DATE(a.start_at) > CURDATE() AND a.status NOT IN ('cancelled','noshow')
-             ORDER BY a.start_at ASC
-             LIMIT ?",
-            [$limit]
+        return $this->fetchAppointments(
+            "DATE(a.start_at) > CURDATE() AND a.status NOT IN ('cancelled','noshow')",
+            [],
+            $limit
         );
     }
 

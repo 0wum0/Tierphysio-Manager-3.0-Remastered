@@ -327,19 +327,25 @@
             {% endif %}
         </div>
         <h1 class="intake-title">{{ app_name }}</h1>
-        <p class="intake-subtitle">Bitte füllen Sie das Formular aus, um sich und Ihren Hund/e anzumelden</p>
+        <p class="intake-subtitle">
+            {% if is_trainer ?? false %}
+                Bitte füllen Sie das Formular aus, um sich und Ihren Hund anzumelden.
+            {% else %}
+                Bitte füllen Sie das Formular aus, um sich und Ihr Tier anzumelden.
+            {% endif %}
+        </p>
     </div>
 
     <!-- Steps bar -->
     <div class="steps-bar">
         <div class="step-wrap">
             <div class="step-circle active" id="sc-1">1</div>
-            <div class="step-label active" id="sl-1">Besitzer</div>
+            <div class="step-label active" id="sl-1">{% if is_trainer ?? false %}Halter{% else %}Besitzer{% endif %}</div>
         </div>
         <div class="step-connector" id="conn-1"></div>
         <div class="step-wrap">
             <div class="step-circle" id="sc-2">2</div>
-            <div class="step-label" id="sl-2">Tier</div>
+            <div class="step-label" id="sl-2">{% if is_trainer ?? false %}Hund{% else %}Tier{% endif %}</div>
         </div>
         <div class="step-connector" id="conn-2"></div>
         <div class="step-wrap">
@@ -416,7 +422,11 @@
             <div class="form-step" id="step-2">
                 <div class="step-heading">
                     <div class="step-heading-icon">🐾</div>
-                    Angaben zu Ihrem Hund / Ihren Hunden
+                    {% if is_trainer ?? false %}
+                        Angaben zu Ihrem Hund / Ihren Hunden
+                    {% else %}
+                        Angaben zu Ihrem Tier
+                    {% endif %}
                 </div>
                 <div class="info-note">
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><line x1="12" y1="16" x2="12" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="8" x2="12.01" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -531,7 +541,9 @@
                 </div>
                 <div class="form-group">
                     <label for="reason">Warum kommen Sie zu uns? <span class="req">*</span></label>
-                    <textarea id="reason" name="reason" rows="5" placeholder="z.B. Mein Hund hat Probleme mit der Hüfte und läuft seit einigen Wochen leicht hinkend. Wir suchen eine physiotherapeutische Behandlung..." required></textarea>
+                    <textarea id="reason" name="reason" rows="5"
+                        placeholder="{% if is_trainer ?? false %}z.B. Mein Hund zieht an der Leine, wir möchten mit einem Einzeltraining starten...{% else %}z.B. Mein Hund hat Probleme mit der Hüfte und läuft seit einigen Wochen leicht hinkend. Wir suchen eine physiotherapeutische Behandlung...{% endif %}"
+                        required></textarea>
                 </div>
                 <div class="form-group" style="margin-top:1rem;">
                     <label for="notes">Weitere Anmerkungen</label>
@@ -587,8 +599,8 @@
                 <div style="background: color-mix(in srgb, var(--bs-primary) 8%, transparent); border: 1px solid color-mix(in srgb, var(--bs-primary) 22%, transparent); border-radius: 14px; padding: 1.25rem; margin-top: 0.5rem;">
                     <div style="font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--bs-secondary-color); margin-bottom: 1rem;">Zusammenfassung</div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1.5rem; font-size: 0.85rem;">
-                        <div><span style="color:var(--bs-secondary-color);">Besitzer:</span><br><strong id="sum-owner">—</strong></div>
-                        <div><span style="color:var(--bs-secondary-color);">Tier:</span><br><strong id="sum-patient">—</strong></div>
+                        <div><span style="color:var(--bs-secondary-color);">{% if is_trainer ?? false %}Halter{% else %}Besitzer{% endif %}:</span><br><strong id="sum-owner">—</strong></div>
+                        <div><span style="color:var(--bs-secondary-color);">{% if is_trainer ?? false %}Hund{% else %}Tier{% endif %}:</span><br><strong id="sum-patient">—</strong></div>
                         <div><span style="color:var(--bs-secondary-color);">E-Mail:</span><br><span id="sum-email" style="color:var(--bs-secondary-color);">—</span></div>
                         <div><span style="color:var(--bs-secondary-color);">Telefon:</span><br><span id="sum-phone" style="color:var(--bs-secondary-color);">—</span></div>
                     </div>
@@ -608,7 +620,7 @@
                             <a href="/datenschutz" target="_blank" rel="noopener"
                                style="color:var(--bs-primary); text-decoration:underline;">Datenschutzerklärung</a>
                             gelesen und willige in die Verarbeitung meiner Daten zum Zweck der
-                            Terminvereinbarung und Behandlung/Betreuung meines Hundes ein
+                            Terminvereinbarung und {% if is_trainer ?? false %}Betreuung meines Hundes{% else %}Behandlung meines Tieres{% endif %} ein
                             (DSGVO Art. 6 Abs. 1 lit. a). Diese Einwilligung kann ich jederzeit widerrufen.
                         </label>
                     </div>

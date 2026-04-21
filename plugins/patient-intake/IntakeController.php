@@ -16,6 +16,7 @@ class IntakeController extends Controller
 {
     private IntakeRepository $repo;
     private IntakeMailService $mailer;
+    private SettingsRepository $settingsRepository;
 
     public function __construct(
         View $view,
@@ -28,6 +29,7 @@ class IntakeController extends Controller
         parent::__construct($view, $session, $config, $translator);
         $this->repo   = new IntakeRepository($db);
         $this->mailer = new IntakeMailService($settingsRepository);
+        $this->settingsRepository = $settingsRepository;
     }
 
     /* ─────────────────────────────────────────────────────────
@@ -387,9 +389,20 @@ class IntakeController extends Controller
 
     private function renderPublic(string $template, array $data = []): void
     {
-        /* Render without auth — uses public layout */
+        /* Render without auth — ohne Login läuft der übliche Application-Bootstrap
+         * (is_trainer, company_name, global_settings) nicht. Wir reichen die
+         * minimal nötigen Twig-Variablen selbst durch, damit das Intake-Formular
+         * tenant-typ-spezifisch (Hundeschule vs. Therapie) beschriftet werden kann. */
+        $companyName  = (string)$this->settingsRepository->get('company_name', '');
+        $practiceType = (string)$this->settingsRepository->get('practice_type', 'therapeut');
+
         $this->view->render($template, array_merge([
-            'csrf_token' => $this->session->generateCsrfToken(),
+            'csrf_token'   => $this->session->generateCsrfToken(),
+            'tenant_name'  => $companyName,
+            'company_name' => $companyName,
+            'app_name'     => $companyName ?: 'Tierphysio Manager',
+            'is_trainer'   => ($practiceType === 'trainer'),
+            'practice_type'=> $practiceType,
         ], $data));
     }
 

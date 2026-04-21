@@ -290,8 +290,14 @@ class MigrationService
         // INSERT INTO / REPLACE INTO
         $sql = preg_replace_callback('/\b(INSERT|REPLACE)\s+(?:IGNORE\s+)?INTO\s+`([^`]+)`/i', fn($m) => str_replace('`'.$m[2].'`', '`'.$addPrefix($m[2]).'`', $m[0]), $sql);
         
-        // UPDATE
-        $sql = preg_replace_callback('/(?<!\w)UPDATE\s+`([^`]+)`/i', fn($m) => str_replace('`'.$m[1].'`', '`'.$addPrefix($m[1]).'`', $m[0]), $sql);
+        // UPDATE — MUSS `SET` nach der Tabelle haben, sonst greift es auch
+        // in `ON DUPLICATE KEY UPDATE `value` = ...` und präfixt die Spalte
+        // (Bug → SQLSTATE 42S22 „Unknown column t_xxx_value").
+        $sql = preg_replace_callback(
+            '/\bUPDATE\s+`([^`]+)`(\s+SET\b)/i',
+            fn($m) => 'UPDATE `' . $addPrefix($m[1]) . '`' . $m[2],
+            $sql
+        );
         
         // DELETE FROM / TRUNCATE TABLE
         $sql = preg_replace_callback('/\bDELETE\s+FROM\s+`([^`]+)`/i', fn($m) => str_replace('`'.$m[1].'`', '`'.$addPrefix($m[1]).'`', $m[0]), $sql);
