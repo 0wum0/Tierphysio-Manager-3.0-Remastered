@@ -40,11 +40,11 @@
 
             <p class="text-muted fs-sm mb-0" style="line-height:1.7;">
                 Sie haben sich über diesen Einladungslink bereits erfolgreich registriert.<br>
-                Wir freuen uns auf Ihren Besuch!
+                {% if is_trainer ?? false %}Wir freuen uns auf das nächste Training!{% else %}Wir freuen uns auf Ihren Besuch!{% endif %}
             </p>
 
             <div class="mt-4 pt-3 border-top text-muted fs-xs">
-                <strong class="text-body">{{ app_name }}</strong>
+                <strong class="text-body">{{ company_name ?: app_name }}</strong>
             </div>
         </div>
     </div>

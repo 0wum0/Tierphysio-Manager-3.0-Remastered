@@ -24,8 +24,10 @@ use App\Core\Database;
 class DogschoolSeedService
 {
     /* Marker für seed-Version — bei Änderungen am Katalog erhöhen, damit
-     * bestehende Tenants beim nächsten Zugriff neue Inhalte bekommen */
-    private const SEED_VERSION = 2;
+     * bestehende Tenants beim nächsten Zugriff neue Inhalte bekommen.
+     * v3: Trainer-spezifische TCP-Fortschrittskategorien ergänzt
+     *     (Gehorsam, Rückruf, Sozialverhalten, Impulskontrolle, …). */
+    private const SEED_VERSION = 3;
 
     private static array $seededPrefixes = [];
 
@@ -60,11 +62,72 @@ class DogschoolSeedService
             $this->seedExercises();
             $this->seedConsents();
             $this->seedTrainingPlans();
+            $this->seedTrainerProgressCategories();
 
             $this->setStoredSeedVersion(self::SEED_VERSION);
             self::$seededPrefixes[$prefix] = true;
         } catch (\Throwable $e) {
             error_log('[DogschoolSeedService] seed() failed: ' . $e->getMessage());
+        }
+    }
+
+    /* ═══════════ TCP Progress-Kategorien für Hundeschulen ═══════════
+     * Füllt die TCP-Kategorientabelle mit trainer-passenden Werten
+     * (Gehorsam, Sozialverhalten, Impulskontrolle, Bindung etc.).
+     * Nur additiv — greift bestehende Praxis-Kategorien nicht an.
+     * Nutzt slug-ähnlich den Namen zur Duplicate-Detection.
+     *
+     * Self-healing: Wenn die TCP-Tabelle noch nicht existiert (TCP-Plugin
+     * nicht installiert), wird der Seed still übersprungen. Das ist OK —
+     * sobald das Plugin aktiviert wird und seine Migration läuft, kann
+     * der Trainer die Kategorien auch manuell über die (gesperrte) TCP-
+     * Admin-UI sehen, oder wir seeden beim nächsten Dashboard-Aufruf neu. */
+    private function seedTrainerProgressCategories(): void
+    {
+        $t = $this->db->prefix('tcp_progress_categories');
+
+        /* Tabelle existent? Sonst stilles Skip. */
+        try {
+            $exists = $this->db->safeFetchColumn("SHOW TABLES LIKE '{$t}'");
+            if (!$exists) return;
+        } catch (\Throwable) {
+            return;
+        }
+
+        /* Kategorien-Katalog für Hundeschulen. Scale konsistent zu Praxis: 1-10.
+         * Labels min/max werden so gewählt, dass niedrigere Werte immer
+         * schlechter und höhere immer besser bedeuten — gleiche Semantik
+         * wie Praxis-Chart-Renderer erwartet. */
+        $categories = [
+            ['Gehorsam',          'Reaktion auf Grundkommandos (Sitz, Platz, Bleib)',   1, 10, 'Ignoriert',        'Perfekt sicher',      '#4f7cff', '🎯', 10],
+            ['Rückruf',           'Zuverlässigkeit beim Kommen auf Ruf',                1, 10, 'Kommt nie',        'Kommt sofort',        '#06b6d4', '📣', 20],
+            ['Leinenführung',     'Entspanntes Gehen an lockerer Leine',                1, 10, 'Zieht stark',      'Perfekte Leine',      '#14b8a6', '🦮', 30],
+            ['Sozialverhalten',   'Umgang mit Artgenossen und Menschen',                1, 10, 'Sehr unsicher',    'Souverän',            '#22c55e', '🐾', 40],
+            ['Impulskontrolle',   'Selbstbeherrschung bei Reizen (Wild, Futter, Gäste)', 1, 10, 'Keine Kontrolle',  'Volle Kontrolle',     '#f97316', '✋', 50],
+            ['Bindung / Vertrauen','Kooperationsbereitschaft und Bindung zum Halter',   1, 10, 'Desinteressiert',  'Sehr eng gebunden',   '#a78bfa', '❤️', 60],
+            ['Konzentration',     'Aufmerksamkeit während des Trainings',               1, 10, 'Abgelenkt',        'Voll fokussiert',     '#fbbf24', '🧠', 70],
+            ['Stresslevel',       'Beobachtete Stresssignale (umgekehrt zu skalieren)', 1, 10, 'Sehr gestresst',   'Entspannt',           '#ef4444', '🌿', 80],
+        ];
+
+        foreach ($categories as $c) {
+            [$name, $desc, $min, $max, $lblMin, $lblMax, $color, $icon, $sort] = $c;
+
+            /* Idempotent: nur insertieren wenn Name noch nicht existiert
+             * (weder von Praxis-Seed noch von früheren Trainer-Seeds). */
+            $exists = (int)$this->db->safeFetchColumn(
+                "SELECT COUNT(*) FROM `{$t}` WHERE name = ?",
+                [$name]
+            );
+            if ($exists > 0) continue;
+
+            $this->db->safeExecute(
+                "INSERT INTO `{$t}`
+                    (name, description, scale_min, scale_max,
+                     scale_label_min, scale_label_max,
+                     color, icon, sort_order, is_active)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)",
+                [$name, $desc, $min, $max, $lblMin, $lblMax, $color, $icon, $sort]
+            );
         }
     }
 

@@ -129,37 +129,43 @@
 
 <div class="invite-shell">
 
-    {# ── Brand-Header ── #}
+    {# ── Brand-Header ──
+       WICHTIG: Einladungsseiten zeigen IMMER nur das Pfoten-Logo —
+       kein custom company_logo, weder für Praxis noch für Hundeschule.
+       Der Inviter (Praxis/Hundeschule) wird ausschließlich über den
+       Namen im Badge kommuniziert. So bleiben Einladungs-URLs auch
+       ohne korrekt konfiguriertes Logo visuell konsistent. #}
     <div class="invite-brand">
         <div class="invite-brand-icon">
-            {% if global_settings is defined and global_settings.company_logo is defined and global_settings.company_logo %}
-                <img src="/uploads/{{ global_settings.company_logo }}" alt="{{ app_name }}"
-                     style="width:64px;height:64px;border-radius:16px;object-fit:contain;background:var(--bs-tertiary-bg);padding:6px;">
-            {% else %}
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <linearGradient id="ivfPaw" x1="0" y1="0" x2="1" y2="1">
-                            <stop offset="0%" stop-color="#6EA8FE"/>
-                            <stop offset="100%" stop-color="#a78bfa"/>
-                        </linearGradient>
-                    </defs>
-                    <ellipse fill="url(#ivfPaw)" cx="9"  cy="3.5" rx="2" ry="2.5"/>
-                    <ellipse fill="url(#ivfPaw)" cx="15" cy="3.5" rx="2" ry="2.5"/>
-                    <ellipse fill="url(#ivfPaw)" cx="4.5" cy="8"  rx="2" ry="2.5"/>
-                    <ellipse fill="url(#ivfPaw)" cx="19.5" cy="8" rx="2" ry="2.5"/>
-                    <path fill="url(#ivfPaw)" d="M12 10c-3.5 0-6.5 2-6.5 5.5 0 2 1 3.5 2.5 4.5h8c1.5-1 2.5-2.5 2.5-4.5C18.5 12 15.5 10 12 10z"/>
-                </svg>
-            {% endif %}
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <linearGradient id="ivfPaw" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stop-color="#6EA8FE"/>
+                        <stop offset="100%" stop-color="#a78bfa"/>
+                    </linearGradient>
+                </defs>
+                <ellipse fill="url(#ivfPaw)" cx="9"  cy="3.5" rx="2" ry="2.5"/>
+                <ellipse fill="url(#ivfPaw)" cx="15" cy="3.5" rx="2" ry="2.5"/>
+                <ellipse fill="url(#ivfPaw)" cx="4.5" cy="8"  rx="2" ry="2.5"/>
+                <ellipse fill="url(#ivfPaw)" cx="19.5" cy="8" rx="2" ry="2.5"/>
+                <path fill="url(#ivfPaw)" d="M12 10c-3.5 0-6.5 2-6.5 5.5 0 2 1 3.5 2.5 4.5h8c1.5-1 2.5-2.5 2.5-4.5C18.5 12 15.5 10 12 10z"/>
+            </svg>
         </div>
         <div class="invite-brand-name">{{ app_name }}</div>
-        <div class="invite-brand-sub">Bitte füllen Sie das Formular aus, um sich und Ihr Tier anzumelden.</div>
+        <div class="invite-brand-sub">
+            {% if is_trainer ?? false %}
+                Bitte füllen Sie das Formular aus, um sich und Ihren Hund anzumelden.
+            {% else %}
+                Bitte füllen Sie das Formular aus, um sich und Ihr Tier anzumelden.
+            {% endif %}
+        </div>
 
         <div class="invite-badge">
             <svg width="13" height="13" fill="none" viewBox="0 0 24 24">
                 <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                       d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.91a16 16 0 0 0 6.29 6.29l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
             </svg>
-            Persönliche Einladung von {{ app_name }}
+            Persönliche Einladung von <strong class="ms-1">{{ company_name ?: app_name }}</strong>
         </div>
     </div>
 
@@ -181,8 +187,8 @@
     <div class="invite-progress"><div class="invite-progress-fill" id="progress-fill" style="width:25%;"></div></div>
 
     <div class="invite-stepper">
-        <div class="step active" data-step="1"><span class="step-num">1</span>Besitzer</div>
-        <div class="step"        data-step="2"><span class="step-num">2</span>Tier</div>
+        <div class="step active" data-step="1"><span class="step-num">1</span>{% if is_trainer ?? false %}Halter{% else %}Besitzer{% endif %}</div>
+        <div class="step"        data-step="2"><span class="step-num">2</span>{% if is_trainer ?? false %}Hund{% else %}Tier{% endif %}</div>
         <div class="step"        data-step="3"><span class="step-num">3</span>Foto</div>
         <div class="step"        data-step="4"><span class="step-num">4</span>Fertig</div>
     </div>
@@ -236,26 +242,36 @@
             </div>
         </div>
 
-        {# ── STEP 2: Tier ── #}
+        {# ── STEP 2: Tier / Hund ── #}
         <div class="step-panel card" id="step-2">
             <div class="card-body p-4">
-                <h3 class="fw-700 fs-md mb-3">Angaben zum Tier</h3>
+                <h3 class="fw-700 fs-md mb-3">{% if is_trainer ?? false %}Angaben zu Ihrem Hund{% else %}Angaben zum Tier{% endif %}</h3>
 
                 <div class="row g-3">
                     <div class="col-sm-6">
-                        <label class="form-label">Name des Tieres *</label>
+                        <label class="form-label">{% if is_trainer ?? false %}Name des Hundes *{% else %}Name des Tieres *{% endif %}</label>
                         <input type="text" name="patient_name" class="form-control"
                                value="{{ old.patient_name ?? '' }}" placeholder="Bello" required>
                     </div>
                     <div class="col-sm-6">
-                        <label class="form-label">Tierart *</label>
-                        <select name="patient_species" class="form-select" required>
-                            <option value="">Bitte wählen</option>
-                            {% set species = ['Hund','Katze','Pferd','Kaninchen','Vogel','Reptil','Nagetier','Fisch','Sonstige'] %}
-                            {% for s in species %}
-                            <option value="{{ s }}" {% if (old.patient_species ?? '') == s %}selected{% endif %}>{{ s }}</option>
-                            {% endfor %}
-                        </select>
+                        {% if is_trainer ?? false %}
+                            {# Hundeschule akzeptiert konzeptionell nur Hunde —
+                               das Feld bleibt aus Konsistenzgründen im Formular,
+                               ist aber auf „Hund" fixiert. Ein verstecktes Input
+                               sichert den Submit-Wert. #}
+                            <label class="form-label">Tierart</label>
+                            <input type="text" class="form-control" value="Hund" disabled readonly>
+                            <input type="hidden" name="patient_species" value="Hund">
+                        {% else %}
+                            <label class="form-label">Tierart *</label>
+                            <select name="patient_species" class="form-select" required>
+                                <option value="">Bitte wählen</option>
+                                {% set species = ['Hund','Katze','Pferd','Kaninchen','Vogel','Reptil','Nagetier','Fisch','Sonstige'] %}
+                                {% for s in species %}
+                                <option value="{{ s }}" {% if (old.patient_species ?? '') == s %}selected{% endif %}>{{ s }}</option>
+                                {% endfor %}
+                            </select>
+                        {% endif %}
                     </div>
                     <div class="col-sm-6">
                         <label class="form-label">Rasse</label>
@@ -346,7 +362,7 @@
     </form>
 
     <div class="invite-footer">
-        &copy; {{ "now"|date("Y") }} {{ app_name }}
+        &copy; {{ "now"|date("Y") }} {{ company_name ?: app_name }} · powered by <strong>{{ app_name }}</strong>
     </div>
 
 </div>
@@ -401,7 +417,9 @@ function validateStep(step) {
     if (step === 2) {
         const pn = document.querySelector('[name="patient_name"]').value.trim();
         const ps = document.querySelector('[name="patient_species"]').value;
-        if (!pn) { alert('Bitte Name des Tieres eingeben.'); return false; }
+        if (!pn) { alert('Bitte Name eingeben.'); return false; }
+        /* Species kann versteckt auf „Hund" fixiert sein (Hundeschul-Modus),
+           Select oder Hidden liefern beide .value — deshalb nur generisch prüfen. */
         if (!ps) { alert('Bitte Tierart auswählen.'); return false; }
     }
     return true;

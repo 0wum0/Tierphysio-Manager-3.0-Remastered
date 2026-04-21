@@ -536,9 +536,19 @@ class InviteController extends Controller
 
     private function renderPublic(string $template, array $data = []): void
     {
+        /* Öffentliche Einladungsseiten laufen AUSSERHALB einer Login-Session,
+         * deshalb sind die normalen Application-Bootstraps (features, is_trainer,
+         * global_settings) nicht gesetzt. Hier reichen wir die minimal nötigen
+         * Twig-Variablen selbst durch, damit das Template den Inviter anzeigen
+         * und die Labels tenant-type-spezifisch umschalten kann. */
+        $companyName  = (string)$this->settingsRepository->get('company_name', '');
+        $practiceType = (string)$this->settingsRepository->get('practice_type', 'therapeut');
+
         $this->view->render($template, array_merge([
-            'csrf_token' => $this->session->generateCsrfToken(),
-            'tenant_name' => $this->settingsRepository->get('company_name', ''),
+            'csrf_token'   => $this->session->generateCsrfToken(),
+            'tenant_name'  => $companyName,
+            'company_name' => $companyName,
+            'is_trainer'   => ($practiceType === 'trainer'),
         ], $data));
     }
 
