@@ -31,6 +31,31 @@ class TherapyCareController extends Controller
         $this->settingsRepo = $settingsRepo;
     }
 
+    /**
+     * Schutz für Hundeschul-/Hundetrainer-Tenants.
+     *
+     * TherapyCare Pro ist ein Tierphysio-Therapie-Modul
+     * (Naturheilkunde-Typen, Therapieberichte, Schmerz-Feedback, ...).
+     * Inhalt und Terminologie sind nicht auf eine Hundeschule übertragbar.
+     * Trainer-Tenants verwenden stattdessen das eigene
+     * `dogschool_training_plans`-Modul unter /trainingsplaene.
+     *
+     * Aufruf am Anfang von Admin-/Settings-Handlern, die per Direkt-URL
+     * erreichbar wären (Sidebar ist bereits via `practice_only` versteckt).
+     * Patient-bezogene Handler (Fortschritt, Timeline) bleiben erreichbar,
+     * weil sie vom Patient-Modal aufgerufen werden und dort über
+     * is_trainer im Template gegated sind.
+     */
+    protected function denyIfTrainer(): void
+    {
+        if (($this->settingsRepo->get('practice_type', 'therapeut')) === 'trainer') {
+            $this->flash('info', 'TherapyCare Pro ist im Hundetrainer-Modus nicht verfügbar. Nutzen Sie stattdessen die Trainingspläne.');
+            $this->redirect('/trainingsplaene');
+            // $this->redirect() ruft exit — Safety-Return:
+            return;
+        }
+    }
+
     /* ══════════════════════════════════════════════════════════
        DASHBOARD WIDGET DATA
     ══════════════════════════════════════════════════════════ */
@@ -150,6 +175,7 @@ class TherapyCareController extends Controller
 
     public function remindersAdmin(array $params = []): void
     {
+        $this->denyIfTrainer();
         $this->requireAdmin();
         $templates = $this->repo->getAllReminderTemplates();
         $logs      = $this->repo->getReminderLogs(50);
@@ -469,6 +495,7 @@ class TherapyCareController extends Controller
 
     public function exerciseLibraryIndex(array $params = []): void
     {
+        $this->denyIfTrainer();
         $category   = $this->get('category', '');
         $search     = $this->get('search', '');
         $exercises  = $this->repo->getExerciseLibrary($category ?: null, $search ?: null);
@@ -784,6 +811,7 @@ class TherapyCareController extends Controller
 
     public function adminSettings(array $params = []): void
     {
+        $this->denyIfTrainer();
         $this->requireAdmin();
 
         $progressCategories    = $this->repo->getAllProgressCategories();

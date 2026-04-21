@@ -1,15 +1,21 @@
+{# Hundeschul-/Hundetrainer-Modus: Terminologie wird umgeschaltet, die
+   Backend-API (/api/patients/{id}/homework) bleibt identisch. Das gleiche
+   Template funktioniert für Praxis und Hundeschule. #}
+{% set hw_title_prefix = (is_trainer ?? false) ? 'Trainingsaufgaben' : 'Hausaufgaben' %}
+{% set hw_add_label    = (is_trainer ?? false) ? 'Trainingsaufgabe hinzufügen' : 'Hausaufgabe hinzufügen' %}
+
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 style="font-size:0.9rem;color:var(--text-muted);margin:0;">Hausaufgaben für {{ patient.name }}</h5>
+    <h5 style="font-size:0.9rem;color:var(--text-muted);margin:0;">{{ hw_title_prefix }} für {{ patient.name }}</h5>
     <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-add-homework">
         <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        Hausaufgabe hinzufügen
+        {{ hw_add_label }}
     </button>
 </div>
 
 <div id="homework-list">
     <div class="text-center py-4" style="color:var(--text-muted);">
         <div class="spinner-border spinner-border-sm me-2"></div>
-        Lade Hausaufgaben...
+        Lade {{ hw_title_prefix }}…
     </div>
 </div>
 
@@ -18,32 +24,46 @@
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 class="modal-title">Hausaufgabe hinzufügen</h3>
+                <h3 class="modal-title">{{ hw_add_label }}</h3>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
             </div>
             <form id="homework-form" action="/api/patients/{{ patient.id }}/homework" method="POST">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                 <div class="modal-body">
                     <div class="form-group mb-3">
-                        <label class="form-label">Hausaufgabe auswählen</label>
+                        <label class="form-label">{% if is_trainer ?? false %}Vorlage auswählen{% else %}Hausaufgabe auswählen{% endif %}</label>
                         <select name="homework_template_id" id="homework-template-select" class="form-control">
-                            <option value="">— Vordefinierte Hausaufgabe —</option>
-                            <option value="custom">— Eigene Hausaufgabe —</option>
+                            <option value="">— Vordefinierte Vorlage —</option>
+                            <option value="custom">— Eigene Aufgabe —</option>
                         </select>
                     </div>
                     
                     <div id="custom-homework" style="display:none;">
                         <div class="form-group mb-3">
-                            <label class="form-label">Titel der Hausaufgabe</label>
-                            <input type="text" name="title" class="form-control" placeholder="z.B. tägliche Spaziergänge">
+                            <label class="form-label">{% if is_trainer ?? false %}Titel der Trainingsaufgabe{% else %}Titel der Hausaufgabe{% endif %}</label>
+                            <input type="text" name="title" class="form-control" placeholder="{% if is_trainer ?? false %}z.B. 10 Min. Leinenführigkeit täglich{% else %}z.B. tägliche Spaziergänge{% endif %}">
                         </div>
                         <div class="form-group mb-3">
                             <label class="form-label">Beschreibung</label>
-                            <textarea name="description" class="form-control" rows="3" placeholder="Detaillierte Anweisungen für den Besitzer..."></textarea>
+                            <textarea name="description" class="form-control" rows="3" placeholder="{% if is_trainer ?? false %}Detaillierte Anweisungen für den Halter…{% else %}Detaillierte Anweisungen für den Besitzer…{% endif %}"></textarea>
                         </div>
                         <div class="form-group mb-3">
                             <label class="form-label">Kategorie</label>
                             <select name="category" class="form-control">
+                                {% if is_trainer ?? false %}
+                                {# Trainer-spezifischer Katalog — Keys sind als Strings in der DB
+                                   gespeichert, kein ENUM-Constraint; mischen mit Praxis-Einträgen
+                                   ist sicher. #}
+                                <option value="grundkommandos">🐕 Grundkommandos</option>
+                                <option value="leinenfuehrung">🦮 Leinenführung</option>
+                                <option value="sozialisierung">🐾 Sozialisierung</option>
+                                <option value="rueckruf">📣 Rückruf</option>
+                                <option value="beschaeftigung">🧠 Beschäftigung/Nasenarbeit</option>
+                                <option value="bewegung">🏃 Bewegung</option>
+                                <option value="spielregeln">🎾 Spielregeln</option>
+                                <option value="umgebungsreize">🌳 Umgebungsreize</option>
+                                <option value="sonstiges">📌 Sonstiges</option>
+                                {% else %}
                                 <option value="bewegung">🏃 Bewegung</option>
                                 <option value="dehnung">🤸 Dehnung</option>
                                 <option value="massage">💆 Massage</option>
@@ -52,6 +72,7 @@
                                 <option value="fuetterung">🍽️ Fütterung</option>
                                 <option value="beobachtung">👁️ Beobachtung</option>
                                 <option value="sonstiges">📌 Sonstiges</option>
+                                {% endif %}
                             </select>
                         </div>
                     </div>
@@ -91,13 +112,13 @@
                     </div>
                     
                     <div class="form-group mb-3">
-                        <label class="form-label">Notizen für den Therapeuten</label>
-                        <textarea name="therapist_notes" class="form-control" rows="2" placeholder="Interne Notizen..."></textarea>
+                        <label class="form-label">{% if is_trainer ?? false %}Notizen für den Trainer{% else %}Notizen für den Therapeuten{% endif %}</label>
+                        <textarea name="therapist_notes" class="form-control" rows="2" placeholder="Interne Notizen…"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
-                    <button type="submit" class="btn btn-primary">Hausaufgabe zuweisen</button>
+                    <button type="submit" class="btn btn-primary">{% if is_trainer ?? false %}Trainingsaufgabe zuweisen{% else %}Hausaufgabe zuweisen{% endif %}</button>
                 </div>
             </form>
         </div>
