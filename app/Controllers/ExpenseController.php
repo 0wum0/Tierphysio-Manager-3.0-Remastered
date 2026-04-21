@@ -206,11 +206,21 @@ class ExpenseController extends Controller
 
         $parsed = $this->receiptParser->parse($file['tmp_name'], $mime);
 
+        /* Hint aus dem Parser hat Priorität — er liefert kontext-spezifische
+         * Meldungen (z.B. „Bild gespeichert, OCR nicht verfügbar"). */
+        $hint = $parsed['hint'] ?? null;
+        if (!$hint) {
+            $hint = $parsed['ok']
+                ? 'Bitte prüfe die automatisch befüllten Felder — sie wurden aus dem Beleg erkannt.'
+                : 'Konnte keine Daten aus dem Beleg extrahieren. Bitte manuell befüllen.';
+        }
+
         $this->json([
-            'ok'           => $parsed['ok'],
-            'mime'         => $mime,
-            'filename'     => $file['name'],
-            'extracted'    => [
+            'ok'          => $parsed['ok'],
+            'mime'        => $mime,
+            'filename'    => $file['name'],
+            'text_source' => $parsed['text_source'] ?? '',
+            'extracted'   => [
                 'date'           => $parsed['date'],
                 'amount_gross'   => $parsed['amount_gross'],
                 'amount_net'     => $parsed['amount_net'],
@@ -219,9 +229,7 @@ class ExpenseController extends Controller
                 'invoice_number' => $parsed['invoice_number'],
                 'description'    => $parsed['description'],
             ],
-            'hint' => $parsed['ok']
-                ? 'Bitte prüfe die automatisch befüllten Felder — sie wurden aus dem Beleg erkannt.'
-                : 'Konnte keine Daten aus dem Beleg extrahieren. Bitte manuell befüllen.',
+            'hint' => $hint,
         ]);
     }
 

@@ -176,28 +176,53 @@
                 return;
             }
 
-            const ex    = json.extracted || {};
+            const ex     = json.extracted || {};
             const filled = [];
-            if (setIfEmpty('date',        ex.date))           filled.push('Datum');
-            if (setIfEmpty('supplier',    ex.supplier))       filled.push('Lieferant');
+
+            if (setIfEmpty('date',     ex.date))     filled.push('Datum');
+            if (setIfEmpty('supplier', ex.supplier)) filled.push('Lieferant');
+
             const descValue = ex.description
                 ? ex.description
                 : (ex.invoice_number ? ('Rechnung ' + ex.invoice_number) : null);
             if (setIfEmpty('description', descValue)) filled.push('Beschreibung');
-            if (setIfEmpty('tax_rate',    ex.tax_rate))       filled.push('MwSt-Satz');
-            if (setIfEmpty('amount_net',  ex.amount_net))     filled.push('Nettobetrag');
+
+            /* MwSt-Satz zuerst setzen — wir brauchen ihn ggf. zum Ableiten des Nettos */
+            if (setIfEmpty('tax_rate', ex.tax_rate)) filled.push('MwSt-Satz');
+
+            /* Netto-Logik:
+             *   1) Netto direkt aus Parser → setzen
+             *   2) Wenn nur Brutto bekannt → mit aktuell gewähltem MwSt-Satz ableiten
+             *      (falls Parser das nicht schon getan hat)  */
+            let netApplied = null;
+            if (ex.amount_net && Number(ex.amount_net) > 0) {
+                netApplied = Number(ex.amount_net);
+            } else if (ex.amount_gross && Number(ex.amount_gross) > 0) {
+                const taxEl   = getField('tax_rate');
+                const taxRate = taxEl ? parseFloat(taxEl.value || '0') : 0;
+                if (taxRate >= 0) {
+                    netApplied = +(Number(ex.amount_gross) / (1 + taxRate / 100)).toFixed(2);
+                }
+            }
+            if (netApplied !== null && setIfEmpty('amount_net', netApplied.toFixed(2))) {
+                filled.push('Nettobetrag');
+            }
 
             const parts = [];
             parts.push('<i class="bi bi-check-circle me-1"></i><strong>Beleg analysiert.</strong>');
             if (filled.length) {
                 parts.push(' Automatisch gefüllt: ' + filled.map(f => '<span class="badge bg-success">' + f + '</span>').join(' '));
             } else {
-                parts.push(' Keine Felder überschrieben — du hattest schon Werte eingetragen.');
+                parts.push(' Keine Felder überschrieben — du hattest schon Werte eingetragen oder es konnte nichts sicher erkannt werden.');
             }
-            if (ex.amount_gross && ex.amount_gross > 0) {
-                parts.push(' Erkannter Bruttobetrag: <strong>' + Number(ex.amount_gross).toFixed(2) + ' €</strong>.');
+            if (ex.amount_gross && Number(ex.amount_gross) > 0) {
+                parts.push(' Erkannter Bruttobetrag: <strong>' + Number(ex.amount_gross).toFixed(2).replace('.', ',') + ' €</strong>.');
             }
-            parts.push(' <em>Bitte Werte vor dem Speichern prüfen.</em>');
+            if (json.hint) {
+                parts.push(' <em>' + json.hint + '</em>');
+            } else {
+                parts.push(' <em>Bitte Werte vor dem Speichern prüfen.</em>');
+            }
             showFeedback('success', parts.join(''));
         } catch (e) {
             console.error('[receipt-upload]', e);
