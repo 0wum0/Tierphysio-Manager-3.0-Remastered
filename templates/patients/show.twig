@@ -338,7 +338,11 @@
                                 <label class="form-label">{{ t('patients.entry_type') }}</label>
                                 <select name="type" class="form-control">
                                     <option value="note">📝 Notiz</option>
+                                    {% if is_trainer ?? false %}
+                                    <option value="treatment">🎾 Training</option>
+                                    {% else %}
                                     <option value="treatment">💊 Behandlung</option>
+                                    {% endif %}
                                     <option value="photo">📷 Foto</option>
                                     <option value="document">📄 Dokument</option>
                                     <option value="other">📌 Sonstiges</option>

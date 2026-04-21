@@ -300,7 +300,7 @@
                 <div class="pd-tabs" id="pd-tab-nav" style="display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;width:100%!important;flex-shrink:0!important;-webkit-overflow-scrolling:touch;">
                     <button class="pd-tab active" data-pd-tab="akte">
                         <svg width="12" height="12" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"/></svg>
-                        Akte
+                        {% if is_trainer ?? false %}Trainingsakte{% else %}Akte{% endif %}
                     </button>
                     {% if features.homework ?? false %}
                     <button class="pd-tab" data-pd-tab="hausaufgaben" >
@@ -348,12 +348,12 @@
                             </div>
                             <div class="pd-info-divider"></div>
                             <div class="pd-info-col">
-                                <div class="pd-info-col-label">Patient</div>
+                                <div class="pd-info-col-label">{% if is_trainer ?? false %}Hund{% else %}Patient{% endif %}</div>
                                 <div id="pd-details" class="pd-info-grid"></div>
                             </div>
                             <div class="pd-info-divider"></div>
                             <div class="pd-info-col">
-                                <div class="pd-info-col-label">Besitzer</div>
+                                <div class="pd-info-col-label">{% if is_trainer ?? false %}Halter{% else %}Besitzer{% endif %}</div>
                                 <div id="pd-owner"></div>
                             </div>
                         </div>
@@ -363,9 +363,13 @@
                         ══════════════════════════════════════════════ #}
                         <div class="pd-tab-panel active" id="pd-panel-akte">
 
-                            {# Neuer Eintrag #}
+                            {# Neuer Eintrag — im Hundeschul-Modus heißt die Akte
+                               „Trainingsakte" und der Eintrag „Trainings-Eintrag". Die
+                               dahinterliegenden Typ-/Feld-Keys bleiben identisch damit
+                               Repository, Timeline-Rendering und JavaScript unverändert
+                               funktionieren. #}
                             <div class="pd-entry-section">
-                                <div class="pd-section-label">Neuer Akteneintrag</div>
+                                <div class="pd-section-label">{% if is_trainer ?? false %}Neuer Trainings-Eintrag{% else %}Neuer Akteneintrag{% endif %}</div>
                                 <form id="pd-timeline-form" method="POST" enctype="multipart/form-data" class="pd-entry-form">
                                     <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                                     <div class="pd-form-grid4">
@@ -373,18 +377,35 @@
                                             <label class="pd-label">Typ</label>
                                             <select name="type" class="pd-select form-select form-select-sm" data-no-cs>
                                                 <option value="note">📝 Notiz</option>
+                                                {% if is_trainer ?? false %}
+                                                <option value="treatment">🎾 Training</option>
+                                                {% else %}
                                                 <option value="treatment">💊 Behandlung</option>
+                                                {% endif %}
                                                 <option value="photo">📷 Foto</option>
                                                 <option value="document">📄 Dokument</option>
                                                 <option value="other">📌 Sonstiges</option>
                                             </select>
                                         </div>
+                                        {# Behandlungsart nur für Praxis-Tenants — die Option-Liste
+                                           wird per Fetch aus treatment_types geladen (siehe Modal-JS).
+                                           Für Trainer-Tenants wird das Feld samt verstecktem Submit-Default
+                                           ausgeblendet, damit das Raster 3-spaltig bleibt statt 4-spaltig.
+                                           Der Backend-Handler akzeptiert fehlendes treatment_type_id. #}
+                                        {% if not (is_trainer ?? false) %}
                                         <div class="pd-field">
                                             <label class="pd-label">Behandlungsart</label>
                                             <select name="treatment_type_id" id="pd-treatment-type" class="pd-select form-select form-select-sm" data-no-cs>
                                                 <option value="">— keine —</option>
                                             </select>
                                         </div>
+                                        {% else %}
+                                        {# Versteckter Container — JS-Selector #pd-treatment-type bleibt
+                                           auflösbar (verhindert null-Zugriffe in Modal-Init). #}
+                                        <select id="pd-treatment-type" name="treatment_type_id" style="display:none;" data-no-cs>
+                                            <option value="">— keine —</option>
+                                        </select>
+                                        {% endif %}
                                         <div class="pd-field">
                                             <label class="pd-label">Datum</label>
                                             <input type="datetime-local" name="entry_date" class="pd-input form-control form-control-sm" value="{{ 'now'|date('Y-m-d\\TH:i') }}">
@@ -393,12 +414,21 @@
                                             <label class="pd-label">Status</label>
                                             <select name="status_badge" class="pd-select form-select form-select-sm" data-no-cs>
                                                 <option value="">— kein —</option>
+                                                {% if is_trainer ?? false %}
+                                                <option value="Im Training">Im Training</option>
+                                                <option value="Pause">Pause</option>
+                                                <option value="Prüfung bestanden">Prüfung bestanden</option>
+                                                <option value="Prüfung nicht bestanden">Prüfung nicht bestanden</option>
+                                                <option value="Kurs abgeschlossen">Kurs abgeschlossen</option>
+                                                <option value="Kurs abgebrochen">Kurs abgebrochen</option>
+                                                {% else %}
                                                 <option value="Schmerzfrei">Schmerzfrei</option>
                                                 <option value="In Behandlung">In Behandlung</option>
                                                 <option value="Kontrolltermin">Kontrolltermin</option>
                                                 <option value="Notfall">Notfall</option>
                                                 <option value="Gebessert">Gebessert</option>
                                                 <option value="Entlassen">Entlassen</option>
+                                                {% endif %}
                                             </select>
                                         </div>
                                     </div>
@@ -442,8 +472,8 @@
                                 </div>
                             </div>
 
-                            {# Timeline #}
-                            <div class="pd-section-label">Verlauf</div>
+                            {# Timeline — Verlauf ist für beide Modi semantisch korrekt #}
+                            <div class="pd-section-label">{% if is_trainer ?? false %}Trainings-Verlauf{% else %}Verlauf{% endif %}</div>
                             <div id="pd-timeline" class="timeline"></div>
                         </div>
 
