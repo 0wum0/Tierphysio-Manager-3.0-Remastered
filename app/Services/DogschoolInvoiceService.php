@@ -228,6 +228,99 @@ class DogschoolInvoiceService
     }
 
     /**
+     * Kennzahlen für das Hundeschul-Dashboard — nur Rechnungen aus
+     * Kurs-/Paket-Automation (erkennbar am Notes-Muster, gleiche Logik wie
+     * {@see listDogschoolInvoices()}).
+     *
+     * Liefert robuste 0-Defaults bei jedem Fehler, damit ein defektes Invoice-
+     * Schema das Dashboard nicht blockiert. Brutto-Ausdruck identisch zu
+     * InvoiceRepository::getStats() — konsistent mit Praxis-KPIs.
+     *
+     * @return array{
+     *   open_count:int, open_amount:float,
+     *   overdue_count:int, overdue_amount:float,
+     *   paid_count_month:int, paid_amount_month:float,
+     *   paid_count_year:int,  paid_amount_year:float
+     * }
+     */
+    public function getStats(): array
+    {
+        $zero = [
+            'open_count' => 0, 'open_amount' => 0.0,
+            'overdue_count' => 0, 'overdue_amount' => 0.0,
+            'paid_count_month' => 0, 'paid_amount_month' => 0.0,
+            'paid_count_year'  => 0, 'paid_amount_year'  => 0.0,
+        ];
+
+        try {
+            $inv = $this->db->prefix('invoices');
+            $ip  = $this->db->prefix('invoice_positions');
+
+            /* Gleiche Brutto-Formel wie InvoiceRepository::getStats(): erst
+             * denormalisiertes total_gross, sonst Summe der Positionen. */
+            $gross = "COALESCE(
+                NULLIF(i.total_gross, 0),
+                (SELECT SUM(ip.total) FROM `{$ip}` ip WHERE ip.invoice_id = i.id),
+                0
+            )";
+
+            /* Dogschool-Filter — identisches Muster wie listDogschoolInvoices() */
+            $dsFilter = "(i.notes LIKE 'Automatisch aus Kurs-Einschreibung%'
+                       OR i.notes LIKE 'Automatisch aus Paket-Verkauf%')";
+
+            $monthStart = date('Y-m-01');
+            $yearStart  = date('Y-01-01');
+            $today      = date('Y-m-d');
+
+            $openRow = $this->db->safeFetch(
+                "SELECT COUNT(*) AS c, COALESCE(SUM({$gross}), 0) AS s
+                   FROM `{$inv}` i
+                  WHERE i.status = 'open' AND {$dsFilter}"
+            ) ?: ['c' => 0, 's' => 0];
+
+            /* Überfällig = status='overdue' ODER open+due_date abgelaufen —
+             * gleiche Semantik wie Praxis-KPIs, damit Klick-Filter und Karte
+             * dieselbe Menge ergeben. */
+            $overdueRow = $this->db->safeFetch(
+                "SELECT COUNT(*) AS c, COALESCE(SUM({$gross}), 0) AS s
+                   FROM `{$inv}` i
+                  WHERE {$dsFilter}
+                    AND (i.status = 'overdue' OR (i.status = 'open' AND i.due_date < ?))",
+                [$today]
+            ) ?: ['c' => 0, 's' => 0];
+
+            $paidMonthRow = $this->db->safeFetch(
+                "SELECT COUNT(*) AS c, COALESCE(SUM({$gross}), 0) AS s
+                   FROM `{$inv}` i
+                  WHERE i.status = 'paid' AND {$dsFilter}
+                    AND i.issue_date >= ?",
+                [$monthStart]
+            ) ?: ['c' => 0, 's' => 0];
+
+            $paidYearRow = $this->db->safeFetch(
+                "SELECT COUNT(*) AS c, COALESCE(SUM({$gross}), 0) AS s
+                   FROM `{$inv}` i
+                  WHERE i.status = 'paid' AND {$dsFilter}
+                    AND i.issue_date >= ?",
+                [$yearStart]
+            ) ?: ['c' => 0, 's' => 0];
+
+            return [
+                'open_count'        => (int)($openRow['c'] ?? 0),
+                'open_amount'       => (float)($openRow['s'] ?? 0),
+                'overdue_count'     => (int)($overdueRow['c'] ?? 0),
+                'overdue_amount'    => (float)($overdueRow['s'] ?? 0),
+                'paid_count_month'  => (int)($paidMonthRow['c'] ?? 0),
+                'paid_amount_month' => (float)($paidMonthRow['s'] ?? 0),
+                'paid_count_year'   => (int)($paidYearRow['c'] ?? 0),
+                'paid_amount_year'  => (float)($paidYearRow['s'] ?? 0),
+            ];
+        } catch (\Throwable) {
+            return $zero;
+        }
+    }
+
+    /**
      * Löst den effektiven Steuersatz auf, abhängig von Tenant-Einstellungen.
      *
      * Prioritäten (hoch → niedrig):

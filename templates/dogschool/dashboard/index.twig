@@ -1,46 +1,169 @@
 {% extends active_theme_layout ?? 'layouts/base.twig' %}
 {% set active_nav = 'dashboard' %}
 
+{% block head %}
+<style>
+    /* KPI-Karten: das gesamte Card ist klickbar (entire-card link pattern).
+       Praxis-Dashboard nutzt eigene Regeln in app.css — dieser Scope ist auf
+       die Hundeschul-Dashboard-spezifische Klasse `kpi-link` begrenzt. */
+    .kpi-link { display:block; text-decoration:none; color:inherit; transition:transform .12s ease, box-shadow .12s ease; }
+    .kpi-link:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(0,0,0,0.12); text-decoration:none; color:inherit; }
+    .kpi-link .card { height:100%; }
+    .kpi-label { text-transform:uppercase; font-size:.72rem; letter-spacing:.05em; color:var(--bs-secondary-color); margin-bottom:.25rem; }
+    .kpi-value { font-weight:700; font-size:1.6rem; line-height:1.1; }
+    .kpi-sub   { font-size:.78rem; color:var(--bs-secondary-color); margin-top:.25rem; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="page-header">
     <div>
         <h1 class="page-title">Hundeschul-Übersicht</h1>
         <p class="page-subtitle">{{ 'now'|date('l, d. F Y') }}</p>
     </div>
-    <div class="d-flex gap-2">
+    <div class="d-flex gap-2 flex-wrap">
         {% if features.dogschool_courses ?? false %}
         <a href="/kurse/neu" class="btn btn-primary btn-sm">+ Neuer Kurs</a>
+        {% endif %}
+        {% if features.dogschool_leads ?? false %}
+        <a href="/interessenten/neu" class="btn btn-outline-primary btn-sm">+ Interessent</a>
+        {% endif %}
+        {% if features.dogschool_packages ?? false %}
+        <a href="/pakete" class="btn btn-outline-primary btn-sm">Paket verkaufen</a>
         {% endif %}
     </div>
 </div>
 
-{# ── Kennzahlen ── #}
-<div class="row g-3 mb-4">
-    <div class="col-md-3">
-        <div class="card"><div class="card-body">
-            <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);letter-spacing:0.05em;">Aktive Kurse</div>
-            <div class="fw-bold" style="font-size:1.75rem;">{{ stats.active_courses }}</div>
-        </div></div>
+{# ══════════════════════════════════════════════════════════
+   KURS-KPIs (immer sichtbar — Kernbestandteil der Hundeschule)
+   Klickbar: Kurse-Liste ggf. mit Status-Filter, Warteliste direkt.
+   ══════════════════════════════════════════════════════════ #}
+<div class="row g-3 mb-3">
+    <div class="col-md-6 col-lg-3">
+        <a href="/kurse?status=active" class="kpi-link">
+            <div class="card"><div class="card-body">
+                <div class="kpi-label">Aktive Kurse</div>
+                <div class="kpi-value">{{ stats.active_courses }}</div>
+                <div class="kpi-sub">Liste öffnen →</div>
+            </div></div>
+        </a>
     </div>
-    <div class="col-md-3">
-        <div class="card"><div class="card-body">
-            <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);letter-spacing:0.05em;">Freie Plätze</div>
-            <div class="fw-bold" style="font-size:1.75rem;color:#22c55e;">{{ stats.free_spots_total }}</div>
-        </div></div>
+    <div class="col-md-6 col-lg-3">
+        <a href="/kurse" class="kpi-link">
+            <div class="card"><div class="card-body">
+                <div class="kpi-label">Freie Plätze</div>
+                <div class="kpi-value" style="color:#22c55e;">{{ stats.free_spots_total }}</div>
+                <div class="kpi-sub">über alle Kurse</div>
+            </div></div>
+        </a>
     </div>
-    <div class="col-md-3">
-        <div class="card"><div class="card-body">
-            <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);letter-spacing:0.05em;">Volle Kurse</div>
-            <div class="fw-bold" style="font-size:1.75rem;color:#fbbf24;">{{ stats.full_courses }}</div>
-        </div></div>
+    <div class="col-md-6 col-lg-3">
+        <a href="/kurse?status=full" class="kpi-link">
+            <div class="card"><div class="card-body">
+                <div class="kpi-label">Volle Kurse</div>
+                <div class="kpi-value" style="color:#fbbf24;">{{ stats.full_courses }}</div>
+                <div class="kpi-sub">ausgebucht</div>
+            </div></div>
+        </a>
     </div>
-    <div class="col-md-3">
-        <div class="card"><div class="card-body">
-            <div class="text-uppercase small mb-1" style="color:var(--bs-secondary-color);letter-spacing:0.05em;">Warteliste</div>
-            <div class="fw-bold" style="font-size:1.75rem;">{{ stats.waitlist_total }}</div>
+    <div class="col-md-6 col-lg-3">
+        {% if features.dogschool_waitlist ?? false %}
+        <a href="/warteliste" class="kpi-link">
+            <div class="card"><div class="card-body">
+                <div class="kpi-label">Warteliste</div>
+                <div class="kpi-value">{{ stats.waitlist_total }}</div>
+                <div class="kpi-sub">wartende Anmeldungen →</div>
+            </div></div>
+        </a>
+        {% else %}
+        <div class="card h-100"><div class="card-body">
+            <div class="kpi-label">Warteliste</div>
+            <div class="kpi-value">{{ stats.waitlist_total }}</div>
         </div></div>
+        {% endif %}
     </div>
 </div>
+
+{# ══════════════════════════════════════════════════════════
+   FINANZ-KPIs (nur wenn dogschool_invoicing aktiv)
+   Klickbar: direkt gefilterte Hundeschul-Rechnungsliste.
+   Filter-Defaults:
+     - Offen    → status=open
+     - Überfällig → status=overdue  (Controller behandelt overdue auch als open+abgelaufen,
+                    List-Filter zeigt beides via status=overdue weil markOverdueAutomatic
+                    regelmäßig via Cron läuft)
+     - Bezahlt  → status=paid + Zeitraum dieses Monats / Jahr
+   ══════════════════════════════════════════════════════════ #}
+{% if invoice_stats %}
+<div class="row g-3 mb-3">
+    <div class="col-md-6 col-lg-3">
+        <a href="/hundeschule/rechnungen?status=open" class="kpi-link">
+            <div class="card"><div class="card-body">
+                <div class="kpi-label">Offene Rechnungen</div>
+                <div class="kpi-value" style="color:#60a5fa;">{{ invoice_stats.open_count }}</div>
+                <div class="kpi-sub">{{ invoice_stats.open_amount|number_format(2, ',', '.') }} € offen</div>
+            </div></div>
+        </a>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <a href="/hundeschule/rechnungen?status=overdue" class="kpi-link">
+            <div class="card"><div class="card-body">
+                <div class="kpi-label">Überfällig</div>
+                <div class="kpi-value" style="color:#ef4444;">{{ invoice_stats.overdue_count }}</div>
+                <div class="kpi-sub">{{ invoice_stats.overdue_amount|number_format(2, ',', '.') }} € fällig</div>
+            </div></div>
+        </a>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <a href="/hundeschule/rechnungen?status=paid&from={{ 'now'|date('Y-m-01') }}&to={{ 'now'|date('Y-m-d') }}" class="kpi-link">
+            <div class="card"><div class="card-body">
+                <div class="kpi-label">Bezahlt ({{ 'now'|date('M') }})</div>
+                <div class="kpi-value" style="color:#22c55e;">{{ invoice_stats.paid_amount_month|number_format(2, ',', '.') }} €</div>
+                <div class="kpi-sub">{{ invoice_stats.paid_count_month }} Rechnung(en)</div>
+            </div></div>
+        </a>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <a href="/hundeschule/rechnungen?status=paid&from={{ 'now'|date('Y-01-01') }}&to={{ 'now'|date('Y-m-d') }}" class="kpi-link">
+            <div class="card"><div class="card-body">
+                <div class="kpi-label">Bezahlt ({{ 'now'|date('Y') }})</div>
+                <div class="kpi-value" style="color:#22c55e;">{{ invoice_stats.paid_amount_year|number_format(2, ',', '.') }} €</div>
+                <div class="kpi-sub">{{ invoice_stats.paid_count_year }} Rechnung(en)</div>
+            </div></div>
+        </a>
+    </div>
+</div>
+{% endif %}
+
+{# ══════════════════════════════════════════════════════════
+   ANFRAGEN / LEADS (feature-gegated, beide optional)
+   ══════════════════════════════════════════════════════════ #}
+{% if (features.dogschool_online_booking ?? false) or (features.dogschool_leads ?? false) %}
+<div class="row g-3 mb-4">
+    {% if features.dogschool_online_booking ?? false %}
+    <div class="col-md-6">
+        <a href="/anfragen" class="kpi-link">
+            <div class="card"><div class="card-body">
+                <div class="kpi-label">Neue Buchungsanfragen</div>
+                <div class="kpi-value" style="color:#a78bfa;">{{ new_booking_requests }}</div>
+                <div class="kpi-sub">aus Online-Buchung — Details öffnen →</div>
+            </div></div>
+        </a>
+    </div>
+    {% endif %}
+    {% if features.dogschool_leads ?? false %}
+    <div class="col-md-6">
+        <a href="/interessenten" class="kpi-link">
+            <div class="card"><div class="card-body">
+                <div class="kpi-label">Aktive Interessenten</div>
+                <div class="kpi-value" style="color:#60a5fa;">{{ active_leads }}</div>
+                <div class="kpi-sub">Status „neu" oder „kontaktiert" →</div>
+            </div></div>
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
 
 <div class="row g-3">
     {# ── Heute ── #}

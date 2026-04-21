@@ -40,6 +40,24 @@ class InvoiceController extends Controller
 
     public function index(array $params = []): void
     {
+        /* Trainer-Tenants haben eine eigene Hundeschul-Rechnungsübersicht
+         * (/hundeschule/rechnungen) mit Kurs-/Paket-Filter. Die Praxis-Rechnungs-
+         * liste zeigt zwar ebenfalls alle Rechnungen, verlinkt in ihren Spalten
+         * aber u.a. auf Patienten-/Tierhalter-Detailansichten mit Praxisbegriffen.
+         * Analoges Verhalten wie in DashboardController::index — siehe dort.
+         *
+         * Wir prüfen den Tenant-Type direkt via Settings-Repository (keine neue
+         * DI-Dependency, InvoiceController hat `SettingsRepository` bereits injected).
+         * Fallback-sicher: bei Fehler → kein Redirect, Praxis-Ansicht bleibt sichtbar. */
+        try {
+            if (($this->settingsRepository->get('practice_type', 'therapeut')) === 'trainer') {
+                $this->redirect('/hundeschule/rechnungen');
+                return;
+            }
+        } catch (\Throwable) {
+            /* Settings nicht lesbar — nicht blockieren, normale Ansicht zeigen */
+        }
+
         /* Throttle: only run overdue check once per 15 minutes via session timestamp */
         $lastOverdueCheck = (int)($this->session->get('_overdue_check_ts') ?? 0);
         if ((time() - $lastOverdueCheck) > 900) {
