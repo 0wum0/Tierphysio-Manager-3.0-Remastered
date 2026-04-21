@@ -606,6 +606,213 @@ HTML;
     }
 
     /* ══════════════════════════════════════════════════════════
+       TENANT-TYPE HELPERS
+       Alle öffentlichen Mail-Funktionen unten nutzen diese Helfer,
+       damit die Texte je nach Praxis-Modus (Tierphysio vs Hunde-
+       schule/Trainer) korrekt getont sind. So vermeiden wir
+       Vermischungen wie „Ihre Behandlung" in einer Hundeschul-Mail.
+    ══════════════════════════════════════════════════════════ */
+
+    private function isTrainerTenant(): bool
+    {
+        return (string)$this->settingsRepository->get('practice_type', 'therapeut') === 'trainer';
+    }
+
+    /**
+     * Setup-Metadaten für eine Kurs-/Buchungs-Mail. Liefert
+     * gemeinsame Strings (Unternehmen, Anrede für Tier vs Patient,
+     * Trainer vs Therapeut) je nach Tenant-Type.
+     */
+    private function tenantMailCtx(): array
+    {
+        $isTrainer = $this->isTrainerTenant();
+        return [
+            'is_trainer'    => $isTrainer,
+            'company'       => $this->settingsRepository->get('company_name', $isTrainer ? 'Hundeschule' : 'Tierphysio Praxis'),
+            'team_label'    => $isTrainer ? 'Trainer-Team' : 'Praxis-Team',
+            'animal_label'  => $isTrainer ? 'Hund' : 'Tier',
+            'session_label' => $isTrainer ? 'Training' : 'Termin',
+            'icon'          => $isTrainer ? '🐾' : '🐾',
+        ];
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       KURS- UND BUCHUNGS-MAILS (tenant-type-aware)
+    ══════════════════════════════════════════════════════════ */
+
+    /**
+     * Eingangsbestätigung für eine /buchung-Anfrage (öffentliches Portal).
+     * Wird direkt nach dem Absenden des Formulars verschickt.
+     *
+     * @param string      $email     Empfänger
+     * @param string      $firstName Vorname des Anfragers
+     * @param string|null $dogName   Name des Hundes (optional)
+     * @param string|null $subject2  Betreff der Anfrage (z.B. Probetraining, Kursname)
+     */
+    public function sendBookingRequestConfirmation(
+        string $email,
+        string $firstName,
+        ?string $dogName = null,
+        ?string $requestSubject = null
+    ): bool {
+        try {
+            $ctx     = $this->tenantMailCtx();
+            $company = $ctx['company'];
+            $name    = trim($firstName) !== '' ? trim($firstName) : ($ctx['is_trainer'] ? 'Halter' : 'Tierhalter');
+            $dogLine = $dogName ? "\n🐕 Hund: {$dogName}" : '';
+            $reqLine = $requestSubject ? "\n📌 Anliegen: {$requestSubject}" : '';
+
+            if ($ctx['is_trainer']) {
+                $subject  = "Wir haben deine Anfrage erhalten – {$company}";
+                $bodyText = "Hallo {$name},\n\n"
+                          . "vielen Dank für deine Anfrage bei {$company}. "
+                          . "Wir haben deine Nachricht erhalten und melden uns innerhalb von 2 Werktagen bei dir zurück."
+                          . $dogLine . $reqLine . "\n\n"
+                          . "Bitte beachte: Diese Mail ist eine reine Eingangsbestätigung. "
+                          . "Dein Trainingsplatz ist erst nach unserer Rückmeldung verbindlich reserviert.\n\n"
+                          . "Bis bald\nDein {$ctx['team_label']} von {$company}";
+            } else {
+                $subject  = "Wir haben Ihre Anfrage erhalten – {$company}";
+                $bodyText = "Hallo {$name},\n\n"
+                          . "vielen Dank für Ihre Anfrage bei {$company}. "
+                          . "Wir haben Ihre Nachricht erhalten und melden uns innerhalb von 2 Werktagen bei Ihnen zurück."
+                          . $dogLine . $reqLine . "\n\n"
+                          . "Bitte beachten Sie: Diese Mail ist eine reine Eingangsbestätigung. "
+                          . "Ihr Termin ist erst nach unserer Rückmeldung verbindlich reserviert.\n\n"
+                          . "Herzliche Grüße\nIhr {$ctx['team_label']} von {$company}";
+            }
+
+            $mailer = $this->createMailer();
+            $mailer->addAddress($email, $name);
+            $mailer->Subject = $subject;
+            $mailer->isHTML(true);
+            $mailer->Body    = $this->wrapInEmailLayout($subject, $bodyText, '✅');
+            $mailer->AltBody = $bodyText;
+            return $mailer->send();
+        } catch (\Throwable $e) {
+            $this->lastError = $e->getMessage();
+            error_log('[MailService::sendBookingRequestConfirmation] ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Bestätigung einer Kurs-Einschreibung (sofort nach dem Enroll).
+     * @param array $enrollment Row mit owner_*, patient_name, course_name, start_date, start_time, location
+     */
+    public function sendCourseEnrollmentConfirmation(array $enrollment): bool
+    {
+        try {
+            $email = (string)($enrollment['owner_email'] ?? '');
+            if ($email === '') return false;
+
+            $ctx        = $this->tenantMailCtx();
+            $company    = $ctx['company'];
+            $firstName  = trim((string)($enrollment['owner_first_name'] ?? '')) ?: ($ctx['is_trainer'] ? 'Halter' : 'Tierhalter');
+            $dogName    = (string)($enrollment['patient_name'] ?? '');
+            $courseName = (string)($enrollment['course_name'] ?? 'unser Kurs');
+            $startDate  = !empty($enrollment['start_date']) ? date('d.m.Y', strtotime((string)$enrollment['start_date'])) : '';
+            $startTime  = !empty($enrollment['start_time']) ? substr((string)$enrollment['start_time'], 0, 5) . ' Uhr' : '';
+            $location   = (string)($enrollment['location'] ?? '');
+
+            $dateLine = $startDate ? "\n📅 Start: {$startDate}" . ($startTime ? ' um ' . $startTime : '') : '';
+            $locLine  = $location !== '' ? "\n📍 Ort: {$location}" : '';
+            $dogLine  = $dogName !== '' ? "\n🐕 {$ctx['animal_label']}: {$dogName}" : '';
+
+            if ($ctx['is_trainer']) {
+                $subject  = "Anmeldung bestätigt: {$courseName} – {$company}";
+                $bodyText = "Hallo {$firstName},\n\n"
+                          . "super, dass du dabei bist! Wir haben deine Anmeldung für den Kurs "
+                          . "**{$courseName}** erhalten und bestätigt."
+                          . $dogLine . $dateLine . $locLine . "\n\n"
+                          . "Du bekommst 24 Stunden vor Kursbeginn eine automatische Erinnerungsmail "
+                          . "mit allen Details. Solltest du einmal nicht kommen können, sag uns "
+                          . "bitte rechtzeitig Bescheid.\n\n"
+                          . "Wir freuen uns auf euch!\nDein {$ctx['team_label']} von {$company}";
+            } else {
+                $subject  = "Anmeldung bestätigt: {$courseName} – {$company}";
+                $bodyText = "Hallo {$firstName},\n\n"
+                          . "vielen Dank für Ihre Anmeldung zum Kurs **{$courseName}**. "
+                          . "Wir haben Ihre Anmeldung erhalten und bestätigt."
+                          . $dogLine . $dateLine . $locLine . "\n\n"
+                          . "Sie erhalten 24 Stunden vor Kursbeginn eine automatische Erinnerung "
+                          . "mit allen Details. Bei Fragen melden Sie sich gerne.\n\n"
+                          . "Herzliche Grüße\nIhr {$ctx['team_label']} von {$company}";
+            }
+
+            $mailer = $this->createMailer();
+            $mailer->addAddress($email, trim($firstName . ' ' . ($enrollment['owner_last_name'] ?? '')));
+            $mailer->Subject = $subject;
+            $mailer->isHTML(true);
+            $mailer->Body    = $this->wrapInEmailLayout($subject, $bodyText, '🎉');
+            $mailer->AltBody = $bodyText;
+            return $mailer->send();
+        } catch (\Throwable $e) {
+            $this->lastError = $e->getMessage();
+            error_log('[MailService::sendCourseEnrollmentConfirmation] ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 24-Stunden-Erinnerung vor Kursbeginn. Wird vom Cron-Job aufgerufen.
+     * Identischer Row-Shape wie sendCourseEnrollmentConfirmation.
+     */
+    public function sendCourseReminder(array $enrollment): bool
+    {
+        try {
+            $email = (string)($enrollment['owner_email'] ?? '');
+            if ($email === '') return false;
+
+            $ctx        = $this->tenantMailCtx();
+            $company    = $ctx['company'];
+            $firstName  = trim((string)($enrollment['owner_first_name'] ?? '')) ?: ($ctx['is_trainer'] ? 'Halter' : 'Tierhalter');
+            $dogName    = (string)($enrollment['patient_name'] ?? '');
+            $courseName = (string)($enrollment['course_name'] ?? 'dein Kurs');
+            $startDate  = !empty($enrollment['start_date']) ? date('d.m.Y', strtotime((string)$enrollment['start_date'])) : '';
+            $startTime  = !empty($enrollment['start_time']) ? substr((string)$enrollment['start_time'], 0, 5) . ' Uhr' : '';
+            $location   = (string)($enrollment['location'] ?? '');
+
+            $dateLine = $startDate ? "\n📅 Termin: {$startDate}" . ($startTime ? ' um ' . $startTime : '') : '';
+            $locLine  = $location !== '' ? "\n📍 Ort: {$location}" : '';
+            $dogLine  = $dogName !== '' ? "\n🐕 {$ctx['animal_label']}: {$dogName}" : '';
+
+            if ($ctx['is_trainer']) {
+                $subject  = "Erinnerung: {$courseName} morgen – {$company}";
+                $bodyText = "Hallo {$firstName},\n\n"
+                          . "eine kleine Erinnerung: Morgen startet dein Kurs **{$courseName}**."
+                          . $dogLine . $dateLine . $locLine . "\n\n"
+                          . "Denk bitte an:\n"
+                          . "• Leckerlis (klein & weich)\n"
+                          . "• Schleppleine / normale Leine\n"
+                          . "• Impfpass beim ersten Termin\n"
+                          . "• Wasser & Handtuch\n\n"
+                          . "Solltest du kurzfristig nicht kommen können, sag uns bitte Bescheid.\n\n"
+                          . "Wir freuen uns auf euch!\nDein {$ctx['team_label']} von {$company}";
+            } else {
+                $subject  = "Erinnerung: {$courseName} morgen – {$company}";
+                $bodyText = "Hallo {$firstName},\n\n"
+                          . "wir möchten Sie an den morgigen Termin erinnern: **{$courseName}**."
+                          . $dogLine . $dateLine . $locLine . "\n\n"
+                          . "Sollten Sie kurzfristig nicht kommen können, geben Sie uns bitte rechtzeitig Bescheid.\n\n"
+                          . "Herzliche Grüße\nIhr {$ctx['team_label']} von {$company}";
+            }
+
+            $mailer = $this->createMailer();
+            $mailer->addAddress($email, trim($firstName . ' ' . ($enrollment['owner_last_name'] ?? '')));
+            $mailer->Subject = $subject;
+            $mailer->isHTML(true);
+            $mailer->Body    = $this->wrapInEmailLayout($subject, $bodyText, '⏰');
+            $mailer->AltBody = $bodyText;
+            return $mailer->send();
+        } catch (\Throwable $e) {
+            $this->lastError = $e->getMessage();
+            error_log('[MailService::sendCourseReminder] ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /* ══════════════════════════════════════════════════════════
        MAILER FACTORY
     ══════════════════════════════════════════════════════════ */
 

@@ -143,6 +143,7 @@ class SettingsController extends Controller
             'email_invite_subject',   'email_invite_body',
             'birthday_mail_subject',  'birthday_mail_body', 'birthday_cron_token',
             'birthday_mail_enabled',
+            'course_reminder_token', // 24h-Kurs-Erinnerungs-Cron — /kurse/cron/erinnerungen?token=...
             'google_client_id', 'google_client_secret', 'google_redirect_uri',
             'portal_show_homework',
             'practice_type',

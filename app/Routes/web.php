@@ -638,6 +638,12 @@ $router->post('/kurse/{id}/warteliste/{wait_id}/entfernen', [CourseController::c
 // Warteliste (globale Übersicht)
 $router->get('/warteliste',                           [CourseController::class, 'waitlistIndex'], ['auth', 'feature:dogschool_waitlist']);
 
+/* 24h-Kurs-Erinnerungs-Cron — öffentlich, Token-gesichert über settings.course_reminder_token
+ * Aufruf z.B. stündlich:
+ *   GET /kurse/cron/erinnerungen?token=XYZ
+ */
+$router->get('/kurse/cron/erinnerungen',              [CourseController::class, 'cronSendReminders'], []);
+
 // Anwesenheit
 $router->get('/anwesenheit',                          [AttendanceController::class, 'index'],     ['auth', 'feature:dogschool_attendance']);
 $router->get('/anwesenheit/session/{session_id}',     [AttendanceController::class, 'sessionMatrix'], ['auth', 'feature:dogschool_attendance']);

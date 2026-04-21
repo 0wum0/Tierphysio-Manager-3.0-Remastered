@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Database;
 use App\Services\DogschoolSchemaService;
+use App\Services\MailService;
 
 /**
  * OnlineBookingController
@@ -29,6 +30,7 @@ class OnlineBookingController extends Controller
         \App\Core\Translator $translator,
         private readonly Database $db,
         private readonly DogschoolSchemaService $schema,
+        private readonly MailService $mailService,
     ) {
         parent::__construct($view, $session, $config, $translator);
     }
@@ -183,6 +185,15 @@ class OnlineBookingController extends Controller
             return;
         }
 
+        /* DSGVO-Einwilligung Pflicht — Clientseitig ist die Checkbox
+         * `required`, serverseitig absichern damit kein manipulierter
+         * Request ohne aktive Zustimmung durchkommt. */
+        if ((string)$this->post('gdpr_consent', '') !== '1') {
+            $this->flash('error', 'Bitte bestätige die Datenschutzerklärung, um deine Anfrage zu senden.');
+            $this->redirect('/buchung');
+            return;
+        }
+
         $token = bin2hex(random_bytes(16));
         $this->db->safeExecute(
             "INSERT INTO `{$this->db->prefix('dogschool_booking_requests')}`
@@ -204,6 +215,26 @@ class OnlineBookingController extends Controller
                 substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 500),
             ]
         );
+
+        /* ── Eingangsbestätigung an den Anfragenden senden (tenant-type-aware).
+         * Fehler beim Mail-Versand blockieren NICHT die Weiterleitung zur
+         * Danke-Seite — die Anfrage ist in der DB sicher gelandet. */
+        try {
+            $requestedFor = (string)$this->post('requested_for', 'course');
+            $subjectMap   = [
+                'course'       => 'Kursbuchung',
+                'trial'        => 'Probetraining',
+                'consultation' => 'Beratungsgespräch',
+            ];
+            $this->mailService->sendBookingRequestConfirmation(
+                $email,
+                $firstName,
+                trim((string)$this->post('dog_name', '')) ?: null,
+                $subjectMap[$requestedFor] ?? null
+            );
+        } catch (\Throwable $e) {
+            error_log('[OnlineBooking publicSubmit mail] ' . $e->getMessage());
+        }
 
         $this->redirect('/buchung/danke');
     }

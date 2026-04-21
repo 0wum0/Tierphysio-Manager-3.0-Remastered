@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Core\Database;
 use App\Repositories\CourseRepository;
 use App\Repositories\OwnerRepository;
 use App\Repositories\PatientRepository;
+use App\Services\MailService;
 
 /**
  * CourseController — Hundeschul-Kurs-Verwaltung
@@ -23,6 +25,8 @@ class CourseController extends Controller
     private CourseRepository $courses;
     private PatientRepository $patients;
     private OwnerRepository $owners;
+    private MailService $mailService;
+    private Database $db;
 
     public function __construct(
         \App\Core\View $view,
@@ -32,11 +36,15 @@ class CourseController extends Controller
         CourseRepository $courses,
         PatientRepository $patients,
         OwnerRepository $owners,
+        MailService $mailService,
+        Database $db,
     ) {
         parent::__construct($view, $session, $config, $translator);
-        $this->courses  = $courses;
-        $this->patients = $patients;
-        $this->owners   = $owners;
+        $this->courses     = $courses;
+        $this->patients    = $patients;
+        $this->owners      = $owners;
+        $this->mailService = $mailService;
+        $this->db          = $db;
     }
 
     /* ═════════════════════════ Liste ═════════════════════════ */
@@ -257,8 +265,106 @@ class CourseController extends Controller
             $this->flash('warning', 'Hund ist bereits für diesen Kurs eingeschrieben.');
         } else {
             $this->flash('success', 'Hund eingeschrieben.');
+
+            /* ── Sofort-Bestätigungsmail (tenant-type-aware).
+             * Owner-E-Mail + Patient-Name + Kurs-Metadaten zusammenstellen. */
+            try {
+                $patient = $this->patients->findById($patientId) ?: [];
+                $owner   = $this->owners->findById($ownerId) ?: [];
+                if (!empty($owner['email'])) {
+                    $this->mailService->sendCourseEnrollmentConfirmation([
+                        'owner_email'      => $owner['email'],
+                        'owner_first_name' => $owner['first_name']  ?? '',
+                        'owner_last_name'  => $owner['last_name']   ?? '',
+                        'patient_name'     => $patient['name']      ?? '',
+                        'course_name'      => $course['name']       ?? '',
+                        'start_date'       => $course['start_date'] ?? null,
+                        'start_time'       => $course['start_time'] ?? null,
+                        'location'         => $course['location']   ?? '',
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                error_log('[CourseController enroll mail] ' . $e->getMessage());
+            }
         }
         $this->redirect("/kurse/{$courseId}");
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       24-Stunden-Erinnerung (Cron-Endpoint)
+       Ruft für alle aktiven Einschreibungen, deren Kurs in den
+       nächsten 24-48 Stunden startet, die tenant-aware
+       sendCourseReminder() auf. Idempotent über eine
+       dynamisch hinzugefügte Spalte `reminder_sent_at` auf
+       `dogschool_enrollments`.
+
+       Sicherheit: Nur per Token (settings.course_reminder_token)
+       aufrufbar — analog zum bestehenden Kalender-Cron.
+    ══════════════════════════════════════════════════════════ */
+    public function cronSendReminders(array $params = []): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        /* Token-Check aus settings (wird per SaaS-Provisioning gesetzt).
+         * Token darf leer sein → Cron ist dann deaktiviert (Sicher-by-Default). */
+        $expected = (string)($this->settingsService()->get('course_reminder_token') ?? '');
+        $provided = (string)$this->get('token', '');
+        if ($expected === '' || !hash_equals($expected, $provided)) {
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'error' => 'invalid token']);
+            return;
+        }
+
+        /* Self-heal: Spalte reminder_sent_at bei Bedarf anlegen */
+        $table = $this->db->prefix('dogschool_enrollments');
+        $this->db->ensureColumn($table, 'reminder_sent_at', 'DATETIME NULL DEFAULT NULL');
+
+        /* Enrollments mit Kursstart in den nächsten 24–48 Stunden holen,
+         * die noch keine Erinnerung bekommen haben (NULL oder älter als
+         * 23 Stunden — Doppel-Versand ausgeschlossen, auch wenn Cron
+         * mehrfach pro Stunde läuft). */
+        $rows = $this->db->safeFetchAll(
+            "SELECT e.id, e.reminder_sent_at,
+                    c.name AS course_name, c.start_date, c.start_time, c.location,
+                    p.name AS patient_name,
+                    o.email      AS owner_email,
+                    o.first_name AS owner_first_name,
+                    o.last_name  AS owner_last_name
+               FROM `{$table}` e
+               LEFT JOIN `{$this->db->prefix('dogschool_courses')}` c ON c.id = e.course_id
+               LEFT JOIN `{$this->db->prefix('patients')}`          p ON p.id = e.patient_id
+               LEFT JOIN `{$this->db->prefix('owners')}`            o ON o.id = e.owner_id
+              WHERE e.status = 'active'
+                AND c.start_date IS NOT NULL
+                AND TIMESTAMP(c.start_date, COALESCE(c.start_time,'00:00:00'))
+                    BETWEEN DATE_ADD(NOW(), INTERVAL 23 HOUR)
+                        AND DATE_ADD(NOW(), INTERVAL 25 HOUR)
+                AND (e.reminder_sent_at IS NULL
+                     OR e.reminder_sent_at < DATE_SUB(NOW(), INTERVAL 23 HOUR))"
+        );
+
+        $sent    = 0;
+        $skipped = 0;
+        foreach ($rows as $row) {
+            if (empty($row['owner_email'])) { $skipped++; continue; }
+            $ok = $this->mailService->sendCourseReminder($row);
+            if ($ok) {
+                $this->db->safeExecute(
+                    "UPDATE `{$table}` SET reminder_sent_at = NOW() WHERE id = ?",
+                    [(int)$row['id']]
+                );
+                $sent++;
+            } else {
+                $skipped++;
+            }
+        }
+
+        echo json_encode(['ok' => true, 'sent' => $sent, 'skipped' => $skipped, 'candidates' => count($rows)]);
+    }
+
+    private function settingsService(): \App\Services\SettingsService
+    {
+        return \App\Core\Application::getInstance()->getContainer()->get(\App\Services\SettingsService::class);
     }
 
     public function unenroll(array $params = []): void

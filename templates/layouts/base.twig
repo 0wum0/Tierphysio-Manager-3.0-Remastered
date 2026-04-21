@@ -291,9 +291,15 @@
                      or ((item.trainer_only ?? false) and not (is_trainer ?? false))
                    ) %}
                 {% if item_feature_ok and item_admin_ok and item_type_ok %}
-                <a href="{{ item.href }}" class="nav-item {{ is_active(item.href) }}">
+                {# Tenant-type-aware label/href:
+                   Plugins dürfen 'label_trainer' / 'href_trainer' mitliefern,
+                   um für Hundeschulen einen alternativen Text oder Zielort
+                   auszuspielen (z.B. „TrainerCare Pro" statt „TherapyCare Pro"). #}
+                {% set nav_label = (is_trainer ?? false) and item.label_trainer is defined ? item.label_trainer : item.label %}
+                {% set nav_href  = (is_trainer ?? false) and item.href_trainer  is defined ? item.href_trainer  : item.href  %}
+                <a href="{{ nav_href }}" class="nav-item {{ is_active(nav_href) }}">
                     {% if item.icon is defined %}{{ item.icon|raw }}{% endif %}
-                    {{ item.label }}
+                    {{ nav_label }}
                 </a>
                 {% endif %}
             {% endfor %}

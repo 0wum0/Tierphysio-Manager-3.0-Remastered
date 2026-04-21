@@ -16,11 +16,21 @@
         <div class="icon-wrap">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><polyline points="20 6 9 17 4 12" stroke="#22c55e" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
-        <h1>Danke für deine Anfrage!</h1>
+        <h1 class="mb-3">Anfrage erfolgreich gesendet</h1>
         <p class="text-secondary mb-4">
-            Wir haben deine Nachricht erhalten und melden uns innerhalb von 2 Werktagen per E-Mail oder Telefon bei dir zurück.
+            Vielen Dank! Wir haben deine Buchungsanfrage erhalten und eine
+            <strong class="text-light">Eingangsbestätigung an deine E-Mail-Adresse</strong>
+            geschickt. Sobald wir deine Anfrage geprüft haben, melden wir uns bei dir —
+            spätestens innerhalb von <strong class="text-light">2 Werktagen</strong>.
         </p>
-        <a href="/" class="btn btn-outline-light">Zur Startseite</a>
+
+        {# Kein „Zur Startseite"-Button: Tierhalter haben hier keine
+           öffentliche Startseite (nur Portal-Login hinter Einladung).
+           Stattdessen nur ein dezenter Hinweis zum Schließen des Tabs. #}
+        <p class="small text-secondary mt-4 mb-0">
+            Du kannst dieses Fenster jetzt schließen. Bei Rückfragen schreib uns
+            einfach eine Nachricht.
+        </p>
     </div>
 </body>
 </html>
