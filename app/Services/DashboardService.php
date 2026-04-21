@@ -268,6 +268,7 @@ class DashboardService
                  LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
                  WHERE a.start_at >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
                    AND a.status NOT IN ('cancelled','noshow')
+                   AND COALESCE(a.google_event_id, '') = ''
                  GROUP BY tt.id, tt.name, tt.color
                  ORDER BY value DESC
                  LIMIT 8"
@@ -314,6 +315,7 @@ class DashboardService
                  FROM `{$this->t('appointments')}`
                  WHERE start_at >= DATE_SUB(NOW(), INTERVAL 3 MONTH)
                    AND status NOT IN ('cancelled','noshow')
+                   AND COALESCE(google_event_id, '') = ''
                  GROUP BY dow
                  ORDER BY dow ASC"
             );

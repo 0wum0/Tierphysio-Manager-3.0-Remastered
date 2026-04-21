@@ -178,17 +178,39 @@ class AppointmentRepository
 
     public function getStats(): array
     {
-        $stmt = $this->db->query(
-            "SELECT
-               COUNT(*) AS total,
-               SUM(CASE WHEN status='scheduled' OR status='confirmed' THEN 1 ELSE 0 END) AS upcoming,
-               SUM(CASE WHEN status='cancelled' THEN 1 ELSE 0 END) AS cancelled,
-               SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) AS completed,
-               SUM(CASE WHEN DATE(start_at)=CURDATE() THEN 1 ELSE 0 END) AS today
-             FROM `{$this->t('appointments')}`",
-            []
-        );
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        /* Statistik zählt NUR intern in TheraPano erstellte Termine.
+         * Google-importierte Events (google_event_id IS NOT NULL, gesetzt durch
+         * Plugin google-calendar-sync Migration 003) werden ausgeschlossen, damit
+         * fremde Kalender-Einträge die Praxis-Statistik nicht verfälschen.
+         * Wenn die Spalte nicht existiert (Plugin nicht installiert), fällt die
+         * Query mit SQLSTATE 42S22 aus — der catch liefert dann den früheren Wert
+         * ohne Filter zurück, damit Tenants ohne google-calendar-sync nicht brechen. */
+        try {
+            $stmt = $this->db->query(
+                "SELECT
+                   COUNT(*) AS total,
+                   SUM(CASE WHEN status='scheduled' OR status='confirmed' THEN 1 ELSE 0 END) AS upcoming,
+                   SUM(CASE WHEN status='cancelled' THEN 1 ELSE 0 END) AS cancelled,
+                   SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) AS completed,
+                   SUM(CASE WHEN DATE(start_at)=CURDATE() THEN 1 ELSE 0 END) AS today
+                 FROM `{$this->t('appointments')}`
+                 WHERE COALESCE(`google_event_id`, '') = ''",
+                []
+            );
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable) {
+            $stmt = $this->db->query(
+                "SELECT
+                   COUNT(*) AS total,
+                   SUM(CASE WHEN status='scheduled' OR status='confirmed' THEN 1 ELSE 0 END) AS upcoming,
+                   SUM(CASE WHEN status='cancelled' THEN 1 ELSE 0 END) AS cancelled,
+                   SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) AS completed,
+                   SUM(CASE WHEN DATE(start_at)=CURDATE() THEN 1 ELSE 0 END) AS today
+                 FROM `{$this->t('appointments')}`",
+                []
+            );
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        }
     }
 
     /* ── Waitlist ── */

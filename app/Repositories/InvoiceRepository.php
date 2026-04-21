@@ -226,19 +226,39 @@ class InvoiceRepository extends Repository
         )";
         $sumGross = "COALESCE(SUM({$grossExpr}), 0)";
 
+        /* ────────────────────────────────────────────────────────────
+         * Revenue-Zuordnungsdatum (DE Ist-Besteuerung):
+         * Umsatz wird dem MONAT DER ZAHLUNG zugeordnet (paid_at), nicht
+         * dem Monat der Rechnungsstellung (issue_date). Sonst fehlen
+         * Rechnungen, die in Vormonaten ausgestellt und diesen Monat
+         * bezahlt wurden (exakt das Differenz-Szenario 1.180 € vs 815 €).
+         *
+         * Fallback: paid_at existiert erst ab Migration 006. Wenn die
+         * Spalte fehlt, fällt $revDate auf issue_date zurück — bestehende
+         * Tenants ohne Migration 006 brechen nicht.
+         * ──────────────────────────────────────────────────────────── */
+        $hasPaidAt = false;
+        try {
+            $this->db->fetchColumn("SELECT `paid_at` FROM `{$inv}` LIMIT 0");
+            $hasPaidAt = true;
+        } catch (\Throwable) {}
+        $revDate = $hasPaidAt
+            ? "DATE(COALESCE(i.paid_at, i.issue_date))"
+            : "i.issue_date";
+
         /* ═══ Umsatz-KPIs (immer aus paid, mit Position-Fallback) ═══ */
         $revenueWeek = (float)$this->db->fetchColumn(
-            "SELECT {$sumGross} FROM `{$inv}` i WHERE i.status = 'paid' AND i.issue_date >= ?",
+            "SELECT {$sumGross} FROM `{$inv}` i WHERE i.status = 'paid' AND {$revDate} >= ?",
             [$week]
         );
 
         $revenueMonth = (float)$this->db->fetchColumn(
-            "SELECT {$sumGross} FROM `{$inv}` i WHERE i.status = 'paid' AND i.issue_date >= ?",
+            "SELECT {$sumGross} FROM `{$inv}` i WHERE i.status = 'paid' AND {$revDate} >= ?",
             [$month]
         );
 
         $revenueYear = (float)$this->db->fetchColumn(
-            "SELECT {$sumGross} FROM `{$inv}` i WHERE i.status = 'paid' AND i.issue_date >= ?",
+            "SELECT {$sumGross} FROM `{$inv}` i WHERE i.status = 'paid' AND {$revDate} >= ?",
             [$year]
         );
 
@@ -247,12 +267,12 @@ class InvoiceRepository extends Repository
         );
 
         $prevMonthRevenue = (float)$this->db->fetchColumn(
-            "SELECT {$sumGross} FROM `{$inv}` i WHERE i.status = 'paid' AND i.issue_date >= ? AND i.issue_date < ?",
+            "SELECT {$sumGross} FROM `{$inv}` i WHERE i.status = 'paid' AND {$revDate} >= ? AND {$revDate} < ?",
             [$prevMonth, $month]
         );
 
         $prevYearRevenue = (float)$this->db->fetchColumn(
-            "SELECT {$sumGross} FROM `{$inv}` i WHERE i.status = 'paid' AND i.issue_date >= ? AND i.issue_date < ?",
+            "SELECT {$sumGross} FROM `{$inv}` i WHERE i.status = 'paid' AND {$revDate} >= ? AND {$revDate} < ?",
             [$prevYear, $year]
         );
 

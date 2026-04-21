@@ -336,7 +336,9 @@ document.addEventListener('DOMContentLoaded', function() {
 function resetTenantVersion(tenantId, targetVersion) {
     if (!confirm('Version wirklich auf v' + targetVersion + ' zurücksetzen?')) return;
 
-    fetch('/admin/migration/reset-version?tenant_id=' + tenantId + '&target_version=' + targetVersion)
+    fetch('/admin/migration/reset-version?tenant_id=' + tenantId + '&target_version=' + targetVersion, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
     .then(response => response.json())
     .then(data => {
         if (data.success) {

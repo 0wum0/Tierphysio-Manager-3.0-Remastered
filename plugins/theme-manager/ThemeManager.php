@@ -17,13 +17,11 @@ class ThemeManager
 {
     private string $themesPath;     /* writable user-installed themes (gitignored) */
     private string $bundledPath;    /* themes shipped with the plugin (deployed via git) */
-    private string $activeFile;
 
     public function __construct()
     {
         $this->themesPath  = STORAGE_PATH . '/themes';
         $this->bundledPath = __DIR__ . '/bundled-themes';
-        $this->activeFile  = STORAGE_PATH . '/themes/.active';
         if (!is_dir($this->themesPath)) {
             mkdir($this->themesPath, 0755, true);
         }
@@ -31,10 +29,37 @@ class ThemeManager
 
     /* ── Active theme ─────────────────────────────────────── */
 
+    /**
+     * Path to the tenant-specific .active marker file.
+     *
+     * Wird LAZY ermittelt, weil der DI-Container den ThemeManager ggf. VOR
+     * dem Tenant-Bootstrap instanziiert. tenant_storage_path() liefert:
+     *   storage/tenants/{prefix}/themes/.active
+     * und fällt bei fehlendem Tenant-Kontext (CLI, Pre-Auth) auf
+     *   storage/themes/.active
+     * zurück — dann ist es global, was für Login/Installer-Kontext korrekt ist.
+     *
+     * Ohne diesen Fix teilen sich alle Praxen EINE .active-Datei und jede
+     * Design-Änderung einer Praxis ändert das Theme für ALLE.
+     */
+    private function activeFilePath(): string
+    {
+        if (function_exists('tenant_storage_path')) {
+            $path = tenant_storage_path('themes/.active');
+            $dir  = dirname($path);
+            if (!is_dir($dir)) {
+                @mkdir($dir, 0755, true);
+            }
+            return $path;
+        }
+        return STORAGE_PATH . '/themes/.active';
+    }
+
     public function getActive(): string
     {
-        if (file_exists($this->activeFile)) {
-            $slug = trim(file_get_contents($this->activeFile));
+        $file = $this->activeFilePath();
+        if (file_exists($file)) {
+            $slug = trim((string)@file_get_contents($file));
             if ($slug && $this->themeDir($slug) !== null) {
                 return $slug;
             }
@@ -50,7 +75,7 @@ class ThemeManager
 
     public function setActive(string $slug): void
     {
-        file_put_contents($this->activeFile, $slug);
+        file_put_contents($this->activeFilePath(), $slug);
     }
 
     /* ── Theme listing ────────────────────────────────────── */

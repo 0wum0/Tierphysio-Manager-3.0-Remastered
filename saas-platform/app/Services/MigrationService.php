@@ -15,6 +15,7 @@ class MigrationService
         'plans',
         'saas_admins',
         'saas_logs',
+        'saas_feature_flags',
         'failed_jobs',
         'migrations_global',
         // System / MySQL schemas
