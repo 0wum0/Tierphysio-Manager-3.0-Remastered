@@ -480,14 +480,53 @@ class IntakeController extends Controller
 
         /* Strenge Validierung: 4–16 Hex-Zeichen. Schützt vor SQL-Injection & Path-Traversal. */
         if ($slug === '' || !preg_match('/^[0-9a-f]{4,16}$/', $slug)) {
+            error_log('[PatientIntake] slug rejected (format): ' . substr($slug, 0, 20));
+            return false;
+        }
+
+        $prefix = $this->resolvePrefixViaSaasDb($slug);
+        if ($prefix === '') {
+            /* Fallback: SaaS-DB nicht verfügbar oder Tenant nicht registriert.
+             * Wir fragen INFORMATION_SCHEMA der aktuellen Verbindung nach einer
+             * `t_*_users`-Tabelle, deren Prefix-Segment zum Slug passt. So
+             * funktionieren tenant-spezifische Anmeldelinks auch wenn der
+             * Tenant nicht über die SaaS-Platform provisioniert wurde. */
+            $prefix = $this->resolvePrefixViaSchema($slug);
+        }
+
+        if ($prefix === '') {
+            error_log('[PatientIntake] slug not resolved: ' . $slug);
             return false;
         }
 
         try {
+            /* Tenant-DB-Verbindung auf den aufgelösten Prefix umstellen.
+             * Die Database-Instanz ist singleton im Container — setPrefix()
+             * wirkt damit für alle nachfolgenden Queries in diesem Request. */
+            $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $db->setPrefix($prefix);
+
+            /* SettingsRepository wurde im Bootstrap ggf. auf den falschen
+             * Tenant geladen — einmal neu aus der jetzt korrekten Prefix-DB
+             * lesen, damit renderPublic() company_name/practice_type passend
+             * in das Twig-Template reicht. */
+            $this->settingsRepository = new \App\Repositories\SettingsRepository($db);
+
+            return true;
+        } catch (\Throwable $e) {
+            error_log('[PatientIntake] prefix apply failed: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /** Primäre Auflösung über die SaaS-Platform-DB. Gibt '' zurück wenn nicht möglich. */
+    private function resolvePrefixViaSaasDb(string $slug): string
+    {
+        try {
             $config = $this->config;
             $saasDb = (string)$config->get('saas_db.database', '');
             if ($saasDb === '') {
-                return false;
+                return '';
             }
 
             $pdo = new \PDO(
@@ -505,41 +544,57 @@ class IntakeController extends Controller
                 ]
             );
 
+            /* Nicht auf Status einschränken — auch ein "pending" Tenant soll
+             * Anmeldungen empfangen können, damit der Praxis-Betreiber den
+             * Link schon vor Aktivierung auf seiner Webseite einbinden kann. */
             $stmt = $pdo->prepare(
                 "SELECT db_name FROM tenants
-                  WHERE status IN ('active','trial')
+                  WHERE db_name IS NOT NULL AND db_name <> ''
                     AND LOWER(SUBSTRING_INDEX(db_name, '_', -1)) = ?
                   LIMIT 1"
             );
             $stmt->execute([$slug]);
             $row = $stmt->fetch();
 
-            if (!$row || empty($row['db_name'])) {
-                return false;
+            if ($row && !empty($row['db_name'])) {
+                return $this->normalizeTenantPrefix((string)$row['db_name']);
             }
-
-            $prefix = $this->normalizeTenantPrefix((string)$row['db_name']);
-            if ($prefix === '') {
-                return false;
-            }
-
-            /* Tenant-DB-Verbindung auf den aufgelösten Prefix umstellen.
-             * Die Database-Instanz ist singleton im Container — setPrefix()
-             * wirkt damit für alle nachfolgenden Queries in diesem Request. */
-            $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
-            $db->setPrefix($prefix);
-
-            /* SettingsRepository wurde im Bootstrap ggf. auf den falschen
-             * Tenant geladen — einmal neu aus der jetzt korrekten Prefix-DB
-             * lesen, damit renderPublic() company_name/practice_type passend
-             * in das Twig-Template reicht. */
-            $this->settingsRepository = new \App\Repositories\SettingsRepository($db);
-
-            return true;
         } catch (\Throwable $e) {
-            error_log('[PatientIntake] applyTenantContextFromSlug failed: ' . $e->getMessage());
-            return false;
+            error_log('[PatientIntake] SaaS DB lookup failed: ' . $e->getMessage());
         }
+
+        return '';
+    }
+
+    /**
+     * Fallback-Auflösung: durchsuche INFORMATION_SCHEMA der aktuellen Tenant-DB
+     * nach `t_*_users`-Tabellen und vergleiche das letzte Prefix-Segment mit
+     * dem Slug. Funktioniert, weil alle Tenants in der gleichen physischen DB
+     * liegen (Shared-DB-Multi-Tenancy mit Table-Prefix-Isolation).
+     */
+    private function resolvePrefixViaSchema(string $slug): string
+    {
+        try {
+            $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $rows = $db->getPdo()->query(
+                "SELECT table_name FROM information_schema.tables
+                  WHERE table_schema = DATABASE()
+                    AND table_name LIKE 't\\_%\\_users'"
+            )->fetchAll(\PDO::FETCH_COLUMN);
+
+            foreach ($rows as $table) {
+                /* `t_therapano_2eff77_users` → prefix `t_therapano_2eff77_` */
+                $trim = substr((string)$table, 0, -strlen('users'));
+                $slugInTable = self::deriveSlugFromPrefix($trim);
+                if ($slugInTable === $slug) {
+                    return $trim;
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('[PatientIntake] schema lookup failed: ' . $e->getMessage());
+        }
+
+        return '';
     }
 
     /** Normalize tenant prefixes to canonical format: t_<slug>_ */
