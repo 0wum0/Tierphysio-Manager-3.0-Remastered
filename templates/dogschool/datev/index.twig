@@ -105,6 +105,16 @@
                         <div class="small">EXTF-Import für DATEV Unternehmen online / Kanzlei-Rewe</div>
                     </button>
                 </form>
+                <form action="/steuerexport/download" method="POST" class="mb-2">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                    <input type="hidden" name="from" value="{{ from }}">
+                    <input type="hidden" name="to" value="{{ to }}">
+                    <input type="hidden" name="mode" value="zip_receipts">
+                    <button type="submit" class="btn btn-success w-100 text-start">
+                        <div class="fw-semibold"><i class="bi bi-file-earmark-zip me-1"></i>Komplett-Paket für Steuerberater (ZIP)</div>
+                        <div class="small">CSV + alle hochgeladenen Belege (PDFs & Bilder) in einem ZIP</div>
+                    </button>
+                </form>
                 <form action="/steuerexport/download" method="POST">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                     <input type="hidden" name="from" value="{{ from }}">

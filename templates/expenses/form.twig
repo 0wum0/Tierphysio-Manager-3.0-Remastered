@@ -9,11 +9,51 @@
 
 <div class="card">
     <div class="card-body">
-        <form action="{{ expense is null ? '/ausgaben' : '/ausgaben/' ~ expense.id }}" method="POST" class="row g-3">
+        <form action="{{ expense is null ? '/ausgaben' : '/ausgaben/' ~ expense.id }}" method="POST" class="row g-3" enctype="multipart/form-data">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
             {% if expense is not null %}
             <input type="hidden" name="_method" value="PUT">
             {% endif %}
+
+            {# ══ Beleg-Upload mit automatischer Texterkennung ══════════════════
+               Beim Auswählen einer Datei wird diese per AJAX an den Parser
+               geschickt, der Datum, Brutto, MwSt, Lieferant & Co. aus PDF/
+               Bild extrahiert und direkt in die Felder unten einfüllt. #}
+            <div class="col-12">
+                <div class="card border-primary" style="background:#1e293b;">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <h5 class="mb-0">
+                                <i class="bi bi-cloud-upload me-2"></i>
+                                Beleg hochladen (PDF oder Bild)
+                            </h5>
+                            {% if expense is not null and expense.receipt_file %}
+                                <a href="/ausgaben/{{ expense.id }}/beleg" target="_blank" class="btn btn-sm btn-outline-info">
+                                    <i class="bi bi-file-earmark-text me-1"></i>
+                                    Aktuellen Beleg öffnen
+                                </a>
+                            {% endif %}
+                        </div>
+                        <p class="small text-secondary mb-2">
+                            Lade hier die Rechnung / Quittung hoch. Das System liest
+                            automatisch Datum, Betrag, MwSt-Satz und Lieferant aus und
+                            füllt die Felder unten vor — bitte prüfe die Werte vor dem Speichern.
+                            Der Beleg wird mit in den Steuerexport aufgenommen.
+                        </p>
+                        <input type="file" name="receipt" id="receipt-upload"
+                               class="form-control"
+                               accept="application/pdf,image/jpeg,image/png,image/webp">
+                        <div id="receipt-feedback" class="small mt-2 d-none"></div>
+                        {% if expense is not null and expense.receipt_file %}
+                            <p class="small text-success mt-2 mb-0">
+                                <i class="bi bi-check-circle-fill me-1"></i>
+                                Aktueller Beleg: <strong>{{ expense.receipt_original_name ?? expense.receipt_file }}</strong>
+                                — Upload einer neuen Datei ersetzt den bestehenden Beleg.
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
 
             <div class="col-md-6">
                 <label class="form-label">Datum *</label>
@@ -67,5 +107,113 @@
         </form>
     </div>
 </div>
+
+{# ══ Auto-Fill JS ══════════════════════════════════════════════════════
+   Sobald eine Datei ausgewählt wird:
+     1. POST an /ausgaben/beleg-preview (inkl. CSRF + Datei)
+     2. Wenn Parser Daten extrahiert hat → Felder nur dann füllen wenn
+        sie aktuell leer sind (wir überschreiben keine Eingabe des Users).
+     3. Feedback-Bereich zeigt was erkannt wurde.
+   Der Datei-Input bleibt im Form-DOM, damit beim Submit die Datei
+   regulär mit hochgeladen wird. #}
+<script>
+(function () {
+    'use strict';
+
+    const input    = document.getElementById('receipt-upload');
+    const feedback = document.getElementById('receipt-feedback');
+    const csrfEl   = document.querySelector('input[name="_csrf_token"]');
+    if (!input || !feedback || !csrfEl) return;
+
+    const getField = (name) => document.querySelector('[name="' + name + '"]');
+    const setIfEmpty = (name, value) => {
+        const el = getField(name);
+        if (!el || value === null || value === undefined || value === '') return false;
+        /* Für Select-Felder: Option suchen die zum Wert passt */
+        if (el.tagName === 'SELECT') {
+            const match = Array.from(el.options).find(o => parseFloat(o.value) === parseFloat(value));
+            if (match && !el.dataset.userEdited) { el.value = match.value; return true; }
+            return false;
+        }
+        if (!el.value || el.value === '0' || el.dataset.autofilled === '1') {
+            el.value = value;
+            el.dataset.autofilled = '1';
+            el.classList.add('border-success');
+            return true;
+        }
+        return false;
+    };
+
+    const showFeedback = (type, html) => {
+        feedback.className = 'small mt-2 alert alert-' + type + ' py-2 px-3';
+        feedback.innerHTML = html;
+        feedback.classList.remove('d-none');
+    };
+
+    input.addEventListener('change', async () => {
+        if (!input.files || !input.files[0]) return;
+        const file = input.files[0];
+
+        showFeedback('info', '<span class="spinner-border spinner-border-sm me-2"></span>Beleg wird analysiert …');
+
+        const fd = new FormData();
+        fd.append('receipt', file);
+        fd.append('_csrf_token', csrfEl.value);
+
+        try {
+            const res = await fetch('/ausgaben/beleg-preview', {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: fd,
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const json = await res.json();
+            if (!json.ok) {
+                showFeedback('warning',
+                    '<i class="bi bi-exclamation-triangle me-1"></i>' +
+                    (json.error || json.hint || 'Konnte nichts aus dem Beleg extrahieren. Bitte manuell befüllen.')
+                );
+                return;
+            }
+
+            const ex    = json.extracted || {};
+            const filled = [];
+            if (setIfEmpty('date',        ex.date))           filled.push('Datum');
+            if (setIfEmpty('supplier',    ex.supplier))       filled.push('Lieferant');
+            const descValue = ex.description
+                ? ex.description
+                : (ex.invoice_number ? ('Rechnung ' + ex.invoice_number) : null);
+            if (setIfEmpty('description', descValue)) filled.push('Beschreibung');
+            if (setIfEmpty('tax_rate',    ex.tax_rate))       filled.push('MwSt-Satz');
+            if (setIfEmpty('amount_net',  ex.amount_net))     filled.push('Nettobetrag');
+
+            const parts = [];
+            parts.push('<i class="bi bi-check-circle me-1"></i><strong>Beleg analysiert.</strong>');
+            if (filled.length) {
+                parts.push(' Automatisch gefüllt: ' + filled.map(f => '<span class="badge bg-success">' + f + '</span>').join(' '));
+            } else {
+                parts.push(' Keine Felder überschrieben — du hattest schon Werte eingetragen.');
+            }
+            if (ex.amount_gross && ex.amount_gross > 0) {
+                parts.push(' Erkannter Bruttobetrag: <strong>' + Number(ex.amount_gross).toFixed(2) + ' €</strong>.');
+            }
+            parts.push(' <em>Bitte Werte vor dem Speichern prüfen.</em>');
+            showFeedback('success', parts.join(''));
+        } catch (e) {
+            console.error('[receipt-upload]', e);
+            showFeedback('danger', '<i class="bi bi-x-circle me-1"></i>Fehler beim Upload. Bitte manuell befüllen.');
+        }
+    });
+
+    /* Schutz vor Überschreiben: wenn Nutzer ein Feld anfasst,
+     * markieren wir es als „user-edited" und lassen es in Ruhe. */
+    ['date','supplier','description','tax_rate','amount_net'].forEach(n => {
+        const el = getField(n);
+        if (!el) return;
+        el.addEventListener('input',  () => { el.dataset.userEdited = '1'; el.dataset.autofilled = '0'; });
+        el.addEventListener('change', () => { el.dataset.userEdited = '1'; });
+    });
+})();
+</script>
 
 {% endblock %}

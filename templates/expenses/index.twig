@@ -136,7 +136,16 @@
                     <tr>
                         <td>{{ expense.date|date_de }}</td>
                         <td>
-                            <div class="fw-semibold">{{ expense.description }}</div>
+                            <div class="fw-semibold d-flex align-items-center gap-2">
+                                <span>{{ expense.description }}</span>
+                                {% if expense.receipt_file %}
+                                <a href="/ausgaben/{{ expense.id }}/beleg" target="_blank"
+                                   class="text-info text-decoration-none"
+                                   title="Beleg ansehen: {{ expense.receipt_original_name ?? expense.receipt_file }}">
+                                    <i class="bi bi-paperclip"></i>
+                                </a>
+                                {% endif %}
+                            </div>
                             {% if expense.notes %}
                             <div class="text-muted small text-truncate" style="max-width:200px;">{{ expense.notes }}</div>
                             {% endif %}

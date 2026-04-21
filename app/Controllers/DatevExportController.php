@@ -50,12 +50,15 @@ class DatevExportController extends Controller
         $mode = (string)$this->post('mode', 'simple'); /* simple | datev | kassenbuch */
 
         $export = match($mode) {
-            'datev'      => $this->service->generateSteuerberaterCsv($from, $to, 'datev'),
-            'kassenbuch' => $this->service->generateKassenbuchCsv($from, $to),
-            default      => $this->service->generateSteuerberaterCsv($from, $to, 'simple'),
+            'datev'        => $this->service->generateSteuerberaterCsv($from, $to, 'datev'),
+            'kassenbuch'   => $this->service->generateKassenbuchCsv($from, $to),
+            'zip_receipts' => $this->service->exportWithReceipts($from, $to),
+            default        => $this->service->generateSteuerberaterCsv($from, $to, 'simple'),
         };
 
-        header('Content-Type: text/csv; charset=utf-8');
+        /* ZIP liefert eigenen MIME mit — alle anderen Modi sind CSV */
+        $mime = $export['mime'] ?? 'text/csv; charset=utf-8';
+        header('Content-Type: ' . $mime);
         header('Content-Disposition: attachment; filename="' . $export['filename'] . '"');
         header('Content-Length: ' . strlen($export['content']));
         header('Cache-Control: no-cache, no-store, must-revalidate');

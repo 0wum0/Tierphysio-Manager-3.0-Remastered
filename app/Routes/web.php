@@ -494,6 +494,10 @@ $router->post('/ausgaben/{id}',          [ExpenseController::class, 'update'], [
 $router->post('/ausgaben/{id}/loeschen', [ExpenseController::class, 'delete'], ['auth']);
 $router->get('/ausgaben/{id}/pdf',       [ExpenseController::class, 'pdf'],    ['auth']);
 
+/* Beleg-Upload: AJAX-Preview (Auto-Parse) + direkter Datei-Stream */
+$router->post('/ausgaben/beleg-preview',  [ExpenseController::class, 'previewReceipt'], ['auth']);
+$router->get('/ausgaben/{id}/beleg',      [ExpenseController::class, 'serveReceipt'],   ['auth']);
+
 // ── Mahnwesen: Erinnerungen ──────────────────────────────────────────
 $router->get('/mahnwesen/erinnerungen', [ReminderDunningController::class, 'reminderIndex'], ['auth']);
 $router->post('/rechnungen/{id}/erinnerung', [ReminderDunningController::class, 'reminderStore'], ['auth']);

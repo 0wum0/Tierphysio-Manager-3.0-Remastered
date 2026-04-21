@@ -61,7 +61,8 @@ class DatevExportService
         $out[] = [
             'Belegdatum', 'Belegnummer', 'Buchungstext', 'Betrag_brutto',
             'Betrag_netto', 'MwSt_Betrag', 'MwSt_Prozent', 'Konto_Soll',
-            'Konto_Haben', 'Kunde', 'Zahlart', 'Status', 'Quelle',
+            'Konto_Haben', 'Kunde_oder_Lieferant', 'Zahlart', 'Status',
+            'Quelle', 'Buchungstyp', 'Beleg_Datei',
         ];
 
         foreach ($rows as $r) {
@@ -88,6 +89,43 @@ class DatevExportService
                 (string)($r['payment_method'] ?? 'rechnung'),
                 (string)($r['status'] ?? 'open'),
                 (string)($r['source_type'] ?? 'other'),
+                'EINNAHME',
+                '',
+            ];
+        }
+
+        /* ── Ausgaben als zusätzliche Zeilen anhängen (EUR negativ / Buchungstyp=AUSGABE).
+         * Referenz auf den hochgeladenen Beleg ist in der Spalte `Beleg_Datei`
+         * enthalten, damit der Steuerberater die Originaldatei im Export-ZIP
+         * (siehe `exportWithReceipts()`) findet. */
+        foreach ($this->fetchExpensesInRange($from, $to) as $e) {
+            $netE   = (float)($e['amount_net']   ?? 0);
+            $grossE = (float)($e['amount_gross'] ?? 0);
+            $taxE   = round($grossE - $netE, 2);
+            $rateE  = (float)($e['tax_rate']     ?? 0);
+
+            /* Vorsteuer-Konto (Gegenkonto) nach SKR03 */
+            $vorsteuerKonto = $this->vorsteuerkontoFor($rateE);
+            /* Aufwands-/Kostenkonto — generisch 4980 „Sonstiger betrieblicher Aufwand",
+             * optional je nach Kategorie differenzieren */
+            $aufwandsKonto  = $this->aufwandsKontoFor((string)($e['category'] ?? ''));
+
+            $out[] = [
+                date('d.m.Y', strtotime((string)$e['date'])),
+                'A-' . (int)$e['id'],
+                substr((string)($e['description'] ?? ''), 0, 60),
+                '-' . $this->formatMoney($grossE),
+                '-' . $this->formatMoney($netE),
+                '-' . $this->formatMoney($taxE),
+                $this->formatMoney($rateE) . '%',
+                (string)$aufwandsKonto,
+                (string)$vorsteuerKonto,
+                (string)($e['supplier'] ?? ''),
+                '',
+                'gebucht',
+                'expense',
+                'AUSGABE',
+                (string)($e['receipt_file'] ?? ''),
             ];
         }
 
@@ -95,6 +133,58 @@ class DatevExportService
             'filename' => sprintf('steuerexport_%s_%s.csv', $from, $to),
             'content'  => $this->arrayToCsv($out, ';'),
         ];
+    }
+
+    /**
+     * Holt alle Ausgaben im Zeitraum inkl. Beleg-Referenz.
+     */
+    private function fetchExpensesInRange(string $from, string $to): array
+    {
+        $exp = $this->db->prefix('expenses');
+        /* Wenn Tabelle nicht existiert → stilles Nothing */
+        try {
+            $exists = (int)$this->db->safeFetchColumn(
+                "SELECT COUNT(*) FROM information_schema.TABLES
+                  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?",
+                [$exp]
+            );
+            if (!$exists) return [];
+        } catch (\Throwable) { return []; }
+
+        return $this->db->safeFetchAll(
+            "SELECT id, `date`, description, category, supplier,
+                    amount_net, tax_rate, amount_gross,
+                    receipt_file, receipt_original_name, receipt_mime
+               FROM `{$exp}`
+              WHERE `date` BETWEEN ? AND ?
+              ORDER BY `date` ASC, id ASC",
+            [$from, $to]
+        );
+    }
+
+    /** SKR03 Vorsteuer-Konten */
+    private function vorsteuerkontoFor(float $rate): int
+    {
+        if ($rate >= 18.5) return 1576; /* Vorsteuer 19% */
+        if ($rate >= 6.5)  return 1571; /* Vorsteuer 7%  */
+        return 1570;                      /* Abziehbare Vorsteuer allg. */
+    }
+
+    /** Grobe Aufwands-Konten-Zuordnung nach Kategorie (SKR03) */
+    private function aufwandsKontoFor(string $category): int
+    {
+        $map = [
+            'Praxisbedarf'                => 4980,
+            'Miete & Nebenkosten'         => 4210,
+            'Fortbildung & Fachliteratur' => 4946,
+            'Marketing & Werbung'         => 4600,
+            'Bürobedarf'                  => 4930,
+            'Software & IT'               => 4940,
+            'Fahrtkosten'                 => 4530,
+            'Versicherungen'              => 4360,
+            'Steuern & Abgaben'           => 4320,
+        ];
+        return $map[$category] ?? 4980; /* Sonstiger betrieblicher Aufwand */
     }
 
     /**
@@ -162,6 +252,70 @@ class DatevExportService
         return [
             'filename' => sprintf('datev_EXTF_%s_%s.csv', $from, $to),
             'content'  => $this->arrayToCsv($csv, ';'),
+        ];
+    }
+
+    /**
+     * Komplett-Paket für den Steuerberater: ZIP mit
+     *   • steuerexport_<from>_<to>.csv (Einnahmen + Ausgaben)
+     *   • belege/<A-id>__<Originalname>  für jeden Ausgabenbeleg
+     *
+     * @return array{filename: string, content: string, mime: string}
+     */
+    public function exportWithReceipts(string $from, string $to): array
+    {
+        $csv = $this->generateSimpleCsv($from, $to);
+
+        /* Wenn ZipArchive nicht verfügbar → nur CSV zurück, Controller
+         * entscheidet wie er's ausliefert. */
+        if (!class_exists(\ZipArchive::class)) {
+            return [
+                'filename' => $csv['filename'],
+                'content'  => $csv['content'],
+                'mime'     => 'text/csv; charset=utf-8',
+            ];
+        }
+
+        $zipPath = tempnam(sys_get_temp_dir(), 'taxexport_');
+        $zip     = new \ZipArchive();
+        $zip->open($zipPath, \ZipArchive::OVERWRITE);
+        $zip->addFromString($csv['filename'], "\xEF\xBB\xBF" . $csv['content']); /* UTF-8 BOM für Excel */
+
+        /* Belege pro Ausgabe in Unterordner legen */
+        $prefix       = $this->db->prefix('');
+        $receiptsRoot = rtrim(dirname(__DIR__, 2), '/\\') . '/storage/tenants/' . trim($prefix, '_') . '/expense_receipts';
+
+        foreach ($this->fetchExpensesInRange($from, $to) as $e) {
+            $receipt = (string)($e['receipt_file'] ?? '');
+            if ($receipt === '') continue;
+            $path = $receiptsRoot . '/' . $receipt;
+            if (!is_file($path)) continue;
+
+            /* Sprechender Name im ZIP: „A-123__OriginalRechnung.pdf" */
+            $orig = (string)($e['receipt_original_name'] ?? $receipt);
+            $orig = preg_replace('/[^\w\-.\s]/u', '_', $orig) ?: $receipt;
+            $zip->addFile($path, 'belege/A-' . (int)$e['id'] . '__' . $orig);
+        }
+
+        /* Kleine README für den Steuerberater */
+        $readme = "Steuerexport — " . date('d.m.Y', strtotime($from)) . " bis " . date('d.m.Y', strtotime($to)) . "\n"
+                . str_repeat('=', 60) . "\n\n"
+                . "Inhalt dieses ZIPs:\n"
+                . "  • " . $csv['filename'] . " — Buchungszeilen (Einnahmen + Ausgaben)\n"
+                . "  • belege/ — Originalbelege aller Ausgaben (PDFs & Bilder)\n\n"
+                . "Die Spalte ,Beleg_Datei` in der CSV verweist auf den Dateinamen im Ordner ,belege/`.\n"
+                . "Ausgaben sind mit ,AUSGABE` im Buchungstyp markiert und mit negativem Vorzeichen.\n"
+                . "Einnahmen sind mit ,EINNAHME` markiert.\n";
+        $zip->addFromString('LIESMICH.txt', $readme);
+
+        $zip->close();
+        $content = (string)file_get_contents($zipPath);
+        @unlink($zipPath);
+
+        return [
+            'filename' => sprintf('steuerexport_mit_belegen_%s_%s.zip', $from, $to),
+            'content'  => $content,
+            'mime'     => 'application/zip',
         ];
     }
 
