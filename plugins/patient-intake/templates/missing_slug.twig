@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="de" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }} — Tierphysio Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base:  #0f172a;
+            --bg-card:  #1e293b;
+            --border:   #334155;
+            --text:     #e2e8f0;
+            --muted:    #94a3b8;
+            --primary:  #2563eb;
+            --accent:   #a78bfa;
+        }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-base);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex; align-items: center; justify-content: center;
+            padding: 2rem 1rem;
+            line-height: 1.6;
+        }
+        .card {
+            max-width: 520px; width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2.5rem;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+        .icon {
+            width: 72px; height: 72px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            display: inline-flex; align-items: center; justify-content: center;
+            margin-bottom: 1.5rem;
+            font-size: 2rem;
+        }
+        h1 {
+            font-size: 1.6rem; font-weight: 700;
+            margin: 0 0 0.75rem;
+            letter-spacing: -0.02em;
+        }
+        p { color: var(--muted); margin: 0 0 1rem; font-size: 0.95rem; }
+        .hint {
+            background: rgba(37, 99, 235, 0.08);
+            border: 1px solid rgba(37, 99, 235, 0.25);
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            text-align: left;
+            margin-top: 1.5rem;
+            font-size: 0.88rem;
+            color: var(--text);
+        }
+        .hint strong { color: var(--accent); display: block; margin-bottom: 0.35rem; font-weight: 600; }
+        .hint code {
+            background: rgba(0,0,0,0.3);
+            padding: 0.15rem 0.45rem;
+            border-radius: 4px;
+            font-size: 0.82rem;
+            color: #7dd3fc;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">🔗</div>
+        <h1>Persönlicher Anmeldelink benötigt</h1>
+        <p>
+            Diese Seite ist nur über den persönlichen Anmeldelink Ihrer Praxis oder
+            Hundeschule erreichbar.
+        </p>
+        <p>
+            Bitte kontaktieren Sie Ihre Praxis oder Hundeschule, um den korrekten Link
+            zu erhalten.
+        </p>
+        <div class="hint">
+            <strong>Für Praxis-Betreiber:</strong>
+            Ihren personalisierten Link finden Sie im Admin-Bereich unter
+            <code>Eingangsmeldungen</code> — einfach kopieren und auf Ihrer Webseite
+            einbinden.
+        </div>
+    </div>
+</body>
+</html>

@@ -38,16 +38,45 @@ class IntakeController extends Controller
 
     public function form(array $params = []): void
     {
+        $slug = (string)($params['slug'] ?? '');
+
+        /* Ohne Slug ist der Tenant mehrdeutig (app.therapano.de wird von
+         * allen Praxen/Trainern geteilt). Wir zeigen eine Landing-Seite,
+         * die erklärt dass der persönliche Praxis-Link benötigt wird. */
+        if ($slug === '') {
+            $this->renderPublic('@patient-intake/missing_slug.twig', [
+                'page_title' => 'Anmeldung',
+            ]);
+            return;
+        }
+
+        if (!$this->applyTenantContextFromSlug($slug)) {
+            $this->renderPublic('@patient-intake/invalid_slug.twig', [
+                'page_title' => 'Anmeldelink ungültig',
+            ]);
+            return;
+        }
+
         $this->renderPublic('@patient-intake/form.twig', [
             'page_title' => 'Patientenanmeldung',
+            'intake_slug' => $slug,
         ]);
     }
 
     public function submit(array $params = []): void
     {
+        $slug = (string)($params['slug'] ?? '');
+
+        if ($slug === '' || !$this->applyTenantContextFromSlug($slug)) {
+            header('Content-Type: application/json');
+            http_response_code(404);
+            echo json_encode(['ok' => false, 'errors' => ['Anmeldelink ungültig.']]);
+            exit;
+        }
+
         /* Basic honeypot spam protection */
         if (!empty($_POST['website'])) {
-            $this->redirect('/anmeldung/danke');
+            $this->redirect('/anmeldung/' . rawurlencode($slug) . '/danke');
             return;
         }
 
@@ -147,14 +176,25 @@ class IntakeController extends Controller
         }
 
         header('Content-Type: application/json');
-        echo json_encode(['ok' => true, 'ids' => $ids, 'count' => count($ids)]);
+        echo json_encode([
+            'ok'       => true,
+            'ids'      => $ids,
+            'count'    => count($ids),
+            'redirect' => '/anmeldung/' . rawurlencode($slug) . '/danke',
+        ]);
         exit;
     }
 
     public function thankYou(array $params = []): void
     {
+        $slug = (string)($params['slug'] ?? '');
+        if ($slug !== '') {
+            $this->applyTenantContextFromSlug($slug);
+        }
+
         $this->renderPublic('@patient-intake/thankyou.twig', [
-            'page_title' => 'Anmeldung erhalten',
+            'page_title'  => 'Anmeldung erhalten',
+            'intake_slug' => $slug,
         ]);
     }
 
@@ -176,12 +216,21 @@ class IntakeController extends Controller
             'abgelehnt'     => $this->repo->countByStatus('abgelehnt'),
         ];
 
+        $tenantSlug = $this->currentTenantSlug();
+        $appUrl     = rtrim((string)($_ENV['APP_URL'] ?? ''), '/');
+        /* Absoluter Link, fertig zum Einbetten auf Praxis-Homepage oder Teilen per Mail. */
+        $intakeLink = $tenantSlug !== ''
+            ? ($appUrl !== '' ? $appUrl : '') . '/anmeldung/' . $tenantSlug
+            : '';
+
         $this->render('@patient-intake/inbox.twig', [
             'page_title'   => 'Eingangsmeldungen',
             'submissions'  => $result['items'],
             'pagination'   => $result,
             'counts'       => $counts,
             'active_status'=> $status,
+            'tenant_slug'  => $tenantSlug,
+            'intake_link'  => $intakeLink,
         ]);
     }
 
@@ -386,6 +435,132 @@ class IntakeController extends Controller
     /* ─────────────────────────────────────────────────────────
        Helpers
     ───────────────────────────────────────────────────────── */
+
+    /**
+     * Extrahiert den öffentlichen Slug aus einem Tenant-Prefix.
+     * Prefix `t_therapano_2eff77_` → Slug `2eff77` (letztes Hex-Segment vor Trailing-Underscore).
+     * Nur Hex-Slugs werden akzeptiert, weil die SaaS-Provisionierung hex-Suffixes setzt —
+     * das schützt vor Enumeration von Praxisnamen im URL.
+     */
+    public static function deriveSlugFromPrefix(string $prefix): string
+    {
+        $trim  = rtrim($prefix, '_');
+        $parts = explode('_', $trim);
+        $last  = (string)end($parts);
+        return ctype_xdigit($last) ? strtolower($last) : '';
+    }
+
+    /**
+     * Liefert den Intake-Slug des aktuellen Tenants (aus der laufenden DB-Verbindung).
+     * Wird für den Admin-Inbox-Copy-Button verwendet.
+     */
+    public function currentTenantSlug(): string
+    {
+        try {
+            $db     = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            return self::deriveSlugFromPrefix($db->getPrefix());
+        } catch (\Throwable) {
+            return '';
+        }
+    }
+
+    /**
+     * Auflösung des Tenants anhand des öffentlichen Slugs:
+     * 1) Slug-Format validieren (6–16 Hex-Zeichen → verhindert Injection)
+     * 2) SaaS-DB durchsuchen nach `db_name`, dessen letztes Segment dem Slug entspricht
+     * 3) Prefix normalisieren und auf der Tenant-DB-Verbindung setzen
+     * 4) SettingsRepository neu laden, damit company_name/practice_type aus der
+     *    korrekten Tenant-DB kommen (sonst bleibt das vom Bootstrap geladene aktiv)
+     *
+     * Returns false wenn der Slug ungültig ist oder kein aktiver Tenant existiert.
+     */
+    private function applyTenantContextFromSlug(string $slug): bool
+    {
+        $slug = strtolower(trim($slug));
+
+        /* Strenge Validierung: 4–16 Hex-Zeichen. Schützt vor SQL-Injection & Path-Traversal. */
+        if ($slug === '' || !preg_match('/^[0-9a-f]{4,16}$/', $slug)) {
+            return false;
+        }
+
+        try {
+            $config = $this->config;
+            $saasDb = (string)$config->get('saas_db.database', '');
+            if ($saasDb === '') {
+                return false;
+            }
+
+            $pdo = new \PDO(
+                sprintf(
+                    'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
+                    $config->get('saas_db.host', 'localhost'),
+                    (int)$config->get('saas_db.port', 3306),
+                    $saasDb
+                ),
+                (string)$config->get('saas_db.username', ''),
+                (string)$config->get('saas_db.password', ''),
+                [
+                    \PDO::ATTR_ERRMODE            => \PDO::ERRMODE_EXCEPTION,
+                    \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+                ]
+            );
+
+            $stmt = $pdo->prepare(
+                "SELECT db_name FROM tenants
+                  WHERE status IN ('active','trial')
+                    AND LOWER(SUBSTRING_INDEX(db_name, '_', -1)) = ?
+                  LIMIT 1"
+            );
+            $stmt->execute([$slug]);
+            $row = $stmt->fetch();
+
+            if (!$row || empty($row['db_name'])) {
+                return false;
+            }
+
+            $prefix = $this->normalizeTenantPrefix((string)$row['db_name']);
+            if ($prefix === '') {
+                return false;
+            }
+
+            /* Tenant-DB-Verbindung auf den aufgelösten Prefix umstellen.
+             * Die Database-Instanz ist singleton im Container — setPrefix()
+             * wirkt damit für alle nachfolgenden Queries in diesem Request. */
+            $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $db->setPrefix($prefix);
+
+            /* SettingsRepository wurde im Bootstrap ggf. auf den falschen
+             * Tenant geladen — einmal neu aus der jetzt korrekten Prefix-DB
+             * lesen, damit renderPublic() company_name/practice_type passend
+             * in das Twig-Template reicht. */
+            $this->settingsRepository = new \App\Repositories\SettingsRepository($db);
+
+            return true;
+        } catch (\Throwable $e) {
+            error_log('[PatientIntake] applyTenantContextFromSlug failed: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /** Normalize tenant prefixes to canonical format: t_<slug>_ */
+    private function normalizeTenantPrefix(string $raw): string
+    {
+        $p = trim($raw);
+        if ($p === '') {
+            return '';
+        }
+        if (str_ends_with($p, '_users')) {
+            $p = substr($p, 0, -strlen('users'));
+        }
+        if (!str_starts_with($p, 't_')) {
+            $p = 't_' . $p;
+        }
+        $p = preg_replace('/_+/', '_', $p) ?? $p;
+        if (!str_ends_with($p, '_')) {
+            $p .= '_';
+        }
+        return $p;
+    }
 
     private function renderPublic(string $template, array $data = []): void
     {

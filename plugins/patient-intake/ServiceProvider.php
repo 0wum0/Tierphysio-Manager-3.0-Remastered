@@ -44,10 +44,15 @@ class ServiceProvider
 
     public function registerRoutes(Router $router): void
     {
-        /* Public — no auth */
-        $router->get('/anmeldung',        [IntakeController::class, 'form'],     []);
-        $router->post('/anmeldung',        [IntakeController::class, 'submit'],   []);
-        $router->get('/anmeldung/danke',   [IntakeController::class, 'thankYou'], []);
+        /* Public — no auth
+         * Wichtig: `/anmeldung/{slug}/danke` MUSS vor `/anmeldung/{slug}` stehen,
+         * sonst matcht der Router die Danke-Route auf den Slug-Parameter. */
+        $router->get('/anmeldung/{slug}/danke', [IntakeController::class, 'thankYou'], []);
+        $router->get('/anmeldung/{slug}',       [IntakeController::class, 'form'],     []);
+        $router->post('/anmeldung/{slug}',      [IntakeController::class, 'submit'],   []);
+
+        /* Legacy-Fallback ohne Slug — zeigt Hinweis "persönlichen Praxis-Link nutzen" */
+        $router->get('/anmeldung',              [IntakeController::class, 'form'],     []);
 
         /* Admin — requires auth */
         $router->get('/eingangsmeldungen',              [IntakeController::class, 'inbox'],        ['auth']);

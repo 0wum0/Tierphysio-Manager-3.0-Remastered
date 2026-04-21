@@ -19,17 +19,59 @@
         </h1>
         <p class="page-subtitle">Neue Patientenanmeldungen über das Online-Formular</p>
     </div>
-    <div style="display:flex;gap:0.75rem;align-items:center;">
-        <a href="/anmeldung" target="_blank" class="btn btn-secondary">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            Anmeldeformular öffnen
-        </a>
-        <button class="btn btn-secondary" id="copy-link-btn" data-url="{{ app_url ?? '' }}/anmeldung">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            Link kopieren
-        </button>
+    <div style="display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap;">
+        {% if tenant_slug %}
+            <a href="/anmeldung/{{ tenant_slug }}" target="_blank" class="btn btn-secondary">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                Anmeldeformular öffnen
+            </a>
+            <button class="btn btn-secondary" id="copy-link-btn"
+                    data-url="{{ intake_link ?: ('/anmeldung/' ~ tenant_slug) }}">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                <span class="btn-label">Link kopieren</span>
+            </button>
+        {% endif %}
     </div>
 </div>
+
+{% if tenant_slug %}
+{# Prominentes Info-Panel mit dem einbettbaren Link — Praxisbetreiber sehen
+   auf einen Blick, welche URL sie auf ihrer Webseite verlinken können. #}
+<div class="lg-card" style="margin-bottom:1.5rem;padding:1.25rem 1.5rem;
+            background:linear-gradient(135deg,rgba(37,99,235,0.08),rgba(167,139,250,0.06));
+            border:1px solid rgba(37,99,235,0.25);">
+    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div style="flex-shrink:0;width:42px;height:42px;border-radius:12px;
+                    background:linear-gradient(135deg,#2563eb,#a78bfa);
+                    display:flex;align-items:center;justify-content:center;">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </div>
+        <div style="flex:1;min-width:260px;">
+            <div style="font-weight:700;font-size:0.92rem;margin-bottom:0.25rem;">
+                Ihr persönlicher Anmelde-Link
+            </div>
+            <div style="font-size:0.82rem;color:var(--text-muted);">
+                Fügen Sie diesen Link auf Ihrer Praxis-Webseite ein, damit sich Kunden
+                direkt anmelden können.
+            </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;flex:1;min-width:280px;
+                    background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.08);
+                    border-radius:10px;padding:0.55rem 0.9rem;">
+            <code id="intake-link-text" style="flex:1;font-size:0.82rem;color:#7dd3fc;
+                       overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                  >{{ intake_link ?: ('/anmeldung/' ~ tenant_slug) }}</code>
+            <button type="button" id="copy-link-btn-inline"
+                    data-url="{{ intake_link ?: ('/anmeldung/' ~ tenant_slug) }}"
+                    class="btn btn-sm btn-primary"
+                    style="flex-shrink:0;padding:0.35rem 0.8rem;font-size:0.8rem;">
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" style="vertical-align:-2px;margin-right:0.3rem;"><rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" stroke-width="2"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                <span class="btn-label">Kopieren</span>
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 {# Status filter tabs #}
 <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;">
@@ -68,7 +110,7 @@
         {% elseif active_status == 'in_bearbeitung' %}Keine Anmeldungen in Bearbeitung.
         {% elseif active_status == 'uebernommen' %}Noch keine Anmeldungen übernommen.
         {% elseif active_status == 'abgelehnt' %}Keine abgelehnten Anmeldungen.
-        {% else %}Es sind noch keine Anmeldungen eingegangen.<br>Teilen Sie den <a href="/anmeldung" target="_blank" style="color:var(--accent);">Anmeldelink</a> mit Ihren Kunden.{% endif %}
+        {% else %}Es sind noch keine Anmeldungen eingegangen.{% if tenant_slug %}<br>Teilen Sie den <a href="/anmeldung/{{ tenant_slug }}" target="_blank" style="color:var(--accent);">Anmeldelink</a> mit Ihren Kunden.{% endif %}{% endif %}
     </div>
 </div>
 {% else %}
@@ -189,16 +231,48 @@
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 </style>
 <script>
-/* Copy link button */
-document.getElementById('copy-link-btn')?.addEventListener('click', function () {
-    const url = this.dataset.url || window.location.origin + '/anmeldung';
-    navigator.clipboard.writeText(url).then(function () {
-        const btn = document.getElementById('copy-link-btn');
-        const orig = btn.innerHTML;
-        btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></svg> Kopiert!';
-        setTimeout(function () { btn.innerHTML = orig; }, 2000);
-    });
-});
+/* Copy link buttons (header + inline panel) — beide nutzen denselben Handler. */
+(function () {
+    function absoluteUrl(raw) {
+        if (!raw) return '';
+        if (/^https?:\/\//i.test(raw)) return raw;
+        return window.location.origin + (raw.startsWith('/') ? raw : '/' + raw);
+    }
+
+    function attachCopy(btnId) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            const url   = absoluteUrl(btn.dataset.url || '');
+            const label = btn.querySelector('.btn-label');
+            if (!url) return;
+
+            navigator.clipboard.writeText(url).then(function () {
+                if (label) {
+                    const orig = label.textContent;
+                    label.textContent = 'Kopiert!';
+                    setTimeout(function () { label.textContent = orig; }, 2000);
+                }
+            }).catch(function () {
+                /* Fallback wenn Clipboard-API vom Browser blockiert wird */
+                const ta = document.createElement('textarea');
+                ta.value = url;
+                document.body.appendChild(ta);
+                ta.select();
+                try { document.execCommand('copy'); } catch (_) {}
+                document.body.removeChild(ta);
+                if (label) {
+                    const orig = label.textContent;
+                    label.textContent = 'Kopiert!';
+                    setTimeout(function () { label.textContent = orig; }, 2000);
+                }
+            });
+        });
+    }
+
+    attachCopy('copy-link-btn');
+    attachCopy('copy-link-btn-inline');
+})();
 
 /* Quick accept */
 document.querySelectorAll('.intake-accept-btn').forEach(function (btn) {
