@@ -486,17 +486,18 @@ $router->get('/rechnungen/{id}/storno-pdf',     [InvoiceController::class, 'down
 $router->get('/api/rechnungen/analytics',        [InvoiceController::class, 'analyticsJson'],      ['auth']);
 
 // ── Ausgaben (Expenses) ───────────────────────────────────────────────
-$router->get('/ausgaben',                [ExpenseController::class, 'index'],  ['auth']);
-$router->get('/ausgaben/neu',            [ExpenseController::class, 'create'], ['auth']);
-$router->post('/ausgaben',               [ExpenseController::class, 'store'],  ['auth']);
-$router->get('/ausgaben/{id}/bearbeiten',[ExpenseController::class, 'edit'],   ['auth']);
-$router->post('/ausgaben/{id}',          [ExpenseController::class, 'update'], ['auth']);
-$router->post('/ausgaben/{id}/loeschen', [ExpenseController::class, 'delete'], ['auth']);
-$router->get('/ausgaben/{id}/pdf',       [ExpenseController::class, 'pdf'],    ['auth']);
-
-/* Beleg-Upload: AJAX-Preview (Auto-Parse) + direkter Datei-Stream */
+/* WICHTIG: Literale Routen (`/beleg-preview`) müssen VOR der Wildcard-
+ * Route `/ausgaben/{id}` stehen — sonst fängt der {id}-Platzhalter den
+ * literalen Pfad ab und PHP ruft update() mit $id='beleg-preview' auf. */
+$router->get('/ausgaben',                 [ExpenseController::class, 'index'],          ['auth']);
+$router->get('/ausgaben/neu',             [ExpenseController::class, 'create'],         ['auth']);
+$router->post('/ausgaben',                [ExpenseController::class, 'store'],          ['auth']);
 $router->post('/ausgaben/beleg-preview',  [ExpenseController::class, 'previewReceipt'], ['auth']);
+$router->get('/ausgaben/{id}/bearbeiten', [ExpenseController::class, 'edit'],           ['auth']);
+$router->get('/ausgaben/{id}/pdf',        [ExpenseController::class, 'pdf'],            ['auth']);
 $router->get('/ausgaben/{id}/beleg',      [ExpenseController::class, 'serveReceipt'],   ['auth']);
+$router->post('/ausgaben/{id}/loeschen',  [ExpenseController::class, 'delete'],         ['auth']);
+$router->post('/ausgaben/{id}',           [ExpenseController::class, 'update'],         ['auth']);
 
 // ── Mahnwesen: Erinnerungen ──────────────────────────────────────────
 $router->get('/mahnwesen/erinnerungen', [ReminderDunningController::class, 'reminderIndex'], ['auth']);
