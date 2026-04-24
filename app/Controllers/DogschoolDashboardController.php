@@ -43,33 +43,57 @@ class DogschoolDashboardController extends Controller
 
     public function index(array $params = []): void
     {
-        $this->requireFeature('dogschool_dashboard');
+        /* Kein `requireFeature('dogschool_dashboard')` — das Dashboard IST die
+         * Startseite jedes Trainer-Tenants. Wenn das Feature fehlt, wollen wir
+         * keinen 403 zeigen (Nutzer wäre komplett ausgesperrt), sondern eine
+         * minimale Variante mit den verfügbaren Sektionen. Jedes KPI-Segment
+         * unten ist individuell gegated — fehlende Features werden im Template
+         * per {% if features.xxx %} ausgeblendet. */
 
         /* Bei erstem Besuch des Hundeschul-Dashboards Standard-Inhalte
          * einspielen (Kursarten, Übungen-Katalog, Consent-Vorlagen,
-         * Trainingsplan-Vorlagen). Idempotent — kostet nach erstem Run 0ms. */
-        $this->seed->seed();
+         * Trainingsplan-Vorlagen). Idempotent — kostet nach erstem Run 0ms.
+         * Self-Heal: bei Migration-/Seed-Fehler weiter mit leeren Daten,
+         * damit das Dashboard nicht komplett scheitert. */
+        try { $this->seed->seed(); } catch (\Throwable $e) {
+            error_log('[DogschoolDashboard] seed failed: ' . $e->getMessage());
+        }
 
         $today    = date('Y-m-d');
         $nextWeek = date('Y-m-d', strtotime('+7 days'));
 
+        /* Alle Repo-Methoden sind bereits safeFetch-basiert → liefern 0/[]
+         * bei fehlenden Tabellen. Doppelter try/catch-Wrap nur als Defense. */
         $stats = [
-            'active_courses'    => $this->courses->countByStatus('active'),
-            'free_spots_total'  => $this->courses->countFreeSpotsTotal(),
-            'waitlist_total'    => $this->courses->countWaitlistTotal(),
-            'full_courses'      => $this->courses->countByStatus('full'),
+            'active_courses'   => 0,
+            'free_spots_total' => 0,
+            'waitlist_total'   => 0,
+            'full_courses'     => 0,
         ];
-
-        $todaySessions    = $this->courses->sessionsBetween($today, $today);
-        $upcomingSessions = $this->courses->sessionsBetween($today, $nextWeek);
-        $openSessions     = $this->courses->openSessions(10);
+        $todaySessions = $upcomingSessions = $openSessions = [];
+        try {
+            $stats = [
+                'active_courses'    => $this->courses->countByStatus('active'),
+                'free_spots_total'  => $this->courses->countFreeSpotsTotal(),
+                'waitlist_total'    => $this->courses->countWaitlistTotal(),
+                'full_courses'      => $this->courses->countByStatus('full'),
+            ];
+            $todaySessions    = $this->courses->sessionsBetween($today, $today);
+            $upcomingSessions = $this->courses->sessionsBetween($today, $nextWeek);
+            $openSessions     = $this->courses->openSessions(10);
+        } catch (\Throwable $e) {
+            error_log('[DogschoolDashboard] course stats failed: ' . $e->getMessage());
+        }
 
         /* ── Finanz-KPIs (Rechnungen) ──
-         * Nur laden wenn dogschool_invoicing-Feature aktiv. Self-healing:
-         * getStats() liefert alle-0-Array bei jedem Fehler — kein Blocker. */
+         * Invoice-Tabelle existiert in jedem Tenant → KPIs immer laden,
+         * auch wenn dogschool_invoicing-Feature nicht aktiv ist (Basic-Plan-
+         * Tenants bekommen so trotzdem ihren Umsatz zu sehen). Fehler → null. */
         $invoiceStats = null;
-        if ($this->featureGate->isEnabled('dogschool_invoicing')) {
+        try {
             $invoiceStats = $this->dsInvoices->getStats();
+        } catch (\Throwable $e) {
+            error_log('[DogschoolDashboard] invoice stats failed: ' . $e->getMessage());
         }
 
         /* ── Anfragen / Leads ──
@@ -91,6 +115,18 @@ class DogschoolDashboardController extends Controller
             );
         }
 
+        /* Features-Map explizit an Template durchreichen, damit Sektionen
+         * im Template per {% if features.dogschool_xxx %} gegated werden
+         * können (Dashboard rendert immer, nur Teile verstecken sich). */
+        $features = [
+            'dogschool_courses'        => $this->featureGate->isEnabled('dogschool_courses'),
+            'dogschool_invoicing'      => $this->featureGate->isEnabled('dogschool_invoicing'),
+            'dogschool_leads'          => $this->featureGate->isEnabled('dogschool_leads'),
+            'dogschool_online_booking' => $this->featureGate->isEnabled('dogschool_online_booking'),
+            'dogschool_packages'       => $this->featureGate->isEnabled('dogschool_packages'),
+            'dogschool_waitlist'       => $this->featureGate->isEnabled('dogschool_waitlist'),
+        ];
+
         $this->render('dogschool/dashboard/index.twig', [
             'page_title'          => 'Hundeschul-Übersicht',
             'active_nav'          => 'dashboard',
@@ -101,6 +137,7 @@ class DogschoolDashboardController extends Controller
             'invoice_stats'       => $invoiceStats,
             'new_booking_requests'=> $newBookingRequests,
             'active_leads'        => $activeLeads,
+            'features'            => $features,
         ]);
     }
 }
