@@ -223,6 +223,10 @@ class IntakeController extends Controller
             ? ($appUrl !== '' ? $appUrl : '') . '/anmeldung/' . $tenantSlug
             : '';
 
+        /* Tenant-Terminologie für Dialoge: Trainer → Halter/Hund, Praxis → Besitzer/Patient */
+        $practiceType = (string)$this->settingsRepository->get('practice_type', 'therapeut');
+        $isTrainer    = ($practiceType === 'trainer');
+
         $this->render('@patient-intake/inbox.twig', [
             'page_title'   => 'Eingangsmeldungen',
             'submissions'  => $result['items'],
@@ -231,6 +235,7 @@ class IntakeController extends Controller
             'active_status'=> $status,
             'tenant_slug'  => $tenantSlug,
             'intake_link'  => $intakeLink,
+            'is_trainer'   => $isTrainer,
         ]);
     }
 
@@ -415,8 +420,38 @@ class IntakeController extends Controller
     }
 
     /* ─────────────────────────────────────────────────────────
+       ADMIN: Ausblenden (Soft-Delete aus der Eingangsmeldungs-Liste)
+    ───────────────────────────────────────────────────────── */
+
+    public function hide(array $params = []): void
+    {
+        /* CSRF validation */
+        $token = $_POST['_csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+        if (!$this->session->validateCsrfToken($token)) {
+            $this->jsonError('CSRF-Token ungültig', 403);
+            return;
+        }
+
+        $submission = $this->repo->findById((int)$params['id']);
+        if (!$submission) {
+            $this->jsonError('Nicht gefunden', 404);
+            return;
+        }
+
+        $this->repo->hide((int)$params['id']);
+
+        header('Content-Type: application/json');
+        echo json_encode([
+            'ok'      => true,
+            'message' => 'Die Anmeldung wurde aus der Liste ausgeblendet. Tierhalter und Patient/Hund bleiben vollständig erhalten.',
+        ]);
+        exit;
+    }
+
+    /* ─────────────────────────────────────────────────────────
        API: Notification count for header bell
     ───────────────────────────────────────────────────────── */
+
 
     public function apiNotifications(array $params = []): void
     {

@@ -188,13 +188,21 @@
                         {% if s.status not in ['uebernommen','abgelehnt'] %}
                         <button class="btn btn-sm btn-success intake-accept-btn"
                                 data-id="{{ s.id }}"
-                                title="Als Patient übernehmen">
+                                title="{% if is_trainer %}Als Halter & Hund übernehmen{% else %}Als Besitzer & Patient übernehmen{% endif %}">
                             <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/></svg>
                         </button>
                         <button class="btn btn-sm btn-danger intake-reject-btn"
                                 data-id="{{ s.id }}"
                                 title="Ablehnen">
                             <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>
+                        </button>
+                        {% else %}
+                        {# Nach Übernahme/Ablehnung: Eintrag aus der Liste ausblenden (Soft-Delete).
+                           Patient/Hund und Besitzer/Halter bleiben in der Hauptkartei erhalten. #}
+                        <button class="btn btn-sm btn-hide intake-hide-btn"
+                                data-id="{{ s.id }}"
+                                title="Aus der Anmeldungs-Liste ausblenden">
+                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                         </button>
                         {% endif %}
                     </div>
@@ -228,6 +236,8 @@
 .btn-success:hover { background:rgba(34,197,94,0.25); }
 .btn-danger { background:rgba(239,68,68,0.12);color:#ef4444;border:1px solid rgba(239,68,68,0.25); }
 .btn-danger:hover { background:rgba(239,68,68,0.22); }
+.btn-hide { background:rgba(148,163,184,0.12);color:#94a3b8;border:1px solid rgba(148,163,184,0.25); }
+.btn-hide:hover { background:rgba(148,163,184,0.22);color:#e2e8f0; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 </style>
 <script>
@@ -326,5 +336,46 @@ document.querySelectorAll('.intake-reject-btn').forEach(function (btn) {
         .catch(function () { alert('Netzwerkfehler.'); });
     });
 });
+
+/* Ausblenden (Soft-Delete aus der Liste) — Patient/Hund & Besitzer/Halter bleiben erhalten. */
+(function () {
+    const IS_TRAINER   = {{ is_trainer ? 'true' : 'false' }};
+    const HALTER_LABEL = IS_TRAINER ? 'Halter' : 'Besitzer';
+    const HUND_LABEL   = IS_TRAINER ? 'Hund'   : 'Patient';
+
+    document.querySelectorAll('.intake-hide-btn').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            const id = this.dataset.id;
+
+            const msg = 'Diese Anmeldung aus der Liste ausblenden?\n\n'
+                      + 'Hinweis: ' + HALTER_LABEL + ' und ' + HUND_LABEL
+                      + ' werden NICHT gelöscht — sie bleiben in der Hauptkartei vollständig erhalten.\n'
+                      + 'Der Eintrag verschwindet nur aus dieser Anmeldungs-Liste.';
+
+            if (!confirm(msg)) return;
+
+            btn.disabled = true;
+
+            fetch('/eingangsmeldungen/' + id + '/ausblenden', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+                body: '_csrf_token=' + encodeURIComponent(document.querySelector('meta[name="csrf-token"]')?.content || '')
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.ok) window.location.reload();
+                else {
+                    alert('Fehler: ' + (data.error || 'Unbekannt'));
+                    btn.disabled = false;
+                }
+            })
+            .catch(function () {
+                alert('Netzwerkfehler.');
+                btn.disabled = false;
+            });
+        });
+    });
+})();
 </script>
 {% endblock %}

@@ -60,6 +60,7 @@ class ServiceProvider
         $router->post('/eingangsmeldungen/{id}/akzeptieren', [IntakeController::class, 'accept'],  ['auth']);
         $router->post('/eingangsmeldungen/{id}/ablehnen',    [IntakeController::class, 'reject'],  ['auth']);
         $router->post('/eingangsmeldungen/{id}/status',      [IntakeController::class, 'updateStatus'], ['auth']);
+        $router->post('/eingangsmeldungen/{id}/ausblenden',  [IntakeController::class, 'hide'],         ['auth']);
 
         /* API — requires auth */
         $router->get('/api/intake/notifications', [IntakeController::class, 'apiNotifications'], ['auth']);
@@ -128,7 +129,17 @@ class ServiceProvider
     private function runMigrations(): void
     {
         try {
-            $db           = Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $db     = Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $prefix = $db->getPrefix();
+
+            /* Ohne aufgelösten Tenant-Prefix NICHT migrieren — sonst würden
+             * wir versehentlich eine geteilte (nicht-tenant-isolierte) Tabelle
+             * anlegen. Die Migration läuft dann beim nächsten Request mit
+             * gesetztem Prefix automatisch nach. */
+            if ($prefix === '') {
+                return;
+            }
+
             $migrationDir = __DIR__ . '/migrations';
             if (!is_dir($migrationDir)) return;
 
@@ -137,14 +148,18 @@ class ServiceProvider
             sort($files);
 
             foreach ($files as $file) {
-                $sql        = file_get_contents($file);
+                $sql        = (string)file_get_contents($file);
+                /* {{prefix}} Platzhalter durch aktuellen Tenant-Prefix ersetzen —
+                 * Migration ist damit tenant-scoped und idempotent (CREATE IF NOT EXISTS). */
+                $sql        = str_replace('{{prefix}}', $prefix, $sql);
                 $statements = array_filter(array_map('trim', explode(';', $sql)));
+
                 foreach ($statements as $stmt) {
                     if (!empty($stmt)) {
                         try {
                             $db->execute($stmt);
                         } catch (\Throwable) {
-                            /* Table already exists — skip */
+                            /* Table/Spalte existiert bereits — skip */
                         }
                     }
                 }

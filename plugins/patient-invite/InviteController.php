@@ -44,6 +44,11 @@ class InviteController extends Controller
         $page   = max(1, (int)$this->get('page', 1));
         $result = $this->repo->getPaginated($page, 20);
 
+        /* Tenant-Terminologie für den Ausblenden-Dialog:
+         * Trainer → Halter/Hund, Praxis → Besitzer/Patient */
+        $practiceType = (string)$this->settingsRepository->get('practice_type', 'therapeut');
+        $isTrainer    = ($practiceType === 'trainer');
+
         $this->render('@patient-invite/index.twig', [
             'page_title'   => 'Einladungslinks',
             'submissions'  => $result['items'],
@@ -53,6 +58,7 @@ class InviteController extends Controller
                 'angenommen' => $this->repo->countByStatus('angenommen'),
                 'abgelaufen' => $this->repo->countByStatus('abgelaufen'),
             ],
+            'is_trainer'   => $isTrainer,
         ]);
     }
 
@@ -218,6 +224,30 @@ class InviteController extends Controller
         $stmt->execute([$params['id']]);
 
         $this->json(['ok' => true]);
+    }
+
+    /**
+     * Soft-Delete: Eintrag aus der Einladungs-Liste ausblenden.
+     * Übernommene Einladungen (angenommen, abgelaufen, abgelehnt) können so
+     * aus der Inbox entfernt werden — der Tierhalter/Hund (bzw. Besitzer/Patient)
+     * und die Einladung selbst bleiben in der DB erhalten.
+     */
+    public function hide(array $params = []): void
+    {
+        $this->validateCsrf();
+
+        $invite = $this->repo->findById((int)$params['id']);
+        if (!$invite) {
+            $this->json(['ok' => false, 'error' => 'Nicht gefunden'], 404);
+            return;
+        }
+
+        $this->repo->hide((int)$params['id']);
+
+        $this->json([
+            'ok'      => true,
+            'message' => 'Die Einladung wurde aus der Liste ausgeblendet. Der Tierhalter und sein Hund (bzw. Besitzer und Patient) bleiben vollständig erhalten.',
+        ]);
     }
 
     public function acceptAdmin(array $params = []): void

@@ -102,6 +102,14 @@
                                 <span class="d-none d-lg-inline ms-1">Zur Akte</span>
                             </button>
                         {% endif %}
+                        {% if inv.status in ['angenommen','abgelaufen','abgelehnt'] %}
+                            {# Soft-Hide: Eintrag aus der Einladungs-Liste ausblenden.
+                               Tierhalter/Halter und Hund/Patient bleiben in der Hauptkartei erhalten. #}
+                            <button class="btn btn-sm btn-hide invite-hide-btn" data-id="{{ inv.id }}" title="Aus Einladungs-Liste ausblenden">
+                                <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                                <span class="d-none d-lg-inline ms-1">Ausblenden</span>
+                            </button>
+                        {% endif %}
                         {% if inv.status == 'offen' %}
                             <button class="btn btn-sm btn-success accept-btn" data-id="{{ inv.id }}" title="Annehmen">
                                 <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -161,11 +169,16 @@
                 <span>🕐 {{ inv.expires_at|date_de }}</span>
                 {% if inv.created_by_name %}<span>👤 {{ inv.created_by_name }}</span>{% endif %}
             </div>
-            {% if inv.status == 'offen' or (inv.status == 'angenommen' and inv.accepted_patient_id) %}
+            {% if inv.status == 'offen' or inv.status in ['angenommen','abgelaufen','abgelehnt'] %}
             <div class="d-flex gap-2 mt-1">
                 {% if inv.status == 'angenommen' and inv.accepted_patient_id %}
                     <button type="button" class="btn btn-sm btn-secondary" title="Zur Akte" onclick="window._gsOpenPatient({{ inv.accepted_patient_id }})">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
+                    </button>
+                {% endif %}
+                {% if inv.status in ['angenommen','abgelaufen','abgelehnt'] %}
+                    <button class="btn btn-sm btn-hide invite-hide-btn" data-id="{{ inv.id }}" title="Aus Einladungs-Liste ausblenden">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                     </button>
                 {% endif %}
                 {% if inv.status == 'offen' %}
@@ -297,6 +310,8 @@
 <style>
 .via-btn { padding:0.55rem 0.75rem;border-radius:8px;border:1.5px solid var(--bs-border-color);text-align:center;font-size:0.82rem;font-weight:600;transition:all 0.15s;background:var(--bs-body-bg);color:var(--bs-body-color); }
 .via-btn.active { border-color:var(--bs-primary);background:rgba(var(--bs-primary-rgb),.1);color:var(--bs-primary); }
+.btn-hide { background:rgba(148,163,184,0.12);color:#94a3b8;border:1px solid rgba(148,163,184,0.25); }
+.btn-hide:hover { background:rgba(148,163,184,0.22);color:#e2e8f0; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 </style>
 <script>
@@ -439,6 +454,46 @@ document.querySelectorAll('.revoke-btn').forEach(function (btn) {
         .then(function (data) { if (data.ok) window.location.reload(); });
     });
 });
+
+/* Ausblenden (Soft-Delete aus der Liste) — Tierhalter/Halter und Hund/Patient bleiben erhalten. */
+(function () {
+    var IS_TRAINER   = {{ is_trainer ? 'true' : 'false' }};
+    var HALTER_LABEL = IS_TRAINER ? 'Halter' : 'Besitzer';
+    var HUND_LABEL   = IS_TRAINER ? 'Hund'   : 'Patient';
+
+    document.querySelectorAll('.invite-hide-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var id = this.dataset.id;
+
+            var msg = 'Diese Einladung aus der Liste ausblenden?\n\n'
+                    + 'Hinweis: ' + HALTER_LABEL + ' und ' + HUND_LABEL
+                    + ' werden NICHT gelöscht — sie bleiben in der Hauptkartei vollständig erhalten.\n'
+                    + 'Der Eintrag verschwindet nur aus dieser Einladungs-Liste.';
+
+            if (!confirm(msg)) return;
+
+            btn.disabled = true;
+
+            fetch('/einladungen/' + id + '/ausblenden', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+                body:    '_csrf_token=' + encodeURIComponent(csrfToken)
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.ok) window.location.reload();
+                else {
+                    alert('Fehler: ' + (data.error || 'Unbekannt'));
+                    btn.disabled = false;
+                }
+            })
+            .catch(function () {
+                alert('Netzwerkfehler.');
+                btn.disabled = false;
+            });
+        });
+    });
+})();
 
 /* Edit invite */
 var _editId = null;

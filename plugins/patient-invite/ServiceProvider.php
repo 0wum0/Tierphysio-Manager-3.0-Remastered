@@ -48,6 +48,7 @@ class ServiceProvider
         $router->post('/einladungen/{id}/bearbeiten', [InviteController::class, 'update'],      ['auth']);
         $router->post('/einladungen/{id}/annehmen',   [InviteController::class, 'acceptAdmin'], ['auth']);
         $router->post('/einladungen/{id}/ablehnen',   [InviteController::class, 'rejectAdmin'], ['auth']);
+        $router->post('/einladungen/{id}/ausblenden', [InviteController::class, 'hide'],        ['auth']);
 
         /* Admin — diagnose */
         $router->get('/einladungen/diagnose',      [InviteController::class, 'diagnose'],   ['auth']);

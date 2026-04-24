@@ -46,12 +46,13 @@ class InviteRepository
     {
         $offset = ($page - 1) * $perPage;
         $total  = (int)$this->db->fetchColumn(
-            "SELECT COUNT(*) FROM `{$this->t('patient_invite_tokens')}`"
+            "SELECT COUNT(*) FROM `{$this->t('patient_invite_tokens')}` WHERE hidden_at IS NULL"
         );
         $items = $this->db->fetchAll(
             "SELECT t.*, u.name AS created_by_name
              FROM `{$this->t('patient_invite_tokens')}` t
              LEFT JOIN `{$this->t('users')}` u ON t.created_by = u.id
+             WHERE t.hidden_at IS NULL
              ORDER BY t.created_at DESC
              LIMIT ? OFFSET ?",
             [$perPage, $offset]
@@ -62,6 +63,19 @@ class InviteRepository
             'current_page' => $page,
             'last_page'    => max(1, (int)ceil($total / $perPage)),
         ];
+    }
+
+    /**
+     * Blendet eine Einladung aus der Liste aus (Soft-Delete).
+     * Der Datensatz bleibt in der DB erhalten — der übernommene Patient/Hund
+     * und Besitzer/Tierhalter werden NICHT gelöscht.
+     */
+    public function hide(int $id): void
+    {
+        $this->db->execute(
+            "UPDATE `{$this->t('patient_invite_tokens')}` SET hidden_at = NOW() WHERE id = ?",
+            [$id]
+        );
     }
 
     public function accept(string $token, int $patientId, int $ownerId): void
@@ -89,7 +103,7 @@ class InviteRepository
     public function countByStatus(string $status): int
     {
         return (int)$this->db->fetchColumn(
-            "SELECT COUNT(*) FROM `{$this->t('patient_invite_tokens')}` WHERE status = ?",
+            "SELECT COUNT(*) FROM `{$this->t('patient_invite_tokens')}` WHERE status = ? AND hidden_at IS NULL",
             [$status]
         );
     }

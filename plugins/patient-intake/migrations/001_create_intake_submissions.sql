@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS `patient_intake_submissions` (
+CREATE TABLE IF NOT EXISTS `{{prefix}}patient_intake_submissions` (
     `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
     `status`            ENUM('neu','in_bearbeitung','uebernommen','abgelehnt') NOT NULL DEFAULT 'neu',
 

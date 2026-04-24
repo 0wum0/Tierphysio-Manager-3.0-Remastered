@@ -12,12 +12,18 @@ class IntakeRepository
 
     public function __construct(private readonly Database $db) {}
 
+    /** Liefert den tenant-präfixierten Tabellennamen (z. B. `t_therapano_2eff77_patient_intake_submissions`). */
+    private function t(): string
+    {
+        return $this->db->prefix(self::TABLE);
+    }
+
     public function create(array $data): int
     {
         $cols         = implode(', ', array_map(fn($k) => "`$k`", array_keys($data)));
         $placeholders = implode(', ', array_fill(0, count($data), '?'));
         $this->db->execute(
-            "INSERT INTO `" . self::TABLE . "` ($cols) VALUES ($placeholders)",
+            "INSERT INTO `" . $this->t() . "` ($cols) VALUES ($placeholders)",
             array_values($data)
         );
         return (int)$this->db->lastInsertId();
@@ -26,7 +32,7 @@ class IntakeRepository
     public function findById(int $id): array|false
     {
         return $this->db->fetch(
-            "SELECT * FROM `" . self::TABLE . "` WHERE id = ? LIMIT 1",
+            "SELECT * FROM `" . $this->t() . "` WHERE id = ? LIMIT 1",
             [$id]
         );
     }
@@ -35,12 +41,12 @@ class IntakeRepository
     {
         if ($status !== '') {
             return $this->db->fetchAll(
-                "SELECT * FROM `" . self::TABLE . "` WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                "SELECT * FROM `" . $this->t() . "` WHERE status = ? AND hidden_at IS NULL ORDER BY created_at DESC LIMIT ? OFFSET ?",
                 [$status, $limit, $offset]
             );
         }
         return $this->db->fetchAll(
-            "SELECT * FROM `" . self::TABLE . "` ORDER BY created_at DESC LIMIT ? OFFSET ?",
+            "SELECT * FROM `" . $this->t() . "` WHERE hidden_at IS NULL ORDER BY created_at DESC LIMIT ? OFFSET ?",
             [$limit, $offset]
         );
     }
@@ -48,7 +54,7 @@ class IntakeRepository
     public function countByStatus(string $status): int
     {
         return (int)$this->db->fetchColumn(
-            "SELECT COUNT(*) FROM `" . self::TABLE . "` WHERE status = ?",
+            "SELECT COUNT(*) FROM `" . $this->t() . "` WHERE status = ? AND hidden_at IS NULL",
             [$status]
         );
     }
@@ -56,7 +62,7 @@ class IntakeRepository
     public function countUnread(): int
     {
         return (int)$this->db->fetchColumn(
-            "SELECT COUNT(*) FROM `" . self::TABLE . "` WHERE status IN ('neu','in_bearbeitung')",
+            "SELECT COUNT(*) FROM `" . $this->t() . "` WHERE status IN ('neu','in_bearbeitung') AND hidden_at IS NULL",
             []
         );
     }
@@ -65,8 +71,8 @@ class IntakeRepository
     {
         return $this->db->fetchAll(
             "SELECT id, patient_name, owner_first_name, owner_last_name, created_at
-             FROM `" . self::TABLE . "`
-             WHERE status IN ('neu','in_bearbeitung')
+             FROM `" . $this->t() . "`
+             WHERE status IN ('neu','in_bearbeitung') AND hidden_at IS NULL
              ORDER BY created_at DESC
              LIMIT ?",
             [$limit]
@@ -79,8 +85,20 @@ class IntakeRepository
         $extra['updated_at'] = date('Y-m-d H:i:s');
         $set = implode(', ', array_map(fn($k) => "`$k` = ?", array_keys($extra)));
         $this->db->execute(
-            "UPDATE `" . self::TABLE . "` SET $set WHERE id = ?",
+            "UPDATE `" . $this->t() . "` SET $set WHERE id = ?",
             [...array_values($extra), $id]
+        );
+    }
+
+    /**
+     * Blendet einen Eintrag aus der Inbox aus (Soft-Delete).
+     * Der Datensatz bleibt in der DB erhalten — Besitzer/Patient werden NICHT gelöscht.
+     */
+    public function hide(int $id): void
+    {
+        $this->db->execute(
+            "UPDATE `" . $this->t() . "` SET hidden_at = NOW() WHERE id = ?",
+            [$id]
         );
     }
 
@@ -90,20 +108,20 @@ class IntakeRepository
 
         if ($status !== '') {
             $total = (int)$this->db->fetchColumn(
-                "SELECT COUNT(*) FROM `" . self::TABLE . "` WHERE status = ?",
+                "SELECT COUNT(*) FROM `" . $this->t() . "` WHERE status = ? AND hidden_at IS NULL",
                 [$status]
             );
             $items = $this->db->fetchAll(
-                "SELECT * FROM `" . self::TABLE . "` WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                "SELECT * FROM `" . $this->t() . "` WHERE status = ? AND hidden_at IS NULL ORDER BY created_at DESC LIMIT ? OFFSET ?",
                 [$status, $perPage, $offset]
             );
         } else {
             $total = (int)$this->db->fetchColumn(
-                "SELECT COUNT(*) FROM `" . self::TABLE . "`",
+                "SELECT COUNT(*) FROM `" . $this->t() . "` WHERE hidden_at IS NULL",
                 []
             );
             $items = $this->db->fetchAll(
-                "SELECT * FROM `" . self::TABLE . "` ORDER BY created_at DESC LIMIT ? OFFSET ?",
+                "SELECT * FROM `" . $this->t() . "` WHERE hidden_at IS NULL ORDER BY created_at DESC LIMIT ? OFFSET ?",
                 [$perPage, $offset]
             );
         }
