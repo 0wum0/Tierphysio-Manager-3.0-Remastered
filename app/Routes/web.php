@@ -726,8 +726,11 @@ $router->post('/trainer/{id}',                                       [TrainerCon
 $router->post('/trainer/{id}/verfuegbarkeit',                        [TrainerController::class, 'addAvailability'],    ['auth', 'feature:dogschool_trainers']);
 $router->post('/trainer/{id}/verfuegbarkeit/{avail_id}/loeschen',    [TrainerController::class, 'removeAvailability'], ['auth', 'feature:dogschool_trainers']);
 
-// Hundeschul-Rechnungen (Shortcuts auf bestehendes Invoice-System)
+// Hundeschul-Rechnungen — vollwertiges Rechnungsmodul mit Trainer-Terminologie
+// Wichtig: /erstellen und /speichern VOR /{id}-Pattern, sonst werden sie als ID interpretiert.
 $router->get('/hundeschule/rechnungen',                              [DogschoolInvoiceController::class, 'index'],        ['auth', 'feature:dogschool_invoicing']);
+$router->get('/hundeschule/rechnungen/erstellen',                    [DogschoolInvoiceController::class, 'create'],       ['auth', 'feature:dogschool_invoicing']);
+$router->post('/hundeschule/rechnungen/speichern',                   [DogschoolInvoiceController::class, 'store'],        ['auth', 'feature:dogschool_invoicing']);
 $router->post('/hundeschule/rechnungen/kurs/{enrollment_id}',        [DogschoolInvoiceController::class, 'createForEnrollment'], ['auth', 'feature:dogschool_invoicing']);
 $router->post('/hundeschule/rechnungen/paket/{balance_id}',          [DogschoolInvoiceController::class, 'createForPackage'],    ['auth', 'feature:dogschool_invoicing']);
 
