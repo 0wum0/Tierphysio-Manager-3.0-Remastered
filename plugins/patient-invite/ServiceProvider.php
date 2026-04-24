@@ -86,44 +86,28 @@ class ServiceProvider
         ];
     }
 
+    /**
+     * Self-Heal-Migrations-Runner für den patient-invite-Plugin.
+     *
+     * Delegiert an den zentralen PluginMigrationService, der pro Tenant die
+     * aktuelle Migrations-Version in `settings.plugin_patient_invite_migration_version`
+     * trackt und nur ausstehende Migrationen fährt. Läuft bei jedem
+     * authentifizierten Request (session-gecached), sodass Altbestand-Tenants
+     * sich beim nächsten Login automatisch auf den neuesten Schema-Stand heilen.
+     */
     private function runMigrations(): void
     {
         try {
-            $db           = Application::getInstance()->getContainer()->get(\App\Core\Database::class);
-            $prefix       = $db->getPrefix();
+            $container = Application::getInstance()->getContainer();
+            $db        = $container->get(\App\Core\Database::class);
+            $session   = $container->has(\App\Core\Session::class)
+                ? $container->get(\App\Core\Session::class)
+                : null;
 
-            // No tenant context (e.g. on /login before auth) → skip silently.
-            // Without the prefix we would create unprefixed tables that are
-            // invisible to the tenant-scoped repository.
-            if ($prefix === '') {
-                return;
-            }
-
-            $migrationDir = __DIR__ . '/migrations';
-            if (!is_dir($migrationDir)) return;
-
-            $files = glob($migrationDir . '/*.sql');
-            if (!$files) return;
-            sort($files);
-
-            foreach ($files as $file) {
-                $sql = (string)file_get_contents($file);
-                // Apply tenant prefix placeholder — matches SaaS migration convention.
-                $sql = str_replace(['{{prefix}}', '{{ prefix }}'], $prefix, $sql);
-
-                $statements = array_filter(array_map('trim', explode(';', $sql)));
-                foreach ($statements as $stmt) {
-                    if (!empty($stmt)) {
-                        try {
-                            $db->execute($stmt);
-                        } catch (\Throwable) {
-                            /* Already exists — skip */
-                        }
-                    }
-                }
-            }
-        } catch (\Throwable) {
-            /* DB not ready yet */
+            $runner = new \App\Services\PluginMigrationService($db, $session);
+            $runner->runPending('patient_invite', __DIR__ . '/migrations');
+        } catch (\Throwable $e) {
+            error_log('[patient-invite] migration bootstrap failed: ' . $e->getMessage());
         }
     }
 }

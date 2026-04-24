@@ -126,46 +126,28 @@ class ServiceProvider
         }
     }
 
+    /**
+     * Self-Heal-Migrations-Runner für den patient-intake-Plugin.
+     *
+     * Delegiert an den zentralen PluginMigrationService, der pro Tenant
+     * die aktuelle Migrations-Version in `settings.plugin_patient_intake_migration_version`
+     * trackt und nur ausstehende Migrationen fährt. Läuft bei jedem
+     * authentifizierten Request (session-gecached), sodass Altbestand-Tenants
+     * sich beim nächsten Login automatisch auf den neuesten Schema-Stand heilen.
+     */
     private function runMigrations(): void
     {
         try {
-            $db     = Application::getInstance()->getContainer()->get(\App\Core\Database::class);
-            $prefix = $db->getPrefix();
+            $container = Application::getInstance()->getContainer();
+            $db        = $container->get(\App\Core\Database::class);
+            $session   = $container->has(\App\Core\Session::class)
+                ? $container->get(\App\Core\Session::class)
+                : null;
 
-            /* Ohne aufgelösten Tenant-Prefix NICHT migrieren — sonst würden
-             * wir versehentlich eine geteilte (nicht-tenant-isolierte) Tabelle
-             * anlegen. Die Migration läuft dann beim nächsten Request mit
-             * gesetztem Prefix automatisch nach. */
-            if ($prefix === '') {
-                return;
-            }
-
-            $migrationDir = __DIR__ . '/migrations';
-            if (!is_dir($migrationDir)) return;
-
-            $files = glob($migrationDir . '/*.sql');
-            if (!$files) return;
-            sort($files);
-
-            foreach ($files as $file) {
-                $sql        = (string)file_get_contents($file);
-                /* {{prefix}} Platzhalter durch aktuellen Tenant-Prefix ersetzen —
-                 * Migration ist damit tenant-scoped und idempotent (CREATE IF NOT EXISTS). */
-                $sql        = str_replace('{{prefix}}', $prefix, $sql);
-                $statements = array_filter(array_map('trim', explode(';', $sql)));
-
-                foreach ($statements as $stmt) {
-                    if (!empty($stmt)) {
-                        try {
-                            $db->execute($stmt);
-                        } catch (\Throwable) {
-                            /* Table/Spalte existiert bereits — skip */
-                        }
-                    }
-                }
-            }
-        } catch (\Throwable) {
-            /* DB not available yet (installer phase) */
+            $runner = new \App\Services\PluginMigrationService($db, $session);
+            $runner->runPending('patient_intake', __DIR__ . '/migrations');
+        } catch (\Throwable $e) {
+            error_log('[patient-intake] migration bootstrap failed: ' . $e->getMessage());
         }
     }
 }
