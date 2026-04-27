@@ -1,0 +1,78 @@
+{# TherapyCare Pro — Owner-Portal: aggregierte Fortschrittsübersicht
+   Wird unter /portal/fortschritt aufgerufen. Bei nur 1 Tier
+   redirected der Controller direkt auf die Tier-Seite. #}
+{% extends '@owner-portal/portal_layout.twig' %}
+{% set active_nav = 'fortschritt' %}
+
+{% block content %}
+<h1 class="portal-page-title">
+    {% if is_trainer %}🐕 Trainings-Verlauf{% else %}📈 Therapiefortschritt{% endif %}
+</h1>
+<p class="text-secondary mb-4">
+    {% if is_trainer %}
+        Wähle ein Tier aus, um den Trainings-Verlauf und die Trainings-Story anzusehen.
+    {% else %}
+        Wähle ein Tier aus, um den Therapiefortschritt und die Therapie-Story anzusehen.
+    {% endif %}
+</p>
+
+{% if cards is empty %}
+<div class="card">
+    <div class="card-body text-center py-5">
+        <div class="fs-1 mb-2" style="opacity:.3;">🐾</div>
+        <p class="text-secondary">Noch keine Tiere im Portal hinterlegt.</p>
+    </div>
+</div>
+{% else %}
+<div class="row g-3">
+    {% for c in cards %}
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100 portal-card shadow-sm">
+            <div class="card-body d-flex flex-column">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <div style="width:36px;height:36px;border-radius:50%;background:var(--bs-tertiary-bg);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" style="opacity:.5;"><path stroke="currentColor" stroke-width="1.5" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    </div>
+                    <div class="min-width-0">
+                        <div class="fw-700">{{ c.pet.name }}</div>
+                        <div class="small text-secondary">
+                            {{ c.pet.species ?? '' }}{% if c.pet.breed %} · {{ c.pet.breed }}{% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                {% if c.latest is not empty %}
+                <div class="mb-3">
+                    {% for entry in c.latest|slice(0,3) %}
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <span style="width:7px;height:7px;border-radius:50%;background:{{ entry.category_color ?? '#4f7cff' }};"></span>
+                        <span class="small flex-grow-1 text-truncate">{{ entry.category_name }}</span>
+                        <span class="small fw-700" style="color:{{ entry.category_color ?? '#4f7cff' }};">
+                            {{ entry.score }}/{{ entry.scale_max }}
+                        </span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-secondary small mb-3">
+                    Noch keine {% if is_trainer %}Trainings-{% endif %}Werte erfasst.
+                </div>
+                {% endif %}
+
+                <div class="d-flex gap-2 flex-wrap mt-auto">
+                    <a href="{{ c.progress_url }}" class="portal-btn portal-btn-secondary portal-btn-sm flex-grow-1">
+                        📈 {% if is_trainer %}Verlauf{% else %}Fortschritt{% endif %}
+                    </a>
+                    {% if c.has_media %}
+                    <a href="{{ c.story_url }}" class="portal-btn portal-btn-primary portal-btn-sm flex-grow-1">
+                        🎞️ {% if is_trainer %}Trainings-Story{% else %}Therapie-Story{% endif %}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

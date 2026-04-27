@@ -88,6 +88,56 @@ class TherapyCarePortalController extends Controller
     }
 
     /* ══════════════════════════════════════════════════════════
+       GET /portal/fortschritt
+       Aggregierte Übersicht aller Tiere des Halters mit direktem
+       Sprung in Fortschrittsseite + Story je Tier.
+       Bei genau 1 Tier → direkter Redirect zur Tier-Seite.
+    ══════════════════════════════════════════════════════════ */
+    public function progressOverview(array $params = []): void
+    {
+        $portalUser = $this->requirePortalAuth();
+
+        $stmt = $this->db->query(
+            "SELECT id, name, species, breed FROM `{$this->t('patients')}`
+              WHERE owner_id = ? ORDER BY name ASC",
+            [(int)$portalUser['owner_id']]
+        );
+        $pets = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+        if (count($pets) === 1) {
+            $this->redirect('/portal/tcp/tiere/' . (int)$pets[0]['id'] . '/fortschritt');
+            return;
+        }
+
+        $isTrainer = ($this->settingsRepo->get('practice_type', 'therapeut') === 'trainer');
+
+        /* Pro Tier: letzter Eintrag + Anzahl Medien für die Karten-Vorschau. */
+        $cards = [];
+        foreach ($pets as $p) {
+            $petId  = (int)$p['id'];
+            $latest = $this->repo->getLatestProgressForPatient($petId);
+            $media  = $this->repo->getMediaForPatient($petId, 1);
+            $cards[] = [
+                'pet'         => $p,
+                'latest'      => $latest,
+                'has_media'   => !empty($media),
+                'progress_url'=> '/portal/tcp/tiere/' . $petId . '/fortschritt',
+                'story_url'   => '/portal/tcp/tiere/' . $petId . '/fortschritt/story',
+            ];
+        }
+
+        $this->render('@therapy-care-pro/portal_progress_overview.twig', [
+            'page_title'        => $isTrainer ? 'Trainings-Verlauf' : 'Therapiefortschritt',
+            'active_nav'        => 'fortschritt',
+            'cards'             => $cards,
+            'is_trainer'        => $isTrainer,
+            'portal_user'       => $portalUser,
+            'is_trainer_tenant' => $isTrainer,
+            'csrf_token'        => $this->session->generateCsrfToken(),
+        ]);
+    }
+
+    /* ══════════════════════════════════════════════════════════
        GET /portal/tcp/tiere/{id}/fortschritt
        Owner views progress chart for their pet
     ══════════════════════════════════════════════════════════ */
@@ -113,10 +163,14 @@ class TherapyCarePortalController extends Controller
          * Authentifizierung statt Praxis-Auth nutzt. */
         $media = $this->repo->getMediaForPatient($patientId, 60);
 
+        $isTrainer = ($this->settingsRepo->get('practice_type', 'therapeut') === 'trainer');
         $this->render('@therapy-care-pro/portal_progress.twig', [
-            'page_title'     => 'Fortschritt — ' . $patient['name'],
-            'patient'        => $patient,
-            'portal_user'    => $portalUser,
+            'page_title'        => 'Fortschritt — ' . $patient['name'],
+            'active_nav'        => 'fortschritt',
+            'is_trainer_tenant' => $isTrainer,
+            'is_trainer'        => $isTrainer,
+            'patient'           => $patient,
+            'portal_user'       => $portalUser,
             'categories'     => $categories,
             'latest'         => $latest,
             'chart_data'     => $chartData,
@@ -152,9 +206,11 @@ class TherapyCarePortalController extends Controller
         $isTrainer     = ($this->settingsRepo->get('practice_type', 'therapeut') === 'trainer');
 
         $this->render('@therapy-care-pro/progress_story.twig', [
-            'page_title'     => ($isTrainer ? 'Trainings-Verlauf — ' : 'Therapie-Story — ') . $patient['name'],
-            'patient'        => $patient,
-            'portal_user'    => $portalUser,
+            'page_title'        => ($isTrainer ? 'Trainings-Verlauf — ' : 'Therapie-Story — ') . $patient['name'],
+            'active_nav'        => 'fortschritt',
+            'is_trainer_tenant' => $isTrainer,
+            'patient'           => $patient,
+            'portal_user'       => $portalUser,
             'media'          => $media,
             'before_after'   => $beforeAfter,
             'latest'         => $latestEntries,

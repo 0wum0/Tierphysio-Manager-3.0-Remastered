@@ -285,6 +285,12 @@
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" stroke-width="2"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M9 12l2 2 4-4"/></svg>
             <span>Hausaufgaben</span>
         </a>
+        {# Fortschritt / Trainings-Verlauf — immer sichtbar (User-Spec). Zielroute
+           leitet bei genau 1 Tier direkt auf dessen Fortschrittsseite. #}
+        <a href="/portal/fortschritt" class="nav-link {% if active_nav == 'fortschritt' %}active{% endif %}">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            <span>{% if is_trainer_tenant ?? false %}Verlauf{% else %}Fortschritt{% endif %}</span>
+        </a>
         <a href="/portal/befunde" class="nav-link {% if active_nav == 'befunde' %}active{% endif %}">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1" stroke="currentColor" stroke-width="2"/><line stroke="currentColor" stroke-width="2" stroke-linecap="round" x1="9" y1="12" x2="15" y2="12"/><line stroke="currentColor" stroke-width="2" stroke-linecap="round" x1="9" y1="15" x2="13" y2="15"/></svg>
             <span>Befundbögen</span>

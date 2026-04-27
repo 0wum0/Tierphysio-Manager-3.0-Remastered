@@ -129,6 +129,10 @@ class ServiceProvider
         $router->get( '/api/tcp/patienten/{id}/modal-data',                   [TherapyCareController::class, 'apiModalData'],        ['auth']);
 
         /* ── OWNER PORTAL EXTENSIONS ── */
+        /* Aggregierte Fortschritts-Übersicht — nav-zugängliche Einstiegsseite.
+         * Bei genau 1 Tier redirected diese auf die Tier-Seite. */
+        $router->get( '/portal/fortschritt',                                  [TherapyCarePortalController::class, 'progressOverview'], []);
+
         /* Spezifischere Routen ZUERST: /story und /media/{id} müssen vor
          * /fortschritt matchen, damit /story nicht als id-Parameter
          * interpretiert wird. */

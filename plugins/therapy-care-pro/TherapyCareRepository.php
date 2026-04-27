@@ -835,12 +835,18 @@ class TherapyCareRepository
     public function getPortalVisibility(int $patientId): array
     {
         $row = $this->db->fetch("SELECT * FROM `{$this->t('tcp_portal_visibility')}` WHERE patient_id = ?", [$patientId]);
-        return $row ?: [
+        $row = $row ?: [
             'patient_id'    => $patientId,
-            'show_progress' => 0,
+            'show_progress' => 1,
             'show_natural'  => 0,
             'show_reports'  => 0,
         ];
+        /* Fortschritt + Story sind im Besitzer-/Hunde-Portal IMMER sichtbar
+         * (User-Spec: 'genau wie Hausaufgaben, muss immer aktiv sein').
+         * show_natural / show_reports bleiben opt-in, weil Praxis-spezifisch
+         * und potenziell sensibel. */
+        $row['show_progress'] = 1;
+        return $row;
     }
 
     public function savePortalVisibility(int $patientId, array $data): void

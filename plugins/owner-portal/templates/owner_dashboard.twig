@@ -168,7 +168,7 @@
 <div class="card mb-3">
   <div class="card-body">
     <div class="d-flex align-items-center justify-content-between mb-3">
-        <h2 class="h5 mb-0">📈 Fortschritts-Verlauf</h2>
+        <h2 class="h5 mb-0">📈 {% if is_trainer_tenant ?? false %}Trainings-Verlauf{% else %}Fortschritts-Verlauf{% endif %}</h2>
         <span class="small text-secondary">Letzte 90 Tage</span>
     </div>
     {% for petChart in progress_chart %}
@@ -232,7 +232,7 @@
 <div class="card mb-3">
   <div class="card-body">
     <div class="d-flex align-items-center justify-content-between mb-3">
-        <h2 class="h5 mb-0">📈 Therapiefortschritt</h2>
+        <h2 class="h5 mb-0">📈 {% if is_trainer_tenant ?? false %}Trainings-Fortschritt{% else %}Therapiefortschritt{% endif %}</h2>
     </div>
     {% for entry in tcp_dashboard %}
     <div class="mb-3 pb-3" style="border-bottom:1px solid var(--bs-border-color);">
@@ -250,9 +250,9 @@
             {% endfor %}
         {% endif %}
         <div class="d-flex gap-2 mt-2 flex-wrap">
-            {% if entry.visibility.show_progress %}
-            <a href="/portal/tcp/tiere/{{ entry.pet.id }}/fortschritt" class="portal-btn portal-btn-secondary portal-btn-sm">Fortschritt →</a>
-            {% endif %}
+            {# Fortschritt + Story sind immer sichtbar (User-Spec); show_progress in getPortalVisibility ist hart auf 1 gesetzt. #}
+            <a href="/portal/tcp/tiere/{{ entry.pet.id }}/fortschritt" class="portal-btn portal-btn-secondary portal-btn-sm">{% if is_trainer_tenant ?? false %}Verlauf{% else %}Fortschritt{% endif %} →</a>
+            <a href="/portal/tcp/tiere/{{ entry.pet.id }}/fortschritt/story" class="portal-btn portal-btn-primary portal-btn-sm">{% if is_trainer_tenant ?? false %}Trainings-Story{% else %}Therapie-Story{% endif %} →</a>
             {% if entry.visibility.show_reports %}
             <a href="/portal/tcp/tiere/{{ entry.pet.id }}/berichte" class="portal-btn portal-btn-secondary portal-btn-sm">Berichte →</a>
             {% endif %}
