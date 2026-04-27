@@ -95,6 +95,13 @@
      - Bezahlt  → status=paid + Zeitraum dieses Monats / Jahr
    ══════════════════════════════════════════════════════════ #}
 {% if invoice_stats %}
+{# Deutsche Monatsnamen — PHP date('M') liefert sonst englische 3-Letter-Abk.
+   die je nach Server-Locale uneinheitlich sind. Hardcoded-Array garantiert
+   konsistente Beschriftung unabhängig von der Locale des Servers. #}
+{% set de_months = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'] %}
+{% set current_month_name = de_months[('now'|date('n')) - 1] %}
+{% set current_year       = 'now'|date('Y') %}
+
 <div class="row g-3 mb-3">
     <div class="col-md-6 col-lg-3">
         <a href="/hundeschule/rechnungen?status=open" class="kpi-link">
@@ -117,18 +124,59 @@
     <div class="col-md-6 col-lg-3">
         <a href="/hundeschule/rechnungen?status=paid&from={{ 'now'|date('Y-m-01') }}&to={{ 'now'|date('Y-m-d') }}" class="kpi-link">
             <div class="card"><div class="card-body">
-                <div class="kpi-label">Bezahlt ({{ 'now'|date('M') }})</div>
+                <div class="kpi-label">Einnahmen {{ current_month_name }}</div>
                 <div class="kpi-value" style="color:#22c55e;">{{ invoice_stats.paid_amount_month|number_format(2, ',', '.') }} €</div>
-                <div class="kpi-sub">{{ invoice_stats.paid_count_month }} Rechnung(en)</div>
+                <div class="kpi-sub">
+                    {{ invoice_stats.paid_count_month }}
+                    {{ invoice_stats.paid_count_month == 1 ? 'bezahlte Rechnung' : 'bezahlte Rechnungen' }}
+                </div>
             </div></div>
         </a>
     </div>
     <div class="col-md-6 col-lg-3">
         <a href="/hundeschule/rechnungen?status=paid&from={{ 'now'|date('Y-01-01') }}&to={{ 'now'|date('Y-m-d') }}" class="kpi-link">
             <div class="card"><div class="card-body">
-                <div class="kpi-label">Bezahlt ({{ 'now'|date('Y') }})</div>
+                <div class="kpi-label">Einnahmen {{ current_year }}</div>
                 <div class="kpi-value" style="color:#22c55e;">{{ invoice_stats.paid_amount_year|number_format(2, ',', '.') }} €</div>
-                <div class="kpi-sub">{{ invoice_stats.paid_count_year }} Rechnung(en)</div>
+                <div class="kpi-sub">
+                    {{ invoice_stats.paid_count_year }}
+                    {{ invoice_stats.paid_count_year == 1 ? 'bezahlte Rechnung' : 'bezahlte Rechnungen' }}
+                </div>
+            </div></div>
+        </a>
+    </div>
+</div>
+
+{# Zusätzliche Zeile: Gesamt-Rechnungsvolumen (alle Zeiten, ohne Status-Filter).
+   Gibt dem Trainer auf einen Blick sein komplettes geschäftliches Volumen —
+   unabhängig davon, ob manuell oder übers Portal entstanden. #}
+<div class="row g-3 mb-3">
+    <div class="col-md-6 col-lg-4">
+        <a href="/hundeschule/rechnungen" class="kpi-link">
+            <div class="card"><div class="card-body">
+                <div class="kpi-label">Rechnungen gesamt</div>
+                <div class="kpi-value">{{ invoice_stats.total_count }}</div>
+                <div class="kpi-sub">alle Rechnungen anzeigen →</div>
+            </div></div>
+        </a>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <div class="card"><div class="card-body">
+            <div class="kpi-label">Rechnungsvolumen gesamt</div>
+            <div class="kpi-value" style="color:#22c55e;">{{ invoice_stats.total_amount|number_format(2, ',', '.') }} €</div>
+            <div class="kpi-sub">über alle Zeiträume (brutto, ohne Stornos)</div>
+        </div></div>
+    </div>
+    <div class="col-md-6 col-lg-4">
+        <a href="/hundeschule/rechnungen/erstellen" class="kpi-link">
+            <div class="card"><div class="card-body" style="display:flex;align-items:center;gap:.75rem;">
+                <div style="width:40px;height:40px;border-radius:10px;background:rgba(124,58,237,.14);display:flex;align-items:center;justify-content:center;">
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </div>
+                <div>
+                    <div class="kpi-label" style="margin-bottom:.15rem;">Schnellaktion</div>
+                    <div style="font-weight:600;">Neue Rechnung erstellen</div>
+                </div>
             </div></div>
         </a>
     </div>

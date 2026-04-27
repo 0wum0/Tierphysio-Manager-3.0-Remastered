@@ -250,6 +250,7 @@ class DogschoolInvoiceService
             'overdue_count' => 0, 'overdue_amount' => 0.0,
             'paid_count_month' => 0, 'paid_amount_month' => 0.0,
             'paid_count_year'  => 0, 'paid_amount_year'  => 0.0,
+            'total_count'      => 0, 'total_amount'     => 0.0,
         ];
 
         try {
@@ -264,9 +265,19 @@ class DogschoolInvoiceService
                 0
             )";
 
-            /* Dogschool-Filter — identisches Muster wie listDogschoolInvoices() */
-            $dsFilter = "(i.notes LIKE 'Automatisch aus Kurs-Einschreibung%'
-                       OR i.notes LIKE 'Automatisch aus Paket-Verkauf%')";
+            /* WICHTIG — KEIN Filter auf Notes-Präfix mehr:
+             * Früher zählte dieses Stats-Set nur Rechnungen mit Notes LIKE
+             * 'Automatisch aus Kurs-Einschreibung%' / 'Automatisch aus Paket-
+             * Verkauf%' — also NUR jene die das Portal/Admin automatisch aus
+             * Enrollment/Package-Kauf erzeugt hat. Manuell angelegte Rechnungen
+             * (z.B. „Training einmalig", „Einzelstunde") blieben dadurch
+             * unsichtbar im Dashboard. Da ein Trainer-Tenant strukturell nur
+             * Hundeschul-Rechnungen hat, werden jetzt ALLE seiner Rechnungen
+             * gezählt — identisches Verhalten wie die Praxis-KPIs. Storno-
+             * und Cancellation-Rechnungen werden aus der Bezahlt-Summe
+             * ausgeschlossen, sonst würde ein Storno die Monats-Summe
+             * reduzieren statt neutralisieren. */
+            $notCancelled = "i.status != 'cancelled' AND (i.invoice_type IS NULL OR i.invoice_type != 'cancellation')";
 
             $monthStart = date('Y-m-01');
             $yearStart  = date('Y-01-01');
@@ -275,7 +286,7 @@ class DogschoolInvoiceService
             $openRow = $this->db->safeFetch(
                 "SELECT COUNT(*) AS c, COALESCE(SUM({$gross}), 0) AS s
                    FROM `{$inv}` i
-                  WHERE i.status = 'open' AND {$dsFilter}"
+                  WHERE i.status = 'open' AND {$notCancelled}"
             ) ?: ['c' => 0, 's' => 0];
 
             /* Überfällig = status='overdue' ODER open+due_date abgelaufen —
@@ -284,7 +295,7 @@ class DogschoolInvoiceService
             $overdueRow = $this->db->safeFetch(
                 "SELECT COUNT(*) AS c, COALESCE(SUM({$gross}), 0) AS s
                    FROM `{$inv}` i
-                  WHERE {$dsFilter}
+                  WHERE {$notCancelled}
                     AND (i.status = 'overdue' OR (i.status = 'open' AND i.due_date < ?))",
                 [$today]
             ) ?: ['c' => 0, 's' => 0];
@@ -292,7 +303,7 @@ class DogschoolInvoiceService
             $paidMonthRow = $this->db->safeFetch(
                 "SELECT COUNT(*) AS c, COALESCE(SUM({$gross}), 0) AS s
                    FROM `{$inv}` i
-                  WHERE i.status = 'paid' AND {$dsFilter}
+                  WHERE i.status = 'paid' AND {$notCancelled}
                     AND i.issue_date >= ?",
                 [$monthStart]
             ) ?: ['c' => 0, 's' => 0];
@@ -300,9 +311,17 @@ class DogschoolInvoiceService
             $paidYearRow = $this->db->safeFetch(
                 "SELECT COUNT(*) AS c, COALESCE(SUM({$gross}), 0) AS s
                    FROM `{$inv}` i
-                  WHERE i.status = 'paid' AND {$dsFilter}
+                  WHERE i.status = 'paid' AND {$notCancelled}
                     AND i.issue_date >= ?",
                 [$yearStart]
+            ) ?: ['c' => 0, 's' => 0];
+
+            /* Gesamt-KPI: alle Rechnungen überhaupt, ohne Zeitfilter —
+             * zeigt dem Trainer auf einen Blick sein komplettes Volumen. */
+            $totalRow = $this->db->safeFetch(
+                "SELECT COUNT(*) AS c, COALESCE(SUM({$gross}), 0) AS s
+                   FROM `{$inv}` i
+                  WHERE {$notCancelled}"
             ) ?: ['c' => 0, 's' => 0];
 
             return [
@@ -314,6 +333,8 @@ class DogschoolInvoiceService
                 'paid_amount_month' => (float)($paidMonthRow['s'] ?? 0),
                 'paid_count_year'   => (int)($paidYearRow['c'] ?? 0),
                 'paid_amount_year'  => (float)($paidYearRow['s'] ?? 0),
+                'total_count'       => (int)($totalRow['c'] ?? 0),
+                'total_amount'      => (float)($totalRow['s'] ?? 0),
             ];
         } catch (\Throwable) {
             return $zero;
