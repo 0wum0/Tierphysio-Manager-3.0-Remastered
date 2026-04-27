@@ -180,34 +180,49 @@ class DogschoolInvoiceController extends Controller
     }
 
     /**
-     * Parsiert Rechnungspositionen aus den POST-Daten (identisch zum
-     * Format der Praxis-InvoiceController — selbes Formular-Schema).
+     * Parsiert Rechnungspositionen aus den POST-Daten.
+     *
+     * WICHTIG: Muss 1:1 identisch zu InvoiceController::parsePositions() sein,
+     * da beide Tenant-Typen (Praxis + Hundeschule) dasselbe Twig-Template
+     * `templates/invoices/create.twig` teilen — das Template rendert Felder
+     * mit den Namen `position_description[]`, `position_quantity[]`,
+     * `position_price[]`, `position_tax_rate[]` (NICHT das früher hier
+     * erwartete `positions[i][description]`-Format — das war ein Bug
+     * und hat zur Fehlermeldung „mindestens eine Position hinzufügen"
+     * geführt, obwohl welche da waren).
      *
      * @return array<int, array{description:string, quantity:float, unit_price:float, tax_rate:float, total:float}>
      */
     private function parsePositions(): array
     {
-        $raw = $_POST['positions'] ?? [];
-        if (!is_array($raw)) return [];
+        $descriptions = $_POST['position_description'] ?? [];
+        $quantities   = $_POST['position_quantity']    ?? [];
+        $prices       = $_POST['position_price']       ?? [];
+        $taxRates     = $_POST['position_tax_rate']    ?? [];
 
-        $out = [];
-        foreach ($raw as $p) {
-            $desc = trim((string)($p['description'] ?? ''));
-            $qty  = (float)str_replace(',', '.', (string)($p['quantity']   ?? '0'));
-            $unit = (float)str_replace(',', '.', (string)($p['unit_price'] ?? '0'));
-            $tax  = (float)str_replace(',', '.', (string)($p['tax_rate']   ?? '19'));
+        if (!is_array($descriptions)) {
+            return [];
+        }
 
-            if ($desc === '' || $qty <= 0) continue;
+        $positions = [];
+        foreach ($descriptions as $i => $description) {
+            if (empty(trim((string)$description))) {
+                continue;
+            }
+            $quantity = (float)str_replace(',', '.', (string)($quantities[$i] ?? 1));
+            $price    = (float)str_replace(',', '.', (string)($prices[$i]     ?? 0));
+            $taxRate  = (float)str_replace(',', '.', (string)($taxRates[$i]   ?? 0));
 
-            $out[] = [
-                'description' => $desc,
-                'quantity'    => $qty,
-                'unit_price'  => $unit,
-                'tax_rate'    => $tax,
-                'total'       => round($qty * $unit, 2),
+            $positions[] = [
+                'description' => htmlspecialchars(trim((string)$description), ENT_QUOTES, 'UTF-8'),
+                'quantity'    => $quantity,
+                'unit_price'  => $price,
+                'tax_rate'    => $taxRate,
+                'total'       => round($quantity * $price, 2),
             ];
         }
-        return $out;
+
+        return $positions;
     }
 
     public function createForEnrollment(array $params = []): void
