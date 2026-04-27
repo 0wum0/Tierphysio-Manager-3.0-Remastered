@@ -539,8 +539,20 @@
                         ══════════════════════════════════════════════ #}
                         <div class="pd-tab-panel" id="pd-panel-fortschritt">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
-                                <div class="pd-section-label" style="margin: 0;">Therapiefortschritt</div>
-                                <button type="button" class="btn btn-secondary btn-sm" style="font-size:0.75rem;" onclick="openTcpFullView('progress')">Vollansicht →</button>
+                                <div class="pd-section-label" style="margin: 0;" id="pd-tcp-heading">
+                                    {% if is_trainer ?? false %}Trainings-Fortschritt{% else %}Therapiefortschritt{% endif %}
+                                </div>
+                                <div style="display:flex;gap:0.35rem;flex-wrap:wrap;">
+                                    {# Story-Button — Sichtbarkeit per JS (abh. von media.length). Öffnet Story in neuem Tab. #}
+                                    <a id="pd-tcp-story-btn" href="#" target="_blank" rel="noopener"
+                                       class="btn btn-primary btn-sm" style="font-size:0.75rem;display:none;">
+                                        <svg width="11" height="11" fill="none" viewBox="0 0 24 24" style="vertical-align:-1px;"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><polyline stroke="currentColor" stroke-width="2" points="12 6 12 12 16 14"/></svg>
+                                        <span id="pd-tcp-story-btn-label">
+                                            {% if is_trainer ?? false %}Trainings-Story{% else %}Therapie-Story{% endif %}
+                                        </span>
+                                    </a>
+                                    <button type="button" class="btn btn-secondary btn-sm" style="font-size:0.75rem;" onclick="openTcpFullView('progress')">Vollansicht →</button>
+                                </div>
                             </div>
                             {# Verlaufsgrafik #}
                             <div id="pd-tcp-chart-wrap" style="display:none;border-radius:10px;border:1px solid var(--bs-border-color);padding:0.75rem;margin-bottom:1rem;">
@@ -567,6 +579,53 @@
                                     <button type="button" class="btn btn-secondary btn-sm" style="font-size:0.75rem;" onclick="openTcpFullView('reports')">Alle Berichte →</button>
                                 </div>
                                 <div id="pd-tcp-reports-list" style="display: flex; flex-direction: column; gap: 0.4rem;"></div>
+                            </div>
+
+                            {# ═══════════════════════════════════════════════
+                               VORHER / NACHHER MEDIEN (Sprint A · L1.1)
+                               Wird per JS in loadTcpData() befüllt — Upload,
+                               Galerie und Story-Button werden dort gesteuert.
+                               Struktur bleibt im DOM, damit CSS-Transitionen
+                               sauber greifen.
+                            ═══════════════════════════════════════════════ #}
+                            <div id="pd-tcp-media-section" style="margin-top: 1.5rem;">
+                                <div style="border-top: 1px solid var(--bs-border-color); padding-top: 1rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap:wrap; gap:.4rem;">
+                                    <div class="pd-section-label" style="margin: 0; display:flex; align-items:center; gap:.35rem;">
+                                        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" style="vertical-align:-1px;"><rect stroke="currentColor" stroke-width="2" x="3" y="3" width="18" height="18" rx="2"/><circle stroke="currentColor" stroke-width="2" cx="8.5" cy="8.5" r="1.5"/><polyline stroke="currentColor" stroke-width="2" points="21 15 16 10 5 21"/></svg>
+                                        Vorher / Nachher Medien
+                                    </div>
+                                    <span id="pd-tcp-media-count" style="font-size:.68rem;color:var(--bs-secondary-color);">0 Dateien</span>
+                                </div>
+
+                                {# Upload-Form — action wird per JS auf den gewählten Eintrag gesetzt. #}
+                                <form id="pd-tcp-media-form" method="POST" enctype="multipart/form-data" action="#"
+                                      style="display:grid;grid-template-columns:1fr 1fr auto;gap:.4rem;margin-bottom:.6rem;">
+                                    <input type="hidden" name="_csrf_token" id="pd-tcp-media-csrf" value="">
+                                    <select name="_entry_id" id="pd-tcp-media-entry-sel" class="form-select form-select-sm" required
+                                            style="grid-column:1 / -1;">
+                                        <option value="">— Eintrag zur Zuordnung wählen —</option>
+                                    </select>
+                                    <select name="phase_label" class="form-select form-select-sm">
+                                        <option value="vorher">Vorher</option>
+                                        <option value="nachher">Nachher</option>
+                                        <option value="verlauf" selected>Verlauf</option>
+                                    </select>
+                                    <input type="file" name="media[]" class="form-control form-control-sm"
+                                           accept="image/*,video/*,audio/*" multiple required>
+                                    <button type="submit" class="btn btn-primary btn-sm" style="white-space:nowrap;">
+                                        <svg width="11" height="11" fill="none" viewBox="0 0 24 24" style="vertical-align:-1px;"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                                        Upload
+                                    </button>
+                                    <div style="grid-column:1 / -1;font-size:.65rem;color:var(--bs-secondary-color);">
+                                        Max. 25 MB pro Datei · Bilder, Videos, Audio · Mehrfach möglich
+                                    </div>
+                                </form>
+
+                                {# Galerie — gruppiert pro Eintrag, von JS befüllt. #}
+                                <div id="pd-tcp-media-gallery" style="max-height:280px;overflow-y:auto;"></div>
+                                <div id="pd-tcp-media-empty" style="text-align:center;padding:1rem;color:var(--bs-secondary-color);font-size:.78rem;">
+                                    Noch keine Medien hochgeladen.
+                                </div>
                             </div>
                         </div>
 
@@ -1452,6 +1511,12 @@ function loadTcpData(patientId) {
                 } else { _drawTcpModalChart(); }
             }
 
+            /* ─── VORHER / NACHHER MEDIEN (Sprint A · L1.1) ─────────
+               Rendert Upload-Form-Select, Galerie und Story-Button.
+               Alle IDs sind in patient-modal-global.twig hartkodiert;
+               deshalb keine Rerender-Listen nötig. */
+            _tcpRenderMedia(patientId, data);
+
             /* TCP Berichte */
             var reports = data.reports || [];
             if (reports.length && tcpRepSec && tcpRepList) {
@@ -1470,6 +1535,160 @@ function loadTcpData(patientId) {
         })
         .catch(function() { /* TCP Plugin nicht aktiv */ });
 }
+
+/* ═════════════════════════════════════════════════════════════════
+   TCP MEDIEN (Vorher/Nachher) – Modal-Akte (Sprint A · L1.1)
+   ───────────────────────────────────────────────────────────────
+   Rendert Galerie + Upload-Form im Patienten-Modal, ohne die
+   bestehende Vollansicht zu verlassen. Komplett vanilla — keine
+   neuen Abhängigkeiten.
+   ═════════════════════════════════════════════════════════════════ */
+function _tcpRenderMedia(patientId, data) {
+    var section   = document.getElementById('pd-tcp-media-section');
+    if (!section) return;
+
+    var entrySel  = document.getElementById('pd-tcp-media-entry-sel');
+    var gallery   = document.getElementById('pd-tcp-media-gallery');
+    var emptyEl   = document.getElementById('pd-tcp-media-empty');
+    var countEl   = document.getElementById('pd-tcp-media-count');
+    var csrfInput = document.getElementById('pd-tcp-media-csrf');
+    var storyBtn  = document.getElementById('pd-tcp-story-btn');
+    var form      = document.getElementById('pd-tcp-media-form');
+
+    var entries = data.entries_brief || [];
+    var media   = data.media          || [];
+    var base    = data.media_url_base || ('/patienten/'+patientId+'/fortschritt/media');
+    var story   = data.story_url      || ('/patienten/'+patientId+'/fortschritt/story');
+    var csrf    = data.csrf_token     || '';
+
+    if (csrfInput) csrfInput.value = csrf;
+
+    /* Eintrags-Dropdown befüllen (chron. absteigend) */
+    if (entrySel) {
+        entrySel.innerHTML = '<option value="">— Eintrag zur Zuordnung wählen —</option>';
+        entries.slice().reverse().forEach(function(e) {
+            var d = (e.entry_date || '').substring(0,10).split('-').reverse().join('.');
+            var opt = document.createElement('option');
+            opt.value = e.id;
+            opt.textContent = d + ' · ' + (e.category_name||'') + ' (' + e.score + '/' + e.scale_max + ')';
+            entrySel.appendChild(opt);
+        });
+        /* onchange → setzt form.action auf entsprechenden /media Endpoint */
+        entrySel.onchange = function() {
+            form.action = '/patienten/' + patientId + '/fortschritt/' + (this.value || 0) + '/media';
+        };
+    }
+
+    /* Story-Button: nur sichtbar wenn Medien existieren */
+    if (storyBtn) {
+        storyBtn.href = story;
+        storyBtn.style.display = media.length > 0 ? '' : 'none';
+    }
+
+    /* Galerie — gruppiert pro Eintrag */
+    if (countEl) countEl.textContent = media.length + ' Datei' + (media.length === 1 ? '' : 'en');
+
+    if (!media.length) {
+        if (gallery) gallery.innerHTML = '';
+        if (emptyEl) emptyEl.style.display = '';
+        return;
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    /* Gruppierung: progress_entry_id → [m,...] */
+    var byEntry = {};
+    media.forEach(function(m) {
+        var k = String(m.progress_entry_id);
+        (byEntry[k] = byEntry[k] || []).push(m);
+    });
+
+    var html = '';
+    entries.slice().reverse().forEach(function(e) {
+        var list = byEntry[String(e.id)] || [];
+        if (!list.length) return;
+        var d = (e.entry_date || '').substring(0,10).split('-').reverse().join('.');
+        html += '<div style="border:1px solid var(--bs-border-color);border-radius:8px;padding:.45rem;margin-bottom:.45rem;background:var(--bs-secondary-bg);">';
+        html += '<div style="display:flex;align-items:center;gap:.35rem;margin-bottom:.35rem;font-size:.72rem;">';
+        html += '<span style="width:7px;height:7px;border-radius:50%;background:'+esc(e.category_color||'#4f7cff')+';"></span>';
+        html += '<strong>'+esc(d)+'</strong>';
+        html += '<span style="color:var(--bs-secondary-color);">· '+esc(e.category_name||'')+' · '+e.score+'/'+e.scale_max+'</span>';
+        html += '<span style="margin-left:auto;color:var(--bs-secondary-color);font-size:.65rem;">'+list.length+'×</span>';
+        html += '</div>';
+        html += '<div style="display:flex;flex-wrap:wrap;gap:.3rem;">';
+        list.forEach(function(m) {
+            var phase = (m.phase_label || 'verlauf').toString();
+            var phaseColor = phase === 'vorher' ? '#f59e0b'
+                           : (phase === 'nachher' ? '#16a34a' : '#6c757d');
+            html += '<div style="position:relative;width:64px;">';
+            html += '<a href="'+esc(base+'/'+m.id)+'" target="_blank" rel="noopener" style="display:block;aspect-ratio:1/1;background:#000;border-radius:6px;overflow:hidden;border:1px solid var(--bs-border-color);">';
+            if (m.media_type === 'image') {
+                html += '<img src="'+esc(base+'/'+m.id)+'" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;">';
+            } else if (m.media_type === 'video') {
+                html += '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#222;color:#fff;"><svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"/></svg></div>';
+            } else {
+                html += '<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#444;color:#fff;font-size:.55rem;">AUDIO</div>';
+            }
+            html += '</a>';
+            html += '<span style="position:absolute;top:2px;left:2px;background:'+phaseColor+';color:#fff;font-size:.5rem;font-weight:700;padding:1px 4px;border-radius:99px;line-height:1;">'+phase.substring(0,1).toUpperCase()+'</span>';
+            html += '<button type="button" data-pd-tcp-media-del="'+m.id+'" style="position:absolute;top:2px;right:2px;background:#dc3545;color:#fff;border:0;border-radius:50%;width:14px;height:14px;font-size:9px;line-height:1;padding:0;cursor:pointer;">×</button>';
+            html += '</div>';
+        });
+        html += '</div></div>';
+    });
+
+    if (gallery) {
+        gallery.innerHTML = html;
+        /* Delete-Handler wire-up */
+        gallery.querySelectorAll('[data-pd-tcp-media-del]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                if (!confirm('Datei wirklich löschen?')) return;
+                var mid = btn.getAttribute('data-pd-tcp-media-del');
+                var fd = new FormData();
+                fd.append('_csrf_token', csrf);
+                fetch('/patienten/'+patientId+'/fortschritt/media/'+mid+'/loeschen', {
+                    method: 'POST',
+                    headers: {'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},
+                    body: fd
+                }).then(function(){
+                    /* Cache invalidieren und Modal-Daten neu holen. */
+                    _tcpLoaded = false;
+                    loadTcpData(patientId);
+                    _hwShowToast('Datei gelöscht.', 'success');
+                }).catch(function(){ _hwShowToast('Fehler beim Löschen.','danger'); });
+            });
+        });
+    }
+
+    /* Upload-Handler (nur einmal binden — Form lebt im DOM) */
+    if (form && !form._tcpBound) {
+        form._tcpBound = true;
+        form.addEventListener('submit', function(ev) {
+            ev.preventDefault();
+            var entryId = entrySel ? entrySel.value : '';
+            if (!entryId) { _hwShowToast('Bitte Eintrag wählen.','warning'); return; }
+            var btn = form.querySelector('button[type="submit"]');
+            var orig = btn ? btn.innerHTML : '';
+            if (btn) { btn.disabled = true; btn.textContent = 'Lade…'; }
+            var fd = new FormData(form);
+            fetch('/patienten/'+patientId+'/fortschritt/'+entryId+'/media', {
+                method: 'POST',
+                headers: {'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},
+                body: fd
+            }).then(function(r){ return r.text(); })
+              .then(function(){
+                  if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+                  form.reset();
+                  _tcpLoaded = false;
+                  loadTcpData(patientId);
+                  _hwShowToast('Hochgeladen.','success');
+              }).catch(function(){
+                  if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+                  _hwShowToast('Upload fehlgeschlagen.','danger');
+              });
+        });
+    }
+}
+window._tcpRenderMedia = _tcpRenderMedia;
 
 /* ─── TCP SLIDER BUILDER ───────────────────────────────────────── */
 function _tcpBuildSliders(cats, patientId, compact) {

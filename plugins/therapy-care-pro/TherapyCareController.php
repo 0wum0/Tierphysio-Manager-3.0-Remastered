@@ -1299,6 +1299,12 @@ class TherapyCareController extends Controller
             $reports = $this->repo->getTherapyReportsForPatient($patientId);
             $vis     = $this->repo->getPortalVisibility($patientId);
 
+            /* Medien für Patienten-Modal-Akte (Sprint A, L1.1).
+             * Minimaler Payload, damit das JS im Modal direkt Galerie
+             * + Upload-Form rendern kann, ohne weitere Roundtrips. */
+            $media = $this->repo->getMediaForPatient($patientId, 60);
+            $isTrainer = ($this->settingsRepo->get('practice_type', 'therapeut') === 'trainer');
+
             $this->json([
                 'ok'         => true,
                 'categories' => $cats,
@@ -1307,6 +1313,20 @@ class TherapyCareController extends Controller
                 'natural'    => $natural,
                 'reports'    => $reports,
                 'visibility' => $vis,
+                /* Neu für Modal-Galerie/Upload: */
+                'entries_brief' => array_map(static fn($e) => [
+                    'id'             => (int)$e['id'],
+                    'entry_date'     => $e['entry_date'],
+                    'category_name'  => $e['category_name']  ?? '',
+                    'category_color' => $e['category_color'] ?? '#4f7cff',
+                    'score'          => (int)($e['score']     ?? 0),
+                    'scale_max'      => (int)($e['scale_max'] ?? 10),
+                ], $entries),
+                'media'        => $media,
+                'story_url'    => '/patienten/' . $patientId . '/fortschritt/story',
+                'media_url_base' => '/patienten/' . $patientId . '/fortschritt/media',
+                'is_trainer'   => $isTrainer,
+                'csrf_token'   => $this->session->generateCsrfToken(),
             ]);
         } catch (\Throwable $e) {
             $this->json(['ok' => false, 'error' => $e->getMessage()], 500);
