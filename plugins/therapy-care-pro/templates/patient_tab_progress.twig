@@ -31,9 +31,17 @@
     <div class="tab-content">
         <div class="tab-pane fade show active" id="tcp-pane-progress-{{ patient.id }}" role="tabpanel">
             <div id="tcp-tab-chart-wrap-{{ patient.id }}" class="border rounded p-3 mb-3">
-                <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
                     <div class="fw-700 fs-sm">Verlaufsgrafik</div>
-                    <a href="/patienten/{{ patient.id }}/fortschritt" class="btn btn-outline-secondary btn-sm" style="font-size:0.7rem;">Vollansicht →</a>
+                    <div class="d-flex gap-1 flex-wrap">
+                        {% if media_all is defined and media_all|length > 0 %}
+                        <a href="{{ story_url }}" target="_blank" rel="noopener" class="btn btn-primary btn-sm" style="font-size:0.7rem;">
+                            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" style="vertical-align:-1px;"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><polyline stroke="currentColor" stroke-width="2" points="12 6 12 12 16 14"/></svg>
+                            {% if is_trainer ?? false %}Trainings-Story{% else %}Therapie-Story{% endif %}
+                        </a>
+                        {% endif %}
+                        <a href="/patienten/{{ patient.id }}/fortschritt" class="btn btn-outline-secondary btn-sm" style="font-size:0.7rem;">Vollansicht →</a>
+                    </div>
                 </div>
                 <div style="position:relative;height:180px;">
                     <canvas id="tcp-tab-chart-{{ patient.id }}"></canvas>
@@ -94,6 +102,126 @@
                         <span class="fs-nano text-success d-none" id="tcp-progress-save-ok-{{ patient.id }}">Gespeichert ✓</span>
                     </div>
                 </form>
+            </div>
+            {% endif %}
+
+            {# ────────────────────────────────────────────────────────────
+               MEDIA-GALERIE + UPLOAD (Modal-Akte)
+               Identische Funktion zur Vollansicht — Halter kann ohne
+               Modal-Verlassen Bilder/Videos zu jedem Eintrag hochladen,
+               ansehen und löschen. Upload-POST navigiert zur Vollansicht
+               (gleiches Verhalten wie Quick-Form-Speichern).
+               ──────────────────────────────────────────────────────────── #}
+            {% if entries is defined and entries is not empty %}
+            <div class="border rounded p-3 mb-3" id="tcp-tab-media-{{ patient.id }}">
+                <div class="d-flex justify-content-between align-items-center mb-2 gap-2 flex-wrap">
+                    <div class="fw-700 fs-sm d-flex align-items-center gap-1">
+                        <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><rect stroke="currentColor" stroke-width="2" x="3" y="3" width="18" height="18" rx="2"/><circle stroke="currentColor" stroke-width="2" cx="8.5" cy="8.5" r="1.5"/><polyline stroke="currentColor" stroke-width="2" points="21 15 16 10 5 21"/></svg>
+                        Vorher / Nachher Medien
+                    </div>
+                    <span class="text-muted fs-nano">
+                        {{ media_all|length ?? 0 }} Datei{{ (media_all|length ?? 0) == 1 ? '' : 'en' }}
+                    </span>
+                </div>
+
+                {# Upload-Form — Modal-kompatibel: action wird per JS auf den
+                   gewählten Eintrag umgebogen, dann normaler POST. #}
+                <form method="POST" enctype="multipart/form-data" action="#"
+                      id="tcp-tab-media-form-{{ patient.id }}"
+                      class="row g-2 align-items-end mb-2">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+                    <div class="col-12 col-md-5">
+                        <label class="form-label fs-nano fw-600 mb-1">Zu Eintrag</label>
+                        <select name="_entry_id" class="form-select form-select-sm" required
+                                onchange="this.form.action='/patienten/{{ patient.id }}/fortschritt/'+this.value+'/media';">
+                            <option value="">— wählen —</option>
+                            {% for e in entries|reverse %}
+                            <option value="{{ e.id }}">{{ e.entry_date|date_de }} · {{ e.category_name }} ({{ e.score }}/{{ e.scale_max }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-6 col-md-2">
+                        <label class="form-label fs-nano fw-600 mb-1">Phase</label>
+                        <select name="phase_label" class="form-select form-select-sm">
+                            <option value="vorher">Vorher</option>
+                            <option value="nachher">Nachher</option>
+                            <option value="verlauf" selected>Verlauf</option>
+                        </select>
+                    </div>
+
+                    <div class="col-6 col-md-3">
+                        <label class="form-label fs-nano fw-600 mb-1">Datei(en)</label>
+                        <input type="file" name="media[]" class="form-control form-control-sm"
+                               accept="image/*,video/*,audio/*" multiple required>
+                    </div>
+
+                    <div class="col-12 col-md-2">
+                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" style="vertical-align:-1px;"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            Hochladen
+                        </button>
+                    </div>
+                    <div class="col-12">
+                        <small class="text-muted fs-nano">Max. 25 MB · Bilder, Videos, Audio · Mehrfach-Auswahl möglich</small>
+                    </div>
+                </form>
+
+                {# Galerie — kompakter (Modal-Breite begrenzt) #}
+                {% if media_all|length > 0 %}
+                <div class="mt-2" style="max-height: 320px; overflow-y: auto;">
+                    {% for entry in entries|reverse %}
+                        {% set entry_media = media_by_entry[entry.id] ?? [] %}
+                        {% if entry_media|length > 0 %}
+                        <div class="border rounded p-2 mb-2" style="background:var(--bs-tertiary-bg);">
+                            <div class="d-flex align-items-center gap-2 mb-2 fs-nano">
+                                <span class="tcp-cat-dot" style="background:{{ entry.category_color }};"></span>
+                                <strong>{{ entry.entry_date|date_de }}</strong>
+                                <span class="text-muted">· {{ entry.category_name }} · {{ entry.score }}/{{ entry.scale_max }}</span>
+                                <span class="ms-auto text-muted">{{ entry_media|length }}×</span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-1">
+                                {% for m in entry_media %}
+                                <div class="position-relative" style="width:72px;">
+                                    {% set phase_class = m.phase_label == 'vorher' ? 'bg-warning text-dark'
+                                        : (m.phase_label == 'nachher' ? 'bg-success text-white' : 'bg-secondary text-white') %}
+                                    <a href="{{ media_url_base }}/{{ m.id }}" target="_blank" rel="noopener"
+                                       class="d-block rounded overflow-hidden border"
+                                       style="aspect-ratio:1/1;background:#000;">
+                                        {% if m.media_type == 'image' %}
+                                        <img src="{{ media_url_base }}/{{ m.id }}" alt=""
+                                             style="width:100%;height:100%;object-fit:cover;" loading="lazy">
+                                        {% elseif m.media_type == 'video' %}
+                                        <div class="d-flex align-items-center justify-content-center text-white" style="width:100%;height:100%;background:#222;">
+                                            <svg width="22" height="22" fill="currentColor" viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+                                        </div>
+                                        {% else %}
+                                        <div class="d-flex align-items-center justify-content-center text-white fs-nano" style="width:100%;height:100%;background:#444;">
+                                            AUDIO
+                                        </div>
+                                        {% endif %}
+                                    </a>
+                                    <span class="position-absolute top-0 start-0 m-1 badge {{ phase_class }}" style="font-size:.55rem;line-height:1;padding:2px 4px;">{{ m.phase_label[0:1]|upper }}</span>
+                                    <form method="POST"
+                                          action="/patienten/{{ patient.id }}/fortschritt/media/{{ m.id }}/loeschen"
+                                          class="position-absolute top-0 end-0 m-1"
+                                          onsubmit="return confirm('Datei löschen?');">
+                                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                                        <button type="submit" class="btn btn-danger" style="padding:0 4px;font-size:9px;line-height:1;">×</button>
+                                    </form>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-muted fs-nano text-center py-2">
+                    Noch keine Medien hochgeladen — Lade Bilder hoch um die {% if is_trainer ?? false %}Trainings-Story{% else %}Therapie-Story{% endif %} aufzubauen.
+                </div>
+                {% endif %}
             </div>
             {% endif %}
 

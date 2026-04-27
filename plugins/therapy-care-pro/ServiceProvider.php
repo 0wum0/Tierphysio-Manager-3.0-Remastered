@@ -239,15 +239,48 @@ class ServiceProvider
             $naturalTypes = $repo->getNaturalTherapyTypesByCategory();
             $reports    = $repo->getTherapyReportsForPatient($patientId);
 
+            /* Für Modal-Akte: jüngste Einträge + Media-Galerie laden, damit
+             * der Halter direkt aus dem Modal Vorher-/Nachher-Bilder
+             * hochladen, ansehen und löschen kann.
+             *
+             * Begrenzt auf 30 Tage / 60 Dateien — der Modal-Tab muss schnell
+             * öffnen. Vollansicht zeigt alles. */
+            $entries  = $repo->getProgressEntriesForPatient(
+                $patientId,
+                date('Y-m-d', strtotime('-90 days')),
+                date('Y-m-d')
+            );
+            $allMedia = $repo->getMediaForPatient($patientId, 60);
+            $mediaByEntry = [];
+            foreach ($allMedia as $m) {
+                $eid = (int)$m['progress_entry_id'];
+                $mediaByEntry[$eid][] = $m;
+            }
+
+            /* Tenant-Typ für Trainer-spezifische Beschriftungen. */
+            $isTrainer = false;
+            try {
+                $settingsRepo = Application::getInstance()->getContainer()
+                    ->get(\App\Repositories\SettingsRepository::class);
+                $isTrainer = ($settingsRepo->get('practice_type', 'therapeut') === 'trainer');
+            } catch (\Throwable) {}
+
             return $view->fetch('@therapy-care-pro/patient_tab_progress.twig', [
-                'patient'    => $patient,
-                'latest'     => $latest,
-                'categories' => $cats,
-                'visibility' => $visibility,
-                'natural'    => $natural,
-                'types'      => $naturalTypes,
-                'reports'    => $reports,
-                'csrf_token' => $_SESSION['csrf_token'] ?? '',
+                'patient'        => $patient,
+                'latest'         => $latest,
+                'categories'     => $cats,
+                'visibility'     => $visibility,
+                'natural'        => $natural,
+                'types'          => $naturalTypes,
+                'reports'        => $reports,
+                'csrf_token'     => $_SESSION['csrf_token'] ?? '',
+                /* Neu für Modal-Galerie + Upload: */
+                'entries'        => $entries,
+                'media_all'      => $allMedia,
+                'media_by_entry' => $mediaByEntry,
+                'media_url_base' => '/patienten/' . $patientId . '/fortschritt/media',
+                'story_url'      => '/patienten/' . $patientId . '/fortschritt/story',
+                'is_trainer'     => $isTrainer,
             ]);
         } catch (\Throwable $e) {
             return '<div class="p-3 text-muted">Fortschrittsdaten nicht verfügbar.</div>';
