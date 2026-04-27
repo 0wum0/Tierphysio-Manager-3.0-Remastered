@@ -22,6 +22,7 @@ class ServiceProvider
         require_once __DIR__ . '/MessagingMailService.php';
         require_once __DIR__ . '/MessagingAdminController.php';
         require_once __DIR__ . '/MessagingOwnerController.php';
+        require_once __DIR__ . '/OwnerPortalBookingController.php';
 
         $this->runMigrations();
 
@@ -78,6 +79,16 @@ class ServiceProvider
         $router->get('/portal/rechnungen',               [OwnerPortalController::class,      'invoices'],       []);
         $router->get('/portal/rechnungen/{id}/pdf',      [OwnerPortalController::class,      'invoicePdf'],     []);
         $router->get('/portal/termine',                  [OwnerPortalController::class,      'appointments'],   []);
+
+        /* ── Hundeschul-Portal: Kurse + Pakete buchen (nur für Trainer-Tenants) ──
+         * Der Controller prüft in jeder Methode selbständig, dass es sich um einen
+         * Trainer-Tenant handelt (sonst 404) — Routen sind immer registriert, damit
+         * kein Tenant-Switch die URL-Konfiguration ändert. */
+        $router->get('/portal/kurse',                            [OwnerPortalBookingController::class, 'coursesIndex'],     []);
+        $router->get('/portal/kurse/{id}',                       [OwnerPortalBookingController::class, 'courseDetail'],    []);
+        $router->post('/portal/kurse/{id}/einschreiben',         [OwnerPortalBookingController::class, 'courseEnroll'],    []);
+        $router->get('/portal/pakete',                           [OwnerPortalBookingController::class, 'packagesIndex'],   []);
+        $router->post('/portal/pakete/{id}/kaufen',              [OwnerPortalBookingController::class, 'packagePurchase'], []);
 
         /* ── Admin portal management (requires staff auth) ── */
         $router->post('/portal-admin/einstellungen',             [OwnerPortalAdminController::class, 'saveSettings'],   ['auth']);

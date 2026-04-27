@@ -63,7 +63,27 @@ class OwnerPortalController extends Controller
             'portal_unread_count' => $this->portalUnread($ownerId),
             'csrf_token'          => $this->session->generateCsrfToken(),
             'show_homework_nav'   => $this->isHomeworkEnabled(),
+            /* Trainer-Tenant-Flag: aktiviert Kurse/Pakete-Navigation im Portal.
+             * Lazily aus settings.practice_type gelesen — Fallback 'therapeut'. */
+            'is_trainer_tenant'   => $this->isTrainerTenant(),
         ];
+    }
+
+    /**
+     * True wenn der aktuelle Tenant eine Hundeschule ist. Cache wäre hier
+     * overkill — wird nur einmal pro Request aus settings gezogen.
+     */
+    private function isTrainerTenant(): bool
+    {
+        try {
+            $val = $this->db->safeFetchColumn(
+                "SELECT `value` FROM `{$this->db->prefix('settings')}` WHERE `key` = ?",
+                ['practice_type']
+            );
+            return strtolower(trim((string)($val ?? 'therapeut'))) === 'trainer';
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /* ── Auth guard helper ── */

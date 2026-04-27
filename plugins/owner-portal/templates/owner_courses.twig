@@ -1,0 +1,76 @@
+{% extends '@owner-portal/portal_layout.twig' %}
+{% set active_nav = 'kurse' %}
+{% block content %}
+
+<h1 class="portal-page-title">🎓 Kurse buchen</h1>
+<p class="text-secondary" style="margin-top:-.4rem;margin-bottom:1rem;">
+    Wähle einen Kurs aus und schreibe deinen Hund direkt ein. Die Rechnung findest du danach unter „Rechnungen".
+</p>
+
+{% if courses %}
+    <div class="pet-grid">
+    {% for c in courses %}
+        {% set is_enrolled  = c.id in enrolled_course_ids %}
+        {% set enrolled_cnt = c.enrolled_count|default(0) %}
+        {% set max_part     = c.max_participants|default(0) %}
+        {% set free_spots   = max_part > 0 ? (max_part - enrolled_cnt) : 9999 %}
+        {% set is_full      = max_part > 0 and free_spots <= 0 %}
+
+        <a href="/portal/kurse/{{ c.id }}" class="pet-card" style="display:block;">
+            <div class="pet-card-body">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                    <div class="pet-card-name">{{ c.name }}</div>
+                    {% if is_enrolled %}
+                        <span class="badge-status badge-paid">eingeschrieben</span>
+                    {% elseif is_full %}
+                        <span class="badge-status badge-open">ausgebucht</span>
+                    {% else %}
+                        <span class="badge-status badge-paid">{{ free_spots }} frei</span>
+                    {% endif %}
+                </div>
+
+                {% if c.description %}
+                    <div class="pet-card-meta" style="min-height:2.5em;">
+                        {{ c.description|length > 120 ? c.description|slice(0, 120) ~ '…' : c.description }}
+                    </div>
+                {% endif %}
+
+                <div class="pet-card-meta" style="margin-top:.6rem;">
+                    {% if c.start_date %}
+                        📅 Start: {{ c.start_date|date('d.m.Y') }}
+                    {% endif %}
+                    {% if c.location %}
+                        <br>📍 {{ c.location }}
+                    {% endif %}
+                </div>
+
+                {% if c.price_cents is defined and c.price_cents > 0 %}
+                    <div class="pet-card-meta text-primary" style="margin-top:.4rem;font-weight:600;">
+                        {{ (c.price_cents / 100)|number_format(2, ',', '.') }} €
+                        {% if c.num_sessions %} · {{ c.num_sessions }} Termine{% endif %}
+                    </div>
+                {% endif %}
+
+                <div style="margin-top:.6rem;text-align:right;">
+                    <span class="text-primary" style="font-size:.85rem;font-weight:600;">
+                        Details ansehen →
+                    </span>
+                </div>
+            </div>
+        </a>
+    {% endfor %}
+    </div>
+{% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="opacity:.2;margin-bottom:1rem;">
+                <path stroke="currentColor" stroke-width="1.5" d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                <path stroke="currentColor" stroke-width="1.5" d="M6 12v5c3 3 9 3 12 0v-5"/>
+            </svg>
+            <p class="text-secondary mb-0">Aktuell keine buchbaren Kurse verfügbar.</p>
+            <p class="text-secondary" style="font-size:.8rem;">Schau einfach später nochmal vorbei!</p>
+        </div>
+    </div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,139 @@
+{% extends '@owner-portal/portal_layout.twig' %}
+{% set active_nav = 'kurse' %}
+{% block content %}
+
+<div style="margin-bottom:1rem;">
+    <a href="/portal/kurse" class="text-secondary" style="text-decoration:none;font-size:.85rem;">
+        ← Zurück zur Kursliste
+    </a>
+</div>
+
+<h1 class="portal-page-title">{{ course.name }}</h1>
+
+<div class="row g-3" style="display:grid;grid-template-columns:2fr 1fr;gap:1rem;margin-top:1rem;">
+
+    {# ── Linke Spalte: Kurs-Info + Termine ── #}
+    <div>
+        <div class="card mb-3">
+            <div class="card-body">
+                {% if course.description %}
+                    <p style="white-space:pre-line;">{{ course.description }}</p>
+                {% endif %}
+
+                <dl style="display:grid;grid-template-columns:auto 1fr;gap:.4rem 1rem;margin:0;font-size:.88rem;">
+                    {% if course.start_date %}
+                        <dt class="text-secondary">Start:</dt>
+                        <dd style="margin:0;">{{ course.start_date|date('d.m.Y') }}</dd>
+                    {% endif %}
+                    {% if course.end_date %}
+                        <dt class="text-secondary">Ende:</dt>
+                        <dd style="margin:0;">{{ course.end_date|date('d.m.Y') }}</dd>
+                    {% endif %}
+                    {% if course.location %}
+                        <dt class="text-secondary">Ort:</dt>
+                        <dd style="margin:0;">{{ course.location }}</dd>
+                    {% endif %}
+                    {% if course.num_sessions %}
+                        <dt class="text-secondary">Termine:</dt>
+                        <dd style="margin:0;">{{ course.num_sessions }}</dd>
+                    {% endif %}
+                    {% if course.max_participants %}
+                        <dt class="text-secondary">Plätze:</dt>
+                        <dd style="margin:0;">
+                            {{ course.enrolled_count|default(0) }} / {{ course.max_participants }}
+                            {% if free_spots > 0 %}
+                                <span class="badge-status badge-paid" style="margin-left:.5rem;">{{ free_spots }} frei</span>
+                            {% else %}
+                                <span class="badge-status badge-open" style="margin-left:.5rem;">ausgebucht — Warteliste</span>
+                            {% endif %}
+                        </dd>
+                    {% endif %}
+                    {% if course.price_cents is defined and course.price_cents > 0 %}
+                        <dt class="text-secondary">Preis:</dt>
+                        <dd style="margin:0;font-weight:700;color:var(--bs-primary);">
+                            {{ (course.price_cents / 100)|number_format(2, ',', '.') }} €
+                        </dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+
+        {% if sessions %}
+            <div class="card">
+                <div class="card-body">
+                    <h3 style="font-size:1rem;font-weight:600;margin-bottom:.8rem;">📅 Termine</h3>
+                    <table class="portal-table" style="width:100%;">
+                        <thead>
+                            <tr>
+                                <th>Datum</th>
+                                <th>Uhrzeit</th>
+                                <th>Dauer</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for s in sessions %}
+                            <tr>
+                                <td>{{ s.session_date|date('D, d.m.Y') }}</td>
+                                <td>{{ s.start_time|default('—') }}</td>
+                                <td>{{ s.duration_min ? s.duration_min ~ ' Min' : '—' }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    {# ── Rechte Spalte: Einschreibe-Formular ── #}
+    <div>
+        <div class="card" style="position:sticky;top:1rem;">
+            <div class="card-body">
+                <h3 style="font-size:1rem;font-weight:600;margin-bottom:.8rem;">🐾 Einschreiben</h3>
+
+                {% if pets|length == 0 %}
+                    <p class="text-secondary" style="font-size:.85rem;">
+                        Du hast noch keine Hunde hinterlegt. Bitte wende dich an die Hundeschule.
+                    </p>
+                {% else %}
+                    <form method="POST" action="/portal/kurse/{{ course.id }}/einschreiben">
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+
+                        <label class="form-label" style="font-size:.82rem;font-weight:600;">Welcher Hund?</label>
+                        <select name="patient_id" class="form-control mb-3" required>
+                            <option value="">— Hund auswählen —</option>
+                            {% for pet in pets %}
+                                {% set already = pet.id in enrolled_pet_ids %}
+                                <option value="{{ pet.id }}" {{ already ? 'disabled' : '' }}>
+                                    {{ pet.name }}{% if already %} (bereits eingeschrieben){% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+
+                        {% if free_spots > 0 %}
+                            <button type="submit" class="portal-btn portal-btn-primary" style="width:100%;">
+                                Jetzt einschreiben
+                            </button>
+                            {% if course.price_cents is defined and course.price_cents > 0 %}
+                                <p class="text-secondary" style="font-size:.75rem;margin-top:.6rem;text-align:center;">
+                                    Nach der Einschreibung erhältst du eine Rechnung über
+                                    <strong>{{ (course.price_cents / 100)|number_format(2, ',', '.') }} €</strong>.
+                                </p>
+                            {% endif %}
+                        {% else %}
+                            <button type="submit" class="portal-btn" style="width:100%;background:var(--bs-warning);color:#000;">
+                                Auf Warteliste setzen
+                            </button>
+                            <p class="text-secondary" style="font-size:.75rem;margin-top:.6rem;text-align:center;">
+                                Der Kurs ist voll. Wir melden uns, sobald ein Platz frei wird.
+                            </p>
+                        {% endif %}
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

@@ -1,0 +1,103 @@
+{% extends '@owner-portal/portal_layout.twig' %}
+{% set active_nav = 'pakete' %}
+{% block content %}
+
+<h1 class="portal-page-title">📦 Pakete</h1>
+<p class="text-secondary" style="margin-top:-.4rem;margin-bottom:1rem;">
+    Kaufe ein Trainings-Paket und löse die Einheiten flexibel bei kommenden Terminen ein.
+</p>
+
+{# ── Aktuelle Guthaben des Halters ── #}
+{% if owned_balances %}
+    <div class="card mb-3">
+        <div class="card-body">
+            <h3 style="font-size:.95rem;font-weight:600;margin-bottom:.8rem;">💰 Dein Guthaben</h3>
+            <table class="portal-table" style="width:100%;">
+                <thead>
+                    <tr>
+                        <th>Paket</th>
+                        <th>Verfügbar</th>
+                        <th>Gültig bis</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for b in owned_balances %}
+                    {% set left = b.units_total - b.units_used %}
+                    <tr>
+                        <td>{{ b.package_name|default('—') }}</td>
+                        <td>
+                            <strong>{{ left }}</strong> / {{ b.units_total }} Einheiten
+                        </td>
+                        <td class="text-secondary">
+                            {{ b.expires_at ? b.expires_at|date('d.m.Y') : 'unbegrenzt' }}
+                        </td>
+                        <td>
+                            {% set sc = {'active':'badge-paid','used_up':'badge-draft','expired':'badge-open','cancelled':'badge-draft'} %}
+                            <span class="badge-status {{ sc[b.status]|default('badge-open') }}">{{ b.status }}</span>
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endif %}
+
+{# ── Verfügbare Pakete zum Kaufen ── #}
+{% if packages %}
+    <h2 style="font-size:1.1rem;font-weight:600;margin:1.5rem 0 .8rem;">Verfügbare Pakete</h2>
+    <div class="pet-grid">
+    {% for pkg in packages %}
+        <div class="pet-card" style="display:flex;flex-direction:column;">
+            <div class="pet-card-body" style="flex:1;display:flex;flex-direction:column;">
+                <div class="pet-card-name">{{ pkg.name }}</div>
+
+                {% if pkg.description %}
+                    <div class="pet-card-meta" style="margin-top:.4rem;flex:1;">
+                        {{ pkg.description }}
+                    </div>
+                {% endif %}
+
+                <div style="margin-top:.8rem;padding:.6rem;background:var(--bs-tertiary-bg);border-radius:8px;">
+                    <div class="text-secondary" style="font-size:.75rem;">Umfang</div>
+                    <div style="font-weight:600;">
+                        {{ pkg.total_units }} Einheit{{ pkg.total_units != 1 ? 'en' : '' }}
+                        {% if pkg.validity_days %}
+                            <span class="text-secondary" style="font-weight:400;font-size:.8rem;">
+                                · gültig {{ pkg.validity_days }} Tage
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div style="margin-top:.8rem;text-align:center;">
+                    <div class="text-secondary" style="font-size:.75rem;">Preis</div>
+                    <div style="font-size:1.4rem;font-weight:700;color:var(--bs-primary);">
+                        {{ (pkg.price_cents / 100)|number_format(2, ',', '.') }} €
+                    </div>
+                </div>
+
+                <form method="POST" action="/portal/pakete/{{ pkg.id }}/kaufen" style="margin-top:.8rem;"
+                      onsubmit="return confirm('Paket „{{ pkg.name|e('js') }}\u00ab für {{ (pkg.price_cents / 100)|number_format(2, ',', '.') }} € jetzt verbindlich kaufen?');">
+                    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                    <button type="submit" class="portal-btn portal-btn-primary" style="width:100%;">
+                        Jetzt kaufen
+                    </button>
+                </form>
+            </div>
+        </div>
+    {% endfor %}
+    </div>
+{% else %}
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <svg width="48" height="48" fill="none" viewBox="0 0 24 24" style="opacity:.2;margin-bottom:1rem;">
+                <path stroke="currentColor" stroke-width="1.5" d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            </svg>
+            <p class="text-secondary mb-0">Aktuell sind keine Pakete verfügbar.</p>
+        </div>
+    </div>
+{% endif %}
+
+{% endblock %}
