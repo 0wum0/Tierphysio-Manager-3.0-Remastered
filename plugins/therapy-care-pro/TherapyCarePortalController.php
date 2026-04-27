@@ -108,14 +108,96 @@ class TherapyCarePortalController extends Controller
         $latest     = $this->repo->getLatestProgressForPatient($patientId);
         $chartData  = $this->buildChartData($categories, $entries);
 
+        /* Medien-Galerie zum Eintrag — read-only für den Halter.
+         * Galerie-URLs verweisen auf die Portal-Serve-Route, die Owner-
+         * Authentifizierung statt Praxis-Auth nutzt. */
+        $media = $this->repo->getMediaForPatient($patientId, 60);
+
         $this->render('@therapy-care-pro/portal_progress.twig', [
-            'page_title'  => 'Fortschritt — ' . $patient['name'],
-            'patient'     => $patient,
-            'portal_user' => $portalUser,
-            'categories'  => $categories,
-            'latest'      => $latest,
-            'chart_data'  => $chartData,
+            'page_title'     => 'Fortschritt — ' . $patient['name'],
+            'patient'        => $patient,
+            'portal_user'    => $portalUser,
+            'categories'     => $categories,
+            'latest'         => $latest,
+            'chart_data'     => $chartData,
+            'media'          => $media,
+            'media_url_base' => '/portal/tcp/tiere/' . $patientId . '/fortschritt/media',
+            'story_url'      => '/portal/tcp/tiere/' . $patientId . '/fortschritt/story',
         ]);
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       GET /portal/tcp/tiere/{id}/fortschritt/story
+       Owner views the chronological therapy story for their pet.
+       Reuses the same template as the practice-side, with
+       portal-scoped media URLs.
+    ══════════════════════════════════════════════════════════ */
+    public function progressStory(array $params = []): void
+    {
+        $portalUser = $this->requirePortalAuth();
+        $patientId  = (int)$params['id'];
+        $patient    = $this->requirePatientOwnership($portalUser, $patientId);
+
+        /* Respect tenant-side visibility flag — wenn der Therapeut den
+         * Fortschritt nicht freigegeben hat, leiten wir zurück. */
+        $visibility = $this->repo->getPortalVisibility($patientId);
+        if (!$visibility['show_progress']) {
+            $this->redirect('/portal/tiere/' . $patientId);
+            return;
+        }
+
+        $media         = $this->repo->getMediaForPatient($patientId);
+        $beforeAfter   = $this->repo->getBeforeAfterPairs($patientId);
+        $latestEntries = $this->repo->getLatestProgressForPatient($patientId);
+        $isTrainer     = ($this->settingsRepo->get('practice_type', 'therapeut') === 'trainer');
+
+        $this->render('@therapy-care-pro/progress_story.twig', [
+            'page_title'     => ($isTrainer ? 'Trainings-Verlauf — ' : 'Therapie-Story — ') . $patient['name'],
+            'patient'        => $patient,
+            'portal_user'    => $portalUser,
+            'media'          => $media,
+            'before_after'   => $beforeAfter,
+            'latest'         => $latestEntries,
+            'is_trainer'     => $isTrainer,
+            /* Wichtig: Portal-User darf nicht /patienten/{id}/... aufrufen,
+             * deshalb hier die Portal-Variante. Das Story-Template nutzt
+             * `media_url_base` für alle <img>/<video>-Quellen. */
+            'media_url_base' => '/portal/tcp/tiere/' . $patientId . '/fortschritt/media',
+            'is_portal_view' => true,
+        ]);
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       GET /portal/tcp/tiere/{id}/fortschritt/media/{media_id}
+       Authenticated media file delivery for the owner portal.
+    ══════════════════════════════════════════════════════════ */
+    public function progressMediaServe(array $params = []): void
+    {
+        $portalUser = $this->requirePortalAuth();
+        $patientId  = (int)$params['id'];
+        $mediaId    = (int)$params['media_id'];
+
+        $this->requirePatientOwnership($portalUser, $patientId);
+
+        $media = $this->repo->findProgressMedia($mediaId);
+        if (!$media || (int)$media['patient_id'] !== $patientId) {
+            $this->abort(404);
+            return;
+        }
+
+        $path = $this->db->storagePath($media['file_path']);
+        if (!is_file($path)) {
+            $this->abort(404);
+            return;
+        }
+
+        header('Content-Type: ' . $media['mime_type']);
+        header('Content-Length: ' . filesize($path));
+        header('Cache-Control: private, max-age=3600');
+        header('Content-Disposition: inline; filename="' .
+            preg_replace('/[^a-zA-Z0-9._-]/', '_', $media['original_name'] ?: 'media') . '"');
+        readfile($path);
+        exit;
     }
 
     /* ══════════════════════════════════════════════════════════

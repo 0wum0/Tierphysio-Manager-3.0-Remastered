@@ -61,6 +61,15 @@ class ServiceProvider
         $router->post('/patienten/{id}/fortschritt',                          [TherapyCareController::class, 'progressStore'],       ['auth']);
         $router->post('/patienten/{id}/fortschritt/{entry_id}/loeschen',      [TherapyCareController::class, 'progressDeleteEntry'], ['auth']);
 
+        /* ── MODULE 1.b: Progress Media (Vorher/Nachher) + Story ──
+         * Spezifischere Routen ZUERST registrieren — Router-Matching ist
+         * pattern-order-sensitive: /story muss vor /{entry_id}/loeschen
+         * matchen, sonst greift {entry_id} = "story". */
+        $router->get( '/patienten/{id}/fortschritt/story',                    [TherapyCareController::class, 'progressStory'],       ['auth']);
+        $router->post('/patienten/{id}/fortschritt/{entry_id}/media',         [TherapyCareController::class, 'progressMediaUpload'], ['auth']);
+        $router->get( '/patienten/{id}/fortschritt/media/{media_id}',         [TherapyCareController::class, 'progressMediaServe'],  ['auth']);
+        $router->post('/patienten/{id}/fortschritt/media/{media_id}/loeschen',[TherapyCareController::class, 'progressMediaDelete'], ['auth']);
+
         /* ── MODULE 2: Feedback (Practice view) ── */
         $router->get( '/patienten/{id}/feedback',                             [TherapyCareController::class, 'feedbackIndex'],       ['auth']);
 
@@ -120,6 +129,11 @@ class ServiceProvider
         $router->get( '/api/tcp/patienten/{id}/modal-data',                   [TherapyCareController::class, 'apiModalData'],        ['auth']);
 
         /* ── OWNER PORTAL EXTENSIONS ── */
+        /* Spezifischere Routen ZUERST: /story und /media/{id} müssen vor
+         * /fortschritt matchen, damit /story nicht als id-Parameter
+         * interpretiert wird. */
+        $router->get( '/portal/tcp/tiere/{id}/fortschritt/story',             [TherapyCarePortalController::class, 'progressStory'],     []);
+        $router->get( '/portal/tcp/tiere/{id}/fortschritt/media/{media_id}',  [TherapyCarePortalController::class, 'progressMediaServe'],[]);
         $router->get( '/portal/tcp/tiere/{id}/fortschritt',                   [TherapyCarePortalController::class, 'progress'],        []);
         $router->get( '/portal/tcp/tiere/{id}/feedback',                      [TherapyCarePortalController::class, 'feedbackList'],    []);
         $router->post('/portal/tcp/tiere/{id}/feedback',                      [TherapyCarePortalController::class, 'feedbackStore'],   []);
@@ -290,6 +304,7 @@ class ServiceProvider
             $expectedTables = [
                 'tcp_progress_categories',
                 'tcp_progress_entries',
+                'tcp_progress_media',
                 'tcp_exercise_feedback',
                 'tcp_reminder_templates',
                 'tcp_reminder_queue',

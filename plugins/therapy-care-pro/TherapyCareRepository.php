@@ -152,6 +152,149 @@ class TherapyCareRepository
     }
 
     /* ══════════════════════════════════════════════════════════
+       MODULE 1.b — PROGRESS MEDIA (Vorher / Nachher / Verlauf)
+       Migration 002_progress_media.sql
+       ──────────────────────────────────────────────────────────
+       Trägt Foto/Video-Anhänge zu Fortschrittseinträgen. Genutzt
+       von Praxis (Upload + Galerie), Portal (read-only Galerie)
+       und Therapie-Story (chronologische Bildstrecke).
+    ══════════════════════════════════════════════════════════ */
+
+    /**
+     * Speichert einen neuen Medien-Datensatz.
+     * file_path ist relativ zum Tenant-Storage (storagePath('progress_media')).
+     *
+     * @param array{
+     *   progress_entry_id:int, patient_id:int, file_path:string,
+     *   mime_type:string, file_size:int, original_name?:string,
+     *   media_type?:string, phase_label?:string, caption?:string,
+     *   sort_order?:int, uploaded_by?:int, uploaded_via?:string
+     * } $data
+     */
+    public function createProgressMedia(array $data): int
+    {
+        $this->db->execute(
+            "INSERT INTO `{$this->t('tcp_progress_media')}`
+                (progress_entry_id, patient_id, file_path, mime_type, file_size,
+                 original_name, media_type, phase_label, caption, sort_order,
+                 uploaded_by, uploaded_via)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                (int)$data['progress_entry_id'],
+                (int)$data['patient_id'],
+                (string)$data['file_path'],
+                (string)$data['mime_type'],
+                (int)($data['file_size']      ?? 0),
+                (string)($data['original_name']?? ''),
+                (string)($data['media_type']  ?? 'image'),
+                (string)($data['phase_label'] ?? 'verlauf'),
+                (string)($data['caption']     ?? ''),
+                (int)($data['sort_order']     ?? 0),
+                isset($data['uploaded_by'])   ? (int)$data['uploaded_by'] : null,
+                (string)($data['uploaded_via']?? 'practice'),
+            ]
+        );
+        return (int)$this->db->lastInsertId();
+    }
+
+    /** Alle Medien zu einem einzelnen Eintrag, geordnet nach sort_order. */
+    public function getMediaForEntry(int $progressEntryId): array
+    {
+        return $this->db->fetchAll(
+            "SELECT * FROM `{$this->t('tcp_progress_media')}`
+              WHERE progress_entry_id = ?
+              ORDER BY sort_order ASC, id ASC",
+            [$progressEntryId]
+        );
+    }
+
+    /**
+     * Alle Medien eines Patienten — chronologisch absteigend, mit Eintrags-Kontext.
+     * Genutzt von der Therapie-Story-View für die Vorher/Nachher-Bildstrecke.
+     */
+    public function getMediaForPatient(int $patientId, int $limit = 200): array
+    {
+        return $this->db->fetchAll(
+            "SELECT m.*,
+                    e.entry_date,
+                    e.score,
+                    e.notes        AS entry_notes,
+                    c.name         AS category_name,
+                    c.color        AS category_color,
+                    c.scale_min    AS category_scale_min,
+                    c.scale_max    AS category_scale_max
+               FROM `{$this->t('tcp_progress_media')}` m
+               JOIN `{$this->t('tcp_progress_entries')}`     e ON e.id = m.progress_entry_id
+               JOIN `{$this->t('tcp_progress_categories')}`  c ON c.id = e.category_id
+              WHERE m.patient_id = ?
+              ORDER BY e.entry_date DESC, m.created_at DESC
+              LIMIT ?",
+            [$patientId, $limit]
+        );
+    }
+
+    /** Findet einzelne Datei zum Authorisieren / Ausliefern. */
+    public function findProgressMedia(int $id): ?array
+    {
+        $row = $this->db->fetch(
+            "SELECT * FROM `{$this->t('tcp_progress_media')}` WHERE id = ? LIMIT 1",
+            [$id]
+        );
+        return $row ?: null;
+    }
+
+    public function deleteProgressMedia(int $id): void
+    {
+        $this->db->execute(
+            "DELETE FROM `{$this->t('tcp_progress_media')}` WHERE id = ?",
+            [$id]
+        );
+    }
+
+    /**
+     * Erste „vorher"- und letzte „nachher"-Datei pro Kategorie — für die
+     * kompakten Vergleichskarten auf der Story-Übersicht.
+     */
+    public function getBeforeAfterPairs(int $patientId): array
+    {
+        $rows = $this->db->fetchAll(
+            "SELECT m.*,
+                    c.name  AS category_name,
+                    c.color AS category_color,
+                    e.entry_date
+               FROM `{$this->t('tcp_progress_media')}` m
+               JOIN `{$this->t('tcp_progress_entries')}`    e ON e.id = m.progress_entry_id
+               JOIN `{$this->t('tcp_progress_categories')}` c ON c.id = e.category_id
+              WHERE m.patient_id = ?
+                AND m.phase_label IN ('vorher','nachher')
+              ORDER BY e.entry_date ASC, m.created_at ASC",
+            [$patientId]
+        );
+
+        $byCat = [];
+        foreach ($rows as $r) {
+            $cid = (int)$r['category_name'];
+            $key = $r['category_name'];
+            if (!isset($byCat[$key])) {
+                $byCat[$key] = [
+                    'category_name'  => $r['category_name'],
+                    'category_color' => $r['category_color'],
+                    'vorher'         => null,
+                    'nachher'        => null,
+                ];
+            }
+            /* Erste 'vorher' und letzte 'nachher' gewinnen: erste Zuweisung
+             * für vorher (ASC sortiert), letzte für nachher (überschreibt). */
+            if ($r['phase_label'] === 'vorher' && $byCat[$key]['vorher'] === null) {
+                $byCat[$key]['vorher'] = $r;
+            } elseif ($r['phase_label'] === 'nachher') {
+                $byCat[$key]['nachher'] = $r;
+            }
+        }
+        return array_values($byCat);
+    }
+
+    /* ══════════════════════════════════════════════════════════
        MODULE 2 — EXERCISE FEEDBACK
     ══════════════════════════════════════════════════════════ */
 

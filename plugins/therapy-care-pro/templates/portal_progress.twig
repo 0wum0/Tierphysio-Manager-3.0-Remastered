@@ -9,7 +9,15 @@
             <h1 class="h5 fw-700 mb-0">Therapiefortschritt</h1>
             <div class="text-muted fs-sm">{{ patient.name }}</div>
         </div>
-        <a href="/portal/tiere/{{ patient.id }}" class="btn btn-outline-secondary btn-sm ms-auto">Zurueck</a>
+        <div class="ms-auto d-flex gap-2 flex-wrap">
+            {% if media is defined and media|length > 0 and story_url is defined %}
+            <a href="{{ story_url }}" class="btn btn-primary btn-sm">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><polyline stroke="currentColor" stroke-width="2" points="12 6 12 12 16 14"/></svg>
+                <span class="ms-1">Verlauf-Story ansehen</span>
+            </a>
+            {% endif %}
+            <a href="/portal/tiere/{{ patient.id }}" class="btn btn-outline-secondary btn-sm">Zurueck</a>
+        </div>
     </div>
 
     {% if latest is not empty %}
@@ -52,6 +60,49 @@
     {% else %}
     <div class="card portal-card shadow-sm mb-4">
         <div class="card-body text-muted text-center py-4 fs-sm">Noch keine Verlaufsdaten vorhanden.</div>
+    </div>
+    {% endif %}
+
+    {# ─────────────────────────────────────────────────────────────
+       Vorher/Nachher Galerie (read-only) — wird vom Therapeuten gefüllt.
+       Direktlink in den Story-Modus für eine größere Bilderstrecke.
+       ───────────────────────────────────────────────────────────── #}
+    {% if media is defined and media|length > 0 %}
+    <div class="card portal-card shadow-sm mb-4">
+        <div class="card-header fw-700 d-flex align-items-center">
+            <span>📸 Bilder & Videos</span>
+            <span class="ms-auto text-muted fs-nano">{{ media|length }} Datei{{ media|length == 1 ? '' : 'en' }}</span>
+        </div>
+        <div class="card-body">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(120px, 1fr));gap:.5rem;">
+                {% for m in media|slice(0, 12) %}
+                <a href="{{ media_url_base }}/{{ m.id }}" target="_blank" rel="noopener"
+                   class="d-block rounded overflow-hidden border position-relative"
+                   style="aspect-ratio:1/1;background:#000;text-decoration:none;">
+                    {% if m.media_type == 'image' %}
+                    <img src="{{ media_url_base }}/{{ m.id }}" alt=""
+                         style="width:100%;height:100%;object-fit:cover;" loading="lazy">
+                    {% else %}
+                    <div class="d-flex align-items-center justify-content-center text-white" style="width:100%;height:100%;background:#222;">
+                        <svg width="28" height="28" fill="currentColor" viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+                    </div>
+                    {% endif %}
+                    {% if m.phase_label != 'verlauf' %}
+                    <span class="position-absolute top-0 start-0 m-1 badge {{ m.phase_label == 'vorher' ? 'bg-warning text-dark' : 'bg-success text-white' }}" style="font-size:.6rem;">
+                        {{ m.phase_label }}
+                    </span>
+                    {% endif %}
+                </a>
+                {% endfor %}
+            </div>
+            {% if media|length > 12 and story_url is defined %}
+            <div class="text-center mt-3">
+                <a href="{{ story_url }}" class="btn btn-sm btn-outline-primary">
+                    Alle {{ media|length }} Medien in der Story-Ansicht →
+                </a>
+            </div>
+            {% endif %}
+        </div>
     </div>
     {% endif %}
 

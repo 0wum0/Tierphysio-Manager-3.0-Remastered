@@ -1,0 +1,255 @@
+{# ════════════════════════════════════════════════════════════════════
+   Therapie-Story (Praxis + Portal)
+
+   Wird gerendert vom Praxis-Controller (TherapyCareController::progressStory)
+   sowie vom Portal-Controller (TherapyCarePortalController::progressStory).
+   Das Layout-Extends unterscheidet zwischen beiden Kontexten anhand
+   `is_portal_view`.
+
+   Inhalt:
+     1. Vorher-/Nachher-Vergleichskarten pro Kategorie
+     2. Chronologische Bildstrecke (Storyverlauf) mit Highlight-Karten
+     3. Aktueller Stand (Werte)
+
+   Variablen (vom Controller):
+     - patient            (Tier-Datensatz)
+     - media              (chron. Liste, getMediaForPatient)
+     - before_after       (Paare aus getBeforeAfterPairs)
+     - latest             (aktuelle Werte aus getLatestProgressForPatient)
+     - is_trainer         (bool, Hundeschul-Tenant)
+     - is_portal_view     (bool, default false)
+     - media_url_base     (Basis-URL für Datei-Auslieferung)
+     - story_url          (für Praxis: Link zurück; nicht im Portal)
+   ════════════════════════════════════════════════════════════════════ #}
+{% set is_portal_view = is_portal_view ?? false %}
+{% extends is_portal_view ? '@owner-portal/portal_layout.twig' : (active_theme_layout ?? 'layouts/base.twig') %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="/plugin-assets/therapy-care-pro/therapy-care-pro.css">
+<style>
+    /* Story-spezifisches Styling — bewusst klein & gekapselt, damit nichts
+       in andere Plugins/Themes leakt. */
+    .tcp-story-wrap     { max-width: 980px; margin: 0 auto; }
+    .tcp-story-hero     { text-align: center; padding: 1.4rem 0 1rem; }
+    .tcp-story-hero h1  { font-weight: 800; letter-spacing: -0.01em; }
+    .tcp-story-hero .lead { color: var(--bs-secondary-color); font-size: 0.95rem; }
+
+    .tcp-ba-grid        { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; }
+    .tcp-ba-card        { background: var(--bs-tertiary-bg); border-radius: 14px; padding: 0.75rem; border: 1px solid var(--bs-border-color); }
+    .tcp-ba-card h3     { font-size: 0.95rem; font-weight: 700; margin: 0 0 0.5rem; display:flex; align-items:center; gap:.4rem; }
+    .tcp-ba-pair        { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+    .tcp-ba-cell        { aspect-ratio: 1/1; background:#000; border-radius:10px; overflow:hidden; position:relative; display:flex; align-items:center; justify-content:center; }
+    .tcp-ba-cell img    { width:100%; height:100%; object-fit:cover; }
+    .tcp-ba-cell .placeholder { color: rgba(255,255,255,.4); font-size: .75rem; text-align:center; padding: .5rem; }
+    .tcp-ba-label       { position:absolute; top:.4rem; left:.4rem; padding: 1px 8px; border-radius:99px; font-size: .65rem; font-weight: 700; }
+    .tcp-ba-label.vorher  { background: #f59e0b; color:#fff; }
+    .tcp-ba-label.nachher { background: #16a34a; color:#fff; }
+
+    .tcp-story-stream   { display:flex; flex-direction: column; gap: 1.25rem; margin-top: 1.5rem; }
+    .tcp-story-day      { font-size: .8rem; font-weight: 700; color: var(--bs-secondary-color);
+                          text-transform: uppercase; letter-spacing: .08em;
+                          padding: .25rem .65rem; border-radius: 99px; background: var(--bs-tertiary-bg);
+                          align-self: flex-start; }
+    .tcp-story-card     { background: var(--bs-body-bg); border: 1px solid var(--bs-border-color);
+                          border-radius: 14px; padding: 0.9rem; }
+    .tcp-story-meta     { display:flex; align-items:center; gap: .5rem; font-size: .85rem;
+                          margin-bottom: .5rem; flex-wrap: wrap; }
+    .tcp-story-cat-dot  { width: 10px; height: 10px; border-radius: 50%; }
+
+    .tcp-story-media    { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.5rem; }
+    .tcp-story-media a  { display:block; aspect-ratio: 1/1; background:#000; border-radius: 10px;
+                          overflow:hidden; position:relative; }
+    .tcp-story-media img{ width:100%; height:100%; object-fit:cover; }
+    .tcp-story-media .video-overlay { position:absolute; inset:0; background: rgba(0,0,0,.4);
+                          display:flex; align-items:center; justify-content:center; color:#fff; }
+    .tcp-story-empty    { text-align:center; padding: 3rem 1rem; color: var(--bs-secondary-color); }
+
+    .tcp-current-grid   { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .75rem; margin-top: 1rem; }
+    .tcp-current-tile   { background: var(--bs-tertiary-bg); border-radius: 12px; padding: .8rem; }
+    .tcp-current-tile .label { font-size: .8rem; color: var(--bs-secondary-color); }
+    .tcp-current-tile .value { font-size: 1.4rem; font-weight: 800; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid {{ is_portal_view ? 'portal-body' : 'px-3 px-lg-4 py-4' }}">
+    <div class="tcp-story-wrap">
+
+        {# ── Header / Breadcrumb ── #}
+        {% if not is_portal_view %}
+        <nav aria-label="breadcrumb" class="mb-2">
+            <ol class="breadcrumb fs-sm">
+                <li class="breadcrumb-item"><a href="/patienten">Patienten</a></li>
+                <li class="breadcrumb-item"><a href="/patienten/{{ patient.id }}">{{ patient.name }}</a></li>
+                <li class="breadcrumb-item"><a href="/patienten/{{ patient.id }}/fortschritt">Fortschritt</a></li>
+                <li class="breadcrumb-item active">{{ is_trainer ? 'Trainings-Verlauf' : 'Therapie-Story' }}</li>
+            </ol>
+        </nav>
+        {% else %}
+        <div class="mb-3">
+            <a href="/portal/tcp/tiere/{{ patient.id }}/fortschritt" class="text-decoration-none fs-sm text-muted">
+                ← Zurück zum Fortschritt
+            </a>
+        </div>
+        {% endif %}
+
+        {# ── Hero ── #}
+        <div class="tcp-story-hero">
+            <h1 class="h3 mb-1">
+                {% if is_trainer %}🐶 Trainings-Verlauf{% else %}🌿 Therapie-Story{% endif %}
+            </h1>
+            <div class="lead">
+                {{ patient.name }}
+                {% if patient.species %} · {{ patient.species }}{% endif %}
+                {% if patient.breed %} · {{ patient.breed }}{% endif %}
+            </div>
+        </div>
+
+        {# ── Aktueller Stand ── #}
+        {% if latest is not empty %}
+        <div class="card shadow-sm mt-3">
+            <div class="card-header fw-700 fs-sm">Aktueller Stand</div>
+            <div class="card-body">
+                <div class="tcp-current-grid">
+                    {% for entry in latest %}
+                    {% set pct = ((entry.score - entry.scale_min) / max(1, entry.scale_max - entry.scale_min)) * 100 %}
+                    <div class="tcp-current-tile">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="tcp-story-cat-dot" style="background:{{ entry.category_color }};"></span>
+                            <span class="label">{{ entry.category_name }}</span>
+                        </div>
+                        <div class="value mt-1" style="color:{{ entry.category_color }};">
+                            {{ entry.score }}<span class="text-muted fs-sm">/{{ entry.scale_max }}</span>
+                        </div>
+                        <div class="tcp-progress-bar-track mt-1">
+                            <div class="tcp-progress-bar-fill" style="width:{{ pct }}%;background:{{ entry.category_color }};"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Vorher / Nachher Vergleich pro Kategorie ── #}
+        {% if before_after is not empty %}
+        <div class="mt-4">
+            <h2 class="h5 fw-700 mb-2">Vorher / Nachher</h2>
+            <div class="tcp-ba-grid">
+                {% for pair in before_after %}
+                <div class="tcp-ba-card">
+                    <h3>
+                        <span class="tcp-story-cat-dot" style="background:{{ pair.category_color }};"></span>
+                        {{ pair.category_name }}
+                    </h3>
+                    <div class="tcp-ba-pair">
+                        {# Vorher #}
+                        <div class="tcp-ba-cell">
+                            <span class="tcp-ba-label vorher">Vorher</span>
+                            {% if pair.vorher %}
+                                {% if pair.vorher.media_type == 'image' %}
+                                <img src="{{ media_url_base }}/{{ pair.vorher.id }}" alt="">
+                                {% else %}
+                                <div class="placeholder">{{ pair.vorher.media_type|upper }}<br>{{ pair.vorher.entry_date|date('d.m.Y') }}</div>
+                                {% endif %}
+                            {% else %}
+                                <div class="placeholder">— kein Bild —</div>
+                            {% endif %}
+                        </div>
+                        {# Nachher #}
+                        <div class="tcp-ba-cell">
+                            <span class="tcp-ba-label nachher">Nachher</span>
+                            {% if pair.nachher %}
+                                {% if pair.nachher.media_type == 'image' %}
+                                <img src="{{ media_url_base }}/{{ pair.nachher.id }}" alt="">
+                                {% else %}
+                                <div class="placeholder">{{ pair.nachher.media_type|upper }}<br>{{ pair.nachher.entry_date|date('d.m.Y') }}</div>
+                                {% endif %}
+                            {% else %}
+                                <div class="placeholder">— noch nichts —</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# ── Story-Stream (chronologische Karten) ──
+             Gruppiert pro Datum. Zeigt Medien + Eintrags-Kontext (Score,
+             Kategorie, Notiz). Quasi „Instagram-Story" über den Verlauf. #}
+        <div class="mt-4">
+            <h2 class="h5 fw-700 mb-2">Verlauf</h2>
+
+            {% if media is empty %}
+            <div class="tcp-story-empty">
+                <svg width="40" height="40" fill="none" viewBox="0 0 24 24" class="mb-2"><rect stroke="currentColor" stroke-width="1.5" x="3" y="3" width="18" height="18" rx="2"/><circle stroke="currentColor" stroke-width="1.5" cx="8.5" cy="8.5" r="1.5"/><polyline stroke="currentColor" stroke-width="1.5" points="21 15 16 10 5 21"/></svg>
+                <div>Noch keine Medien für die {{ is_trainer ? 'Verlaufsdokumentation' : 'Therapie-Story' }} vorhanden.</div>
+                {% if not is_portal_view %}
+                <a href="/patienten/{{ patient.id }}/fortschritt#tcp-media-section" class="btn btn-sm btn-outline-primary mt-2">
+                    Erstes Bild hochladen
+                </a>
+                {% endif %}
+            </div>
+            {% else %}
+
+            {# Gruppieren nach entry_date — media kommt schon DESC sortiert #}
+            <div class="tcp-story-stream">
+                {% set last_date = '' %}
+                {% set group = [] %}
+                {% for m in media %}
+                    {% if m.entry_date != last_date %}
+                        {# neue Gruppe öffnen #}
+                        {% if group|length > 0 %}
+                            {# Output der vorigen Gruppe — Twig hat keine native group-by-Funktion,
+                               deshalb das verschachtelte Pattern. Nicht ideal aber funktioniert. #}
+                        {% endif %}
+                        {% set last_date = m.entry_date %}
+                        <div class="tcp-story-day">{{ m.entry_date|date_de }}</div>
+                    {% endif %}
+
+                    <div class="tcp-story-card">
+                        <div class="tcp-story-meta">
+                            <span class="tcp-story-cat-dot" style="background:{{ m.category_color }};"></span>
+                            <strong>{{ m.category_name }}</strong>
+                            <span class="text-muted">·</span>
+                            <span>{{ m.score }}/{{ m.category_scale_max }}</span>
+                            {% if m.phase_label != 'verlauf' %}
+                            <span class="badge {{ m.phase_label == 'vorher' ? 'bg-warning text-dark' : 'bg-success text-white' }} fs-nano">
+                                {{ m.phase_label }}
+                            </span>
+                            {% endif %}
+                            {% if m.caption %}
+                            <span class="text-muted ms-auto fs-nano">{{ m.caption }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="tcp-story-media">
+                            <a href="{{ media_url_base }}/{{ m.id }}" target="_blank" rel="noopener">
+                                {% if m.media_type == 'image' %}
+                                <img src="{{ media_url_base }}/{{ m.id }}" alt="" loading="lazy">
+                                {% elseif m.media_type == 'video' %}
+                                <video src="{{ media_url_base }}/{{ m.id }}" preload="metadata" muted></video>
+                                <div class="video-overlay">
+                                    <svg width="40" height="40" fill="currentColor" viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+                                </div>
+                                {% else %}
+                                <div class="video-overlay">{{ m.media_type|upper }}</div>
+                                {% endif %}
+                            </a>
+                        </div>
+                        {% if m.entry_notes %}
+                        <div class="text-muted fs-sm mt-2">{{ m.entry_notes }}</div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

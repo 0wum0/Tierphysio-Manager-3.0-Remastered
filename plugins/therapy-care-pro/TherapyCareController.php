@@ -79,18 +79,34 @@ class TherapyCareController extends Controller
 
         $chartData = $this->buildChartData($categories, $entries);
 
+        /* Medien-Galerie: alle Anhänge des Patienten + pro-Eintrag-Map.
+         * Das Template zeigt eine kompakte Vorschau ganz oben + erlaubt
+         * Upload zu jedem einzelnen Eintrag. */
+        $allMedia = $this->repo->getMediaForPatient($patientId, 60);
+        $mediaByEntry = [];
+        foreach ($allMedia as $m) {
+            $eid = (int)$m['progress_entry_id'];
+            $mediaByEntry[$eid][] = $m;
+        }
+
         $this->render('@therapy-care-pro/progress_index.twig', [
-            'page_title'  => 'Therapiefortschritt — ' . $patient['name'],
-            'patient'     => $patient,
-            'categories'  => $categories,
-            'entries'     => $entries,
-            'latest'      => $latest,
-            'chart_data'  => $chartData,
-            'date_from'   => $dateFrom,
-            'date_to'     => $dateTo,
-            'csrf_token'  => $this->session->generateCsrfToken(),
-            'success'     => $this->session->getFlash('success'),
-            'error'       => $this->session->getFlash('error'),
+            'page_title'    => 'Therapiefortschritt — ' . $patient['name'],
+            'patient'       => $patient,
+            'categories'    => $categories,
+            'entries'       => $entries,
+            'latest'        => $latest,
+            'chart_data'    => $chartData,
+            'date_from'     => $dateFrom,
+            'date_to'       => $dateTo,
+            'csrf_token'    => $this->session->generateCsrfToken(),
+            'success'       => $this->session->getFlash('success'),
+            'error'         => $this->session->getFlash('error'),
+            /* Neu: Medien für Story/Galerie. media_url_base nutzt die
+             * authentifizierte Praxis-Serve-Route. */
+            'media_all'      => $allMedia,
+            'media_by_entry' => $mediaByEntry,
+            'media_url_base' => '/patienten/' . $patientId . '/fortschritt/media',
+            'story_url'      => '/patienten/' . $patientId . '/fortschritt/story',
         ]);
     }
 
@@ -140,6 +156,237 @@ class TherapyCareController extends Controller
         $this->repo->deleteProgressEntry((int)$params['entry_id']);
         $this->session->flash('success', 'Eintrag gelöscht.');
         $this->redirect("/patienten/{$params['id']}/fortschritt");
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       MODULE 1.b — PROGRESS MEDIA (Vorher/Nachher Upload)
+    ══════════════════════════════════════════════════════════ */
+
+    /** Erlaubte MIME-Prefixe + maximale Größe für Progress-Uploads. */
+    private const MEDIA_ALLOWED_PREFIXES = ['image/', 'video/', 'audio/'];
+    private const MEDIA_MAX_BYTES        = 25 * 1024 * 1024; /* 25 MB */
+
+    /**
+     * POST /patienten/{id}/fortschritt/{entry_id}/media
+     *
+     * Lädt 1..n Dateien zu einem Fortschrittseintrag hoch. Validiert
+     * Mime-Typ + Größe, speichert unter tenant-scoped storage und legt
+     * je File einen Datensatz in tcp_progress_media an.
+     */
+    public function progressMediaUpload(array $params = []): void
+    {
+        $this->validateCsrf();
+        $patientId = (int)$params['id'];
+        $entryId   = (int)$params['entry_id'];
+        $userId    = (int)($this->session->get('user_id') ?? 0);
+
+        /* Patienten-Zugehörigkeit prüfen — verhindert dass Eintrag-IDs
+         * aus fremden Tenants per direkter URL angesteuert werden (DI
+         * setzt zwar bereits den Prefix, aber wir validieren defensiv). */
+        $patient = $this->repo->getPatientWithOwner($patientId);
+        if (!$patient) {
+            $this->abort(404);
+            return;
+        }
+
+        $files = $_FILES['media'] ?? null;
+        if (!$files || empty($files['name'])) {
+            $this->session->flash('error', 'Keine Datei ausgewählt.');
+            $this->redirect("/patienten/{$patientId}/fortschritt");
+            return;
+        }
+
+        $phaseLabel = $this->sanitize($this->post('phase_label', 'verlauf'));
+        if (!in_array($phaseLabel, ['vorher', 'nachher', 'verlauf'], true)) {
+            $phaseLabel = 'verlauf';
+        }
+        $caption = trim((string)$this->post('caption', ''));
+
+        /* PHP delivers either single-file (string fields) or multi-file (array).
+         * Normalisieren auf array-Form für einheitliche Iteration. */
+        $names = (array)$files['name'];
+        $isMulti = is_array($files['name']);
+
+        $db        = \App\Core\Application::getInstance()->getContainer()->get(Database::class);
+        $targetDir = $db->storagePath('progress_media/' . $entryId);
+        if (!is_dir($targetDir)) {
+            @mkdir($targetDir, 0775, true);
+        }
+
+        $saved = 0;
+        $errors = [];
+
+        for ($i = 0; $i < count($names); $i++) {
+            $name = $isMulti ? $files['name'][$i]     : $files['name'];
+            $tmp  = $isMulti ? $files['tmp_name'][$i] : $files['tmp_name'];
+            $err  = $isMulti ? $files['error'][$i]    : $files['error'];
+            $size = (int)($isMulti ? $files['size'][$i] : $files['size']);
+
+            if ($err !== UPLOAD_ERR_OK) {
+                $errors[] = "{$name}: Upload-Fehler ({$err})";
+                continue;
+            }
+            if ($size <= 0 || $size > self::MEDIA_MAX_BYTES) {
+                $errors[] = "{$name}: Datei zu groß (max " . (self::MEDIA_MAX_BYTES / 1048576) . " MB)";
+                continue;
+            }
+
+            /* Mime per finfo (clientseitiger mime ist unzuverlässig) */
+            $finfo = new \finfo(FILEINFO_MIME_TYPE);
+            $mime  = (string)$finfo->file($tmp);
+            $allowed = false;
+            foreach (self::MEDIA_ALLOWED_PREFIXES as $p) {
+                if (str_starts_with($mime, $p)) { $allowed = true; break; }
+            }
+            if (!$allowed) {
+                $errors[] = "{$name}: Dateityp {$mime} nicht erlaubt";
+                continue;
+            }
+
+            /* Sicherer Dateiname: nur Endung übernehmen, Rest = uniqid. */
+            $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+            $ext = preg_replace('/[^a-z0-9]/', '', $ext) ?: 'bin';
+            $safeName = uniqid('m', true) . '.' . $ext;
+            $absPath  = $targetDir . DIRECTORY_SEPARATOR . $safeName;
+
+            if (!@move_uploaded_file($tmp, $absPath)) {
+                $errors[] = "{$name}: Speichern fehlgeschlagen";
+                continue;
+            }
+            @chmod($absPath, 0644);
+
+            $mediaType = match (true) {
+                str_starts_with($mime, 'video/') => 'video',
+                str_starts_with($mime, 'audio/') => 'audio',
+                str_starts_with($mime, 'image/') => 'image',
+                default                          => 'other',
+            };
+
+            $this->repo->createProgressMedia([
+                'progress_entry_id' => $entryId,
+                'patient_id'        => $patientId,
+                'file_path'         => 'progress_media/' . $entryId . '/' . $safeName,
+                'mime_type'         => $mime,
+                'file_size'         => $size,
+                'original_name'     => $name,
+                'media_type'        => $mediaType,
+                'phase_label'       => $phaseLabel,
+                'caption'           => $caption,
+                'sort_order'        => $saved,
+                'uploaded_by'       => $userId ?: null,
+                'uploaded_via'      => 'practice',
+            ]);
+            $saved++;
+        }
+
+        if ($saved > 0) {
+            $this->session->flash('success', $saved . ' Datei' . ($saved === 1 ? '' : 'en') . ' hochgeladen.');
+        }
+        if ($errors) {
+            $this->session->flash('error', implode(' · ', array_slice($errors, 0, 3)));
+        }
+
+        $this->redirect("/patienten/{$patientId}/fortschritt");
+    }
+
+    /** POST /patienten/{id}/fortschritt/media/{media_id}/loeschen */
+    public function progressMediaDelete(array $params = []): void
+    {
+        $this->validateCsrf();
+        $patientId = (int)$params['id'];
+        $mediaId   = (int)$params['media_id'];
+
+        $media = $this->repo->findProgressMedia($mediaId);
+        if (!$media || (int)$media['patient_id'] !== $patientId) {
+            $this->session->flash('error', 'Datei nicht gefunden.');
+            $this->redirect("/patienten/{$patientId}/fortschritt");
+            return;
+        }
+
+        /* Datei vom Disk entfernen — DB-Eintrag entfernt fk-CASCADE-frei
+         * weil progress_media keine Kindelemente hat. */
+        $db   = \App\Core\Application::getInstance()->getContainer()->get(Database::class);
+        $path = $db->storagePath($media['file_path']);
+        if (is_file($path)) {
+            @unlink($path);
+        }
+        $this->repo->deleteProgressMedia($mediaId);
+
+        $this->session->flash('success', 'Datei gelöscht.');
+        $this->redirect("/patienten/{$patientId}/fortschritt");
+    }
+
+    /**
+     * GET /patienten/{id}/fortschritt/media/{media_id}
+     *
+     * Liefert die Datei mit Original-MIME-Type aus. Authentifiziert über
+     * den 'auth'-Middleware der Route — verhindert direkte Storage-Pfad-
+     * Zugriffe. Patient-Match wird zusätzlich geprüft.
+     */
+    public function progressMediaServe(array $params = []): void
+    {
+        $patientId = (int)$params['id'];
+        $mediaId   = (int)$params['media_id'];
+
+        $media = $this->repo->findProgressMedia($mediaId);
+        if (!$media || (int)$media['patient_id'] !== $patientId) {
+            $this->abort(404);
+            return;
+        }
+
+        $db   = \App\Core\Application::getInstance()->getContainer()->get(Database::class);
+        $path = $db->storagePath($media['file_path']);
+        if (!is_file($path)) {
+            $this->abort(404);
+            return;
+        }
+
+        header('Content-Type: ' . $media['mime_type']);
+        header('Content-Length: ' . filesize($path));
+        header('Cache-Control: private, max-age=3600');
+        header('Content-Disposition: inline; filename="' .
+            preg_replace('/[^a-zA-Z0-9._-]/', '_', $media['original_name'] ?: 'media') . '"');
+        readfile($path);
+        exit;
+    }
+
+    /**
+     * GET /patienten/{id}/fortschritt/story
+     *
+     * Therapie-Story: chronologische Bildstrecke + Vorher/Nachher-Vergleich
+     * pro Kategorie. Reine Darstellungs-View — Daten kommen aus
+     * tcp_progress_media + tcp_progress_entries.
+     */
+    public function progressStory(array $params = []): void
+    {
+        $patientId = (int)$params['id'];
+        $patient   = $this->repo->getPatientWithOwner($patientId);
+        if (!$patient) {
+            $this->abort(404);
+            return;
+        }
+
+        $media         = $this->repo->getMediaForPatient($patientId);
+        $beforeAfter   = $this->repo->getBeforeAfterPairs($patientId);
+        $latestEntries = $this->repo->getLatestProgressForPatient($patientId);
+
+        /* Tenant-Typ ans Template — Trainer sehen "Verlaufsdokumentation"
+         * statt "Therapie-Story", aber gleiche Daten. */
+        $isTrainer = ($this->settingsRepo->get('practice_type', 'therapeut') === 'trainer');
+
+        $this->render('@therapy-care-pro/progress_story.twig', [
+            'page_title'   => ($isTrainer ? 'Trainings-Verlauf — ' : 'Therapie-Story — ') . $patient['name'],
+            'patient'      => $patient,
+            'media'        => $media,
+            'before_after' => $beforeAfter,
+            'latest'       => $latestEntries,
+            'is_trainer'   => $isTrainer,
+            /* Praxis-Story wird im Admin-Bereich gerendert — Routen für
+             * Datei-Auslieferung sind die /patienten/{id}/fortschritt/media-
+             * Endpoints (auth-pflichtig). */
+            'media_url_base' => '/patienten/' . $patientId . '/fortschritt/media',
+            'csrf_token'     => $this->session->generateCsrfToken(),
+        ]);
     }
 
     /* ══════════════════════════════════════════════════════════
