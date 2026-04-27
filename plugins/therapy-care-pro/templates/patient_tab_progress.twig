@@ -120,7 +120,7 @@
                         Vorher / Nachher Medien
                     </div>
                     <span class="text-muted fs-nano">
-                        {{ media_all|length ?? 0 }} Datei{{ (media_all|length ?? 0) == 1 ? '' : 'en' }}
+                        {% set _mc = media_all|default([])|length %}{{ _mc }} Datei{{ _mc == 1 ? '' : 'en' }}
                     </span>
                 </div>
 
