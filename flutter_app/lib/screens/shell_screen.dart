@@ -14,7 +14,7 @@ import '../core/theme.dart';
 import '../core/terminology.dart';
 
 const double _kSidebarCollapsed = 72.0;
-const double _kSidebarExpanded  = 240.0;
+const double _kSidebarExpanded = 240.0;
 
 class ShellScreen extends StatefulWidget {
   final Widget child;
@@ -28,9 +28,9 @@ class _ShellScreenState extends State<ShellScreen>
     with TickerProviderStateMixin {
   final _api = ApiService();
   int _unreadMessages = 0;
-  int _overdueCount   = 0;
-  int _newIntakes     = 0;
-  int _birthdayCount  = 0;
+  int _overdueCount = 0;
+  int _newIntakes = 0;
+  int _birthdayCount = 0;
   List<Map<String, dynamic>> _pendingIntakes = [];
   late Timer _clockTimer;
   late Timer _connectivityTimer;
@@ -110,11 +110,11 @@ class _ShellScreenState extends State<ShellScreen>
       duration: const Duration(milliseconds: 600),
     );
     _bellAnim = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end:  0.18), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 0.18), weight: 1),
       TweenSequenceItem(tween: Tween(begin: 0.18, end: -0.18), weight: 2),
       TweenSequenceItem(tween: Tween(begin: -0.18, end: 0.12), weight: 2),
       TweenSequenceItem(tween: Tween(begin: 0.12, end: -0.08), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -0.08, end: 0.0),  weight: 1),
+      TweenSequenceItem(tween: Tween(begin: -0.08, end: 0.0), weight: 1),
     ]).animate(CurvedAnimation(parent: _bellCtrl, curve: Curves.easeInOut));
   }
 
@@ -131,7 +131,9 @@ class _ShellScreenState extends State<ShellScreen>
     try {
       final result = await InternetAddress.lookup('google.com')
           .timeout(const Duration(seconds: 4));
-      if (mounted) setState(() => _isOffline = result.isEmpty || result.first.rawAddress.isEmpty);
+      if (mounted)
+        setState(() =>
+            _isOffline = result.isEmpty || result.first.rawAddress.isEmpty);
     } catch (_) {
       if (mounted) setState(() => _isOffline = true);
     }
@@ -157,7 +159,7 @@ class _ShellScreenState extends State<ShellScreen>
       // Prüfe ob Sync überhaupt aktiv ist
       final status = await _api.googleSyncStatus();
       final connected = status['connected'] as bool? ?? false;
-      final enabled   = status['sync_enabled'] as bool? ?? false;
+      final enabled = status['sync_enabled'] as bool? ?? false;
       if (!connected || !enabled) return;
 
       // Push (TheraPano → Google) + Pull (Google → TheraPano) parallel
@@ -179,21 +181,25 @@ class _ShellScreenState extends State<ShellScreen>
         _api.dashboard(),
         _api.intakeInbox().catchError((_) => <String, dynamic>{}),
       ]);
-      final d          = results[0] as Map<String, dynamic>;
-      final intakeData  = results[1] as Map<String, dynamic>;
-      final allIntakes  = (intakeData['items'] as List? ?? []);
-      final pending = allIntakes.where((e) {
-        final s = (e as Map)['status'] as String? ?? 'neu';
-        return s == 'neu' || s == 'in_bearbeitung' || s == 'pending';
-      }).map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      final d = results[0] as Map<String, dynamic>;
+      final intakeData = results[1] as Map<String, dynamic>;
+      final allIntakes = (intakeData['items'] as List? ?? []);
+      final pending = allIntakes
+          .where((e) {
+            final s = (e as Map)['status'] as String? ?? 'neu';
+            return s == 'neu' || s == 'in_bearbeitung' || s == 'pending';
+          })
+          .map((e) => Map<String, dynamic>.from(e as Map))
+          .toList();
 
       if (mounted) {
-        final newCount = pending.length + ((d['birthdays_today'] as List?)?.length ?? 0);
-        final hadMore  = newCount > _lastBellCount && _lastBellCount >= 0;
+        final newCount =
+            pending.length + ((d['birthdays_today'] as List?)?.length ?? 0);
+        final hadMore = newCount > _lastBellCount && _lastBellCount >= 0;
         setState(() {
-          _newIntakes     = pending.length;
+          _newIntakes = pending.length;
           _pendingIntakes = pending;
-          _birthdayCount  = ((d['birthdays_today'] as List?)?.length) ?? 0;
+          _birthdayCount = ((d['birthdays_today'] as List?)?.length) ?? 0;
         });
         if (hadMore && _lastBellCount >= 0) {
           _bellCtrl.forward(from: 0);
@@ -244,14 +250,38 @@ class _ShellScreenState extends State<ShellScreen>
     );
     if (_unreadMessages == 0) return icon;
     return Badge(
-      label: Text('$_unreadMessages', style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700)),
+      label: Text('$_unreadMessages',
+          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700)),
       backgroundColor: AppTheme.danger,
       child: icon,
     );
   }
 
   final _narrowScaffoldKey = GlobalKey<ScaffoldState>();
-  Terminology _term() => Terminology(isTrainer: context.read<AuthService>().isTrainer);
+  Terminology _term() =>
+      Terminology(isTrainer: context.read<AuthService>().isTrainer);
+
+  Widget _animatedContent(String location) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 260),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        final slide = Tween<Offset>(
+          begin: const Offset(0.02, 0),
+          end: Offset.zero,
+        ).animate(animation);
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(position: slide, child: child),
+        );
+      },
+      child: KeyedSubtree(
+        key: ValueKey<String>(location),
+        child: widget.child,
+      ),
+    );
+  }
 
   void _openMoreDrawer() {
     final t = _term();
@@ -264,21 +294,37 @@ class _ShellScreenState extends State<ShellScreen>
       ),
       builder: (ctx) {
         final items = [
-          _GridItem(Icons.person_rounded,          t.ownerPlural,      AppTheme.secondary, '/tierhalter'),
-          _GridItem(Icons.people_alt_rounded,      'Warteliste',       AppTheme.warning,   '/warteliste'),
-          _GridItem(Icons.warning_amber_rounded,   'Mahnungen',        AppTheme.danger,    '/mahnungen',  badge: _overdueCount),
-          _GridItem(Icons.assignment_ind_rounded,  'Anmeldungen',      AppTheme.primary,   '/anmeldungen', badge: _newIntakes),
-          _GridItem(Icons.send_rounded,            'Einladungen',      AppTheme.secondary, '/einladungen'),
-          _GridItem(Icons.category_rounded,        'Behandlungs\narten', AppTheme.tertiary,   '/behandlungsarten'),
-          _GridItem(Icons.assignment_rounded,      'Hausaufgaben',     AppTheme.primary,    '/hausaufgaben'),
-          _GridItem(Icons.description_rounded,     'Befundbögen',      AppTheme.secondary,  '/befunde'),
-          _GridItem(Icons.home_work_rounded,       'Portal Admin',     AppTheme.tertiary,   '/portal-admin'),
-          _GridItem(Icons.healing_rounded,         'Therapy Care',     AppTheme.primary,    '/tcp'),
-          _GridItem(Icons.account_balance_rounded, 'Steuerexport',     AppTheme.secondary,  '/steuerexport'),
-          _GridItem(Icons.mail_rounded,            'Mailbox',          AppTheme.tertiary,   '/mailbox'),
-          _GridItem(Icons.search_rounded,          'Suche',            AppTheme.primary,    '/suche'),
-          _GridItem(Icons.person_outline_rounded,  'Mein Profil',      AppTheme.primary,    '/profil'),
-          _GridItem(Icons.settings_rounded,        'Einstellungen',    AppTheme.tertiary,   '/einstellungen'),
+          _GridItem(Icons.person_rounded, t.ownerPlural, AppTheme.secondary,
+              '/tierhalter'),
+          _GridItem(Icons.people_alt_rounded, 'Warteliste', AppTheme.warning,
+              '/warteliste'),
+          _GridItem(Icons.warning_amber_rounded, 'Mahnungen', AppTheme.danger,
+              '/mahnungen',
+              badge: _overdueCount),
+          _GridItem(Icons.assignment_ind_rounded, 'Anmeldungen',
+              AppTheme.primary, '/anmeldungen',
+              badge: _newIntakes),
+          _GridItem(Icons.send_rounded, 'Einladungen', AppTheme.secondary,
+              '/einladungen'),
+          _GridItem(Icons.category_rounded, 'Behandlungs\narten',
+              AppTheme.tertiary, '/behandlungsarten'),
+          _GridItem(Icons.assignment_rounded, 'Hausaufgaben', AppTheme.primary,
+              '/hausaufgaben'),
+          _GridItem(Icons.description_rounded, 'Befundbögen',
+              AppTheme.secondary, '/befunde'),
+          _GridItem(Icons.home_work_rounded, 'Portal Admin', AppTheme.tertiary,
+              '/portal-admin'),
+          _GridItem(
+              Icons.healing_rounded, 'Therapy Care', AppTheme.primary, '/tcp'),
+          _GridItem(Icons.account_balance_rounded, 'Steuerexport',
+              AppTheme.secondary, '/steuerexport'),
+          _GridItem(
+              Icons.mail_rounded, 'Mailbox', AppTheme.tertiary, '/mailbox'),
+          _GridItem(Icons.search_rounded, 'Suche', AppTheme.primary, '/suche'),
+          _GridItem(Icons.person_outline_rounded, 'Mein Profil',
+              AppTheme.primary, '/profil'),
+          _GridItem(Icons.settings_rounded, 'Einstellungen', AppTheme.tertiary,
+              '/einstellungen'),
         ];
         return SafeArea(
           child: Padding(
@@ -287,7 +333,8 @@ class _ShellScreenState extends State<ShellScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 40, height: 4,
+                  width: 40,
+                  height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
                     color: cs.outlineVariant,
@@ -315,39 +362,51 @@ class _ShellScreenState extends State<ShellScreen>
                             clipBehavior: Clip.none,
                             children: [
                               Container(
-                                width: 56, height: 56,
+                                width: 56,
+                                height: 56,
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
-                                    colors: [item.color, item.color.withValues(alpha: 0.72)],
+                                    colors: [
+                                      item.color,
+                                      item.color.withValues(alpha: 0.72)
+                                    ],
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
                                   ),
                                   borderRadius: BorderRadius.circular(16),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: item.color.withValues(alpha: isDark ? 0.25 : 0.32),
-                                      blurRadius: 10, offset: const Offset(0, 4),
+                                      color: item.color.withValues(
+                                          alpha: isDark ? 0.25 : 0.32),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
                                     ),
                                   ],
                                 ),
-                                child: Icon(item.icon, color: Colors.white, size: 26),
+                                child: Icon(item.icon,
+                                    color: Colors.white, size: 26),
                               ),
                               if ((item.badge ?? 0) > 0)
                                 Positioned(
-                                  top: -5, right: -5,
+                                  top: -5,
+                                  right: -5,
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 5, vertical: 2),
                                     decoration: BoxDecoration(
                                       color: AppTheme.danger,
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
-                                        color: isDark ? const Color(0xFF1A1D27) : Colors.white,
-                                        width: 1.5),
+                                          color: isDark
+                                              ? const Color(0xFF1A1D27)
+                                              : Colors.white,
+                                          width: 1.5),
                                     ),
                                     child: Text('${item.badge}',
-                                      style: const TextStyle(
-                                        color: Colors.white, fontSize: 9,
-                                        fontWeight: FontWeight.w800)),
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w800)),
                                   ),
                                 ),
                             ],
@@ -391,23 +450,35 @@ class _ShellScreenState extends State<ShellScreen>
   Widget _buildWideLayout(BuildContext context) {
     final t = _term();
     final location = GoRouterState.of(context).matchedLocation;
-    final railIdx  = _railRoutes.indexWhere((r) => location.startsWith(r));
+    final railIdx = _railRoutes.indexWhere((r) => location.startsWith(r));
     final selected = railIdx >= 0 ? railIdx : 0;
     final cs = Theme.of(context).colorScheme;
 
     final destinations = [
-      _SidebarDest(Icons.dashboard_outlined,      Icons.dashboard_rounded,         'Dashboard'),
-      _SidebarDest(Icons.pets_outlined,           Icons.pets_rounded,              t.patientPlural),
-      _SidebarDest(Icons.person_outline_rounded,  Icons.person_rounded,            t.ownerPlural),
-      _SidebarDest(Icons.receipt_long_outlined,   Icons.receipt_long_rounded,      'Rechnungen'),
-      _SidebarDest(Icons.calendar_month_outlined, Icons.calendar_month_rounded,    'Kalender'),
-      _SidebarDest(Icons.chat_outlined,           Icons.chat_rounded,              'Nachrichten',  badge: _unreadMessages),
-      _SidebarDest(Icons.people_alt_outlined,           Icons.people_alt_rounded,          'Warteliste'),
-      _SidebarDest(Icons.warning_amber_outlined,        Icons.warning_amber_rounded,       'Mahnungen',    badge: _overdueCount),
-      _SidebarDest(Icons.assignment_ind_outlined,       Icons.assignment_ind_rounded,      'Anmeldungen',  badge: _newIntakes),
-      _SidebarDest(Icons.send_outlined,                 Icons.send_rounded,                'Einladungen'),
-      _SidebarDest(Icons.category_outlined,             Icons.category_rounded,            'Behandlungsarten'),
-      _SidebarDest(Icons.home_work_outlined,            Icons.home_work_rounded,           'Portal Admin'),
+      _SidebarDest(
+          Icons.dashboard_outlined, Icons.dashboard_rounded, 'Dashboard'),
+      _SidebarDest(Icons.pets_outlined, Icons.pets_rounded, t.patientPlural),
+      _SidebarDest(
+          Icons.person_outline_rounded, Icons.person_rounded, t.ownerPlural),
+      _SidebarDest(Icons.receipt_long_outlined, Icons.receipt_long_rounded,
+          'Rechnungen'),
+      _SidebarDest(Icons.calendar_month_outlined, Icons.calendar_month_rounded,
+          'Kalender'),
+      _SidebarDest(Icons.chat_outlined, Icons.chat_rounded, 'Nachrichten',
+          badge: _unreadMessages),
+      _SidebarDest(
+          Icons.people_alt_outlined, Icons.people_alt_rounded, 'Warteliste'),
+      _SidebarDest(Icons.warning_amber_outlined, Icons.warning_amber_rounded,
+          'Mahnungen',
+          badge: _overdueCount),
+      _SidebarDest(Icons.assignment_ind_outlined, Icons.assignment_ind_rounded,
+          'Anmeldungen',
+          badge: _newIntakes),
+      _SidebarDest(Icons.send_outlined, Icons.send_rounded, 'Einladungen'),
+      _SidebarDest(
+          Icons.category_outlined, Icons.category_rounded, 'Behandlungsarten'),
+      _SidebarDest(
+          Icons.home_work_outlined, Icons.home_work_rounded, 'Portal Admin'),
     ];
 
     return Scaffold(
@@ -431,38 +502,53 @@ class _ShellScreenState extends State<ShellScreen>
                       children: [
                         const SizedBox(width: 14),
                         Container(
-                          width: 36, height: 36,
+                          width: 36,
+                          height: 36,
                           decoration: BoxDecoration(
                             color: AppTheme.primary.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Center(
                             child: SvgPicture.asset(
-                              'assets/icons/paw.svg', width: 20, height: 20,
-                              colorFilter: ColorFilter.mode(AppTheme.primary, BlendMode.srcIn),
+                              'assets/icons/paw.svg',
+                              width: 20,
+                              height: 20,
+                              colorFilter: ColorFilter.mode(
+                                  AppTheme.primary, BlendMode.srcIn),
                             ),
                           ),
                         ),
-                        if (showLabels) ...[  
+                        if (showLabels) ...[
                           const SizedBox(width: 10),
                           Expanded(
                             child: RichText(
                               overflow: TextOverflow.clip,
                               text: TextSpan(
                                 style: const TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.w800,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w800,
                                   letterSpacing: -0.4,
                                   decoration: TextDecoration.none,
                                 ),
                                 children: [
-                                  TextSpan(text: 'Thera',
-                                    style: TextStyle(color: cs.onSurface, decoration: TextDecoration.none)),
-                                  TextSpan(text: 'Pano', style: TextStyle(
-                                    decoration: TextDecoration.none,
-                                    foreground: Paint()..shader = LinearGradient(
-                                      colors: [AppTheme.primary, AppTheme.secondary],
-                                    ).createShader(const Rect.fromLTWH(0, 0, 50, 18)),
-                                  )),
+                                  TextSpan(
+                                      text: 'Thera',
+                                      style: TextStyle(
+                                          color: cs.onSurface,
+                                          decoration: TextDecoration.none)),
+                                  TextSpan(
+                                      text: 'Pano',
+                                      style: TextStyle(
+                                        decoration: TextDecoration.none,
+                                        foreground: Paint()
+                                          ..shader = LinearGradient(
+                                            colors: [
+                                              AppTheme.primary,
+                                              AppTheme.secondary
+                                            ],
+                                          ).createShader(const Rect.fromLTWH(
+                                              0, 0, 50, 18)),
+                                      )),
                                 ],
                               ),
                             ),
@@ -476,9 +562,11 @@ class _ShellScreenState extends State<ShellScreen>
                             icon: AnimatedRotation(
                               turns: _sidebarExpanded ? 0.5 : 0,
                               duration: const Duration(milliseconds: 280),
-                              child: const Icon(Icons.chevron_right_rounded, size: 20),
+                              child: const Icon(Icons.chevron_right_rounded,
+                                  size: 20),
                             ),
-                            tooltip: _sidebarExpanded ? 'Einklappen' : 'Ausklappen',
+                            tooltip:
+                                _sidebarExpanded ? 'Einklappen' : 'Ausklappen',
                             onPressed: _toggleSidebar,
                           ),
                         ),
@@ -488,7 +576,8 @@ class _ShellScreenState extends State<ShellScreen>
                   Divider(height: 1, color: cs.outlineVariant),
                   // ── Search ──
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                     child: showLabels
                         ? InkWell(
                             borderRadius: BorderRadius.circular(10),
@@ -496,16 +585,20 @@ class _ShellScreenState extends State<ShellScreen>
                             child: Container(
                               height: 36,
                               decoration: BoxDecoration(
-                                color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+                                color: cs.surfaceContainerHighest
+                                    .withValues(alpha: 0.5),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 10),
                               child: Row(children: [
-                                Icon(Icons.search_rounded, size: 16,
-                                  color: cs.onSurfaceVariant),
+                                Icon(Icons.search_rounded,
+                                    size: 16, color: cs.onSurfaceVariant),
                                 const SizedBox(width: 8),
-                                Text('Suche', style: TextStyle(
-                                  fontSize: 13, color: cs.onSurfaceVariant)),
+                                Text('Suche',
+                                    style: TextStyle(
+                                        fontSize: 13,
+                                        color: cs.onSurfaceVariant)),
                               ]),
                             ),
                           )
@@ -518,7 +611,8 @@ class _ShellScreenState extends State<ShellScreen>
                   // ── Nav items ──
                   Expanded(
                     child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       itemCount: destinations.length,
                       itemBuilder: (ctx, i) {
                         final dest = destinations[i];
@@ -535,7 +629,8 @@ class _ShellScreenState extends State<ShellScreen>
                   Divider(height: 1, color: cs.outlineVariant),
                   // ── Footer ──
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                     child: Column(mainAxisSize: MainAxisSize.min, children: [
                       _SidebarTile(
                         dest: _SidebarDest(Icons.person_outline_rounded,
@@ -578,14 +673,18 @@ class _ShellScreenState extends State<ShellScreen>
                   child: const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                     child: Row(children: [
-                      Icon(Icons.wifi_off_rounded, color: Colors.white, size: 16),
+                      Icon(Icons.wifi_off_rounded,
+                          color: Colors.white, size: 16),
                       SizedBox(width: 8),
                       Text('Keine Internetverbindung',
-                        style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600)),
                     ]),
                   ),
                 ),
-              Expanded(child: widget.child),
+              Expanded(child: _animatedContent(location)),
             ],
           ),
         ),
@@ -594,8 +693,8 @@ class _ShellScreenState extends State<ShellScreen>
   }
 
   Widget _buildTopBar(BuildContext context) {
-    final cs       = Theme.of(context).colorScheme;
-    final timeStr  = DateFormat('HH:mm', 'de_DE').format(_now);
+    final cs = Theme.of(context).colorScheme;
+    final timeStr = DateFormat('HH:mm', 'de_DE').format(_now);
     final totalBadge = _newIntakes + _birthdayCount;
     return Container(
       height: 56,
@@ -605,11 +704,13 @@ class _ShellScreenState extends State<ShellScreen>
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(children: [
-        Text(timeStr, style: TextStyle(
-          fontSize: 15, fontWeight: FontWeight.w600,
-          color: cs.onSurfaceVariant,
-          fontFeatures: const [FontFeature.tabularFigures()],
-        )),
+        Text(timeStr,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: cs.onSurfaceVariant,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            )),
         const Spacer(),
         Stack(
           alignment: Alignment.center,
@@ -621,14 +722,20 @@ class _ShellScreenState extends State<ShellScreen>
             ),
             if (totalBadge > 0)
               Positioned(
-                top: 8, right: 8,
+                top: 8,
+                right: 8,
                 child: Container(
                   padding: const EdgeInsets.all(3),
-                  decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                  constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                  decoration: const BoxDecoration(
+                      color: Colors.red, shape: BoxShape.circle),
+                  constraints:
+                      const BoxConstraints(minWidth: 16, minHeight: 16),
                   child: Text('$totalBadge',
-                    style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
-                    textAlign: TextAlign.center),
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700),
+                      textAlign: TextAlign.center),
                 ),
               ),
           ],
@@ -646,35 +753,47 @@ class _ShellScreenState extends State<ShellScreen>
       title: Row(
         children: [
           // Logo + TeraPano
-          SvgPicture.asset('assets/icons/paw.svg', width: 22, height: 22,
-            colorFilter: ColorFilter.mode(AppTheme.primary, BlendMode.srcIn)),
+          SvgPicture.asset('assets/icons/paw.svg',
+              width: 22,
+              height: 22,
+              colorFilter: ColorFilter.mode(AppTheme.primary, BlendMode.srcIn)),
           const SizedBox(width: 8),
-          RichText(text: TextSpan(
+          RichText(
+              text: TextSpan(
             style: const TextStyle(
-              fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.5,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
               decoration: TextDecoration.none,
             ),
             children: [
-              TextSpan(text: 'Thera', style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                decoration: TextDecoration.none,
-              )),
-              TextSpan(text: 'Pano', style: TextStyle(
-                decoration: TextDecoration.none,
-                foreground: Paint()..shader = LinearGradient(
-                  colors: [AppTheme.primary, AppTheme.secondary],
-                ).createShader(const Rect.fromLTWH(0, 0, 56, 20)),
-              )),
+              TextSpan(
+                  text: 'Thera',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    decoration: TextDecoration.none,
+                  )),
+              TextSpan(
+                  text: 'Pano',
+                  style: TextStyle(
+                    decoration: TextDecoration.none,
+                    foreground: Paint()
+                      ..shader = LinearGradient(
+                        colors: [AppTheme.primary, AppTheme.secondary],
+                      ).createShader(const Rect.fromLTWH(0, 0, 56, 20)),
+                  )),
             ],
           )),
           // Live clock — centered
           Expanded(
             child: Center(
-              child: Text(timeStr, style: TextStyle(
-                fontSize: 15, fontWeight: FontWeight.w600,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              )),
+              child: Text(timeStr,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  )),
             ),
           ),
         ],
@@ -684,16 +803,16 @@ class _ShellScreenState extends State<ShellScreen>
         Consumer<ThemeService>(
           builder: (_, ts, __) => IconButton(
             icon: Icon(switch (ts.mode) {
-              ThemeMode.light  => Icons.light_mode_rounded,
-              ThemeMode.dark   => Icons.dark_mode_rounded,
+              ThemeMode.light => Icons.light_mode_rounded,
+              ThemeMode.dark => Icons.dark_mode_rounded,
               ThemeMode.system => Icons.brightness_auto_rounded,
             }),
             tooltip: 'Theme wechseln',
             onPressed: () {
               final next = switch (ts.mode) {
                 ThemeMode.system => ThemeMode.light,
-                ThemeMode.light  => ThemeMode.dark,
-                ThemeMode.dark   => ThemeMode.system,
+                ThemeMode.light => ThemeMode.dark,
+                ThemeMode.dark => ThemeMode.system,
               };
               ts.setMode(next);
             },
@@ -720,22 +839,28 @@ class _ShellScreenState extends State<ShellScreen>
               ),
               if (totalBadge > 0)
                 Positioned(
-                  top: 6, right: 6,
+                  top: 6,
+                  right: 6,
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.elasticOut,
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                     decoration: BoxDecoration(
                       color: AppTheme.danger,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: Theme.of(context).colorScheme.surface,
-                        width: 1.5),
+                          color: Theme.of(context).colorScheme.surface,
+                          width: 1.5),
                     ),
-                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    constraints:
+                        const BoxConstraints(minWidth: 16, minHeight: 16),
                     child: Text('$totalBadge',
-                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800),
-                      textAlign: TextAlign.center),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800),
+                        textAlign: TextAlign.center),
                   ),
                 ),
             ],
@@ -755,10 +880,13 @@ class _ShellScreenState extends State<ShellScreen>
       ),
       isScrollControlled: true,
       builder: (ctx) => _NotificationSheet(
-        newIntakes:     _newIntakes,
+        newIntakes: _newIntakes,
         pendingIntakes: _pendingIntakes,
-        birthdayCount:  _birthdayCount,
-        onTap: (route) { Navigator.pop(ctx); context.push(route); },
+        birthdayCount: _birthdayCount,
+        onTap: (route) {
+          Navigator.pop(ctx);
+          context.push(route);
+        },
       ),
     );
   }
@@ -778,19 +906,23 @@ class _ShellScreenState extends State<ShellScreen>
           Material(
             color: Colors.orange.shade700,
             child: const SafeArea(
-              top: false, bottom: false,
+              top: false,
+              bottom: false,
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 child: Row(children: [
                   Icon(Icons.wifi_off_rounded, color: Colors.white, size: 16),
                   SizedBox(width: 8),
                   Text('Keine Internetverbindung',
-                    style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600)),
                 ]),
               ),
             ),
           ),
-        Expanded(child: widget.child),
+        Expanded(child: _animatedContent(location)),
       ]),
       bottomNavigationBar: NavigationBar(
         selectedIndex: navIdx,
@@ -808,10 +940,17 @@ class _ShellScreenState extends State<ShellScreen>
             label: 'Dashboard',
           ),
           NavigationDestination(
-            icon: SvgPicture.asset('assets/icons/paw.svg', width: 22, height: 22,
-              colorFilter: ColorFilter.mode(Theme.of(context).colorScheme.onSurfaceVariant, BlendMode.srcIn)),
-            selectedIcon: SvgPicture.asset('assets/icons/paw.svg', width: 22, height: 22,
-              colorFilter: ColorFilter.mode(AppTheme.primary, BlendMode.srcIn)),
+            icon: SvgPicture.asset('assets/icons/paw.svg',
+                width: 22,
+                height: 22,
+                colorFilter: ColorFilter.mode(
+                    Theme.of(context).colorScheme.onSurfaceVariant,
+                    BlendMode.srcIn)),
+            selectedIcon: SvgPicture.asset('assets/icons/paw.svg',
+                width: 22,
+                height: 22,
+                colorFilter:
+                    ColorFilter.mode(AppTheme.primary, BlendMode.srcIn)),
             label: t.patientPlural,
           ),
           const NavigationDestination(
@@ -832,7 +971,8 @@ class _ShellScreenState extends State<ShellScreen>
           NavigationDestination(
             icon: Badge(
               isLabelVisible: _overdueCount > 0,
-              label: Text('$_overdueCount', style: const TextStyle(fontSize: 9)),
+              label:
+                  Text('$_overdueCount', style: const TextStyle(fontSize: 9)),
               backgroundColor: AppTheme.danger,
               child: const Icon(Icons.grid_view_outlined),
             ),
@@ -844,7 +984,6 @@ class _ShellScreenState extends State<ShellScreen>
     );
   }
 
-
   Future<void> _confirmLogout(BuildContext context) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -852,8 +991,12 @@ class _ShellScreenState extends State<ShellScreen>
         title: const Text('Abmelden'),
         content: const Text('Möchten Sie sich wirklich abmelden?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Abbrechen')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Abmelden')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Abbrechen')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Abmelden')),
         ],
       ),
     );
@@ -905,7 +1048,9 @@ class _SidebarTile extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             decoration: BoxDecoration(
-              color: isSelected ? accent.withValues(alpha: 0.12) : Colors.transparent,
+              color: isSelected
+                  ? accent.withValues(alpha: 0.12)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
             ),
             padding: EdgeInsets.symmetric(
@@ -920,7 +1065,8 @@ class _SidebarTile extends StatelessWidget {
                 Badge(
                   isLabelVisible: dest.badge > 0,
                   label: Text('${dest.badge}',
-                    style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700)),
+                      style: const TextStyle(
+                          fontSize: 9, fontWeight: FontWeight.w700)),
                   backgroundColor: AppTheme.danger,
                   child: Icon(
                     isSelected ? dest.selectedIcon : dest.icon,
@@ -935,7 +1081,8 @@ class _SidebarTile extends StatelessWidget {
                       dest.label,
                       style: TextStyle(
                         fontSize: 13,
-                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w500,
                         color: isSelected ? accent : cs.onSurface,
                       ),
                       overflow: TextOverflow.ellipsis,
@@ -991,15 +1138,19 @@ class _NotificationSheetState extends State<_NotificationSheet>
   void initState() {
     super.initState();
     _entryCtrl = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 350));
-    _fadeAnim  = CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut);
+        vsync: this, duration: const Duration(milliseconds: 350));
+    _fadeAnim = CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut);
     _slideAnim = Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOutCubic));
+        .animate(
+            CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOutCubic));
     _entryCtrl.forward();
   }
 
   @override
-  void dispose() { _entryCtrl.dispose(); super.dispose(); }
+  void dispose() {
+    _entryCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1017,43 +1168,66 @@ class _NotificationSheetState extends State<_NotificationSheet>
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
-                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Text('Benachrichtigungen',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                  if (hasAny)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppTheme.danger.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text('${widget.newIntakes + widget.birthdayCount} neu',
-                        style: TextStyle(color: AppTheme.danger, fontSize: 11, fontWeight: FontWeight.w700)),
-                    ),
-                ]),
+                Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2))),
+                Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Benachrichtigungen',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w700)),
+                      if (hasAny)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: AppTheme.danger.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                              '${widget.newIntakes + widget.birthdayCount} neu',
+                              style: TextStyle(
+                                  color: AppTheme.danger,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700)),
+                        ),
+                    ]),
                 const SizedBox(height: 16),
                 if (!hasAny)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 24),
                     child: Column(children: [
-                      Icon(Icons.notifications_none_rounded, size: 48,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      Icon(Icons.notifications_none_rounded,
+                          size: 48,
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant),
                       const SizedBox(height: 8),
                       Text('Keine neuen Benachrichtigungen',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant)),
                     ]),
                   ),
                 // Individual pending intakes
                 ...widget.pendingIntakes.map((intake) {
-                  final ownerFirst = intake['owner_first_name'] as String? ?? '';
-                  final ownerLast  = intake['owner_last_name']  as String? ?? '';
-                  final ownerName  = '$ownerFirst $ownerLast'.trim();
-                  final petName    = intake['patient_name'] as String? ?? '';
-                  final species    = intake['patient_species'] as String? ?? '';
-                  final subtitle   = [
+                  final ownerFirst =
+                      intake['owner_first_name'] as String? ?? '';
+                  final ownerLast = intake['owner_last_name'] as String? ?? '';
+                  final ownerName = '$ownerFirst $ownerLast'.trim();
+                  final petName = intake['patient_name'] as String? ?? '';
+                  final species = intake['patient_species'] as String? ?? '';
+                  final subtitle = [
                     if (petName.isNotEmpty) petName,
                     if (species.isNotEmpty) species,
                   ].join(' · ');
@@ -1061,7 +1235,9 @@ class _NotificationSheetState extends State<_NotificationSheet>
                     icon: Icons.assignment_ind_rounded,
                     color: AppTheme.primary,
                     title: ownerName.isNotEmpty ? ownerName : 'Neue Anmeldung',
-                    subtitle: subtitle.isNotEmpty ? subtitle : 'Zur Bestätigung antippen',
+                    subtitle: subtitle.isNotEmpty
+                        ? subtitle
+                        : 'Zur Bestätigung antippen',
                     onTap: () => widget.onTap('/anmeldungen/${intake['id']}'),
                   );
                 }),
@@ -1069,8 +1245,10 @@ class _NotificationSheetState extends State<_NotificationSheet>
                   _NotifTile(
                     icon: Icons.cake_rounded,
                     color: AppTheme.secondary,
-                    title: '${widget.birthdayCount} Geburtstag${widget.birthdayCount == 1 ? '' : 'e'} heute!',
-                    subtitle: 'Tier${widget.birthdayCount == 1 ? '' : 'e'} haben heute Geburtstag',
+                    title:
+                        '${widget.birthdayCount} Geburtstag${widget.birthdayCount == 1 ? '' : 'e'} heute!',
+                    subtitle:
+                        'Tier${widget.birthdayCount == 1 ? '' : 'e'} haben heute Geburtstag',
                     onTap: () => widget.onTap('/patienten'),
                   ),
               ]),
@@ -1087,8 +1265,12 @@ class _NotifTile extends StatelessWidget {
   final Color color;
   final String title, subtitle;
   final VoidCallback onTap;
-  const _NotifTile({required this.icon, required this.color,
-    required this.title, required this.subtitle, required this.onTap});
+  const _NotifTile(
+      {required this.icon,
+      required this.color,
+      required this.title,
+      required this.subtitle,
+      required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -1104,15 +1286,26 @@ class _NotifTile extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Row(children: [
               Container(
-                width: 42, height: 42,
-                decoration: BoxDecoration(color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.15),
+                    shape: BoxShape.circle),
                 child: Icon(icon, color: color, size: 22),
               ),
               const SizedBox(width: 12),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(title, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: color)),
-                Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-              ])),
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Text(title,
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                            color: color)),
+                    Text(subtitle,
+                        style: Theme.of(context).textTheme.bodySmall),
+                  ])),
               Icon(Icons.chevron_right_rounded, color: color, size: 18),
             ]),
           ),

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:open_file_plus/open_file_plus.dart';
 
 class UpdateInfo {
   final String version;
@@ -106,9 +105,8 @@ class UpdateService {
       await sink.flush();
       await sink.close();
 
-      // Launch the installer
-      // Silent install? Typically Inno Setup uses /VERYSILENT /SUPPRESSMSGBOXES
-      await OpenFile.open(installFile.path);
+      // Launch the Windows installer.
+      await Process.start(installFile.path, const []);
 
       // Close the app to allow the installer to overwrite files
       Future.delayed(const Duration(seconds: 1), () {

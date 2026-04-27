@@ -25,7 +25,8 @@ class ApiService {
   /// Handles paths like /patient-photos/5/abc.jpg, /patient-timeline/5/abc.mp4,
   /// /patients/intake_abc.jpg, and already-absolute https:// URLs.
   static String mediaUrl(String relativePath) {
-    if (relativePath.startsWith('http://') || relativePath.startsWith('https://')) {
+    if (relativePath.startsWith('http://') ||
+        relativePath.startsWith('https://')) {
       return relativePath;
     }
     final base = _baseUrl.replaceAll(RegExp(r'/$'), '');
@@ -46,13 +47,13 @@ class ApiService {
   }
 
   Map<String, String> _headers([String? token]) => {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    // Required by many Laravel installations to accept JSON responses
-    // and avoid being treated as a browser (which causes HTML redirect/403).
-    'X-Requested-With': 'XMLHttpRequest',
-    if (token != null) 'Authorization': 'Bearer $token',
-  };
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        // Required by many Laravel installations to accept JSON responses
+        // and avoid being treated as a browser (which causes HTML redirect/403).
+        'X-Requested-With': 'XMLHttpRequest',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
 
   Future<Map<String, String>> _authHeaders() async {
     final token = await getToken();
@@ -76,7 +77,9 @@ class ApiService {
 
   Future<dynamic> post(String path, Map<String, dynamic> body) async {
     final h = await _authHeaders();
-    final res = await http.post(_uri(path), headers: h, body: jsonEncode(body)).timeout(_timeout);
+    final res = await http
+        .post(_uri(path), headers: h, body: jsonEncode(body))
+        .timeout(_timeout);
     return _parse(res);
   }
 
@@ -94,7 +97,7 @@ class ApiService {
     dynamic data;
     bool isJson = false;
     try {
-      data  = jsonDecode(body);
+      data = jsonDecode(body);
       isJson = true;
     } catch (_) {
       // Not JSON – server returned HTML or plain text.
@@ -104,15 +107,24 @@ class ApiService {
     if (res.statusCode >= 400) {
       String msg;
       if (isJson && data is Map) {
+        final errorCode = (data['error'] ?? '').toString();
+        final feature = (data['feature'] ?? '').toString();
+        if (errorCode == 'feature_disabled') {
+          msg =
+              'Diese Funktion ist in deinem aktuellen Tarif nicht verfuegbar.';
+          throw FeatureDisabledException(msg, res.statusCode, feature);
+        }
         // Prefer backend's own error/message field
-        msg = (data['error'] ?? data['message'] ?? 'Fehler ${res.statusCode}').toString();
+        msg = (data['message'] ?? data['error'] ?? 'Fehler ${res.statusCode}')
+            .toString();
       } else if (!isJson && body.isNotEmpty) {
         // Strip HTML tags and truncate so the message is readable
         final stripped = body
             .replaceAll(RegExp(r'<[^>]*>'), ' ')
             .replaceAll(RegExp(r'\s+'), ' ')
             .trim();
-        msg = stripped.length > 120 ? '${stripped.substring(0, 120)}…' : stripped;
+        msg =
+            stripped.length > 120 ? '${stripped.substring(0, 120)}…' : stripped;
         // If the stripped text is still HTML-garbage, fall back to a clean message
         if (msg.isEmpty || msg.startsWith('<!') || msg.startsWith('<?')) {
           msg = 'Server ${res.statusCode}: Zugang verweigert.';
@@ -136,7 +148,8 @@ class ApiService {
 
   /* ── Auth ── */
 
-  Future<Map<String, dynamic>> login(String email, String password, String device) async {
+  Future<Map<String, dynamic>> login(
+      String email, String password, String device) async {
     final data = await postPublic('/login', {
       'email': email,
       'password': password,
@@ -146,7 +159,9 @@ class ApiService {
   }
 
   Future<void> logout() async {
-    try { await post('/logout', {}); } catch (_) {}
+    try {
+      await post('/logout', {});
+    } catch (_) {}
     await clearToken();
   }
 
@@ -160,9 +175,12 @@ class ApiService {
 
   /* ── Patients ── */
 
-  Future<Map<String, dynamic>> patients({int page = 1, int perPage = 20, String search = ''}) async =>
+  Future<Map<String, dynamic>> patients(
+          {int page = 1, int perPage = 20, String search = ''}) async =>
       Map<String, dynamic>.from(await get('/patients', query: {
-        'page': page, 'per_page': perPage, if (search.isNotEmpty) 'search': search,
+        'page': page,
+        'per_page': perPage,
+        if (search.isNotEmpty) 'search': search,
       }));
 
   Future<Map<String, dynamic>> patientShow(int id) async =>
@@ -171,13 +189,15 @@ class ApiService {
   Future<Map<String, dynamic>> patientCreate(Map<String, dynamic> data) async =>
       Map<String, dynamic>.from(await post('/patients', data));
 
-  Future<Map<String, dynamic>> patientUpdate(int id, Map<String, dynamic> data) async =>
+  Future<Map<String, dynamic>> patientUpdate(
+          int id, Map<String, dynamic> data) async =>
       Map<String, dynamic>.from(await post('/patients/$id', data));
 
   Future<List<dynamic>> patientTimeline(int id) async =>
       List<dynamic>.from(await get('/patients/$id/timeline'));
 
-  Future<Map<String, dynamic>> patientTimelineCreate(int id, Map<String, dynamic> data) async =>
+  Future<Map<String, dynamic>> patientTimelineCreate(
+          int id, Map<String, dynamic> data) async =>
       Map<String, dynamic>.from(await post('/patients/$id/timeline', data));
 
   Future<Map<String, dynamic>> patientTimelineCreateMultipart(
@@ -190,14 +210,18 @@ class ApiService {
     List<File> files = const [],
   }) async {
     final token = await getToken();
-    final req = http.MultipartRequest('POST', _uri('/patients/$patientId/timeline'))
-      ..headers.addAll({'Authorization': 'Bearer $token', 'Accept': 'application/json'})
-      ..fields['type'] = type
-      ..fields['entry_date'] = DateTime.now().toIso8601String().substring(0, 10);
+    final req =
+        http.MultipartRequest('POST', _uri('/patients/$patientId/timeline'))
+          ..headers.addAll(
+              {'Authorization': 'Bearer $token', 'Accept': 'application/json'})
+          ..fields['type'] = type
+          ..fields['entry_date'] =
+              DateTime.now().toIso8601String().substring(0, 10);
 
     if (title != null) req.fields['title'] = title;
     if (content != null) req.fields['content'] = content;
-    if (treatmentTypeId != null) req.fields['treatment_type_id'] = treatmentTypeId.toString();
+    if (treatmentTypeId != null)
+      req.fields['treatment_type_id'] = treatmentTypeId.toString();
     if (statusBadge != null) req.fields['status_badge'] = statusBadge;
 
     for (final file in files) {
@@ -208,7 +232,9 @@ class ApiService {
     return Map<String, dynamic>.from(_parse(res) as Map);
   }
 
-  Future<Map<String, dynamic>> patientTimelineUpload(int patientId, File file, {
+  Future<Map<String, dynamic>> patientTimelineUpload(
+    int patientId,
+    File file, {
     required String title,
     required String type,
     String content = '',
@@ -216,7 +242,8 @@ class ApiService {
     final token = await getToken();
     final uri = _uri('/patients/$patientId/timeline/upload');
     final req = http.MultipartRequest('POST', uri)
-      ..headers.addAll({'Authorization': 'Bearer $token', 'Accept': 'application/json'})
+      ..headers.addAll(
+          {'Authorization': 'Bearer $token', 'Accept': 'application/json'})
       ..fields['title'] = title
       ..fields['type'] = type
       ..fields['content'] = content
@@ -232,9 +259,12 @@ class ApiService {
 
   /* ── Owners ── */
 
-  Future<Map<String, dynamic>> owners({int page = 1, int perPage = 20, String search = ''}) async =>
+  Future<Map<String, dynamic>> owners(
+          {int page = 1, int perPage = 20, String search = ''}) async =>
       Map<String, dynamic>.from(await get('/owners', query: {
-        'page': page, 'per_page': perPage, if (search.isNotEmpty) 'search': search,
+        'page': page,
+        'per_page': perPage,
+        if (search.isNotEmpty) 'search': search,
       }));
 
   Future<Map<String, dynamic>> ownerShow(int id) async =>
@@ -243,14 +273,20 @@ class ApiService {
   Future<Map<String, dynamic>> ownerCreate(Map<String, dynamic> data) async =>
       Map<String, dynamic>.from(await post('/owners', data));
 
-  Future<Map<String, dynamic>> ownerUpdate(int id, Map<String, dynamic> data) async =>
+  Future<Map<String, dynamic>> ownerUpdate(
+          int id, Map<String, dynamic> data) async =>
       Map<String, dynamic>.from(await post('/owners/$id', data));
 
   /* ── Invoices ── */
 
-  Future<Map<String, dynamic>> invoices({int page = 1, int perPage = 20, String status = '', String search = ''}) async =>
+  Future<Map<String, dynamic>> invoices(
+          {int page = 1,
+          int perPage = 20,
+          String status = '',
+          String search = ''}) async =>
       Map<String, dynamic>.from(await get('/invoices', query: {
-        'page': page, 'per_page': perPage,
+        'page': page,
+        'per_page': perPage,
         if (status.isNotEmpty) 'status': status,
         if (search.isNotEmpty) 'search': search,
       }));
@@ -261,16 +297,16 @@ class ApiService {
   Future<Map<String, dynamic>> invoiceCreate(Map<String, dynamic> data) async =>
       Map<String, dynamic>.from(await post('/invoices', data));
 
-
   /* ── Appointments ── */
 
   Future<List<dynamic>> appointments({String? start, String? end}) async =>
       List<dynamic>.from(await get('/appointments', query: {
         if (start != null) 'start': start,
-        if (end   != null) 'end':   end,
+        if (end != null) 'end': end,
       }));
 
-  Future<Map<String, dynamic>> appointmentCreate(Map<String, dynamic> data) async =>
+  Future<Map<String, dynamic>> appointmentCreate(
+          Map<String, dynamic> data) async =>
       Map<String, dynamic>.from(await post('/appointments', data));
 
   Future<void> appointmentUpdate(int id, Map<String, dynamic> data) async =>
@@ -307,7 +343,8 @@ class ApiService {
         'body': body,
       }));
 
-  Future<void> invoiceUpdateStatus(int id, String status, {String? reason, String? paidAt}) async =>
+  Future<void> invoiceUpdateStatus(int id, String status,
+          {String? reason, String? paidAt}) async =>
       await post('/invoices/$id/status', {
         'status': status,
         if (reason != null) 'cancellation_reason': reason,
@@ -328,13 +365,15 @@ class ApiService {
   Future<Map<String, dynamic>> patientPhotoUpload(int id, File photo) async {
     final token = await getToken();
     final req = http.MultipartRequest('POST', _uri('/patients/$id/foto'))
-      ..headers.addAll({'Authorization': 'Bearer $token', 'Accept': 'application/json'})
+      ..headers.addAll(
+          {'Authorization': 'Bearer $token', 'Accept': 'application/json'})
       ..files.add(await http.MultipartFile.fromPath('photo', photo.path));
     final res = await http.Response.fromStream(await req.send());
     return Map<String, dynamic>.from(_parse(res) as Map);
   }
 
-  Future<void> patientTimelineUpdate(int patientId, int entryId, Map<String, dynamic> data) async =>
+  Future<void> patientTimelineUpdate(
+          int patientId, int entryId, Map<String, dynamic> data) async =>
       await post('/patients/$patientId/timeline/$entryId/update', data);
 
   /* ── Owners extended ── */
@@ -350,7 +389,8 @@ class ApiService {
 
   /* ── Invoices extended ── */
 
-  Future<Map<String, dynamic>> invoiceUpdate(int id, Map<String, dynamic> data) async =>
+  Future<Map<String, dynamic>> invoiceUpdate(
+          int id, Map<String, dynamic> data) async =>
       Map<String, dynamic>.from(await post('/invoices/$id/update', data));
 
   Future<void> invoiceDelete(int id) async =>
@@ -365,11 +405,15 @@ class ApiService {
   Future<Map<String, dynamic>> invoiceSendEmail(int id) async =>
       Map<String, dynamic>.from(await post('/invoices/$id/senden', {}));
 
-  Future<Map<String, dynamic>> reminderSendEmail(int invoiceId, int reminderId) async =>
-      Map<String, dynamic>.from(await post('/invoices/$invoiceId/erinnerungen/$reminderId/senden', {}));
+  Future<Map<String, dynamic>> reminderSendEmail(
+          int invoiceId, int reminderId) async =>
+      Map<String, dynamic>.from(await post(
+          '/invoices/$invoiceId/erinnerungen/$reminderId/senden', {}));
 
-  Future<Map<String, dynamic>> dunningSendEmail(int invoiceId, int dunningId) async =>
-      Map<String, dynamic>.from(await post('/invoices/$invoiceId/mahnungen/$dunningId/senden', {}));
+  Future<Map<String, dynamic>> dunningSendEmail(
+          int invoiceId, int dunningId) async =>
+      Map<String, dynamic>.from(
+          await post('/invoices/$invoiceId/mahnungen/$dunningId/senden', {}));
 
   /* ── Reminders ── */
 
@@ -379,8 +423,10 @@ class ApiService {
   Future<List<dynamic>> remindersForInvoice(int invoiceId) async =>
       List<dynamic>.from(await get('/invoices/$invoiceId/erinnerungen'));
 
-  Future<Map<String, dynamic>> reminderCreate(int invoiceId, Map<String, dynamic> data) async =>
-      Map<String, dynamic>.from(await post('/invoices/$invoiceId/erinnerungen', data));
+  Future<Map<String, dynamic>> reminderCreate(
+          int invoiceId, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(
+          await post('/invoices/$invoiceId/erinnerungen', data));
 
   Future<void> reminderDelete(int invoiceId, int reminderId) async =>
       await post('/invoices/$invoiceId/erinnerungen/$reminderId/loeschen', {});
@@ -396,8 +442,10 @@ class ApiService {
   Future<List<dynamic>> dunningsForInvoice(int invoiceId) async =>
       List<dynamic>.from(await get('/invoices/$invoiceId/mahnungen'));
 
-  Future<Map<String, dynamic>> dunningCreate(int invoiceId, Map<String, dynamic> data) async =>
-      Map<String, dynamic>.from(await post('/invoices/$invoiceId/mahnungen', data));
+  Future<Map<String, dynamic>> dunningCreate(
+          int invoiceId, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(
+          await post('/invoices/$invoiceId/mahnungen', data));
 
   Future<void> dunningDelete(int invoiceId, int dunningId) async =>
       await post('/invoices/$invoiceId/mahnungen/$dunningId/loeschen', {});
@@ -436,7 +484,8 @@ class ApiService {
   Future<void> waitlistDelete(int id) async =>
       await post('/warteliste/$id/loeschen', {});
 
-  Future<Map<String, dynamic>> waitlistSchedule(int id, Map<String, dynamic> data) async =>
+  Future<Map<String, dynamic>> waitlistSchedule(
+          int id, Map<String, dynamic> data) async =>
       Map<String, dynamic>.from(await post('/warteliste/$id/einplanen', data));
 
   /* ── Treatment types CRUD ── */
@@ -447,11 +496,14 @@ class ApiService {
   Future<Map<String, dynamic>> treatmentTypeShow(int id) async =>
       Map<String, dynamic>.from(await get('/behandlungsarten/$id'));
 
-  Future<Map<String, dynamic>> treatmentTypeCreate(Map<String, dynamic> data) async =>
+  Future<Map<String, dynamic>> treatmentTypeCreate(
+          Map<String, dynamic> data) async =>
       Map<String, dynamic>.from(await post('/behandlungsarten', data));
 
-  Future<Map<String, dynamic>> treatmentTypeUpdate(int id, Map<String, dynamic> data) async =>
-      Map<String, dynamic>.from(await post('/behandlungsarten/$id/update', data));
+  Future<Map<String, dynamic>> treatmentTypeUpdate(
+          int id, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(
+          await post('/behandlungsarten/$id/update', data));
 
   Future<void> treatmentTypeDelete(int id) async =>
       await post('/behandlungsarten/$id/loeschen', {});
@@ -464,8 +516,15 @@ class ApiService {
   Future<Map<String, dynamic>> profileUpdate(Map<String, dynamic> data) async =>
       Map<String, dynamic>.from(await post('/profil', data));
 
-  Future<void> profileChangePassword({required String current, required String newPw, required String confirm}) async =>
-      await post('/profil/passwort', {'current_password': current, 'new_password': newPw, 'new_password_confirmation': confirm});
+  Future<void> profileChangePassword(
+          {required String current,
+          required String newPw,
+          required String confirm}) async =>
+      await post('/profil/passwort', {
+        'current_password': current,
+        'new_password': newPw,
+        'new_password_confirmation': confirm
+      });
 
   /* ── Search & Notifications ── */
 
@@ -485,11 +544,13 @@ class ApiService {
           String subtitle = '';
           if (type == 'patient') {
             final species = (row['species'] ?? '').toString();
-            subtitle = species.isNotEmpty ? species : (row['status'] ?? '').toString();
+            subtitle =
+                species.isNotEmpty ? species : (row['status'] ?? '').toString();
           } else if (type == 'owner') {
             subtitle = (row['email'] ?? row['phone'] ?? '').toString();
           } else if (type == 'invoice') {
-            subtitle = '${row['status'] ?? ''} · ${row['issue_date'] ?? ''}'.trim();
+            subtitle =
+                '${row['status'] ?? ''} · ${row['issue_date'] ?? ''}'.trim();
           } else if (type == 'appointment') {
             subtitle = (row['start_at'] ?? '').toString();
           }
@@ -503,10 +564,14 @@ class ApiService {
         }
       }
 
-      addType('patient', List<dynamic>.from(grouped['patients'] as List? ?? const []));
-      addType('owner', List<dynamic>.from(grouped['owners'] as List? ?? const []));
-      addType('invoice', List<dynamic>.from(grouped['invoices'] as List? ?? const []));
-      addType('appointment', List<dynamic>.from(grouped['appointments'] as List? ?? const []));
+      addType('patient',
+          List<dynamic>.from(grouped['patients'] as List? ?? const []));
+      addType(
+          'owner', List<dynamic>.from(grouped['owners'] as List? ?? const []));
+      addType('invoice',
+          List<dynamic>.from(grouped['invoices'] as List? ?? const []));
+      addType('appointment',
+          List<dynamic>.from(grouped['appointments'] as List? ?? const []));
       return out;
     }
     return <dynamic>[];
@@ -544,9 +609,11 @@ class ApiService {
 
   /* ── Intake (Anmeldungen) ── */
 
-  Future<Map<String, dynamic>> intakeInbox({int page = 1, int perPage = 50}) async =>
+  Future<Map<String, dynamic>> intakeInbox(
+          {int page = 1, int perPage = 50}) async =>
       Map<String, dynamic>.from(await get('/anmeldung', query: {
-        'page': page, 'per_page': perPage,
+        'page': page,
+        'per_page': perPage,
       }));
 
   Future<Map<String, dynamic>> intakeShow(int id) async =>
@@ -562,9 +629,11 @@ class ApiService {
 
   /* ── Invitations (Einladungen) ── */
 
-  Future<Map<String, dynamic>> inviteList({int page = 1, int perPage = 50}) async =>
+  Future<Map<String, dynamic>> inviteList(
+          {int page = 1, int perPage = 50}) async =>
       Map<String, dynamic>.from(await get('/einladungen', query: {
-        'page': page, 'per_page': perPage,
+        'page': page,
+        'per_page': perPage,
       }));
 
   Future<Map<String, dynamic>> inviteSend(Map<String, dynamic> data) async =>
@@ -573,8 +642,10 @@ class ApiService {
   Future<void> inviteRevoke(int id) async =>
       await post('/einladungen/$id/widerrufen', {});
 
-  Future<Map<String, dynamic>> inviteUpdate(int id, Map<String, dynamic> data) async =>
-      Map<String, dynamic>.from(await post('/einladungen/$id/bearbeiten', data));
+  Future<Map<String, dynamic>> inviteUpdate(
+          int id, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(
+          await post('/einladungen/$id/bearbeiten', data));
 
   Future<Map<String, dynamic>> inviteWhatsapp(int id) async =>
       Map<String, dynamic>.from(await get('/einladungen/$id/whatsapp'));
@@ -607,7 +678,8 @@ class ApiService {
   Future<Map<String, dynamic>> tcpProgress(int patientId) async =>
       Map<String, dynamic>.from(await get('/tcp/$patientId/progress'));
 
-  Future<Map<String, dynamic>> tcpSave(int patientId, Map<String, dynamic> data) async =>
+  Future<Map<String, dynamic>> tcpSave(
+          int patientId, Map<String, dynamic> data) async =>
       Map<String, dynamic>.from(await post('/tcp/$patientId/save', data));
 
   Future<List<dynamic>> tcpNatural(int patientId) async =>
@@ -624,18 +696,21 @@ class ApiService {
   /* ── Invoices extended ── */
 
   Future<Map<String, dynamic>> invoiceStorno(int id, String reason) async =>
-      Map<String, dynamic>.from(await post('/rechnungen/$id/storno', {'reason': reason}));
+      Map<String, dynamic>.from(
+          await post('/rechnungen/$id/storno', {'reason': reason}));
 
   Future<void> portalUserDelete(int id) async =>
       await post('/portal-admin/benutzer/$id/loeschen', {});
 
   Future<Map<String, dynamic>> portalOwnerOverview(int ownerId) async =>
-      Map<String, dynamic>.from(await get('/portal-admin/besitzer/$ownerId/uebersicht'));
+      Map<String, dynamic>.from(
+          await get('/portal-admin/besitzer/$ownerId/uebersicht'));
 
   /* ── Patient Homework (Hausaufgaben per Patient) ── */
 
   Future<List<dynamic>> patientHomeworkList(int patientId) async =>
-      List<dynamic>.from(await get('/patients/$patientId/hausaufgaben') as List);
+      List<dynamic>.from(
+          await get('/patients/$patientId/hausaufgaben') as List);
 
   Future<Map<String, dynamic>> patientHomeworkShow(int id) async =>
       Map<String, dynamic>.from(await get('/hausaufgaben/$id'));
@@ -643,16 +718,21 @@ class ApiService {
   /* ── Exercises (per patient) ── */
 
   Future<List<dynamic>> exercisesList(int patientId) async =>
-      List<dynamic>.from(await get('/portal-admin/patienten/$patientId/uebungen'));
+      List<dynamic>.from(
+          await get('/portal-admin/patienten/$patientId/uebungen'));
 
-  Future<Map<String, dynamic>> exerciseCreate(int patientId, Map<String, dynamic> data) async =>
-      Map<String, dynamic>.from(await post('/portal-admin/patienten/$patientId/uebungen', data));
+  Future<Map<String, dynamic>> exerciseCreate(
+          int patientId, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(
+          await post('/portal-admin/patienten/$patientId/uebungen', data));
 
   Future<Map<String, dynamic>> exerciseShow(int id) async =>
       Map<String, dynamic>.from(await get('/portal-admin/uebungen/$id'));
 
-  Future<Map<String, dynamic>> exerciseUpdate(int id, Map<String, dynamic> data) async =>
-      Map<String, dynamic>.from(await post('/portal-admin/uebungen/$id/update', data));
+  Future<Map<String, dynamic>> exerciseUpdate(
+          int id, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(
+          await post('/portal-admin/uebungen/$id/update', data));
 
   Future<void> exerciseDelete(int id) async =>
       await post('/portal-admin/uebungen/$id/loeschen', {});
@@ -662,23 +742,31 @@ class ApiService {
   Future<List<dynamic>> homeworkPlanList() async =>
       List<dynamic>.from(await get('/portal-admin/hausaufgabenplaene'));
 
-  Future<Map<String, dynamic>> homeworkPlanCreate(Map<String, dynamic> data) async =>
-      Map<String, dynamic>.from(await post('/portal-admin/hausaufgabenplaene', data));
+  Future<Map<String, dynamic>> homeworkPlanCreate(
+          Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(
+          await post('/portal-admin/hausaufgabenplaene', data));
 
   Future<Map<String, dynamic>> homeworkPlanShow(int id) async =>
-      Map<String, dynamic>.from(await get('/portal-admin/hausaufgabenplaene/$id'));
+      Map<String, dynamic>.from(
+          await get('/portal-admin/hausaufgabenplaene/$id'));
 
-  Future<Map<String, dynamic>> homeworkPlanUpdate(int id, Map<String, dynamic> data) async =>
-      Map<String, dynamic>.from(await post('/portal-admin/hausaufgabenplaene/$id/update', data));
+  Future<Map<String, dynamic>> homeworkPlanUpdate(
+          int id, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(
+          await post('/portal-admin/hausaufgabenplaene/$id/update', data));
 
   Future<void> homeworkPlanDelete(int id) async =>
       await post('/portal-admin/hausaufgabenplaene/$id/loeschen', {});
 
   Future<Map<String, dynamic>> homeworkPlanPdfUrl(int id) async =>
-      Map<String, dynamic>.from(await get('/portal-admin/hausaufgabenplaene/$id/pdf'));
+      Map<String, dynamic>.from(
+          await get('/portal-admin/hausaufgabenplaene/$id/pdf'));
 
-  Future<Map<String, dynamic>> homeworkPlanSend(int id, Map<String, dynamic> data) async =>
-      Map<String, dynamic>.from(await post('/portal-admin/hausaufgabenplaene/$id/senden', data));
+  Future<Map<String, dynamic>> homeworkPlanSend(
+          int id, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(
+          await post('/portal-admin/hausaufgabenplaene/$id/senden', data));
 
   Future<List<dynamic>> homeworkTemplates() async =>
       List<dynamic>.from(await get('/portal-admin/vorlagen'));
@@ -728,25 +816,43 @@ class ApiService {
   Future<List<dynamic>> tcpProgressList(int patientId) async =>
       List<dynamic>.from(await get('/tcp/patienten/$patientId/fortschritt'));
 
-  Future<Map<String, dynamic>> tcpProgressStore(int patientId, Map<String, dynamic> data) async =>
-      Map<String, dynamic>.from(await post('/tcp/patienten/$patientId/fortschritt', data));
+  Future<Map<String, dynamic>> tcpProgressStore(
+          int patientId, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(
+          await post('/tcp/patienten/$patientId/fortschritt', data));
 
   Future<void> tcpProgressDelete(int entryId) async =>
       await post('/tcp/fortschritt/$entryId/loeschen', {});
 
   // Exercise feedback
-  Future<List<dynamic>> tcpFeedbackList(int patientId) async =>
-      List<dynamic>.from(await get('/tcp/patienten/$patientId/feedback'));
+  Future<List<dynamic>> tcpFeedbackList(int patientId) async {
+    try {
+      final raw = await get('/tcp/patienten/$patientId/feedback');
+      if (raw is Map) {
+        return List<dynamic>.from(raw['feedback'] as List? ?? const []);
+      }
+      return List<dynamic>.from(raw as List? ?? const []);
+    } on FeatureDisabledException {
+      return <dynamic>[];
+    }
+  }
 
-  Future<List<dynamic>> tcpFeedbackProblematic() async =>
-      List<dynamic>.from(await get('/tcp/feedback/problematisch'));
+  Future<List<dynamic>> tcpFeedbackProblematic() async {
+    try {
+      return List<dynamic>.from(await get('/tcp/feedback/problematisch'));
+    } on FeatureDisabledException {
+      return <dynamic>[];
+    }
+  }
 
   // Therapy reports
   Future<List<dynamic>> tcpReportList(int patientId) async =>
       List<dynamic>.from(await get('/tcp/patienten/$patientId/berichte'));
 
-  Future<Map<String, dynamic>> tcpReportCreate(int patientId, Map<String, dynamic> data) async =>
-      Map<String, dynamic>.from(await post('/tcp/patienten/$patientId/berichte', data));
+  Future<Map<String, dynamic>> tcpReportCreate(
+          int patientId, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(
+          await post('/tcp/patienten/$patientId/berichte', data));
 
   Future<Map<String, dynamic>> tcpReportShow(int id) async =>
       Map<String, dynamic>.from(await get('/tcp/berichte/$id'));
@@ -763,13 +869,15 @@ class ApiService {
   Future<List<dynamic>> tcpLibraryList() async =>
       List<dynamic>.from(await get('/tcp/bibliothek'));
 
-  Future<Map<String, dynamic>> tcpLibraryCreate(Map<String, dynamic> data) async =>
+  Future<Map<String, dynamic>> tcpLibraryCreate(
+          Map<String, dynamic> data) async =>
       Map<String, dynamic>.from(await post('/tcp/bibliothek', data));
 
   Future<Map<String, dynamic>> tcpLibraryShow(int id) async =>
       Map<String, dynamic>.from(await get('/tcp/bibliothek/$id'));
 
-  Future<Map<String, dynamic>> tcpLibraryUpdate(int id, Map<String, dynamic> data) async =>
+  Future<Map<String, dynamic>> tcpLibraryUpdate(
+          int id, Map<String, dynamic> data) async =>
       Map<String, dynamic>.from(await post('/tcp/bibliothek/$id/update', data));
 
   Future<void> tcpLibraryDelete(int id) async =>
@@ -779,11 +887,15 @@ class ApiService {
   Future<List<dynamic>> tcpNaturalList(int patientId) async =>
       List<dynamic>.from(await get('/tcp/patienten/$patientId/naturheilkunde'));
 
-  Future<Map<String, dynamic>> tcpNaturalCreate(int patientId, Map<String, dynamic> data) async =>
-      Map<String, dynamic>.from(await post('/tcp/patienten/$patientId/naturheilkunde', data));
+  Future<Map<String, dynamic>> tcpNaturalCreate(
+          int patientId, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(
+          await post('/tcp/patienten/$patientId/naturheilkunde', data));
 
-  Future<Map<String, dynamic>> tcpNaturalUpdate(int id, Map<String, dynamic> data) async =>
-      Map<String, dynamic>.from(await post('/tcp/naturheilkunde/$id/update', data));
+  Future<Map<String, dynamic>> tcpNaturalUpdate(
+          int id, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(
+          await post('/tcp/naturheilkunde/$id/update', data));
 
   Future<void> tcpNaturalDelete(int id) async =>
       await post('/tcp/naturheilkunde/$id/loeschen', {});
@@ -795,8 +907,10 @@ class ApiService {
   Future<List<dynamic>> tcpReminderQueue(int patientId) async =>
       List<dynamic>.from(await get('/tcp/patienten/$patientId/erinnerungen'));
 
-  Future<Map<String, dynamic>> tcpReminderQueueStore(int patientId, Map<String, dynamic> data) async =>
-      Map<String, dynamic>.from(await post('/tcp/patienten/$patientId/erinnerungen', data));
+  Future<Map<String, dynamic>> tcpReminderQueueStore(
+          int patientId, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(
+          await post('/tcp/patienten/$patientId/erinnerungen', data));
 
   /* ── Tax Export Pro (Steuerexport) ── */
 
@@ -810,7 +924,8 @@ class ApiService {
       Map<String, dynamic>.from(await get('/steuerexport/audit-log'));
 
   Future<Map<String, dynamic>> taxExportFinalize(int id) async =>
-      Map<String, dynamic>.from(await post('/steuerexport/$id/finalisieren', {}));
+      Map<String, dynamic>.from(
+          await post('/steuerexport/$id/finalisieren', {}));
 
   Future<Map<String, dynamic>> taxExportCancel(int id) async =>
       Map<String, dynamic>.from(await post('/steuerexport/$id/stornieren', {}));
@@ -835,17 +950,19 @@ class ApiService {
   /* ── Owner Portal (Besitzerportal) ── */
 
   // Auth
-  Future<Map<String, dynamic>> portalLogin(String email, String password) async =>
+  Future<Map<String, dynamic>> portalLogin(
+          String email, String password) async =>
       Map<String, dynamic>.from(await postPublic('/portal/login', {
         'email': email,
         'password': password,
       }));
 
-  Future<void> portalLogout() async =>
-      await post('/portal/logout', {});
+  Future<void> portalLogout() async => await post('/portal/logout', {});
 
-  Future<Map<String, dynamic>> portalSetPassword(String token, String password) async =>
-      Map<String, dynamic>.from(await postPublic('/portal/passwort-setzen/$token', {
+  Future<Map<String, dynamic>> portalSetPassword(
+          String token, String password) async =>
+      Map<String, dynamic>.from(
+          await postPublic('/portal/passwort-setzen/$token', {
         'password': password,
         'password_confirmation': password,
       }));
@@ -861,8 +978,10 @@ class ApiService {
   Future<Map<String, dynamic>> ownerPortalPetDetail(int id) async =>
       Map<String, dynamic>.from(await get('/portal/tiere/$id'));
 
-  Future<Map<String, dynamic>> ownerPortalPetEdit(int id, Map<String, dynamic> data) async =>
-      Map<String, dynamic>.from(await post('/portal/tiere/$id/bearbeiten', data));
+  Future<Map<String, dynamic>> ownerPortalPetEdit(
+          int id, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(
+          await post('/portal/tiere/$id/bearbeiten', data));
 
   // Rechnungen
   Future<List<dynamic>> ownerPortalInvoices() async =>
@@ -886,14 +1005,17 @@ class ApiService {
   Future<List<dynamic>> ownerPortalThreadList() async =>
       List<dynamic>.from(await get('/portal/nachrichten'));
 
-  Future<Map<String, dynamic>> ownerPortalNewThread(Map<String, dynamic> data) async =>
+  Future<Map<String, dynamic>> ownerPortalNewThread(
+          Map<String, dynamic> data) async =>
       Map<String, dynamic>.from(await post('/portal/nachrichten/neu', data));
 
   Future<Map<String, dynamic>> ownerPortalThreadShow(int id) async =>
       Map<String, dynamic>.from(await get('/portal/nachrichten/$id'));
 
-  Future<Map<String, dynamic>> ownerPortalReply(int id, Map<String, dynamic> data) async =>
-      Map<String, dynamic>.from(await post('/portal/nachrichten/$id/antworten', data));
+  Future<Map<String, dynamic>> ownerPortalReply(
+          int id, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(
+          await post('/portal/nachrichten/$id/antworten', data));
 
   // Befundbögen
   Future<List<dynamic>> ownerPortalBefunde() async =>
@@ -908,7 +1030,8 @@ class ApiService {
   Future<Map<String, dynamic>> ownerPortalProfile() async =>
       Map<String, dynamic>.from(await get('/portal/profil'));
 
-  Future<Map<String, dynamic>> ownerPortalChangePassword(String currentPassword, String newPassword) async =>
+  Future<Map<String, dynamic>> ownerPortalChangePassword(
+          String currentPassword, String newPassword) async =>
       Map<String, dynamic>.from(await post('/portal/profil/passwort', {
         'current_password': currentPassword,
         'new_password': newPassword,
@@ -922,6 +1045,8 @@ class ApiService {
     required String category,
     int? rating,
     String platform = 'android',
+    String? appVersion,
+    String? email,
   }) async {
     try {
       final token = await getToken();
@@ -929,18 +1054,26 @@ class ApiService {
       final headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
         if (token != null) 'Authorization': 'Bearer $token',
       };
       final body = json.encode({
-        'message':  message,
+        'message': message,
         'category': category,
         if (rating != null) 'rating': rating,
         'platform': platform,
+        if (appVersion != null && appVersion.isNotEmpty)
+          'app_version': appVersion,
+        if (email != null && email.isNotEmpty) 'email': email,
       });
       final response = await http
           .post(Uri.parse(saasUrl), headers: headers, body: body)
           .timeout(const Duration(seconds: 15));
-      return response.statusCode == 200;
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return false;
+      }
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      return decoded is Map ? decoded['success'] == true : true;
     } catch (_) {
       return false;
     }
@@ -953,4 +1086,9 @@ class ApiException implements Exception {
   ApiException(this.message, this.statusCode);
   @override
   String toString() => message;
+}
+
+class FeatureDisabledException extends ApiException {
+  final String feature;
+  FeatureDisabledException(super.message, super.statusCode, this.feature);
 }

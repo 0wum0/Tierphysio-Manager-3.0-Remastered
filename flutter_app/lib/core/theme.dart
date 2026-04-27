@@ -4,12 +4,12 @@ import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // Brand colours
-  static const primary   = Color(0xFF5B8AF0);
+  static const primary = Color(0xFF5B8AF0);
   static const secondary = Color(0xFF8B5CF6);
-  static const tertiary  = Color(0xFF06B6D4);
-  static const success   = Color(0xFF10B981);
-  static const warning   = Color(0xFFF59E0B);
-  static const danger    = Color(0xFFEF4444);
+  static const tertiary = Color(0xFF06B6D4);
+  static const success = Color(0xFF10B981);
+  static const warning = Color(0xFFF59E0B);
+  static const danger = Color(0xFFEF4444);
 
   // Chart palette
   static const chartColors = [
@@ -27,13 +27,16 @@ class AppTheme {
       displayColor: cs.onSurface,
     );
     return base.copyWith(
-      displayLarge:  base.displayLarge?.copyWith(fontWeight: FontWeight.w800),
+      displayLarge: base.displayLarge?.copyWith(fontWeight: FontWeight.w800),
       displayMedium: base.displayMedium?.copyWith(fontWeight: FontWeight.w800),
-      headlineLarge: base.headlineLarge?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.5),
-      headlineMedium: base.headlineMedium?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.3),
-      titleLarge: base.titleLarge?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.2),
+      headlineLarge: base.headlineLarge
+          ?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.5),
+      headlineMedium: base.headlineMedium
+          ?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.3),
+      titleLarge: base.titleLarge
+          ?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.2),
       titleMedium: base.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-      bodyLarge:  base.bodyLarge?.copyWith(fontWeight: FontWeight.w400),
+      bodyLarge: base.bodyLarge?.copyWith(fontWeight: FontWeight.w400),
       bodyMedium: base.bodyMedium?.copyWith(fontWeight: FontWeight.w400),
       labelLarge: base.labelLarge?.copyWith(fontWeight: FontWeight.w600),
     );
@@ -72,15 +75,23 @@ class AppTheme {
       colorScheme: cs,
       textTheme: textTheme,
       scaffoldBackgroundColor: cs.surface,
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: ZoomPageTransitionsBuilder(),
+          TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
+        },
+      ),
       appBarTheme: AppBarTheme(
         centerTitle: false,
         elevation: 0,
         scrolledUnderElevation: 0.5,
         backgroundColor: cs.surface,
         foregroundColor: cs.onSurface,
-        systemOverlayStyle: isDark
-            ? SystemUiOverlayStyle.light
-            : SystemUiOverlayStyle.dark,
+        systemOverlayStyle:
+            isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         titleTextStyle: GoogleFonts.inter(
           fontSize: 20,
           fontWeight: FontWeight.w700,
@@ -132,27 +143,31 @@ class AppTheme {
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: danger, width: 2),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
         labelStyle: TextStyle(color: cs.onSurfaceVariant),
         floatingLabelStyle: const TextStyle(color: primary),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           minimumSize: const Size(double.infinity, 52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(double.infinity, 52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           side: BorderSide(color: cs.outline),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
       ),
       chipTheme: ChipThemeData(
@@ -175,7 +190,8 @@ class AppTheme {
         height: 68,
         backgroundColor: isDark ? const Color(0xFF181B26) : Colors.white,
         indicatorColor: primary.withValues(alpha: 0.15),
-        indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        indicatorShape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         labelTextStyle: WidgetStateProperty.resolveWith((s) {
           final selected = s.contains(WidgetState.selected);
@@ -194,13 +210,17 @@ class AppTheme {
         }),
       ),
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: isDark ? const Color(0xFF12141E) : const Color(0xFFEFF2FF),
+        backgroundColor:
+            isDark ? const Color(0xFF12141E) : const Color(0xFFEFF2FF),
         indicatorColor: primary.withValues(alpha: 0.13),
-        indicatorShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        indicatorShape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         selectedIconTheme: const IconThemeData(color: primary),
         unselectedIconTheme: IconThemeData(color: cs.onSurfaceVariant),
-        selectedLabelTextStyle: const TextStyle(color: primary, fontWeight: FontWeight.w700, fontSize: 12),
-        unselectedLabelTextStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+        selectedLabelTextStyle: const TextStyle(
+            color: primary, fontWeight: FontWeight.w700, fontSize: 12),
+        unselectedLabelTextStyle:
+            TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
         backgroundColor: primary,
@@ -211,7 +231,8 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        backgroundColor: isDark ? const Color(0xFF22263A) : const Color(0xFF1E2234),
+        backgroundColor:
+            isDark ? const Color(0xFF22263A) : const Color(0xFF1E2234),
         contentTextStyle: GoogleFonts.inter(color: Colors.white, fontSize: 14),
       ),
       bottomSheetTheme: BottomSheetThemeData(
