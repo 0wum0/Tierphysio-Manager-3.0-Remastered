@@ -267,6 +267,29 @@
 </div>
 {% endif %}
 
+{# ── Letzte Aktivität ── #}
+{% if recent_activity is defined and recent_activity|length > 0 %}
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 class="h5 mb-0">🕐 Letzte Aktivität</h2>
+    </div>
+    {% for act in recent_activity %}
+    <div class="d-flex align-items-center gap-3 py-2" style="{% if not loop.last %}border-bottom:1px solid var(--bs-border-color);{% endif %}">
+        <div style="width:32px;height:32px;border-radius:50%;background:rgba(79,70,229,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:.9rem;">✅</div>
+        <div class="flex-fill">
+            <div class="fw-500 small">{{ act.title }}</div>
+            {% if act.pet_name %}
+            <div class="small text-secondary">🐾 {{ act.pet_name }}</div>
+            {% endif %}
+        </div>
+        <div class="small text-secondary text-end" style="white-space:nowrap;">{{ act.created_at|date('d.m.Y') }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 {% endblock %}
 
 {% block scripts %}

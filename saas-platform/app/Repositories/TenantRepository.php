@@ -13,12 +13,35 @@ class TenantRepository
     public function all(int $limit = 100, int $offset = 0): array
     {
         return $this->db->fetchAll(
-            "SELECT t.*, p.name AS plan_name, p.slug AS plan_slug
+            "SELECT t.*, p.name AS plan_name, p.slug AS plan_slug,
+                    s.status AS sub_status, s.grandfathered_price, s.grandfathered_reason,
+                    s.trial_ends_at AS sub_trial_ends_at, s.next_billing
              FROM tenants t
              LEFT JOIN plans p ON p.id = t.plan_id
+             LEFT JOIN subscriptions s ON s.tenant_id = t.id
+                 AND s.id = (SELECT id FROM subscriptions WHERE tenant_id = t.id ORDER BY created_at DESC LIMIT 1)
              ORDER BY t.created_at DESC
              LIMIT ? OFFSET ?",
             [$limit, $offset]
+        );
+    }
+
+    public function countFounders(): int
+    {
+        try {
+            return (int)$this->db->fetchColumn(
+                "SELECT COUNT(*) FROM tenants WHERE is_founder = 1"
+            );
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
+    public function setFounder(int $id, bool $isFounder, float $price = 39.0): void
+    {
+        $this->db->execute(
+            "UPDATE tenants SET is_founder = ?, founder_since = ? WHERE id = ?",
+            [$isFounder ? 1 : 0, $isFounder ? date('Y-m-d H:i:s') : null, $id]
         );
     }
 

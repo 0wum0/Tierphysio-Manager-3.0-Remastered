@@ -285,6 +285,52 @@
             </div>
         </div>
 
+        {# Early Tester / Founders System #}
+        <div class="card mb-3" style="border-color:rgba(245,158,11,.35);">
+            <div class="card-header px-4 py-3 d-flex align-items-center gap-2" style="background:rgba(245,158,11,.07);">
+                <span style="font-size:1rem;">★</span>
+                <span class="fw-semibold">Early Tester / Founder</span>
+                {% if tenant.is_founder %}
+                <span class="badge bg-warning text-dark ms-auto">AKTIV</span>
+                {% endif %}
+            </div>
+            <div class="card-body px-4 py-3">
+                {% if tenant.is_founder %}
+                <div class="mb-3 p-2 rounded" style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);">
+                    <div class="fw-semibold text-warning" style="font-size:.9rem;">★ Founder-Status aktiv</div>
+                    {% if tenant.founder_since %}
+                    <div class="text-secondary" style="font-size:.72rem;">Seit: {{ tenant.founder_since|date('d.m.Y') }}</div>
+                    {% endif %}
+                    {% if subscription and subscription.grandfathered_price %}
+                    <div class="text-warning mt-1" style="font-size:.85rem;">
+                        Sonderpreis: <strong>{{ subscription.grandfathered_price|number_format(2, ',', '.') }} €/Monat</strong>
+                        <span class="text-secondary" style="font-size:.72rem;">(statt regulärem Preis)</span>
+                    </div>
+                    {% endif %}
+                </div>
+                <form method="POST" action="/admin/tenants/{{ tenant.id }}/set-founder">
+                    {{ csrf_field()|raw }}
+                    <input type="hidden" name="enable" value="0">
+                    <button type="submit" class="btn btn-sm btn-outline-warning w-100" onclick="return confirm('Founder-Status entfernen?')">
+                        <i class="bi bi-x me-1"></i>Founder-Status entfernen
+                    </button>
+                </form>
+                {% else %}
+                <p class="text-muted fs-sm mb-3">
+                    Setzt automatisch einen Grandfathered-Preis (Early-Tester-Konditionen).
+                    <br>Regulärer Preis wird dauerhaft auf den Founders-Preis eingefroren — kein Einmal-Betrag!
+                </p>
+                <form method="POST" action="/admin/tenants/{{ tenant.id }}/set-founder">
+                    {{ csrf_field()|raw }}
+                    <input type="hidden" name="enable" value="1">
+                    <button type="submit" class="btn btn-sm btn-warning w-100">
+                        <i class="bi bi-star me-1"></i>Als Founder setzen (automatisch €39/Monat)
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+
         {# Sonderpreis (Grandfathered Pricing) #}
         <div class="card mb-3">
             <div class="card-header px-4 py-3"><span class="fw-semibold">Sonderpreis (Early Adopter / Vertrag)</span></div>
@@ -319,6 +365,7 @@
                         <label class="form-label" style="font-size:.75rem;color:#94a3b8;">Begründung</label>
                         <select name="grandfathered_reason" class="form-select form-select-sm"
                                 style="background:#0f172a;border-color:#334155;color:#f1f5f9;">
+                            <option value="founders-discount" {{ subscription.grandfathered_reason == 'founders-discount' ? 'selected' : '' }}>★ Founder Discount</option>
                             <option value="early-adopter" {{ subscription.grandfathered_reason == 'early-adopter' ? 'selected' : '' }}>Early Adopter</option>
                             <option value="tester" {{ subscription.grandfathered_reason == 'tester' ? 'selected' : '' }}>Tester</option>
                             <option value="partner" {{ subscription.grandfathered_reason == 'partner' ? 'selected' : '' }}>Partner</option>

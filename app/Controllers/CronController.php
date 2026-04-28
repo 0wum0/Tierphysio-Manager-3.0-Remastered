@@ -100,6 +100,7 @@ class CronController extends Controller
             'google_sync_cron_secret',
             'tcp_cron_token',
             'cron_secret',
+            'portal_smart_reminder_token',
         ];
 
         foreach ($keys as $key) {
@@ -278,6 +279,11 @@ class CronController extends Controller
                     'schedule' => '0 8 * * *', // Täglich um 08:00
                     'interval_seconds' => 86400,
                     'endpoint' => '/api/holiday-cron'
+                ],
+                'smart_reminders' => [
+                    'schedule' => '0 9 * * *', // Täglich um 09:00
+                    'interval_seconds' => 86400,
+                    'endpoint' => '/portal/cron/smart-erinnerungen'
                 ]
             ];
 
@@ -361,7 +367,8 @@ class CronController extends Controller
             'calendar_reminders' => 'calendar_cron_secret',
             'google_sync' => 'google_sync_cron_secret',
             'tcp_reminders' => 'tcp_cron_token',
-            'holiday_greetings' => 'cron_secret'
+            'holiday_greetings' => 'cron_secret',
+            'smart_reminders'   => 'portal_smart_reminder_token'
         ];
 
         $tokenKey = $tokenKeys[$jobKey] ?? '';

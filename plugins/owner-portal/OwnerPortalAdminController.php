@@ -679,4 +679,50 @@ class OwnerPortalAdminController extends Controller
         $row  = $stmt->fetch(\PDO::FETCH_ASSOC);
         return $row ?: null;
     }
+
+    /* ── GET /portal/cron/smart-erinnerungen?token=XYZ ──────────────────── */
+    public function cronSmartReminders(array $params = []): void
+    {
+        $start = hrtime(true);
+
+        $db       = \App\Core\Application::getInstance()->getContainer()->get(Database::class);
+        $settings = \App\Core\Application::getInstance()->getContainer()->get(\App\Repositories\SettingsRepository::class);
+        $mailer   = \App\Core\Application::getInstance()->getContainer()->get(\App\Services\MailService::class);
+
+        /* Token-Prüfung (Self-Healing: generiert bei erstem Aufruf) */
+        $expectedToken = $settings->get('portal_smart_reminder_token', '');
+        if ($expectedToken === '') {
+            $expectedToken = bin2hex(random_bytes(32));
+            $settings->set('portal_smart_reminder_token', $expectedToken);
+        }
+
+        $providedToken = (string)($_GET['token'] ?? '');
+        $authHeader    = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+        if (str_starts_with($authHeader, 'Bearer ')) {
+            $providedToken = substr($authHeader, 7);
+        }
+
+        if ($providedToken !== '' && !hash_equals($expectedToken, $providedToken)) {
+            http_response_code(401);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Ungültiger Token']);
+            exit;
+        }
+
+        try {
+            $portalMailer = new OwnerPortalMailService($settings, $mailer);
+            $service      = new SmartReminderService($db, $portalMailer, $settings);
+            $result       = $service->processPending();
+        } catch (\Throwable $e) {
+            http_response_code(200);
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
+            exit;
+        }
+
+        $ms = (int)((hrtime(true) - $start) / 1_000_000);
+        header('Content-Type: application/json');
+        echo json_encode(array_merge(['ok' => true, 'duration_ms' => $ms], $result));
+        exit;
+    }
 }

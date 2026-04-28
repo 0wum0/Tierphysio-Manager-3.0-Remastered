@@ -23,6 +23,7 @@ class ServiceProvider
         require_once __DIR__ . '/MessagingAdminController.php';
         require_once __DIR__ . '/MessagingOwnerController.php';
         require_once __DIR__ . '/OwnerPortalBookingController.php';
+        require_once __DIR__ . '/SmartReminderService.php';
 
         $this->runMigrations();
 
@@ -142,6 +143,9 @@ class ServiceProvider
         $router->get('/api/portal/nachrichten/ungelesen',                            [MessagingOwnerController::class, 'unreadCount'], []);
         $router->post('/api/portal/nachrichten/{id}/antworten',                      [MessagingOwnerController::class, 'reply'],       []);
         $router->post('/api/portal/nachrichten/neu',                                 [MessagingOwnerController::class, 'newThread'],   []);
+
+        /* ── Smart Erinnerungen Cron-Endpunkt (Token-gesichert) ── */
+        $router->get('/portal/cron/smart-erinnerungen',                              [OwnerPortalAdminController::class, 'cronSmartReminders'], []);
     }
 
     public function dashboardWidget(array $context): array

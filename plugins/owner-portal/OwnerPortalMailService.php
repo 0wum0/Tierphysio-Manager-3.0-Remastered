@@ -133,6 +133,80 @@ class OwnerPortalMailService
         $this->mailer->sendRaw($email, $ownerName, $subject, $htmlBody);
     }
 
+    /**
+     * Sendet Erinnerung an Besitzer, dass ausstehende Übungen/Hausaufgaben warten.
+     */
+    public function sendExerciseReminder(string $email, string $companyName): bool
+    {
+        $baseUrl     = $this->getBaseUrl();
+        $portalUrl   = $baseUrl . '/portal/hausaufgaben';
+        $safeName    = htmlspecialchars($companyName, ENT_QUOTES, 'UTF-8');
+        $safeUrl     = htmlspecialchars($portalUrl,   ENT_QUOTES, 'UTF-8');
+
+        $subject  = '📋 Erinnerung: Übungen für Ihr Tier stehen bereit — ' . $companyName;
+        $htmlBody = '
+<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;">
+  <h2 style="color:#4f46e5;margin-bottom:8px;">📋 Ihre Übungen warten auf Sie!</h2>
+  <p style="color:#374151;">Guten Tag,</p>
+  <p style="color:#374151;">
+    Wir möchten Sie daran erinnern, dass für Ihr Tier noch ausstehende Übungen und
+    Hausaufgaben im Besitzerportal von <strong>' . $safeName . '</strong> auf Sie warten.
+  </p>
+  <p style="color:#374151;">
+    Regelmäßige Übungen sind ein wichtiger Teil des Therapieerfolgs — Ihr Tier wird es
+    Ihnen danken! 🐾
+  </p>
+  <p style="margin:28px 0;">
+    <a href="' . $safeUrl . '" style="background:#4f46e5;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;display:inline-block;">
+      Zu den Übungen im Portal
+    </a>
+  </p>
+  <p style="color:#9ca3af;font-size:12px;margin-top:24px;border-top:1px solid #e5e7eb;padding-top:16px;">
+    Diese Erinnerung wurde automatisch von <strong>' . $safeName . '</strong> versendet.
+  </p>
+</div>';
+
+        return $this->mailer->sendRaw($email, '', $subject, $htmlBody);
+    }
+
+    /**
+     * Sendet Inaktivitäts-Erinnerung wenn Besitzer längere Zeit nicht eingeloggt war.
+     */
+    public function sendInactivityReminder(string $email, string $companyName, int $daysSince): bool
+    {
+        $baseUrl   = $this->getBaseUrl();
+        $portalUrl = $baseUrl . '/portal/login';
+        $safeName  = htmlspecialchars($companyName, ENT_QUOTES, 'UTF-8');
+        $safeUrl   = htmlspecialchars($portalUrl,   ENT_QUOTES, 'UTF-8');
+        $safeDays  = (int)$daysSince;
+
+        $subject  = '👋 Wir vermissen Sie! — ' . $companyName;
+        $htmlBody = '
+<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;">
+  <h2 style="color:#4f46e5;margin-bottom:8px;">👋 Lange nicht gesehen!</h2>
+  <p style="color:#374151;">Guten Tag,</p>
+  <p style="color:#374151;">
+    Sie waren seit <strong>' . $safeDays . ' Tagen</strong> nicht mehr im Besitzerportal
+    von <strong>' . $safeName . '</strong> eingeloggt.
+  </p>
+  <p style="color:#374151;">
+    Im Portal finden Sie aktuelle Übungspläne, Termine, Rechnungen und den Fortschritt
+    Ihres Tieres — alles auf einen Blick.
+  </p>
+  <p style="margin:28px 0;">
+    <a href="' . $safeUrl . '" style="background:#4f46e5;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;display:inline-block;">
+      Jetzt einloggen
+    </a>
+  </p>
+  <p style="color:#9ca3af;font-size:12px;margin-top:24px;border-top:1px solid #e5e7eb;padding-top:16px;">
+    Diese Erinnerung wurde automatisch von <strong>' . $safeName . '</strong> versendet.
+    Wenn Sie keine weiteren Erinnerungen wünschen, wenden Sie sich bitte direkt an die Praxis.
+  </p>
+</div>';
+
+        return $this->mailer->sendRaw($email, '', $subject, $htmlBody);
+    }
+
     private function getBaseUrl(): string
     {
         $configured = $this->settings->get('portal_base_url', '');

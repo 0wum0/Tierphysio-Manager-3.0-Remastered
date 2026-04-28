@@ -1,0 +1,108 @@
+{% extends 'layouts/base.twig' %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h4 class="mb-1 fw-700">
+            <svg class="sa-icon me-2" style="color:var(--bs-warning)"><use href="/sa/icons/sprite.svg#shield-check"></use></svg>
+            Audit-Log
+        </h4>
+        <p class="text-muted fs-sm mb-0">Alle Admin-Aktionen: Plan-Änderungen, Tenant-Änderungen, Sonderpreise.</p>
+    </div>
+</div>
+
+{# Filter #}
+<form method="GET" action="/admin/audit-log" class="card card-body mb-4 p-3">
+    <div class="d-flex gap-2 flex-wrap align-items-end">
+        <div>
+            <label class="form-label fs-xs mb-1">Aktion</label>
+            <input type="text" name="action" value="{{ filter_action }}" class="form-control form-control-sm" placeholder="z.B. tenant.suspend" style="min-width:180px;">
+        </div>
+        <div>
+            <label class="form-label fs-xs mb-1">Benutzer</label>
+            <input type="text" name="actor" value="{{ filter_actor }}" class="form-control form-control-sm" placeholder="Admin-Name" style="min-width:140px;">
+        </div>
+        <div class="d-flex gap-2 align-items-end">
+            <button type="submit" class="btn btn-sm btn-primary">
+                <svg class="sa-icon sa-icon-sm me-1"><use href="/sa/icons/sprite.svg#search"></use></svg>Filtern
+            </button>
+            {% if filter_action or filter_actor %}
+            <a href="/admin/audit-log" class="btn btn-sm btn-outline-secondary">
+                <svg class="sa-icon sa-icon-sm"><use href="/sa/icons/sprite.svg#x"></use></svg>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</form>
+
+<div class="card">
+    <div class="card-header d-flex align-items-center justify-content-between py-2">
+        <span class="fw-600 fs-sm">{{ pagination.total }} Einträge</span>
+        <span class="text-muted fs-xs">Seite {{ pagination.page }} / {{ pagination.last_page }}</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover table-sm mb-0">
+            <thead class="fs-xs text-muted">
+                <tr>
+                    <th style="width:155px;">Zeitpunkt</th>
+                    <th style="width:120px;">Benutzer</th>
+                    <th style="width:220px;">Aktion</th>
+                    <th>Objekt</th>
+                    <th>Detail</th>
+                    <th style="width:110px;">IP</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in logs %}
+                {% set actionParts = entry.action|split('.') %}
+                {% set actionNs    = actionParts|first %}
+                {% set badgeColor  = {
+                    'tenant':       'danger',
+                    'subscription': 'warning',
+                    'plan':         'info',
+                    'settings':     'secondary',
+                    'auth':         'dark',
+                    'system':       'light',
+                }[actionNs] ?? 'secondary' %}
+                <tr>
+                    <td class="text-muted text-nowrap fs-xs">{{ entry.created_at|date('d.m.Y H:i:s') }}</td>
+                    <td class="fs-xs fw-600">{{ entry.actor }}</td>
+                    <td>
+                        <span class="badge bg-{{ badgeColor }}-lt text-{{ badgeColor }} fs-xxs">{{ entry.action }}</span>
+                    </td>
+                    <td class="text-muted fs-sm">
+                        {% if entry.subject %}
+                            {{ entry.subject }}{% if entry.subject_id %} <span class="text-muted">#{{ entry.subject_id }}</span>{% endif %}
+                        {% endif %}
+                    </td>
+                    <td class="text-muted fs-sm" style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ entry.detail }}">
+                        {{ entry.detail }}
+                    </td>
+                    <td class="text-muted fs-xs">{{ entry.ip }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center py-5 text-muted">
+                        <svg class="sa-icon sa-icon-3x d-block mx-auto mb-2 opacity-25"><use href="/sa/icons/sprite.svg#shield-check"></use></svg>
+                        Keine Audit-Einträge gefunden.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if pagination.last_page > 1 %}
+    <div class="card-footer d-flex justify-content-between align-items-center py-2">
+        <div class="d-flex gap-1">
+            {% if pagination.has_prev %}
+            <a href="?page={{ pagination.page - 1 }}&action={{ filter_action }}&actor={{ filter_actor }}" class="btn btn-sm btn-outline-secondary">← Zurück</a>
+            {% endif %}
+            {% if pagination.has_next %}
+            <a href="?page={{ pagination.page + 1 }}&action={{ filter_action }}&actor={{ filter_actor }}" class="btn btn-sm btn-outline-secondary">Weiter →</a>
+            {% endif %}
+        </div>
+        <span class="text-muted fs-xs">{{ pagination.total }} Einträge gesamt</span>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

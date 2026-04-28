@@ -117,6 +117,27 @@ class NotificationController extends Controller
         ]);
     }
 
+    public function auditLog(array $params = []): void
+    {
+        $this->requireAuth();
+
+        $page    = max(1, (int)$this->get('page', 1));
+        $action  = trim($this->get('action', ''));
+        $actor   = trim($this->get('actor', ''));
+        $subject = trim($this->get('subject', ''));
+        $result  = $this->log->getPaginated($page, 50, $action, $actor);
+
+        $this->render('admin/audit-log.twig', [
+            'page_title'     => 'Audit-Log',
+            'active_nav'     => 'audit_log',
+            'logs'           => $result['items'],
+            'pagination'     => $result,
+            'filter_action'  => $action,
+            'filter_actor'   => $actor,
+            'filter_subject' => $subject,
+        ]);
+    }
+
     private function isAjax(): bool
     {
         return strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') === 'xmlhttprequest'

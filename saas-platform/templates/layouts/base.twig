@@ -395,6 +395,18 @@
                     </a>
                 </li>
                 <li>
+                    <a href="/admin/cron-monitoring" {% if active_nav == 'cron_monitoring' %}class="active"{% endif %}>
+                        <svg class="sa-icon"><use href="/sa/icons/sprite.svg#activity"></use></svg>
+                        <span class="nav-link-text">Cron-Monitoring</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/admin/audit-log" {% if active_nav == 'audit_log' %}class="active"{% endif %}>
+                        <svg class="sa-icon"><use href="/sa/icons/sprite.svg#shield-check"></use></svg>
+                        <span class="nav-link-text">Audit-Log</span>
+                    </a>
+                </li>
+                <li>
                     <a href="/admin/updates" id="sidebar-update-link">
                         <svg class="sa-icon"><use href="/sa/icons/sprite.svg#refresh-cw"></use></svg>
                         <span class="nav-link-text">
