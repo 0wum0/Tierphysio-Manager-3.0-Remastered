@@ -114,12 +114,13 @@ class PraxisCronController extends Controller
 
         // Get cronjob config
         $cronjobs = [
-            'dispatcher' => 'cron_dispatcher_token',
-            'birthday' => 'birthday_cron_token',
+            'dispatcher'         => 'cron_dispatcher_token',
+            'birthday'           => 'birthday_cron_token',
             'calendar_reminders' => 'calendar_cron_secret',
-            'google_calendar' => 'google_sync_cron_secret',
-            'tcp_reminders' => 'tcp_cron_token',
-            'holiday_greetings' => 'cron_secret'
+            'google_calendar'    => 'google_sync_cron_secret',
+            'tcp_reminders'      => 'tcp_cron_token',
+            'holiday_greetings'  => 'cron_secret',
+            'smart_reminders'    => 'portal_smart_reminder_token',
         ];
 
         if (!isset($cronjobs[$cronJobKey])) {
@@ -167,12 +168,13 @@ class PraxisCronController extends Controller
         $settingsTable = $prefix . 'settings';
 
         $tokenFields = [
-            'dispatcher' => 'cron_dispatcher_token',
-            'birthday' => 'birthday_cron_token',
+            'dispatcher'         => 'cron_dispatcher_token',
+            'birthday'           => 'birthday_cron_token',
             'calendar_reminders' => 'calendar_cron_secret',
-            'google_calendar' => 'google_sync_cron_secret',
-            'tcp_reminders' => 'tcp_cron_token',
-            'holiday_greetings' => 'cron_secret'
+            'google_calendar'    => 'google_sync_cron_secret',
+            'tcp_reminders'      => 'tcp_cron_token',
+            'holiday_greetings'  => 'cron_secret',
+            'smart_reminders'    => 'portal_smart_reminder_token',
         ];
 
         $tokenField = $tokenFields[$cronJobKey] ?? '';
@@ -235,19 +237,23 @@ class PraxisCronController extends Controller
         $settingsTable = $prefix . 'settings';
 
         $tokenFields = [
-            'dispatcher' => 'cron_dispatcher_token',
-            'birthday' => 'birthday_cron_token',
+            'dispatcher'         => 'cron_dispatcher_token',
+            'birthday'           => 'birthday_cron_token',
             'calendar_reminders' => 'calendar_cron_secret',
-            'google_calendar' => 'google_sync_cron_secret',
-            'tcp_reminders' => 'tcp_cron_token',
-            'holiday_greetings' => 'cron_secret'
+            'google_calendar'    => 'google_sync_cron_secret',
+            'tcp_reminders'      => 'tcp_cron_token',
+            'holiday_greetings'  => 'cron_secret',
+            'smart_reminders'    => 'portal_smart_reminder_token',
         ];
 
-        $tokenField = $tokenFields[$cronJobKey];
-        $token = $this->db->fetchColumn("SELECT `value` FROM `{$settingsTable}` WHERE `key` = ?", [$tokenField]);
+        $tokenField = $tokenFields[$cronJobKey] ?? '';
+        $token = $tokenField !== ''
+            ? $this->db->fetchColumn("SELECT `value` FROM `{$settingsTable}` WHERE `key` = ?", [$tokenField])
+            : null;
 
+        // Use & because ?tid= is already in the URL — a second ? would corrupt the tid parameter
         if ($token) {
-            $url .= '?token=' . $token;
+            $url .= '&token=' . $token;
         }
 
         // Execute request

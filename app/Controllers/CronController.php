@@ -475,6 +475,23 @@ class CronController extends Controller
         $normalized = preg_replace('/_+/', '_', $normalized) ?? $normalized;
         $normalized = trim($normalized, '_');
 
-        return 't_' . $normalized . '_';
+        $prefix = 't_' . $normalized . '_';
+
+        // MySQL table names are limited to 64 chars. A prefix > 58 chars (64 - len('users'))
+        // would make every table name too long → error 1103. This can happen when a malformed
+        // URL causes '?token=HEXVALUE' to be absorbed into the tid parameter value.
+        if (strlen($prefix) > 58) {
+            $this->cronLog(sprintf(
+                '[CRON] FEHLER: tid "%s" erzeugt ungültigen Prefix (%d Zeichen). '
+                . 'Mögliche Ursache: Doppeltes "?" in der Cron-URL — bitte "&token=" statt "?token=" verwenden.',
+                substr($tid, 0, 80),
+                strlen($prefix)
+            ));
+            throw new \InvalidArgumentException(
+                "Ungültiger tid-Parameter (Prefix zu lang: {$prefix}). Cron-URL prüfen."
+            );
+        }
+
+        return $prefix;
     }
 }
