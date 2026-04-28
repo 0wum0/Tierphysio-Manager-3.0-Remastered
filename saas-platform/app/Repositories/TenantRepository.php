@@ -12,18 +12,32 @@ class TenantRepository
 
     public function all(int $limit = 100, int $offset = 0): array
     {
-        return $this->db->fetchAll(
-            "SELECT t.*, p.name AS plan_name, p.slug AS plan_slug,
-                    s.status AS sub_status, s.grandfathered_price, s.grandfathered_reason,
-                    s.trial_ends_at AS sub_trial_ends_at, s.next_billing
-             FROM tenants t
-             LEFT JOIN plans p ON p.id = t.plan_id
-             LEFT JOIN subscriptions s ON s.tenant_id = t.id
-                 AND s.id = (SELECT id FROM subscriptions WHERE tenant_id = t.id ORDER BY created_at DESC LIMIT 1)
-             ORDER BY t.created_at DESC
-             LIMIT ? OFFSET ?",
-            [$limit, $offset]
-        );
+        /* Self-Healing: erweiterter Query mit Subscription-Join.
+         * Fällt auf einfachen Query zurück wenn Spalten aus Migration 001/003 fehlen. */
+        try {
+            return $this->db->fetchAll(
+                "SELECT t.*, p.name AS plan_name, p.slug AS plan_slug,
+                        s.status AS sub_status, s.grandfathered_price, s.grandfathered_reason,
+                        s.trial_ends_at AS sub_trial_ends_at, s.next_billing
+                 FROM tenants t
+                 LEFT JOIN plans p ON p.id = t.plan_id
+                 LEFT JOIN subscriptions s ON s.tenant_id = t.id
+                     AND s.id = (SELECT id FROM subscriptions WHERE tenant_id = t.id ORDER BY created_at DESC LIMIT 1)
+                 ORDER BY t.created_at DESC
+                 LIMIT ? OFFSET ?",
+                [$limit, $offset]
+            );
+        } catch (\Throwable) {
+            /* Fallback: einfacher Query ohne neue Spalten */
+            return $this->db->fetchAll(
+                "SELECT t.*, p.name AS plan_name, p.slug AS plan_slug
+                 FROM tenants t
+                 LEFT JOIN plans p ON p.id = t.plan_id
+                 ORDER BY t.created_at DESC
+                 LIMIT ? OFFSET ?",
+                [$limit, $offset]
+            );
+        }
     }
 
     public function countFounders(): int
@@ -33,16 +47,25 @@ class TenantRepository
                 "SELECT COUNT(*) FROM tenants WHERE is_founder = 1"
             );
         } catch (\Throwable) {
-            return 0;
+            return 0; // Spalte noch nicht migriert
         }
     }
 
     public function setFounder(int $id, bool $isFounder, float $price = 39.0): void
     {
-        $this->db->execute(
-            "UPDATE tenants SET is_founder = ?, founder_since = ? WHERE id = ?",
-            [$isFounder ? 1 : 0, $isFounder ? date('Y-m-d H:i:s') : null, $id]
-        );
+        try {
+            $this->db->execute(
+                "UPDATE tenants SET is_founder = ?, founder_since = ? WHERE id = ?",
+                [$isFounder ? 1 : 0, $isFounder ? date('Y-m-d H:i:s') : null, $id]
+            );
+        } catch (\Throwable $e) {
+            /* Spalten is_founder/founder_since fehlen — Migration 003 ausstehend */
+            error_log('[TenantRepository] setFounder failed (migration pending?): ' . $e->getMessage());
+            throw new \RuntimeException(
+                'Founder-Status konnte nicht gesetzt werden. Bitte Migration 003 ausführen.',
+                0, $e
+            );
+        }
     }
 
     public function count(): int
