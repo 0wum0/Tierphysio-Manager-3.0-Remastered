@@ -282,4 +282,54 @@ class PraxisCronController extends Controller
         ]);
         exit;
     }
+
+    /* ── GET /admin/cron-monitoring ─────────────────────────────────── */
+    public function monitoring(array $params = []): void
+    {
+        $this->requireAuth();
+
+        $jobKeys = [
+            'birthday', 'calendar_reminders', 'google_sync',
+            'tcp_reminders', 'holiday_greetings', 'smart_reminders', 'dispatcher',
+        ];
+
+        $jobStats = [];
+        foreach ($jobKeys as $key) {
+            try {
+                $last = $this->db->fetch(
+                    "SELECT job_key, status, message, duration_ms, created_at
+                     FROM cron_dispatcher_log
+                     WHERE job_key = ?
+                     ORDER BY created_at DESC LIMIT 1",
+                    [$key]
+                );
+                $errorCount = (int)$this->db->fetchColumn(
+                    "SELECT COUNT(*) FROM cron_dispatcher_log
+                     WHERE job_key = ? AND status = 'error' AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)",
+                    [$key]
+                );
+                $jobStats[$key] = [
+                    'last_run'    => $last ?: null,
+                    'errors_24h'  => $errorCount,
+                ];
+            } catch (\Throwable) {
+                $jobStats[$key] = ['last_run' => null, 'errors_24h' => 0];
+            }
+        }
+
+        /* Last 50 dispatcher log entries */
+        $recentLogs = [];
+        try {
+            $recentLogs = $this->db->fetchAll(
+                "SELECT * FROM cron_dispatcher_log ORDER BY created_at DESC LIMIT 50"
+            );
+        } catch (\Throwable) {}
+
+        $this->render('admin/cron-monitoring.twig', [
+            'page_title'  => 'Cronjob-Monitoring',
+            'active_nav'  => 'praxis_cron',
+            'job_stats'   => $jobStats,
+            'recent_logs' => $recentLogs,
+        ]);
+    }
 }

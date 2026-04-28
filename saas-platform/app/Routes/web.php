@@ -49,6 +49,7 @@ $router->post('/admin/tenants/{id}/cancel',     [TenantController::class, 'cance
 $router->post('/admin/tenants/{id}/license',    [TenantController::class, 'issueLicense']);
 $router->post('/admin/tenants/{id}/set-trial',        [TenantController::class, 'setTrial']);
 $router->post('/admin/tenants/{id}/set-grandfathered', [TenantController::class, 'setGrandfatheredPrice']);
+$router->post('/admin/tenants/{id}/set-founder',       [TenantController::class, 'setFounder']);
 $router->post('/admin/tenants/{id}/delete',     [TenantController::class, 'delete']);
 $router->post('/admin/tenants/{id}/repair',          [DataMigrationController::class, 'repairDatabase']);
 $router->post('/admin/tenants/{id}/run-migrations',  [TenantController::class, 'runMigrations']);
@@ -104,6 +105,9 @@ $router->post('/admin/notifications/delete-read',             [NotificationContr
 $router->post('/admin/notifications/{id}/read',               [NotificationController::class, 'markRead']);
 $router->post('/admin/notifications/{id}/delete',             [NotificationController::class, 'delete']);
 
+// ── Audit Log ─────────────────────────────────────────────────────────────
+$router->get('/admin/audit-log', [NotificationController::class, 'auditLog']);
+
 // ── Revenue Dashboard ──────────────────────────────────────────────────────
 $router->get('/admin/revenue',     [RevenueController::class, 'index']);
 $router->get('/admin/revenue/api', [RevenueController::class, 'api']);
@@ -142,6 +146,7 @@ $router->get('/admin/praxis-cron',                   [PraxisCronController::clas
 $router->post('/admin/praxis-cron/update-token',     [PraxisCronController::class, 'updateToken']);
 $router->get('/admin/praxis-cron/get-token',         [PraxisCronController::class, 'getToken']);
 $router->get('/admin/praxis-cron/run-now',           [PraxisCronController::class, 'runNow']);
+$router->get('/admin/cron-monitoring',               [PraxisCronController::class, 'monitoring']);
 
 // ── Datenbank-Version API ─────────────────────────────────────────────────────────────
 $router->get('/admin/migration/tenant-version',     [DataMigrationController::class, 'getTenantVersion']);

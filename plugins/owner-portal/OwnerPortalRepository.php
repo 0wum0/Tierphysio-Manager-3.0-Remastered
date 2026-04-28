@@ -643,4 +643,47 @@ class OwnerPortalRepository
             return '';
         }
     }
+
+    /**
+     * Letzte Aktivitäten des Besitzers: abgehakte Aufgaben + gesendete Smart-Erinnerungen.
+     * Für das "Letzte Aktivität" Widget im Owner Dashboard.
+     */
+    public function getRecentActivityForOwner(int $ownerId, int $limit = 5): array
+    {
+        try {
+            return $this->db->fetchAll(
+                "SELECT
+                    'check' AS activity_type,
+                    task_title AS title,
+                    pet_name,
+                    created_at
+                 FROM `{$this->t('portal_check_notifications')}`
+                 WHERE owner_id = ?
+                 ORDER BY created_at DESC
+                 LIMIT ?",
+                [$ownerId, $limit]
+            );
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * Zusammenfassung der Smart-Reminder-Logs für den Besitzer.
+     */
+    public function getSmartReminderSummaryForOwner(int $ownerId): array
+    {
+        try {
+            $t = $this->t('portal_smart_reminders');
+            return $this->db->fetchAll(
+                "SELECT type, COUNT(*) AS count, MAX(sent_at) AS last_sent
+                 FROM `{$t}`
+                 WHERE owner_id = ? AND status = 'sent'
+                 GROUP BY type",
+                [$ownerId]
+            );
+        } catch (\Throwable) {
+            return [];
+        }
+    }
 }

@@ -1,0 +1,124 @@
+{% extends 'layouts/base.twig' %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h4 class="mb-1 fw-700">
+            <svg class="sa-icon me-2" style="color:var(--bs-primary)"><use href="/sa/icons/sprite.svg#clock"></use></svg>
+            Cronjob-Monitoring
+        </h4>
+        <p class="text-muted fs-sm mb-0">Letzter Lauf, Fehlerstatus und Logs aller registrierten Jobs.</p>
+    </div>
+    <a href="/admin/praxis-cron" class="btn btn-sm btn-outline-secondary">
+        <svg class="sa-icon sa-icon-sm me-1"><use href="/sa/icons/sprite.svg#settings"></use></svg>Cronjob-Setup
+    </a>
+</div>
+
+{# Job Status Cards #}
+{% set jobLabels = {
+    'birthday':          { label: 'Geburtstagsmail',        icon: '🎂', schedule: 'Tägl. 08:00' },
+    'calendar_reminders':{ label: 'Kalender-Erinnerungen',  icon: '📅', schedule: 'Alle 15 Min' },
+    'google_sync':       { label: 'Google Kalender Sync',   icon: '🔄', schedule: 'Stündlich'  },
+    'tcp_reminders':     { label: 'TherapyCare Erinnerungen',icon: '💊', schedule: 'Alle 15 Min' },
+    'holiday_greetings': { label: 'Feiertagsgrüße',         icon: '🎉', schedule: 'Tägl. 08:00' },
+    'smart_reminders':   { label: 'Smart Erinnerungen',     icon: '🔔', schedule: 'Tägl. 09:00' },
+    'dispatcher':        { label: 'Dispatcher',             icon: '⚡', schedule: 'Alle 10 Min' },
+} %}
+
+<div class="row g-3 mb-4">
+    {% for jobKey, stat in job_stats %}
+    {% set jobInfo = jobLabels[jobKey] ?? { label: jobKey, icon: '⚙', schedule: '–' } %}
+    {% set lastRun = stat.last_run %}
+    {% set hasError = lastRun and lastRun.status == 'error' %}
+    {% set neverRan = not lastRun %}
+    <div class="col-md-6 col-xl-4">
+        <div class="card h-100 {% if hasError %}border-danger{% elseif neverRan %}border-secondary{% else %}border-success{% endif %}" style="border-opacity:.4;">
+            <div class="card-body p-3">
+                <div class="d-flex align-items-start justify-content-between mb-2">
+                    <div>
+                        <div class="fw-600 fs-sm">{{ jobInfo.icon }} {{ jobInfo.label }}</div>
+                        <div class="text-muted" style="font-size:.7rem;">{{ jobInfo.schedule }}</div>
+                    </div>
+                    {% if hasError %}
+                    <span class="badge bg-danger-lt text-danger">Fehler</span>
+                    {% elseif neverRan %}
+                    <span class="badge bg-secondary-lt text-secondary">Nie gelaufen</span>
+                    {% elseif lastRun.status == 'skipped' %}
+                    <span class="badge bg-warning-lt text-warning">Übersprungen</span>
+                    {% else %}
+                    <span class="badge bg-success-lt text-success">OK</span>
+                    {% endif %}
+                </div>
+                {% if lastRun %}
+                <div class="fs-xs text-muted mb-1">
+                    Letzter Lauf: <strong class="{% if hasError %}text-danger{% else %}text-body{% endif %}">{{ lastRun.created_at|date('d.m.Y H:i:s') }}</strong>
+                </div>
+                {% if lastRun.duration_ms %}
+                <div class="fs-xs text-muted mb-1">Dauer: {{ lastRun.duration_ms }}ms</div>
+                {% endif %}
+                {% if hasError %}
+                <div class="fs-xs text-danger mt-1 p-1 rounded" style="background:rgba(239,68,68,.07);">
+                    {{ lastRun.message|slice(0, 120) }}
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="fs-xs text-muted">Noch nicht ausgeführt.</div>
+                {% endif %}
+                {% if stat.errors_24h > 0 %}
+                <div class="mt-2 fs-xs text-danger fw-600">⚠ {{ stat.errors_24h }} Fehler in den letzten 24h</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{# Recent Logs Table #}
+<div class="card">
+    <div class="card-header d-flex align-items-center justify-content-between py-2">
+        <span class="fw-600 fs-sm">Letzte 50 Cron-Einträge</span>
+        <span class="text-muted fs-xs">cron_dispatcher_log</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover table-sm mb-0">
+            <thead class="fs-xs text-muted">
+                <tr>
+                    <th style="width:155px;">Zeitpunkt</th>
+                    <th style="width:180px;">Job</th>
+                    <th style="width:90px;">Status</th>
+                    <th>Meldung</th>
+                    <th style="width:80px;">Dauer</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in recent_logs %}
+                <tr>
+                    <td class="text-muted fs-xs text-nowrap">{{ entry.created_at|date('d.m.Y H:i:s') }}</td>
+                    <td class="fs-xs fw-600">{{ jobLabels[entry.job_key].icon ?? '⚙' }} {{ jobLabels[entry.job_key].label ?? entry.job_key }}</td>
+                    <td>
+                        {% if entry.status == 'success' %}
+                        <span class="badge bg-success-lt text-success fs-xxs">OK</span>
+                        {% elseif entry.status == 'error' %}
+                        <span class="badge bg-danger-lt text-danger fs-xxs">Fehler</span>
+                        {% else %}
+                        <span class="badge bg-warning-lt text-warning fs-xxs">{{ entry.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted fs-xs" style="max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="{{ entry.message }}">
+                        {{ entry.message }}
+                    </td>
+                    <td class="text-muted fs-xs">{% if entry.duration_ms %}{{ entry.duration_ms }}ms{% else %}–{% endif %}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center py-5 text-muted">
+                        <svg class="sa-icon sa-icon-3x d-block mx-auto mb-2 opacity-25"><use href="/sa/icons/sprite.svg#clock"></use></svg>
+                        Noch keine Cron-Logs vorhanden.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

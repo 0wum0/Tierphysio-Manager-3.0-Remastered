@@ -34,7 +34,7 @@
                     <th>Therapeut / E-Mail</th>
                     <th>Plan</th>
                     <th>Status</th>
-                    <th>Datenbank</th>
+                    <th>Trial-Ende / Billing</th>
                     <th>Erstellt</th>
                     <th></th>
                 </tr>
@@ -42,30 +42,60 @@
             <tbody>
                 {% for tenant in tenants %}
                 {% set statusMap = {
-                    'active':    'badge-active',
-                    'trial':     'badge-trial',
-                    'pending':   'badge-pending',
-                    'suspended': 'badge-suspended',
-                    'cancelled': 'badge-cancelled',
-                    'paused':    'badge-paused'
+                    'active':             'badge-active',
+                    'trial':              'badge-trial',
+                    'trialing':           'badge-trial',
+                    'pending':            'badge-pending',
+                    'suspended':          'badge-suspended',
+                    'cancelled':          'badge-cancelled',
+                    'paused':             'badge-paused',
+                    'past_due':           'bg-warning-lt text-warning',
+                    'grace':              'bg-warning-lt text-warning',
+                    'founders_discount':  'bg-success-lt text-success',
                 } %}
                 <tr>
                     <td class="px-4 text-secondary" style="font-size:.8rem;">{{ tenant.id }}</td>
                     <td>
-                        <div class="fw-medium">{{ tenant.practice_name }}</div>
+                        <div class="fw-medium">
+                            {{ tenant.practice_name }}
+                            {% if tenant.is_founder %}
+                            <span title="Early-Tester Founder ({{ tenant.grandfathered_price ?? '39'}}€/Monat)" style="display:inline-block;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border-radius:4px;font-size:.6rem;font-weight:700;padding:1px 5px;vertical-align:2px;letter-spacing:.03em;">★ FOUNDER</span>
+                            {% endif %}
+                        </div>
                         <div style="font-size:.75rem;color:#64748b;">{{ tenant.city }}{% if tenant.country %}, {{ tenant.country }}{% endif %}</div>
                     </td>
                     <td>
                         <div style="font-size:.875rem;">{{ tenant.owner_name }}</div>
                         <div style="font-size:.75rem;color:#64748b;">{{ tenant.email }}</div>
                     </td>
-                    <td><span class="badge bg-secondary">{{ tenant.plan_name ?? '–' }}</span></td>
-                    <td><span class="badge {{ statusMap[tenant.status] ?? 'bg-secondary' }}">{{ tenant.status }}</span></td>
                     <td>
-                        {% if tenant.db_created %}
-                            <span class="text-success" style="font-size:.75rem;"><i class="bi bi-check-circle"></i> OK</span>
+                        <span class="badge bg-secondary">{{ tenant.plan_name ?? '–' }}</span>
+                        {% if tenant.grandfathered_price %}
+                        <span class="badge bg-success-lt text-success fs-xxs" title="{{ tenant.grandfathered_reason }}">{{ tenant.grandfathered_price }}€</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge {{ statusMap[tenant.status] ?? 'bg-secondary' }}">{{ tenant.status }}</span>
+                        {% if tenant.sub_status and tenant.sub_status != tenant.status %}
+                        <span class="badge {{ statusMap[tenant.sub_status] ?? 'bg-secondary' }} fs-xxs">{{ tenant.sub_status }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:.75rem;">
+                        {% if tenant.trial_ends_at %}
+                            {% set trialEnd = tenant.trial_ends_at|date('U') %}
+                            {% set now = 'now'|date('U') %}
+                            {% if trialEnd < now %}
+                            <span class="text-danger"><i class="bi bi-clock-history"></i> {{ tenant.trial_ends_at|date('d.m.Y') }}</span>
+                            {% else %}
+                            <span class="text-warning"><i class="bi bi-hourglass-split"></i> {{ tenant.trial_ends_at|date('d.m.Y') }}</span>
+                            {% endif %}
+                        {% elseif tenant.next_billing %}
+                            <span class="text-muted"><i class="bi bi-calendar-check"></i> {{ tenant.next_billing|date('d.m.Y') }}</span>
                         {% else %}
-                            <span class="text-warning" style="font-size:.75rem;"><i class="bi bi-clock"></i> Ausstehend</span>
+                            <span class="text-muted">–</span>
+                        {% endif %}
+                        {% if tenant.last_login_at %}
+                        <div class="text-muted" style="font-size:.7rem;" title="Letzter Login">↩ {{ tenant.last_login_at|date('d.m.Y') }}</div>
                         {% endif %}
                     </td>
                     <td class="text-secondary" style="font-size:.8rem;">{{ tenant.created_at|date('d.m.Y') }}</td>

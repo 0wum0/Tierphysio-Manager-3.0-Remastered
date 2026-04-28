@@ -202,6 +202,12 @@ class OwnerPortalController extends Controller
             }
         } catch (\Throwable) {}
 
+        /* ── Letzte Aktivitäten des Besitzers ── */
+        $recentActivity = [];
+        try {
+            $recentActivity = $this->repo->getRecentActivityForOwner($ownerId, 5);
+        } catch (\Throwable) {}
+
         $this->render('@owner-portal/owner_dashboard.twig', array_merge($this->portalBase($user), [
             'page_title'            => 'Mein Tierportal',
             'pets'                  => $pets,
@@ -213,6 +219,7 @@ class OwnerPortalController extends Controller
             'tcp_dashboard'         => $tcpDashboard,
             'progress_chart'        => $progressChart,
             'homework_stats'        => $homeworkStats,
+            'recent_activity'       => $recentActivity,
         ]));
     }
 

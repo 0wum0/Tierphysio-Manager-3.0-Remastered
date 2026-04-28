@@ -21,9 +21,12 @@ use Saas\Services\FeatureFlagService;
 use Saas\Services\SubscriptionService;
 use Saas\Services\MigrationService;
 use Saas\Services\TenantFeatureCacheInvalidator;
+use Saas\Repositories\ActivityLogRepository;
 
 class TenantController extends Controller
 {
+    private ActivityLogRepository $auditLog;
+
     public function __construct(
         View                          $view,
         Session                       $session,
@@ -39,6 +42,12 @@ class TenantController extends Controller
         private TenantFeatureCacheInvalidator $cacheInvalidator,
     ) {
         parent::__construct($view, $session);
+        $this->auditLog = new ActivityLogRepository($this->db);
+    }
+
+    private function adminActor(): string
+    {
+        return (string)($this->session->get('saas_user') ?? 'admin');
     }
 
     public function index(array $params = []): void
@@ -231,8 +240,10 @@ class TenantController extends Controller
         $this->requireRole('superadmin', 'admin');
         $this->verifyCsrf();
 
-        $id = (int)($params['id'] ?? 0);
+        $id     = (int)($params['id'] ?? 0);
+        $tenant = $this->tenantRepo->find($id);
         $this->provisioningService->suspend($id);
+        $this->auditLog->log('tenant.suspend', $this->adminActor(), 'tenant', $id, ($tenant['practice_name'] ?? ''));
         $this->session->flash('success', 'Praxis gesperrt.');
         $this->redirect('/admin/tenants/' . $id);
     }
@@ -242,8 +253,10 @@ class TenantController extends Controller
         $this->requireRole('superadmin', 'admin');
         $this->verifyCsrf();
 
-        $id = (int)($params['id'] ?? 0);
+        $id     = (int)($params['id'] ?? 0);
+        $tenant = $this->tenantRepo->find($id);
         $this->tenantRepo->setStatus($id, 'active');
+        $this->auditLog->log('tenant.activate', $this->adminActor(), 'tenant', $id, ($tenant['practice_name'] ?? ''));
         $this->session->flash('success', 'Praxis aktiviert.');
         $this->redirect('/admin/tenants/' . $id);
     }
@@ -253,8 +266,10 @@ class TenantController extends Controller
         $this->requireRole('superadmin', 'admin');
         $this->verifyCsrf();
 
-        $id = (int)($params['id'] ?? 0);
+        $id     = (int)($params['id'] ?? 0);
+        $tenant = $this->tenantRepo->find($id);
         $this->provisioningService->reactivate($id);
+        $this->auditLog->log('tenant.reactivate', $this->adminActor(), 'tenant', $id, ($tenant['practice_name'] ?? ''));
         $this->session->flash('success', 'Praxis reaktiviert.');
         $this->redirect('/admin/tenants/' . $id);
     }
@@ -331,6 +346,7 @@ class TenantController extends Controller
         if ($price <= 0) {
             try {
                 $this->subscriptionService->removeGrandfatheredPrice($id, $actor);
+                $this->auditLog->log('subscription.grandfathered_remove', $actor, 'tenant', $id, ($tenant['practice_name'] ?? ''));
                 $this->session->flash('success', 'Sonderpreis entfernt. Standardpreis wird wieder angewendet.');
             } catch (\Throwable $e) {
                 $this->session->flash('error', 'Fehler: ' . $e->getMessage());
@@ -339,6 +355,11 @@ class TenantController extends Controller
             try {
                 $this->subscriptionService->setGrandfatheredPrice(
                     $id, $price, $reason, $note ?: null, $actor
+                );
+                $this->auditLog->log(
+                    'subscription.grandfathered_set',
+                    $actor, 'tenant', $id,
+                    sprintf('%s — %.2f€/Monat (%s)', $tenant['practice_name'] ?? '', $price, $reason)
                 );
                 $this->session->flash('success', sprintf(
                     "Sonderpreis von %.2f \u{20AC} f\u{FC}r '%s' gesetzt (%s).",
@@ -352,13 +373,79 @@ class TenantController extends Controller
         $this->redirect('/admin/tenants/' . $id);
     }
 
+    public function setFounder(array $params = []): void
+    {
+        $this->requireRole('superadmin', 'admin');
+        $this->verifyCsrf();
+
+        $id     = (int)($params['id'] ?? 0);
+        $tenant = $this->tenantRepo->find($id);
+        if (!$tenant) { $this->notFound(); }
+
+        $enable = $this->post('enable', '0') === '1';
+        $actor  = $this->adminActor();
+
+        /* Max-Founder-Limit prüfen */
+        if ($enable) {
+            $maxFounders = 20;
+            try {
+                $maxSetting = $this->db->fetchColumn("SELECT value FROM saas_settings WHERE `key` = 'max_founders'");
+                if ($maxSetting !== false) { $maxFounders = (int)$maxSetting; }
+            } catch (\Throwable) {}
+
+            $currentFounders = $this->tenantRepo->countFounders();
+            if ($maxFounders > 0 && $currentFounders >= $maxFounders && !($tenant['is_founder'] ?? false)) {
+                $this->session->flash('error', "Maximale Anzahl Founders ({$maxFounders}) bereits erreicht.");
+                $this->redirect('/admin/tenants/' . $id);
+                return;
+            }
+        }
+
+        /* Founder-Status setzen */
+        $this->tenantRepo->setFounder($id, $enable);
+
+        /* Grandfathered-Preis setzen / entfernen */
+        $foundersPrice = 39.0;
+        try {
+            $priceSetting = $this->db->fetchColumn("SELECT value FROM saas_settings WHERE `key` = 'founders_price'");
+            if ($priceSetting !== false) { $foundersPrice = (float)str_replace(',', '.', (string)$priceSetting); }
+        } catch (\Throwable) {}
+
+        try {
+            if ($enable) {
+                $this->subscriptionService->setGrandfatheredPrice(
+                    $id, $foundersPrice, 'founders-discount',
+                    'Early-Tester Sonderpreis', $actor
+                );
+            } else {
+                $this->subscriptionService->removeGrandfatheredPrice($id, $actor);
+            }
+        } catch (\Throwable $e) {
+            /* Non-critical — subscription may not exist yet */
+        }
+
+        $action  = $enable ? 'tenant.founder_set' : 'tenant.founder_remove';
+        $detail  = $enable
+            ? sprintf('%s — Founder-Preis: %.2f€/Monat', $tenant['practice_name'] ?? '', $foundersPrice)
+            : ($tenant['practice_name'] ?? '');
+        $this->auditLog->log($action, $actor, 'tenant', $id, $detail);
+
+        $msg = $enable
+            ? sprintf("Founder-Status gesetzt. Sonderpreis: %.2f€/Monat.", $foundersPrice)
+            : 'Founder-Status entfernt.';
+        $this->session->flash('success', $msg);
+        $this->redirect('/admin/tenants/' . $id);
+    }
+
     public function cancel(array $params = []): void
     {
         $this->requireRole('superadmin', 'admin');
         $this->verifyCsrf();
 
-        $id = (int)($params['id'] ?? 0);
+        $id     = (int)($params['id'] ?? 0);
+        $tenant = $this->tenantRepo->find($id);
         $this->provisioningService->cancel($id);
+        $this->auditLog->log('subscription.cancel', $this->adminActor(), 'tenant', $id, ($tenant['practice_name'] ?? ''));
         $this->session->flash('success', 'Abo gekündigt.');
         $this->redirect('/admin/tenants/' . $id);
     }
