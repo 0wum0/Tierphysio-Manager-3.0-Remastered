@@ -1,0 +1,233 @@
+{
+  "main": {
+    "id": "180990aed46a8195",
+    "type": "split",
+    "children": [
+      {
+        "id": "4c327f8323e04deb",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "550b65a575ea133e",
+            "type": "leaf",
+            "state": {
+              "type": "graph",
+              "state": {},
+              "icon": "lucide-git-fork",
+              "title": "Graph-Ansicht"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "5434fb129bdb9e5a",
+    "type": "split",
+    "children": [
+      {
+        "id": "5601ffc18823e11d",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "fd96697ab25fae43",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Dateiexplorer"
+            }
+          },
+          {
+            "id": "6ce4f9b6819baed7",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Suchen"
+            }
+          },
+          {
+            "id": "15115170bfb9872b",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Lesezeichen"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "5c4e946325be61f7",
+    "type": "split",
+    "children": [
+      {
+        "id": "ad749ea2f6707594",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "49ba846a6dab3fe4",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Rückverweise"
+            }
+          },
+          {
+            "id": "25bdf99e10af9780",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Ausgehende Links"
+            }
+          },
+          {
+            "id": "996cad679c845f34",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "2836897509ad4848",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "Alle Eigenschaften"
+            }
+          },
+          {
+            "id": "a16eb79cd81ca512",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Gliederung"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Schnellauswahl öffnen": false,
+      "graph:Graph-Ansicht öffnen": false,
+      "canvas:Neuen Canvas erstellen": false,
+      "daily-notes:Heutige Notiz öffnen": false,
+      "templates:Vorlage einfügen": false,
+      "command-palette:Befehlspalette öffnen": false,
+      "bases:Neue Base erstellen": false
+    }
+  },
+  "active": "550b65a575ea133e",
+  "lastOpenFiles": [
+    "WIKI.md",
+    "Makefile",
+    "LICENSE",
+    "GEMINI.md",
+    "CLAUDE.md",
+    "CHANGELOG.md",
+    "ATTRIBUTION.md",
+    "AGENTS.md",
+    "wiki/sources/_index.md",
+    "wiki/sources/claude-obsidian-ecosystem-research.md",
+    "wiki/sources",
+    "wiki/questions/How does the LLM Wiki pattern work.md",
+    "wiki/questions",
+    "wiki/meta/workflow-loop.gif",
+    "wiki/meta/wiki-graph-grow.gif",
+    "wiki/meta/welcome-canvas.gif",
+    "wiki/meta/tiling-report-2026-04-24.md",
+    "wiki/meta/image-example-wiki-map-view.png",
+    "wiki/meta/image-example-graph-view.png",
+    "wiki/meta/full-audit-and-system-setup-session.md",
+    "wiki/meta/dragonscale-mechanism-overview.svg",
+    "wiki/meta/dragonscale-mechanism-overview.png",
+    "wiki/meta/dragonscale-frontier-graph.svg",
+    "wiki/meta/dragonscale-frontier-graph.png",
+    "wiki/meta/dragonscale-6-test-flow.svg",
+    "wiki/meta/dashboard.md",
+    "wiki/meta/dashboard.base",
+    "wiki/meta/claude-obsidian-v1.4-release-session.md",
+    "wiki/meta/claude-obsidian-v1.2.0-release-session.md",
+    "wiki/meta/boundary-frontier-2026-04-24.md",
+    "wiki/meta/2026-04-24-v1.6.0-release-session.md",
+    "wiki/meta/2026-04-15-slides-and-release-session.md",
+    "wiki/meta/2026-04-15-release-report-session.md",
+    "wiki/meta/2026-04-14-community-cta-rollout.md",
+    "wiki/meta/2026-04-14-claude-seo-v190-session.md",
+    "wiki/meta/2026-04-10-backlink-empire-session.md",
+    "wiki/meta",
+    "wiki/folds/fold-k3-from-2026-04-23-to-2026-04-24-n8.md",
+    "wiki/folds",
+    "wiki/entities/_index.md",
+    "wiki/entities/rvk7895-llm-knowledge-bases.md",
+    "wiki/entities/Nexus-claudesidian-mcp.md",
+    "wiki/entities/kepano-obsidian-skills.md",
+    "wiki/entities",
+    "wiki/concepts",
+    "wiki/comparisons",
+    "wiki/canvases/youtube-explainer.canvas",
+    "wiki/canvases/welcome.canvas",
+    "wiki/canvases/main.canvas",
+    "wiki/canvases/claude-obsidian-presentation.canvas",
+    "wiki/Wiki Map.canvas"
+  ]
+}
