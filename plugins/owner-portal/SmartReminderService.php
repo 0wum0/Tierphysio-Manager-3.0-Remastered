@@ -66,27 +66,38 @@ class SmartReminderService
 
         $t_users  = $this->prefix . 'owner_portal_users';
         $t_plans  = $this->prefix . 'portal_homework_plans';
-        $t_checks = $this->prefix . 'portal_homework_plan_tasks';
-        $t_chtask = $this->prefix . 'portal_homework_checklist';
+        $t_chtask = $this->prefix . 'portal_homework_task_checks'; // korrekte Tabelle aus Migration 005
         $t_remind = $this->prefix . 'portal_smart_reminders';
 
+        /* Self-Healing: prüfen ob benötigte Tabellen existieren */
+        if (!$this->tableExists($t_remind)) {
+            error_log('[SmartReminderService] Tabelle fehlt: ' . $t_remind . ' — Migration 008 ausstehend');
+            return ['sent' => 0, 'skipped' => 0, 'failed' => 0];
+        }
+
         try {
-            /* Besitzer mit aktiven Plänen, wo die letzte Aktivität länger als $cutoff zurückliegt */
+            /* Besitzer mit aktiven Plänen, wo die letzte Aktivität länger als $cutoff zurückliegt.
+             * Falls portal_homework_task_checks noch nicht existiert, wird das Subquery übersprungen. */
+            $checksSubquery = $this->tableExists($t_chtask)
+                ? "NOT EXISTS (
+                       SELECT 1 FROM `{$t_chtask}` ch
+                       WHERE ch.owner_id = u.owner_id
+                         AND ch.checked_at >= ?
+                   )"
+                : "1=1"; /* Tabelle fehlt → Bedingung immer wahr (alle Besitzer bekommen Erinnerung) */
+
+            $params = $this->tableExists($t_chtask)
+                ? [$cutoff, $sentCutoff]
+                : [$sentCutoff];
+
             $owners = $this->db->fetchAll(
                 "SELECT DISTINCT u.id AS user_id, u.owner_id, u.email,
-                        u.last_login_at, p.practice_name AS company
+                        u.last_login AS last_login_at, '' AS company
                  FROM `{$t_users}` u
                  JOIN `{$t_plans}` php ON php.owner_id = u.owner_id AND php.status = 'active'
                  WHERE u.is_active = 1
                    AND u.email != ''
-                   AND (
-                       /* Hat seit $cutoff keine Aufgabe abgehakt */
-                       NOT EXISTS (
-                           SELECT 1 FROM `{$t_chtask}` ch
-                           WHERE ch.owner_id = u.owner_id
-                             AND ch.checked_at >= ?
-                       )
-                   )
+                   AND ({$checksSubquery})
                    AND NOT EXISTS (
                        SELECT 1 FROM `{$t_remind}` r
                        WHERE r.owner_id = u.owner_id
@@ -94,7 +105,7 @@ class SmartReminderService
                          AND r.sent_at >= ?
                          AND r.status = 'sent'
                    )",
-                [$cutoff, $sentCutoff]
+                $params
             );
         } catch (\Throwable $e) {
             error_log('[SmartReminderService] DB error (exercise): ' . $e->getMessage());
@@ -146,11 +157,15 @@ class SmartReminderService
         $t_users  = $this->prefix . 'owner_portal_users';
         $t_remind = $this->prefix . 'portal_smart_reminders';
 
+        if (!$this->tableExists($t_remind)) {
+            return ['sent' => 0, 'skipped' => 0, 'failed' => 0];
+        }
+
         try {
             /* Aktive Portal-User die seit $cutoff nicht eingeloggt waren und
                denen wir in den letzten 7 Tagen noch keine Inaktivitäts-Mail geschickt haben */
             $owners = $this->db->fetchAll(
-                "SELECT u.id AS user_id, u.owner_id, u.email, u.last_login_at
+                "SELECT u.id AS user_id, u.owner_id, u.email, u.last_login
                  FROM `{$t_users}` u
                  WHERE u.is_active = 1
                    AND u.email != ''
@@ -175,7 +190,7 @@ class SmartReminderService
             $email = (string)($owner['email'] ?? '');
             if ($email === '') { $skipped++; continue; }
 
-            $lastLogin = $owner['last_login'] ?? null;
+            $lastLogin = $owner['last_login'] ?? $owner['last_login_at'] ?? null;
             $daysSince = $lastLogin
                 ? (int)round((time() - strtotime((string)$lastLogin)) / 86400)
                 : $inactivityDays;
@@ -223,6 +238,21 @@ class SmartReminderService
             );
         } catch (\Throwable $e) {
             error_log('[SmartReminderService] log failed: ' . $e->getMessage());
+        }
+    }
+
+    /* Self-Healing: prüft ob eine Tabelle in der aktuellen DB existiert */
+    private function tableExists(string $tableName): bool
+    {
+        try {
+            $result = $this->db->fetchColumn(
+                "SELECT COUNT(*) FROM information_schema.TABLES
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?",
+                [$tableName]
+            );
+            return (int)$result > 0;
+        } catch (\Throwable) {
+            return false;
         }
     }
 }
