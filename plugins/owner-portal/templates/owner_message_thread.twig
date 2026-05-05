@@ -17,23 +17,32 @@
 <div style="background:var(--bs-secondary-bg);border:1px solid var(--bs-border-color);border-radius:12px;margin-bottom:1rem;overflow:hidden;">
     <div id="msg-list" style="display:flex;flex-direction:column;gap:.85rem;padding:1.25rem;max-height:480px;overflow-y:auto;">
         {% for msg in messages %}
-        {% set isAdmin = msg.sender_type == 'admin' %}
-        <div style="display:flex;gap:.75rem;{% if not isAdmin %}flex-direction:row-reverse;{% endif %}" data-msg-id="{{ msg.id }}">
-            <div style="width:32px;height:32px;border-radius:50%;background:{% if isAdmin %}rgba(79,124,255,0.12){% else %}rgba(34,197,94,0.12){% endif %};display:flex;align-items:center;justify-content:center;flex-shrink:0;align-self:flex-end;">
-                {% if isAdmin %}
+        {% set isOwn = msg.sender_type == 'owner' %}
+        <div style="display:flex;gap:.75rem;{% if isOwn %}flex-direction:row-reverse;{% endif %}" data-msg-id="{{ msg.id }}">
+            <div style="width:32px;height:32px;border-radius:50%;background:{% if not isOwn %}rgba(79,124,255,0.12){% else %}rgba(34,197,94,0.12){% endif %};display:flex;align-items:center;justify-content:center;flex-shrink:0;align-self:flex-end;">
+                {% if not isOwn %}
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="#4f7cff" stroke-width="2" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4" stroke="#4f7cff" stroke-width="2"/></svg>
                 {% else %}
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="#22c55e" stroke-width="2" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                 {% endif %}
             </div>
-            <div style="max-width:78%;{% if not isAdmin %}margin-right:auto;{% else %}margin-left:auto;{% endif %}">
-                <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;{% if not isAdmin %}flex-direction:row-reverse;{% endif %}">
-                    <span style="font-weight:600;font-size:.8rem;color:{% if isAdmin %}#4f7cff{% else %}#22c55e{% endif %};">
-                        {% if isAdmin %}{{ msg.sender_name }}{% else %}Sie{% endif %}
+            <div style="max-width:78%;{% if isOwn %}margin-right:auto;{% else %}margin-left:auto;{% endif %}">
+                <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;{% if isOwn %}flex-direction:row-reverse;{% endif %}">
+                    <span style="font-weight:600;font-size:.8rem;color:{% if not isOwn %}#4f7cff{% else %}#22c55e{% endif %};">
+                        {% if not isOwn %}{{ msg.sender_name }}{% else %}Sie{% endif %}
                     </span>
                     <span style="font-size:.68rem;color:var(--bs-secondary-color);">{{ msg.created_at|date('d.m.Y H:i') }}</span>
                 </div>
-                <div style="padding:.75rem 1rem;border-radius:{% if isAdmin %}4px 12px 12px 12px{% else %}12px 4px 12px 12px{% endif %};background:{% if isAdmin %}rgba(79,124,255,0.08);border:1px solid rgba(79,124,255,0.15){% else %}var(--bs-tertiary-bg);border:1px solid var(--bs-border-color){% endif %};font-size:.875rem;white-space:pre-line;line-height:1.6;">{{ msg.body }}</div>
+                <div style="padding:.75rem 1rem;border-radius:{% if not isOwn %}4px 12px 12px 12px{% else %}12px 4px 12px 12px{% endif %};background:{% if not isOwn %}rgba(79,124,255,0.08);border:1px solid rgba(79,124,255,0.15){% else %}var(--bs-tertiary-bg);border:1px solid var(--bs-border-color){% endif %};font-size:.875rem;white-space:pre-line;line-height:1.6;">{{ msg.body }}</div>
+                {% if isOwn %}
+                <div style="display:flex;justify-content:flex-end;margin-top:.25rem;" data-status-id="{{ msg.id }}">
+                    {% if msg.read_at %}
+                    <svg width="20" height="10" viewBox="0 0 20 10" fill="none" title="Gelesen"><polyline points="1.5,5 5.5,9 13.5,1" stroke="#4f7cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="6,5 10,9 18,1" stroke="#4f7cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    {% else %}
+                    <svg width="14" height="10" viewBox="0 0 14 10" fill="none" title="Gesendet"><polyline points="1.5,5 5.5,9 12.5,1" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
         </div>
         {% endfor %}
@@ -66,59 +75,78 @@
 (function() {
     var threadId = {{ thread.id }};
     var _csrf    = document.getElementById('portal-csrf').value;
+    var list     = document.getElementById('msg-list');
 
     /* Scroll to bottom */
-    var list = document.getElementById('msg-list');
     if (list) list.scrollTop = list.scrollHeight;
 
-    /* Reply */
-    var btnReply = document.getElementById('btnReply');
-    if (!btnReply) return;
+    /* ── Tick SVG helpers ── */
+    function tickSingle() {
+        return '<svg width="14" height="10" viewBox="0 0 14 10" fill="none" title="Gesendet"><polyline points="1.5,5 5.5,9 12.5,1" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    }
+    function tickDouble() {
+        return '<svg width="20" height="10" viewBox="0 0 20 10" fill="none" title="Gelesen"><polyline points="1.5,5 5.5,9 13.5,1" stroke="#4f7cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="6,5 10,9 18,1" stroke="#4f7cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    }
 
-    btnReply.addEventListener('click', function() {
-        var body  = document.getElementById('replyBody').value.trim();
-        var errEl = document.getElementById('replyError');
-        if (!body) {
-            errEl.textContent = 'Bitte eine Nachricht eingeben.';
-            errEl.style.display = 'block';
-            return;
+    /* ── Update tick to double-blue ── */
+    function setRead(msgId) {
+        var el = document.querySelector('[data-status-id="' + msgId + '"]');
+        if (el && !el.classList.contains('read')) {
+            el.innerHTML = tickDouble();
+            el.classList.add('read');
         }
-        errEl.style.display = 'none';
-        btnReply.disabled = true;
-        btnReply.textContent = 'Wird gesendet…';
+    }
 
-        var fd = new FormData();
-        fd.append('_csrf_token', _csrf);
-        fd.append('body', body);
-
-        fetch('/api/portal/nachrichten/' + threadId + '/antworten', {
-            method: 'POST',
-            body: fd
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(d) {
-            if (d.ok) {
-                appendMessage(d);
-                document.getElementById('replyBody').value = '';
-            } else {
-                errEl.textContent = d.error || 'Fehler beim Senden.';
+    /* ── Reply ── */
+    var btnReply = document.getElementById('btnReply');
+    if (btnReply) {
+        btnReply.addEventListener('click', function() {
+            var body  = document.getElementById('replyBody').value.trim();
+            var errEl = document.getElementById('replyError');
+            if (!body) {
+                errEl.textContent = 'Bitte eine Nachricht eingeben.';
                 errEl.style.display = 'block';
+                return;
             }
-            btnReply.disabled = false;
-            btnReply.innerHTML = '<svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="22 2 15 22 11 13 2 9 22 2"/></svg> Antwort senden';
-        })
-        .catch(function() {
-            errEl.textContent = 'Verbindungsfehler.';
-            errEl.style.display = 'block';
-            btnReply.disabled = false;
-            btnReply.textContent = 'Antwort senden';
-        });
-    });
+            errEl.style.display = 'none';
+            btnReply.disabled = true;
+            btnReply.textContent = 'Wird gesendet…';
 
-    function appendMessage(d) {
-        var bodyEsc = d.body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+            var fd = new FormData();
+            fd.append('_csrf_token', _csrf);
+            fd.append('body', body);
+
+            fetch('/api/portal/nachrichten/' + threadId + '/antworten', {
+                method: 'POST',
+                body: fd
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.ok) {
+                    appendOwnerMessage(d);
+                    document.getElementById('replyBody').value = '';
+                    lastId = d.id;
+                } else {
+                    errEl.textContent = d.error || 'Fehler beim Senden.';
+                    errEl.style.display = 'block';
+                }
+                btnReply.disabled = false;
+                btnReply.innerHTML = '<svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="22 2 15 22 11 13 2 9 22 2"/></svg> Antwort senden';
+            })
+            .catch(function() {
+                errEl.textContent = 'Verbindungsfehler.';
+                errEl.style.display = 'block';
+                btnReply.disabled = false;
+                btnReply.textContent = 'Antwort senden';
+            });
+        });
+    }
+
+    /* ── Append own (owner) message ── */
+    function appendOwnerMessage(d) {
+        var bodyEsc = d.body.replace(/\n/g,'<br>');
         var wrap = document.createElement('div');
-        wrap.style.cssText = 'display:flex;gap:.75px;flex-direction:row-reverse;';
+        wrap.style.cssText = 'display:flex;gap:.75rem;flex-direction:row-reverse;';
         wrap.dataset.msgId = d.id;
         wrap.innerHTML =
             '<div style="width:32px;height:32px;border-radius:50%;background:rgba(34,197,94,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;align-self:flex-end;">'
@@ -130,10 +158,75 @@
           + '<span style="font-size:.68rem;color:var(--bs-secondary-color);">' + d.created_at + '</span>'
           + '</div>'
           + '<div style="padding:.75rem 1rem;border-radius:12px 4px 12px 12px;background:var(--bs-tertiary-bg);border:1px solid var(--bs-border-color);font-size:.875rem;line-height:1.6;">' + bodyEsc + '</div>'
+          + '<div style="display:flex;justify-content:flex-end;margin-top:.25rem;" data-status-id="' + d.id + '">' + tickSingle() + '</div>'
           + '</div>';
         list.appendChild(wrap);
         list.scrollTop = list.scrollHeight;
     }
+
+    /* ── Append incoming (admin) message ── */
+    function appendAdminMessage(d) {
+        var bodyEsc = d.body.replace(/\n/g,'<br>');
+        var wrap = document.createElement('div');
+        wrap.style.cssText = 'display:flex;gap:.75rem;';
+        wrap.dataset.msgId = d.id;
+        wrap.innerHTML =
+            '<div style="width:32px;height:32px;border-radius:50%;background:rgba(79,124,255,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;align-self:flex-end;">'
+          + '<svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="#4f7cff" stroke-width="2" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4" stroke="#4f7cff" stroke-width="2"/></svg>'
+          + '</div>'
+          + '<div style="max-width:78%;margin-left:auto;">'
+          + '<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;">'
+          + '<span style="font-weight:600;font-size:.8rem;color:#4f7cff;">' + (d.sender_name || 'Team') + '</span>'
+          + '<span style="font-size:.68rem;color:var(--bs-secondary-color);">' + d.created_at + '</span>'
+          + '</div>'
+          + '<div style="padding:.75rem 1rem;border-radius:4px 12px 12px 12px;background:rgba(79,124,255,0.08);border:1px solid rgba(79,124,255,0.15);font-size:.875rem;line-height:1.6;">' + bodyEsc + '</div>'
+          + '</div>';
+        list.appendChild(wrap);
+        list.scrollTop = list.scrollHeight;
+    }
+
+    /* ── Long-polling ── */
+    var msgs = document.querySelectorAll('#msg-list [data-msg-id]');
+    var lastId = 0;
+    msgs.forEach(function(el) {
+        var id = parseInt(el.dataset.msgId, 10);
+        if (id > lastId) lastId = id;
+    });
+
+    var pollTimer;
+    function poll() {
+        fetch('/api/portal/nachrichten/' + threadId + '/poll?after=' + lastId)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.messages && data.messages.length) {
+                data.messages.forEach(function(m) {
+                    if (parseInt(m.id, 10) > lastId) lastId = parseInt(m.id, 10);
+                    if (m.sender_type === 'admin') {
+                        appendAdminMessage(m);
+                    }
+                    /* own messages arriving via poll (rare edge case) are ignored — already appended */
+                });
+            }
+            if (data.read_updates && data.read_updates.length) {
+                data.read_updates.forEach(function(id) { setRead(id); });
+            }
+        })
+        .catch(function() {})
+        .finally(function() {
+            pollTimer = setTimeout(poll, 4000);
+        });
+    }
+
+    pollTimer = setTimeout(poll, 4000);
+
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            clearTimeout(pollTimer);
+        } else {
+            clearTimeout(pollTimer);
+            pollTimer = setTimeout(poll, 500);
+        }
+    });
 })();
 </script>
 {% endblock %}

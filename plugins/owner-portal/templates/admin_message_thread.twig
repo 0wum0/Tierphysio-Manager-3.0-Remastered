@@ -57,6 +57,15 @@
                         </div>
                         <div class="rounded-3 p-3"
                              style="background:{% if isAdmin %}rgba(79,124,255,0.08);border:1px solid rgba(79,124,255,0.15){% else %}var(--bs-secondary-bg);border:1px solid var(--bs-border-color){% endif %};font-size:.875rem;white-space:pre-line;line-height:1.6;">{{ msg.body }}</div>
+                        {% if isAdmin %}
+                        <div class="d-flex justify-content-end mt-1" data-status-id="{{ msg.id }}">
+                            {% if msg.read_at %}
+                            <svg width="20" height="10" viewBox="0 0 20 10" fill="none" title="Gelesen"><polyline points="1.5,5 5.5,9 13.5,1" stroke="#4f7cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="6,5 10,9 18,1" stroke="#4f7cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            {% else %}
+                            <svg width="14" height="10" viewBox="0 0 14 10" fill="none" title="Gesendet"><polyline points="1.5,5 5.5,9 12.5,1" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            {% endif %}
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 {% endfor %}
@@ -105,10 +114,26 @@
 <script>
 (function() {
     var threadId = {{ thread.id }};
+    var list     = document.getElementById('msg-list');
 
     /* ── Scroll to bottom on load ── */
-    var list = document.getElementById('msg-list');
     if (list) list.scrollTop = list.scrollHeight;
+
+    /* ── Tick SVG helpers ── */
+    function tickSingle() {
+        return '<svg width="14" height="10" viewBox="0 0 14 10" fill="none" title="Gesendet"><polyline points="1.5,5 5.5,9 12.5,1" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    }
+    function tickDouble() {
+        return '<svg width="20" height="10" viewBox="0 0 20 10" fill="none" title="Gelesen"><polyline points="1.5,5 5.5,9 13.5,1" stroke="#4f7cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="6,5 10,9 18,1" stroke="#4f7cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    }
+
+    function setRead(msgId) {
+        var el = document.querySelector('[data-status-id="' + msgId + '"]');
+        if (el && !el.classList.contains('read')) {
+            el.innerHTML = tickDouble();
+            el.classList.add('read');
+        }
+    }
 
     /* ── Reply ── */
     var btnReply = document.getElementById('btnReply');
@@ -133,8 +158,9 @@
             .then(function(r) { return r.json(); })
             .then(function(d) {
                 if (d.ok) {
-                    appendMessage(d, true);
+                    appendAdminMessage(d);
                     document.getElementById('replyBody').value = '';
+                    lastId = d.id;
                 } else {
                     errEl.textContent = d.error || 'Fehler beim Senden.';
                     errEl.classList.remove('d-none');
@@ -167,32 +193,86 @@
         });
     }
 
-    /* ── Append new message bubble ── */
-    function appendMessage(d, isAdmin) {
-        var colorA = isAdmin ? '#4f7cff' : '#22c55e';
-        var bgA    = isAdmin ? 'rgba(79,124,255,0.08)' : 'var(--bs-secondary-bg)';
-        var borderA= isAdmin ? '1px solid rgba(79,124,255,0.15)' : '1px solid var(--bs-border-color)';
-        var iconPath= isAdmin
-            ? '<path stroke="' + colorA + '" stroke-width="2" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4" stroke="' + colorA + '" stroke-width="2"/>'
-            : '<path stroke="' + colorA + '" stroke-width="2" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>';
-
-        var bodyEsc = d.body.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-
+    /* ── Append own (admin) message ── */
+    function appendAdminMessage(d) {
+        var bodyEsc = d.body.replace(/\n/g,'<br>');
         var wrapper = document.createElement('div');
-        wrapper.className = 'd-flex gap-3' + (isAdmin ? ' flex-row-reverse' : '');
+        wrapper.className = 'd-flex gap-3 flex-row-reverse';
         wrapper.dataset.msgId = d.id;
         wrapper.innerHTML =
-            '<div class="flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle" style="width:36px;height:36px;background:rgba(' + (isAdmin?'79,124,255':'34,197,94') + ',0.12);align-self:flex-end;">'
-          + '<svg width="15" height="15" fill="none" viewBox="0 0 24 24">' + iconPath + '</svg></div>'
-          + '<div style="max-width:72%;' + (isAdmin?'margin-left:auto;':'') + '">'
-          + '<div class="d-flex align-items-center gap-2 mb-1' + (isAdmin?' flex-row-reverse':'') + '">'
-          + '<span class="fw-600 fs-sm" style="color:' + colorA + ';">' + d.sender_name + '</span>'
+            '<div class="flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle" style="width:36px;height:36px;background:rgba(79,124,255,0.12);align-self:flex-end;">'
+          + '<svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="#4f7cff" stroke-width="2" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4" stroke="#4f7cff" stroke-width="2"/></svg></div>'
+          + '<div style="max-width:72%;margin-left:auto;">'
+          + '<div class="d-flex align-items-center gap-2 mb-1 flex-row-reverse">'
+          + '<span class="fw-600 fs-sm" style="color:#4f7cff;">' + d.sender_name + '</span>'
           + '<span class="text-muted" style="font-size:.72rem;">' + d.created_at + '</span></div>'
-          + '<div class="rounded-3 p-3" style="background:' + bgA + ';border:' + borderA + ';font-size:.875rem;line-height:1.6;">' + bodyEsc + '</div>'
+          + '<div class="rounded-3 p-3" style="background:rgba(79,124,255,0.08);border:1px solid rgba(79,124,255,0.15);font-size:.875rem;line-height:1.6;">' + bodyEsc + '</div>'
+          + '<div class="d-flex justify-content-end mt-1" data-status-id="' + d.id + '">' + tickSingle() + '</div>'
           + '</div>';
         list.appendChild(wrapper);
         list.scrollTop = list.scrollHeight;
     }
+
+    /* ── Append incoming (owner) message ── */
+    function appendOwnerMessage(d) {
+        var bodyEsc = d.body.replace(/\n/g,'<br>');
+        var wrapper = document.createElement('div');
+        wrapper.className = 'd-flex gap-3';
+        wrapper.dataset.msgId = d.id;
+        wrapper.innerHTML =
+            '<div class="flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle" style="width:36px;height:36px;background:rgba(34,197,94,0.12);align-self:flex-end;">'
+          + '<svg width="15" height="15" fill="none" viewBox="0 0 24 24"><path stroke="#22c55e" stroke-width="2" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div>'
+          + '<div style="max-width:72%;">'
+          + '<div class="d-flex align-items-center gap-2 mb-1">'
+          + '<span class="fw-600 fs-sm" style="color:#22c55e;">' + d.sender_name + '</span>'
+          + '<span class="text-muted" style="font-size:.72rem;">' + d.created_at + '</span></div>'
+          + '<div class="rounded-3 p-3" style="background:var(--bs-secondary-bg);border:1px solid var(--bs-border-color);font-size:.875rem;line-height:1.6;">' + bodyEsc + '</div>'
+          + '</div>';
+        list.appendChild(wrapper);
+        list.scrollTop = list.scrollHeight;
+    }
+
+    /* ── Long-polling ── */
+    var msgs = document.querySelectorAll('#msg-list [data-msg-id]');
+    var lastId = 0;
+    msgs.forEach(function(el) {
+        var id = parseInt(el.dataset.msgId, 10);
+        if (id > lastId) lastId = id;
+    });
+
+    var pollTimer;
+    function poll() {
+        fetch('/api/portal-admin/nachrichten/' + threadId + '/poll?after=' + lastId)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.messages && data.messages.length) {
+                data.messages.forEach(function(m) {
+                    if (parseInt(m.id, 10) > lastId) lastId = parseInt(m.id, 10);
+                    if (m.sender_type === 'owner') {
+                        appendOwnerMessage(m);
+                    }
+                });
+            }
+            if (data.read_updates && data.read_updates.length) {
+                data.read_updates.forEach(function(id) { setRead(id); });
+            }
+        })
+        .catch(function() {})
+        .finally(function() {
+            pollTimer = setTimeout(poll, 4000);
+        });
+    }
+
+    pollTimer = setTimeout(poll, 4000);
+
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            clearTimeout(pollTimer);
+        } else {
+            clearTimeout(pollTimer);
+            pollTimer = setTimeout(poll, 500);
+        }
+    });
 })();
 </script>
 {% endblock %}

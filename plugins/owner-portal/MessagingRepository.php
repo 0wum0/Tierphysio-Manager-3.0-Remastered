@@ -120,7 +120,7 @@ class MessagingRepository
     public function markThreadReadByAdmin(int $threadId): void
     {
         $this->db->execute(
-            "UPDATE `{$this->t('portal_messages')}` SET is_read = 1 WHERE thread_id = ? AND sender_type = 'owner' AND is_read = 0",
+            "UPDATE `{$this->t('portal_messages')}` SET is_read = 1, read_at = NOW() WHERE thread_id = ? AND sender_type = 'owner' AND is_read = 0",
             [$threadId]
         );
     }
@@ -128,9 +128,34 @@ class MessagingRepository
     public function markThreadReadByOwner(int $threadId): void
     {
         $this->db->execute(
-            "UPDATE `{$this->t('portal_messages')}` SET is_read = 1 WHERE thread_id = ? AND sender_type = 'admin' AND is_read = 0",
+            "UPDATE `{$this->t('portal_messages')}` SET is_read = 1, read_at = NOW() WHERE thread_id = ? AND sender_type = 'admin' AND is_read = 0",
             [$threadId]
         );
+    }
+
+    public function getNewMessages(int $threadId, int $afterId): array
+    {
+        $stmt = $this->db->query(
+            "SELECT m.*,
+                    CASE WHEN m.sender_type = 'admin' THEN COALESCE(u.name, 'Team') ELSE CONCAT(o.first_name, ' ', o.last_name) END AS sender_name
+             FROM `{$this->t('portal_messages')}` m
+             LEFT JOIN `{$this->t('users')}` u ON u.id = m.sender_id AND m.sender_type = 'admin'
+             LEFT JOIN `{$this->t('portal_message_threads')}` t ON t.id = m.thread_id
+             LEFT JOIN `{$this->t('owners')}` o ON o.id = t.owner_id AND m.sender_type = 'owner'
+             WHERE m.thread_id = ? AND m.id > ?
+             ORDER BY m.created_at ASC",
+            [$threadId, $afterId]
+        );
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getReadUpdates(int $threadId, string $senderType): array
+    {
+        $stmt = $this->db->query(
+            "SELECT id FROM `{$this->t('portal_messages')}` WHERE thread_id = ? AND sender_type = ? AND read_at IS NOT NULL",
+            [$threadId, $senderType]
+        );
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 
     public function countUnreadForAdmin(): int
