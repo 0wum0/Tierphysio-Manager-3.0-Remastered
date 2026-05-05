@@ -1,0 +1,2 @@
+ALTER TABLE `{PREFIX}portal_messages`
+    ADD COLUMN IF NOT EXISTS `read_at` DATETIME NULL DEFAULT NULL AFTER `is_read`;

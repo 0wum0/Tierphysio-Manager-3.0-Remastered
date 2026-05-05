@@ -134,6 +134,7 @@ class ServiceProvider
         $router->post('/api/portal-admin/nachrichten/neu',                           [MessagingAdminController::class, 'newThread'],   ['auth']);
         $router->get('/api/portal-admin/nachrichten-drawer',                         [MessagingAdminController::class, 'drawerData'],  ['auth']);
         $router->get('/api/portal-admin/nachrichten/{id}/messages',                   [MessagingAdminController::class, 'messages'],     ['auth']);
+        $router->get('/api/portal-admin/nachrichten/{id}/poll',                      [MessagingAdminController::class, 'poll'],         ['auth']);
         $router->get('/api/portal-admin/portal-users',                               [MessagingAdminController::class, 'portalUsers'], ['auth']);
         $router->post('/api/portal-admin/nachrichten/{id}/loeschen',                 [MessagingAdminController::class, 'delete'],    ['auth']);
 
@@ -141,6 +142,7 @@ class ServiceProvider
         $router->get('/portal/nachrichten',                                          [MessagingOwnerController::class, 'index'],       []);
         $router->get('/portal/nachrichten/{id}',                                     [MessagingOwnerController::class, 'thread'],      []);
         $router->get('/api/portal/nachrichten/ungelesen',                            [MessagingOwnerController::class, 'unreadCount'], []);
+        $router->get('/api/portal/nachrichten/{id}/poll',                            [MessagingOwnerController::class, 'poll'],        []);
         $router->post('/api/portal/nachrichten/{id}/antworten',                      [MessagingOwnerController::class, 'reply'],       []);
         $router->post('/api/portal/nachrichten/neu',                                 [MessagingOwnerController::class, 'newThread'],   []);
 
