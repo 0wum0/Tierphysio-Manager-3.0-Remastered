@@ -105,16 +105,28 @@ class MessagingRepository
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function addMessage(int $threadId, string $senderType, ?int $senderId, string $body): int
+    public function addMessage(int $threadId, string $senderType, ?int $senderId, string $body, ?string $attachmentPath = null, ?string $attachmentName = null, ?int $attachmentSize = null): int
     {
         $this->db->execute(
-            "INSERT INTO `{$this->t('portal_messages')}` (thread_id, sender_type, sender_id, body, is_read, created_at)
-             VALUES (?, ?, ?, ?, 0, NOW())",
-            [$threadId, $senderType, $senderId, trim($body)]
+            "INSERT INTO `{$this->t('portal_messages')}` (thread_id, sender_type, sender_id, body, attachment_path, attachment_name, attachment_size, is_read, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 0, NOW())",
+            [$threadId, $senderType, $senderId, trim($body), $attachmentPath, $attachmentName, $attachmentSize]
         );
         $msgId = (int)$this->db->lastInsertId();
         $this->touchThread($threadId);
         return $msgId;
+    }
+
+    public function getMessageById(int $id): ?array
+    {
+        $stmt = $this->db->query(
+            "SELECT m.*, t.owner_id FROM `{$this->t('portal_messages')}` m
+             JOIN `{$this->t('portal_message_threads')}` t ON t.id = m.thread_id
+             WHERE m.id = ? LIMIT 1",
+            [$id]
+        );
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
     }
 
     public function markThreadReadByAdmin(int $threadId): void

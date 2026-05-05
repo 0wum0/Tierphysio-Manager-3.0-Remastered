@@ -135,6 +135,8 @@ class ServiceProvider
         $router->get('/api/portal-admin/nachrichten-drawer',                         [MessagingAdminController::class, 'drawerData'],  ['auth']);
         $router->get('/api/portal-admin/nachrichten/{id}/messages',                   [MessagingAdminController::class, 'messages'],     ['auth']);
         $router->get('/api/portal-admin/nachrichten/{id}/poll',                      [MessagingAdminController::class, 'poll'],         ['auth']);
+        $router->post('/api/portal-admin/nachrichten/{id}/anhang',                   [MessagingAdminController::class, 'upload'],       ['auth']);
+        $router->get('/api/portal-admin/nachrichten/{id}/anhang/{msgId}',            [MessagingAdminController::class, 'download'],     ['auth']);
         $router->get('/api/portal-admin/portal-users',                               [MessagingAdminController::class, 'portalUsers'], ['auth']);
         $router->post('/api/portal-admin/nachrichten/{id}/loeschen',                 [MessagingAdminController::class, 'delete'],    ['auth']);
 
@@ -144,6 +146,8 @@ class ServiceProvider
         $router->get('/api/portal/nachrichten/ungelesen',                            [MessagingOwnerController::class, 'unreadCount'], []);
         $router->get('/api/portal/nachrichten/{id}/poll',                            [MessagingOwnerController::class, 'poll'],        []);
         $router->post('/api/portal/nachrichten/{id}/antworten',                      [MessagingOwnerController::class, 'reply'],       []);
+        $router->post('/api/portal/nachrichten/{id}/anhang',                         [MessagingOwnerController::class, 'upload'],      []);
+        $router->get('/api/portal/nachrichten/{id}/anhang/{msgId}',                  [MessagingOwnerController::class, 'download'],    []);
         $router->post('/api/portal/nachrichten/neu',                                 [MessagingOwnerController::class, 'newThread'],   []);
 
         /* ── Smart Erinnerungen Cron-Endpunkt (Token-gesichert) ── */
