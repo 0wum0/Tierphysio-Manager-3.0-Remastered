@@ -1,198 +1,296 @@
 {% extends '@owner-portal/portal_layout.twig' %}
 
 {% block content %}
-<div style="display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+<style>
+.wa-wrap{display:flex;flex-direction:column;height:calc(100vh - 200px);min-height:480px;max-height:780px;border-radius:14px;overflow:hidden;border:1px solid var(--bs-border-color);box-shadow:0 2px 12px rgba(0,0,0,.07);}
+.wa-header{display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;background:var(--bs-secondary-bg);border-bottom:1px solid var(--bs-border-color);flex-shrink:0;}
+.wa-body{flex:1;overflow-y:auto;padding:1rem;display:flex;flex-direction:column;gap:.5rem;background:var(--portal-chat-bg,#f0f4f8);}
+.wa-footer{padding:.5rem .75rem;background:var(--bs-secondary-bg);border-top:1px solid var(--bs-border-color);flex-shrink:0;}
+.wa-input-row{display:flex;align-items:flex-end;gap:.5rem;}
+.wa-input-box{flex:1;background:var(--bs-body-bg);border:1px solid var(--bs-border-color);border-radius:22px;padding:.5rem .9rem;display:flex;align-items:flex-end;gap:.5rem;}
+.wa-input-box textarea{flex:1;border:none;outline:none;resize:none;background:transparent;color:var(--bs-body-color);font-size:.9rem;font-family:inherit;line-height:1.45;max-height:120px;overflow-y:auto;padding:0;}
+.wa-btn-send{width:42px;height:42px;border-radius:50%;background:#25d366;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s;}
+.wa-btn-send:hover{background:#1fb959;}
+.wa-btn-send:disabled{background:#94a3b8;cursor:not-allowed;}
+.wa-clip{width:32px;height:32px;border-radius:50%;background:transparent;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--bs-secondary-color);flex-shrink:0;transition:color .15s;}
+.wa-clip:hover{color:var(--bs-body-color);}
+.wa-bubble{max-width:75%;padding:.45rem .7rem .35rem;border-radius:8px;box-shadow:0 1px 1px rgba(0,0,0,.08);position:relative;word-break:break-word;}
+.wa-bubble-own{background:#d9fdd3;border-radius:8px 0 8px 8px;margin-left:auto;}
+.wa-bubble-them{background:#fff;border-radius:0 8px 8px 8px;margin-right:auto;}
+@media(prefers-color-scheme:dark){.wa-bubble-own{background:#025144;}.wa-bubble-them{background:#1f2c34;}}
+.wa-bubble-own::before{content:'';position:absolute;top:0;right:-7px;border-style:solid;border-width:7px 7px 0 0;border-color:#d9fdd3 transparent transparent transparent;}
+.wa-bubble-them::before{content:'';position:absolute;top:0;left:-7px;border-style:solid;border-width:7px 0 0 7px;border-color:#fff transparent transparent transparent;}
+.wa-time{font-size:.62rem;color:#999;white-space:nowrap;}
+.wa-body-text{font-size:.875rem;line-height:1.45;color:var(--bs-body-color);}
+.wa-sender{font-size:.72rem;font-weight:700;color:#4f7cff;margin-bottom:.15rem;}
+.wa-meta{display:flex;align-items:center;justify-content:flex-end;gap:.2rem;margin-top:.2rem;float:right;clear:both;margin-left:.5rem;}
+.wa-attach{display:flex;align-items:center;gap:.5rem;background:rgba(0,0,0,.05);border-radius:8px;padding:.45rem .6rem;margin-bottom:.35rem;text-decoration:none;color:inherit;border:1px solid rgba(0,0,0,.07);}
+.wa-attach:hover{background:rgba(0,0,0,.09);}
+.wa-attach-icon{width:32px;height:32px;border-radius:6px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.wa-file-preview{display:flex;align-items:center;gap:.35rem;background:rgba(37,211,102,.12);border:1px solid rgba(37,211,102,.3);border-radius:8px;padding:.4rem .65rem;margin-bottom:.4rem;font-size:.8rem;}
+.wa-format-hint{font-size:.68rem;color:var(--bs-secondary-color);padding:.25rem .9rem 0;line-height:1.5;}
+</style>
+
+<div style="margin-bottom:.75rem;display:flex;align-items:center;gap:.75rem;">
     <a href="/portal/nachrichten" class="portal-btn portal-btn-secondary portal-btn-sm">← Zurück</a>
-    <div style="flex:1;min-width:0;">
-        <h1 class="portal-page-title" style="margin:0;font-size:1.15rem;">{{ thread.subject }}</h1>
-        <div style="font-size:.78rem;color:var(--bs-secondary-color);margin-top:.2rem;">
-            <span style="display:inline-block;background:{% if thread.status == 'closed' %}rgba(148,163,184,.15);color:#94a3b8{% else %}rgba(34,197,94,.15);color:#22c55e{% endif %};border-radius:20px;font-size:.63rem;font-weight:600;padding:1px 7px;">
-                {{ thread.status == 'closed' ? 'Geschlossen' : 'Offen' }}
-            </span>
-        </div>
-    </div>
 </div>
 
-{# Message thread #}
-<div style="background:var(--bs-secondary-bg);border:1px solid var(--bs-border-color);border-radius:12px;margin-bottom:1rem;overflow:hidden;">
-    <div id="msg-list" style="display:flex;flex-direction:column;gap:.85rem;padding:1.25rem;max-height:480px;overflow-y:auto;">
-        {% for msg in messages %}
-        {% set isOwn = msg.sender_type == 'owner' %}
-        <div style="display:flex;gap:.75rem;{% if isOwn %}flex-direction:row-reverse;{% endif %}" data-msg-id="{{ msg.id }}">
-            <div style="width:32px;height:32px;border-radius:50%;background:{% if not isOwn %}rgba(79,124,255,0.12){% else %}rgba(34,197,94,0.12){% endif %};display:flex;align-items:center;justify-content:center;flex-shrink:0;align-self:flex-end;">
-                {% if not isOwn %}
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="#4f7cff" stroke-width="2" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4" stroke="#4f7cff" stroke-width="2"/></svg>
+<div class="wa-wrap">
+    {# ── Header ── #}
+    <div class="wa-header">
+        <div style="width:38px;height:38px;border-radius:50%;background:rgba(79,124,255,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path stroke="#4f7cff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ thread.subject }}</div>
+            <div style="font-size:.7rem;color:var(--bs-secondary-color);">
+                {% if thread.status == 'closed' %}
+                <span style="color:#94a3b8;">Geschlossen</span>
                 {% else %}
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="#22c55e" stroke-width="2" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                <span style="color:#25d366;">● Online</span>
                 {% endif %}
             </div>
-            <div style="max-width:78%;{% if isOwn %}margin-right:auto;{% else %}margin-left:auto;{% endif %}">
-                <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;{% if isOwn %}flex-direction:row-reverse;{% endif %}">
-                    <span style="font-weight:600;font-size:.8rem;color:{% if not isOwn %}#4f7cff{% else %}#22c55e{% endif %};">
-                        {% if not isOwn %}{{ msg.sender_name }}{% else %}Sie{% endif %}
+        </div>
+        <span style="display:inline-block;background:{% if thread.status == 'closed' %}rgba(148,163,184,.15);color:#94a3b8{% else %}rgba(37,211,102,.15);color:#16a34a{% endif %};border-radius:20px;font-size:.63rem;font-weight:600;padding:2px 8px;">
+            {{ thread.status == 'closed' ? 'Geschlossen' : 'Offen' }}
+        </span>
+    </div>
+
+    {# ── Messages ── #}
+    <div id="msg-list" class="wa-body">
+        {% for msg in messages %}
+        {% set isOwn = msg.sender_type == 'owner' %}
+        <div style="display:flex;justify-content:{% if isOwn %}flex-end{% else %}flex-start{% endif %};" data-msg-id="{{ msg.id }}">
+            <div class="wa-bubble {% if isOwn %}wa-bubble-own{% else %}wa-bubble-them{% endif %}">
+                {% if not isOwn %}
+                <div class="wa-sender">{{ msg.sender_name }}</div>
+                {% endif %}
+
+                {% if msg.attachment_name %}
+                <a href="/api/portal/nachrichten/{{ thread.id }}/anhang/{{ msg.id }}" class="wa-attach" download>
+                    <div class="wa-attach-icon">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="#4f7cff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="#4f7cff" stroke-width="2" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
+                    </div>
+                    <div style="min-width:0;">
+                        <div style="font-size:.8rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">{{ msg.attachment_name }}</div>
+                        <div style="font-size:.65rem;color:var(--bs-secondary-color);">{{ msg.size_label }}</div>
+                    </div>
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;color:var(--bs-secondary-color);"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="7 10 12 15 17 10"/><line stroke="currentColor" stroke-width="2" stroke-linecap="round" x1="12" y1="15" x2="12" y2="3"/></svg>
+                </a>
+                {% endif %}
+
+                {% if msg.body_html %}
+                <div class="wa-body-text">{{ msg.body_html|raw }}</div>
+                {% endif %}
+
+                <div class="wa-meta">
+                    <span class="wa-time">{{ msg.created_at|date('H:i') }}</span>
+                    {% if isOwn %}
+                    <span data-status-id="{{ msg.id }}" style="display:flex;align-items:center;">
+                        {% if msg.read_at %}
+                        <svg width="18" height="9" viewBox="0 0 18 9" fill="none" title="Gelesen"><polyline points="1,4.5 4.5,8 12,1" stroke="#4f7cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="5.5,4.5 9,8 16.5,1" stroke="#4f7cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        {% else %}
+                        <svg width="12" height="9" viewBox="0 0 12 9" fill="none" title="Gesendet"><polyline points="1,4.5 4.5,8 11,1" stroke="#999" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        {% endif %}
                     </span>
-                    <span style="font-size:.68rem;color:var(--bs-secondary-color);">{{ msg.created_at|date('d.m.Y H:i') }}</span>
-                </div>
-                <div style="padding:.75rem 1rem;border-radius:{% if not isOwn %}4px 12px 12px 12px{% else %}12px 4px 12px 12px{% endif %};background:{% if not isOwn %}rgba(79,124,255,0.08);border:1px solid rgba(79,124,255,0.15){% else %}var(--bs-tertiary-bg);border:1px solid var(--bs-border-color){% endif %};font-size:.875rem;white-space:pre-line;line-height:1.6;">{{ msg.body }}</div>
-                {% if isOwn %}
-                <div style="display:flex;justify-content:flex-end;margin-top:.25rem;" data-status-id="{{ msg.id }}">
-                    {% if msg.read_at %}
-                    <svg width="20" height="10" viewBox="0 0 20 10" fill="none" title="Gelesen"><polyline points="1.5,5 5.5,9 13.5,1" stroke="#4f7cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="6,5 10,9 18,1" stroke="#4f7cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    {% else %}
-                    <svg width="14" height="10" viewBox="0 0 14 10" fill="none" title="Gesendet"><polyline points="1.5,5 5.5,9 12.5,1" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
                     {% endif %}
                 </div>
-                {% endif %}
             </div>
         </div>
         {% endfor %}
     </div>
-</div>
 
-{# Reply box #}
-{% if thread.status != 'closed' %}
-<div style="background:var(--bs-secondary-bg);border:1px solid var(--bs-border-color);border-radius:12px;padding:1.1rem;">
-    <div id="replyError" class="portal-alert portal-alert-error" style="display:none;margin-bottom:.75rem;"></div>
-    <textarea id="replyBody" style="width:100%;padding:.65rem .85rem;border-radius:8px;border:1px solid var(--bs-border-color);background:var(--bs-body-bg);color:var(--bs-body-color);font-size:.875rem;font-family:inherit;resize:vertical;min-height:90px;display:block;box-sizing:border-box;" placeholder="Ihre Antwort…"></textarea>
-    <div style="display:flex;justify-content:flex-end;margin-top:.75rem;">
-        <button class="portal-btn portal-btn-primary" id="btnReply">
-            <svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            Antwort senden
-        </button>
+    {# ── Input area ── #}
+    {% if thread.status != 'closed' %}
+    <div class="wa-footer">
+        <input type="hidden" id="portal-csrf" value="{{ csrf_token }}">
+        <div id="filePreview" style="display:none;" class="wa-file-preview">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="#16a34a" stroke-width="2" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>
+            <span id="fileName" style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;"></span>
+            <span id="fileSize" style="color:var(--bs-secondary-color);"></span>
+            <button onclick="clearFile()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:#ef4444;font-size:.8rem;padding:0 2px;">✕</button>
+        </div>
+        <div id="sendError" class="portal-alert portal-alert-error" style="display:none;margin-bottom:.4rem;font-size:.8rem;"></div>
+        <div class="wa-input-row">
+            <label for="fileInput" class="wa-clip" title="Datei anhängen (PDF, Word, Excel, TXT)">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv" style="display:none;">
+            </label>
+            <div class="wa-input-box">
+                <textarea id="replyBody" placeholder="Nachricht" rows="1"></textarea>
+            </div>
+            <button class="wa-btn-send" id="btnSend" title="Senden">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13" stroke="#fff" stroke-width="2" stroke-linecap="round"/><polygon points="22 2 15 22 11 13 2 9 22 2" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+            </button>
+        </div>
+        <div class="wa-format-hint">*fett* &nbsp;_kursiv_ &nbsp;~durchgestrichen~ &nbsp;` `` `code` `` `</div>
     </div>
+    {% else %}
+    <div style="padding:.75rem 1rem;background:var(--bs-secondary-bg);border-top:1px solid var(--bs-border-color);text-align:center;font-size:.8rem;color:var(--bs-secondary-color);">
+        Diese Konversation wurde geschlossen.
+    </div>
+    {% endif %}
 </div>
-{% else %}
-<div class="portal-alert" style="background:rgba(148,163,184,.08);border:1px solid var(--bs-border-color);color:var(--bs-secondary-color);display:flex;align-items:center;gap:.5rem;">
-    <svg width="15" height="15" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="12 8 12 12 14 14"/></svg>
-    Diese Konversation wurde geschlossen. Starten Sie bei Fragen eine neue Nachricht.
-</div>
-{% endif %}
 {% endblock %}
 
 {% block scripts %}
-<input type="hidden" id="portal-csrf" value="{{ csrf_token }}">
 <script>
 (function() {
     var threadId = {{ thread.id }};
-    var _csrf    = document.getElementById('portal-csrf').value;
     var list     = document.getElementById('msg-list');
+    var ta       = document.getElementById('replyBody');
+    var btnSend  = document.getElementById('btnSend');
+    var fileInput= document.getElementById('fileInput');
+    var _csrf    = document.getElementById('portal-csrf') ? document.getElementById('portal-csrf').value : '';
+    var selectedFile = null;
+    var lastId   = 0;
 
-    /* Scroll to bottom */
-    if (list) list.scrollTop = list.scrollHeight;
-
-    /* ── Tick SVG helpers ── */
-    function tickSingle() {
-        return '<svg width="14" height="10" viewBox="0 0 14 10" fill="none" title="Gesendet"><polyline points="1.5,5 5.5,9 12.5,1" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    }
-    function tickDouble() {
-        return '<svg width="20" height="10" viewBox="0 0 20 10" fill="none" title="Gelesen"><polyline points="1.5,5 5.5,9 13.5,1" stroke="#4f7cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="6,5 10,9 18,1" stroke="#4f7cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-    }
-
-    /* ── Update tick to double-blue ── */
-    function setRead(msgId) {
-        var el = document.querySelector('[data-status-id="' + msgId + '"]');
-        if (el && !el.classList.contains('read')) {
-            el.innerHTML = tickDouble();
-            el.classList.add('read');
-        }
-    }
-
-    /* ── Reply ── */
-    var btnReply = document.getElementById('btnReply');
-    if (btnReply) {
-        btnReply.addEventListener('click', function() {
-            var body  = document.getElementById('replyBody').value.trim();
-            var errEl = document.getElementById('replyError');
-            if (!body) {
-                errEl.textContent = 'Bitte eine Nachricht eingeben.';
-                errEl.style.display = 'block';
-                return;
-            }
-            errEl.style.display = 'none';
-            btnReply.disabled = true;
-            btnReply.textContent = 'Wird gesendet…';
-
-            var fd = new FormData();
-            fd.append('_csrf_token', _csrf);
-            fd.append('body', body);
-
-            fetch('/api/portal/nachrichten/' + threadId + '/antworten', {
-                method: 'POST',
-                body: fd
-            })
-            .then(function(r) { return r.json(); })
-            .then(function(d) {
-                if (d.ok) {
-                    appendOwnerMessage(d);
-                    document.getElementById('replyBody').value = '';
-                    lastId = d.id;
-                } else {
-                    errEl.textContent = d.error || 'Fehler beim Senden.';
-                    errEl.style.display = 'block';
-                }
-                btnReply.disabled = false;
-                btnReply.innerHTML = '<svg width="13" height="13" fill="none" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" points="22 2 15 22 11 13 2 9 22 2"/></svg> Antwort senden';
-            })
-            .catch(function() {
-                errEl.textContent = 'Verbindungsfehler.';
-                errEl.style.display = 'block';
-                btnReply.disabled = false;
-                btnReply.textContent = 'Antwort senden';
-            });
-        });
-    }
-
-    /* ── Append own (owner) message ── */
-    function appendOwnerMessage(d) {
-        var bodyEsc = d.body.replace(/\n/g,'<br>');
-        var wrap = document.createElement('div');
-        wrap.style.cssText = 'display:flex;gap:.75rem;flex-direction:row-reverse;';
-        wrap.dataset.msgId = d.id;
-        wrap.innerHTML =
-            '<div style="width:32px;height:32px;border-radius:50%;background:rgba(34,197,94,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;align-self:flex-end;">'
-          + '<svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="#22c55e" stroke-width="2" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'
-          + '</div>'
-          + '<div style="max-width:78%;margin-right:auto;">'
-          + '<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;flex-direction:row-reverse;">'
-          + '<span style="font-weight:600;font-size:.8rem;color:#22c55e;">Sie</span>'
-          + '<span style="font-size:.68rem;color:var(--bs-secondary-color);">' + d.created_at + '</span>'
-          + '</div>'
-          + '<div style="padding:.75rem 1rem;border-radius:12px 4px 12px 12px;background:var(--bs-tertiary-bg);border:1px solid var(--bs-border-color);font-size:.875rem;line-height:1.6;">' + bodyEsc + '</div>'
-          + '<div style="display:flex;justify-content:flex-end;margin-top:.25rem;" data-status-id="' + d.id + '">' + tickSingle() + '</div>'
-          + '</div>';
-        list.appendChild(wrap);
-        list.scrollTop = list.scrollHeight;
-    }
-
-    /* ── Append incoming (admin) message ── */
-    function appendAdminMessage(d) {
-        var bodyEsc = d.body.replace(/\n/g,'<br>');
-        var wrap = document.createElement('div');
-        wrap.style.cssText = 'display:flex;gap:.75rem;';
-        wrap.dataset.msgId = d.id;
-        wrap.innerHTML =
-            '<div style="width:32px;height:32px;border-radius:50%;background:rgba(79,124,255,0.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;align-self:flex-end;">'
-          + '<svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="#4f7cff" stroke-width="2" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4" stroke="#4f7cff" stroke-width="2"/></svg>'
-          + '</div>'
-          + '<div style="max-width:78%;margin-left:auto;">'
-          + '<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;">'
-          + '<span style="font-weight:600;font-size:.8rem;color:#4f7cff;">' + (d.sender_name || 'Team') + '</span>'
-          + '<span style="font-size:.68rem;color:var(--bs-secondary-color);">' + d.created_at + '</span>'
-          + '</div>'
-          + '<div style="padding:.75rem 1rem;border-radius:4px 12px 12px 12px;background:rgba(79,124,255,0.08);border:1px solid rgba(79,124,255,0.15);font-size:.875rem;line-height:1.6;">' + bodyEsc + '</div>'
-          + '</div>';
-        list.appendChild(wrap);
-        list.scrollTop = list.scrollHeight;
-    }
-
-    /* ── Long-polling ── */
-    var msgs = document.querySelectorAll('#msg-list [data-msg-id]');
-    var lastId = 0;
-    msgs.forEach(function(el) {
+    /* Track last message ID */
+    document.querySelectorAll('#msg-list [data-msg-id]').forEach(function(el) {
         var id = parseInt(el.dataset.msgId, 10);
         if (id > lastId) lastId = id;
     });
 
+    /* Scroll to bottom */
+    if (list) list.scrollTop = list.scrollHeight;
+
+    /* ── Auto-resize textarea ── */
+    if (ta) {
+        ta.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+        });
+        ta.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (btnSend) btnSend.click();
+            }
+        });
+    }
+
+    /* ── File selection ── */
+    if (fileInput) {
+        fileInput.addEventListener('change', function() {
+            var f = this.files[0];
+            if (!f) return;
+            if (f.size > 10 * 1024 * 1024) {
+                showError('Datei zu groß (max. 10 MB).');
+                this.value = '';
+                return;
+            }
+            selectedFile = f;
+            document.getElementById('fileName').textContent = f.name;
+            document.getElementById('fileSize').textContent = formatSize(f.size);
+            document.getElementById('filePreview').style.display = 'flex';
+        });
+    }
+
+    window.clearFile = function() {
+        selectedFile = null;
+        if (fileInput) fileInput.value = '';
+        document.getElementById('filePreview').style.display = 'none';
+    };
+
+    function formatSize(b) {
+        if (b < 1024) return b + ' B';
+        if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+        return (b / 1048576).toFixed(1) + ' MB';
+    }
+
+    function showError(msg) {
+        var el = document.getElementById('sendError');
+        if (el) { el.textContent = msg; el.style.display = 'block'; setTimeout(function(){el.style.display='none';}, 4000); }
+    }
+
+    /* ── WhatsApp text formatter (JS mirror of PHP) ── */
+    function waFormat(text) {
+        var s = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        s = s.replace(/```([\s\S]+?)```/g, '<code style="font-family:monospace;background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">$1</code>');
+        s = s.replace(/\*([^\*\n]+)\*/g, '<strong>$1</strong>');
+        s = s.replace(/_([^_\n]+)_/g, '<em>$1</em>');
+        s = s.replace(/~([^~\n]+)~/g, '<s>$1</s>');
+        return s.replace(/\n/g, '<br>');
+    }
+
+    /* ── Tick helpers ── */
+    function tickSingle() { return '<svg width="12" height="9" viewBox="0 0 12 9" fill="none" title="Gesendet"><polyline points="1,4.5 4.5,8 11,1" stroke="#999" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
+    function tickDouble() { return '<svg width="18" height="9" viewBox="0 0 18 9" fill="none" title="Gelesen"><polyline points="1,4.5 4.5,8 12,1" stroke="#4f7cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><polyline points="5.5,4.5 9,8 16.5,1" stroke="#4f7cff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
+
+    function setRead(msgId) {
+        var el = document.querySelector('[data-status-id="' + msgId + '"]');
+        if (el && !el.classList.contains('read')) { el.innerHTML = tickDouble(); el.classList.add('read'); }
+    }
+
+    /* ── Build bubble HTML ── */
+    function buildBubble(d, isOwn, threadIdVal) {
+        var attach = '';
+        if (d.attachment_name) {
+            var url = '/api/portal/nachrichten/' + threadIdVal + '/anhang/' + d.id;
+            attach = '<a href="' + url + '" class="wa-attach" download>'
+                + '<div class="wa-attach-icon"><svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="#4f7cff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="#4f7cff" stroke-width="2" stroke-linecap="round" points="14 2 14 8 20 8"/></svg></div>'
+                + '<div style="min-width:0;"><div style="font-size:.8rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">' + d.attachment_name + '</div>'
+                + (d.size_label ? '<div style="font-size:.65rem;color:#999;">' + d.size_label + '</div>' : '')
+                + '</div></a>';
+        }
+        var bodyHtml = d.body_html || waFormat(d.body || '');
+        var bodyPart = bodyHtml ? '<div class="wa-body-text">' + bodyHtml + '</div>' : '';
+        var senderPart = !isOwn ? '<div class="wa-sender">' + (d.sender_name || 'Team') + '</div>' : '';
+        var tick = isOwn ? '<span data-status-id="' + d.id + '" style="display:flex;align-items:center;">' + tickSingle() + '</span>' : '';
+        var meta = '<div class="wa-meta"><span class="wa-time">' + d.created_at + '</span>' + tick + '</div>';
+
+        var wrapper = document.createElement('div');
+        wrapper.style.cssText = 'display:flex;justify-content:' + (isOwn ? 'flex-end' : 'flex-start') + ';';
+        wrapper.dataset.msgId = d.id;
+        var bubble = document.createElement('div');
+        bubble.className = 'wa-bubble ' + (isOwn ? 'wa-bubble-own' : 'wa-bubble-them');
+        bubble.innerHTML = senderPart + attach + bodyPart + meta;
+        wrapper.appendChild(bubble);
+        return wrapper;
+    }
+
+    function appendMsg(d, isOwn) {
+        var el = buildBubble(d, isOwn, threadId);
+        list.appendChild(el);
+        list.scrollTop = list.scrollHeight;
+    }
+
+    /* ── Send ── */
+    if (btnSend) {
+        btnSend.addEventListener('click', function() {
+            var body = ta ? ta.value.trim() : '';
+            if (!body && !selectedFile) { showError('Bitte Nachricht eingeben oder Datei auswählen.'); return; }
+
+            btnSend.disabled = true;
+            var fd = new FormData();
+            fd.append('_csrf_token', _csrf);
+            if (body) fd.append('body', body);
+
+            var endpoint;
+            if (selectedFile) {
+                fd.append('file', selectedFile);
+                endpoint = '/api/portal/nachrichten/' + threadId + '/anhang';
+            } else {
+                endpoint = '/api/portal/nachrichten/' + threadId + '/antworten';
+            }
+
+            fetch(endpoint, { method: 'POST', body: fd })
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                if (d.ok) {
+                    appendMsg(d, true);
+                    if (parseInt(d.id, 10) > lastId) lastId = parseInt(d.id, 10);
+                    if (ta) { ta.value = ''; ta.style.height = 'auto'; }
+                    clearFile();
+                } else {
+                    showError(d.error || 'Fehler beim Senden.');
+                }
+                btnSend.disabled = false;
+            })
+            .catch(function() { showError('Verbindungsfehler.'); btnSend.disabled = false; });
+        });
+    }
+
+    /* ── Polling ── */
     var pollTimer;
     function poll() {
         fetch('/api/portal/nachrichten/' + threadId + '/poll?after=' + lastId)
@@ -201,10 +299,7 @@
             if (data.messages && data.messages.length) {
                 data.messages.forEach(function(m) {
                     if (parseInt(m.id, 10) > lastId) lastId = parseInt(m.id, 10);
-                    if (m.sender_type === 'admin') {
-                        appendAdminMessage(m);
-                    }
-                    /* own messages arriving via poll (rare edge case) are ignored — already appended */
+                    if (m.sender_type === 'admin') appendMsg(m, false);
                 });
             }
             if (data.read_updates && data.read_updates.length) {
@@ -212,20 +307,12 @@
             }
         })
         .catch(function() {})
-        .finally(function() {
-            pollTimer = setTimeout(poll, 4000);
-        });
+        .finally(function() { pollTimer = setTimeout(poll, 4000); });
     }
-
     pollTimer = setTimeout(poll, 4000);
-
     document.addEventListener('visibilitychange', function() {
-        if (document.hidden) {
-            clearTimeout(pollTimer);
-        } else {
-            clearTimeout(pollTimer);
-            pollTimer = setTimeout(poll, 500);
-        }
+        if (document.hidden) { clearTimeout(pollTimer); }
+        else { clearTimeout(pollTimer); pollTimer = setTimeout(poll, 500); }
     });
 })();
 </script>

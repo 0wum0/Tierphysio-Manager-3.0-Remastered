@@ -20,6 +20,34 @@ class MessagingAdminController extends Controller
     private MessagingMailService    $mailer;
     private SettingsRepository      $settingsRepository;
 
+    private const ALLOWED_MIME = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'text/plain',
+        'text/csv',
+        'application/csv',
+    ];
+
+    private function formatWhatsApp(string $text): string
+    {
+        $s = htmlspecialchars($text, ENT_QUOTES, 'UTF-8');
+        $s = preg_replace('/```(.+?)```/s', '<code style="font-family:monospace;background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">$1</code>', $s);
+        $s = preg_replace('/\*([^\*\n]+)\*/', '<strong>$1</strong>', $s);
+        $s = preg_replace('/_([^_\n]+)_/', '<em>$1</em>', $s);
+        $s = preg_replace('/~([^~\n]+)~/', '<s>$1</s>', $s);
+        return nl2br($s);
+    }
+
+    private function fileSizeLabel(int $bytes): string
+    {
+        if ($bytes < 1024) return $bytes . ' B';
+        if ($bytes < 1048576) return round($bytes / 1024, 1) . ' KB';
+        return round($bytes / 1048576, 1) . ' MB';
+    }
+
     public function __construct(
         View $view,
         Session $session,
@@ -67,6 +95,11 @@ class MessagingAdminController extends Controller
 
         $this->repo->markThreadReadByAdmin($id);
         $messages = $this->repo->getMessages($id);
+        foreach ($messages as &$m) {
+            $m['body_html']  = $this->formatWhatsApp($m['body']);
+            $m['size_label'] = $m['attachment_size'] ? $this->fileSizeLabel((int)$m['attachment_size']) : '';
+        }
+        unset($m);
 
         $this->render('@owner-portal/admin_message_thread.twig', [
             'page_title'  => 'Nachricht: ' . $thread['subject'],
@@ -121,16 +154,118 @@ class MessagingAdminController extends Controller
             /* Mail errors must not break the AJAX reply */
         }
 
-        /* Return rendered message bubble for AJAX append */
         $senderName = $user['name'] ?? 'Team';
         $this->json([
             'ok'          => true,
             'id'          => $msgId,
-            'body'        => htmlspecialchars($body, ENT_QUOTES, 'UTF-8'),
+            'body'        => $body,
+            'body_html'   => $this->formatWhatsApp($body),
             'sender_type' => 'admin',
             'sender_name' => $senderName,
-            'created_at'  => date('d.m.Y H:i'),
+            'created_at'  => date('H:i'),
         ]);
+    }
+
+    /* ── POST /api/portal-admin/nachrichten/{id}/anhang (AJAX: send with file) ── */
+    public function upload(array $params = []): void
+    {
+        $id     = (int)($params['id'] ?? 0);
+        $thread = $this->repo->getThreadById($id);
+        if (!$thread) {
+            $this->json(['error' => 'Thread nicht gefunden.'], 404);
+            return;
+        }
+
+        $body = trim($this->post('body', ''));
+        $file = $_FILES['file'] ?? null;
+
+        if ($body === '' && (!$file || $file['error'] !== UPLOAD_ERR_OK)) {
+            $this->json(['error' => 'Nachricht oder Datei erforderlich.'], 422);
+            return;
+        }
+
+        $attachPath = $attachName = null;
+        $attachSize = null;
+
+        if ($file && $file['error'] === UPLOAD_ERR_OK) {
+            if ($file['size'] > 10 * 1024 * 1024) {
+                $this->json(['error' => 'Datei zu groß (max. 10 MB).'], 422);
+                return;
+            }
+            $mime = mime_content_type($file['tmp_name']) ?: '';
+            if (!in_array($mime, self::ALLOWED_MIME, true)) {
+                $this->json(['error' => 'Dateityp nicht erlaubt (PDF, Word, Excel, TXT, CSV).'], 422);
+                return;
+            }
+            $dir = tenant_storage_path('portal-attachments/' . $id);
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            $ext      = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+            $safeName = bin2hex(random_bytes(8)) . '.' . $ext;
+            if (!move_uploaded_file($file['tmp_name'], $dir . '/' . $safeName)) {
+                $this->json(['error' => 'Datei konnte nicht gespeichert werden.'], 500);
+                return;
+            }
+            $attachPath = 'portal-attachments/' . $id . '/' . $safeName;
+            $attachName = basename($file['name']);
+            $attachSize = (int)$file['size'];
+        }
+
+        $user   = $this->session->getUser();
+        $userId = $user ? (int)$user['id'] : null;
+        $msgId  = $this->repo->addMessage($id, 'admin', $userId, $body, $attachPath, $attachName, $attachSize);
+
+        if ($thread['status'] === 'closed') {
+            $this->repo->reopenThread($id);
+        }
+
+        try {
+            $this->mailer->notifyOwnerNewMessage(
+                $thread['owner_email'],
+                $thread['owner_name'],
+                $id,
+                $thread['subject'],
+                $body ?: '[Dateianhang: ' . $attachName . ']'
+            );
+        } catch (\Throwable) {}
+
+        $senderName = $user['name'] ?? 'Team';
+        $this->json([
+            'ok'              => true,
+            'id'              => $msgId,
+            'body'            => $body,
+            'body_html'       => $this->formatWhatsApp($body),
+            'sender_type'     => 'admin',
+            'sender_name'     => $senderName,
+            'created_at'      => date('H:i'),
+            'attachment_name' => $attachName,
+            'size_label'      => $attachSize ? $this->fileSizeLabel($attachSize) : '',
+        ]);
+    }
+
+    /* ── GET /api/portal-admin/nachrichten/{id}/anhang/{msgId} (download) ── */
+    public function download(array $params = []): void
+    {
+        $msgId = (int)($params['msgId'] ?? 0);
+        $msg   = $this->repo->getMessageById($msgId);
+        if (!$msg || empty($msg['attachment_path'])) {
+            http_response_code(404);
+            exit;
+        }
+
+        $fullPath = tenant_storage_path($msg['attachment_path']);
+        if (!is_file($fullPath)) {
+            http_response_code(404);
+            exit;
+        }
+
+        $name = $msg['attachment_name'] ?: basename($fullPath);
+        header('Content-Type: application/octet-stream');
+        header('Content-Disposition: attachment; filename="' . addslashes($name) . '"');
+        header('Content-Length: ' . filesize($fullPath));
+        readfile($fullPath);
+        exit;
     }
 
     /* ── POST /api/portal-admin/nachrichten/{id}/status (AJAX: open/close) ── */
@@ -218,13 +353,17 @@ class MessagingAdminController extends Controller
 
         $outMsgs = [];
         foreach ($newMsgs as $m) {
+            $size = isset($m['attachment_size']) && $m['attachment_size'] ? $this->fileSizeLabel((int)$m['attachment_size']) : '';
             $outMsgs[] = [
-                'id'          => (int)$m['id'],
-                'sender_type' => $m['sender_type'],
-                'sender_name' => $m['sender_name'] ?? '',
-                'body'        => htmlspecialchars($m['body'], ENT_QUOTES, 'UTF-8'),
-                'created_at'  => isset($m['created_at']) ? (new \DateTime($m['created_at']))->format('d.m.Y H:i') : '',
-                'read_at'     => $m['read_at'] ?? null,
+                'id'              => (int)$m['id'],
+                'sender_type'     => $m['sender_type'],
+                'sender_name'     => $m['sender_name'] ?? '',
+                'body'            => $m['body'],
+                'body_html'       => $this->formatWhatsApp($m['body']),
+                'created_at'      => isset($m['created_at']) ? (new \DateTime($m['created_at']))->format('H:i') : '',
+                'read_at'         => $m['read_at'] ?? null,
+                'attachment_name' => $m['attachment_name'] ?? null,
+                'size_label'      => $size,
             ];
         }
 
