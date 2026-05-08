@@ -163,12 +163,16 @@
     const hiddenMarkers  = ROOT.querySelector('input[name="anatomy_markers"]');
     const hiddenDrawings = ROOT.querySelector('input[name="anatomy_drawings"]');
 
+    // Schmerzskala: liest bestehenden schmerz_nrs-Input aus dem Formular
+    const nrsInput = document.querySelector('input[name="schmerz_nrs"]');
+
     const state = {
         species:  safeRead(hiddenSpecies, 'dog'),
         markers:  safeParseJson(hiddenMarkers?.value, []),
         drawings: safeParseJson(hiddenDrawings?.value, []),
         tool:     'marker',           // 'marker' | 'draw' | 'erase'
         color:    COLORS[0].hex,
+        nrs:      (nrsInput && nrsInput.value !== '') ? parseInt(nrsInput.value, 10) : null,
     };
 
     function safeRead(el, fallback) {
@@ -191,6 +195,7 @@
         renderToolbar();
         renderStage();
         renderLegend();
+        renderNrsScale();
         renderMarkerList();
         syncHidden();
     } catch (e) {
@@ -467,6 +472,47 @@
             });
             list.appendChild(row);
         });
+    }
+
+    function renderNrsScale() {
+        const container = ROOT.querySelector('.anatomy-nrs-scale');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const NRS_COLORS = [
+            '#22c55e','#4ade80','#a3e635',
+            '#facc15','#fb923c',
+            '#f97316','#ef4444',
+            '#dc2626','#b91c1c','#991b1b','#7f1d1d',
+        ];
+
+        const wrap = document.createElement('div');
+        wrap.className = 'anatomy-nrs-wrap';
+
+        for (let i = 0; i <= 10; i++) {
+            const btn = document.createElement('button');
+            btn.type        = 'button';
+            btn.textContent = String(i);
+            btn.className   = 'anatomy-nrs-btn' + (state.nrs === i ? ' active' : '');
+            btn.style.setProperty('--nrs-color', NRS_COLORS[i]);
+            btn.title       = i === 0 ? 'Kein Schmerz' : i <= 3 ? 'Leicht' : i <= 6 ? 'Mäßig' : i <= 8 ? 'Stark' : 'Maximal';
+            btn.addEventListener('click', () => {
+                state.nrs = i;
+                if (nrsInput) nrsInput.value = String(i);
+                // Aktiv-Klasse aktualisieren ohne komplettes Re-Render
+                wrap.querySelectorAll('.anatomy-nrs-btn').forEach((b, idx) => {
+                    b.classList.toggle('active', idx === i);
+                });
+            });
+            wrap.appendChild(btn);
+        }
+
+        const labels = document.createElement('div');
+        labels.className = 'anatomy-nrs-labels';
+        labels.innerHTML = '<span>0 – Kein Schmerz</span><span>5 – Mäßig</span><span>10 – Max</span>';
+
+        container.appendChild(wrap);
+        container.appendChild(labels);
     }
 
     function syncHidden() {
