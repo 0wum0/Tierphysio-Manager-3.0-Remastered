@@ -106,9 +106,21 @@ class BefundbogenController extends Controller
             $this->repo->saveFelder($id, $this->collectFelder());
         } catch (\Throwable $e) {
             error_log('[Befund store] ' . $e->getMessage());
+            if ($this->isXhr()) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'error' => 'Befundbogen konnte nicht gespeichert werden.']);
+                exit;
+            }
             $this->flash('error', 'Befundbogen konnte nicht gespeichert werden. Bitte versuche es erneut.');
             $this->redirect('/patienten/' . $patientId . '/befunde/neu');
             return;
+        }
+
+        // AJAX-Support für Modal-Inline-Flow
+        if ($this->isXhr()) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => true, 'id' => $id]);
+            exit;
         }
 
         $this->flash('success', 'Befundbogen wurde gespeichert.');

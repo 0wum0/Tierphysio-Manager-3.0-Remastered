@@ -615,4 +615,12 @@
     }
 
     } // end initAnatomy
+
+    // Globaler Expose: ermöglicht Initialisierung im Patientenmodal
+    // (ohne Seitenwechsel, dynamisch per createElement geladen)
+    window.befundAnatomyInit = function (root) {
+        if (!root) return;
+        root.removeAttribute('data-booted'); // erlaubt Re-Init auf neuem Container
+        initAnatomy(root);
+    };
 })();
