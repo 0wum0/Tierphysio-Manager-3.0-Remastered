@@ -26,6 +26,44 @@ Bug gefunden → in Datei dokumentieren → Fix referenzieren → Status aktuali
 
 ---
 
+## Bug: „Die interaktive Anatomie konnte nicht geladen werden" nach SVG-Layer-Refactor (Commit `dd6ed9b`)
+**Status:** `fixed` (Commit `e0a01e2` → `main` als `96bb587`)
+
+### Symptom
+Nach Umstellung von flachen `SILHOUETTES` auf ein layerbasiertes `ANATOMY`-System mit
+`Proxy`-Wrapper + `escapeAttr` wurde die Warnung wieder angezeigt, obwohl kein offensichtlicher
+Syntaxfehler vorlag (`node --check` clean).
+
+### Ursache
+Der ursprüngliche globale `try/catch` in `initAnatomy` (Datei: `public/assets/js/befund-anatomy.js`,
+vorher Zeile 184–195) hat **jeden** Fehler eines beliebigen Render-Schrittes (Toolbar, Stage,
+Legend, NRS, MarkerList, syncHidden) abgefangen und pauschal die Warnung eingeblendet.
+Der eigentliche Fehler wurde nur als `console.error('[Befund Anatomy] Initialisierung fehlgeschlagen:', e)`
+geloggt — ohne Step-Name, ohne Stack, ohne `error.name/.message`. Das machte die konkrete
+Ursache praktisch unsichtbar und degradierte selbst kleine Fehler in unkritischen Schritten
+(z. B. NRS) zum vollständigen Abbruch der Anatomie.
+
+### Fix
+1. Jeder Render-Schritt ist jetzt in `safeRun(name, fn)` isoliert (eigenes `try/catch`).
+2. Jeder Fehler wird mit `step`, `error.name`, `error.message`, vollständigem `stack` geloggt.
+3. Die Warnung erscheint **nur noch**, wenn die Silhouette/Stage wirklich nicht gebaut
+   werden konnte (`ROOT.querySelector('.anatomy-stage svg.anatomy-silhouette')` ist null).
+4. Fehler in unkritischen Schritten (Legend/NRS/MarkerList) verhindern die Anatomie nicht mehr.
+
+### Betroffene Datei/Funktion
+- `public/assets/js/befund-anatomy.js` → `initAnatomy(ROOT)` (DOM-Build-Block)
+
+### Verifikation
+- F12 → Console: Bei weiteren Fehlern erscheint `[Befund Anatomy] Schritt "renderStage"
+  fehlgeschlagen: ... \nStack: ...` mit exakter Fehlerursache.
+- Hund/Katze/Pferd sollten jetzt zuverlässig laden; Silhouette-Check entscheidet über Warnung.
+
+### Offene TODOs
+- Nach Test auf Live-Server: falls Warnung weiterhin erscheint → tatsächlichen
+  `console.error`-Eintrag aus der Browser-Console in diese Datei kopieren.
+
+---
+
 ## Bug: Befundbögen — Tierauswahl navigiert nicht zur Befundung
 
 **Status:** `fixed`
