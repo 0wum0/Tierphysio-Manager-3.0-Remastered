@@ -178,6 +178,7 @@
   },
   "active": "550b65a575ea133e",
   "lastOpenFiles": [
+    "07-features/3d-befundmodell-schmerzskala.md",
     "15-agent-rules/git-pr-rules.md",
     "01-architecture/tenant-system.md",
     "01-architecture/domains.md",
@@ -219,7 +220,6 @@
     "wiki/meta/2026-04-24-v1.6.0-release-session.md",
     "wiki/meta/2026-04-15-slides-and-release-session.md",
     "wiki/meta/2026-04-15-release-report-session.md",
-    "wiki/meta/2026-04-14-community-cta-rollout.md",
     "wiki/meta",
     "wiki/folds",
     "wiki/entities",
