@@ -181,17 +181,42 @@
     let drawingPath = null; // must be before the try-block (renderStage→renderOverlay reads it)
 
     // ── DOM-Build ──────────────────────────────────────────────
-    try {
-        renderToolbar();
-        renderStage();
-        renderLegend();
-        renderNrsScale();
-        renderMarkerList();
-        syncHidden();
-    } catch (e) {
-        console.error('[Befund Anatomy] Initialisierung fehlgeschlagen:', e);
-        ROOT.innerHTML = '<div class="alert alert-warning">Die interaktive Anatomie konnte nicht geladen werden. Du kannst den Befund trotzdem normal bearbeiten.</div>';
-        return;
+    // Jeder Render-Schritt ist isoliert: ein Fehler in z.B. NRS soll
+    // nicht die Silhouette verhindern. Echte Ursachen werden mit
+    // step/name/message/stack protokolliert (Console → F12).
+    const stepErrors = [];
+    const safeRun = (name, fn) => {
+        try { fn(); }
+        catch (e) {
+            stepErrors.push({ step: name, error: e });
+            console.error('[Befund Anatomy] Schritt "' + name + '" fehlgeschlagen:',
+                (e && e.name) || 'Error',
+                (e && e.message) || e,
+                '\nStack:\n' + ((e && e.stack) || '(kein stack)'));
+        }
+    };
+    safeRun('renderToolbar',    renderToolbar);
+    safeRun('renderStage',      renderStage);
+    safeRun('renderLegend',     renderLegend);
+    safeRun('renderNrsScale',   renderNrsScale);
+    safeRun('renderMarkerList', renderMarkerList);
+    safeRun('syncHidden',       syncHidden);
+
+    // Warnhinweis nur wenn die Silhouette/Stage wirklich nicht gebaut werden konnte.
+    // Andere Schritte (Legend/NRS/Marker) sind nicht kritisch.
+    const stageOk = !!ROOT.querySelector('.anatomy-stage svg.anatomy-silhouette');
+    if (!stageOk && stepErrors.length) {
+        const warn = document.createElement('div');
+        warn.className = 'alert alert-warning';
+        warn.style.margin = '.5rem 0';
+        warn.textContent = 'Die interaktive Anatomie konnte nicht geladen werden. Du kannst den Befund trotzdem normal bearbeiten.';
+        const stage = ROOT.querySelector('.anatomy-stage');
+        if (stage && stage.parentNode) {
+            stage.parentNode.insertBefore(warn, stage);
+            stage.style.display = 'none';
+        } else {
+            ROOT.prepend(warn);
+        }
     }
 
     function renderToolbar() {
