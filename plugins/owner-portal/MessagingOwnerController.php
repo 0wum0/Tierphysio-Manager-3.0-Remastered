@@ -316,9 +316,13 @@ class MessagingOwnerController extends Controller
         }
 
         $name = $msg['attachment_name'] ?: basename($fullPath);
-        header('Content-Type: application/octet-stream');
-        header('Content-Disposition: attachment; filename="' . addslashes($name) . '"');
+        $mime = @mime_content_type($fullPath) ?: 'application/octet-stream';
+        $isImage = in_array($mime, ['image/jpeg', 'image/png', 'image/gif', 'image/webp'], true);
+        $disposition = $isImage ? 'inline' : 'attachment';
+        header('Content-Type: ' . $mime);
+        header('Content-Disposition: ' . $disposition . '; filename="' . addslashes($name) . '"');
         header('Content-Length: ' . filesize($fullPath));
+        header('Cache-Control: private, max-age=86400');
         readfile($fullPath);
         exit;
     }
