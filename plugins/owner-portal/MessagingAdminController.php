@@ -29,6 +29,12 @@ class MessagingAdminController extends Controller
         'text/plain',
         'text/csv',
         'application/csv',
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'image/avif',
+        'image/bmp',
     ];
 
     private function formatWhatsApp(string $text): string
@@ -261,9 +267,15 @@ class MessagingAdminController extends Controller
         }
 
         $name = $msg['attachment_name'] ?: basename($fullPath);
-        header('Content-Type: application/octet-stream');
-        header('Content-Disposition: attachment; filename="' . addslashes($name) . '"');
+        $mime = mime_content_type($fullPath) ?: 'application/octet-stream';
+        header('Content-Type: ' . $mime);
+        if (!str_starts_with($mime, 'image/')) {
+            header('Content-Disposition: attachment; filename="' . addslashes($name) . '"');
+        } else {
+            header('Content-Disposition: inline; filename="' . addslashes($name) . '"');
+        }
         header('Content-Length: ' . filesize($fullPath));
+        header('Cache-Control: private, max-age=86400');
         readfile($fullPath);
         exit;
     }
