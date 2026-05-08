@@ -50,6 +50,11 @@ class MessagingOwnerController extends Controller
         'text/plain',
         'text/csv',
         'application/csv',
+        // Bilder
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
     ];
 
     private function formatWhatsApp(string $text): string
@@ -245,7 +250,7 @@ class MessagingOwnerController extends Controller
             }
             $mime = mime_content_type($file['tmp_name']) ?: '';
             if (!in_array($mime, self::ALLOWED_MIME, true)) {
-                $this->json(['error' => 'Dateityp nicht erlaubt (PDF, Word, Excel, TXT, CSV).'], 422);
+                $this->json(['error' => 'Dateityp nicht erlaubt (PDF, Word, Excel, TXT, CSV, JPG, PNG, GIF, WebP).'], 422);
                 return;
             }
             $dir = tenant_storage_path('portal-attachments/' . $id);
