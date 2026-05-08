@@ -10,18 +10,28 @@ Interaktives SVG-Anatomiemodell mit Schmerzskala im Befundbogen.
 
 ## Flow
 
-### Öffnen (aus Patient-Modal)
+### Öffnen (aus Patient-Modal) — KEIN Seitenwechsel
 1. Patient-Modal → Tab „Befundbögen" → „Befundung starten"
 2. Tierauswahl-Modal öffnet sich (Hund / Katze / Pferd)
-3. Klick auf Tier → JS-Handler ruft `window.location.href = '/patienten/{id}/befunde/neu?species={key}'` auf
-4. Controller `BefundbogenController::create()` liest `?species=` Parameter, gibt `anatomy_species` an `form.twig`
-5. Seite rendert SVG-Silhouette server-seitig + lädt `befund-anatomy.js`
+3. Klick auf Tier → `openAnatomyInModal(patientId, species)` — kein `window.location.href`
+4. `#befund-anatomy`-HTML wird inline in `#pd-befunde-list` aufgebaut
+5. CSS (`/assets/css/befund-anatomy.css`) + Stage-CSS + JS dynamisch geladen (einmalig)
+6. Erstes Laden: `boot()` init automatisch; Folge-Opens: `window.befundAnatomyInit(root)` direkt
+7. „Befund speichern" → AJAX POST → `BefundbogenController::store()` → JSON `{success, id}` → Liste neu laden
 
 ### Initialisierung (befund-anatomy.js)
-- IIFE mit `window.__befundAnatomyBooted`-Guard (verhindert Doppel-Init)
-- `boot()` → `initAnatomy(ROOT)` bei DOMContentLoaded
+- IIFE mit `window.__befundAnatomyBooted`-Guard (verhindert Doppel-Init beim normalen Seiten-Load)
+- `boot()` → `initAnatomy(ROOT)` wenn `#befund-anatomy` im DOM vorhanden
+- `window.befundAnatomyInit(root)` am Ende der IIFE: Re-Init im Modal ohne IIFE-Guard-Problem
 - Liest State aus Hidden-Inputs (`anatomy_species`, `anatomy_markers`, `anatomy_drawings`) + `schmerz_nrs`
 - Rendert: Toolbar → Stage → Legend → NRS-Scale → Marker-List
+
+### Behobener Bug: TDZ-ReferenceError (Commit 5d810b0)
+`let drawingPath = null` war nach dem try-Block (Zeile 340), wurde aber darin via
+`renderStage()` → `renderOverlay()` bereits gelesen. JavaScript TDZ für `let` wirft
+`ReferenceError: Cannot access 'drawingPath' before initialization` → catch-Block →
+„Die interaktive Anatomie konnte nicht geladen werden."
+**Fix:** `let drawingPath = null` vor den try-Block verschoben (Zeile 193).
 
 ### Schmerzskala (NRS 0–10)
 - Container: `.anatomy-nrs-scale` in `#befund-anatomy`
