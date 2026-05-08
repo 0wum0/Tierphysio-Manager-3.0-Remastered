@@ -15,7 +15,7 @@ Verbindliche Domain-Topologie für TheraPano. Darf unter keinen Umständen geän
 |---|---|---|
 | Praxis-App + API | `https://app.therapano.de` | Praxis-Login, Web-UI, REST-API |
 | Besitzer-Portal | `https://portal.therapano.de` | Tierbesitzer-Zugang |
-| SaaS-Admin | `https://app.therapano.de/admin` | Betreiber-Verwaltung |
+| SaaS-Admin | `https://therapano.de/admin` | Betreiber-Verwaltung |
 | Mobile API | `https://app.therapano.de/api/mobile/*` | Flutter-Client |
 
 ## Absolute Verbote
