@@ -14,15 +14,15 @@
 .wa-btn-send:disabled{background:#94a3b8;cursor:not-allowed;}
 .wa-clip{width:32px;height:32px;border-radius:50%;background:transparent;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--bs-secondary-color);flex-shrink:0;transition:color .15s;}
 .wa-clip:hover{color:var(--bs-body-color);}
-.wa-bubble{max-width:75%;padding:.45rem .7rem .35rem;border-radius:8px;box-shadow:0 1px 1px rgba(0,0,0,.08);position:relative;word-break:break-word;}
+.wa-bubble{max-width:75%;padding:.45rem .7rem .35rem;border-radius:8px;box-shadow:0 1px 1px rgba(0,0,0,.08);position:relative;word-break:break-word;color:#1a1a1a !important;}
 .wa-bubble-own{background:#d9fdd3;border-radius:8px 0 8px 8px;margin-left:auto;}
 .wa-bubble-them{background:#fff;border-radius:0 8px 8px 8px;margin-right:auto;}
-@media(prefers-color-scheme:dark){.wa-bubble-own{background:#025144;}.wa-bubble-them{background:#1f2c34;}}
 .wa-bubble-own::before{content:'';position:absolute;top:0;right:-7px;border-style:solid;border-width:7px 7px 0 0;border-color:#d9fdd3 transparent transparent transparent;}
 .wa-bubble-them::before{content:'';position:absolute;top:0;left:-7px;border-style:solid;border-width:7px 0 0 7px;border-color:#fff transparent transparent transparent;}
-.wa-time{font-size:.62rem;color:#999;white-space:nowrap;}
-.wa-body-text{font-size:.875rem;line-height:1.45;color:var(--bs-body-color);}
+.wa-time{font-size:.62rem;color:#555 !important;white-space:nowrap;}
+.wa-body-text{font-size:.875rem;line-height:1.45;color:#1a1a1a !important;}
 .wa-sender{font-size:.72rem;font-weight:700;color:#4f7cff;margin-bottom:.15rem;}
+.wa-attach{color:#1a1a1a !important;}
 .wa-meta{display:flex;align-items:center;justify-content:flex-end;gap:.2rem;margin-top:.2rem;float:right;clear:both;margin-left:.5rem;}
 .wa-attach{display:flex;align-items:center;gap:.5rem;background:rgba(0,0,0,.05);border-radius:8px;padding:.45rem .6rem;margin-bottom:.35rem;text-decoration:none;color:inherit;border:1px solid rgba(0,0,0,.07);}
 .wa-attach:hover{background:rgba(0,0,0,.09);}
