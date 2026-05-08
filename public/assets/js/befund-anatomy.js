@@ -190,6 +190,8 @@
         }
     }
 
+    let drawingPath = null; // must be before the try-block (renderStage→renderOverlay reads it)
+
     // ── DOM-Build ──────────────────────────────────────────────
     try {
         renderToolbar();
@@ -336,8 +338,6 @@
         attachStageEvents(stage, overlay);
         renderOverlay();
     }
-
-    let drawingPath = null;
 
     function attachStageEvents(stage, overlay) {
         const coords = (ev) => {
