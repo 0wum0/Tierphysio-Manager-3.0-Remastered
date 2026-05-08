@@ -27,9 +27,17 @@
 .wa-attach{display:flex;align-items:center;gap:.5rem;background:rgba(0,0,0,.04);border-radius:8px;padding:.45rem .6rem;margin-bottom:.35rem;text-decoration:none;color:inherit;border:1px solid rgba(0,0,0,.06);}
 .wa-attach:hover{background:rgba(0,0,0,.09);}
 .wa-attach-icon{width:32px;height:32px;border-radius:6px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-.wa-attach-image{display:block;margin-bottom:.35rem;border-radius:10px;overflow:hidden;max-width:280px;line-height:0;}
-.wa-attach-image img{display:block;width:100%;max-height:340px;object-fit:cover;border-radius:10px;background:#e2e8f0;cursor:pointer;transition:opacity .15s;}
+.wa-attach-image{display:block;margin-bottom:.35rem;border-radius:10px;overflow:hidden;max-width:280px;line-height:0;cursor:zoom-in;}
+.wa-attach-image img{display:block;width:100%;max-height:340px;object-fit:cover;border-radius:10px;background:#e2e8f0;transition:opacity .15s;}
 .wa-attach-image:hover img{opacity:.92;}
+/* Lightbox */
+.wa-lightbox{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:2rem;cursor:zoom-out;animation:waFadeIn .15s;}
+@keyframes waFadeIn{from{opacity:0;}to{opacity:1;}}
+.wa-lightbox img{max-width:95vw;max-height:90vh;object-fit:contain;border-radius:6px;box-shadow:0 12px 48px rgba(0,0,0,.5);cursor:default;}
+.wa-lightbox-close{position:absolute;top:1rem;right:1rem;background:rgba(255,255,255,.15);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:1.4rem;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:background .12s;}
+.wa-lightbox-close:hover{background:rgba(255,255,255,.28);}
+.wa-lightbox-download{position:absolute;top:1rem;right:4rem;background:rgba(255,255,255,.15);border:none;color:#fff;padding:0 .9rem;height:40px;border-radius:20px;font-size:.85rem;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;transition:background .12s;}
+.wa-lightbox-download:hover{background:rgba(255,255,255,.28);color:#fff;}
 .wa-file-preview{display:flex;align-items:center;gap:.35rem;background:rgba(79,124,255,.08);border:1px solid rgba(79,124,255,.2);border-radius:8px;padding:.4rem .65rem;margin-bottom:.4rem;font-size:.8rem;}
 .wa-fmt-menu{position:fixed;display:none;background:var(--bs-body-bg);border:1px solid var(--bs-border-color);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.18);overflow:hidden;z-index:99999;min-width:170px;}
 .wa-fmt-item{display:flex;align-items:center;gap:.6rem;width:100%;border:none;background:none;padding:.55rem .85rem;font-size:.84rem;color:var(--bs-body-color);cursor:pointer;text-align:left;transition:background .1s;}
@@ -85,7 +93,7 @@
                 {% set _ext = msg.attachment_name|split('.')|last|lower %}
                 {% set _isImg = _ext in ['jpg','jpeg','png','gif','webp'] %}
                 {% if _isImg %}
-                <a href="/api/portal-admin/nachrichten/{{ thread.id }}/anhang/{{ msg.id }}" target="_blank" class="wa-attach-image">
+                <a href="/api/portal-admin/nachrichten/{{ thread.id }}/anhang/{{ msg.id }}" class="wa-attach-image" data-lightbox="1" data-filename="{{ msg.attachment_name }}">
                     <img src="/api/portal-admin/nachrichten/{{ thread.id }}/anhang/{{ msg.id }}" alt="{{ msg.attachment_name }}" loading="lazy">
                 </a>
                 {% else %}
@@ -307,7 +315,7 @@
             var isImg = ['jpg','jpeg','png','gif','webp'].indexOf(ext) !== -1;
             if (isImg) {
                 var safeName = String(d.attachment_name).replace(/"/g, '&quot;');
-                attach = '<a href="' + url + '" target="_blank" class="wa-attach-image">'
+                attach = '<a href="' + url + '" class="wa-attach-image" data-lightbox="1" data-filename="' + safeName + '">'
                     + '<img src="' + url + '" alt="' + safeName + '" loading="lazy">'
                     + '</a>';
             } else {
@@ -424,6 +432,40 @@
         if (document.hidden) { clearTimeout(pollTimer); }
         else { clearTimeout(pollTimer); pollTimer = setTimeout(poll, 500); }
     });
+
+    /* ── Image-Lightbox (keine neuen Tabs mehr) ── */
+    document.addEventListener('click', function(ev) {
+        var a = ev.target.closest ? ev.target.closest('a.wa-attach-image[data-lightbox="1"]') : null;
+        if (!a) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        openLightbox(a.href, a.dataset.filename || '');
+    });
+    function openLightbox(src, filename) {
+        closeLightbox();
+        var box = document.createElement('div');
+        box.className = 'wa-lightbox';
+        box.innerHTML =
+            '<a class="wa-lightbox-download" href="' + src + '" download="' + (filename||'') + '" title="Herunterladen">'
+            + '<svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="7 10 12 15 17 10"/><line stroke="currentColor" stroke-width="2" stroke-linecap="round" x1="12" y1="15" x2="12" y2="3"/></svg>'
+            + 'Download</a>'
+            + '<button type="button" class="wa-lightbox-close" aria-label="Schliessen">&times;</button>'
+            + '<img src="' + src + '" alt="">';
+        box.addEventListener('click', function(e) { if (e.target === box) closeLightbox(); });
+        box.querySelector('.wa-lightbox-close').addEventListener('click', closeLightbox);
+        var img = box.querySelector('img');
+        img.addEventListener('click', function(e) { e.stopPropagation(); });
+        document.body.appendChild(box);
+        document.body.style.overflow = 'hidden';
+        document.addEventListener('keydown', escLightbox);
+    }
+    function closeLightbox() {
+        var box = document.querySelector('.wa-lightbox');
+        if (box) box.remove();
+        document.body.style.overflow = '';
+        document.removeEventListener('keydown', escLightbox);
+    }
+    function escLightbox(e) { if (e.key === 'Escape') closeLightbox(); }
 })();
 </script>
 {% endblock %}
