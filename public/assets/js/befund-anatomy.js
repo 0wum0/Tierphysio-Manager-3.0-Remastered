@@ -63,97 +63,57 @@
     const SILHOUETTES = {
         // ── Hund (Seitenansicht) ─────────────────────────────────
         dog: `
-            <g fill="${SIL_FILL}" stroke="${SIL_STROKE}" stroke-width="${SIL_SW}" stroke-linejoin="round">
-                <!-- Rumpf -->
-                <ellipse cx="235" cy="168" rx="138" ry="58"/>
-                <!-- Hals -->
-                <path d="M138 140 Q125 115 130 100 Q148 92 162 118 Q158 136 155 155" stroke-width="1"/>
-                <!-- Kopf -->
-                <ellipse cx="92" cy="132" rx="46" ry="42"/>
-                <!-- Schnauze -->
-                <ellipse cx="57" cy="150" rx="22" ry="15"/>
-                <!-- Ohr (hängend) -->
-                <path d="M72 98 Q55 72 65 58 Q82 50 96 78 Q100 95 92 102"/>
-                <!-- Auge -->
-                <circle cx="78" cy="122" r="5" fill="${SIL_STROKE}" stroke="none"/>
-                <!-- Nase -->
-                <ellipse cx="43" cy="148" rx="7" ry="5" fill="${SIL_STROKE}" stroke="none"/>
-                <!-- Vorderbein links -->
-                <path d="M155 218 L148 272 Q152 276 156 272 L162 218"/>
-                <!-- Vorderbein rechts -->
-                <path d="M195 222 L189 272 Q193 276 197 272 L202 222"/>
-                <!-- Hinterbein links -->
-                <path d="M278 220 L272 272 Q276 276 280 272 L285 220"/>
-                <!-- Hinterbein rechts -->
-                <path d="M320 218 L315 272 Q319 276 323 272 L327 218"/>
-                <!-- Rute (geschwungen) -->
-                <path d="M368 142 Q398 108 408 128 Q415 148 400 162" fill="none" stroke-width="5" stroke-linecap="round"/>
+            <g fill="${SIL_FILL}" stroke="${SIL_STROKE}" stroke-width="${SIL_SW}" stroke-linejoin="round" stroke-linecap="round">
+                <ellipse cx="280" cy="155" rx="150" ry="52"/>
+                <ellipse cx="118" cy="140" rx="30" ry="28"/>
+                <ellipse cx="73" cy="138" rx="48" ry="38"/>
+                <path d="M36,152 C24,147 13,155 15,167 C17,178 30,182 45,178 C58,174 62,162 54,154 Z"/>
+                <path d="M52,106 C38,110 30,128 34,148 C38,166 53,172 66,168 C79,163 83,148 78,130 C73,112 63,106 52,106 Z"/>
+                <circle cx="62" cy="124" r="7" fill="${SIL_STROKE}" stroke="none"/>
+                <ellipse cx="17" cy="165" rx="7" ry="6" fill="${SIL_STROKE}" stroke="none"/>
+                <path d="M162,200 L157,274 Q165,280 172,274 L172,200 Z"/>
+                <path d="M200,198 L195,272 Q203,278 210,272 L210,198 Z"/>
+                <path d="M320,200 C313,218 314,238 322,252 C316,258 313,267 318,274 L334,274 C337,266 333,257 328,252 C334,237 333,217 330,200 Z"/>
+                <path d="M356,198 C349,216 350,236 358,250 C352,256 349,265 354,272 L370,272 C373,264 369,255 364,250 C370,235 369,215 366,198 Z"/>
+                <path d="M420,128 C445,104 458,88 452,70 C447,56 430,55 420,66" fill="none" stroke-width="9" stroke-linecap="round"/>
             </g>
         `,
         // ── Katze (Seitenansicht) ────────────────────────────────
         cat: `
-            <g fill="${SIL_FILL}" stroke="${SIL_STROKE}" stroke-width="${SIL_SW}" stroke-linejoin="round">
-                <!-- Rumpf -->
-                <ellipse cx="238" cy="172" rx="118" ry="50"/>
-                <!-- Hals -->
-                <path d="M135 148 Q122 125 130 110 Q146 102 158 122 Q155 138 152 158" stroke-width="1"/>
-                <!-- Kopf -->
-                <circle cx="95" cy="140" r="40"/>
-                <!-- Schnauze -->
-                <ellipse cx="66" cy="152" rx="18" ry="13"/>
-                <!-- Ohr links (spitz) -->
-                <polygon points="72,108 80,80 92,106"/>
-                <!-- Ohr rechts (spitz) -->
-                <polygon points="100,104 110,76 122,104"/>
-                <!-- Auge -->
-                <ellipse cx="82" cy="132" rx="6" ry="7" fill="${SIL_STROKE}" stroke="none"/>
-                <!-- Nase -->
-                <polygon points="60,147 66,142 72,147 66,153" fill="${SIL_STROKE}" stroke="none"/>
-                <!-- Vorderbein links -->
-                <path d="M160 218 L154 268 Q158 272 162 268 L167 218"/>
-                <!-- Vorderbein rechts -->
-                <path d="M198 222 L192 268 Q196 272 200 268 L205 222"/>
-                <!-- Hinterbein links -->
-                <path d="M286 220 L281 268 Q285 272 289 268 L294 220"/>
-                <!-- Hinterbein rechts -->
-                <path d="M322 218 L317 268 Q321 272 325 268 L330 218"/>
-                <!-- Schwanz (lang, aufrecht) -->
-                <path d="M354 182 Q420 168 435 135 Q440 108 418 98" fill="none" stroke-width="7" stroke-linecap="round"/>
+            <g fill="${SIL_FILL}" stroke="${SIL_STROKE}" stroke-width="${SIL_SW}" stroke-linejoin="round" stroke-linecap="round">
+                <ellipse cx="258" cy="152" rx="128" ry="48"/>
+                <ellipse cx="118" cy="144" rx="28" ry="25"/>
+                <circle cx="76" cy="138" r="44"/>
+                <polygon points="50,98 64,40 86,97"/>
+                <polygon points="86,95 104,37 122,95"/>
+                <path d="M38,148 C26,143 15,152 17,163 C19,174 33,178 47,173 C60,168 63,155 55,149 Z"/>
+                <ellipse cx="64" cy="124" rx="7" ry="9" fill="${SIL_STROKE}" stroke="none"/>
+                <polygon points="50,144 58,136 66,144 58,152" fill="${SIL_STROKE}" stroke="none"/>
+                <path d="M150,200 L146,270 Q154,276 161,270 L161,200 Z"/>
+                <path d="M186,198 L182,268 Q190,274 197,268 L197,198 Z"/>
+                <path d="M306,198 C300,216 302,236 309,250 C303,256 301,265 306,272 L321,272 C323,264 320,255 315,250 C321,235 319,215 316,198 Z"/>
+                <path d="M338,196 C332,214 334,234 341,248 C335,254 333,263 338,270 L353,270 C355,262 352,253 347,248 C353,233 351,213 348,196 Z"/>
+                <path d="M386,152 C415,130 442,110 448,82 C452,60 436,48 422,60 C410,70 412,90 420,104" fill="none" stroke-width="11" stroke-linecap="round"/>
             </g>
         `,
         // ── Pferd (Seitenansicht) ────────────────────────────────
         horse: `
-            <g fill="${SIL_FILL}" stroke="${SIL_STROKE}" stroke-width="${SIL_SW}" stroke-linejoin="round">
-                <!-- Rumpf -->
-                <ellipse cx="248" cy="148" rx="148" ry="58"/>
-                <!-- Kruppe (leichte Erhebung hinten) -->
-                <ellipse cx="370" cy="138" rx="42" ry="35"/>
-                <!-- Hals (lang) -->
-                <path d="M118 120 Q105 88 112 65 Q128 52 148 68 Q155 88 152 118"/>
-                <!-- Kopf -->
-                <ellipse cx="88" cy="95" rx="28" ry="42"/>
-                <!-- Maul/Schnauze -->
-                <ellipse cx="72" cy="126" rx="18" ry="12"/>
-                <!-- Nüstern -->
-                <ellipse cx="64" cy="128" rx="5" ry="4" fill="${SIL_STROKE}" stroke="none"/>
-                <!-- Auge -->
-                <circle cx="88" cy="82" r="5" fill="${SIL_STROKE}" stroke="none"/>
-                <!-- Ohr links -->
-                <polygon points="78,62 84,44 92,62"/>
-                <!-- Ohr rechts -->
-                <polygon points="90,60 96,42 104,60"/>
-                <!-- Mähne -->
-                <path d="M112 68 Q118 80 122 98 Q128 110 132 120" fill="none" stroke-width="8" stroke-linecap="round"/>
-                <!-- Vorderbein links -->
-                <path d="M142 198 L134 268 Q138 274 144 268 L152 198"/>
-                <!-- Vorderbein rechts -->
-                <path d="M178 202 L170 268 Q174 274 180 268 L188 202"/>
-                <!-- Hinterbein links -->
-                <path d="M318 200 L312 268 Q316 274 322 268 L330 200"/>
-                <!-- Hinterbein rechts -->
-                <path d="M356 198 L350 268 Q354 274 360 268 L368 198"/>
-                <!-- Schweif -->
-                <path d="M392 145 Q428 128 438 155 Q445 175 430 188" fill="none" stroke-width="8" stroke-linecap="round"/>
+            <g fill="${SIL_FILL}" stroke="${SIL_STROKE}" stroke-width="${SIL_SW}" stroke-linejoin="round" stroke-linecap="round">
+                <ellipse cx="300" cy="144" rx="168" ry="62"/>
+                <ellipse cx="422" cy="112" rx="52" ry="45"/>
+                <path d="M155,100 C148,80 138,62 122,56 C106,50 88,60 86,80 C84,98 96,114 112,118 C130,122 150,112 158,102 Z"/>
+                <path d="M86,80 C72,70 58,72 46,86 C34,100 36,122 50,136 C62,148 78,150 90,142 C104,132 106,110 96,94 Z"/>
+                <path d="M50,136 C38,138 26,148 28,162 C30,174 44,178 58,172 C72,166 76,150 66,140 Z"/>
+                <path d="M90,66 C86,48 94,30 104,30 C114,32 118,48 112,64 Z"/>
+                <circle cx="66" cy="100" r="7" fill="${SIL_STROKE}" stroke="none"/>
+                <ellipse cx="26" cy="160" rx="7" ry="5" fill="${SIL_STROKE}" stroke="none"/>
+                <path d="M106,62 C114,80 118,100 118,118" fill="none" stroke-width="12" stroke-linecap="round"/>
+                <path d="M168,194 L162,278 Q171,284 179,278 L179,194 Z"/>
+                <path d="M207,192 L201,276 Q210,282 218,276 L218,192 Z"/>
+                <path d="M362,194 C358,214 360,238 366,256 C360,262 357,271 362,278 L378,278 C380,270 376,261 372,256 C374,238 372,213 370,194 Z"/>
+                <path d="M398,192 C394,212 396,236 402,254 C396,260 393,269 398,276 L414,276 C416,268 412,259 408,254 C410,236 408,211 406,192 Z"/>
+                <path d="M452,130 C476,110 490,88 483,66 C476,50 458,50 447,64" fill="none" stroke-width="14" stroke-linecap="round"/>
+                <path d="M452,130 C478,148 491,172 482,196 C476,210 460,214 448,204" fill="none" stroke-width="9" stroke-linecap="round"/>
             </g>
         `,
     };
