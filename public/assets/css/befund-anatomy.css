@@ -116,21 +116,166 @@ body.dark .anatomy-stage {
 }
 
 .anatomy-stage svg.anatomy-silhouette path.anatomy-region {
-    fill: #9fb1c2;
-    fill-opacity: .55;
-    stroke: #5b738a;
-    stroke-width: 0.7;
-    transition: fill-opacity .15s;
+    transition: fill-opacity .12s, stroke-opacity .12s;
+    cursor: pointer;
 }
 
-.anatomy-stage svg.anatomy-silhouette path.anatomy-region:hover {
-    fill-opacity: .85;
+/* Hover: Muskel-Region nur dezent andeuten, damit Silhouette dominiert.
+   .anatomy-region-hover wird per JS gesetzt (CSS :hover greift nicht,
+   da silhouette-SVG pointer-events:none hat). */
+.anatomy-stage svg.anatomy-silhouette path.anatomy-region.anatomy-region-hover {
+    fill: #ffd166 !important;
+    fill-opacity: .45 !important;
+    stroke: #d97706 !important;
+    stroke-opacity: .95 !important;
+    stroke-width: 1.4 !important;
 }
 
-[data-bs-theme="dark"] .anatomy-stage svg.anatomy-silhouette path.anatomy-region,
-body.dark .anatomy-stage svg.anatomy-silhouette path.anatomy-region {
-    fill: #6b8197;
-    stroke: #2c3e50;
+/* Eingefärbte (mit NRS belegte) Region: dauerhaft sichtbar */
+.anatomy-stage svg.anatomy-silhouette path.anatomy-region-painted {
+    fill-opacity: .65;
+}
+
+.anatomy-stage svg.anatomy-silhouette path.anatomy-region-painted.anatomy-region-hover {
+    fill-opacity: .85 !important;
+}
+
+/* ── Region-Schmerz-Picker (kombiniert Seite + NRS) ───────── */
+.anatomy-region-picker {
+    position: absolute;
+    z-index: 12;
+    transform: translate(-50%, -110%);
+    background: #fff;
+    color: #1f2a36;
+    border: 1px solid #c0cdd8;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.22);
+    padding: .55rem .65rem .6rem;
+    width: 280px;
+    pointer-events: auto;
+    user-select: none;
+}
+
+[data-bs-theme="dark"] .anatomy-region-picker,
+body.dark .anatomy-region-picker {
+    background: #1b2230;
+    color: #e2e8f0;
+    border-color: #2d3a4a;
+}
+
+.anatomy-region-picker .arp-title {
+    font-size: .78rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: .4rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    color: var(--bs-primary, #2563eb);
+}
+
+.anatomy-region-picker .arp-row {
+    display: flex;
+    gap: .25rem;
+    margin-bottom: .35rem;
+}
+
+.anatomy-region-picker .arp-sides {
+    justify-content: stretch;
+}
+
+.anatomy-region-picker .arp-side {
+    flex: 1;
+    padding: .3rem .5rem;
+    font-size: .78rem;
+    border: 1px solid var(--bs-border-color, #d8dfe6);
+    background: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    color: inherit;
+    transition: all .12s;
+}
+
+.anatomy-region-picker .arp-side:hover {
+    background: var(--bs-primary, #2563eb);
+    color: #fff;
+    border-color: var(--bs-primary, #2563eb);
+}
+
+.anatomy-region-picker .arp-side.active {
+    background: var(--bs-primary, #2563eb);
+    color: #fff;
+    border-color: var(--bs-primary, #2563eb);
+    font-weight: 700;
+}
+
+.anatomy-region-picker .arp-side.arp-side-needed {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 2px rgba(239,68,68,.25);
+}
+
+.anatomy-region-picker .arp-nrs-row {
+    display: grid;
+    grid-template-columns: repeat(11, 1fr);
+    gap: 3px;
+}
+
+.anatomy-region-picker .arp-nrs {
+    aspect-ratio: 1 / 1;
+    min-width: 0;
+    padding: 0;
+    font-size: .72rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--nrs, #6b7280);
+    border: 2px solid transparent;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: transform .08s, border-color .08s;
+}
+
+.anatomy-region-picker .arp-nrs:hover {
+    transform: scale(1.08);
+    border-color: #1f2a36;
+}
+
+.anatomy-region-picker .arp-nrs.active {
+    border-color: #1f2a36;
+    transform: scale(1.1);
+    box-shadow: 0 2px 6px rgba(0,0,0,.25);
+}
+
+.anatomy-region-picker .arp-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: .25rem;
+    margin-top: .25rem;
+    margin-bottom: 0;
+}
+
+.anatomy-region-picker .arp-clear,
+.anatomy-region-picker .arp-cancel {
+    flex: 1;
+    padding: .3rem .5rem;
+    font-size: .72rem;
+    border: 1px solid var(--bs-border-color, #d8dfe6);
+    background: transparent;
+    border-radius: 5px;
+    cursor: pointer;
+    color: inherit;
+    transition: all .12s;
+}
+
+.anatomy-region-picker .arp-clear {
+    color: #dc2626;
+    border-color: #fecaca;
+}
+
+.anatomy-region-picker .arp-clear:hover {
+    background: #fee2e2;
+}
+
+.anatomy-region-picker .arp-cancel:hover {
+    background: var(--bs-secondary-bg, #e5e7eb);
 }
 
 /* ── Side-Picker (Links/Rechts/Mittig nach Klick auf bilateralen Muskel) ── */
