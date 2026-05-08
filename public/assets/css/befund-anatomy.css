@@ -220,6 +220,55 @@ body.dark .anatomy-stage {
     margin: 0;
 }
 
+/* ── NRS Schmerzskala ─────────────────────────────────────── */
+
+.anatomy-nrs-wrap {
+    display: flex;
+    gap: .3rem;
+    flex-wrap: wrap;
+    margin-bottom: .4rem;
+}
+
+.anatomy-nrs-btn {
+    min-width: 36px;
+    min-height: 36px;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    background: rgba(128, 128, 128, .1);
+    color: var(--bs-body-color, #333);
+    font-size: .85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .12s, border-color .12s, transform .1s;
+    line-height: 1;
+    padding: 0 .4rem;
+}
+
+.anatomy-nrs-btn:hover {
+    background: var(--nrs-color, #888);
+    color: #fff;
+    border-color: var(--nrs-color, #888);
+    transform: translateY(-1px);
+}
+
+.anatomy-nrs-btn.active {
+    background: var(--nrs-color, #888);
+    border-color: var(--nrs-color, #888);
+    color: #fff;
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--nrs-color, #888) 50%, transparent);
+}
+
+.anatomy-nrs-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: .7rem;
+    color: var(--bs-secondary-color, #888);
+    margin-top: .1rem;
+    padding: 0 .1rem;
+}
+
+/* ── Ende NRS ─────────────────────────────────────────────── */
+
 .physio-bereich-chip.checked {
     background: rgba(37, 99, 235, .08);
     border-color: var(--bs-primary, #2563eb);
