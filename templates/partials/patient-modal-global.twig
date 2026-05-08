@@ -2954,6 +2954,31 @@ document.addEventListener('click', function(ev) {
     }
 });
 
+/* ═══════════════════════════════════════════════════════
+   BEFUND SPECIES CARD — explizite Navigation
+   Bootstrap-Stacked-Modal-Focus-Trap kann normale <a>-
+   Klicks schlucken → window.location.href als Fallback.
+═══════════════════════════════════════════════════════ */
+document.addEventListener('click', function(ev) {
+    var card = ev.target.closest('.befund-species-card');
+    if (!card) return;
+    var href = card.getAttribute('href');
+    if (!href || href === '#') return;
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    // Species-Modal sauber schließen bevor Navigation
+    var speciesModal = document.getElementById('modal-pd-befund-species');
+    if (speciesModal) {
+        try {
+            var m = bootstrap.Modal.getInstance(speciesModal);
+            if (m) { m.hide(); }
+        } catch (e) { /* ignore */ }
+    }
+
+    window.location.href = href;
+});
+
 function resolveSpeciesSuggestion(raw) {
     var s = String(raw || '').toLowerCase();
     if (!s) return 'dog';
