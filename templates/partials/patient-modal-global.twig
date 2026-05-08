@@ -3016,7 +3016,14 @@ function openAnatomyInModal(patientId, species) {
             '[data-bs-theme="dark"] #befund-anatomy .anatomy-stage,body.dark #befund-anatomy .anatomy-stage{background:#1b2230;border-color:#2d3a4a;}' +
             '#befund-anatomy .anatomy-stage svg{position:absolute;inset:0;width:100%;height:100%;}' +
             '#befund-anatomy .anatomy-stage svg.anatomy-silhouette{z-index:1;pointer-events:none;opacity:.95;}' +
-            '#befund-anatomy .anatomy-stage svg.anatomy-overlay{z-index:2;}';
+            '#befund-anatomy .anatomy-stage svg.anatomy-silhouette path.anatomy-region{fill:#9fb1c2;fill-opacity:.55;stroke:#5b738a;stroke-width:.7;}' +
+            '#befund-anatomy .anatomy-stage svg.anatomy-overlay{z-index:2;}' +
+            '#befund-anatomy .anatomy-side-picker{position:absolute;z-index:10;transform:translate(-50%,-110%);background:#fff;border:1px solid #c0cdd8;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18);padding:.4rem .5rem;min-width:160px;}' +
+            '[data-bs-theme="dark"] #befund-anatomy .anatomy-side-picker{background:#1b2230;border-color:#2d3a4a;color:#e2e8f0;}' +
+            '#befund-anatomy .anatomy-side-picker-label{font-size:.72rem;font-weight:600;text-align:center;margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.03em;color:#555;}' +
+            '#befund-anatomy .anatomy-side-picker-buttons{display:flex;gap:.25rem;}' +
+            '#befund-anatomy .anatomy-side-picker-buttons button{flex:1;padding:.35rem .5rem;font-size:.78rem;border:1px solid #dee2e6;background:transparent;border-radius:5px;cursor:pointer;color:inherit;}' +
+            '#befund-anatomy .anatomy-side-picker-buttons button:hover{background:#2563eb;color:#fff;border-color:#2563eb;}';
         document.head.appendChild(stg);
     }
 

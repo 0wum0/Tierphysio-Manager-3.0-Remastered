@@ -112,7 +112,102 @@ body.dark .anatomy-stage {
 .anatomy-stage svg.anatomy-silhouette {
     z-index: 1;
     pointer-events: none;
-    opacity: .9;
+    opacity: .95;
+}
+
+.anatomy-stage svg.anatomy-silhouette path.anatomy-region {
+    fill: #9fb1c2;
+    fill-opacity: .55;
+    stroke: #5b738a;
+    stroke-width: 0.7;
+    transition: fill-opacity .15s;
+}
+
+.anatomy-stage svg.anatomy-silhouette path.anatomy-region:hover {
+    fill-opacity: .85;
+}
+
+[data-bs-theme="dark"] .anatomy-stage svg.anatomy-silhouette path.anatomy-region,
+body.dark .anatomy-stage svg.anatomy-silhouette path.anatomy-region {
+    fill: #6b8197;
+    stroke: #2c3e50;
+}
+
+/* ── Side-Picker (Links/Rechts/Mittig nach Klick auf bilateralen Muskel) ── */
+.anatomy-side-picker {
+    position: absolute;
+    z-index: 10;
+    transform: translate(-50%, -110%);
+    background: #fff;
+    border: 1px solid #c0cdd8;
+    border-radius: 8px;
+    box-shadow: 0 4px 14px rgba(0,0,0,.18);
+    padding: .4rem .5rem;
+    min-width: 160px;
+    pointer-events: auto;
+}
+
+[data-bs-theme="dark"] .anatomy-side-picker,
+body.dark .anatomy-side-picker {
+    background: #1b2230;
+    border-color: #2d3a4a;
+    color: #e2e8f0;
+}
+
+.anatomy-side-picker-label {
+    font-size: .72rem;
+    font-weight: 600;
+    color: var(--bs-secondary-color, #555);
+    text-align: center;
+    margin-bottom: .35rem;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+}
+
+.anatomy-side-picker-buttons {
+    display: flex;
+    gap: .25rem;
+}
+
+.anatomy-side-picker-buttons button {
+    flex: 1;
+    padding: .35rem .5rem;
+    font-size: .78rem;
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    background: transparent;
+    border-radius: 5px;
+    cursor: pointer;
+    color: inherit;
+    transition: all .12s;
+}
+
+.anatomy-side-picker-buttons button:hover {
+    background: var(--bs-primary, #2563eb);
+    color: #fff;
+    border-color: var(--bs-primary, #2563eb);
+}
+
+/* Marker-Liste: Region-Label */
+.anatomy-marker-list .marker-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.anatomy-marker-list .marker-region {
+    font-size: .72rem;
+    font-weight: 600;
+    color: var(--bs-primary, #2563eb);
+    text-transform: uppercase;
+    letter-spacing: .02em;
+}
+
+.anatomy-marker-list .marker-note {
+    font-size: .8rem;
+    color: var(--bs-body-color, #333);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .anatomy-stage svg.anatomy-overlay {

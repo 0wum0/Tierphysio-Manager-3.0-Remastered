@@ -52,71 +52,99 @@
         { key: 'horse', label: 'Pferd'  },
     ];
 
-    // Extrem schematische SVG-Silhouetten (keine externen Assets nötig).
-    // viewBox ist immer 0 0 500 300 — Marker-Koordinaten sind in diesem
-    // viewBox-Koordinatensystem gespeichert.
-    // Silhouetten-Farben: gut sichtbar auf hellem UND dunklem Hintergrund
-    const SIL_FILL   = '#7d9bb5';  // mittleres Blau-Grau
-    const SIL_STROKE = '#3d5a72';  // dunkles Blau-Grau für Kontur
-    const SIL_SW     = '2.5';      // stroke-width
+    // ── Veterinary Anatomy Engine — Phase 1 (SVG Layer System) ────
+    // viewBox: 0 0 500 300 — Tiere im lateralen Profil, Blickrichtung links.
+    // body  = kontinuierliche Außenkontur (eine path-Definition)
+    // regions = klickbare anatomische Zonen mit data-region + bilateral-Flag
+    const SIL_FILL    = '#c9d4de';  // helle Hautfarbe
+    const SIL_STROKE  = '#2c3e50';  // dunkle Kontur
+    const SIL_SW      = '2.2';
+    const MUS_FILL    = '#9fb1c2';  // Muskel-Layer Grundfarbe
+    const MUS_STROKE  = '#5b738a';
 
-    const SILHOUETTES = {
-        // ── Hund (Seitenansicht) ─────────────────────────────────
-        dog: `
-            <g fill="${SIL_FILL}" stroke="${SIL_STROKE}" stroke-width="${SIL_SW}" stroke-linejoin="round" stroke-linecap="round">
-                <ellipse cx="280" cy="155" rx="150" ry="52"/>
-                <ellipse cx="118" cy="140" rx="30" ry="28"/>
-                <ellipse cx="73" cy="138" rx="48" ry="38"/>
-                <path d="M36,152 C24,147 13,155 15,167 C17,178 30,182 45,178 C58,174 62,162 54,154 Z"/>
-                <path d="M52,106 C38,110 30,128 34,148 C38,166 53,172 66,168 C79,163 83,148 78,130 C73,112 63,106 52,106 Z"/>
-                <circle cx="62" cy="124" r="7" fill="${SIL_STROKE}" stroke="none"/>
-                <ellipse cx="17" cy="165" rx="7" ry="6" fill="${SIL_STROKE}" stroke="none"/>
-                <path d="M162,200 L157,274 Q165,280 172,274 L172,200 Z"/>
-                <path d="M200,198 L195,272 Q203,278 210,272 L210,198 Z"/>
-                <path d="M320,200 C313,218 314,238 322,252 C316,258 313,267 318,274 L334,274 C337,266 333,257 328,252 C334,237 333,217 330,200 Z"/>
-                <path d="M356,198 C349,216 350,236 358,250 C352,256 349,265 354,272 L370,272 C373,264 369,255 364,250 C370,235 369,215 366,198 Z"/>
-                <path d="M420,128 C445,104 458,88 452,70 C447,56 430,55 420,66" fill="none" stroke-width="9" stroke-linecap="round"/>
-            </g>
-        `,
-        // ── Katze (Seitenansicht) ────────────────────────────────
-        cat: `
-            <g fill="${SIL_FILL}" stroke="${SIL_STROKE}" stroke-width="${SIL_SW}" stroke-linejoin="round" stroke-linecap="round">
-                <ellipse cx="258" cy="152" rx="128" ry="48"/>
-                <ellipse cx="118" cy="144" rx="28" ry="25"/>
-                <circle cx="76" cy="138" r="44"/>
-                <polygon points="50,98 64,40 86,97"/>
-                <polygon points="86,95 104,37 122,95"/>
-                <path d="M38,148 C26,143 15,152 17,163 C19,174 33,178 47,173 C60,168 63,155 55,149 Z"/>
-                <ellipse cx="64" cy="124" rx="7" ry="9" fill="${SIL_STROKE}" stroke="none"/>
-                <polygon points="50,144 58,136 66,144 58,152" fill="${SIL_STROKE}" stroke="none"/>
-                <path d="M150,200 L146,270 Q154,276 161,270 L161,200 Z"/>
-                <path d="M186,198 L182,268 Q190,274 197,268 L197,198 Z"/>
-                <path d="M306,198 C300,216 302,236 309,250 C303,256 301,265 306,272 L321,272 C323,264 320,255 315,250 C321,235 319,215 316,198 Z"/>
-                <path d="M338,196 C332,214 334,234 341,248 C335,254 333,263 338,270 L353,270 C355,262 352,253 347,248 C353,233 351,213 348,196 Z"/>
-                <path d="M386,152 C415,130 442,110 448,82 C452,60 436,48 422,60 C410,70 412,90 420,104" fill="none" stroke-width="11" stroke-linecap="round"/>
-            </g>
-        `,
-        // ── Pferd (Seitenansicht) ────────────────────────────────
-        horse: `
-            <g fill="${SIL_FILL}" stroke="${SIL_STROKE}" stroke-width="${SIL_SW}" stroke-linejoin="round" stroke-linecap="round">
-                <ellipse cx="300" cy="144" rx="168" ry="62"/>
-                <ellipse cx="422" cy="112" rx="52" ry="45"/>
-                <path d="M155,100 C148,80 138,62 122,56 C106,50 88,60 86,80 C84,98 96,114 112,118 C130,122 150,112 158,102 Z"/>
-                <path d="M86,80 C72,70 58,72 46,86 C34,100 36,122 50,136 C62,148 78,150 90,142 C104,132 106,110 96,94 Z"/>
-                <path d="M50,136 C38,138 26,148 28,162 C30,174 44,178 58,172 C72,166 76,150 66,140 Z"/>
-                <path d="M90,66 C86,48 94,30 104,30 C114,32 118,48 112,64 Z"/>
-                <circle cx="66" cy="100" r="7" fill="${SIL_STROKE}" stroke="none"/>
-                <ellipse cx="26" cy="160" rx="7" ry="5" fill="${SIL_STROKE}" stroke="none"/>
-                <path d="M106,62 C114,80 118,100 118,118" fill="none" stroke-width="12" stroke-linecap="round"/>
-                <path d="M168,194 L162,278 Q171,284 179,278 L179,194 Z"/>
-                <path d="M207,192 L201,276 Q210,282 218,276 L218,192 Z"/>
-                <path d="M362,194 C358,214 360,238 366,256 C360,262 357,271 362,278 L378,278 C380,270 376,261 372,256 C374,238 372,213 370,194 Z"/>
-                <path d="M398,192 C394,212 396,236 402,254 C396,260 393,269 398,276 L414,276 C416,268 412,259 408,254 C410,236 408,211 406,192 Z"/>
-                <path d="M452,130 C476,110 490,88 483,66 C476,50 458,50 447,64" fill="none" stroke-width="14" stroke-linecap="round"/>
-                <path d="M452,130 C478,148 491,172 482,196 C476,210 460,214 448,204" fill="none" stroke-width="9" stroke-linecap="round"/>
-            </g>
-        `,
+    const ANATOMY = {
+        // ── Hund (lateral, blickt nach links) ────────────────────
+        dog: {
+            body: 'M28,148 Q22,144 26,140 L70,134 Q82,130 88,122 Q66,108 70,96 Q84,86 102,94 L108,96 Q112,76 124,72 L130,76 Q134,96 132,112 Q150,102 180,94 Q240,86 305,94 Q360,100 400,112 Q422,96 448,76 Q466,74 462,94 Q456,116 428,134 Q418,152 412,172 L414,224 Q416,248 430,260 L430,266 Q412,270 388,266 L388,250 Q386,216 376,196 Q352,194 280,196 Q230,212 208,212 Q196,218 192,242 L192,260 Q198,266 178,266 Q160,266 156,260 L156,242 Q154,216 150,196 Q144,176 138,166 Q124,160 96,160 Q72,158 48,154 Q34,152 28,148 Z',
+            regions: [
+                { id: 'head',     label: 'Kopf',          bilateral: false, d: 'M28,148 Q22,144 26,140 L70,134 Q82,130 88,122 Q66,108 70,96 Q84,86 102,94 L108,96 Q112,76 124,72 L130,76 Q134,96 132,112 Q120,118 108,124 Q92,138 80,150 Q60,156 40,154 Q32,152 28,148 Z' },
+                { id: 'cervical', label: 'HWS / Hals',    bilateral: false, d: 'M132,112 Q150,102 180,94 Q186,118 178,140 Q150,150 132,148 Q124,140 132,112 Z' },
+                { id: 'shoulder', label: 'Schulter',      bilateral: true,  d: 'M178,140 Q186,118 196,108 Q220,108 230,128 Q228,156 210,170 Q188,170 178,140 Z' },
+                { id: 'thoracic', label: 'BWS',           bilateral: false, d: 'M196,108 Q240,96 290,98 L290,150 Q260,154 230,148 Q220,128 196,108 Z' },
+                { id: 'lumbar',   label: 'LWS',           bilateral: false, d: 'M290,98 Q330,98 370,104 L370,156 Q330,160 290,150 Z' },
+                { id: 'croup',    label: 'Kruppe / ISG',  bilateral: false, d: 'M370,104 Q400,112 412,128 Q416,154 400,170 Q386,172 370,156 Z' },
+                { id: 'tail',     label: 'Rute',          bilateral: false, d: 'M412,128 Q422,96 448,76 Q466,74 462,94 Q456,116 432,128 Q418,134 412,128 Z' },
+                { id: 'biceps_femoris', label: 'Biceps femoris', bilateral: true, d: 'M376,170 Q400,170 412,172 L414,224 Q400,224 386,216 Q380,194 376,170 Z' },
+                { id: 'hock',     label: 'Sprunggelenk',  bilateral: true,  d: 'M388,224 L414,224 L414,260 Q412,266 388,266 L388,250 Z' },
+                { id: 'thorax_wall', label: 'Brustkorb',  bilateral: false, d: 'M210,170 Q260,180 290,180 Q282,202 240,206 Q210,206 196,196 Q200,184 210,170 Z' },
+                { id: 'triceps',  label: 'Triceps brachii', bilateral: true, d: 'M150,170 Q180,170 196,196 Q188,212 168,214 Q146,212 138,196 Q142,180 150,170 Z' },
+                { id: 'forearm',  label: 'Unterarm',      bilateral: true,  d: 'M150,196 Q170,200 168,214 L156,260 Q150,266 156,242 Q154,216 150,196 Z' },
+                { id: 'carpus',   label: 'Karpalgelenk',  bilateral: true,  d: 'M156,242 L192,242 L192,260 Q198,266 178,266 Q160,266 156,260 Z' },
+            ],
+        },
+        // ── Katze (lateral, blickt nach links) ───────────────────
+        cat: {
+            body: 'M22,156 Q18,152 22,148 L58,142 Q70,140 76,134 Q60,124 60,108 Q56,90 70,84 L82,118 L92,118 L96,82 Q104,70 116,76 Q124,90 122,118 Q130,116 152,108 Q210,98 270,108 Q320,116 360,124 Q380,108 412,80 Q444,52 462,72 Q470,92 442,118 Q412,144 388,152 L388,212 Q392,234 408,254 Q406,260 384,260 L384,242 Q380,210 372,194 Q344,196 280,200 Q230,212 206,212 Q196,218 192,238 L192,256 Q198,262 178,262 Q160,262 156,256 L156,238 Q154,210 148,194 Q134,180 100,168 Q60,164 36,160 Q26,158 22,156 Z',
+            regions: [
+                { id: 'head',     label: 'Kopf',          bilateral: false, d: 'M22,156 Q18,152 22,148 L58,142 Q70,140 76,134 Q60,124 60,108 Q56,90 70,84 L82,118 L92,118 L96,82 Q104,70 116,76 Q124,90 122,118 Q108,128 90,136 Q62,154 30,158 Q24,158 22,156 Z' },
+                { id: 'cervical', label: 'HWS / Hals',    bilateral: false, d: 'M122,118 Q140,114 160,112 Q170,134 158,148 Q138,150 122,144 Q120,130 122,118 Z' },
+                { id: 'shoulder', label: 'Schulter',      bilateral: true,  d: 'M158,148 Q170,134 188,128 Q208,128 218,148 Q216,170 198,180 Q176,178 158,148 Z' },
+                { id: 'thoracic', label: 'BWS',           bilateral: false, d: 'M188,128 Q220,118 270,120 L270,164 Q230,168 208,160 Q200,142 188,128 Z' },
+                { id: 'lumbar',   label: 'LWS',           bilateral: false, d: 'M270,120 Q310,120 350,128 L350,168 Q310,172 270,164 Z' },
+                { id: 'croup',    label: 'Kruppe / ISG',  bilateral: false, d: 'M350,128 Q372,140 388,152 Q394,178 376,190 Q360,188 350,168 Z' },
+                { id: 'tail',     label: 'Rute',          bilateral: false, d: 'M388,152 Q412,144 442,118 Q470,92 462,72 Q444,52 412,80 Q392,108 388,140 Q386,148 388,152 Z' },
+                { id: 'biceps_femoris', label: 'Biceps femoris', bilateral: true, d: 'M360,188 Q380,190 388,212 L388,254 Q374,254 366,238 Q358,214 360,188 Z' },
+                { id: 'hock',     label: 'Sprunggelenk',  bilateral: true,  d: 'M366,238 L388,254 L384,260 Q368,260 366,238 Z' },
+                { id: 'thorax_wall', label: 'Brustkorb',  bilateral: false, d: 'M198,180 Q240,190 270,190 Q262,210 224,212 Q198,212 188,200 Q192,188 198,180 Z' },
+                { id: 'triceps',  label: 'Triceps brachii', bilateral: true, d: 'M148,180 Q176,178 198,196 Q190,212 170,214 Q146,212 138,198 Q140,186 148,180 Z' },
+                { id: 'forearm',  label: 'Unterarm',      bilateral: true,  d: 'M148,196 Q168,200 170,214 L156,256 Q148,256 148,238 Q150,216 148,196 Z' },
+                { id: 'carpus',   label: 'Karpalgelenk',  bilateral: true,  d: 'M156,238 L192,238 L192,256 Q198,262 178,262 Q160,262 156,256 Z' },
+            ],
+        },
+        // ── Pferd (lateral, blickt nach links) ───────────────────
+        horse: {
+            body: 'M30,86 Q24,80 32,74 L72,62 Q86,58 90,46 Q88,28 102,26 Q116,28 120,52 L122,72 Q124,90 118,110 Q124,128 122,148 L114,158 Q98,160 80,158 Q70,170 70,184 Q90,196 130,196 Q200,196 280,196 Q360,196 420,196 Q444,180 466,150 Q480,128 472,110 Q448,114 434,128 L434,170 Q436,196 446,222 Q450,252 458,272 Q446,278 422,272 L420,256 Q412,228 396,210 Q368,212 320,212 Q260,212 200,212 Q170,212 156,200 Q150,222 144,250 Q146,266 154,272 Q142,278 122,272 L120,250 Q118,220 116,196 Q110,180 96,170 Q72,166 50,162 Q36,158 30,148 Z',
+            regions: [
+                { id: 'head',     label: 'Kopf',          bilateral: false, d: 'M30,86 Q24,80 32,74 L72,62 Q86,58 90,46 Q88,28 102,26 Q116,28 120,52 L122,72 Q124,90 118,110 Q102,118 78,118 Q50,114 36,108 Q28,98 30,86 Z' },
+                { id: 'cervical', label: 'HWS / Hals',    bilateral: false, d: 'M118,110 Q140,116 168,128 Q172,154 152,168 Q128,170 114,158 Q116,128 118,110 Z' },
+                { id: 'shoulder', label: 'Schulter',      bilateral: true,  d: 'M152,168 Q168,154 188,156 Q210,160 218,184 Q210,200 184,202 Q160,200 152,168 Z' },
+                { id: 'withers',  label: 'Widerrist',     bilateral: false, d: 'M168,128 Q200,118 240,118 L240,156 Q210,162 188,156 Q172,146 168,128 Z' },
+                { id: 'thoracic', label: 'BWS / Sattellage', bilateral: false, d: 'M240,118 Q300,116 360,122 L360,160 Q300,168 240,156 Z' },
+                { id: 'lumbar',   label: 'LWS',           bilateral: false, d: 'M360,122 Q400,128 432,134 L432,168 Q400,172 360,160 Z' },
+                { id: 'croup',    label: 'Kruppe / ISG',  bilateral: false, d: 'M432,134 Q448,114 472,110 Q480,128 466,150 Q448,170 432,168 Z' },
+                { id: 'tail',     label: 'Schweifrübe',   bilateral: false, d: 'M432,168 Q448,180 446,222 Q444,252 458,272 Q446,278 422,272 L420,256 Q418,224 432,168 Z' },
+                { id: 'biceps_femoris', label: 'Hinterhand-Muskulatur', bilateral: true, d: 'M396,210 Q420,212 432,210 L432,248 Q420,256 396,260 Q386,232 396,210 Z' },
+                { id: 'gaskin',   label: 'Unterschenkel', bilateral: true, d: 'M396,260 Q412,228 420,256 L422,272 Q400,278 396,260 Z' },
+                { id: 'hock',     label: 'Sprunggelenk',  bilateral: true,  d: 'M396,260 L420,272 Q400,278 396,260 Z' },
+                { id: 'thorax_wall', label: 'Brustkorb',  bilateral: false, d: 'M184,202 Q260,210 360,210 Q340,224 280,228 Q220,228 188,224 Q176,214 184,202 Z' },
+                { id: 'triceps',  label: 'Triceps / Oberarm', bilateral: true, d: 'M150,178 Q178,180 188,202 Q180,222 158,222 Q138,218 134,200 Q138,184 150,178 Z' },
+                { id: 'forearm',  label: 'Unterarm',      bilateral: true,  d: 'M150,200 Q172,210 158,222 L150,250 Q142,254 144,228 Q146,212 150,200 Z' },
+                { id: 'carpus',   label: 'Karpalgelenk',  bilateral: true,  d: 'M144,250 Q158,256 156,272 Q142,278 122,272 L120,256 Q132,250 144,250 Z' },
+            ],
+        },
     };
+
+    // Kompatibilitäts-Wrapper — alte SILHOUETTES-API liefert vollständige Layer-Komposition
+    const SILHOUETTES = new Proxy({}, {
+        get(_, species) {
+            const data = ANATOMY[species] || ANATOMY.dog;
+            const regionPaths = data.regions.map(r =>
+                `<path d="${r.d}" class="anatomy-region" data-region="${r.id}" data-label="${escapeAttr(r.label)}" data-bilateral="${r.bilateral ? '1' : '0'}" fill="${MUS_FILL}" stroke="${MUS_STROKE}" stroke-width="0.8"/>`
+            ).join('');
+            return `
+                <g class="layer-contour" fill="${SIL_FILL}" stroke="${SIL_STROKE}" stroke-width="${SIL_SW}" stroke-linejoin="round" stroke-linecap="round">
+                    <path d="${data.body}"/>
+                </g>
+                <g class="layer-muscles" stroke-linejoin="round" stroke-linecap="round" pointer-events="all">
+                    ${regionPaths}
+                </g>
+            `;
+        },
+    });
+
+    function escapeAttr(s) {
+        return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
 
     // ── State ──────────────────────────────────────────────────
     const hiddenSpecies  = ROOT.querySelector('input[name="anatomy_species"]');
@@ -311,16 +339,27 @@
         overlay.addEventListener('click', (ev) => {
             if (state.tool !== 'marker') return;
             const { x, y } = coords(ev);
-            state.markers.push({
-                id:      'm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
-                x: round(x), y: round(y),
-                color:   state.color,
-                note:    '',
-                createdAt: new Date().toISOString(),
-            });
-            renderOverlay();
-            renderMarkerList();
-            syncHidden();
+            const region = detectRegion(stage, x, y);
+            const place = (side) => {
+                state.markers.push({
+                    id:      'm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                    x: round(x), y: round(y),
+                    color:   state.color,
+                    note:    '',
+                    region:  region ? region.id    : null,
+                    label:   region ? region.label : null,
+                    side:    side || null,
+                    createdAt: new Date().toISOString(),
+                });
+                renderOverlay();
+                renderMarkerList();
+                syncHidden();
+            };
+            if (region && region.bilateral) {
+                showSidePicker(stage, ev.clientX, ev.clientY, region, (side) => place(side));
+            } else {
+                place(null);
+            }
         });
 
         overlay.addEventListener('mousedown', (ev) => {
@@ -343,6 +382,56 @@
             drawingPath = null;
             renderOverlay();
         }));
+    }
+
+    function detectRegion(stage, vx, vy) {
+        try {
+            const sil = stage.querySelector('.anatomy-silhouette');
+            if (!sil) return null;
+            const pt = sil.createSVGPoint();
+            pt.x = vx; pt.y = vy;
+            const paths = sil.querySelectorAll('path.anatomy-region');
+            // letzte (oberste) Region zuerst prüfen → präzisere Treffer
+            for (let i = paths.length - 1; i >= 0; i--) {
+                const p = paths[i];
+                if (typeof p.isPointInFill === 'function' && p.isPointInFill(pt)) {
+                    return {
+                        id:        p.dataset.region,
+                        label:     p.dataset.label || p.dataset.region,
+                        bilateral: p.dataset.bilateral === '1',
+                    };
+                }
+            }
+        } catch (e) {
+            console.warn('[Anatomy] detectRegion fehlgeschlagen:', e);
+        }
+        return null;
+    }
+
+    function showSidePicker(stage, clientX, clientY, region, onPick) {
+        document.querySelectorAll('.anatomy-side-picker').forEach(el => el.remove());
+        const stageRect = stage.getBoundingClientRect();
+        const wrap = document.createElement('div');
+        wrap.className = 'anatomy-side-picker';
+        wrap.style.left = (clientX - stageRect.left) + 'px';
+        wrap.style.top  = (clientY - stageRect.top)  + 'px';
+        wrap.innerHTML =
+            '<div class="anatomy-side-picker-label">' + escapeAttr(region.label) + '</div>' +
+            '<div class="anatomy-side-picker-buttons">' +
+                '<button type="button" data-side="left">Links</button>' +
+                '<button type="button" data-side="right">Rechts</button>' +
+                '<button type="button" data-side="">Mittig</button>' +
+            '</div>';
+        stage.appendChild(wrap);
+        const close = () => { wrap.remove(); document.removeEventListener('click', outside, true); };
+        const outside = (ev) => { if (!wrap.contains(ev.target)) close(); };
+        wrap.querySelectorAll('button').forEach(b => b.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            const side = b.dataset.side || null;
+            close();
+            onPick(side);
+        }));
+        setTimeout(() => document.addEventListener('click', outside, true), 0);
     }
 
     function renderOverlay() {
@@ -421,9 +510,14 @@
         state.markers.forEach(m => {
             const row = document.createElement('div');
             row.className = 'marker-row';
+            const sideLabel = m.side === 'left' ? 'L' : (m.side === 'right' ? 'R' : '');
+            const regionLabel = m.label || m.region || '';
+            const meta = regionLabel
+                ? `<span class="marker-region">${escapeHtml(regionLabel)}${sideLabel ? ' · ' + sideLabel : ''}</span>`
+                : '';
             row.innerHTML = `
                 <span class="marker-dot" style="background:${m.color}"></span>
-                <span>${escapeHtml(m.note || '(ohne Notiz)')}</span>
+                <span class="marker-text">${meta}<span class="marker-note">${escapeHtml(m.note || '(ohne Notiz)')}</span></span>
                 <button type="button" class="marker-remove" title="Entfernen">×</button>
             `;
             row.querySelector('.marker-remove').addEventListener('click', () => {
