@@ -394,14 +394,20 @@ class MessagingAdminController extends Controller
 
         $out = [];
         foreach ($msgs as $m) {
+            $size = isset($m['attachment_size']) && $m['attachment_size']
+                ? $this->fileSizeLabel((int)$m['attachment_size'])
+                : '';
             $out[] = [
-                'id'          => (int)$m['id'],
-                'sender_type' => $m['sender_type'],
-                'sender_name' => $m['sender_name'] ?? '',
-                'body'        => $m['body'],
-                'created_at'  => isset($m['created_at'])
+                'id'              => (int)$m['id'],
+                'sender_type'     => $m['sender_type'],
+                'sender_name'     => $m['sender_name'] ?? '',
+                'body'            => $m['body'],
+                'body_html'       => $this->formatWhatsApp($m['body'] ?? ''),
+                'created_at'      => isset($m['created_at'])
                     ? (new \DateTime($m['created_at']))->format('d.m.Y H:i')
                     : '',
+                'attachment_name' => $m['attachment_name'] ?? null,
+                'size_label'      => $size,
             ];
         }
 

@@ -1652,35 +1652,39 @@
             });
     }
 
-    function renderMessages(msgs){
-        var msgList = document.getElementById('drawer-msg-list');
-        if(!msgs.length){
-            msgList.innerHTML = '<div class="text-center text-muted py-4 fs-xs">Keine Nachrichten</div>';
-            return;
-        }
-        var html = '';
-        msgs.forEach(function(m){
-            var isAdmin = m.sender_type === 'admin';
-            var name    = isAdmin ? esc(m.sender_name || 'Team') : 'Besitzer';
-            var color   = isAdmin ? '#4f7cff' : '#22c55e';
-            var align   = isAdmin ? 'flex-start' : 'flex-end';
-            var bg      = isAdmin ? 'rgba(79,124,255,0.10)' : 'var(--bs-tertiary-bg)';
-            var border  = isAdmin ? '1px solid rgba(79,124,255,0.2)' : '1px solid var(--bs-border-color)';
-            var radius  = isAdmin ? '4px 10px 10px 10px' : '10px 4px 10px 10px';
-            var bodyTxt = esc(m.body||'').replace(/\n/g,'<br>');
-            html +=
-                '<div style="display:flex;flex-direction:column;align-items:' + align + ';">'
-                + '<span style="font-size:.65rem;color:' + color + ';font-weight:600;margin-bottom:2px;">' + name + '</span>'
-                + '<div style="max-width:90%;padding:.5rem .75rem;border-radius:' + radius + ';background:' + bg + ';border:' + border + ';font-size:.8rem;line-height:1.5;">' + bodyTxt + '</div>'
-                + '<span style="font-size:.6rem;color:var(--bs-secondary-color);margin-top:2px;">' + esc(m.created_at||'') + '</span>'
-                + '</div>';
-        });
-        msgList.innerHTML = html;
-        msgList.scrollTop = msgList.scrollHeight;
+    /* WhatsApp-Style-Formatierung: *fett* _kursiv_ ~durchgestrichen~ ```code``` */
+    function waFormat(text){
+        var s = esc(text||'');
+        s = s.replace(/```([\s\S]+?)```/g,'<code style="font-family:monospace;background:rgba(0,0,0,.06);padding:1px 4px;border-radius:3px;">$1</code>');
+        s = s.replace(/\*([^\*\n]+)\*/g,'<strong>$1</strong>');
+        s = s.replace(/_([^_\n]+)_/g,'<em>$1</em>');
+        s = s.replace(/~([^~\n]+)~/g,'<s>$1</s>');
+        return s.replace(/\n/g,'<br>');
     }
 
-    function appendDrawerMessage(m){
-        var msgList = document.getElementById('drawer-msg-list');
+    /* Attachment-Block: Bild inline (mit Lightbox) oder Datei-Karte */
+    function buildDrawerAttachment(m){
+        if (!m.attachment_name || !m.id || !_activeThreadId) return '';
+        var url  = '/api/portal-admin/nachrichten/' + _activeThreadId + '/anhang/' + m.id;
+        var name = m.attachment_name;
+        var ext  = (name.split('.').pop() || '').toLowerCase();
+        var safe = esc(name);
+        if (['jpg','jpeg','png','gif','webp'].indexOf(ext) !== -1) {
+            return '<a href="' + url + '" class="drawer-attach-image" data-drawer-lightbox="1" data-filename="' + safe + '" '
+                + 'style="display:block;margin-top:.35rem;border-radius:8px;overflow:hidden;max-width:220px;line-height:0;cursor:zoom-in;">'
+                + '<img src="' + url + '" alt="' + safe + '" loading="lazy" '
+                + 'style="display:block;width:100%;max-height:260px;object-fit:cover;border-radius:8px;background:#e2e8f0;">'
+                + '</a>';
+        }
+        return '<a href="' + url + '" download="' + safe + '" '
+            + 'style="display:flex;align-items:center;gap:.4rem;margin-top:.35rem;background:rgba(0,0,0,.05);border:1px solid rgba(0,0,0,.08);border-radius:6px;padding:.3rem .5rem;font-size:.7rem;color:inherit;text-decoration:none;max-width:220px;">'
+            + '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;"><path stroke="#4f7cff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="#4f7cff" stroke-width="2" stroke-linecap="round" points="14 2 14 8 20 8"/></svg>'
+            + '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;font-weight:600;">' + safe + '</span>'
+            + (m.size_label ? '<span style="color:var(--bs-secondary-color);flex-shrink:0;">' + esc(m.size_label) + '</span>' : '')
+            + '</a>';
+    }
+
+    function buildDrawerBubbleHtml(m){
         var isAdmin = m.sender_type === 'admin';
         var name    = isAdmin ? esc(m.sender_name || 'Team') : 'Besitzer';
         var color   = isAdmin ? '#4f7cff' : '#22c55e';
@@ -1688,16 +1692,69 @@
         var bg      = isAdmin ? 'rgba(79,124,255,0.10)' : 'var(--bs-tertiary-bg)';
         var border  = isAdmin ? '1px solid rgba(79,124,255,0.2)' : '1px solid var(--bs-border-color)';
         var radius  = isAdmin ? '4px 10px 10px 10px' : '10px 4px 10px 10px';
-        var bodyTxt = esc(m.body||'').replace(/\n/g,'<br>');
-        var wrap = document.createElement('div');
-        wrap.style.cssText = 'display:flex;flex-direction:column;align-items:' + align + ';';
-        wrap.innerHTML =
-            '<span style="font-size:.65rem;color:' + color + ';font-weight:600;margin-bottom:2px;">' + name + '</span>'
-            + '<div style="max-width:90%;padding:.5rem .75rem;border-radius:' + radius + ';background:' + bg + ';border:' + border + ';font-size:.8rem;line-height:1.5;">' + bodyTxt + '</div>'
-            + '<span style="font-size:.6rem;color:var(--bs-secondary-color);margin-top:2px;">' + esc(m.created_at||'') + '</span>';
-        msgList.appendChild(wrap);
+        var bodyHtml = m.body_html ? m.body_html : waFormat(m.body || '');
+        var attach   = buildDrawerAttachment(m);
+        return '<div style="display:flex;flex-direction:column;align-items:' + align + ';">'
+            + '<span style="font-size:.65rem;color:' + color + ';font-weight:600;margin-bottom:2px;">' + name + '</span>'
+            + '<div style="max-width:90%;padding:.5rem .75rem;border-radius:' + radius + ';background:' + bg + ';border:' + border + ';font-size:.8rem;line-height:1.5;">'
+            + (bodyHtml || '') + attach
+            + '</div>'
+            + '<span style="font-size:.6rem;color:var(--bs-secondary-color);margin-top:2px;">' + esc(m.created_at||'') + '</span>'
+            + '</div>';
+    }
+
+    function renderMessages(msgs){
+        var msgList = document.getElementById('drawer-msg-list');
+        if(!msgs.length){
+            msgList.innerHTML = '<div class="text-center text-muted py-4 fs-xs">Keine Nachrichten</div>';
+            return;
+        }
+        msgList.innerHTML = msgs.map(buildDrawerBubbleHtml).join('');
         msgList.scrollTop = msgList.scrollHeight;
     }
+
+    function appendDrawerMessage(m){
+        var msgList = document.getElementById('drawer-msg-list');
+        var tmp = document.createElement('div');
+        tmp.innerHTML = buildDrawerBubbleHtml(m);
+        while (tmp.firstChild) { msgList.appendChild(tmp.firstChild); }
+        msgList.scrollTop = msgList.scrollHeight;
+    }
+
+    /* ── Image-Lightbox für Drawer (kein neuer Tab) ── */
+    document.addEventListener('click', function(ev){
+        var a = ev.target.closest ? ev.target.closest('a.drawer-attach-image[data-drawer-lightbox="1"]') : null;
+        if (!a) return;
+        ev.preventDefault();
+        ev.stopPropagation();
+        openDrawerLightbox(a.href, a.dataset.filename || '');
+    });
+    function openDrawerLightbox(src, filename){
+        closeDrawerLightbox();
+        var box = document.createElement('div');
+        box.className = 'drawer-lightbox';
+        box.style.cssText = 'position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,.88);display:flex;align-items:center;justify-content:center;padding:2rem;cursor:zoom-out;';
+        box.innerHTML =
+            '<a href="' + src + '" download="' + (filename||'') + '" '
+            + 'style="position:absolute;top:1rem;right:4rem;background:rgba(255,255,255,.15);color:#fff;padding:0 .9rem;height:40px;border-radius:20px;font-size:.85rem;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;">'
+            + '<svg width="16" height="16" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="7 10 12 15 17 10"/><line stroke="currentColor" stroke-width="2" stroke-linecap="round" x1="12" y1="15" x2="12" y2="3"/></svg>Download</a>'
+            + '<button type="button" aria-label="Schliessen" '
+            + 'style="position:absolute;top:1rem;right:1rem;background:rgba(255,255,255,.15);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:1.4rem;cursor:pointer;line-height:1;">&times;</button>'
+            + '<img src="' + src + '" alt="" style="max-width:95vw;max-height:90vh;object-fit:contain;border-radius:6px;box-shadow:0 12px 48px rgba(0,0,0,.5);cursor:default;">';
+        box.addEventListener('click', function(e){ if (e.target === box) closeDrawerLightbox(); });
+        box.querySelector('button').addEventListener('click', closeDrawerLightbox);
+        box.querySelector('img').addEventListener('click', function(e){ e.stopPropagation(); });
+        document.body.appendChild(box);
+        document.body.style.overflow = 'hidden';
+        document.addEventListener('keydown', escDrawerLightbox);
+    }
+    function closeDrawerLightbox(){
+        var box = document.querySelector('.drawer-lightbox');
+        if (box) box.remove();
+        document.body.style.overflow = '';
+        document.removeEventListener('keydown', escDrawerLightbox);
+    }
+    function escDrawerLightbox(e){ if (e.key === 'Escape') closeDrawerLightbox(); }
 
     /* ── Load thread list ── */
     function loadDrawer(){
@@ -1801,10 +1858,14 @@
                 if(data.ok){
                     document.getElementById('drawer-reply-body').value = '';
                     appendDrawerMessage({
-                        sender_type: 'admin',
-                        sender_name: data.sender_name || 'Team',
-                        body: data.body,
-                        created_at: data.created_at || ''
+                        id:              data.id,
+                        sender_type:     'admin',
+                        sender_name:     data.sender_name || 'Team',
+                        body:            data.body,
+                        body_html:       data.body_html,
+                        created_at:      data.created_at || '',
+                        attachment_name: data.attachment_name || null,
+                        size_label:      data.size_label || ''
                     });
                     loadDrawer();
                 } else {
