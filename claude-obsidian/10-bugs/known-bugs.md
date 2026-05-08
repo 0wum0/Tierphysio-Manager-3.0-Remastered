@@ -57,6 +57,50 @@ und verließen sich auf Browser-native `href`-Navigation, die im Kontext gestack
 - Server-seitige NRS-Anzeige in `show.twig` noch nicht visuell (nur Zahlwert) — könnte
   mit gleichem CSS-Pattern als read-only Scale dargestellt werden
 
+---
+
+## Bug: window.location.href-Fix war falsch — Seitenwechsel statt Modal-Flow
+
+**Status:** `fixed`
+**Datum:** 2026-05-08
+
+### Ursache
+Der erste Fix hat `window.location.href = '/patienten/{id}/befunde/neu?species={key}'` ergänzt,
+um den Bootstrap Modal Focus-Trap zu umgehen. Das hat jedoch einen VOLLSEITENWECHSEL ausgelöst
+anstatt die Anatomie im Patientenmodal zu belassen. Zusätzlich scheiterte die Anatomie-Initialisierung
+auf der Formularseite mit "Die interaktive Anatomie konnte nicht geladen werden."
+
+### Korrekter Fix (Commit 964aee8 auf main)
+
+**templates/partials/patient-modal-global.twig:**
+- `window.location.href`-Handler entfernt
+- Neuer Handler: `openAnatomyInModal(patientId, species)` — kein Seitenwechsel
+- `openAnatomyInModal()`: baut `#befund-anatomy`-HTML inline in `#pd-befunde-list`
+- Lädt `/assets/css/befund-anatomy.css` + Stage-Sizing-CSS dynamisch (einmalig)
+- Lädt `/assets/js/befund-anatomy.js` dynamisch; bei erstem Load: `boot()` init automatisch;
+  bei Folge-Opens: `window.befundAnatomyInit(root)` direkt
+- `saveBefundInline()`: AJAX POST zu `/patienten/{id}/befunde/speichern` mit `X-Requested-With`
+- Nach Speichern: `loadBefundboegen()` neu laden
+
+**public/assets/js/befund-anatomy.js:**
+- `window.befundAnatomyInit = function(root) { initAnatomy(root); }` am Ende der IIFE
+- Ermöglicht Re-Init auf neuem Container ohne IIFE-Guard-Problem
+
+**app/Controllers/BefundbogenController.php:**
+- `store()`: AJAX-Erkennung via `$this->isXhr()`
+- Bei AJAX: JSON `{success: true, id: N}` zurückgeben statt redirect
+- Auch im Fehlerfall: JSON `{success: false, error: ...}`
+
+### Flow (korrekt)
+1. Patientenmodal → Befundbögen → Befundung starten
+2. Tierart wählen (Hund/Katze/Pferd)
+3. Species-Modal schließt sich
+4. Anatomie-HTML wird INLINE in `#pd-befunde-list` gerendert
+5. JS+CSS werden dynamisch geladen (nur beim ersten Mal)
+6. Anatomie mit Silhouette + NRS-Skala erscheint im Modal
+7. "Befund speichern" → AJAX POST → JSON → Liste neu laden
+8. Kein Seitenwechsel an keiner Stelle
+
 ## Verlinkungen
 - [[15-agent-rules/update-brain]]
 - [[11-decisions/decision-log]]
