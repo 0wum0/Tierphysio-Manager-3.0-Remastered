@@ -1,5 +1,11 @@
 # 3D-Befundmodell & NRS-Schmerzskala
 
+> **Architektur-Upgrade beschlossen:** Dieser Artikel beschreibt den technischen Flow (Modal, NRS, Speichern).
+> Für die neue Layer-Architektur und den Three.js-Fahrplan siehe:
+> [[veterinary-anatomy-engine]] · [[../11-decisions/anatomy-system-rework]]
+>
+> Die aktuellen SVG-Silhouetten sind **Phase-1-Platzhalter** — semantische Körperzonen + Layer-System folgen als nächster Schritt.
+
 ## Feature-Übersicht
 Interaktives SVG-Anatomiemodell mit Schmerzskala im Befundbogen.
 
