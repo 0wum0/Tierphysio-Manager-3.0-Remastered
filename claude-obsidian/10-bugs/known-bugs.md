@@ -139,6 +139,69 @@ auf der Formularseite mit "Die interaktive Anatomie konnte nicht geladen werden.
 7. "Befund speichern" → AJAX POST → JSON → Liste neu laden
 8. Kein Seitenwechsel an keiner Stelle
 
+---
+
+## Bug: Chat-Medien werden nicht angezeigt (Bilder/Dokumente im Besitzerportal-Chat)
+
+**Status:** `fixed` (Commits `363a935`, `871f072`, `21ae297`, `e253205`)
+**Datum:** 2026-05-08 bis 2026-05-09
+
+### Symptom
+- Hochgeladene Bilder wurden im Chat nicht als Vorschau angezeigt
+- Dokumente wurden nicht als Download-Links dargestellt
+- Uploads schlugen mit "Dateityp nicht erlaubt" fehl für Bilder (JPG/PNG/GIF/WebP)
+
+### Ursache (3 Teil-Bugs)
+
+**1. Fehlende MIME-Types (Commit `363a935`)**
+`ALLOWED_MIME` in `MessagingAdminController` und `MessagingOwnerController` enthielt nur
+Dokument-Typen (PDF, Word, Excel, TXT, CSV). Bilder (`image/jpeg`, `image/png`, `image/gif`,
+`image/webp`) fehlten → Upload-Validierung lehnte alle Bild-Uploads ab.
+
+**2. Kein Image-Rendering im Template (Commit `871f072`)**
+`admin_message_thread.twig` und `owner_message_thread.twig` zeigten **alle** Anhänge nur
+als Download-Karten, ohne Extension-Check und ohne `<img>`-Tag. Kein `wa-attach-image`-CSS.
+
+**3. Bilder öffneten sich in neuem Tab (Commit `21ae297` + `e253205`)**
+`<a target="_blank">` öffnete Bilder in neuem Browser-Tab anstatt einer Lightbox.
+Keine `openLightbox()`-Funktion vorhanden. Kein `data-lightbox="1"`-Attribut auf Links.
+Admin-Drawer hatte keine Lightbox-Implementierung.
+
+### Fixes
+
+| Commit | Datei | Änderung |
+|--------|-------|----------|
+| `363a935` | `MessagingAdminController.php` | `image/jpeg`, `image/png`, `image/gif`, `image/webp` zu `ALLOWED_MIME` |
+| `363a935` | `MessagingOwnerController.php` | Gleiche MIME-Ergänzung |
+| `363a935` | `admin_message_thread.twig` | `accept`-Attribut im `<input type="file">` um Bilder erweitert |
+| `363a935` | `owner_message_thread.twig` | Gleiche accept-Erweiterung |
+| `871f072` | `admin_message_thread.twig` | Extension-Check + `<img>`-Tag + `.wa-attach-image` CSS |
+| `871f072` | `owner_message_thread.twig` | Gleiche Rendering-Logik |
+| `21ae297` | `admin_message_thread.twig` | `openLightbox()` Funktion + `data-lightbox="1"` |
+| `21ae297` | `owner_message_thread.twig` | Gleiche Lightbox-Implementierung |
+| `e253205` | `MessagingAdminController.php` | Drawer-Attachment-Rendering + `buildDrawerAttachment()` |
+| `e253205` | `storage/themes/smart-tierphysio/layout.twig` | Drawer-Lightbox (`drawer-lightbox`-Overlay) |
+
+### Betroffene Dateien
+- `plugins/owner-portal/MessagingAdminController.php`
+- `plugins/owner-portal/MessagingOwnerController.php`
+- `plugins/owner-portal/templates/admin_message_thread.twig`
+- `plugins/owner-portal/templates/owner_message_thread.twig`
+- `storage/themes/smart-tierphysio/layout.twig`
+
+### Verifikation
+- Bild hochladen → erscheint als `<img>` mit Lightbox bei Klick
+- Klick auf Bild → Fullscreen-Lightbox mit Download-Button und ESC-Close
+- PDF hochladen → erscheint als Download-Karte mit Dateiname + Größe
+- Admin-Drawer → Bild-Anhänge werden inline mit Lightbox angezeigt
+- Tenant-Isolation: Dateien landen in `storage/tenants/{prefix}/portal-attachments/{threadId}/`
+
+### Offene Punkte
+- Kein Video-Preview-Support (mp4 als Download-Karte dargestellt)
+- Kein server-seitiges Image-Resize/Thumbnail
+
+---
+
 ## Verlinkungen
 - [[15-agent-rules/update-brain]]
 - [[11-decisions/decision-log]]
