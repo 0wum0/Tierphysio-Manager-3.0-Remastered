@@ -163,7 +163,17 @@ class GoogleSyncService
     {
         $connection = $this->repo->getConnection();
         if (!$this->shouldSync($connection)) {
-            return ['success' => 0, 'skipped' => 0, 'failed' => 0, 'error' => 'Sync not enabled or no connection'];
+            /* Detailed skip reason for logging */
+            if (!$connection) {
+                $reason = 'no_connection';
+            } elseif (empty($connection['sync_enabled'])) {
+                $reason = 'sync_disabled';
+            } elseif (empty($connection['auto_sync'])) {
+                $reason = 'auto_sync_disabled';
+            } else {
+                $reason = 'no_access_token';
+            }
+            return ['success' => 0, 'skipped' => 0, 'failed' => 0, 'error' => "Push skipped: {$reason}"];
         }
 
         $stmt = $this->db->query(
@@ -249,8 +259,21 @@ class GoogleSyncService
     public function pullFromGoogle(?string $timeMin = null): array
     {
         $connection = $this->repo->getConnection();
-        if (!$connection || empty($connection['access_token'])) {
+        if (!$connection) {
             return ['success' => false, 'message' => 'Kein Google Konto verbunden.', 'imported' => 0, 'updated' => 0, 'deleted' => 0];
+        }
+
+        /* Sync muss aktiv sein — gleiche Logik wie shouldSync() */
+        if (empty($connection['sync_enabled'])) {
+            return ['success' => false, 'message' => 'Google Sync deaktiviert (sync_enabled=0).', 'imported' => 0, 'updated' => 0, 'deleted' => 0, 'skipped' => true];
+        }
+
+        if (empty($connection['auto_sync'])) {
+            return ['success' => false, 'message' => 'Auto-Sync deaktiviert (auto_sync=0).', 'imported' => 0, 'updated' => 0, 'deleted' => 0, 'skipped' => true];
+        }
+
+        if (empty($connection['access_token'])) {
+            return ['success' => false, 'message' => 'Kein Access Token vorhanden. Bitte Google Konto erneut verbinden.', 'imported' => 0, 'updated' => 0, 'deleted' => 0];
         }
 
         $calendarId = $connection['calendar_id'] ?: 'primary';
@@ -270,14 +293,21 @@ class GoogleSyncService
                 return $this->pullFromGoogle($timeMin);
             }
             if ($e->getMessage() === 'TOKEN_REVOKED') {
-                $msg = 'Google-Zugang wurde widerrufen. Bitte unter Einstellungen → Google Kalender erneut verbinden.';
+                $msg = '[RECONNECT REQUIRED] Google Refresh Token ist abgelaufen oder widerrufen. '
+                     . 'Tenant muss Google Konto unter /google-kalender erneut verbinden. '
+                     . 'Account: ' . ($connection['google_email'] ?? 'unbekannt');
                 $this->repo->log((int)$connection['id'], 'error', false, $msg);
-                return ['success' => false, 'message' => $msg, 'imported' => 0, 'updated' => 0, 'deleted' => 0];
+                error_log('[GoogleCalendarSync] ' . $msg);
+                return ['success' => false, 'message' => $msg, 'imported' => 0, 'updated' => 0, 'deleted' => 0, 'reconnect_required' => true];
             }
-            $this->repo->log((int)$connection['id'], 'error', false, 'Pull fehlgeschlagen: ' . $e->getMessage());
+            $msg = 'Pull fehlgeschlagen (RuntimeException): ' . $e->getMessage();
+            $this->repo->log((int)$connection['id'], 'error', false, $msg);
+            error_log('[GoogleCalendarSync] ' . $msg);
             return ['success' => false, 'message' => $e->getMessage(), 'imported' => 0, 'updated' => 0, 'deleted' => 0];
         } catch (\Throwable $e) {
-            $this->repo->log((int)$connection['id'], 'error', false, 'Pull fehlgeschlagen: ' . $e->getMessage());
+            $msg = 'Pull fehlgeschlagen (Exception): ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine();
+            $this->repo->log((int)$connection['id'], 'error', false, $msg);
+            error_log('[GoogleCalendarSync] ' . $msg);
             return ['success' => false, 'message' => $e->getMessage(), 'imported' => 0, 'updated' => 0, 'deleted' => 0];
         }
 

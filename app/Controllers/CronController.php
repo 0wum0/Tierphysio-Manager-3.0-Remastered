@@ -293,10 +293,15 @@ class CronController extends Controller
                 $jobStart = hrtime(true);
 
                 try {
-                    // Prüfen, ob Job fällig ist
+                    /* Prüfen ob Job fällig ist — WICHTIG: nach tid filtern damit
+                     * Tenant A's Job-Ausführung nicht Tenant B überspringen lässt */
                     $lastRun = $this->db->fetchColumn(
-                        "SELECT created_at FROM cron_dispatcher_log WHERE job_key = ? ORDER BY created_at DESC LIMIT 1",
-                        [$jobKey]
+                        "SELECT created_at FROM cron_dispatcher_log
+                         WHERE job_key = ?
+                           AND status IN ('success','partial_error')
+                           AND (? = '' OR tid = ?)
+                         ORDER BY created_at DESC LIMIT 1",
+                        [$jobKey, $tid, $tid]
                     );
 
                     $isDue = true;
@@ -308,7 +313,7 @@ class CronController extends Controller
 
                     if (!$isDue) {
                         $results[$jobKey] = ['status' => 'skipped', 'reason' => 'Not due yet'];
-                        $this->dispatcherLog($jobKey, 'skipped', 'Not due yet', $jobStart);
+                        $this->dispatcherLog($jobKey, 'skipped', 'Not due yet', $jobStart, $tid);
                         continue;
                     }
 
@@ -319,7 +324,15 @@ class CronController extends Controller
 
                     $status = !empty($jobResult['success']) ? 'success' : 'error';
                     $message = $jobResult['message'] ?? (!empty($jobResult['success']) ? 'Executed successfully' : 'Execution failed');
-                    $this->dispatcherLog($jobKey, $status, $message, $jobStart);
+                    $this->dispatcherLog(
+                        $jobKey,
+                        $status,
+                        $message,
+                        $jobStart,
+                        $tid,
+                        (int)($jobResult['http_code'] ?? 0),
+                        (string)($jobResult['response'] ?? '')
+                    );
                 } catch (\Throwable $e) {
                     $errorMessage = 'Job failed: ' . $e->getMessage();
                     $results[$jobKey] = [
@@ -328,7 +341,7 @@ class CronController extends Controller
                         'message' => $errorMessage,
                     ];
                     $this->cronLog("[JOB EXCEPTION] {$jobKey}: " . $e->getMessage());
-                    $this->dispatcherLog($jobKey, 'error', $errorMessage, $jobStart);
+                    $this->dispatcherLog($jobKey, 'error', $errorMessage, $jobStart, $tid);
                 }
             }
 
@@ -336,8 +349,8 @@ class CronController extends Controller
             $skippedCount = count(array_filter($results, fn($r) => isset($r['status']) && $r['status'] === 'skipped'));
 
             $msg = "executed={$executedCount}, skipped={$skippedCount}";
-            $this->cronLog("SUCCESS dispatcher: {$msg}");
-            $this->dispatcherLog('dispatcher', 'success', $msg, $start);
+            $this->cronLog("SUCCESS dispatcher: {$msg} tid={$tid}");
+            $this->dispatcherLog('dispatcher', 'success', $msg, $start, $tid);
 
             $this->jsonCron([
                 'ok' => true,
@@ -348,10 +361,10 @@ class CronController extends Controller
             ]);
 
         } catch (\Throwable $e) {
-            $this->cronLog("EXCEPTION dispatcher: " . $e->getMessage());
-            $this->dispatcherLog('dispatcher', 'error', $e->getMessage(), $start);
+            $this->cronLog("EXCEPTION dispatcher tid={$tid}: " . $e->getMessage());
+            $this->dispatcherLog('dispatcher', 'error', $e->getMessage(), $start, $tid);
             http_response_code(200);
-            $this->jsonCron(['ok' => false, 'error' => $e->getMessage()]);
+            $this->jsonCron(['ok' => false, 'error' => $e->getMessage(), 'tid' => $tid]);
         }
     }
 
@@ -404,32 +417,73 @@ class CronController extends Controller
 
         if ($error) {
             return [
-                'success' => false,
-                'status' => 'error',
-                'message' => 'CURL Error: ' . $error,
-                'duration_ms' => $duration
+                'success'      => false,
+                'status'       => 'error',
+                'message'      => 'CURL Error: ' . $error,
+                'duration_ms'  => $duration,
+                'http_code'    => 0,
+                'response'     => '',
             ];
         }
 
+        $responseStr = (string)$response;
+        $isOk        = $httpCode >= 200 && $httpCode < 300;
+
+        /* Parse JSON response to extract detail info for log message */
+        $decoded = json_decode($responseStr, true);
+        $detailMsg = "HTTP {$httpCode}";
+        if (is_array($decoded)) {
+            if (isset($decoded['tid']))          $detailMsg .= " tid={$decoded['tid']}";
+            if (isset($decoded['google_email'])) $detailMsg .= " google={$decoded['google_email']}";
+            if (isset($decoded['status']))       $detailMsg .= " status={$decoded['status']}";
+            if (isset($decoded['reason']))       $detailMsg .= " reason={$decoded['reason']}";
+            if (isset($decoded['push'])) {
+                $p = $decoded['push'];
+                $detailMsg .= sprintf(' push[synced=%d skipped=%d failed=%d]', $p['success'] ?? 0, $p['skipped'] ?? 0, $p['failed'] ?? 0);
+            }
+            if (isset($decoded['pull'])) {
+                $p = $decoded['pull'];
+                $detailMsg .= sprintf(' pull[imported=%d updated=%d deleted=%d]', $p['imported'] ?? 0, $p['updated'] ?? 0, $p['deleted'] ?? 0);
+            }
+            if (!empty($decoded['error']))        $detailMsg .= " error={$decoded['error']}";
+        }
+
         return [
-            'success' => $httpCode >= 200 && $httpCode < 300,
-            'status' => ($httpCode >= 200 && $httpCode < 300) ? 'success' : 'error',
-            'message' => "HTTP {$httpCode}",
-            'duration_ms' => $duration,
-            'response' => substr((string)$response, 0, 500)
+            'success'      => $isOk,
+            'status'       => $isOk ? 'success' : 'error',
+            'message'      => $detailMsg,
+            'duration_ms'  => $duration,
+            'http_code'    => $httpCode,
+            'response'     => substr($responseStr, 0, 500),
         ];
     }
 
-    private function dispatcherLog(string $jobKey, string $status, string $message, int $startHrtime): void
-    {
+    private function dispatcherLog(
+        string  $jobKey,
+        string  $status,
+        string  $message,
+        int     $startHrtime,
+        string  $tid = '',
+        int     $httpCode = 0,
+        string  $responseExcerpt = ''
+    ): void {
         $ms = (int)((hrtime(true) - $startHrtime) / 1_000_000);
         try {
             $this->db->query(
-                "INSERT INTO cron_dispatcher_log (job_key, status, message, duration_ms) VALUES (?, ?, ?, ?)",
-                [$jobKey, $status, $message, $ms]
+                "INSERT INTO cron_dispatcher_log (job_key, tid, status, message, duration_ms, http_code, response_excerpt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)",
+                [
+                    $jobKey,
+                    $tid !== '' ? $tid : null,
+                    $status,
+                    mb_substr($message, 0, 2000),
+                    $ms,
+                    $httpCode > 0 ? $httpCode : null,
+                    $responseExcerpt !== '' ? mb_substr($responseExcerpt, 0, 1000) : null,
+                ]
             );
         } catch (\Throwable) {
-            // Logging must never crash the dispatcher
+            /* Logging must never crash the dispatcher */
         }
     }
 

@@ -60,6 +60,62 @@ Beispiele:
 
 ## Bekannte Bugs / Fixes
 
+### BEHOBEN Mai 2026 (2. Runde): HTTP 200 ohne echten Sync — Tierphysio Wenzel
+
+**Symptom:** Cron-Monitor zeigte HTTP 200 / OK, aber Google-Termine erschienen nicht im Praxis-Kalender.
+
+**Root Causes (5 Bugs):**
+
+#### Bug 1 — KRITISCH: Kein Tenant-Prefix in `cron()` (GoogleCalendarController)
+`GoogleCalendarController::cron()` las `?tid=` nicht und rief `$db->setPrefix()` nie auf.
+Alle DB-Zugriffe (getConnection, pullFromGoogle, bulkSyncAll) liefen ohne Tenant-Prefix
+→ falsche oder leere Tabellen → kein Google-Konto gefunden → Sync lief für niemanden.
+
+**Fix:** Prefix-Setzung am Anfang von `cron()`, vor jedem DB-Zugriff:
+```php
+$db = Application::getInstance()->getContainer()->get(Database::class);
+$db->setPrefix($prefix);
+```
+
+#### Bug 2: `pullFromGoogle()` prüfte `shouldSync()` nicht
+`bulkSyncAll()` prüfte `shouldSync()` (sync_enabled + auto_sync + access_token).
+`pullFromGoogle()` prüfte nur `!$connection || empty($connection['access_token'])`.
+→ Pull lief auch wenn `sync_enabled=0` oder `auto_sync=0`.
+
+**Fix:** `pullFromGoogle()` prüft jetzt explizit `sync_enabled` und `auto_sync` mit klarem Rückgabegrund.
+
+#### Bug 3: Cron-Antwort enthielt keine Tenant-/Account-Infos
+`cron()` antwortete immer `{"ok": true}` ohne Tenant, Google-Account, Calendar-ID, Push/Pull-Zahlen.
+→ Monitor sah nur HTTP 200, keine Aussage ob wirklich verarbeitet.
+
+**Fix:** Detaillierte JSON-Antwort:
+```json
+{"ok": true, "tid": "tierphysio-wenzel", "google_email": "...", "calendar_id": "primary",
+ "push": {"success": 0, "skipped": 5, "failed": 0},
+ "pull": {"imported": 3, "updated": 1, "deleted": 0}}
+```
++ Klar getrenntes `skipped` mit `reason` (no_connection, sync_disabled, auto_sync_disabled, no_access_token).
+
+#### Bug 4: `executeJob()` loggte nur HTTP-Code, keine Sync-Zahlen
+`dispatcherLog` hatte nur `job_key`, `status`, `message`.
+→ Aus dem Log konnte man nicht sehen wie viele Termine tatsächlich verarbeitet wurden.
+
+**Fix:**
+- `executeJob()` parst jetzt die JSON-Antwort und baut eine Detail-Message: `tid=X google=Y push[synced=0 skipped=5] pull[imported=3]`
+- `dispatcherLog` erhält neue Felder: `tid`, `http_code`, `response_excerpt`
+- Migration 054: `cron_dispatcher_log` um `tid`, `http_code`, `response_excerpt` erweitert
+
+#### Bug 5 — KRITISCH: `last_run` Prüfung ohne `tid`-Filter (Cross-Tenant-Scheduling)
+Der Dispatcher prüfte für jeden Job: `SELECT created_at FROM cron_dispatcher_log WHERE job_key = ?`
+Wenn Tenant A google_sync ausführte, glaubte der Dispatcher für Tenant B: "Job kürzlich gelaufen → skip".
+→ Bei Praxis mit mehreren Tenants: zweiter Tenant wurde dauerhaft übersprungen.
+
+**Fix:** `WHERE job_key = ? AND status IN ('success','partial_error') AND (? = '' OR tid = ?)`
+
+### TOKEN_REVOKED Logging verbessert
+Wenn Refresh Token abgelaufen: Log enthält jetzt `[RECONNECT REQUIRED]` + Google-Email + error_log.
+Cron-Monitor sieht dann `reason=reconnect_required` statt stillem Fehler.
+
 ### BEHOBEN Mai 2026: Duplicate Key `uq_appin`
 **Ursache:** `google_calendar_sync_map` hatte auf manchen Tenants den Unique-Key
 unter dem alten Namen `uq_appin` statt `uq_appointment_connection`. `createSyncEntry()`

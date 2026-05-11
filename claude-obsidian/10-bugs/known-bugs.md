@@ -26,6 +26,30 @@ Bug gefunden → in Datei dokumentieren → Fix referenzieren → Status aktuali
 
 ---
 
+## Bug: Google Kalender Sync HTTP 200 aber keine Termine synchronisiert — Tierphysio Wenzel
+**Status:** `fixed` (Mai 2026)
+**Commit:** `fix: repair google calendar tenant sync processing`
+**Betroffene Dateien:**
+- `plugins/google-calendar-sync/GoogleCalendarController.php`
+- `plugins/google-calendar-sync/GoogleSyncService.php`
+- `app/Controllers/CronController.php`
+- `migrations/054_cron_dispatcher_log_tid.sql` (neu)
+
+**Root Causes (5 Bugs):**
+1. `GoogleCalendarController::cron()` setzte KEINEN Tenant-Prefix → DB-Zugriffe auf falsche Tabellen → kein Google-Konto gefunden → Sync für niemanden
+2. `pullFromGoogle()` prüfte `shouldSync()` nicht → Pull auch wenn `sync_enabled=0`
+3. Cron-Antwort enthielt keine Tenant/Account/Zahlen-Infos → Monitor sah nur HTTP 200
+4. `executeJob()` loggte nur HTTP-Code, keine Pull/Push-Zahlen
+5. `cron_dispatcher_log` last_run-Check ohne `tid`-Filter → Tenant A's Ausführung ließ Tenant B überspringen (Cross-Tenant Scheduling Bug)
+
+**Verifikation Tierphysio Wenzel:**
+- `tid=tierphysio-wenzel` im Dispatcher-Aufruf vorhanden ✓
+- Prefix `t_tierphysio_wenzel_` wird jetzt gesetzt ✓
+- Google-Konto in `t_tierphysio_wenzel_google_calendar_connections` gesucht ✓
+- JSON-Antwort enthält jetzt `tid`, `google_email`, `calendar_id`, `push`, `pull` ✓
+
+---
+
 ## Bug: „Die interaktive Anatomie konnte nicht geladen werden" nach SVG-Layer-Refactor (Commit `dd6ed9b`)
 **Status:** `fixed` (Commit `e0a01e2` → `main` als `96bb587`)
 

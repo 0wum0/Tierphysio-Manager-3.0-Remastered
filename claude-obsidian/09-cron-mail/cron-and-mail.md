@@ -65,14 +65,28 @@ Cron-Requests ohne Session → Feature disabled → `header('Location: /dashboar
 **Fix:** Alle Cron-Pfade explizit als `null` in FeatureRouteMap + X-Internal-Cron Bypass in FeatureMiddleware + FeatureGateService.
 → Details: [[10-bugs/known-bugs#Cron HTTP 302]]
 
+### Google Cron ohne Tenant-Prefix → Sync lief für niemanden (Fix Mai 2026, 2. Runde)
+**Ursache:** `GoogleCalendarController::cron()` rief `$db->setPrefix()` nie auf.
+→ Alle DB-Zugriffe (getConnection etc.) liefen ohne Tenant → kein Google-Konto gefunden.
+**Fix:** Prefix-Setzung ganz oben in `cron()`, vor jedem DB-Zugriff.
+**Regel:** Jeder Cron-Controller der `?tid=` bekommt, MUSS als erstes `setPrefix()` aufrufen.
+
+### cron_dispatcher_log last_run ohne tid-Filter → Cross-Tenant-Scheduling-Fehler (Fix Mai 2026)
+**Ursache:** `SELECT created_at FROM cron_dispatcher_log WHERE job_key = ?` hatte keinen tid-Filter.
+Tenant A führte google_sync aus → Dispatcher für Tenant B: "Job kürzlich gelaufen → skip".
+**Fix:** `WHERE job_key = ? AND status IN ('success','partial_error') AND (? = '' OR tid = ?)`.
+**Neue Felder in `cron_dispatcher_log`:** `tid`, `http_code`, `response_excerpt` (Migration 054).
+
 ## Risiken
 - Falsche Cron-URL oder Token führt zu Ausfällen.
 - Fehlender `null`-Eintrag in FeatureRouteMap → 302 Redirect bei neuen Cron-Pfaden.
 - Mailfehler bleiben unentdeckt ohne Monitoring.
 - Tenant-Prefix nicht gesetzt → Cron verarbeitet leere Queue (falscher Tenant).
+- `cron_dispatcher_log` ohne `tid`-Filter → Cross-Tenant Job-Scheduling-Fehler bei Multi-Tenant.
 
 ## TODOs
-- Cron-Status in SaaS-Dashboard weiter ausbauen (letzte Ausführungszeit je Tenant).
+- Cron-Status in SaaS-Dashboard weiter ausbauen (letzte Ausführungszeit je Tenant, aufgeschlüsselt nach tid).
+- Google Sync: Prüfen ob `sync_token` nach langer Pause noch gültig ist.
 
 ## Verlinkungen
 - [[00-start/CRITICAL-RULES]]

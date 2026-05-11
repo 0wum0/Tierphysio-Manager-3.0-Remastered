@@ -260,29 +260,131 @@ class GoogleCalendarController extends Controller
         $secret = defined('GOOGLE_SYNC_CRON_SECRET') ? GOOGLE_SYNC_CRON_SECRET : '';
         $isInternal = ($_SERVER['HTTP_X_INTERNAL_CRON'] ?? '') === 'true';
 
-        if (!$isInternal && (empty($secret) || !hash_equals($secret, $token))) {
-            http_response_code(403);
-            $this->googleDbLog('google_calendar', 'error', 'Unauthorized token.', $start);
-            echo json_encode(['error' => 'Unauthorized']);
+        /* ── KRITISCH: Tenant-Prefix aus ?tid= setzen BEVOR jeder DB-Zugriff ── */
+        $tid    = (string)($_GET['tid'] ?? '');
+        $prefix = '';
+        if ($tid !== '') {
+            $normalized = strtolower(trim($tid));
+            $normalized = preg_replace('/[^a-z0-9]/', '_', $normalized) ?? $normalized;
+            $normalized = preg_replace('/_+/', '_', $normalized) ?? $normalized;
+            $normalized = trim($normalized, '_');
+            $prefix     = 't_' . $normalized . '_';
+
+            if (strlen($prefix) > 58) {
+                http_response_code(400);
+                header('Content-Type: application/json');
+                echo json_encode(['ok' => false, 'error' => 'Invalid tid parameter (prefix too long)', 'tid' => substr($tid, 0, 80)]);
+                exit;
+            }
+
+            /* Inject prefix into all repositories and service's DB instance */
+            $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $db->setPrefix($prefix);
+        }
+
+        /* ── Token-Validierung ── */
+        /* Wenn kein tid angegeben, hole secret aus Settings; sonst vertrau X-Internal-Cron */
+        if (!$isInternal) {
+            /* Fallback: Token aus Settings (nach Prefix-Setzung!) */
+            if (empty($secret) && $tid !== '') {
+                $secret = (string)($this->repo->getSetting('google_sync_cron_secret') ?? '');
+            }
+            if (empty($secret) || !hash_equals($secret, $token)) {
+                http_response_code(403);
+                $this->googleDbLog('google_calendar', 'error', "Unauthorized token for tid={$tid}", $start);
+                header('Content-Type: application/json');
+                echo json_encode(['error' => 'Unauthorized', 'tid' => $tid]);
+                exit;
+            }
+        }
+
+        /* ── Connection prüfen NACH Prefix-Setzung ── */
+        $connection = $this->repo->getConnection();
+
+        if (!$connection) {
+            $msg = "SKIP: Kein Google-Konto verbunden für Tenant tid={$tid} prefix={$prefix}";
+            $this->googleDbLog('google_calendar', 'skipped', $msg, $start);
+            header('Content-Type: application/json');
+            echo json_encode([
+                'ok'     => true,
+                'tid'    => $tid,
+                'prefix' => $prefix,
+                'status' => 'skipped',
+                'reason' => 'no_connection',
+            ]);
+            exit;
+        }
+
+        /* Sync aktiv? */
+        $syncEnabled = !empty($connection['sync_enabled']);
+        $autoSync    = !empty($connection['auto_sync']);
+        $hasToken    = !empty($connection['access_token']);
+        $googleEmail = $connection['google_email'] ?? '(unbekannt)';
+        $calendarId  = $connection['calendar_id'] ?: 'primary';
+
+        if (!$syncEnabled || !$autoSync || !$hasToken) {
+            $reason = !$syncEnabled ? 'sync_disabled' : (!$autoSync ? 'auto_sync_disabled' : 'no_access_token');
+            $msg    = "SKIP: tid={$tid} google={$googleEmail} reason={$reason} sync_enabled={$connection['sync_enabled']} auto_sync={$connection['auto_sync']}";
+            $this->googleDbLog('google_calendar', 'skipped', $msg, $start);
+            header('Content-Type: application/json');
+            echo json_encode([
+                'ok'           => true,
+                'tid'          => $tid,
+                'google_email' => $googleEmail,
+                'calendar_id'  => $calendarId,
+                'status'       => 'skipped',
+                'reason'       => $reason,
+            ]);
             exit;
         }
 
         try {
             $pushResult = $this->sync->bulkSyncAll();
             $pullResult = $this->sync->pullFromGoogle();
-            $msg = 'push=' . json_encode($pushResult) . ' pull=' . json_encode($pullResult);
-            $this->googleDbLog('google_calendar', 'success', $msg, $start);
+
+            $hasErrors   = (!empty($pushResult['failed']) && $pushResult['failed'] > 0)
+                        || (!empty($pullResult['success']) && $pullResult['success'] === false);
+            $overallOk   = !$hasErrors;
+
+            $msg = sprintf(
+                'tid=%s google=%s calendar=%s | push: synced=%d skipped=%d failed=%d | pull: imported=%d updated=%d deleted=%d success=%s%s',
+                $tid,
+                $googleEmail,
+                $calendarId,
+                $pushResult['success'] ?? 0,
+                $pushResult['skipped'] ?? 0,
+                $pushResult['failed']  ?? 0,
+                $pullResult['imported'] ?? 0,
+                $pullResult['updated']  ?? 0,
+                $pullResult['deleted']  ?? 0,
+                ($pullResult['success'] ?? false) ? 'true' : 'false',
+                isset($pushResult['error']) ? ' push_error=' . $pushResult['error'] : ''
+            );
+
+            $this->googleDbLog('google_calendar', $overallOk ? 'success' : 'partial_error', $msg, $start);
+
             header('Content-Type: application/json');
             echo json_encode([
-                'ok'   => true,
-                'time' => date('c'),
-                'push' => $pushResult,
-                'pull' => $pullResult,
+                'ok'           => true,
+                'tid'          => $tid,
+                'prefix'       => $prefix,
+                'google_email' => $googleEmail,
+                'calendar_id'  => $calendarId,
+                'time'         => date('c'),
+                'push'         => $pushResult,
+                'pull'         => $pullResult,
+                'has_errors'   => $hasErrors,
             ]);
         } catch (\Throwable $e) {
-            $this->googleDbLog('google_calendar', 'error', $e->getMessage(), $start);
+            $msg = "EXCEPTION tid={$tid} google={$googleEmail}: " . $e->getMessage();
+            $this->googleDbLog('google_calendar', 'error', $msg, $start);
             header('Content-Type: application/json');
-            echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
+            echo json_encode([
+                'ok'           => false,
+                'tid'          => $tid,
+                'google_email' => $googleEmail,
+                'error'        => $e->getMessage(),
+            ]);
         }
         exit;
     }
