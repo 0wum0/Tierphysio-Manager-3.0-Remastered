@@ -183,27 +183,27 @@ class GoogleSyncService
 
         foreach ($unsynced as $row) {
             try {
-                // Double check if sync record was created in the meantime
+                /* Double-check: skip if a valid sync record was created concurrently */
                 $existing = $this->repo->getSyncEntryByAppointment((int)$row['id']);
-                if (!$existing || $existing['sync_status'] === 'deleted') {
+                if ($existing && $existing['sync_status'] === 'synced' && !empty($existing['google_event_id'])) {
+                    $skipped++;
+                } else {
                     $this->syncCreated((int)$row['id']);
+                    $success++;
+                    /* Pause (250 ms) to respect Google rate limits */
+                    usleep(250000);
                 }
-                $success++;
-                
-                // Pause einbauen (250ms), um Google-Rate-Limits zu schonen
-                usleep(250000); 
-
             } catch (\Throwable $e) {
                 $failed++;
                 $errorMsg = $e->getMessage();
-                
-                // Bei Rate-Limit Fehlern sofort abbrechen
+
+                /* Abort on rate-limit errors to avoid burning quota */
                 if (str_contains($errorMsg, 'rateLimitExceeded') || str_contains($errorMsg, 'usageLimits')) {
                     return [
-                        'success' => $success, 
-                        'skipped' => $skipped, 
-                        'failed'  => $failed, 
-                        'error'   => 'Google Rate Limit erreicht. Sync pausiert.'
+                        'success' => $success,
+                        'skipped' => $skipped,
+                        'failed'  => $failed,
+                        'error'   => 'Google Rate Limit erreicht. Sync pausiert.',
                     ];
                 }
             }
@@ -406,6 +406,7 @@ class GoogleSyncService
     /**
      * Google-Event in die appointments-Tabelle schreiben/aktualisieren.
      * Macht Google-Termine für die Flutter App sichtbar (die nur appointments liest).
+     * Versucht außerdem, Tier-/Besitzername im Titel/Beschreibung zu erkennen.
      * Fehler werden still geloggt — der Pull läuft immer weiter.
      */
     private function upsertAppointmentFromGoogle(
@@ -421,17 +422,28 @@ class GoogleSyncService
                 [$googleEventId]
             );
 
-            $title = mb_substr(
-                $event['summary'] ?? '(Google Termin)',
-                0, 255
-            );
-            $desc = mb_substr(
-                $event['description'] ?? '',
-                0, 65535
-            );
+            $title = mb_substr($event['summary'] ?? '(Google Termin)', 0, 255);
+            $desc  = mb_substr($event['description'] ?? '', 0, 65535);
+
+            /* --- Patient / Owner Matching --- */
+            $patientId = null;
+            $ownerId   = null;
+
+            if (!$existing) {
+                /* Only attempt matching for new imports */
+                [$patientId, $ownerId] = $this->matchPatientOwnerFromText($title, $desc);
+            } else {
+                /* For updates, preserve existing patient/owner assignment */
+                $existingAppt = $this->db->fetch(
+                    "SELECT patient_id, owner_id FROM `{$this->t('appointments')}` WHERE google_event_id = ? LIMIT 1",
+                    [$googleEventId]
+                );
+                $patientId = $existingAppt['patient_id'] ?? null;
+                $ownerId   = $existingAppt['owner_id'] ?? null;
+            }
 
             if ($existing) {
-                // Vorhandenen Eintrag aktualisieren
+                /* Update existing — preserve patient_id/owner_id if already set */
                 $this->db->execute(
                     "UPDATE `{$this->t('appointments')}`
                      SET title       = ?,
@@ -451,12 +463,12 @@ class GoogleSyncService
                     ]
                 );
             } else {
-                // Neuen Eintrag anlegen
+                /* Insert new appointment */
                 $this->db->execute(
                     "INSERT INTO `{$this->t('appointments')}`
                          (title, description, start_at, end_at, status,
-                          google_event_id, color, all_day, created_at, updated_at)
-                     VALUES (?, ?, ?, ?, 'scheduled', ?, '#4285F4', ?, NOW(), NOW())",
+                          google_event_id, color, all_day, patient_id, owner_id, created_at, updated_at)
+                     VALUES (?, ?, ?, ?, 'scheduled', ?, '#4285F4', ?, ?, ?, NOW(), NOW())",
                     [
                         $title,
                         $desc,
@@ -464,10 +476,12 @@ class GoogleSyncService
                         $endDt->format('Y-m-d H:i:s'),
                         $googleEventId,
                         $isAllDay ? 1 : 0,
+                        $patientId,
+                        $ownerId,
                     ]
                 );
 
-                // Rückverlinkung: appointment_id in imported_events setzen
+                /* Backlink: set appointment_id in imported_events */
                 $newId = $this->db->lastInsertId();
                 if ($newId) {
                     $this->db->execute(
@@ -479,9 +493,113 @@ class GoogleSyncService
                 }
             }
         } catch (\Throwable $e) {
-            // Nicht-kritisch: nur loggen, Sync läuft weiter
             error_log('[GoogleSync] upsertAppointmentFromGoogle failed for '
                 . $googleEventId . ': ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Versucht aus Titel + Beschreibung einen Patienten und/oder Besitzer zu erkennen.
+     *
+     * Strategie:
+     *  1. Suche alle Tokens (Wörter ≥ 2 Zeichen) aus Titel + Beschreibung.
+     *  2. Exakter Match gegen patient.name (Tiername).
+     *  3. Exakter Match gegen CONCAT(owners.first_name, ' ', owners.last_name).
+     *  4. Nur wenn eindeutig (genau 1 Treffer) zuordnen; bei Mehrdeutigkeit: null.
+     *
+     * @return array{0: int|null, 1: int|null}  [patient_id, owner_id]
+     */
+    private function matchPatientOwnerFromText(string $title, string $description): array
+    {
+        $patientId = null;
+        $ownerId   = null;
+
+        try {
+            /* Collect words/tokens — split on whitespace and common separators */
+            $combined = $title . ' ' . $description;
+            $tokens   = array_unique(
+                array_filter(
+                    preg_split('/[\s,\/\-\.\|]+/u', $combined),
+                    fn(string $t): bool => mb_strlen($t) >= 2
+                ) ?: []
+            );
+
+            if (empty($tokens)) {
+                return [null, null];
+            }
+
+            /* --- Patient matching (exact name, case-insensitive) --- */
+            $patientRows = $this->db->fetchAll(
+                "SELECT id, name FROM `{$this->t('patients')}`
+                 WHERE LOWER(name) IN ("
+                    . implode(',', array_fill(0, count($tokens), '?'))
+                    . ") LIMIT 10",
+                array_map('mb_strtolower', array_values($tokens))
+            );
+
+            /* Also try multi-word patient names appearing as substring in title */
+            if (empty($patientRows)) {
+                $allPatients = $this->db->fetchAll(
+                    "SELECT id, name FROM `{$this->t('patients')}` WHERE name IS NOT NULL AND name != '' LIMIT 500"
+                );
+                $titleLower = mb_strtolower($combined);
+                $patientRows = array_filter(
+                    $allPatients,
+                    fn(array $p): bool => mb_strlen($p['name']) >= 2
+                        && str_contains($titleLower, mb_strtolower($p['name']))
+                );
+                $patientRows = array_values($patientRows);
+            }
+
+            if (count($patientRows) === 1) {
+                $patientId = (int)$patientRows[0]['id'];
+            }
+
+            /* --- Owner matching (first_name + last_name, case-insensitive) --- */
+            $ownerRows = $this->db->fetchAll(
+                "SELECT id,
+                        TRIM(CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,''))) AS full_name
+                 FROM `{$this->t('owners')}`
+                 WHERE LOWER(TRIM(CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,'')))) IN ("
+                    . implode(',', array_fill(0, count($tokens), '?'))
+                    . ") LIMIT 10",
+                array_map('mb_strtolower', array_values($tokens))
+            );
+
+            /* Also try full-name substring match */
+            if (empty($ownerRows)) {
+                $allOwners = $this->db->fetchAll(
+                    "SELECT id,
+                            TRIM(CONCAT(COALESCE(first_name,''), ' ', COALESCE(last_name,''))) AS full_name
+                     FROM `{$this->t('owners')}` LIMIT 500"
+                );
+                $titleLower = mb_strtolower($combined);
+                $ownerRows  = array_filter(
+                    $allOwners,
+                    fn(array $o): bool => mb_strlen($o['full_name']) >= 3
+                        && str_contains($titleLower, mb_strtolower($o['full_name']))
+                );
+                $ownerRows = array_values($ownerRows);
+            }
+
+            if (count($ownerRows) === 1) {
+                $ownerId = (int)$ownerRows[0]['id'];
+            }
+
+            /* If owner found but no patient, try to derive patient via owner */
+            if ($ownerId !== null && $patientId === null) {
+                $patientsOfOwner = $this->db->fetchAll(
+                    "SELECT id, name FROM `{$this->t('patients')}` WHERE owner_id = ? LIMIT 10",
+                    [$ownerId]
+                );
+                if (count($patientsOfOwner) === 1) {
+                    $patientId = (int)$patientsOfOwner[0]['id'];
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('[GoogleSync] matchPatientOwnerFromText failed: ' . $e->getMessage());
+        }
+
+        return [$patientId, $ownerId];
     }
 }

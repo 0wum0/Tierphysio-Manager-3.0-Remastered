@@ -328,6 +328,57 @@ SaaS cron_runner.php
 
 ---
 
+---
+
+## Bug: Google Kalender Sync bricht mit Duplicate Key `uq_appin` ab
+
+**Status:** `fixed`
+**Datum:** 2026-05-11
+
+### Symptom
+- „Letzter Sync" im Dashboard sehr alt
+- Sync-Log zeigt: `SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '1020-1001' for key 'uq_appin'`
+- Neue Termine wurden nicht zu Google synchronisiert
+
+### Ursache (3 Bugs)
+
+**Bug 1 — Alter Constraint-Name `uq_appin`**
+Auf manchen Tenants wurde `google_calendar_sync_map` mit dem kurzen Schlüsselnamen `uq_appin`
+statt `uq_appointment_connection` erstellt. `ON DUPLICATE KEY UPDATE` referenziert immer den
+Constraint auf `(appointment_id, connection_id)`. Wenn der Name nicht stimmt, ignoriert MySQL
+den `ON DUPLICATE KEY`-Pfad → normaler INSERT → Duplicate Key Exception.
+
+**Bug 2 — INSERT IGNORE statt ON DUPLICATE KEY UPDATE**
+`createSyncEntry()` nutzte `INSERT IGNORE` — bei einem vorhandenen Eintrag wurde der INSERT
+stillschweigend ignoriert, `lastInsertId()` gab `0` zurück. Bei erneutem `syncCreated()`-Aufruf
+(z.B. nach `sync_status='failed'` mit leerem `google_event_id`) wurde erneut `INSERT` versucht
+→ Exception da Unique-Violation.
+
+**Bug 3 — bulkSyncAll success-Counter falsch**
+`$success++` wurde auch erhöht wenn ein vorhandener gültiger Sync-Eintrag gefunden und
+übersprungen wurde → falscher Zählerstand im Sync-Report.
+
+### Fix
+
+| Datei | Änderung |
+|-------|----------|
+| `plugins/google-calendar-sync/migrations/004_fix_sync_map_constraint.sql` | Neue Migration: DROP KEY `uq_appin`, DROP KEY `uq_appointment_connection`, ADD UNIQUE KEY `uq_appointment_connection` |
+| `GoogleCalendarRepository.php` → `createSyncEntry()` | Umgestellt von `INSERT IGNORE` auf `INSERT ... ON DUPLICATE KEY UPDATE` mit allen relevanten Feldern. Bei ODKU-Trigger (lastInsertId=0) wird die vorhandene Row-ID nachgeladen. |
+| `GoogleCalendarRepository.php` → `getLastSuccessfulSync()` | `action IN ('create','update','delete','pull')` — Pull-Aktionen werden jetzt als erfolgreicher Sync gewertet |
+| `GoogleSyncService.php` → `bulkSyncAll()` | `$skipped++` für vorhandene gültige Einträge, `$success++` nur nach tatsächlichem `syncCreated()`-Aufruf |
+| `GoogleSyncService.php` → `upsertAppointmentFromGoogle()` | Patient/Owner jetzt per `matchPatientOwnerFromText()` aus Titel/Beschreibung abgeleitet |
+| `GoogleSyncService.php` → `matchPatientOwnerFromText()` | Neue Methode: Token-Split, exakter DB-Match + Substring-Fallback für Patient und Owner; Ableitungsregel Owner→Patient; Mehrdeutigkeit → null |
+
+### Verifikation
+1. Sync läuft ohne SQL-Exception durch ✓
+2. Letzter Sync wird korrekt aktualisiert (auch nach Pull) ✓
+3. Kein doppelter Termin in Google ✓
+4. Google-Termin mit Tiername → Patient wird zugeordnet ✓
+5. Google-Termin mit Besitzername → Owner wird zugeordnet ✓
+6. Mehrdeutige Namen → keine falsche Zuordnung ✓
+
+---
+
 ## Verlinkungen
 - [[15-agent-rules/update-brain]]
 - [[11-decisions/decision-log]]

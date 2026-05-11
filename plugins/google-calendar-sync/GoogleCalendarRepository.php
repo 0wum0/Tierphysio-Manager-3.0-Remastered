@@ -114,19 +114,37 @@ class GoogleCalendarRepository
 
     public function createSyncEntry(array $data): int
     {
+        $status = $data['sync_status'] ?? 'synced';
         $this->db->query(
-            "INSERT IGNORE INTO `{$this->t('google_calendar_sync_map')}`
+            "INSERT INTO `{$this->t('google_calendar_sync_map')}`
              (appointment_id, connection_id, google_event_id, google_calendar_id, sync_status, last_synced_at)
-             VALUES (?, ?, ?, ?, ?, NOW())",
+             VALUES (?, ?, ?, ?, ?, NOW())
+             ON DUPLICATE KEY UPDATE
+                 google_event_id    = VALUES(google_event_id),
+                 google_calendar_id = VALUES(google_calendar_id),
+                 sync_status        = VALUES(sync_status),
+                 last_synced_at     = NOW(),
+                 last_error         = NULL,
+                 updated_at         = NOW()",
             [
                 $data['appointment_id'],
                 $data['connection_id'],
                 $data['google_event_id'],
                 $data['google_calendar_id'],
-                $data['sync_status'] ?? 'synced',
+                $status,
             ]
         );
-        return (int)$this->db->lastInsertId();
+        $newId = (int)$this->db->lastInsertId();
+        if ($newId === 0) {
+            /* ON DUPLICATE KEY UPDATE triggered — fetch the existing row's id */
+            $stmt = $this->db->query(
+                "SELECT id FROM `{$this->t('google_calendar_sync_map')}` WHERE appointment_id = ? AND connection_id = ? LIMIT 1",
+                [$data['appointment_id'], $data['connection_id']]
+            );
+            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+            return $row ? (int)$row['id'] : 0;
+        }
+        return $newId;
     }
 
     public function updateSyncEntry(int $id, array $data): void
@@ -210,7 +228,7 @@ class GoogleCalendarRepository
     {
         $stmt = $this->db->query(
             "SELECT created_at FROM `{$this->t('google_calendar_sync_log')}`
-             WHERE success = 1 AND action IN ('create','update','delete')
+             WHERE success = 1 AND action IN ('create','update','delete','pull')
              ORDER BY created_at DESC LIMIT 1"
         );
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
