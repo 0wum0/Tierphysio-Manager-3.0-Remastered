@@ -3,84 +3,129 @@
 {% block content %}
 <section class="py-5">
     <div class="container">
+
+        {# ── Kopfzeile ── #}
         <div class="text-center mb-5">
-            <h1 class="fw-bold" style="color:#fff;">Tarif wählen</h1>
-            <p class="text-secondary" style="max-width:540px;margin:auto;">
-                Starten Sie noch heute mit Ihrem Tierphysio Manager. Alle Tarife beinhalten eine kostenlose Einrichtung.
+            <span class="badge mb-3" style="background:rgba(99,102,241,.15);color:#a5b4fc;border:1px solid rgba(99,102,241,.3);font-size:.8rem;letter-spacing:.08em;text-transform:uppercase;padding:.4em 1em;">Transparente Preise</span>
+            <h1 class="fw-bold mb-3" style="color:#fff;font-size:clamp(1.8rem,4vw,2.8rem);">Den richtigen Tarif wählen</h1>
+            <p class="text-secondary mx-auto" style="max-width:560px;font-size:1.05rem;">
+                Starte noch heute – kostenlose Einrichtung, keine versteckten Kosten, jederzeit kündbar.
             </p>
         </div>
 
-        <div class="row g-4 justify-content-center">
+        {# ── Plan-Badges Mapping ── #}
+        {% set planMeta = {
+            'basic':             { badge: 'Einsteiger',             badgeColor: '#64748b', featured: false },
+            'pro':               { badge: 'Beliebt',                badgeColor: '#2563eb', featured: true  },
+            'ultra':             { badge: 'Komplettlösung',         badgeColor: '#7c3aed', featured: false },
+            'enterprise':        { badge: 'Komplettlösung',         badgeColor: '#7c3aed', featured: false },
+            'business':          { badge: 'Für Teams',              badgeColor: '#0ea5e9', featured: false },
+            'beta':              { badge: 'Früher Unterstützer',    badgeColor: '#d97706', featured: false },
+            'beta_tester':       { badge: 'Früher Unterstützer',    badgeColor: '#d97706', featured: false },
+            'hundeschule_basic': { badge: 'Für Hundeschulen',       badgeColor: '#16a34a', featured: false },
+            'dogschool_basic':   { badge: 'Für Hundeschulen',       badgeColor: '#16a34a', featured: false },
+            'dogschool_pro':     { badge: 'Hundeschule Pro',        badgeColor: '#2563eb', featured: true  },
+        } %}
+
+        <div class="row g-4 justify-content-center align-items-stretch">
             {% for plan in plans %}
             {% set features = plan.features ? plan.features|json_decode : [] %}
-            {% set isPro = plan.slug == 'pro' %}
-            <div class="col-md-4">
-                <div class="card h-100 position-relative {{ isPro ? 'border-primary' : '' }}" style="{{ isPro ? 'border-color:#2563eb!important;' : '' }}">
-                    {% if isPro %}
-                    <div class="position-absolute top-0 start-50 translate-middle">
-                        <span class="badge bg-primary px-3 py-2">Beliebtester Tarif</span>
+            {% set meta = planMeta[plan.slug] ?? { badge: '', badgeColor: '#64748b', featured: false } %}
+            {% set isFeatured = meta.featured %}
+
+            <div class="col-md-6 col-lg-4 d-flex">
+                <div class="card h-100 w-100 position-relative d-flex flex-column"
+                     style="background:#1e293b;border:1px solid {{ isFeatured ? '#2563eb' : 'rgba(255,255,255,0.08)' }};border-radius:16px;transition:transform .2s,box-shadow .2s;{% if isFeatured %}box-shadow:0 0 40px rgba(37,99,235,.25);{% endif %}">
+
+                    {# Featured-Glow-Ring #}
+                    {% if isFeatured %}
+                    <div style="position:absolute;inset:0;border-radius:16px;background:linear-gradient(135deg,rgba(37,99,235,.08),transparent);pointer-events:none;"></div>
+                    {% endif %}
+
+                    {# Badge oben #}
+                    {% if meta.badge %}
+                    <div class="text-center" style="margin-top:-14px;margin-bottom:0;">
+                        <span class="badge px-3 py-2" style="background:{{ meta.badgeColor }};font-size:.75rem;letter-spacing:.05em;border-radius:20px;">
+                            {% if isFeatured %}<i class="bi bi-star-fill me-1" style="font-size:.7rem;"></i>{% endif %}
+                            {{ meta.badge }}
+                        </span>
                     </div>
                     {% endif %}
+
                     <div class="card-body p-4 d-flex flex-column">
-                        <div class="mb-3">
-                            <h4 class="fw-bold text-white mb-1">{{ plan.name }}</h4>
-                            <p class="text-secondary mb-0" style="font-size:.875rem;">{{ plan.description }}</p>
+
+                        {# Plan-Titel & Beschreibung #}
+                        <div class="mb-3 {{ meta.badge ? 'mt-2' : '' }}">
+                            <h4 class="fw-bold mb-1" style="color:#f1f5f9;">{{ plan.name }}</h4>
+                            <p class="mb-0" style="color:#94a3b8;font-size:.875rem;">{{ plan.description }}</p>
                         </div>
-                        <div class="mb-4">
-                            <span class="display-6 fw-bold text-white">{{ plan.price_month|number_format(0,',','.') }} €</span>
-                            <span class="text-secondary">/Monat</span>
-                            {% if plan.price_year > 0 %}
-                            <div class="text-success" style="font-size:.8rem;">
-                                oder {{ plan.price_year|number_format(0,',','.') }} €/Jahr
-                            </div>
+
+                        {# Preis #}
+                        <div class="mb-4 pb-3" style="border-bottom:1px solid rgba(255,255,255,0.08);">
+                            {% if plan.price_month == 0 %}
+                                <span class="display-6 fw-bold" style="color:#f1f5f9;">Kostenlos</span>
+                            {% else %}
+                                <span class="display-6 fw-bold" style="color:#f1f5f9;">{{ plan.price_month|number_format(0,',','.') }} €</span>
+                                <span style="color:#94a3b8;">/Monat</span>
+                                {% if plan.price_year > 0 %}
+                                <div class="mt-1" style="color:#4ade80;font-size:.8rem;">
+                                    <i class="bi bi-tag me-1"></i>{{ plan.price_year|number_format(0,',','.') }} €/Jahr – 2 Monate gratis
+                                </div>
+                                {% endif %}
                             {% endif %}
                             {% if plan.trial_days is defined and plan.trial_days > 0 %}
-                            <div class="mt-1">
+                            <div class="mt-2">
                                 <span class="badge" style="background:rgba(99,102,241,.2);color:#a5b4fc;font-size:.72rem;border:1px solid rgba(99,102,241,.3);">
                                     <i class="bi bi-clock me-1"></i>{{ plan.trial_days }} Tage kostenlos testen
                                 </span>
                             </div>
                             {% endif %}
                         </div>
-                        <ul class="list-unstyled mb-4 flex-grow-1">
-                            <li class="mb-2" style="font-size:.875rem;">
-                                <i class="bi bi-people text-primary me-2"></i>
-                                {% if plan.max_users == -1 %}Unbegrenzte Benutzer{% else %}Bis zu {{ plan.max_users }} Benutzer{% endif %}
+
+                        {# Feature-Liste #}
+                        <ul class="list-unstyled mb-4 flex-grow-1" style="font-size:.875rem;">
+                            <li class="mb-2 d-flex align-items-center gap-2">
+                                <i class="bi bi-people" style="color:#60a5fa;min-width:18px;"></i>
+                                <span style="color:#cbd5e1;">
+                                    {% if plan.max_users == -1 %}Unbegrenzte Benutzer{% else %}Bis zu {{ plan.max_users }} Benutzer{% endif %}
+                                </span>
                             </li>
                             {% for f in features %}
-                            <li class="mb-2" style="font-size:.875rem;">
-                                <i class="bi bi-check-lg text-success me-2"></i>
-                                {% set featureNames = {
-                                    'invoices': 'Rechnungen',
-                                    'appointments': 'Terminkalender',
-                                    'patients': 'Patientenverwaltung',
-                                    'owners': 'Besitzerverwaltung',
-                                    'dashboard': 'Dashboard & Statistiken',
-                                    'waitlist': 'Warteliste',
-                                    'intake': 'Patientenanmeldung',
-                                    'staff': 'Mitarbeiterverwaltung',
-                                    'reports': 'Erweiterte Reports',
-                                    'premium': 'Premium-Funktionen'
-                                } %}
-                                {{ featureNames[f] ?? f }}
+                            <li class="mb-2 d-flex align-items-center gap-2">
+                                <i class="{{ f|feature_icon }}" style="color:#60a5fa;min-width:18px;"></i>
+                                <span style="color:#cbd5e1;">{{ f|feature_label }}</span>
                             </li>
                             {% endfor %}
                         </ul>
-                        <a href="/register/{{ plan.slug }}" class="btn {{ isPro ? 'btn-primary' : 'btn-outline-primary' }} w-100 fw-semibold">
-                            Jetzt mit {{ plan.name }} starten
+
+                        {# CTA-Button #}
+                        <a href="/register/{{ plan.slug }}"
+                           class="btn w-100 fw-semibold py-2"
+                           style="{% if isFeatured %}background:#2563eb;color:#fff;border:none;{% else %}background:transparent;color:#60a5fa;border:1px solid #2563eb;{% endif %}border-radius:10px;transition:background .2s,color .2s;">
+                            {% if plan.price_month == 0 %}
+                                Jetzt kostenlos starten
+                            {% else %}
+                                Mit {{ plan.name }} starten
+                            {% endif %}
                         </a>
+
                     </div>
                 </div>
             </div>
             {% endfor %}
         </div>
 
-        <div class="text-center mt-5">
-            <p class="text-secondary" style="font-size:.875rem;">
-                <i class="bi bi-shield-check text-success me-1"></i>
-                DSGVO-konform &bull; EU-Hosting &bull; Jederzeit kündbar &bull; Keine Einrichtungsgebühr
+        {# ── Vertrauenszeichen ── #}
+        <div class="text-center mt-5 pt-3">
+            <p style="color:#64748b;font-size:.875rem;">
+                <i class="bi bi-shield-fill-check me-1" style="color:#4ade80;"></i>
+                DSGVO-konform &nbsp;&bull;&nbsp;
+                <i class="bi bi-server me-1"></i>EU-Hosting &nbsp;&bull;&nbsp;
+                <i class="bi bi-x-circle me-1"></i>Jederzeit kündbar &nbsp;&bull;&nbsp;
+                <i class="bi bi-gift me-1"></i>Keine Einrichtungsgebühr
             </p>
         </div>
+
     </div>
 </section>
 {% endblock %}
