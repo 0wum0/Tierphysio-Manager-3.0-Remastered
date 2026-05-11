@@ -322,8 +322,9 @@ class CronController extends Controller
                     $jobResult = $this->executeJob($jobKey, (string)$config['endpoint'], $tid);
                     $results[$jobKey] = $jobResult;
 
-                    $status = !empty($jobResult['success']) ? 'success' : 'error';
-                    $message = $jobResult['message'] ?? (!empty($jobResult['success']) ? 'Executed successfully' : 'Execution failed');
+                    /* Status direkt aus executeJob übernehmen: 'success' | 'skipped' | 'error' */
+                    $status  = (string)($jobResult['status'] ?? (!empty($jobResult['success']) ? 'success' : 'error'));
+                    $message = $jobResult['message'] ?? ($status === 'success' ? 'Executed successfully' : 'Execution failed');
                     $this->dispatcherLog(
                         $jobKey,
                         $status,
@@ -432,11 +433,19 @@ class CronController extends Controller
         /* Parse JSON response to extract detail info for log message */
         $decoded = json_decode($responseStr, true);
         $detailMsg = "HTTP {$httpCode}";
+        $responseStatus = '';
+        $responseReason = '';
         if (is_array($decoded)) {
             if (isset($decoded['tid']))          $detailMsg .= " tid={$decoded['tid']}";
             if (isset($decoded['google_email'])) $detailMsg .= " google={$decoded['google_email']}";
-            if (isset($decoded['status']))       $detailMsg .= " status={$decoded['status']}";
-            if (isset($decoded['reason']))       $detailMsg .= " reason={$decoded['reason']}";
+            if (isset($decoded['status'])) {
+                $responseStatus = (string)$decoded['status'];
+                $detailMsg .= " status={$responseStatus}";
+            }
+            if (isset($decoded['reason'])) {
+                $responseReason = (string)$decoded['reason'];
+                $detailMsg .= " reason={$responseReason}";
+            }
             if (isset($decoded['push'])) {
                 $p = $decoded['push'];
                 $detailMsg .= sprintf(' push[synced=%d skipped=%d failed=%d]', $p['success'] ?? 0, $p['skipped'] ?? 0, $p['failed'] ?? 0);
@@ -448,9 +457,23 @@ class CronController extends Controller
             if (!empty($decoded['error']))        $detailMsg .= " error={$decoded['error']}";
         }
 
+        /* Status-Klassifizierung:
+         * HTTP 2xx + status=skipped/reason=no_connection → 'skipped' (kein Erfolg, kein Fehler)
+         * HTTP 2xx + reason=reconnect_required           → 'skipped' (Google-Verbindung abgelaufen)
+         * HTTP 2xx + ok=true, kein skip-Grund           → 'success'
+         * HTTP >= 300 oder ok=false                     → 'error'
+         */
+        $isSkipped = $isOk && (
+            $responseStatus === 'skipped'
+            || in_array($responseReason, ['no_connection', 'reconnect_required', 'sync_disabled', 'auto_sync_disabled', 'no_access_token'], true)
+        );
+
+        $finalStatus = $isSkipped ? 'skipped' : ($isOk ? 'success' : 'error');
+        $finalSuccess = $isOk && !$isSkipped;
+
         return [
-            'success'      => $isOk,
-            'status'       => $isOk ? 'success' : 'error',
+            'success'      => $finalSuccess,
+            'status'       => $finalStatus,
             'message'      => $detailMsg,
             'duration_ms'  => $duration,
             'http_code'    => $httpCode,

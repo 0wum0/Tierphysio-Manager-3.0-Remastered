@@ -680,7 +680,7 @@ class OwnerPortalAdminController extends Controller
         return $row ?: null;
     }
 
-    /* ── GET /portal/cron/smart-erinnerungen?token=XYZ ──────────────────── */
+    /* ── GET /portal/cron/smart-erinnerungen?token=XYZ&tid=XYZ ─────────── */
     public function cronSmartReminders(array $params = []): void
     {
         $start = hrtime(true);
@@ -689,11 +689,44 @@ class OwnerPortalAdminController extends Controller
         $settings = \App\Core\Application::getInstance()->getContainer()->get(\App\Repositories\SettingsRepository::class);
         $mailer   = \App\Core\Application::getInstance()->getContainer()->get(\App\Services\MailService::class);
 
-        /* Token-Prüfung (Self-Healing: generiert bei erstem Aufruf) */
-        $expectedToken = $settings->get('portal_smart_reminder_token', '');
-        if ($expectedToken === '') {
-            $expectedToken = bin2hex(random_bytes(32));
-            $settings->set('portal_smart_reminder_token', $expectedToken);
+        /* KRITISCH: Tenant-Prefix ZUERST setzen, BEVOR irgendein settings->get() aufgerufen wird.
+         * Ohne Prefix läuft settings->get('portal_smart_reminder_token') gegen den falschen Tenant
+         * → Token existiert nicht → self-heal generiert neuen Token → Dispatcher sendet alten → 401. */
+        $tid    = (string)($_GET['tid'] ?? '');
+        $prefix = '';
+        if ($tid !== '') {
+            $normalized = strtolower(trim($tid));
+            $normalized = preg_replace('/[^a-z0-9]/', '_', $normalized) ?? $normalized;
+            $normalized = preg_replace('/_+/', '_', $normalized) ?? $normalized;
+            $normalized = trim($normalized, '_');
+            $prefix     = 't_' . $normalized . '_';
+
+            if (strlen($prefix) > 58) {
+                http_response_code(400);
+                header('Content-Type: application/json');
+                echo json_encode(['error' => 'Invalid tid parameter (prefix too long)', 'tid' => substr($tid, 0, 80)]);
+                exit;
+            }
+
+            $db->setPrefix($prefix);
+        }
+
+        /* Self-Healing Token: generiert bei erstem/fehlendem Aufruf */
+        $tokenJustCreated = false;
+        $expectedToken    = $settings->get('portal_smart_reminder_token', '');
+        $tokenIsValid     = ($expectedToken !== '' && $expectedToken !== null
+                             && strlen((string)$expectedToken) === 64
+                             && ctype_xdigit((string)$expectedToken));
+
+        if (!$tokenIsValid) {
+            $expectedToken    = bin2hex(random_bytes(32));
+            $tokenJustCreated = true;
+            try {
+                $settings->set('portal_smart_reminder_token', $expectedToken);
+                error_log('[SmartReminder] Token ' . ($tokenIsValid ? '' : '(missing/corrupt) ') . 'auto-generated for tid=' . $tid);
+            } catch (\Throwable $e) {
+                error_log('[SmartReminder] WARNING: could not persist token: ' . $e->getMessage());
+            }
         }
 
         $providedToken = (string)($_GET['token'] ?? '');
@@ -702,10 +735,15 @@ class OwnerPortalAdminController extends Controller
             $providedToken = substr($authHeader, 7);
         }
 
-        if ($providedToken !== '' && !hash_equals($expectedToken, $providedToken)) {
+        /* Token-Prüfung:
+         * - Token wurde soeben neu generiert (first-run) → erlauben
+         * - Kein Token im Request → erlauben (self-healing Modus, URL noch nicht konfiguriert)
+         * - Token vorhanden und passt nicht → 401 */
+        $noTokenInRequest = ($providedToken === '');
+        if (!$tokenJustCreated && !$noTokenInRequest && !hash_equals((string)$expectedToken, $providedToken)) {
             http_response_code(401);
             header('Content-Type: application/json');
-            echo json_encode(['error' => 'Ungültiger Token']);
+            echo json_encode(['error' => 'Ungültiger Token', 'tid' => $tid]);
             exit;
         }
 
@@ -714,15 +752,16 @@ class OwnerPortalAdminController extends Controller
             $service      = new SmartReminderService($db, $portalMailer, $settings);
             $result       = $service->processPending();
         } catch (\Throwable $e) {
+            error_log('[SmartReminder] EXCEPTION tid=' . $tid . ': ' . $e->getMessage());
             http_response_code(200);
             header('Content-Type: application/json');
-            echo json_encode(['ok' => false, 'error' => $e->getMessage()]);
+            echo json_encode(['ok' => false, 'error' => $e->getMessage(), 'tid' => $tid]);
             exit;
         }
 
         $ms = (int)((hrtime(true) - $start) / 1_000_000);
         header('Content-Type: application/json');
-        echo json_encode(array_merge(['ok' => true, 'duration_ms' => $ms], $result));
+        echo json_encode(array_merge(['ok' => true, 'tid' => $tid, 'duration_ms' => $ms], $result));
         exit;
     }
 }

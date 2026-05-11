@@ -297,19 +297,72 @@ HTML;
 
     private function alreadySentThisYear(int $patientId, int $year): bool
     {
-        $count = $this->db->fetchColumn(
-            "SELECT COUNT(*) FROM `{$this->t('birthday_emails_sent')}` WHERE patient_id = ? AND year_sent = ?",
-            [$patientId, $year]
-        );
-        return (int)$count > 0;
+        $table = $this->t('birthday_emails_sent');
+        /* Self-Healing: Tabelle anlegen wenn sie fehlt */
+        if (!$this->tableExists($table)) {
+            $this->ensureBirthdayEmailsSentTable();
+            /* Konnte nicht angelegt werden → lieber doppelt senden als gar nicht */
+            if (!$this->tableExists($table)) {
+                error_log('[BirthdayMailService] birthday_emails_sent fehlt, kann nicht geprüft werden.');
+                return false;
+            }
+        }
+
+        try {
+            $count = $this->db->fetchColumn(
+                "SELECT COUNT(*) FROM `{$table}` WHERE patient_id = ? AND year_sent = ?",
+                [$patientId, $year]
+            );
+            return (int)$count > 0;
+        } catch (\Throwable $e) {
+            error_log('[BirthdayMailService] alreadySentThisYear error: ' . $e->getMessage());
+            return false;
+        }
     }
 
     private function markSent(int $patientId, int $year): void
     {
-        $this->db->execute(
-            "INSERT IGNORE INTO `{$this->t('birthday_emails_sent')}` (patient_id, year_sent, sent_at) VALUES (?, ?, NOW())",
-            [$patientId, $year]
-        );
+        try {
+            $table = $this->t('birthday_emails_sent');
+            $this->db->execute(
+                "INSERT IGNORE INTO `{$table}` (patient_id, year_sent, sent_at) VALUES (?, ?, NOW())",
+                [$patientId, $year]
+            );
+        } catch (\Throwable $e) {
+            error_log('[BirthdayMailService] markSent error: ' . $e->getMessage());
+        }
+    }
+
+    private function tableExists(string $tableName): bool
+    {
+        try {
+            $result = $this->db->fetchColumn(
+                "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?",
+                [$tableName]
+            );
+            return (int)$result > 0;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    private function ensureBirthdayEmailsSentTable(): void
+    {
+        $table = $this->t('birthday_emails_sent');
+        try {
+            $this->db->query(
+                "CREATE TABLE IF NOT EXISTS `{$table}` (
+                    id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                    patient_id INT UNSIGNED NOT NULL,
+                    year_sent  SMALLINT UNSIGNED NOT NULL,
+                    sent_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE KEY uq_patient_year (patient_id, year_sent)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+            );
+            error_log('[BirthdayMailService] birthday_emails_sent auto-created for table: ' . $table);
+        } catch (\Throwable $e) {
+            error_log('[BirthdayMailService] ensureBirthdayEmailsSentTable failed: ' . $e->getMessage());
+        }
     }
 
     private function calculateAge(string $birthDate): int

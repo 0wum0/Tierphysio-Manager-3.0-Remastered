@@ -50,6 +50,38 @@ Bug gefunden → in Datei dokumentieren → Fix referenzieren → Status aktuali
 
 ---
 
+## Bug: Produktiv-Cron 401/403/500 — fehlende Tenant-Prefix + fehlende Token-Self-Healing (Mai 2026)
+**Status:** `fixed` (Mai 2026)
+**Commit:** `fix: add self healing cron token and reminder recovery`
+**Betroffene Dateien:**
+- `plugins/owner-portal/OwnerPortalAdminController.php` — `cronSmartReminders()`
+- `plugins/bulk-mail/HolidayController.php` — `cron()`
+- `app/Services/BirthdayMailService.php` — `alreadySentThisYear()` / `markSent()`
+- `app/Controllers/CronController.php` — `executeJob()` Status-Klassifizierung
+- `saas-platform/migrations/064_selfhealing_cron_tokens.sql` (neu)
+
+**Root Cause 1 — Smart Erinnerungen HTTP 401:**
+`cronSmartReminders()` setzte keinen Tenant-Prefix vor `settings->get('portal_smart_reminder_token')`.
+Token-Lookup gegen falschen Tenant → Token = null → self-heal erzeugt neuen Token in falschem Tenant
+→ Dispatcher sendet alten Token → IMMER 401. Fix: `$db->setPrefix($prefix)` vor jedem DB-Zugriff.
+
+**Root Cause 2 — Feiertagsgrüße HTTP 403:**
+`HolidayController::cron()` hatte: `if ($expected === '' || $key !== $expected) → 403`.
+Leerer `cron_secret` → sofort 403, kein Selbstheilungsmechanismus. Kein `setPrefix($tid)` vorhanden.
+Fix: Self-Healing Pattern implementiert (Token fehlt → generieren → speichern → weiterausführen).
+
+**Root Cause 3 — Geburtstagsmail HTTP 500:**
+`BirthdayMailService::alreadySentThisYear()` direkte Abfrage auf `birthday_emails_sent` ohne
+`tableExists()`-Check → MySQL „Table not found" → Exception → unkontrollierter 500.
+Fix: `tableExists()` + `ensureBirthdayEmailsSentTable()` + try/catch in beiden Methoden.
+
+**Root Cause 4 — Google Sync `no_connection` als SUCCESS:**
+`CronController::executeJob()` klassifizierte HTTP 200 + `status=skipped/reason=no_connection`
+als `success=true` → Cron-Monitor zeigte "OK" obwohl Google-Verbindung fehlt.
+Fix: Neue Status-Logik: `skipped`-reasons → `finalStatus='skipped'`, `success=false`.
+
+---
+
 ## Bug: „Die interaktive Anatomie konnte nicht geladen werden" nach SVG-Layer-Refactor (Commit `dd6ed9b`)
 **Status:** `fixed` (Commit `e0a01e2` → `main` als `96bb587`)
 

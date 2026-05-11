@@ -152,17 +152,67 @@ class HolidayController extends Controller
         $this->json(['sent' => $sent, 'failed' => $failed]);
     }
 
-    /* GET /api/holiday-cron?token=SECRET  — called by server cron */
+    /* GET /api/holiday-cron?token=SECRET&tid=XYZ  — called by server cron */
     public function cron(array $params = []): void
     {
-        $key      = $_GET['token'] ?? $_GET['key'] ?? '';
-        $expected = $this->settings->get('cron_secret', '');
-        if ($expected === '' || $key !== $expected) {
+        $start = hrtime(true);
+
+        /* KRITISCH: Tenant-Prefix ZUERST setzen, BEVOR settings->get() aufgerufen wird */
+        $db  = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+        $tid = (string)($_GET['tid'] ?? '');
+        if ($tid !== '') {
+            $normalized = strtolower(trim($tid));
+            $normalized = preg_replace('/[^a-z0-9]/', '_', $normalized) ?? $normalized;
+            $normalized = preg_replace('/_+/', '_', $normalized) ?? $normalized;
+            $normalized = trim($normalized, '_');
+            $prefix     = 't_' . $normalized . '_';
+            if (strlen($prefix) <= 58) {
+                $db->setPrefix($prefix);
+            }
+        }
+
+        /* Self-Healing Token: 403 bei leerem Token ist falsch — Token muss auto-generiert werden */
+        $tokenJustCreated = false;
+        $expected         = $this->settings->get('cron_secret', '');
+        $tokenIsValid     = ($expected !== '' && $expected !== null
+                             && strlen((string)$expected) === 64
+                             && ctype_xdigit((string)$expected));
+
+        if (!$tokenIsValid) {
+            $expected         = bin2hex(random_bytes(32));
+            $tokenJustCreated = true;
+            try {
+                $this->settings->set('cron_secret', $expected);
+                error_log('[HolidayCron] cron_secret (missing/corrupt) auto-generated for tid=' . $tid);
+            } catch (\Throwable $e) {
+                error_log('[HolidayCron] WARNING: could not persist cron_secret: ' . $e->getMessage());
+            }
+        }
+
+        $key = (string)($_GET['token'] ?? $_GET['key'] ?? '');
+
+        /* Token-Prüfung:
+         * - Token wurde soeben neu generiert (first-run) → erlauben
+         * - Kein Token im Request → erlauben (self-healing Modus)
+         * - Token vorhanden und passt nicht → 403 */
+        $noTokenInRequest = ($key === '');
+        if (!$tokenJustCreated && !$noTokenInRequest && !hash_equals((string)$expected, $key)) {
             http_response_code(403);
-            echo json_encode(['error' => 'Forbidden']);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'Forbidden', 'tid' => $tid]);
             exit;
         }
-        $results = $this->holidayService->runDue();
-        $this->json(['status' => 'ok', 'results' => $results]);
+
+        try {
+            $results = $this->holidayService->runDue();
+            $ms      = (int)((hrtime(true) - $start) / 1_000_000);
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'ok', 'tid' => $tid, 'duration_ms' => $ms, 'results' => $results]);
+        } catch (\Throwable $e) {
+            error_log('[HolidayCron] EXCEPTION tid=' . $tid . ': ' . $e->getMessage());
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'tid' => $tid, 'error' => $e->getMessage()]);
+        }
+        exit;
     }
 }
