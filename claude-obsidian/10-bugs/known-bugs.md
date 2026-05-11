@@ -452,7 +452,7 @@ Ein fehlender DB-Eintrag führte direkt zu einem harten 404 statt einer Hilfssei
 
 ## Bug: Migrationen wurden im falschen Ordner erstellt (Repo-Root statt saas-platform/)
 **Status:** `fixed` (Mai 2026)
-**Migration:** `saas-platform/migrations/062_homework_default_active.sql`
+**Migration:** `saas-platform/migrations/063_homework_default_active.sql`
 
 ### Symptom
 Migrationen, die unter `migrations/` (Repo-Root) abgelegt wurden, wurden vom SaaS
@@ -471,7 +471,7 @@ Der Root-`migrations/`-Ordner wird NIE gelesen.
 
 ## Bug: Hausaufgaben-Plugin nicht standardmäßig aktiv (required_plan: pro statt basic)
 **Status:** `fixed` (Mai 2026)
-**Migration:** `saas-platform/migrations/062_homework_default_active.sql`
+**Migration:** `saas-platform/migrations/063_homework_default_active.sql`
 
 ### Symptom
 Tenants auf Basic-Plan sahen kein Hausaufgaben-Plugin, obwohl es Default-Aktiv sein sollte.

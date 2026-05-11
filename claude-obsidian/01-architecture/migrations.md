@@ -108,12 +108,12 @@ Bug in Logik braucht neue DB-Spalte.
 
 | Stand | Wert |
 |---|---|
-| Höchste Migration in `saas-platform/migrations/` | **062** |
+| Höchste Migration in `saas-platform/migrations/` | **063** |
 | Höchste Migration in `migrations/` (Root — wirkungslos!) | 062 (Legacy!) |
 | Alle produktiven Tenants | v61 |
 | v060 erstellt | Mai 2026 — Dogschool Feature-Flags |
 | v061 erstellt | Mai 2026 — Dogschool TCP Feature-Flags |
-| v062 erstellt | Mai 2026 — homework Default aktiv (required_plan: basic, alle Pläne, cache-heal) |
+| v063 erstellt | Mai 2026 — homework Default aktiv (required_plan: basic, alle Pläne, cache-heal) |
 
 **LERNEFFEKT:** v055 (Root-Ordner) war wirkungslos — einerseits falscher Pfad, andererseits `55 > 61 = false`.
 Die neue Repair-Migration muss IMMER `version > aktueller-Tenant-Stand` UND im richtigen Ordner liegen.
@@ -121,6 +121,9 @@ Die neue Repair-Migration muss IMMER `version > aktueller-Tenant-Stand` UND im r
 **MIGRATIONS-PFAD-FEHLER (historisch, Mai 2026):**
 Migrationen wurden irrtümlich unter `migrations/` (Repo-Root) statt `saas-platform/migrations/` abgelegt.
 Der SaaS MigrationService liest AUSSCHLIESSLICH `saas-platform/migrations/`. Root-Migrationen sind wirkungslos.
+
+**ACHTUNG Versionsnummern-Kollision:** Root-`migrations/` hat eine `062_repair_cron_dispatcher_log.sql`.
+Wenn Tenants v62 bereits getrackt haben (durch irgendeinen alten Runner), muss die nächste SaaS-Migration v063 sein (nicht v062)!
 
 ---
 

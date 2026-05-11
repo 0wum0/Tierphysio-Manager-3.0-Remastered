@@ -35,7 +35,7 @@ für ihre Patienten zu erstellen und über das Besitzer-Portal zu teilen.
 | `plugins/homework/templates/patient-tab.twig` | Twig-Template für Patienten-Modal-Tab |
 | `app/Controllers/HomeworkController.php` | REST-API-Controller |
 | `app/Repositories/HomeworkRepository.php` | DB-Zugriff (prefixed tables) |
-| `saas-platform/migrations/062_homework_default_active.sql` | Macht homework default-aktiv für alle Tenants |
+| `saas-platform/migrations/063_homework_default_active.sql` | Macht homework default-aktiv für alle Tenants |
 
 ## Routes (Plugin-seitig registriert)
 
@@ -58,7 +58,7 @@ Das Plugin fügt einen "Hausaufgaben"-Tab in die Patienten-Modal-Akte ein via `p
 
 ## Self-Healing für bestehende Tenants
 
-Migration 062 löscht `_features_cache` in der Settings-Tabelle jedes Tenants.
+Migration 063 löscht `_features_cache` in der Settings-Tabelle jedes Tenants.
 Beim nächsten Request wird der Cache aus der SaaS-DB neu aufgebaut, dabei greift:
 - `required_plan = 'basic'` → homework ist für alle Pläne freigegeben
 - Alle Pläne haben `homework` in ihrer Feature-Liste
@@ -67,8 +67,8 @@ Beim nächsten Request wird der Cache aus der SaaS-DB neu aufgebaut, dabei greif
 
 | Datum | Änderung |
 |---|---|
-| Mai 2026 | homework von `pro` auf `basic` Plan gehoben — Migration 062 |
-| Mai 2026 | homework in alle Plan-Feature-Listen aufgenommen |
+| Mai 2026 | homework von `pro` auf `basic` Plan gehoben — Migration 063 |
+| Mai 2026 | homework in alle Plan-Feature-Listen aufgenommen (v063) |
 | Mai 2026 | Bestehende Tenants werden via Cache-Invalidierung automatisch geheilt |
 
 ## Verlinkungen
