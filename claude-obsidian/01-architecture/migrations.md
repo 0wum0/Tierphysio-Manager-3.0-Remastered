@@ -87,10 +87,14 @@ Bug in Logik braucht neue DB-Spalte.
 
 | Stand | Wert |
 |---|---|
-| Höchste Migration im Repo | **055** |
-| Tenants laut User | v61 (produktive Tenants hatten extern mehr Migrationen) |
-| v054 erstellt | Mai 2026 — cron_dispatcher_log Erweiterung |
-| v055 erstellt | Mai 2026 — Repair für v054-Fixes (Tenants >= 54) |
+| Höchste Migration im Repo | **062** |
+| Alle produktiven Tenants | v61 |
+| v054 erstellt | Mai 2026 — cron_dispatcher_log Erweiterung (für neue Tenants < v54) |
+| v055 erstellt | Mai 2026 — Repair für Tenants >= v54 (WIRKUNGSLOS — Tenants auf v61!) |
+| v062 erstellt | Mai 2026 — Korrekte Repair für alle Tenants auf v61 (62 > 61 = true ✓) |
+
+**LERNEFFEKT:** v055 war ebenfalls wirkungslos weil `55 > 61 = false`.
+Die neue Repair-Migration muss IMMER `version > aktueller-Tenant-Stand` haben.
 
 ---
 
