@@ -288,25 +288,98 @@
 <section class="py-5" id="pricing">
     <div class="container py-5 text-center reveal-hidden">
         <span class="section-kicker">Deine Wahl</span>
-        <h2 class="section-title">Einfache <span class="gradient-text">Preispläne.</span></h2>
-        <div class="row g-4 mt-4 justify-content-center">
+        <h2 class="section-title">Transparente <span class="gradient-text">Preispläne.</span></h2>
+        <p class="text-muted mx-auto mb-5" style="max-width:580px;">Keine versteckten Kosten, keine Einrichtungsgebühr – jederzeit kündbar. Wähle den Tarif, der zu deiner Praxis passt.</p>
+
+        {% set planMeta = {
+            'basic':             { badge: 'Einsteiger',             badgeColor: '#64748b', featured: false, subtitle: 'Für den Einstieg' },
+            'pro':               { badge: '⭐ Beliebt',             badgeColor: '#2563eb', featured: true,  subtitle: 'Für wachsende Praxen' },
+            'ultra':             { badge: 'Komplettlösung',         badgeColor: '#7c3aed', featured: false, subtitle: 'Voller Funktionsumfang' },
+            'enterprise':        { badge: 'Komplettlösung',         badgeColor: '#7c3aed', featured: false, subtitle: 'Voller Funktionsumfang' },
+            'business':          { badge: 'Für Teams',              badgeColor: '#0ea5e9', featured: false, subtitle: 'Mehrere Mitarbeitende' },
+            'beta':              { badge: 'Früher Unterstützer',    badgeColor: '#d97706', featured: false, subtitle: 'Sondertarif Beta' },
+            'beta_tester':       { badge: 'Früher Unterstützer',    badgeColor: '#d97706', featured: false, subtitle: 'Sondertarif Beta' },
+            'hundeschule_basic': { badge: 'Für Hundeschulen',       badgeColor: '#16a34a', featured: false, subtitle: 'Speziell für Trainer' },
+            'dogschool_basic':   { badge: 'Für Hundeschulen',       badgeColor: '#16a34a', featured: false, subtitle: 'Speziell für Trainer' },
+            'dogschool_pro':     { badge: '⭐ Hundeschule Pro',     badgeColor: '#2563eb', featured: true,  subtitle: 'Professionelle Hundeschule' },
+        } %}
+
+        <div class="row g-4 mt-0 justify-content-center align-items-stretch text-start">
             {% if plans is defined %}
                 {% for plan in plans %}
+                {% set features = plan.features ? plan.features|json_decode : [] %}
+                {% set meta = planMeta[plan.slug] ?? { badge: '', badgeColor: '#64748b', featured: false, subtitle: '' } %}
+                {% set isFeatured = meta.featured %}
                     <div class="col-md-6 col-lg-4 d-flex">
-                        <div class="glass-card w-100 p-5 d-flex flex-column {% if plan.is_featured %}border-primary{% endif %}">
-                            <h3 class="h4 mb-3">{{ plan.name }}</h3>
-                            <div class="h2 fw-bold mb-4">{{ (plan.price_month is defined and plan.price_month) ? plan.price_month : '0' }}€ <small class="h6 opacity-50">/mtl</small></div>
-                            <ul class="list-unstyled text-start flex-grow-1 text-muted small mb-5">
-                                {% set features = plan.features ? plan.features|json_decode : [] %}
+                        <div class="w-100 position-relative d-flex flex-column"
+                             style="background:rgba(30,41,59,.85);border:1px solid {{ isFeatured ? '#2563eb' : 'rgba(255,255,255,0.1)' }};border-radius:18px;padding:2rem;{% if isFeatured %}box-shadow:0 0 50px rgba(37,99,235,.2);{% endif %}">
+
+                            {% if isFeatured %}
+                            <div style="position:absolute;inset:0;border-radius:18px;background:linear-gradient(135deg,rgba(37,99,235,.07),transparent);pointer-events:none;"></div>
+                            {% endif %}
+
+                            {% if meta.badge %}
+                            <div style="margin-top:-2.8rem;margin-bottom:.75rem;text-align:center;">
+                                <span style="background:{{ meta.badgeColor }};color:#fff;font-size:.72rem;font-weight:700;letter-spacing:.07em;padding:.35em 1em;border-radius:20px;display:inline-block;">
+                                    {{ meta.badge }}
+                                </span>
+                            </div>
+                            {% endif %}
+
+                            <div class="mb-1">
+                                <h3 class="h4 fw-bold mb-0" style="color:#f1f5f9;">{{ plan.name }}</h3>
+                                {% if meta.subtitle %}<p class="mb-0 mt-1" style="color:#94a3b8;font-size:.82rem;">{{ meta.subtitle }}</p>{% endif %}
+                            </div>
+
+                            <div class="my-3 pb-3" style="border-bottom:1px solid rgba(255,255,255,0.08);">
+                                {% if (plan.price_month is defined and plan.price_month) %}
+                                    <span class="fw-bold" style="font-size:2.2rem;color:#f1f5f9;">{{ plan.price_month }}€</span>
+                                    <span class="opacity-50 ms-1" style="font-size:.9rem;">/Monat</span>
+                                    {% if plan.price_year is defined and plan.price_year > 0 %}
+                                    <div style="font-size:.78rem;color:#4ade80;margin-top:.25rem;"><i class="bi bi-tag me-1"></i>{{ plan.price_year }}€/Jahr – 2 Monate gratis</div>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="fw-bold" style="font-size:2.2rem;color:#f1f5f9;">Kostenlos</span>
+                                {% endif %}
+                                {% if plan.trial_days is defined and plan.trial_days > 0 %}
+                                <div class="mt-2">
+                                    <span style="background:rgba(99,102,241,.15);color:#a5b4fc;font-size:.72rem;border:1px solid rgba(99,102,241,.3);padding:.25em .75em;border-radius:20px;display:inline-block;">
+                                        <i class="bi bi-clock me-1"></i>{{ plan.trial_days }} Tage kostenlos testen
+                                    </span>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <ul class="list-unstyled flex-grow-1 mb-4" style="font-size:.86rem;">
+                                {% if plan.max_users is defined %}
+                                <li class="mb-2 d-flex align-items-center gap-2">
+                                    <i class="bi bi-people" style="color:#60a5fa;min-width:16px;"></i>
+                                    <span style="color:#cbd5e1;">{% if plan.max_users == -1 %}Unbegrenzte Benutzer{% else %}Bis zu {{ plan.max_users }} Benutzer{% endif %}</span>
+                                </li>
+                                {% endif %}
                                 {% for f in features %}
-                                    <li class="mb-2"><i class="bi bi-check2 text-primary me-2"></i> {{ f }}</li>
+                                <li class="mb-2 d-flex align-items-center gap-2">
+                                    <i class="{{ f|feature_icon }}" style="color:#60a5fa;min-width:16px;"></i>
+                                    <span style="color:#cbd5e1;">{{ f|feature_label }}</span>
+                                </li>
                                 {% endfor %}
                             </ul>
-                            <a href="/register/{{ plan.slug }}" class="btn-nav-primary w-100 py-3">Jetzt starten</a>
+
+                            <a href="/register/{{ plan.slug }}"
+                               class="btn w-100 fw-semibold py-2 mt-auto"
+                               style="{% if isFeatured %}background:#2563eb;color:#fff;border:none;{% else %}background:transparent;color:#60a5fa;border:1px solid rgba(37,99,235,.6);{% endif %}border-radius:10px;">
+                                {% if plan.price_month is not defined or plan.price_month == 0 %}Jetzt kostenlos starten{% else %}Jetzt starten{% endif %}
+                            </a>
                         </div>
                     </div>
                 {% endfor %}
             {% endif %}
+        </div>
+
+        <div class="mt-4" style="font-size:.85rem;color:#475569;">
+            <i class="bi bi-shield-fill-check me-1" style="color:#4ade80;"></i>DSGVO-konform &nbsp;·&nbsp;
+            <i class="bi bi-server me-1"></i>EU-Hosting &nbsp;·&nbsp;
+            <i class="bi bi-x-circle me-1"></i>Jederzeit kündbar
         </div>
     </div>
 </section>

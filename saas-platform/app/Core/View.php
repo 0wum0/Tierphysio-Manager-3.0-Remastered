@@ -8,6 +8,7 @@ use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 use Twig\TwigFunction;
 use Twig\TwigFilter;
+use Saas\Services\FeatureLabelService;
 
 class View
 {
@@ -75,6 +76,18 @@ class View
 
         $this->twig->addFilter(new TwigFilter('number_format', function (mixed $value, int $decimals = 2, string $decPoint = ',', string $thousandsSep = '.'): string {
             return number_format((float)$value, $decimals, $decPoint, $thousandsSep);
+        }));
+
+        $this->twig->addFilter(new TwigFilter('feature_label', function (string $key): string {
+            return FeatureLabelService::label($key);
+        }));
+
+        $this->twig->addFilter(new TwigFilter('feature_icon', function (string $key): string {
+            return FeatureLabelService::icon($key);
+        }));
+
+        $this->twig->addFilter(new TwigFilter('feature_group', function (string $key): string {
+            return FeatureLabelService::group($key);
         }));
     }
 
