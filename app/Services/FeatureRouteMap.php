@@ -109,6 +109,17 @@ final class FeatureRouteMap
         '/interessenten'                => 'dogschool_leads',
         '/leads'                        => 'dogschool_leads',
         '/buchung'                      => null,    /* öffentlich — kein Gate */
+
+        /* Cron-Endpunkte: token-gesichert, kein Session/Feature-Gate nötig.
+         * Explizit null damit der längste Präfix-Match greift und das
+         * übergeordnete /kalender- bzw. /tcp-Gate nicht feuert. */
+        '/cron'                         => null,    /* /cron/geburtstag, /cron/dispatcher */
+        '/kalender/cron'                => null,    /* Kalender-Erinnerungen */
+        '/tcp/cron'                     => null,    /* TherapyCare Erinnerungen */
+        '/google-kalender/cron'         => null,    /* Google-Kalender Sync */
+        '/portal/cron'                  => null,    /* Smart-Erinnerungen Portal */
+        '/kurse/cron'                   => null,    /* Kurs-Erinnerungen */
+        '/api/holiday-cron'             => null,    /* Feiertags-Cron */
         '/anfragen'                     => 'dogschool_online_booking',
         '/fortschritt'                  => 'dogschool_progress_tracking',
         '/auswertungen'                 => 'dogschool_reports',

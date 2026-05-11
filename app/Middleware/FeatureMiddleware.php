@@ -37,6 +37,13 @@ class FeatureMiddleware
             return;
         }
 
+        /* Internal cron requests (X-Internal-Cron: true) are token-secured.
+         * Never block them with a session-dependent feature check. */
+        if (($_SERVER['HTTP_X_INTERNAL_CRON'] ?? '') === 'true') {
+            $next();
+            return;
+        }
+
         /* Delegiert an den zentralen Gate-Service — stoppt bei Bedarf mit 403/Redirect */
         $this->gate->requireFeature($this->featureKey);
         $next();

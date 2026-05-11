@@ -1184,6 +1184,16 @@ class TherapyCareController extends Controller
 
     public function cronReminders(array $params = []): void
     {
+        /* Tenant-Prefix setzen, BEVOR jeder DB-Zugriff stattfindet.
+         * Der Dispatcher übergibt ?tid= in der URL — ohne das würden alle
+         * Queries gegen die globale (leere) Tabelle laufen. */
+        $tid = (string)($_GET['tid'] ?? '');
+        if ($tid !== '') {
+            $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $normalized = preg_replace('/[^a-z0-9_]/', '_', strtolower($tid));
+            $db->setPrefix('t_' . $normalized . '_');
+        }
+
         $start         = hrtime(true);
         $settings      = $this->settingsRepo->all();
         $expectedToken = $settings['tcp_cron_token'] ?? '';

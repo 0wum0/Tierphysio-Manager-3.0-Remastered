@@ -255,6 +255,79 @@ zwischen zwei völlig unterschiedlichen Features.
 
 ---
 
+---
+
+## Bug: Cron HTTP 302 — TherapyCare & Kalender-Erinnerungen schlagen fehl
+
+**Status:** `fixed`
+**Datum:** 2026-05-11
+
+### Symptom
+SaaS Cron-Dashboard zeigt für folgende Jobs `HTTP 302`:
+- 💊 TherapyCare Erinnerungen (`/tcp/cron/erinnerungen`)
+- 📅 Kalender-Erinnerungen (`/kalender/cron/erinnerungen`)
+
+Jobs werden nicht ausgeführt. Reminder-Mails werden nicht versendet.
+
+### Ursache (3 Schichten)
+
+**Bug 1 — FeatureRouteMap greift auf Cron-Pfade (Haupt-Ursache)**
+`app/Services/FeatureRouteMap.php` mappt URL-Präfixe auf Feature-Keys:
+- `/kalender` → `calendar`
+- `/tcp` → `therapy_care`
+
+Der Router wendet dieses Auto-Gating auf ALLE Routen an, auch auf `[]`-Routen ohne Auth-Middleware.
+Cron-Requests haben keine Session → Feature-Gate prüft `isEnabled()` → kein Cache/Prefix → `false` →
+`FeatureGateService::requireFeature()` gibt `header('Location: /dashboard')` + exit → **HTTP 302**.
+
+**Bug 2 — FeatureMiddleware hat kein Cron-Bypass**
+`app/Middleware/FeatureMiddleware::handle()` reichte blind an `gate->requireFeature()` weiter,
+ohne den `X-Internal-Cron: true` Header zu prüfen, den der Dispatcher setzt.
+
+**Bug 3 — TCP Cron setzt Tenant-Prefix zu spät**
+`TherapyCareController::cronReminders()` rief `$this->settingsRepo->all()` auf, BEVOR der
+`?tid=` Parameter verarbeitet wurde. Dadurch wurde der falsche (leere) Tenant-Context gelesen.
+
+### Fix
+
+| Datei | Änderung |
+|-------|----------|
+| `app/Services/FeatureRouteMap.php` | Alle Cron-Endpunkte als `null` eingetragen (explizit kein Gate): `/cron`, `/kalender/cron`, `/tcp/cron`, `/google-kalender/cron`, `/portal/cron`, `/kurse/cron`, `/api/holiday-cron` |
+| `app/Services/FeatureGateService.php` | `requireFeature()`: früher Return wenn `HTTP_X_INTERNAL_CRON = 'true'` |
+| `app/Middleware/FeatureMiddleware.php` | `handle()`: bypass für `X-Internal-Cron: true` (Defense-in-Depth Layer 2) |
+| `plugins/therapy-care-pro/TherapyCareController.php` | `cronReminders()`: Tenant-Prefix aus `?tid=` BEVOR erster DB-Zugriff (`settingsRepo->all()`) |
+
+### Cron-Architektur nach Fix
+
+```
+SaaS cron_runner.php
+  → HTTP GET /cron/dispatcher?tid=XYZ
+    (X-Internal-Cron: true Header)
+    → FeatureRouteMap: /cron → null (kein Gate)
+    → CronController::dispatcher()
+      → executeJob() via cURL mit X-Internal-Cron: true
+        → /kalender/cron/erinnerungen?tid=XYZ&token=ABC
+          → FeatureRouteMap: /kalender/cron → null (kein Gate)
+          → CalendarController::cronReminders() ✅
+        → /tcp/cron/erinnerungen?tid=XYZ&token=ABC
+          → FeatureRouteMap: /tcp/cron → null (kein Gate)
+          → TherapyCareController::cronReminders() ✅
+```
+
+### Bekannte Stolperfallen
+- **`?token=` vs `&token=`**: Wenn die URL bereits `?tid=...` enthält, muss der Token mit `&token=` angehängt werden, nicht `?token=`. → Korrekt in `PraxisCronController::runNow()` (Zeile 256: `$url .= '&token=' . $token`)
+- **Tenant-Prefix vor DB-Zugriff**: In jedem Cron-Controller MUSS `setPrefix()` aus `?tid=` erfolgen, bevor `settingsRepo` oder `repo` aufgerufen wird.
+- **FeatureRouteMap null vs. kein Eintrag**: `null` in der Map → explizit kein Gate. Fehlt ein Eintrag und der Präfix matcht einen übergeordneten Eintrag, greift das übergeordnete Gate.
+
+### Verifikation
+1. Cron-Dashboard zeigt `HTTP 200` für TherapyCare Erinnerungen ✓
+2. Cron-Dashboard zeigt `HTTP 200` für Kalender-Erinnerungen ✓
+3. Dispatcher-Log (`cron_dispatcher_log`) zeigt `success` für `tcp_reminders` und `calendar_reminders` ✓
+4. Keine doppelten Reminder ✓
+5. Tenant-Kontext korrekt (richtige Queue geladen) ✓
+
+---
+
 ## Verlinkungen
 - [[15-agent-rules/update-brain]]
 - [[11-decisions/decision-log]]

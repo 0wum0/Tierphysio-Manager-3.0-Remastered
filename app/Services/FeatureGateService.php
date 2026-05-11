@@ -232,6 +232,12 @@ class FeatureGateService
      */
     public function requireFeature(string $key): void
     {
+        /* Internal cron requests carry X-Internal-Cron: true (set by CronController::executeJob).
+         * These are token-secured and must not be blocked by session-dependent feature checks. */
+        if (($_SERVER['HTTP_X_INTERNAL_CRON'] ?? '') === 'true') {
+            return;
+        }
+
         if ($this->isEnabled($key)) {
             return;
         }
