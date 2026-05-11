@@ -39,6 +39,8 @@
 .wa-lightbox-download{position:absolute;top:1rem;right:4rem;background:rgba(255,255,255,.15);border:none;color:#fff;padding:0 .9rem;height:40px;border-radius:20px;font-size:.85rem;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem;transition:background .12s;}
 .wa-lightbox-download:hover{background:rgba(255,255,255,.28);color:#fff;}
 .wa-file-preview{display:flex;align-items:center;gap:.35rem;background:rgba(79,124,255,.08);border:1px solid rgba(79,124,255,.2);border-radius:8px;padding:.4rem .65rem;margin-bottom:.4rem;font-size:.8rem;}
+.wa-img-wrap{display:block;margin-bottom:.35rem;border-radius:8px;overflow:hidden;max-width:260px;cursor:pointer;}
+.wa-img-wrap img{display:block;width:100%;height:auto;max-height:260px;object-fit:cover;border-radius:8px;}
 .wa-fmt-menu{position:fixed;display:none;background:var(--bs-body-bg);border:1px solid var(--bs-border-color);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.18);overflow:hidden;z-index:99999;min-width:170px;}
 .wa-fmt-item{display:flex;align-items:center;gap:.6rem;width:100%;border:none;background:none;padding:.55rem .85rem;font-size:.84rem;color:var(--bs-body-color);cursor:pointer;text-align:left;transition:background .1s;}
 .wa-fmt-item:hover{background:var(--bs-secondary-bg);}
@@ -103,9 +105,9 @@
                     </div>
                     <div style="min-width:0;">
                         <div style="font-size:.8rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px;">{{ msg.attachment_name }}</div>
-                        <div style="font-size:.65rem;color:var(--bs-secondary-color);">{{ msg.size_label }}</div>
+                        <div style="font-size:.65rem;color:#555;">{{ msg.size_label }}</div>
                     </div>
-                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;color:var(--bs-secondary-color);"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="7 10 12 15 17 10"/><line stroke="currentColor" stroke-width="2" stroke-linecap="round" x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="flex-shrink:0;color:#555;"><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline stroke="currentColor" stroke-width="2" stroke-linecap="round" points="7 10 12 15 17 10"/><line stroke="currentColor" stroke-width="2" stroke-linecap="round" x1="12" y1="15" x2="12" y2="3"/></svg>
                 </a>
                 {% endif %}
                 {% endif %}
@@ -305,6 +307,8 @@
         var el = document.querySelector('[data-status-id="' + msgId + '"]');
         if (el && !el.classList.contains('read')) { el.innerHTML = tickDouble(); el.classList.add('read'); }
     }
+
+    function isImg(name) { return /\.(jpg|jpeg|png|gif|webp|avif|bmp)$/i.test(name || ''); }
 
     /* ── Build bubble ── */
     function buildBubble(d, isAdmin) {
