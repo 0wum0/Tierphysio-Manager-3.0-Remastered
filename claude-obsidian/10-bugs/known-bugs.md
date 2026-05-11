@@ -379,6 +379,53 @@ stillschweigend ignoriert, `lastInsertId()` gab `0` zurück. Bei erneutem `syncC
 
 ---
 
+---
+
+## Bug: therapano.de/impressum liefert HTTP 404
+
+**Status:** `fixed`
+**Datum:** 2026-05-11
+
+### Symptom
+- `https://therapano.de/impressum` → HTTP 404
+- Google OAuth Trust & Safety Prüfung schlägt fehl
+- Footer-Links und Landing-Page-Links im Consent Screen fehlerhaft
+
+### Ursache (2 Bugs)
+
+**Bug 1 — Kein `impressum`-Datensatz in `legal_documents`**
+`migration/001_initial_schema.sql` seeded `datenschutz`, `agb`, `av-vertrag` —
+aber **kein `impressum`**. `LegalController::view()` rief `findBySlug('impressum')` auf →
+`false` → `$this->notFound()` → HTTP 404.
+
+**Bug 2 — Kein Placeholder-Fallback**
+`LegalController::view()` hatte keine Fallback-Logik für nicht vorhandene Slugs.
+Ein fehlender DB-Eintrag führte direkt zu einem harten 404 statt einer Hilfsseite.
+
+### Was NICHT das Problem war
+- Routes in `platform.php` existierten bereits korrekt (`/legal/{slug}`, `/impressum`, `/datenschutz`)
+- `legal/view.twig` existierte bereits
+- `LegalController` hatte keine `requireAuth()` → korrekt öffentlich
+
+### Fix
+
+| Datei | Änderung |
+|-------|----------|
+| `saas-platform/migrations/053_legal_impressum_seed.sql` | **Neu**: `INSERT IGNORE INTO legal_documents` für Slug `impressum` mit Standardtext |
+| `saas-platform/app/Controllers/LegalController.php` → `view()` | DB-Zugriff in try/catch (DB evtl. nicht installiert); Placeholder statt 404 wenn Slug nicht in DB |
+| `saas-platform/templates/layouts/public.twig` | `Impressum`-Link im Footer ergänzt |
+| `claude-obsidian/06-saas/public-legal-pages.md` | **Neu**: Architektur-Doku der öffentlichen Legal-Seiten |
+
+### Verifikation
+1. `https://therapano.de/impressum` → HTTP 200 ✓
+2. `https://therapano.de/datenschutz` → HTTP 200 ✓
+3. `https://therapano.de/legal/datenschutz` → HTTP 200 ✓
+4. Kein Login erforderlich ✓
+5. Footer zeigt alle Legal-Links ✓
+6. Bei fehlendem DB-Eintrag: Placeholder statt 404 ✓
+
+---
+
 ## Verlinkungen
 - [[15-agent-rules/update-brain]]
 - [[11-decisions/decision-log]]
