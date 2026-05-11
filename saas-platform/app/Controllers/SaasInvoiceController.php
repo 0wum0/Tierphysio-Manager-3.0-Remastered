@@ -9,14 +9,16 @@ use Saas\Core\View;
 use Saas\Core\Session;
 use Saas\Repositories\SaasInvoiceRepository;
 use Saas\Repositories\TenantRepository;
+use Saas\Services\SaasInvoiceBillingService;
 
 class SaasInvoiceController extends Controller
 {
     public function __construct(
         View $view,
         Session $session,
-        private readonly SaasInvoiceRepository $invoiceRepo,
-        private readonly TenantRepository      $tenantRepo
+        private readonly SaasInvoiceRepository     $invoiceRepo,
+        private readonly TenantRepository          $tenantRepo,
+        private readonly SaasInvoiceBillingService $billingService,
     ) {
         parent::__construct($view, $session);
     }
@@ -30,9 +32,10 @@ class SaasInvoiceController extends Controller
 
         $status = trim($this->get('status', ''));
         $search = trim($this->get('search', ''));
+        $type   = trim($this->get('type', ''));
         $page   = max(1, (int)$this->get('page', 1));
 
-        $result    = $this->invoiceRepo->getPaginated($page, 20, $status, $search);
+        $result    = $this->invoiceRepo->getPaginated($page, 20, $status, $search, $type);
         $stats     = $this->invoiceRepo->getStats();
         $chartData = $this->invoiceRepo->getMonthlyChartData();
 
@@ -78,7 +81,7 @@ class SaasInvoiceController extends Controller
         }
 
         $paymentMethod = $this->post('payment_method', 'rechnung');
-        if (!in_array($paymentMethod, ['rechnung','ueberweisung','lastschrift','bar'], true)) {
+        if (!in_array($paymentMethod, ['rechnung','ueberweisung','lastschrift','bar','stripe'], true)) {
             $paymentMethod = 'rechnung';
         }
         $isCash = ($paymentMethod === 'bar');
@@ -736,6 +739,152 @@ class SaasInvoiceController extends Controller
         if (!mail($toStr, '=?UTF-8?B?' . base64_encode($subject) . '?=', $message, $headers)) {
             throw new \RuntimeException('mail() gibt false zurück – prüfen Sie die PHP-Mailkonfiguration.');
         }
+    }
+
+    // ── Storno / Gutschrift ───────────────────────────────────────────────────
+
+    public function creditNote(array $params = []): void
+    {
+        $this->requireAuth();
+
+        $invoice = $this->invoiceRepo->findById((int)$params['id']);
+        if (!$invoice) { $this->notFound(); }
+
+        if ($invoice['status'] === 'cancelled') {
+            $this->session->flash('error', 'Diese Rechnung ist bereits storniert.');
+            $this->redirect("/admin/invoices/{$params['id']}");
+            return;
+        }
+
+        $this->render('admin/invoices/credit_note.twig', [
+            'page_title' => 'Gutschrift / Storno erstellen',
+            'invoice'    => $invoice,
+            'positions'  => $this->invoiceRepo->getPositions((int)$params['id']),
+        ]);
+    }
+
+    public function creditNoteStore(array $params = []): void
+    {
+        $this->requireAuth();
+        $this->verifyCsrf();
+
+        $invoice = $this->invoiceRepo->findById((int)$params['id']);
+        if (!$invoice) { $this->notFound(); }
+
+        $reason         = trim($this->post('reason', ''));
+        $overrideAmount = (float)str_replace(',', '.', (string)$this->post('override_amount', '0'));
+
+        if (empty($reason)) {
+            $this->session->flash('error', 'Bitte geben Sie einen Storno-Grund an.');
+            $this->redirect("/admin/invoices/{$params['id']}/credit-note");
+            return;
+        }
+
+        try {
+            $creditNoteId = $this->billingService->createCreditNote((int)$params['id'], $reason, $overrideAmount);
+            $this->session->flash('success', '✅ Gutschrift erstellt. Originalrechnung wurde storniert.');
+            $this->redirect("/admin/invoices/{$creditNoteId}");
+        } catch (\Throwable $e) {
+            $this->session->flash('error', 'Fehler beim Erstellen der Gutschrift: ' . $e->getMessage());
+            $this->redirect("/admin/invoices/{$params['id']}");
+        }
+    }
+
+    // ── Mahnwesen ─────────────────────────────────────────────────────────────
+
+    public function dunning(array $params = []): void
+    {
+        $this->requireAuth();
+
+        $invoice  = $this->invoiceRepo->findById((int)$params['id']);
+        if (!$invoice) { $this->notFound(); }
+
+        $dunnings = $this->billingService->getDunnings((int)$params['id']);
+
+        $this->render('admin/invoices/dunning.twig', [
+            'page_title' => 'Mahnwesen – ' . $invoice['invoice_number'],
+            'invoice'    => $invoice,
+            'dunnings'   => $dunnings,
+        ]);
+    }
+
+    public function dunningStore(array $params = []): void
+    {
+        $this->requireAuth();
+        $this->verifyCsrf();
+
+        $invoice = $this->invoiceRepo->findById((int)$params['id']);
+        if (!$invoice) { $this->notFound(); }
+
+        $level     = max(1, min(3, (int)$this->post('level', 1)));
+        $fee       = (float)str_replace(',', '.', (string)$this->post('fee', '0'));
+        $dueDate   = $this->post('due_date', date('Y-m-d', strtotime('+7 days'))) ?: date('Y-m-d', strtotime('+7 days'));
+        $sendEmail = $this->post('send_email', '0') === '1';
+
+        try {
+            $this->billingService->createDunning((int)$params['id'], $level, $fee, $dueDate, $sendEmail);
+            $this->session->flash('success', 'Mahnung (Stufe ' . $level . ') erstellt.' . ($sendEmail ? ' E-Mail wurde gesendet.' : ''));
+        } catch (\Throwable $e) {
+            $this->session->flash('error', 'Fehler: ' . $e->getMessage());
+        }
+        $this->redirect("/admin/invoices/{$params['id']}/dunning");
+    }
+
+    // ── DATEV Export ──────────────────────────────────────────────────────────
+
+    public function datevExport(array $params = []): void
+    {
+        $this->requireAuth();
+
+        $dateFrom = $this->get('date_from', date('Y-01-01'));
+        $dateTo   = $this->get('date_to',   date('Y-m-d'));
+        $format   = $this->get('format', '');
+
+        if ($format === 'datev') {
+            $csv      = $this->billingService->generateDatevCsv($dateFrom, $dateTo);
+            $filename = 'DATEV_' . str_replace('-', '', $dateFrom) . '_' . str_replace('-', '', $dateTo) . '.csv';
+            header('Content-Type: text/csv; charset=UTF-8');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Pragma: no-cache');
+            echo "\xEF\xBB\xBF";
+            echo $csv;
+            exit;
+        }
+
+        $invoices = $this->invoiceRepo->getForTaxExport($dateFrom, $dateTo);
+        $summary  = $this->invoiceRepo->getTaxSummary($dateFrom, $dateTo);
+
+        $this->render('admin/invoices/datev_export.twig', [
+            'page_title' => 'DATEV / Steuerexport',
+            'invoices'   => $invoices,
+            'summary'    => $summary,
+            'date_from'  => $dateFrom,
+            'date_to'    => $dateTo,
+        ]);
+    }
+
+    // ── Self-Healing / Reconcile ──────────────────────────────────────────────
+
+    public function reconcile(array $params = []): void
+    {
+        $this->requireAuth();
+        $this->verifyCsrf();
+
+        $stats = $this->billingService->reconcileMissingInvoices();
+        $this->session->flash('success', "Self-Healing: {$stats['created']} Rechnungen rekonstruiert, {$stats['errors']} Fehler.");
+        $this->redirect('/admin/invoices');
+    }
+
+    // ── Dunning Cron ─────────────────────────────────────────────────────────
+
+    public function runDunningCron(array $params = []): void
+    {
+        $this->requireAuth();
+        $this->verifyCsrf();
+
+        $stats = $this->billingService->runDunningCycle();
+        $this->session->flash('success', "Mahnlauf: {$stats['processed']} verarbeitet, {$stats['skipped']} übersprungen, {$stats['errors']} Fehler.");
+        $this->redirect('/admin/invoices');
     }
 
     private function exportCsv(array $invoices, array $summary, string $dateFrom, string $dateTo): void

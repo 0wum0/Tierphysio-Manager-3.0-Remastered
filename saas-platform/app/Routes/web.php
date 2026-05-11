@@ -82,6 +82,9 @@ $router->get('/admin/invoices',                         [SaasInvoiceController::
 $router->get('/admin/invoices/create',                  [SaasInvoiceController::class, 'create']);
 $router->post('/admin/invoices',                        [SaasInvoiceController::class, 'store']);
 $router->get('/admin/invoices/tax-export',              [SaasInvoiceController::class, 'taxExport']);
+$router->get('/admin/invoices/datev-export',            [SaasInvoiceController::class, 'datevExport']);
+$router->post('/admin/invoices/reconcile',              [SaasInvoiceController::class, 'reconcile']);
+$router->post('/admin/invoices/run-dunning',            [SaasInvoiceController::class, 'runDunningCron']);
 $router->get('/admin/invoices/{id}',                    [SaasInvoiceController::class, 'show']);
 $router->get('/admin/invoices/{id}/edit',               [SaasInvoiceController::class, 'edit']);
 $router->post('/admin/invoices/{id}/edit',              [SaasInvoiceController::class, 'update']);
@@ -90,6 +93,10 @@ $router->post('/admin/invoices/{id}/status',            [SaasInvoiceController::
 $router->post('/admin/invoices/{id}/send-email',        [SaasInvoiceController::class, 'sendEmail']);
 $router->post('/admin/invoices/{id}/finalize',          [SaasInvoiceController::class, 'finalize']);
 $router->get('/admin/invoices/{id}/pdf',                [SaasInvoiceController::class, 'downloadPdf']);
+$router->get('/admin/invoices/{id}/credit-note',        [SaasInvoiceController::class, 'creditNote']);
+$router->post('/admin/invoices/{id}/credit-note',       [SaasInvoiceController::class, 'creditNoteStore']);
+$router->get('/admin/invoices/{id}/dunning',            [SaasInvoiceController::class, 'dunning']);
+$router->post('/admin/invoices/{id}/dunning',           [SaasInvoiceController::class, 'dunningStore']);
 
 // ── Einstellungen ──────────────────────────────────────────────────────────
 $router->get('/admin/settings',            [SettingsController::class, 'index']);

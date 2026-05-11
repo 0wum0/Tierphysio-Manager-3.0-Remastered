@@ -1,0 +1,128 @@
+{% extends 'layouts/base.twig' %}
+
+{% block content %}
+
+<div class="d-flex align-items-center gap-3 mb-4">
+    <a href="/admin/invoices/{{ invoice.id }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Zurück</a>
+    <div>
+        <h5 class="mb-0 fw-700">Gutschrift / Storno erstellen</h5>
+        <div class="text-muted fs-sm">zu Rechnung <strong>{{ invoice.invoice_number }}</strong></div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+
+        {# Originalrechnung Übersicht #}
+        <div class="card mb-4 border-warning">
+            <div class="card-header px-4 py-3 bg-warning bg-opacity-10">
+                <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>
+                <strong>Originalrechnung wird storniert</strong>
+            </div>
+            <div class="card-body px-4 py-3">
+                <div class="row g-3">
+                    <div class="col-sm-4">
+                        <div class="text-muted fs-xs">Rechnungsnr.</div>
+                        <div class="fw-700">{{ invoice.invoice_number }}</div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="text-muted fs-xs">Betrag</div>
+                        <div class="fw-700 text-danger">{{ invoice.total_gross|number_format(2,',','.') }} €</div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="text-muted fs-xs">Status</div>
+                        {% set statusLabels = {'draft':'Entwurf','open':'Offen','paid':'Bezahlt','overdue':'Überfällig','cancelled':'Storniert'} %}
+                        <span class="badge-inv badge-inv-{{ invoice.status }}">{{ statusLabels[invoice.status] ?? invoice.status }}</span>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <div class="text-muted fs-xs fw-700 mb-2">Positionen</div>
+                    <table class="table table-sm mb-0">
+                        <thead><tr>
+                            <th>Beschreibung</th>
+                            <th class="text-end">Menge</th>
+                            <th class="text-end">Einzelpreis</th>
+                            <th class="text-end">Gesamt</th>
+                        </tr></thead>
+                        <tbody>
+                        {% for pos in positions %}
+                        <tr>
+                            <td class="fs-sm">{{ pos.description }}</td>
+                            <td class="text-end fs-sm">{{ pos.quantity|number_format(2,',','.') }}</td>
+                            <td class="text-end fs-sm">{{ pos.unit_price|number_format(2,',','.') }} €</td>
+                            <td class="text-end fs-sm"><strong>{{ pos.total|number_format(2,',','.') }} €</strong></td>
+                        </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        {# Gutschrift-Formular #}
+        <div class="card">
+            <div class="card-header px-4 py-3">
+                <span class="fw-600"><i class="bi bi-file-earmark-minus me-2 text-danger"></i>Gutschrift / Storno-Details</span>
+            </div>
+            <div class="card-body px-4 py-3">
+                <form method="POST" action="/admin/invoices/{{ invoice.id }}/credit-note">
+                    {{ csrf_field()|raw }}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-600">Storno-Grund <span class="text-danger">*</span></label>
+                        <textarea name="reason" class="form-control" rows="3" required
+                            placeholder="z. B. Kundenwunsch, doppelte Abbuchung, fehlerhafte Berechnung…"></textarea>
+                        <div class="form-text">Wird auf der Gutschrift und im DATEV-Export ausgewiesen.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-600">Abweichender Gutschriftsbetrag (Brutto)</label>
+                        <div class="input-group" style="max-width:200px;">
+                            <input type="number" name="override_amount" class="form-control" step="0.01" min="0"
+                                placeholder="{{ invoice.total_gross|number_format(2,',','.') }}">
+                            <span class="input-group-text">€</span>
+                        </div>
+                        <div class="form-text">Leer lassen = vollständige Stornierung ({{ invoice.total_gross|number_format(2,',','.') }} €)</div>
+                    </div>
+
+                    <div class="alert alert-warning fs-sm d-flex gap-2">
+                        <i class="bi bi-shield-lock-fill flex-shrink-0 mt-1"></i>
+                        <div>
+                            <strong>GoBD-konform:</strong> Die Originalrechnung wird <em>nicht gelöscht</em>, sondern auf „Storniert" gesetzt.
+                            Es wird eine neue Gutschrift mit negativem Betrag erzeugt. Beide Dokumente bleiben im System und im Steuerexport sichtbar.
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a href="/admin/invoices/{{ invoice.id }}" class="btn btn-outline-secondary">Abbrechen</a>
+                        <button type="submit" class="btn btn-danger"
+                            onclick="return confirm('Rechnung stornieren und Gutschrift erstellen? Diese Aktion kann nicht rückgängig gemacht werden.')">
+                            <i class="bi bi-file-earmark-minus me-1"></i>Gutschrift erstellen &amp; Stornieren
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header px-4 py-3">
+                <span class="text-muted fs-xs fw-700 text-uppercase" style="letter-spacing:.08em;"><i class="bi bi-info-circle me-1"></i>Ablauf</span>
+            </div>
+            <div class="card-body px-4 py-3 fs-sm">
+                <ol class="ps-3 mb-0" style="line-height:2;">
+                    <li>Originalrechnung <strong>{{ invoice.invoice_number }}</strong> wird auf <span class="badge bg-secondary">Storniert</span> gesetzt</li>
+                    <li>Neue Gutschrift-Rechnung mit negativem Betrag wird erstellt</li>
+                    <li>Beide Dokumente erscheinen im Steuerexport und DATEV</li>
+                    <li>PDF für beide Dokumente verfügbar</li>
+                    <li>Gutschrift kann per E-Mail versendet werden</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

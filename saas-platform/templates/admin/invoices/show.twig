@@ -8,11 +8,22 @@
         <a href="/admin/invoices" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Zurück</a>
         <div>
             <h5 class="mb-0 fw-700">{{ invoice.invoice_number }}</h5>
-            <div class="d-flex align-items-center gap-2 mt-1">
+            <div class="d-flex align-items-center gap-2 mt-1 flex-wrap">
                 <span class="badge-inv badge-inv-{{ invoice.status }}">
                     {% set statusLabels = {'draft':'Entwurf','open':'Offen','paid':'Bezahlt','overdue':'Überfällig','cancelled':'Storniert'} %}
                     {{ statusLabels[invoice.status] ?? invoice.status }}
                 </span>
+                {% if invoice.type is defined and invoice.type == 'credit_note' %}
+                <span class="badge bg-warning text-dark fs-xs"><i class="bi bi-file-earmark-minus me-1"></i>Gutschrift</span>
+                {% elseif invoice.type is defined and invoice.type == 'correction' %}
+                <span class="badge bg-info text-dark fs-xs">Korrektur</span>
+                {% endif %}
+                {% if invoice.invoice_type_label %}
+                <span class="badge bg-secondary bg-opacity-25 text-secondary fs-xs">{{ invoice.invoice_type_label }}</span>
+                {% endif %}
+                {% if invoice.stripe_invoice_id %}
+                <span class="badge bg-primary bg-opacity-10 text-primary fs-xs"><i class="bi bi-stripe me-1"></i>Stripe</span>
+                {% endif %}
                 {% if invoice.finalized_at %}
                 <span class="finalized-badge"><i class="bi bi-lock-fill"></i> GoBD-finalisiert</span>
                 {% endif %}
@@ -78,6 +89,23 @@
                         <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
                         <button type="submit" class="dropdown-item"><i class="bi bi-lock me-2"></i>GoBD-finalisieren</button>
                     </form>
+                </li>
+                {% endif %}
+                {# Gutschrift / Storno #}
+                {% if invoice.status not in ['cancelled'] and (invoice.type is not defined or invoice.type != 'credit_note') %}
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <a class="dropdown-item text-danger" href="/admin/invoices/{{ invoice.id }}/credit-note">
+                        <i class="bi bi-file-earmark-minus me-2"></i>Gutschrift / Storno erstellen
+                    </a>
+                </li>
+                {% endif %}
+                {# Mahnwesen #}
+                {% if invoice.status in ['open','overdue'] %}
+                <li>
+                    <a class="dropdown-item text-warning" href="/admin/invoices/{{ invoice.id }}/dunning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Mahnwesen
+                    </a>
                 </li>
                 {% endif %}
                 {# Löschen #}
@@ -199,7 +227,37 @@
                 {% endif %}
                 <div class="d-flex justify-content-between border-bottom py-2 fs-sm"><span class="text-muted">Erstellt</span><span class="text-muted">{{ invoice.created_at|date('d.m.Y H:i') }}</span></div>
                 {% if invoice.finalized_at %}
-                <div class="d-flex justify-content-between py-2 fs-sm"><span class="text-muted">Finalisiert</span><span class="text-success">{{ invoice.finalized_at|date('d.m.Y H:i') }}</span></div>
+                <div class="d-flex justify-content-between py-2 border-bottom fs-sm"><span class="text-muted">Finalisiert</span><span class="text-success">{{ invoice.finalized_at|date('d.m.Y H:i') }}</span></div>
+                {% endif %}
+                {% if invoice.billing_period_start and invoice.billing_period_end %}
+                <div class="d-flex justify-content-between py-2 border-bottom fs-sm">
+                    <span class="text-muted">Abrechnungszeitraum</span>
+                    <span class="fs-xs">{{ invoice.billing_period_start|date('d.m.Y') }} – {{ invoice.billing_period_end|date('d.m.Y') }}</span>
+                </div>
+                {% endif %}
+                {% if invoice.stripe_invoice_id %}
+                <div class="py-2 border-bottom fs-xs">
+                    <div class="text-muted mb-1">Stripe Invoice ID</div>
+                    <code class="fs-xs text-primary">{{ invoice.stripe_invoice_id }}</code>
+                </div>
+                {% endif %}
+                {% if invoice.stripe_subscription_id %}
+                <div class="py-2 border-bottom fs-xs">
+                    <div class="text-muted mb-1">Stripe Subscription</div>
+                    <code class="fs-xs text-muted">{{ invoice.stripe_subscription_id }}</code>
+                </div>
+                {% endif %}
+                {% if invoice.credit_note_for %}
+                <div class="d-flex justify-content-between py-2 border-bottom fs-sm">
+                    <span class="text-muted">Gutschrift für</span>
+                    <a href="/admin/invoices/{{ invoice.credit_note_for }}" class="text-warning fs-xs">Rechnung #{{ invoice.credit_note_for }}</a>
+                </div>
+                {% endif %}
+                {% if invoice.storno_reason %}
+                <div class="py-2 fs-sm">
+                    <div class="text-muted fs-xs mb-1">Storno-Grund</div>
+                    <div class="text-warning">{{ invoice.storno_reason }}</div>
+                </div>
                 {% endif %}
             </div>
         </div>

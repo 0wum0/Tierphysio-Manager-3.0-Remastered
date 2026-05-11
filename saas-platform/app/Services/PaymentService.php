@@ -6,6 +6,8 @@ namespace Saas\Services;
 
 use Saas\Core\Database;
 use Saas\Repositories\NotificationRepository;
+use Saas\Repositories\SaasInvoiceRepository;
+use Saas\Repositories\TenantRepository;
 
 /**
  * PaymentService — Stripe + PayPal integration
@@ -377,10 +379,10 @@ class PaymentService
 
     private function onStripePaymentSucceeded(array $event): void
     {
-        $invoice    = $event['data']['object'];
-        $customerId = $invoice['customer'] ?? null;
-        $amount     = ($invoice['amount_paid'] ?? 0) / 100;
-        $subId      = $invoice['subscription'] ?? null;
+        $stripeInvoice = $event['data']['object'];
+        $customerId    = $stripeInvoice['customer'] ?? null;
+        $amount        = ($stripeInvoice['amount_paid'] ?? 0) / 100;
+        $subId         = $stripeInvoice['subscription'] ?? null;
 
         if (!$customerId) return;
 
@@ -402,9 +404,20 @@ class PaymentService
         );
         $this->db->execute(
             "INSERT INTO payments (tenant_id, amount, currency, status, method, external_id, paid_at)
-             VALUES (?, ?, 'EUR', 'paid', 'stripe', ?, NOW())",
+             VALUES (?, ?, 'EUR', 'paid', 'stripe', ?, NOW())
+             ON DUPLICATE KEY UPDATE paid_at = paid_at",
             [$tenant['id'], $amount, $subId]
         );
+
+        // Auto-create SaaS invoice (idempotent)
+        try {
+            $invoiceRepo  = new SaasInvoiceRepository($this->db);
+            $tenantRepo   = new TenantRepository($this->db);
+            $billingService = new SaasInvoiceBillingService($this->db, $invoiceRepo, $tenantRepo, $this->notifRepo);
+            $billingService->createFromStripePayment($stripeInvoice);
+        } catch (\Throwable $e) {
+            error_log("[PaymentService] Auto-invoice creation failed: " . $e->getMessage());
+        }
 
         $this->notifRepo->create('payment', 'Stripe-Zahlung erfolgreich', "Tenant #{$tenant['id']}: {$amount} €");
     }

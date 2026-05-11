@@ -49,7 +49,8 @@
         <a href="/admin/invoices?status=open"     class="btn btn-sm {% if status == 'open' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Offen</a>
         <a href="/admin/invoices?status=paid"     class="btn btn-sm {% if status == 'paid' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Bezahlt</a>
         <a href="/admin/invoices?status=overdue"  class="btn btn-sm {% if status == 'overdue' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Überfällig</a>
-        <a href="/admin/invoices?status=draft"    class="btn btn-sm {% if status == 'draft' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Entwurf</a>
+        <a href="/admin/invoices?status=draft"      class="btn btn-sm {% if status == 'draft' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Entwurf</a>
+        <a href="/admin/invoices?status=cancelled"  class="btn btn-sm {% if status == 'cancelled' %}btn-primary{% else %}btn-outline-secondary{% endif %}">Storniert</a>
     </div>
     <div class="d-flex gap-2 align-items-center">
         <form method="GET" action="/admin/invoices" class="d-flex gap-2">
@@ -67,6 +68,26 @@
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
                 <li><a class="dropdown-item" href="/admin/invoices/tax-export"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Steuerexport (CSV)</a></li>
+                <li><a class="dropdown-item" href="/admin/invoices/datev-export"><i class="bi bi-file-earmark-arrow-down me-2"></i>DATEV Export</a></li>
+            </ul>
+        </div>
+        <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="bi bi-tools me-1"></i>Verwaltung
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <form method="POST" action="/admin/invoices/reconcile">
+                        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                        <button type="submit" class="dropdown-item"><i class="bi bi-arrow-repeat me-2"></i>Self-Healing (Rechnungen rekonstruieren)</button>
+                    </form>
+                </li>
+                <li>
+                    <form method="POST" action="/admin/invoices/run-dunning">
+                        <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+                        <button type="submit" class="dropdown-item"><i class="bi bi-exclamation-triangle me-2 text-warning"></i>Mahnlauf jetzt ausführen</button>
+                    </form>
+                </li>
             </ul>
         </div>
     </div>
@@ -85,6 +106,7 @@
                     <th>Fällig</th>
                     <th class="text-end">Betrag</th>
                     <th>Status</th>
+                    <th>Typ</th>
                     <th>Zahlungsart</th>
                     <th></th>
                 </tr>
@@ -131,6 +153,20 @@
                     </td>
                     <td>
                         <span class="badge-inv badge-inv-{{ inv.status }}">{{ statusLabel[inv.status] ?? inv.status }}</span>
+                        {% if inv.dunning_count > 0 %}
+                        <span class="badge bg-warning text-dark fs-xs ms-1" title="{{ inv.dunning_count }} Mahnung(en)">
+                            <i class="bi bi-exclamation-triangle"></i> {{ inv.dunning_count }}
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if inv.type is defined and inv.type == 'credit_note' %}
+                        <span class="badge bg-warning text-dark fs-xs">Gutschrift</span>
+                        {% elseif inv.stripe_invoice_id %}
+                        <span class="badge bg-primary bg-opacity-10 text-primary fs-xs">Stripe</span>
+                        {% else %}
+                        <span class="text-muted fs-xs">Manuell</span>
+                        {% endif %}
                     </td>
                     <td class="text-muted fs-sm">{{ methodLabel[inv.payment_method] ?? inv.payment_method }}</td>
                     <td class="text-end" onclick="event.stopPropagation()">
@@ -141,7 +177,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="9" class="text-center py-5 text-muted">
+                    <td colspan="10" class="text-center py-5 text-muted">
                         <svg class="sa-icon sa-icon-3x d-block mx-auto mb-2 opacity-25"><use href="/sa/icons/sprite.svg#file-text"></use></svg>
                         Keine Rechnungen gefunden.
                         <a href="/admin/invoices/create" class="d-block mt-2">Erste Rechnung erstellen →</a>

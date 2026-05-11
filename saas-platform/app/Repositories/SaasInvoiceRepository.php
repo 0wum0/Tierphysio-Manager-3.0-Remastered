@@ -24,6 +24,21 @@ class SaasInvoiceRepository
         );
     }
 
+    public function findByStripeInvoiceId(string $stripeId): array|false
+    {
+        return $this->db->fetch(
+            "SELECT * FROM saas_invoices WHERE stripe_invoice_id = ?", [$stripeId]
+        );
+    }
+
+    public function getCreditNotesForInvoice(int $originalId): array
+    {
+        return $this->db->fetchAll(
+            "SELECT * FROM saas_invoices WHERE credit_note_for = ? ORDER BY created_at ASC",
+            [$originalId]
+        );
+    }
+
     public function create(array $data): string
     {
         $cols = implode(', ', array_map(fn($k) => "`{$k}`", array_keys($data)));
@@ -91,7 +106,7 @@ class SaasInvoiceRepository
 
     // ── Liste & Suche ─────────────────────────────────────────────────────────
 
-    public function getPaginated(int $page, int $perPage, string $status = '', string $search = ''): array
+    public function getPaginated(int $page, int $perPage, string $status = '', string $search = '', string $type = ''): array
     {
         $conditions = [];
         $params     = [];
@@ -99,6 +114,11 @@ class SaasInvoiceRepository
         if ($status !== '') {
             $conditions[] = "i.status = ?";
             $params[]     = $status;
+        }
+
+        if ($type !== '') {
+            $conditions[] = "i.type = ?";
+            $params[]     = $type;
         }
 
         if ($search !== '') {
@@ -118,8 +138,9 @@ class SaasInvoiceRepository
             "SELECT i.*,
                     COALESCE(NULLIF(t.practice_name,''), t.owner_name) AS tenant_display,
                     t.email AS tenant_email,
-                    CASE WHEN i.status IN ('open','overdue') AND i.due_date < CURDATE()
-                         THEN DATEDIFF(CURDATE(), i.due_date) ELSE NULL END AS days_overdue
+                    CASE WHEN i.status IN ('open','overdue') AND i.due_date IS NOT NULL AND i.due_date < CURDATE()
+                         THEN DATEDIFF(CURDATE(), i.due_date) ELSE NULL END AS days_overdue,
+                    (SELECT COUNT(*) FROM saas_invoice_dunnings sid WHERE sid.invoice_id = i.id) AS dunning_count
              FROM saas_invoices i
              JOIN tenants t ON t.id = i.tenant_id
              {$where}
@@ -262,8 +283,7 @@ class SaasInvoiceRepository
                     t.email AS tenant_email, t.address, t.city, t.zip, t.country
              FROM saas_invoices i
              JOIN tenants t ON t.id = i.tenant_id
-             WHERE i.status IN ('paid','open','overdue')
-               AND i.issue_date BETWEEN ? AND ?
+             WHERE i.issue_date BETWEEN ? AND ?
              ORDER BY i.issue_date ASC, i.invoice_number ASC",
             [$dateFrom, $dateTo]
         );

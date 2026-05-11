@@ -1,0 +1,200 @@
+{% extends 'layouts/base.twig' %}
+
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="d-flex align-items-center gap-3">
+        <a href="/admin/invoices" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Zurück</a>
+        <div>
+            <h5 class="mb-0 fw-700">DATEV / Steuerexport</h5>
+            <div class="text-muted fs-sm">SaaS-Plattform Buchhaltungsexport</div>
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="/admin/invoices/tax-export?date_from={{ date_from }}&date_to={{ date_to }}&format=csv"
+           class="btn btn-sm btn-success">
+            <i class="bi bi-file-earmark-spreadsheet me-1"></i>Steuer-CSV
+        </a>
+        <a href="/admin/invoices/datev-export?date_from={{ date_from }}&date_to={{ date_to }}&format=datev"
+           class="btn btn-sm btn-primary">
+            <i class="bi bi-file-earmark-arrow-down me-1"></i>DATEV exportieren
+        </a>
+    </div>
+</div>
+
+{# ── Filter ────────────────────────────────────────────────────────── #}
+<div class="card mb-4">
+    <div class="card-header px-4 py-3 text-muted fs-xs fw-700 text-uppercase" style="letter-spacing:.08em;">
+        <i class="bi bi-funnel me-1"></i>Zeitraum &amp; Export
+    </div>
+    <div class="card-body px-4 py-3">
+        <form method="GET" action="/admin/invoices/datev-export" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">Von</label>
+                <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Bis</label>
+                <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+            </div>
+            <div class="col-md-6 d-flex gap-2 flex-wrap align-items-end">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Anzeigen
+                </button>
+                <a href="/admin/invoices/datev-export?date_from={{ 'now'|date('Y') }}-01-01&date_to={{ 'now'|date('Y-m-d') }}"
+                   class="btn btn-outline-secondary btn-sm">Dieses Jahr</a>
+                <a href="/admin/invoices/datev-export?date_from={{ 'now'|date('Y') }}-{{ 'now'|date('m') }}-01&date_to={{ 'now'|date('Y-m-d') }}"
+                   class="btn btn-outline-secondary btn-sm">Dieser Monat</a>
+                <a href="/admin/invoices/datev-export?date_from={{ date_from }}&date_to={{ date_to }}&format=datev"
+                   class="btn btn-primary btn-sm ms-auto">
+                    <i class="bi bi-download me-1"></i>DATEV CSV herunterladen
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# ── Steuer-Zusammenfassung ─────────────────────────────────────────── #}
+{% if summary %}
+<div class="card mb-4">
+    <div class="card-header px-4 py-3 d-flex justify-content-between align-items-center">
+        <span class="fw-600 fs-sm">
+            <i class="bi bi-calculator me-1 text-success"></i>Steuer-Zusammenfassung
+            <span class="text-muted fw-400">{{ date_from|date('d.m.Y') }} – {{ date_to|date('d.m.Y') }}</span>
+        </span>
+    </div>
+    <div class="table-responsive">
+        <table class="table mb-0">
+            <thead class="fs-xs text-muted">
+                <tr>
+                    <th class="px-4">Steuersatz</th>
+                    <th class="text-end">Anzahl Rechnungen</th>
+                    <th class="text-end">Nettobetrag</th>
+                    <th class="text-end">Steuerbetrag</th>
+                    <th class="text-end">Bruttobetrag</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in summary %}
+                <tr>
+                    <td class="px-4"><strong>{{ row.tax_rate|number_format(0,',','.') }} %</strong></td>
+                    <td class="text-end">{{ row.invoice_count }}</td>
+                    <td class="text-end">{{ row.total_net|number_format(2,',','.') }} €</td>
+                    <td class="text-end text-warning">{{ row.total_tax|number_format(2,',','.') }} €</td>
+                    <td class="text-end"><strong>{{ row.total_gross|number_format(2,',','.') }} €</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot class="fw-700 border-top">
+                <tr>
+                    <th class="px-4">Gesamt</th>
+                    <th class="text-end">{{ summary|map(r => r.invoice_count)|reduce((carry, v) => carry + v, 0) }}</th>
+                    <th class="text-end">{{ summary|map(r => r.total_net)|reduce((carry, v) => carry + v, 0)|number_format(2,',','.') }} €</th>
+                    <th class="text-end text-warning">{{ summary|map(r => r.total_tax)|reduce((carry, v) => carry + v, 0)|number_format(2,',','.') }} €</th>
+                    <th class="text-end text-success">{{ summary|map(r => r.total_gross)|reduce((carry, v) => carry + v, 0)|number_format(2,',','.') }} €</th>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{# ── DATEV Info-Box ─────────────────────────────────────────────────── #}
+<div class="alert alert-info d-flex gap-2 mb-4 fs-sm">
+    <i class="bi bi-info-circle-fill flex-shrink-0 mt-1"></i>
+    <div>
+        <strong>DATEV-Export</strong> erzeugt eine Buchungsstapel-CSV im DATEV-Format (EXTF 510/21).
+        Der Export enthält alle bezahlten Rechnungen und Gutschriften im gewählten Zeitraum.
+        Konto <strong>8400</strong> (Umsatzerlöse) / Gegenkonto Kundennummer.
+        Für den Import in DATEV Unternehmen Online oder Kanzlei-Rechnungswesen geeignet.
+    </div>
+</div>
+
+{# ── Einzelne Rechnungen ────────────────────────────────────────────── #}
+<div class="card">
+    <div class="card-header px-4 py-3 d-flex justify-content-between align-items-center">
+        <span class="text-muted fs-sm">{{ invoices|length }} Rechnung(en) im Zeitraum</span>
+        <div class="d-flex gap-2">
+            <a href="/admin/invoices/tax-export?date_from={{ date_from }}&date_to={{ date_to }}&format=csv"
+               class="btn btn-sm btn-outline-success">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i>Steuer-CSV
+            </a>
+            <a href="/admin/invoices/datev-export?date_from={{ date_from }}&date_to={{ date_to }}&format=datev"
+               class="btn btn-sm btn-primary">
+                <i class="bi bi-download me-1"></i>DATEV CSV
+            </a>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover table-sm mb-0">
+            <thead class="fs-xs text-muted">
+                <tr>
+                    <th class="px-4">Rechnungsnr.</th>
+                    <th>Datum</th>
+                    <th>Typ</th>
+                    <th>Kunde</th>
+                    <th>Status</th>
+                    <th class="text-end">Netto (€)</th>
+                    <th class="text-end">MwSt. (€)</th>
+                    <th class="text-end">Brutto (€)</th>
+                    <th>Bezahlt am</th>
+                    <th>Stripe</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in invoices %}
+                {% set statusLabels = {'draft':'Entwurf','open':'Offen','paid':'Bezahlt','overdue':'Überfällig','cancelled':'Storniert'} %}
+                {% set typeLabels = {'invoice':'Rechnung','credit_note':'Gutschrift','correction':'Korrektur'} %}
+                <tr>
+                    <td class="px-4"><strong class="fs-sm">{{ inv.invoice_number }}</strong></td>
+                    <td class="fs-sm text-nowrap">{{ inv.issue_date|date('d.m.Y') }}</td>
+                    <td>
+                        <span class="badge {% if inv.type == 'credit_note' %}bg-warning text-dark{% else %}bg-primary bg-opacity-10 text-primary{% endif %} fs-xs">
+                            {{ typeLabels[inv.type] ?? inv.type }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="fs-sm">{{ inv.tenant_display }}</div>
+                        <div class="text-muted fs-xs">{{ inv.tenant_email }}</div>
+                    </td>
+                    <td><span class="badge-inv badge-inv-{{ inv.status }}">{{ statusLabels[inv.status] ?? inv.status }}</span></td>
+                    <td class="text-end fs-sm {% if inv.type == 'credit_note' %}text-warning{% endif %}">
+                        {{ inv.total_net|number_format(2,',','.') }}
+                    </td>
+                    <td class="text-end text-warning fs-sm">{{ inv.total_tax|number_format(2,',','.') }}</td>
+                    <td class="text-end fw-600 fs-sm {% if inv.type == 'credit_note' %}text-warning{% else %}text-success{% endif %}">
+                        {{ inv.total_gross|number_format(2,',','.') }}
+                    </td>
+                    <td class="text-nowrap fs-sm">
+                        {% if inv.paid_at %}
+                            <span class="text-success">{{ inv.paid_at|date('d.m.Y') }}</span>
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="fs-xs text-muted">
+                        {% if inv.stripe_invoice_id %}
+                            <code class="fs-xs">{{ inv.stripe_invoice_id|slice(0,12) }}…</code>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        <a href="/admin/invoices/{{ inv.id }}" class="btn btn-sm btn-outline-secondary">
+                            <svg class="sa-icon"><use href="/sa/icons/sprite.svg#eye"></use></svg>
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="11" class="text-center py-5 text-muted">
+                        <svg class="sa-icon sa-icon-3x d-block mx-auto mb-2 opacity-25"><use href="/sa/icons/sprite.svg#search"></use></svg>
+                        Keine Rechnungen im gewählten Zeitraum.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
