@@ -293,6 +293,27 @@ Vor jedem Commit prüfen:
 
 ---
 
+## !! MIGRATIONS-PFLICHT-REGEL (Mai 2026) !!
+
+**Niemals bestehende Migrationen bearbeiten wenn Tenants bereits auf höherem Stand sind.**
+
+```
+FALSCH: Tenant auf v61, Bug-Fix in v054 eingetragen → wird NIEMALS ausgeführt → wirkungslos!
+RICHTIG: Neue Repair-Migration v062 erstellen → wird ausgeführt → Fix greift!
+```
+
+**Versionstracking:** `{prefix}migrations` Tabelle — `MAX(version)` = aktueller Stand.
+Nur Migrationen mit `version > MAX(version)` werden ausgeführt.
+
+**Idempotenz:** Normales `ADD COLUMN` (kein `IF NOT EXISTS`) — MigrationService toleriert
+Fehler 1060 (Duplicate column) + 1061 (Duplicate key) → mehrfach ausführbar ohne Crash.
+
+**KEIN `ADD COLUMN IF NOT EXISTS`** — MySQL 8.0.3+ only, nicht universell!
+
+→ Vollständige Doku: `claude-obsidian/01-architecture/migrations.md`
+
+---
+
 ## Neue Features – Checkliste
 
 ```
@@ -302,6 +323,7 @@ Vor jedem Commit prüfen:
 [ ] active_nav setzen für Sidebar-Highlighting
 [ ] CSRF bei POST-Formularen
 [ ] Bei neuen Tabellen: CREATE TABLE IF NOT EXISTS (self-healing)
+[ ] Bei neuen Spalten für bestehende Tenants: neue Repair-Migration erstellen (nicht alte bearbeiten!)
 [ ] Bei SaaS-Services: prefix als Constructor-Parameter, nicht global
 [ ] Fehler-Handling: try/catch in Services, safe*-Methoden in Background-Tasks
 ```

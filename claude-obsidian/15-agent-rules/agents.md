@@ -20,6 +20,36 @@ Task erhalten → Brain lesen → Änderung umsetzen → Brain aktualisieren →
 - Brain nach jeder Änderung verpflichtend aktualisieren.
 - Keine Annahmen ohne Quellbezug.
 
+## !! MIGRATION-PFLICHT-REGEL !!
+
+**Niemals alte Migrationen bearbeiten wenn Tenants bereits auf höherem Stand sind.**
+
+### Warum:
+- `MigrationService` führt nur Migrationen aus, deren `version > MAX({prefix}migrations.version)`
+- Tenant auf v61 → v054 wird NIE ausgeführt → Fix bleibt wirkungslos
+- Dies ist ein stiller Fehler — kein Crash, kein Log, einfach wirkungslos
+
+### Korrekte Vorgehensweise:
+1. Prüfe: Was ist der höchste Migrations-Stand im Repo? (`ls migrations/ | tail`)
+2. Prüfe: Was ist der höchste Stand der Tenants? (SaaS Admin → Versions-Check)
+3. Wenn Fix für `version <= Tenant-Stand` nötig: **neue Repair-Migration** erstellen
+4. Neue Migration: nächst höhere Nummer (z.B. Repo hat 054, erstelle 055)
+5. Repair-Migration muss idempotent sein (normales ADD COLUMN — Fehler 1060 toleriert)
+6. KEIN `ADD COLUMN IF NOT EXISTS` — das ist MySQL 8.0.3+ only!
+
+### Self-Healing Pattern:
+```sql
+-- Idempotent: MigrationService toleriert 1060 (Duplicate column) + 1061 (Duplicate key)
+ALTER TABLE `my_table` ADD COLUMN `new_col` VARCHAR(100) NULL DEFAULT NULL;
+ALTER TABLE `my_table` ADD INDEX `idx_new_col` (`new_col`);
+-- Tabellen: immer IF NOT EXISTS (universell kompatibel)
+CREATE TABLE IF NOT EXISTS `my_table` (...);
+-- Daten: INSERT IGNORE oder ON DUPLICATE KEY UPDATE
+INSERT IGNORE INTO `settings` (`key`, `value`) VALUES ('key', 'val');
+```
+
+→ Details: [[01-architecture/migrations]]
+
 ## Agent-spezifisch
 - **Claude**: vor Ausführung immer [[00-start/CRITICAL-RULES]] prüfen.
 - **Codex**: nach Commit zwingend Brain-Diff prüfen.
