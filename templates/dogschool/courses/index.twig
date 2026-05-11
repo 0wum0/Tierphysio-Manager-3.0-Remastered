@@ -7,10 +7,10 @@
         <h1 class="page-title">Kurse</h1>
         <p class="page-subtitle">{{ pagination.total }} {% if pagination.total == 1 %}Kurs{% else %}Kurse{% endif %}</p>
     </div>
-    <a href="/kurse/neu" class="btn btn-primary">
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#ci-modal-new-course">
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         Neuer Kurs
-    </a>
+    </button>
 </div>
 
 <div class="card mb-3">
@@ -46,7 +46,7 @@
                 {% if filter_q or filter_status %}Keine Kurse passen zum Filter.{% else %}Noch keine Kurse angelegt.{% endif %}
             </div>
             <div style="font-size:0.85rem;opacity:0.7;margin-bottom:16px;">Lege deinen ersten Kurs an, um Teilnehmer einzuschreiben.</div>
-            <a href="/kurse/neu" class="btn btn-primary btn-sm">Neuen Kurs anlegen</a>
+            <a href="/kurse/neu" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#ci-modal-new-course">Neuen Kurs anlegen</a>
         </div>
     </div>
 {% else %}
@@ -121,4 +121,113 @@
     </nav>
     {% endif %}
 {% endif %}
+{# ── Modal: Neuer Kurs ── #}
+<div class="modal fade" id="ci-modal-new-course" tabindex="-1" aria-labelledby="ci-modal-new-course-label" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ci-modal-new-course-label">Neuen Kurs erstellen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            </div>
+            <form id="ci-form-new-course" action="/kurse" method="POST" novalidate>
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <div class="modal-body">
+                    <div id="ci-new-course-alert" class="alert alert-danger d-none mb-3"></div>
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Kursname <span style="color:#ef4444;">*</span></label>
+                            <input type="text" name="name" required class="form-control" placeholder="z.B. Welpenkurs Gruppe A">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="draft">Entwurf</option>
+                                <option value="active" selected>Aktiv</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Startdatum</label>
+                            <input type="date" name="start_date" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Uhrzeit</label>
+                            <input type="time" name="start_time" value="18:00" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Max. Teilnehmer</label>
+                            <input type="number" name="max_participants" value="8" min="1" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ort / Trainingsplatz</label>
+                            <input type="text" name="location" class="form-control" placeholder="Trainingsgetände">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Kursgebühr (EUR)</label>
+                            <input type="number" step="0.01" min="0" name="price_eur" value="0.00" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a href="/kurse/neu" class="btn btn-link btn-sm me-auto" style="font-size:0.8rem;">Alle Felder anzeigen →</a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary" id="ci-btn-new-course">
+                        <span class="ci-btn-text">Kurs anlegen</span>
+                        <span class="ci-btn-spin spinner-border spinner-border-sm d-none" role="status"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+    const form  = document.getElementById('ci-form-new-course');
+    const alert = document.getElementById('ci-new-course-alert');
+    const btn   = document.getElementById('ci-btn-new-course');
+    if (!form) return;
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        alert.classList.add('d-none');
+        const btnText = btn.querySelector('.ci-btn-text');
+        const btnSpin = btn.querySelector('.ci-btn-spin');
+        btn.disabled  = true;
+        btnText.classList.add('d-none');
+        btnSpin.classList.remove('d-none');
+
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+            const res = await fetch('/kurse', {
+                method:  'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Token': csrfToken },
+                body:    new URLSearchParams(new FormData(form)),
+            });
+            const data = await res.json();
+            if (data.success) {
+                const modalObj = bootstrap.Modal.getInstance(document.getElementById('ci-modal-new-course'));
+                if (modalObj) modalObj.hide();
+                window.location.href = data.redirect ?? '/kurse';
+            } else {
+                alert.textContent = data.error ?? 'Fehler beim Speichern.';
+                alert.classList.remove('d-none');
+            }
+        } catch (err) {
+            console.error('[CourseModal]', err);
+            alert.textContent = 'Verbindungsfehler.';
+            alert.classList.remove('d-none');
+        } finally {
+            btn.disabled = false;
+            btnText.classList.remove('d-none');
+            btnSpin.classList.add('d-none');
+        }
+    });
+
+    document.getElementById('ci-modal-new-course').addEventListener('hidden.bs.modal', function () {
+        form.reset();
+        alert.classList.add('d-none');
+    });
+})();
+</script>
 {% endblock %}

@@ -50,12 +50,11 @@ class MessagingOwnerController extends Controller
         'text/plain',
         'text/csv',
         'application/csv',
+        // Bilder
         'image/jpeg',
         'image/png',
         'image/gif',
         'image/webp',
-        'image/avif',
-        'image/bmp',
     ];
 
     private function formatWhatsApp(string $text): string
@@ -251,7 +250,7 @@ class MessagingOwnerController extends Controller
             }
             $mime = mime_content_type($file['tmp_name']) ?: '';
             if (!in_array($mime, self::ALLOWED_MIME, true)) {
-                $this->json(['error' => 'Dateityp nicht erlaubt (PDF, Word, Excel, TXT, CSV).'], 422);
+                $this->json(['error' => 'Dateityp nicht erlaubt (PDF, Word, Excel, TXT, CSV, JPG, PNG, GIF, WebP).'], 422);
                 return;
             }
             $dir = tenant_storage_path('portal-attachments/' . $id);
@@ -317,13 +316,11 @@ class MessagingOwnerController extends Controller
         }
 
         $name = $msg['attachment_name'] ?: basename($fullPath);
-        $mime = mime_content_type($fullPath) ?: 'application/octet-stream';
+        $mime = @mime_content_type($fullPath) ?: 'application/octet-stream';
+        $isImage = in_array($mime, ['image/jpeg', 'image/png', 'image/gif', 'image/webp'], true);
+        $disposition = $isImage ? 'inline' : 'attachment';
         header('Content-Type: ' . $mime);
-        if (!str_starts_with($mime, 'image/')) {
-            header('Content-Disposition: attachment; filename="' . addslashes($name) . '"');
-        } else {
-            header('Content-Disposition: inline; filename="' . addslashes($name) . '"');
-        }
+        header('Content-Disposition: ' . $disposition . '; filename="' . addslashes($name) . '"');
         header('Content-Length: ' . filesize($fullPath));
         header('Cache-Control: private, max-age=86400');
         readfile($fullPath);

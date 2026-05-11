@@ -104,11 +104,17 @@ class PackageController extends Controller
 
         $data = $this->collectPackageData();
         if ($data['name'] === '') {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'error' => 'Name darf nicht leer sein.'], 422);
+            }
             $this->flash('error', 'Name darf nicht leer sein.');
             $this->redirect('/pakete/neu');
             return;
         }
         $id = $this->packages->create($data);
+        if ($this->isAjax()) {
+            $this->json(['success' => true, 'id' => $id, 'redirect' => '/pakete']);
+        }
         $this->flash('success', 'Paket angelegt.');
         $this->redirect('/pakete');
     }
@@ -120,11 +126,17 @@ class PackageController extends Controller
 
         $id = (int)($params['id'] ?? 0);
         if (!$this->packages->findById($id)) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'error' => 'Paket nicht gefunden.'], 404);
+            }
             $this->flash('error', 'Paket nicht gefunden.');
             $this->redirect('/pakete');
             return;
         }
         $this->packages->update($id, $this->collectPackageData());
+        if ($this->isAjax()) {
+            $this->json(['success' => true, 'id' => $id, 'redirect' => '/pakete']);
+        }
         $this->flash('success', 'Paket aktualisiert.');
         $this->redirect('/pakete');
     }

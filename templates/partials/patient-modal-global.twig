@@ -2954,6 +2954,141 @@ document.addEventListener('click', function(ev) {
     }
 });
 
+/* ═══════════════════════════════════════════════════════
+   BEFUND SPECIES CARD — öffnet Anatomie INLINE im Modal
+   Kein Seitenwechsel. Species → Anatomie in #pd-befunde-list
+═══════════════════════════════════════════════════════ */
+document.addEventListener('click', function(ev) {
+    var card = ev.target.closest('.befund-species-card');
+    if (!card) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    var species   = card.getAttribute('data-species') || 'dog';
+    var patientId = window.pdAktPatientId || '';
+    if (!patientId) return;
+
+    // Species-Modal schließen
+    var speciesModal = document.getElementById('modal-pd-befund-species');
+    if (speciesModal) {
+        try { var m = bootstrap.Modal.getInstance(speciesModal); if (m) m.hide(); } catch (e) {}
+    }
+
+    openAnatomyInModal(patientId, species);
+});
+
+function openAnatomyInModal(patientId, species) {
+    var container = document.getElementById('pd-befunde-list');
+    if (!container) return;
+
+    // Anatomy-HTML inline aufbauen
+    container.innerHTML = [
+        '<div id="befund-anatomy" style="padding:.5rem 0;">',
+        '  <input type="hidden" name="anatomy_species" value="' + escapeHtmlPd(species) + '">',
+        '  <input type="hidden" name="anatomy_markers" value="[]">',
+        '  <input type="hidden" name="anatomy_drawings" value="[]">',
+        '  <input type="number" name="schmerz_nrs" style="display:none;" min="0" max="10" value="">',
+        '  <div class="anatomy-toolbar"></div>',
+        '  <div class="anatomy-wrap"><div class="anatomy-stage"></div></div>',
+        '  <div class="anatomy-legend"></div>',
+        '  <h6 class="fw-700 mt-3 mb-1 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.05em;">Schmerzskala NRS (0\u201310)</h6>',
+        '  <div class="anatomy-nrs-scale"></div>',
+        '  <h6 class="fw-700 mt-3 mb-1 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.05em;">Markierungen</h6>',
+        '  <div class="anatomy-marker-list"></div>',
+        '  <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;">',
+        '    <button type="button" class="btn btn-primary btn-sm" id="pd-befund-inline-save">Befund speichern</button>',
+        '    <button type="button" class="btn btn-outline-secondary btn-sm" id="pd-befund-inline-cancel">Abbrechen</button>',
+        '  </div>',
+        '</div>',
+    ].join('');
+
+    // CSS laden (einmalig)
+    if (!document.querySelector('link[data-befund-anatomy]')) {
+        var lnk = document.createElement('link');
+        lnk.rel = 'stylesheet';
+        lnk.href = '/assets/css/befund-anatomy.css';
+        lnk.setAttribute('data-befund-anatomy', '1');
+        document.head.appendChild(lnk);
+        // Stage-Sizing (normalerweise in form.twig inline — hier nachladen)
+        var stg = document.createElement('style');
+        stg.setAttribute('data-befund-anatomy', '1');
+        stg.textContent = '#befund-anatomy .anatomy-stage{position:relative;width:100%;padding-top:60%;background:#e8edf2;border-radius:10px;border:1px solid #c0cdd8;overflow:hidden;cursor:crosshair;}' +
+            '[data-bs-theme="dark"] #befund-anatomy .anatomy-stage,body.dark #befund-anatomy .anatomy-stage{background:#1b2230;border-color:#2d3a4a;}' +
+            '#befund-anatomy .anatomy-stage svg{position:absolute;inset:0;width:100%;height:100%;}' +
+            '#befund-anatomy .anatomy-stage svg.anatomy-silhouette{z-index:1;pointer-events:none;opacity:.95;}' +
+            '#befund-anatomy .anatomy-stage svg.anatomy-silhouette path.anatomy-region{fill:#9fb1c2;fill-opacity:.55;stroke:#5b738a;stroke-width:.7;}' +
+            '#befund-anatomy .anatomy-stage svg.anatomy-overlay{z-index:2;}' +
+            '#befund-anatomy .anatomy-side-picker{position:absolute;z-index:10;transform:translate(-50%,-110%);background:#fff;border:1px solid #c0cdd8;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18);padding:.4rem .5rem;min-width:160px;}' +
+            '[data-bs-theme="dark"] #befund-anatomy .anatomy-side-picker{background:#1b2230;border-color:#2d3a4a;color:#e2e8f0;}' +
+            '#befund-anatomy .anatomy-side-picker-label{font-size:.72rem;font-weight:600;text-align:center;margin-bottom:.35rem;text-transform:uppercase;letter-spacing:.03em;color:#555;}' +
+            '#befund-anatomy .anatomy-side-picker-buttons{display:flex;gap:.25rem;}' +
+            '#befund-anatomy .anatomy-side-picker-buttons button{flex:1;padding:.35rem .5rem;font-size:.78rem;border:1px solid #dee2e6;background:transparent;border-radius:5px;cursor:pointer;color:inherit;}' +
+            '#befund-anatomy .anatomy-side-picker-buttons button:hover{background:#2563eb;color:#fff;border-color:#2563eb;}';
+        document.head.appendChild(stg);
+    }
+
+    // JS laden und Anatomie initialisieren
+    if (window.befundAnatomyInit) {
+        // Bereits geladen — direkt auf neuem Container init
+        window.befundAnatomyInit(document.getElementById('befund-anatomy'));
+    } else if (!document.querySelector('script[data-befund-anatomy]')) {
+        // Script erstmalig laden — boot() init automatisch sobald geladen
+        var scr = document.createElement('script');
+        scr.src = '/assets/js/befund-anatomy.js';
+        scr.setAttribute('data-befund-anatomy', '1');
+        document.head.appendChild(scr);
+    }
+    // Lädt gerade: boot() übernimmt wenn DOM+Script bereit
+
+    // Speichern
+    var saveBtn = document.getElementById('pd-befund-inline-save');
+    if (saveBtn) saveBtn.addEventListener('click', function() { saveBefundInline(patientId); });
+
+    // Abbrechen → zurück zur Liste
+    var cancelBtn = document.getElementById('pd-befund-inline-cancel');
+    if (cancelBtn) cancelBtn.addEventListener('click', function() {
+        _befundeLoaded = false;
+        loadBefundboegen(patientId);
+    });
+}
+
+function saveBefundInline(patientId) {
+    var root = document.getElementById('befund-anatomy');
+    if (!root) return;
+
+    var btn = document.getElementById('pd-befund-inline-save');
+    if (btn) { btn.disabled = true; btn.textContent = 'Speichern\u2026'; }
+
+    var csrfToken = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+    var params = new URLSearchParams({
+        _csrf_token:      csrfToken,
+        anatomy_species:  (root.querySelector('[name="anatomy_species"]') || {}).value  || 'dog',
+        anatomy_markers:  (root.querySelector('[name="anatomy_markers"]') || {}).value  || '[]',
+        anatomy_drawings: (root.querySelector('[name="anatomy_drawings"]') || {}).value || '[]',
+        schmerz_nrs:      (root.querySelector('[name="schmerz_nrs"]') || {}).value      || '',
+    });
+
+    fetch('/patienten/' + patientId + '/befunde/speichern', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+        body:    params.toString(),
+    })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            _befundeLoaded = false;
+            loadBefundboegen(patientId);
+        } else {
+            throw new Error(data.error || 'Fehler');
+        }
+    })
+    .catch(function(e) {
+        console.error('[Befund inline save]', e);
+        if (btn) { btn.disabled = false; btn.textContent = 'Befund speichern'; }
+        alert('Befund konnte nicht gespeichert werden.');
+    });
+}
+
 function resolveSpeciesSuggestion(raw) {
     var s = String(raw || '').toLowerCase();
     if (!s) return 'dog';

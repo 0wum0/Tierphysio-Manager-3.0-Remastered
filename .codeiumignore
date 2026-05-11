@@ -30,8 +30,13 @@ dist/webfonts/
 dist/icons/
 
 # ── Storage & Uploads ─────────────────────────────────────────
-storage/
-storage/**
+# Hinweis: storage/themes/ ist NICHT ausgeschlossen, damit das aktive Theme-
+# Layout (storage/themes/smart-tierphysio/layout.twig) indexiert und editiert
+# werden kann. Logs/Cache/Uploads bleiben ausgeschlossen.
+storage/logs/
+storage/cache/
+storage/uploads/
+storage/tenant_storage/
 saas-platform/storage/
 
 # ── Logs ──────────────────────────────────────────────────────

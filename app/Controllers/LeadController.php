@@ -103,7 +103,10 @@ class LeadController extends Controller
 
         $data = $this->collectData();
         $data['created_at'] = date('Y-m-d H:i:s');
-        $this->leads->create($data);
+        $id = (int)$this->leads->create($data);
+        if ($this->isAjax()) {
+            $this->json(['success' => true, 'id' => $id, 'redirect' => '/interessenten']);
+        }
         $this->flash('success', 'Interessent angelegt.');
         $this->redirect('/interessenten');
     }
@@ -115,11 +118,17 @@ class LeadController extends Controller
 
         $id = (int)($params['id'] ?? 0);
         if (!$this->leads->findById($id)) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'error' => 'Nicht gefunden.'], 404);
+            }
             $this->flash('error', 'Nicht gefunden.');
             $this->redirect('/interessenten');
             return;
         }
         $this->leads->update($id, $this->collectData());
+        if ($this->isAjax()) {
+            $this->json(['success' => true, 'id' => $id, 'redirect' => '/interessenten/' . $id]);
+        }
         $this->flash('success', 'Gespeichert.');
         $this->redirect('/interessenten/' . $id);
     }

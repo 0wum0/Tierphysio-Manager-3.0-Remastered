@@ -7,7 +7,7 @@
         <h1 class="page-title">Interessenten</h1>
         <p class="page-subtitle">{{ pagination.total }} Einträge</p>
     </div>
-    <a href="/interessenten/neu" class="btn btn-primary">+ Neuer Interessent</a>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#li-modal-new-lead">+ Neuer Interessent</button>
 </div>
 
 <div class="row g-3 mb-3">
@@ -63,4 +63,119 @@
         </table>
     </div>
 </div>
+{# ── Modal: Neuer Interessent ── #}
+<div class="modal fade" id="li-modal-new-lead" tabindex="-1" aria-labelledby="li-modal-new-lead-label" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="li-modal-new-lead-label">Interessent erfassen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            </div>
+            <form id="li-form-new-lead" action="/interessenten" method="POST" novalidate>
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <div class="modal-body">
+                    <div id="li-new-lead-alert" class="alert alert-danger d-none mb-3"></div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small">Vorname</label>
+                            <input type="text" name="first_name" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Nachname</label>
+                            <input type="text" name="last_name" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">E-Mail</label>
+                            <input type="email" name="email" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Telefon</label>
+                            <input type="text" name="phone" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Hundename</label>
+                            <input type="text" name="dog_name" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Rasse</label>
+                            <input type="text" name="dog_breed" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Interesse an</label>
+                            <input type="text" name="interest" class="form-control form-control-sm" placeholder="z.B. Welpenkurs">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Quelle</label>
+                            <input type="text" name="source" class="form-control form-control-sm" placeholder="Google, Instagram, Empfehlung …">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small">Anliegen / Notizen</label>
+                            <textarea name="notes" rows="2" class="form-control form-control-sm"></textarea>
+                        </div>
+                        <input type="hidden" name="status" value="new">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a href="/interessenten/neu" class="btn btn-link btn-sm me-auto" style="font-size:0.8rem;">Alle Felder anzeigen →</a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary" id="li-btn-new-lead">
+                        <span class="li-btn-text">Interessent anlegen</span>
+                        <span class="li-btn-spin spinner-border spinner-border-sm d-none" role="status"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+    const form  = document.getElementById('li-form-new-lead');
+    const alert = document.getElementById('li-new-lead-alert');
+    const btn   = document.getElementById('li-btn-new-lead');
+    if (!form) return;
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        alert.classList.add('d-none');
+        const btnText = btn.querySelector('.li-btn-text');
+        const btnSpin = btn.querySelector('.li-btn-spin');
+        btn.disabled  = true;
+        btnText.classList.add('d-none');
+        btnSpin.classList.remove('d-none');
+
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+            const res = await fetch('/interessenten', {
+                method:  'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Token': csrfToken },
+                body:    new URLSearchParams(new FormData(form)),
+            });
+            const data = await res.json();
+            if (data.success) {
+                const modalObj = bootstrap.Modal.getInstance(document.getElementById('li-modal-new-lead'));
+                if (modalObj) modalObj.hide();
+                window.location.reload();
+            } else {
+                alert.textContent = data.error ?? 'Fehler beim Speichern.';
+                alert.classList.remove('d-none');
+            }
+        } catch (err) {
+            console.error('[LeadModal]', err);
+            alert.textContent = 'Verbindungsfehler.';
+            alert.classList.remove('d-none');
+        } finally {
+            btn.disabled = false;
+            btnText.classList.remove('d-none');
+            btnSpin.classList.add('d-none');
+        }
+    });
+
+    document.getElementById('li-modal-new-lead').addEventListener('hidden.bs.modal', function () {
+        form.reset();
+        alert.classList.add('d-none');
+    });
+})();
+</script>
 {% endblock %}
