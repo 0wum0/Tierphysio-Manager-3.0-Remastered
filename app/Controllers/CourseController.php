@@ -167,6 +167,9 @@ class CourseController extends Controller
 
         $data = $this->collectCourseData();
         if ($data['name'] === '') {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'error' => 'Kursname darf nicht leer sein.'], 422);
+            }
             $this->flash('error', 'Kursname darf nicht leer sein.');
             $this->redirect('/kurse/neu');
             return;
@@ -178,6 +181,9 @@ class CourseController extends Controller
             $this->courses->generateSessions($id);
         }
 
+        if ($this->isAjax()) {
+            $this->json(['success' => true, 'id' => $id, 'redirect' => "/kurse/{$id}"]);
+        }
         $this->flash('success', 'Kurs angelegt.');
         $this->redirect("/kurse/{$id}");
     }
@@ -190,6 +196,9 @@ class CourseController extends Controller
         $id = (int)($params['id'] ?? 0);
         $c  = $this->courses->findById($id);
         if (!$c) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'error' => 'Kurs nicht gefunden.'], 404);
+            }
             $this->flash('error', 'Kurs nicht gefunden.');
             $this->redirect('/kurse');
             return;
@@ -199,6 +208,9 @@ class CourseController extends Controller
         $this->courses->update($id, $data);
         $this->courses->recalculateStatus($id);
 
+        if ($this->isAjax()) {
+            $this->json(['success' => true, 'id' => $id, 'redirect' => "/kurse/{$id}"]);
+        }
         $this->flash('success', 'Kurs aktualisiert.');
         $this->redirect("/kurse/{$id}");
     }

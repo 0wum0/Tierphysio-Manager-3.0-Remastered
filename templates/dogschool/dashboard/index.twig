@@ -23,13 +23,19 @@
     </div>
     <div class="d-flex gap-2 flex-wrap">
         {% if features.dogschool_courses ?? false %}
-        <a href="/kurse/neu" class="btn btn-primary btn-sm">+ Neuer Kurs</a>
+        <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#ds-modal-new-course">
+            + Neuer Kurs
+        </button>
         {% endif %}
         {% if features.dogschool_leads ?? false %}
-        <a href="/interessenten/neu" class="btn btn-outline-primary btn-sm">+ Interessent</a>
+        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#ds-modal-new-lead">
+            + Interessent
+        </button>
         {% endif %}
         {% if features.dogschool_packages ?? false %}
-        <a href="/pakete" class="btn btn-outline-primary btn-sm">Paket verkaufen</a>
+        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#ds-modal-sell-package">
+            Paket verkaufen
+        </button>
         {% endif %}
     </div>
 </div>
@@ -308,4 +314,244 @@
     </div>
     {% endif %}
 </div>
+
+{# ══════════════════════════════════════════════════════════
+   MODALE: Neuer Kurs / Neuer Interessent / Paket verkaufen
+   ══════════════════════════════════════════════════════════ #}
+
+{# ── Modal: Neuer Kurs ── #}
+{% if features.dogschool_courses ?? false %}
+<div class="modal fade" id="ds-modal-new-course" tabindex="-1" aria-labelledby="ds-modal-new-course-label" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ds-modal-new-course-label">Neuen Kurs erstellen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            </div>
+            <form id="ds-form-new-course" action="/kurse" method="POST" novalidate>
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <div class="modal-body">
+                    <div id="ds-new-course-alert" class="alert alert-danger d-none mb-3"></div>
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Kursname <span style="color:#ef4444;">*</span></label>
+                            <input type="text" name="name" required class="form-control" placeholder="z.B. Welpenkurs Gruppe A">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Status</label>
+                            <select name="status" class="form-select">
+                                <option value="draft">Entwurf</option>
+                                <option value="active" selected>Aktiv</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Startdatum</label>
+                            <input type="date" name="start_date" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Uhrzeit</label>
+                            <input type="time" name="start_time" value="18:00" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Max. Teilnehmer</label>
+                            <input type="number" name="max_participants" value="8" min="1" class="form-control">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Ort / Trainingsplatz</label>
+                            <input type="text" name="location" class="form-control" placeholder="Trainingsgelände">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Kursgebühr (EUR)</label>
+                            <input type="number" step="0.01" min="0" name="price_eur" value="0.00" class="form-control">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a href="/kurse/neu" class="btn btn-link btn-sm me-auto" style="font-size:0.8rem;">Alle Felder anzeigen →</a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary" id="ds-btn-new-course">
+                        <span class="ds-btn-text">Kurs anlegen</span>
+                        <span class="ds-btn-spin spinner-border spinner-border-sm d-none" role="status"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{# ── Modal: Neuer Interessent ── #}
+{% if features.dogschool_leads ?? false %}
+<div class="modal fade" id="ds-modal-new-lead" tabindex="-1" aria-labelledby="ds-modal-new-lead-label" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ds-modal-new-lead-label">Interessent erfassen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            </div>
+            <form id="ds-form-new-lead" action="/interessenten" method="POST" novalidate>
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <div class="modal-body">
+                    <div id="ds-new-lead-alert" class="alert alert-danger d-none mb-3"></div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small">Vorname</label>
+                            <input type="text" name="first_name" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Nachname</label>
+                            <input type="text" name="last_name" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">E-Mail</label>
+                            <input type="email" name="email" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Telefon</label>
+                            <input type="text" name="phone" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Hundename</label>
+                            <input type="text" name="dog_name" class="form-control form-control-sm">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Interesse an</label>
+                            <input type="text" name="interest" class="form-control form-control-sm" placeholder="z.B. Welpenkurs">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small">Notizen</label>
+                            <textarea name="notes" rows="2" class="form-control form-control-sm"></textarea>
+                        </div>
+                        <input type="hidden" name="status" value="new">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a href="/interessenten/neu" class="btn btn-link btn-sm me-auto" style="font-size:0.8rem;">Alle Felder anzeigen →</a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary" id="ds-btn-new-lead">
+                        <span class="ds-btn-text">Interessent anlegen</span>
+                        <span class="ds-btn-spin spinner-border spinner-border-sm d-none" role="status"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{# ── Modal: Paket verkaufen ── #}
+{% if features.dogschool_packages ?? false %}
+<div class="modal fade" id="ds-modal-sell-package" tabindex="-1" aria-labelledby="ds-modal-sell-package-label" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="ds-modal-sell-package-label">Paket verkaufen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            </div>
+            <form id="ds-form-sell-package" action="/pakete/verkaufen" method="POST" novalidate>
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <div class="modal-body">
+                    <div id="ds-sell-package-alert" class="alert alert-danger d-none mb-3"></div>
+                    <div class="mb-3">
+                        <label class="form-label">Paket</label>
+                        <select name="package_id" required class="form-select">
+                            <option value="">— bitte auswählen —</option>
+                        </select>
+                        <div class="form-text"><a href="/pakete" target="_blank">Paket-Katalog öffnen →</a></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Halter (Owner-ID)</label>
+                        <input type="number" name="owner_id" required class="form-control" placeholder="ID aus Halterliste">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Hund (optional, Patient-ID)</label>
+                        <input type="number" name="patient_id" class="form-control" placeholder="Leer = für alle Hunde des Halters">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notizen</label>
+                        <textarea name="notes" rows="2" class="form-control"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a href="/pakete" class="btn btn-link btn-sm me-auto" style="font-size:0.8rem;">Paket-Seite öffnen →</a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary" id="ds-btn-sell-package">
+                        <span class="ds-btn-text">Verkaufen</span>
+                        <span class="ds-btn-spin spinner-border spinner-border-sm d-none" role="status"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<script>
+(function () {
+    'use strict';
+
+    function dsSubmitModal(formId, alertId, btnId, modalId) {
+        const form  = document.getElementById(formId);
+        const alert = document.getElementById(alertId);
+        const btn   = document.getElementById(btnId);
+        if (!form) return;
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            alert.classList.add('d-none');
+            const btnText = btn.querySelector('.ds-btn-text');
+            const btnSpin = btn.querySelector('.ds-btn-spin');
+            btn.disabled  = true;
+            btnText.classList.add('d-none');
+            btnSpin.classList.remove('d-none');
+
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+                const body      = new URLSearchParams(new FormData(form));
+                const res = await fetch(form.action, {
+                    method:  'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-Token':     csrfToken,
+                    },
+                    body,
+                });
+                const data = await res.json();
+                if (data.success) {
+                    const modalEl  = document.getElementById(modalId);
+                    const modalObj = bootstrap.Modal.getInstance(modalEl);
+                    if (modalObj) modalObj.hide();
+                    if (data.redirect) { window.location.href = data.redirect; } else { window.location.reload(); }
+                } else {
+                    alert.textContent = data.error ?? 'Fehler beim Speichern.';
+                    alert.classList.remove('d-none');
+                }
+            } catch (err) {
+                console.error('[DogschoolModal]', err);
+                alert.textContent = 'Verbindungsfehler. Bitte erneut versuchen.';
+                alert.classList.remove('d-none');
+            } finally {
+                btn.disabled = false;
+                btnText.classList.remove('d-none');
+                btnSpin.classList.add('d-none');
+            }
+        });
+    }
+
+    dsSubmitModal('ds-form-new-course',   'ds-new-course-alert',   'ds-btn-new-course',   'ds-modal-new-course');
+    dsSubmitModal('ds-form-new-lead',     'ds-new-lead-alert',     'ds-btn-new-lead',     'ds-modal-new-lead');
+    dsSubmitModal('ds-form-sell-package', 'ds-sell-package-alert', 'ds-btn-sell-package', 'ds-modal-sell-package');
+
+    ['ds-modal-new-course', 'ds-modal-new-lead'].forEach(function (id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('hidden.bs.modal', function () {
+            const f = el.querySelector('form');
+            if (f) f.reset();
+            const a = el.querySelector('.alert');
+            if (a) a.classList.add('d-none');
+        });
+    });
+})();
+</script>
 {% endblock %}
