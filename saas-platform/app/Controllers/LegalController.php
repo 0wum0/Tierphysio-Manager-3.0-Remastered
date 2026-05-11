@@ -8,13 +8,15 @@ use Saas\Core\Controller;
 use Saas\Core\View;
 use Saas\Core\Session;
 use Saas\Repositories\LegalRepository;
+use Saas\Repositories\SettingsRepository;
 
 class LegalController extends Controller
 {
     public function __construct(
-        View                    $view,
-        Session                 $session,
-        private LegalRepository $legalRepo
+        View                       $view,
+        Session                    $session,
+        private LegalRepository    $legalRepo,
+        private SettingsRepository $settingsRepo
     ) {
         parent::__construct($view, $session);
     }
@@ -103,7 +105,30 @@ class LegalController extends Controller
 
     public function impressum(array $params = []): void
     {
-        $this->view(['slug' => 'impressum']);
+        try {
+            $s = $this->settingsRepo->allFlat();
+        } catch (\Throwable) {
+            $s = [];
+        }
+
+        $company = [
+            'name'    => $s['company_name']    ?? '',
+            'owner'   => $s['company_owner']   ?? '',
+            'address' => $s['company_address'] ?? '',
+            'zip'     => $s['company_zip']     ?? '',
+            'city'    => $s['company_city']    ?? '',
+            'country' => $s['company_country'] ?? 'Deutschland',
+            'phone'   => $s['company_phone']   ?? '',
+            'email'   => $s['company_email']   ?? '',
+            'website' => $s['company_website'] ?? '',
+            'tax_id'  => $s['tax_id']          ?? '',
+            'vat_id'  => $s['vat_id']          ?? '',
+        ];
+
+        $this->render('legal/impressum.twig', [
+            'company'    => $company,
+            'page_title' => 'Impressum',
+        ]);
     }
 
     public function datenschutz(array $params = []): void

@@ -41,7 +41,7 @@ class SettingsController extends Controller
 
         $tab      = $this->post('_tab', 'company');
         $allowed  = [
-            'company'       => ['company_name','company_email','company_address','company_zip','company_city','company_country','company_phone','company_website','tax_id','vat_id'],
+            'company'       => ['company_name','company_owner','company_email','company_address','company_zip','company_city','company_country','company_phone','company_website','tax_id','vat_id'],
             'billing'       => ['bank_iban','bank_bic','bank_name','invoice_prefix','invoice_start_number','invoice_payment_days','kleinunternehmer'],
             'mail'          => ['smtp_host','smtp_port','smtp_encryption','smtp_username','smtp_password','mail_from_name','mail_from_address'],
             'notifications' => ['notify_new_tenant','notify_payment','notify_overdue','notify_trial_expiry','notify_email'],

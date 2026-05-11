@@ -31,6 +31,10 @@
                         <input type="text" name="company_name" class="form-control" value="{{ flat.company_name ?? '' }}">
                     </div>
                     <div class="col-md-6">
+                        <label class="form-label">Inhaber / Verantwortlicher <small class="text-muted">(Impressum)</small></label>
+                        <input type="text" name="company_owner" class="form-control" value="{{ flat.company_owner ?? '' }}" placeholder="Vorname Nachname">
+                    </div>
+                    <div class="col-md-6">
                         <label class="form-label">E-Mail</label>
                         <input type="email" name="company_email" class="form-control" value="{{ flat.company_email ?? '' }}">
                     </div>

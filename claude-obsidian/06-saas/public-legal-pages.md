@@ -41,20 +41,30 @@ Router matcht erste passende Route → platform.php-Einträge greifen.
 `saas-platform/app/Controllers/LegalController.php`
 
 - **Kein `requireAuth()`** → öffentlich ohne Login
+- Injiziert: `LegalRepository` + `SettingsRepository` (auto-wired via Container)
 - `view(array $params)`: liest `legal_documents` per Slug, zeigt Placeholder wenn nicht gefunden
-- `impressum()`: ruft `$this->view(['slug' => 'impressum'])` auf
-- `datenschutz()`: ruft `$this->view(['slug' => 'datenschutz'])` auf
-- **try/catch** um DB-Zugriff → kein 500 wenn Tabelle nicht existiert
+- `impressum()`: liest **Company Settings** aus `saas_settings` → rendert `legal/impressum.twig`
+- `datenschutz()`: liest `legal_documents` Slug `datenschutz` → rendert `legal/view.twig`
+- **try/catch** um alle DB-Zugriffe → kein 500 wenn Tabelle nicht existiert
 
 ### Fallback-Verhalten
 Wenn Slug nicht in `legal_documents` vorhanden:
 - Kein HTTP 404
 - Placeholder-Doc mit Titel aus `$titleMap`
 - Content: „Dieses Dokument wird in Kürze verfügbar sein."
-- Admin kann über `/admin/legal` befüllen
 
-## Template
+## Templates
 
+### legal/impressum.twig (NEU)
+`saas-platform/templates/legal/impressum.twig`
+
+- Extends `layouts/public.twig`
+- Datenquelle: `company.*` aus Settings (kein `legal_documents`)
+- Sektionen: Anbieter, Kontakt, Steuerliche Angaben, Haftungsausschluss
+- Placeholder-Notice wenn keine Firmendaten gepflegt
+- Vollständig responsive, dark-theme, SEO-freundlich
+
+### legal/view.twig (generisch)
 `saas-platform/templates/legal/view.twig`
 
 - Extends `layouts/public.twig`

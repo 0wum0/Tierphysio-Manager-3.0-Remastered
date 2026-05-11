@@ -1,0 +1,227 @@
+{% extends 'layouts/public.twig' %}
+
+{% block title %}Impressum{% endblock %}
+
+{% block styles %}
+<style>
+    .legal-hero {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        border-bottom: 1px solid #334155;
+        padding: 3rem 0 2rem;
+    }
+    .legal-section {
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: .75rem;
+        padding: 1.75rem 2rem;
+        margin-bottom: 1.25rem;
+    }
+    .legal-section h2 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: .07em;
+        margin-bottom: 1rem;
+        padding-bottom: .5rem;
+        border-bottom: 1px solid #334155;
+    }
+    .legal-row {
+        display: grid;
+        grid-template-columns: 160px 1fr;
+        gap: .35rem .75rem;
+        align-items: baseline;
+        margin-bottom: .4rem;
+    }
+    .legal-label {
+        color: #64748b;
+        font-size: .825rem;
+        font-weight: 500;
+    }
+    .legal-value {
+        color: #e2e8f0;
+        font-size: .925rem;
+        word-break: break-word;
+    }
+    .legal-value a {
+        color: #60a5fa;
+        text-decoration: none;
+    }
+    .legal-value a:hover { text-decoration: underline; }
+    .placeholder-notice {
+        background: #0f172a;
+        border: 1px dashed #475569;
+        border-radius: .5rem;
+        padding: .75rem 1.25rem;
+        color: #64748b;
+        font-size: .85rem;
+    }
+    @media (max-width: 576px) {
+        .legal-row { grid-template-columns: 1fr; gap: .1rem; }
+        .legal-label { font-size: .75rem; }
+        .legal-section { padding: 1.25rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── Hero ─────────────────────────────────────────────────────────────────── #}
+<div class="legal-hero">
+    <div class="container">
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb" style="font-size:.8rem;--bs-breadcrumb-divider-color:#475569;">
+                <li class="breadcrumb-item"><a href="/" style="color:#64748b;">TheraPano</a></li>
+                <li class="breadcrumb-item active" style="color:#94a3b8;">Impressum</li>
+            </ol>
+        </nav>
+        <h1 class="fw-bold text-white mb-1" style="font-size:clamp(1.75rem,4vw,2.5rem);">Impressum</h1>
+        <p class="text-secondary mb-0" style="font-size:.9rem;">
+            Angaben gemäß § 5 TMG und § 55 RStV
+        </p>
+    </div>
+</div>
+
+{# ── Content ──────────────────────────────────────────────────────────────── #}
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-xl-7">
+
+                {# ── Anbieter ─────────────────────────────────────────────── #}
+                <div class="legal-section">
+                    <h2><i class="bi bi-building me-2"></i>Anbieter</h2>
+
+                    {% if company.name %}
+                    <div class="legal-row">
+                        <span class="legal-label">Unternehmen</span>
+                        <span class="legal-value fw-medium">{{ company.name }}</span>
+                    </div>
+                    {% endif %}
+
+                    {% if company.owner %}
+                    <div class="legal-row">
+                        <span class="legal-label">Inhaber</span>
+                        <span class="legal-value">{{ company.owner }}</span>
+                    </div>
+                    {% endif %}
+
+                    {% if company.address or company.zip or company.city %}
+                    <div class="legal-row">
+                        <span class="legal-label">Adresse</span>
+                        <span class="legal-value">
+                            {% if company.address %}{{ company.address }}<br>{% endif %}
+                            {% if company.zip or company.city %}{{ company.zip }} {{ company.city }}<br>{% endif %}
+                            {% if company.country and company.country != 'Deutschland' %}{{ company.country }}{% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+
+                    {% if not company.name and not company.owner and not company.address %}
+                    <div class="placeholder-notice">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Firmendaten noch nicht gepflegt. Bitte unter
+                        <a href="/admin/settings?tab=company" style="color:#60a5fa;">Admin → Einstellungen → Firma</a>
+                        ergänzen.
+                    </div>
+                    {% endif %}
+                </div>
+
+                {# ── Kontakt ──────────────────────────────────────────────── #}
+                {% if company.phone or company.email or company.website %}
+                <div class="legal-section">
+                    <h2><i class="bi bi-envelope me-2"></i>Kontakt</h2>
+
+                    {% if company.phone %}
+                    <div class="legal-row">
+                        <span class="legal-label">Telefon</span>
+                        <span class="legal-value">
+                            <a href="tel:{{ company.phone|replace({' ': ''}) }}">{{ company.phone }}</a>
+                        </span>
+                    </div>
+                    {% endif %}
+
+                    {% if company.email %}
+                    <div class="legal-row">
+                        <span class="legal-label">E-Mail</span>
+                        <span class="legal-value">
+                            <a href="mailto:{{ company.email }}">{{ company.email }}</a>
+                        </span>
+                    </div>
+                    {% endif %}
+
+                    {% if company.website %}
+                    <div class="legal-row">
+                        <span class="legal-label">Website</span>
+                        <span class="legal-value">
+                            <a href="{{ company.website }}" target="_blank" rel="noopener noreferrer">
+                                {{ company.website }}
+                            </a>
+                        </span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {# ── Steuer ───────────────────────────────────────────────── #}
+                {% if company.tax_id or company.vat_id %}
+                <div class="legal-section">
+                    <h2><i class="bi bi-receipt me-2"></i>Steuerliche Angaben</h2>
+
+                    {% if company.tax_id %}
+                    <div class="legal-row">
+                        <span class="legal-label">Steuernummer</span>
+                        <span class="legal-value">{{ company.tax_id }}</span>
+                    </div>
+                    {% endif %}
+
+                    {% if company.vat_id %}
+                    <div class="legal-row">
+                        <span class="legal-label">USt-IdNr.</span>
+                        <span class="legal-value">{{ company.vat_id }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {# ── Haftungsausschluss ───────────────────────────────────── #}
+                <div class="legal-section">
+                    <h2><i class="bi bi-shield me-2"></i>Haftungsausschluss</h2>
+                    <p class="text-secondary mb-3" style="font-size:.875rem;line-height:1.7;">
+                        <strong class="text-light">Haftung für Inhalte:</strong>
+                        Als Diensteanbieter sind wir gemäß § 7 Abs. 1 TMG für eigene Inhalte auf diesen Seiten nach den
+                        allgemeinen Gesetzen verantwortlich. Nach §§ 8 bis 10 TMG sind wir als Diensteanbieter jedoch nicht
+                        verpflichtet, übermittelte oder gespeicherte fremde Informationen zu überwachen oder nach Umständen
+                        zu forschen, die auf eine rechtswidrige Tätigkeit hinweisen.
+                    </p>
+                    <p class="text-secondary mb-3" style="font-size:.875rem;line-height:1.7;">
+                        <strong class="text-light">Haftung für Links:</strong>
+                        Unser Angebot enthält Links zu externen Webseiten Dritter, auf deren Inhalte wir keinen Einfluss haben.
+                        Für die Inhalte der verlinkten Seiten ist stets der jeweilige Anbieter oder Betreiber der Seiten
+                        verantwortlich. Rechtswidrige Inhalte waren zum Zeitpunkt der Verlinkung nicht erkennbar.
+                    </p>
+                    <p class="text-secondary mb-0" style="font-size:.875rem;line-height:1.7;">
+                        <strong class="text-light">Urheberrecht:</strong>
+                        Die durch die Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten unterliegen dem deutschen
+                        Urheberrecht. Beiträge Dritter sind als solche gekennzeichnet. Die Vervielfältigung, Bearbeitung,
+                        Verbreitung und jede Art der Verwertung außerhalb der Grenzen des Urheberrechtes bedürfen der
+                        schriftlichen Zustimmung des jeweiligen Autors bzw. Erstellers.
+                    </p>
+                </div>
+
+                {# ── Links ────────────────────────────────────────────────── #}
+                <div class="d-flex gap-3 mt-4 flex-wrap">
+                    <a href="/legal/datenschutz" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-shield-check me-1"></i>Datenschutzerklärung
+                    </a>
+                    <a href="/register" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-arrow-right me-1"></i>Zur Registrierung
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
