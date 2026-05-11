@@ -20,6 +20,25 @@ Task erhalten → Brain lesen → Änderung umsetzen → Brain aktualisieren →
 - Brain nach jeder Änderung verpflichtend aktualisieren.
 - Keine Annahmen ohne Quellbezug.
 
+## !! HARTE MIGRATIONS-PFAD-REGEL !!
+
+**SaaS-Tenant-Migrationen IMMER und AUSSCHLIESSLICH unter:**
+```
+saas-platform/migrations/
+```
+
+**`migrations/` im Repo-Root wird vom SaaS Runner NICHT gelesen — wirkungslos!**
+
+```
+FALSCH:  migrations/063_fix.sql                      → WIRKUNGSLOS
+RICHTIG: saas-platform/migrations/063_fix.sql        → korrekt
+```
+
+**Begründung:** `MigrationService::getLatestVersion()` nutzt `$this->config->getRootPath() . '/migrations'`.
+`SAAS_ROOT` (aus `saas-platform/public/index.php`) = `saas-platform/` → `saas-platform/migrations/`.
+
+---
+
 ## !! MIGRATION-PFLICHT-REGEL !!
 
 **Niemals alte Migrationen bearbeiten wenn Tenants bereits auf höherem Stand sind.**
@@ -30,10 +49,10 @@ Task erhalten → Brain lesen → Änderung umsetzen → Brain aktualisieren →
 - Dies ist ein stiller Fehler — kein Crash, kein Log, einfach wirkungslos
 
 ### Korrekte Vorgehensweise:
-1. Prüfe: Was ist der höchste Migrations-Stand im Repo? (`ls migrations/ | tail`)
+1. Prüfe: Was ist der höchste Stand in `saas-platform/migrations/`? (NICHT `migrations/`!)
 2. Prüfe: Was ist der höchste Stand der Tenants? (SaaS Admin → Versions-Check)
 3. Wenn Fix für `version <= Tenant-Stand` nötig: **neue Repair-Migration** erstellen
-4. Neue Migration: nächst höhere Nummer (z.B. Repo hat 054, erstelle 055)
+4. Neue Migration: nächst höhere Nummer (z.B. Repo hat 061, erstelle 062)
 5. Repair-Migration muss idempotent sein (normales ADD COLUMN — Fehler 1060 toleriert)
 6. KEIN `ADD COLUMN IF NOT EXISTS` — das ist MySQL 8.0.3+ only!
 

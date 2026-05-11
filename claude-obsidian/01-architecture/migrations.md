@@ -4,8 +4,9 @@
 Vollständige Dokumentation des Migrations-Systems für Tenant-Datenbanken in TheraPano.
 
 ## Relevante Dateien im Repo
-- `migrations/` — Tenant-Migrations SQL-Dateien (nummeriert 001–NNN)
-- `app/Services/MigrationService.php` — Migration-Runner für Praxis-App (Tenant-Kontext)
+- `saas-platform/migrations/` — **EINZIGER korrekter Pfad** für SaaS-Tenant-Migrationen (001–NNN)
+- `migrations/` — ACHTUNG: **Legacy-Ordner im Repo-Root** — wird vom SaaS MigrationService NICHT gelesen! Wirkungslos für Tenants!
+- `app/Services/MigrationService.php` — Migration-Runner für Praxis-App (Tenant-Kontext, veraltet)
 - `saas-platform/app/Services/MigrationService.php` — Migration-Runner für SaaS (alle Tenants)
 - `saas-platform/app/Controllers/DataMigrationController.php` — Admin-UI + Batch-Rollout
 - `saas-platform/provisioning/tenant_schema.sql` — Basis-Schema für neue Tenants
@@ -58,6 +59,26 @@ SaaS Admin → /admin/migration → "Alle Tenants migrieren"
 
 ---
 
+## !! HARTE MIGRATIONS-PFAD-REGEL !!
+
+**SaaS-Tenant-Migrationen gehören IMMER und AUSSCHLIESSLICH nach:**
+```
+saas-platform/migrations/
+```
+
+**Der `migrations/` Ordner im Repo-Root wird vom SaaS MigrationService NIEMALS gelesen!**
+
+```
+FALSCH: migrations/063_mein_fix.sql          → WIRKUNGSLOS für Tenants
+RICHTIG: saas-platform/migrations/063_mein_fix.sql  → wird korrekt ausgeführt
+```
+
+**Warum:** `MigrationService::getLatestVersion()` benutzt `$this->config->getRootPath() . '/migrations'`.
+`getRootPath()` gibt den Pfad der `saas-platform/` zurück (SAAS_ROOT aus `public/index.php`).
+Damit zeigt es auf `saas-platform/migrations/` — NICHT auf den Root-`migrations/`-Ordner.
+
+---
+
 ## !! KRITISCHE MIGRATION-REGEL !!
 
 ### FALSCH (niemals so!):
@@ -87,14 +108,19 @@ Bug in Logik braucht neue DB-Spalte.
 
 | Stand | Wert |
 |---|---|
-| Höchste Migration im Repo | **062** |
+| Höchste Migration in `saas-platform/migrations/` | **062** |
+| Höchste Migration in `migrations/` (Root — wirkungslos!) | 062 (Legacy!) |
 | Alle produktiven Tenants | v61 |
-| v054 erstellt | Mai 2026 — cron_dispatcher_log Erweiterung (für neue Tenants < v54) |
-| v055 erstellt | Mai 2026 — Repair für Tenants >= v54 (WIRKUNGSLOS — Tenants auf v61!) |
-| v062 erstellt | Mai 2026 — Korrekte Repair für alle Tenants auf v61 (62 > 61 = true ✓) |
+| v060 erstellt | Mai 2026 — Dogschool Feature-Flags |
+| v061 erstellt | Mai 2026 — Dogschool TCP Feature-Flags |
+| v062 erstellt | Mai 2026 — homework Default aktiv (required_plan: basic, alle Pläne, cache-heal) |
 
-**LERNEFFEKT:** v055 war ebenfalls wirkungslos weil `55 > 61 = false`.
-Die neue Repair-Migration muss IMMER `version > aktueller-Tenant-Stand` haben.
+**LERNEFFEKT:** v055 (Root-Ordner) war wirkungslos — einerseits falscher Pfad, andererseits `55 > 61 = false`.
+Die neue Repair-Migration muss IMMER `version > aktueller-Tenant-Stand` UND im richtigen Ordner liegen.
+
+**MIGRATIONS-PFAD-FEHLER (historisch, Mai 2026):**
+Migrationen wurden irrtümlich unter `migrations/` (Repo-Root) statt `saas-platform/migrations/` abgelegt.
+Der SaaS MigrationService liest AUSSCHLIESSLICH `saas-platform/migrations/`. Root-Migrationen sind wirkungslos.
 
 ---
 

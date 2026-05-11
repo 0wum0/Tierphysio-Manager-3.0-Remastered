@@ -450,6 +450,43 @@ Ein fehlender DB-Eintrag führte direkt zu einem harten 404 statt einer Hilfssei
 
 ---
 
+## Bug: Migrationen wurden im falschen Ordner erstellt (Repo-Root statt saas-platform/)
+**Status:** `fixed` (Mai 2026)
+**Migration:** `saas-platform/migrations/062_homework_default_active.sql`
+
+### Symptom
+Migrationen, die unter `migrations/` (Repo-Root) abgelegt wurden, wurden vom SaaS
+MigrationService nie ausgeführt — keine Fehlermeldung, stille Wirkungslosigkeit.
+
+### Ursache
+`MigrationService::getLatestVersion()` benutzt `$this->config->getRootPath() . '/migrations'`.
+`getRootPath()` = `saas-platform/` (SAAS_ROOT aus `public/index.php`).
+Der Root-`migrations/`-Ordner wird NIE gelesen.
+
+### Fix
+- Dokumentation (`claude-obsidian/01-architecture/migrations.md` + `agents.md`) korrigiert
+- Harte Regel etabliert: SaaS-Migrationen IMMER unter `saas-platform/migrations/`
+
+---
+
+## Bug: Hausaufgaben-Plugin nicht standardmäßig aktiv (required_plan: pro statt basic)
+**Status:** `fixed` (Mai 2026)
+**Migration:** `saas-platform/migrations/062_homework_default_active.sql`
+
+### Symptom
+Tenants auf Basic-Plan sahen kein Hausaufgaben-Plugin, obwohl es Default-Aktiv sein sollte.
+
+### Ursache
+`saas_feature_flags.required_plan` für `homework` war `pro` → Basic-Tenants ohne Feature.
+Außerdem fehlte `homework` in der `plans.features` JSON-Liste für Basic-Pläne.
+
+### Fix
+1. `INSERT INTO saas_feature_flags ... ON DUPLICATE KEY UPDATE required_plan = 'basic'`
+2. `UPDATE plans SET features = JSON_ARRAY_APPEND(...)` für alle Pläne (idempotent)
+3. `DELETE FROM settings WHERE key = '_features_cache'` per Tenant → Re-Sync erzwungen
+
+---
+
 ## Verlinkungen
 - [[15-agent-rules/update-brain]]
 - [[11-decisions/decision-log]]
