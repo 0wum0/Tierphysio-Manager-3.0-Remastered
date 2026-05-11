@@ -95,8 +95,8 @@
                 {% set _ext = msg.attachment_name|split('.')|last|lower %}
                 {% set _isImg = _ext in ['jpg','jpeg','png','gif','webp'] %}
                 {% if _isImg %}
-                <a href="/api/portal-admin/nachrichten/{{ thread.id }}/anhang/{{ msg.id }}" class="wa-attach-image" data-lightbox="1" data-filename="{{ msg.attachment_name }}">
-                    <img src="/api/portal-admin/nachrichten/{{ thread.id }}/anhang/{{ msg.id }}" alt="{{ msg.attachment_name }}" loading="lazy">
+                <a href="/api/portal-admin/nachrichten/{{ thread.id }}/anhang/{{ msg.id }}" class="wa-attach-image" data-lightbox="1" data-filename="{{ msg.attachment_name }}" style="display:block;margin-top:.25rem;border-radius:8px;overflow:hidden;max-width:220px;line-height:0;cursor:zoom-in;">
+                    <img src="/api/portal-admin/nachrichten/{{ thread.id }}/anhang/{{ msg.id }}" alt="{{ msg.attachment_name }}" loading="eager" style="display:block;width:100%;max-height:260px;object-fit:cover;border-radius:8px;background:#e2e8f0;">
                 </a>
                 {% else %}
                 <a href="/api/portal-admin/nachrichten/{{ thread.id }}/anhang/{{ msg.id }}" class="wa-attach" download>
