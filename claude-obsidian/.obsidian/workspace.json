@@ -178,6 +178,7 @@
   },
   "active": "550b65a575ea133e",
   "lastOpenFiles": [
+    "06-saas/feature-mapping.md",
     "07-features/hundeschulen-support.md",
     "11-decisions/anatomy-system-rework.md",
     "07-features/veterinary-anatomy-engine.md",
@@ -219,7 +220,6 @@
     "wiki/meta/dashboard.base",
     "wiki/meta/claude-obsidian-v1.4-release-session.md",
     "wiki/meta/claude-obsidian-v1.2.0-release-session.md",
-    "wiki/meta/boundary-frontier-2026-04-24.md",
     "wiki/meta",
     "wiki/folds",
     "wiki/entities",
