@@ -734,9 +734,9 @@ $router->post('/hundeschule/rechnungen/speichern',                   [DogschoolI
 $router->post('/hundeschule/rechnungen/kurs/{enrollment_id}',        [DogschoolInvoiceController::class, 'createForEnrollment'], ['auth', 'feature:dogschool_invoicing']);
 $router->post('/hundeschule/rechnungen/paket/{balance_id}',          [DogschoolInvoiceController::class, 'createForPackage'],    ['auth', 'feature:dogschool_invoicing']);
 
-// DATEV-Export
-$router->get('/steuerexport',                                        [DatevExportController::class, 'index'],     ['auth', 'feature:dogschool_datev_export']);
-$router->post('/steuerexport/download',                              [DatevExportController::class, 'download'],  ['auth', 'feature:dogschool_datev_export']);
+// DATEV-Export (Hundeschule) — eigene URL, kein Konflikt mit /steuerexport (tax-export-pro Plugin)
+$router->get('/hundeschule/steuerexport',                            [DatevExportController::class, 'index'],     ['auth', 'feature:dogschool_datev_export']);
+$router->post('/hundeschule/steuerexport/download',                  [DatevExportController::class, 'download'],  ['auth', 'feature:dogschool_datev_export']);
 
 // Online-Buchung — ÖFFENTLICH (kein auth!) + interne Verwaltung
 $router->get('/anfragen',                                            [OnlineBookingController::class, 'adminIndex'],  ['auth', 'feature:dogschool_online_booking']);

@@ -202,6 +202,59 @@ Admin-Drawer hatte keine Lightbox-Implementierung.
 
 ---
 
+## Bug: Feature-Gating sperrt Steuerreport/Steuerexport trotz freigeschaltetem Feature
+
+**Status:** `fixed`
+**Datum:** 2026-05-11
+**Tenant:** Tierphysio Wenzel (und alle Therapeut-Tenants mit `tax_export` Feature)
+
+### Symptom
+Tenant hat `tax_export` im SaaS-Admin freigeschaltet. `/steuerexport` zeigt trotzdem
+„Feature nicht freigeschaltet" bzw. wird mit 403 blockiert.
+
+### Ursache (2 Bugs)
+
+**Bug 1 — Doppelter Array-Key in `FeatureRouteMap::MAP` (kritisch)**
+`app/Services/FeatureRouteMap.php` enthielt `/steuerexport` **zweimal** als PHP-Array-Key:
+- Eintrag 1 (korrekt): `'/steuerexport' => 'tax_export'` (für tax-export-pro Plugin)
+- Eintrag 2 (falsch, überschreibt Eintrag 1): `'/steuerexport' => 'dogschool_datev_export'`
+
+PHP-Arrays erlauben keine doppelten Schlüssel. Der zweite Eintrag überschreibt stillschweigend
+den ersten. Die Route `/steuerexport` wurde dadurch immer gegen `dogschool_datev_export` geprüft —
+ein Feature das für alle Therapeut-Tenants (practice_type ≠ 'trainer') durch den
+`DOGSCHOOL_PREFIX`-Gate grundsätzlich `false` ist.
+
+**Bug 2 — Route-Kollision in `web.php`**
+Beide Controller (`TaxExportController` via ServiceProvider, `DatevExportController`) waren auf
+`GET /steuerexport` registriert. Der Router führt je nach Reihenfolge nur einen aus — Konfusion
+zwischen zwei völlig unterschiedlichen Features.
+
+### Fix
+
+| Datei | Änderung |
+|-------|----------|
+| `app/Services/FeatureRouteMap.php` | Doppelten `/steuerexport` → `dogschool_datev_export` Eintrag entfernt, neuen Eintrag `/hundeschule/steuerexport` → `dogschool_datev_export` ergänzt |
+| `app/Routes/web.php` | Hundeschule DATEV-Export-Routen von `/steuerexport` auf `/hundeschule/steuerexport` umgezogen |
+| `templates/dogschool/datev/index.twig` | Alle Form-Actions und GET-Actions auf `/hundeschule/steuerexport` aktualisiert |
+| `templates/layouts/base.twig` | Sidebar-Navlink für `dogschool_datev_export` auf `/hundeschule/steuerexport` aktualisiert |
+| `templates/dogschool/invoices/index.twig` | „→ Steuerexport"-Button auf `/hundeschule/steuerexport` aktualisiert |
+
+### Feature-Gating nach Fix
+
+| URL | Feature-Key | Gilt für |
+|-----|-------------|---------|
+| `/steuerexport` | `tax_export` | Therapeuten (tax-export-pro Plugin) |
+| `/hundeschule/steuerexport` | `dogschool_datev_export` | Trainer-Tenants (Hundeschule) |
+
+### Verifikation
+1. Therapeut-Tenant mit `tax_export` aktiviert → `/steuerexport` öffnet ohne Fehlermeldung ✓
+2. Therapeut-Tenant ohne `tax_export` → 403/Redirect zum Dashboard ✓
+3. Trainer-Tenant mit `dogschool_datev_export` → `/hundeschule/steuerexport` öffnet ✓
+4. Therapeut-Tenant auf `/hundeschule/steuerexport` → 403 (DOGSCHOOL_PREFIX-Gate) ✓
+5. Keine anderen Tenants oder Features betroffen ✓
+
+---
+
 ## Verlinkungen
 - [[15-agent-rules/update-brain]]
 - [[11-decisions/decision-log]]

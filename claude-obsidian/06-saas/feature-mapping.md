@@ -53,8 +53,8 @@ Die Keys entsprechen exakt `saas_feature_flags.feature_key` und `plans.features`
 | `dunning` | Mahnwesen |
 | `analytics` | Statistiken & Analysen |
 | `exports` | Datenexporte |
-| `dogschool_invoicing` | Rechnungsverwaltung |
-| `dogschool_datev_export` | DATEV Export |
+| `dogschool_invoicing` | Rechnungsverwaltung — Route: `/hundeschule/rechnungen` |
+| `dogschool_datev_export` | DATEV Export — Route: `/hundeschule/steuerexport` (NICHT `/steuerexport`! Das ist `tax_export` vom tax-export-pro Plugin) |
 
 ### Therapie & Training
 | Key | Anzeige |

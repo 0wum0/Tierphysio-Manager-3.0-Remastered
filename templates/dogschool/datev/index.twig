@@ -9,7 +9,7 @@
     </div>
 </div>
 
-<form method="GET" action="/steuerexport" class="mb-3">
+<form method="GET" action="/hundeschule/steuerexport" class="mb-3">
     <div class="card"><div class="card-body">
         <div class="row g-3 align-items-end">
             <div class="col-md-4">
@@ -85,7 +85,7 @@
             <div class="card-header px-4 py-3"><span class="fw-semibold">CSV-Export</span></div>
             <div class="card-body">
                 <p class="small" style="color:var(--bs-secondary-color);">Drei Formate verfügbar:</p>
-                <form action="/steuerexport/download" method="POST" class="mb-2">
+                <form action="/hundeschule/steuerexport/download" method="POST" class="mb-2">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                     <input type="hidden" name="from" value="{{ from }}">
                     <input type="hidden" name="to" value="{{ to }}">
@@ -95,7 +95,7 @@
                         <div class="small">Alle Rechnungen, eine Zeile pro Position, für Lexware/BuchhaltungsButler/sevDesk</div>
                     </button>
                 </form>
-                <form action="/steuerexport/download" method="POST" class="mb-2">
+                <form action="/hundeschule/steuerexport/download" method="POST" class="mb-2">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                     <input type="hidden" name="from" value="{{ from }}">
                     <input type="hidden" name="to" value="{{ to }}">
@@ -105,7 +105,7 @@
                         <div class="small">EXTF-Import für DATEV Unternehmen online / Kanzlei-Rewe</div>
                     </button>
                 </form>
-                <form action="/steuerexport/download" method="POST" class="mb-2">
+                <form action="/hundeschule/steuerexport/download" method="POST" class="mb-2">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                     <input type="hidden" name="from" value="{{ from }}">
                     <input type="hidden" name="to" value="{{ to }}">
@@ -115,7 +115,7 @@
                         <div class="small">CSV + alle hochgeladenen Belege (PDFs & Bilder) in einem ZIP</div>
                     </button>
                 </form>
-                <form action="/steuerexport/download" method="POST">
+                <form action="/hundeschule/steuerexport/download" method="POST">
                     <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                     <input type="hidden" name="from" value="{{ from }}">
                     <input type="hidden" name="to" value="{{ to }}">

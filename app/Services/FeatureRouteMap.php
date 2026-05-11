@@ -81,6 +81,8 @@ final class FeatureRouteMap
 
         '/steuerexport'                 => 'tax_export',
 
+        '/hundeschule/steuerexport'     => 'dogschool_datev_export',
+
         // ── Hundeschul-/Hundetrainer-Modul (practice_type = 'trainer') ──
         //    Alle dogschool_* Features werden zusätzlich über den
         //    Tenant-Typ-Gate im FeatureGateService::isEnabled() abgesichert:
@@ -115,7 +117,6 @@ final class FeatureRouteMap
         '/uebungen'                     => 'dogschool_exercises',
         '/kursarten'                    => 'dogschool_categories',
         '/hundeschule/rechnungen'       => 'dogschool_invoicing',
-        '/steuerexport'                 => 'dogschool_datev_export',
         '/api/consents'                 => 'dogschool_consents',
     ];
 
