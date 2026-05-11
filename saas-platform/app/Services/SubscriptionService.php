@@ -198,11 +198,25 @@ class SubscriptionService
         ?float  $grandfatheredPrice = null,
         ?string $grandfatheredReason = null,
         ?string $pricingNote = null,
-        string  $actor = 'admin'
+        string  $actor = 'admin',
+        bool    $bypassCapacityCheck = false
     ): void {
         $plan = $this->planRepo->find($planId);
         if (!$plan) {
             throw new \RuntimeException("Plan #{$planId} nicht gefunden.");
+        }
+
+        /* Kapazitätsprüfung: blockiert Planwechsel wenn Limit erreicht.
+         * Ausgenommen: Admin mit $bypassCapacityCheck=true oder Tenant
+         * hat denselben Plan schon (keine neue Subscription). */
+        if (!$bypassCapacityCheck) {
+            $currentSub = $this->subRepo->findByTenant($tenantId);
+            $currentPlanId = $currentSub ? (int)$currentSub['plan_id'] : 0;
+            if ($currentPlanId !== $planId && $this->planRepo->isAtCapacity($planId)) {
+                throw new \RuntimeException(
+                    "Plan \"{$plan['name']}\" hat das maximale Kunden-Limit erreicht."
+                );
+            }
         }
 
         $previousPlanId = null;

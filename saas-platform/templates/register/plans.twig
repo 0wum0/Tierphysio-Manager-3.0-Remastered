@@ -32,10 +32,11 @@
             {% set features = plan.features ? plan.features|json_decode : [] %}
             {% set meta = planMeta[plan.slug] ?? { badge: '', badgeColor: '#64748b', featured: false } %}
             {% set isFeatured = meta.featured %}
+            {% set isSoldOut = plan_capacity is defined and plan_capacity[plan.id] is defined and plan_capacity[plan.id] %}
 
             <div class="col-md-6 col-lg-4 d-flex">
                 <div class="card h-100 w-100 position-relative d-flex flex-column"
-                     style="background:#1e293b;border:1px solid {{ isFeatured ? '#2563eb' : 'rgba(255,255,255,0.08)' }};border-radius:16px;transition:transform .2s,box-shadow .2s;{% if isFeatured %}box-shadow:0 0 40px rgba(37,99,235,.25);{% endif %}">
+                     style="background:#1e293b;border:1px solid {{ isFeatured and not isSoldOut ? '#2563eb' : (isSoldOut ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.08)') }};border-radius:16px;transition:transform .2s,box-shadow .2s;{% if isFeatured and not isSoldOut %}box-shadow:0 0 40px rgba(37,99,235,.25);{% endif %}{% if isSoldOut %}opacity:.65;{% endif %}">
 
                     {# Featured-Glow-Ring #}
                     {% if isFeatured %}
@@ -99,6 +100,13 @@
                         </ul>
 
                         {# CTA-Button #}
+                        {% if isSoldOut %}
+                        <div class="text-center py-2">
+                            <span class="badge px-4 py-2" style="background:rgba(100,116,139,.2);color:#94a3b8;border:1px solid rgba(100,116,139,.3);border-radius:10px;font-size:.85rem;">
+                                <i class="bi bi-lock me-1"></i>Momentan ausgebucht
+                            </span>
+                        </div>
+                        {% else %}
                         <a href="/register/{{ plan.slug }}"
                            class="btn w-100 fw-semibold py-2"
                            style="{% if isFeatured %}background:#2563eb;color:#fff;border:none;{% else %}background:transparent;color:#60a5fa;border:1px solid #2563eb;{% endif %}border-radius:10px;transition:background .2s,color .2s;">
@@ -108,6 +116,7 @@
                                 Mit {{ plan.name }} starten
                             {% endif %}
                         </a>
+                        {% endif %}
 
                     </div>
                 </div>

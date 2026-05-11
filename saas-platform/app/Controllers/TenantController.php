@@ -222,7 +222,16 @@ class TenantController extends Controller
          * Event-Log + Cache-Invalidation in einem Schritt. */
         if ($planChanged && $plan) {
             try {
-                $this->subscriptionService->assignPlan($id, (int)$plan['id']);
+                /* Admin darf Limits überschreiten (bypassCapacityCheck = true).
+                 * Warnung in der UI falls Plan schon am Limit ist. */
+                $this->subscriptionService->assignPlan(
+                    tenantId:             $id,
+                    planId:               (int)$plan['id'],
+                    bypassCapacityCheck:  true,
+                );
+                if ($this->planRepo->isAtCapacity((int)$plan['id'])) {
+                    $this->session->flash('warning', "Plan \"{$plan['name']}\" hat das Kunden-Limit erreicht. Dieser Tenant wurde trotzdem zugewiesen (Admin-Override).");
+                }
             } catch (\Throwable $e) {
                 error_log('[TenantController::update] assignPlan failed: ' . $e->getMessage());
                 /* Fallback: wenigstens den Cache platt machen, damit der

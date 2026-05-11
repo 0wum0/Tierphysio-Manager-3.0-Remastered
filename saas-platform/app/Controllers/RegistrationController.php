@@ -30,11 +30,19 @@ class RegistrationController extends Controller
     public function index(array $params = []): void
     {
         $plans = $this->planRepo->allActive();
+
+        $planCapacity = [];
+        foreach ($plans as $p) {
+            $planId = (int)$p['id'];
+            $planCapacity[$planId] = $this->planRepo->isAtCapacity($planId);
+        }
+
         $this->render('register/plans.twig', [
-            'plans'           => $plans,
-            'stripe_enabled'  => $this->paymentService->isStripeEnabled(),
-            'paypal_enabled'  => $this->paymentService->isPayPalEnabled(),
-            'page_title'      => 'Tarif wählen',
+            'plans'          => $plans,
+            'plan_capacity'  => $planCapacity,
+            'stripe_enabled' => $this->paymentService->isStripeEnabled(),
+            'paypal_enabled' => $this->paymentService->isPayPalEnabled(),
+            'page_title'     => 'Tarif wählen',
         ]);
     }
 
@@ -101,6 +109,12 @@ class RegistrationController extends Controller
         if ($errors) {
             $this->session->flash('error', implode('<br>', $errors));
             $this->redirect('/register/' . $planSlug);
+        }
+
+        /* Plan-Kapazitätsprüfung – blockiert wenn max_subscribers erreicht. */
+        if ($this->planRepo->isAtCapacity((int)$plan['id'])) {
+            $this->session->flash('error', 'Dieser Tarif ist momentan ausgebucht. Bitte wählen Sie einen anderen Tarif.');
+            $this->redirect('/register');
         }
 
         /* Default auf 'stripe' wenn Stripe aktiv ist — sonst 'manual'.

@@ -91,6 +91,7 @@ class PlanRepository
 
         $allCols = [
             'slug', 'name', 'description', 'price_month', 'price_year', 'max_users',
+            'max_subscribers',
             'features', 'is_active', 'sort_order',
             'is_public', 'trial_days', 'currency', 'stripe_price_id', 'stripe_price_id_yearly',
         ];
@@ -108,6 +109,12 @@ class PlanRepository
     }
 
     /** @return list<string> */
+    public function getExistingColumnsPublic(): array
+    {
+        return $this->getExistingColumns();
+    }
+
+    /** @return list<string> */
     private function getExistingColumns(): array
     {
         static $cache = null;
@@ -121,6 +128,41 @@ class PlanRepository
             $cache = ['slug','name','description','price_month','price_year','max_users','features','is_active','sort_order'];
         }
         return $cache;
+    }
+
+    /**
+     * Count tenants currently actively subscribed to a plan.
+     * Counts: active, trialing, trial, past_due.
+     * Excludes: cancelled, expired, suspended.
+     */
+    public function countActiveSubscribers(int $planId): int
+    {
+        try {
+            return (int)$this->db->fetchColumn(
+                "SELECT COUNT(*) FROM subscriptions
+                 WHERE plan_id = ? AND status IN ('active','trialing','trial','past_due')",
+                [$planId]
+            );
+        } catch (\Throwable) {
+            return 0;
+        }
+    }
+
+    /**
+     * Returns true when the plan has reached its subscriber limit.
+     * 99999999 is treated as unlimited.
+     */
+    public function isAtCapacity(int $planId): bool
+    {
+        $plan = $this->find($planId);
+        if (!$plan) {
+            return false;
+        }
+        $limit = (int)($plan['max_subscribers'] ?? 99999999);
+        if ($limit >= 99999999) {
+            return false;
+        }
+        return $this->countActiveSubscribers($planId) >= $limit;
     }
 
     /**

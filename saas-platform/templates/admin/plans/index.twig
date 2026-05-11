@@ -20,7 +20,7 @@
                     <th>Preis / Monat</th>
                     <th>Preis / Jahr</th>
                     <th>Trial</th>
-                    <th>Max. Benutzer</th>
+                    <th>Kunden-Limit</th>
                     <th>Features</th>
                     <th>Status</th>
                     <th></th>
@@ -43,11 +43,28 @@
                             <span class="text-secondary">–</span>
                         {% endif %}
                     </td>
-                    <td>{{ plan.max_users == -1 ? 'Unbegrenzt' : plan.max_users }}</td>
+                    <td>
+                        {% set limit = plan.max_subscribers is defined ? plan.max_subscribers|default(99999999) : 99999999 %}
+                        {% set cnt = subscriber_counts[plan.id] is defined ? subscriber_counts[plan.id] : 0 %}
+                        {% if limit >= 99999999 %}
+                            <span class="text-success">{{ cnt }} / ∞</span>
+                        {% else %}
+                            {% set pct = limit > 0 ? (cnt / limit * 100)|round : 100 %}
+                            <div class="d-flex align-items-center gap-1">
+                                <span class="{% if cnt >= limit %}text-danger fw-700{% elseif pct >= 80 %}text-warning{% else %}text-success{% endif %}" style="font-size:.8rem;">
+                                    {{ cnt }} / {{ limit }}
+                                </span>
+                            </div>
+                            <div class="progress mt-1" style="height:4px;width:70px;">
+                                <div class="progress-bar {% if pct >= 100 %}bg-danger{% elseif pct >= 80 %}bg-warning{% else %}bg-success{% endif %}"
+                                     style="width:{{ pct > 100 ? 100 : pct }}%"></div>
+                            </div>
+                        {% endif %}
+                    </td>
                     <td>
                         <div class="d-flex flex-wrap gap-1">
                             {% for f in features %}
-                            <span class="badge bg-primary bg-opacity-25 text-primary" style="font-size:.7rem;">{{ f }}</span>
+                            <span class="badge bg-primary bg-opacity-25 text-primary" style="font-size:.7rem;" title="{{ f }}">{{ f|feature_label }}</span>
                             {% endfor %}
                         </div>
                     </td>

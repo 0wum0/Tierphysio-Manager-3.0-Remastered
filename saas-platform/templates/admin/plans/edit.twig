@@ -2,128 +2,204 @@
 {% set active_nav = 'plans' %}
 
 {% block content %}
-<div class="d-flex align-items-center mb-4">
-    <a href="/admin/plans" class="btn btn-sm btn-outline-secondary me-3">
-        <i class="bi bi-arrow-left me-1"></i>Zurück
-    </a>
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div class="d-flex align-items-center gap-3">
+        <a href="/admin/plans" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Zurück</a>
+        <div>
+            <h5 class="mb-0 fw-700">Plan bearbeiten: {{ plan.name }}</h5>
+            <div class="text-muted fs-sm">Slug: <code>{{ plan.slug }}</code>
+                {% if subscriber_count is defined %}
+                · <span class="{% if plan.max_subscribers is defined and plan.max_subscribers < 99999999 and subscriber_count >= plan.max_subscribers %}text-danger fw-700{% else %}text-success{% endif %}">
+                    {{ subscriber_count }} aktive Kunden
+                    {% if plan.max_subscribers is defined and plan.max_subscribers < 99999999 %}
+                        / {{ plan.max_subscribers }} Limit
+                    {% else %}
+                        (unbegrenzt)
+                    {% endif %}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </div>
 
-<div class="row justify-content-center">
-<div class="col-lg-7">
-<div class="card">
-    <div class="card-header px-4 py-3">
-        <span class="fw-semibold"><i class="bi bi-collection me-2"></i>Plan bearbeiten: {{ plan.name }}</span>
-    </div>
-    <div class="card-body px-4 py-4">
-        <form method="POST" action="/admin/plans/{{ plan.id }}/edit">
-            {{ csrf_field()|raw }}
+<form method="POST" action="/admin/plans/{{ plan.id }}/edit">
+{{ csrf_field()|raw }}
 
-            <div class="row g-3 mb-4">
-                <div class="col-sm-6">
-                    <label class="form-label">Name *</label>
-                    <input type="text" name="name" class="form-control" required value="{{ plan.name }}">
+<div class="row g-4">
+
+    {# ── Left: Plan Details + Features ─────────────────────────── #}
+    <div class="col-lg-8">
+
+        <div class="card mb-4">
+            <div class="card-header px-4 py-3 fw-600">
+                <i class="bi bi-info-circle me-2"></i>Plan-Details
+            </div>
+            <div class="card-body px-4 py-4">
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <label class="form-label fw-600">Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" required value="{{ plan.name }}">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label fw-600">Slug</label>
+                        <input type="text" class="form-control" value="{{ plan.slug }}" disabled>
+                        <div class="form-text">Unveränderlich nach Erstellung</div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-600">Beschreibung</label>
+                        <textarea name="description" class="form-control" rows="2">{{ plan.description }}</textarea>
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label fw-600">Preis / Monat (€)</label>
+                        <input type="number" name="price_month" class="form-control" step="0.01" min="0" value="{{ plan.price_month }}">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label fw-600">Preis / Jahr (€)</label>
+                        <input type="number" name="price_year" class="form-control" step="0.01" min="0" value="{{ plan.price_year }}">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label fw-600">Testzeitraum (Tage)</label>
+                        <input type="number" name="trial_days" class="form-control" min="0" value="{{ plan.trial_days }}">
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label fw-600">Max. Benutzer pro Praxis</label>
+                        <input type="number" name="max_users" class="form-control" value="{{ plan.max_users }}">
+                        <div class="form-text">-1 = unbegrenzt</div>
+                    </div>
+                    <div class="col-sm-4">
+                        <label class="form-label fw-600">Maximale Anzahl Kunden</label>
+                        <input type="number" name="max_subscribers" class="form-control" min="1" max="99999999"
+                               value="{{ plan.max_subscribers is defined ? plan.max_subscribers : 99999999 }}">
+                        <div class="form-text">Wie viele Praxen/Hundeschulen dürfen diesen Plan nutzen. 99999999 = unbegrenzt.</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label" style="font-size:.75rem;color:#94a3b8;">Stripe Price ID (monatlich)</label>
+                        <input type="text" name="stripe_price_id" class="form-control"
+                               placeholder="price_1ABC…" value="{{ plan.stripe_price_id ?? '' }}">
+                    </div>
+                    <div class="col-sm-6">
+                        <label class="form-label" style="font-size:.75rem;color:#94a3b8;">Stripe Price ID (jährlich)</label>
+                        <input type="text" name="stripe_price_id_yearly" class="form-control"
+                               placeholder="price_1DEF…" value="{{ plan.stripe_price_id_yearly ?? '' }}">
+                    </div>
                 </div>
-                <div class="col-sm-6">
-                    <label class="form-label">Slug</label>
-                    <input type="text" class="form-control" value="{{ plan.slug }}" disabled>
+            </div>
+        </div>
+
+        {# ── Feature-Matrix grouped ──────────────────────────────── #}
+        <div class="card mb-4">
+            <div class="card-header px-4 py-3 d-flex justify-content-between align-items-center">
+                <span class="fw-600"><i class="bi bi-grid me-2"></i>Features (freigeschaltete Module)</span>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-xs btn-outline-secondary" id="selectAll">Alle</button>
+                    <button type="button" class="btn btn-xs btn-outline-secondary" id="deselectAll">Keine</button>
                 </div>
-                <div class="col-12">
-                    <label class="form-label">Beschreibung</label>
-                    <textarea name="description" class="form-control" rows="2">{{ plan.description }}</textarea>
+            </div>
+            <div class="card-body px-4 py-3">
+
+                {# Group features by their group (index 2 in all_features array) #}
+                {% set groups = {} %}
+                {% for key, meta in all_features %}
+                    {% set grp = meta[2] %}
+                    {% set groups = groups|merge({(grp): (groups[grp] is defined ? groups[grp]|merge({(key): meta}) : {(key): meta})}) %}
+                {% endfor %}
+
+                {% for group_name, group_features in groups %}
+                <div class="mb-3">
+                    <div class="text-muted fw-700 mb-2" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid #334155;padding-bottom:.35rem;">
+                        {{ group_name }}
+                    </div>
+                    <div class="row g-2">
+                        {% for key, meta in group_features %}
+                        <div class="col-sm-4 col-6">
+                            <div class="form-check">
+                                <input class="form-check-input feature-checkbox" type="checkbox"
+                                       name="features[]" value="{{ key }}" id="feat_{{ key }}"
+                                       {% if key in features %}checked{% endif %}>
+                                <label class="form-check-label fs-sm" for="feat_{{ key }}">
+                                    <i class="bi {{ meta[1] }} me-1 text-primary opacity-75"></i>{{ meta[0] }}
+                                </label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
-                <div class="col-sm-4">
-                    <label class="form-label">Preis / Monat (€)</label>
-                    <input type="number" name="price_month" class="form-control" step="0.01" value="{{ plan.price_month }}">
+                {% endfor %}
+
+            </div>
+        </div>
+
+    </div>
+
+    {# ── Right: Config ──────────────────────────────────────────── #}
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header px-4 py-3 fw-600"><i class="bi bi-toggles me-2"></i>Status</div>
+            <div class="card-body px-4 py-3">
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="is_active" value="1" id="is_active"
+                               {{ plan.is_active ? 'checked' : '' }}>
+                        <label class="form-check-label" for="is_active">Plan aktiv</label>
+                    </div>
                 </div>
-                <div class="col-sm-4">
-                    <label class="form-label">Preis / Jahr (€)</label>
-                    <input type="number" name="price_year" class="form-control" step="0.01" value="{{ plan.price_year }}">
-                </div>
-                <div class="col-sm-4">
-                    <label class="form-label">Max. Benutzer (-1 = unbegrenzt)</label>
-                    <input type="number" name="max_users" class="form-control" value="{{ plan.max_users }}">
-                </div>
-                <div class="col-sm-4">
-                    <label class="form-label">Testzeitraum (Tage)</label>
-                    <input type="number" name="trial_days" class="form-control" value="{{ plan.trial_days }}">
-                </div>
-                <div class="col-sm-6">
-                    <label class="form-label" style="font-size:.75rem;color:#94a3b8;">Stripe Price ID (monatlich)</label>
-                    <input type="text" name="stripe_price_id" class="form-control"
-                           placeholder="price_1ABC…" value="{{ plan.stripe_price_id ?? '' }}">
-                </div>
-                <div class="col-sm-6">
-                    <label class="form-label" style="font-size:.75rem;color:#94a3b8;">Stripe Price ID (jährlich)</label>
-                    <input type="text" name="stripe_price_id_yearly" class="form-control"
-                           placeholder="price_1DEF…" value="{{ plan.stripe_price_id_yearly ?? '' }}">
-                </div>
-                <div class="col-sm-6">
-                    <div class="form-check form-switch mt-2">
+                <div class="mb-0">
+                    <div class="form-check form-switch">
                         <input class="form-check-input" type="checkbox" name="is_public" value="1" id="is_public"
                                {{ plan.is_public ? 'checked' : '' }}>
                         <label class="form-check-label" for="is_public">Öffentlich (im Registrierungsdialog)</label>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <hr style="border-color:#334155;">
-            <h6 class="text-secondary mb-3 mt-3" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;">Features (freigeschaltete Module)</h6>
-            <div class="mb-3">
-                <label class="form-label">Features</label>
-                <div class="row g-2">
-                    {% set allFeatures = {
-                        'invoices':        'Rechnungen',
-                        'appointments':    'Termine',
-                        'patients':        'Patienten',
-                        'owners':          'Besitzer',
-                        'dashboard':       'Dashboard',
-                        'waitlist':        'Warteliste',
-                        'intake':          'Patientenanmeldung',
-                        'staff':           'Mitarbeiterverwaltung',
-                        'reports':         'Berichte',
-                        'calendar':        'Kalender',
-                        'google_sync':     'Google Sync',
-                        'therapy_care':    'Therapie-Dokumentation',
-                        'messaging':       'Nachrichten',
-                        'file_uploads':    'Datei-Uploads',
-                        'advanced_reports':'Erweiterte Berichte',
-                        'owner_portal':    'Besitzer-Portal',
-                        'reminders':       'Erinnerungen',
-                        'premium_support': 'Premium Support',
-                        'ai_features':     'KI-Features',
-                        'premium':         'Premium'
-                    } %}
-                    {% for key, label in allFeatures %}
-                    <div class="col-sm-4">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="features[]"
-                                   value="{{ key }}" id="feat_{{ key }}"
-                                   {% if key in features %}checked{% endif %}>
-                            <label class="form-check-label" for="feat_{{ key }}" style="font-size:.85rem;">{{ label }}</label>
-                        </div>
-                    </div>
-                    {% endfor %}
+        {% if subscriber_count is defined %}
+        <div class="card mb-3">
+            <div class="card-header px-4 py-3 fw-600"><i class="bi bi-people me-2"></i>Nutzung</div>
+            <div class="card-body px-4 py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="text-muted fs-sm">Aktive Kunden</span>
+                    <strong class="{% if plan.max_subscribers is defined and plan.max_subscribers < 99999999 and subscriber_count >= plan.max_subscribers %}text-danger{% else %}text-success{% endif %}">
+                        {{ subscriber_count }}
+                        {% if plan.max_subscribers is defined and plan.max_subscribers < 99999999 %}
+                            / {{ plan.max_subscribers }}
+                        {% endif %}
+                    </strong>
                 </div>
-            </div>
-
-            <hr style="border-color:#334155;">
-            <div class="mb-4 mt-3">
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" name="is_active" value="1" id="is_active"
-                        {{ plan.is_active ? 'checked' : '' }}>
-                    <label class="form-check-label" for="is_active">Plan aktiv (für Registrierung sichtbar)</label>
+                {% if plan.max_subscribers is defined and plan.max_subscribers < 99999999 %}
+                {% set pct = (subscriber_count / plan.max_subscribers * 100)|round %}
+                <div class="progress mt-2" style="height:6px;">
+                    <div class="progress-bar {% if pct >= 100 %}bg-danger{% elseif pct >= 80 %}bg-warning{% else %}bg-success{% endif %}"
+                         style="width:{{ pct > 100 ? 100 : pct }}%"></div>
                 </div>
+                {% if pct >= 100 %}
+                <div class="alert alert-danger fs-xs mt-2 mb-0 py-2">⚠️ Limit erreicht – keine neuen Kunden möglich</div>
+                {% elseif pct >= 80 %}
+                <div class="alert alert-warning fs-xs mt-2 mb-0 py-2">Nur noch {{ plan.max_subscribers - subscriber_count }} Plätze frei</div>
+                {% endif %}
+                {% endif %}
             </div>
+        </div>
+        {% endif %}
 
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-check-lg me-1"></i>Speichern
-                </button>
-                <a href="/admin/plans" class="btn btn-outline-secondary">Abbrechen</a>
-            </div>
-        </form>
+        <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-lg me-1"></i>Änderungen speichern
+            </button>
+            <a href="/admin/plans" class="btn btn-outline-secondary">Abbrechen</a>
+        </div>
     </div>
+
 </div>
-</div>
-</div>
+</form>
+
+<script>
+document.getElementById('selectAll')?.addEventListener('click', () => {
+    document.querySelectorAll('.feature-checkbox').forEach(cb => cb.checked = true);
+});
+document.getElementById('deselectAll')?.addEventListener('click', () => {
+    document.querySelectorAll('.feature-checkbox').forEach(cb => cb.checked = false);
+});
+</script>
 {% endblock %}
