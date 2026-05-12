@@ -151,7 +151,7 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark    = Theme.of(context).colorScheme.brightness == Brightness.dark;
-    final isOwner   = msg['is_owner'] as bool? ?? (msg['sender_type'] as String? == 'owner');
+    final isOwner   = (msg['is_owner'] as bool?) ?? ((msg['sender_type'] as String?) == 'owner');
     final body      = msg['body'] as String? ?? msg['message'] as String? ?? msg['nachricht'] as String? ?? '';
     final sender    = msg['sender_name'] as String? ?? (isOwner ? 'Sie' : 'Praxis');
     final time      = msg['created_at'] as String? ?? msg['datum'] as String? ?? '';
