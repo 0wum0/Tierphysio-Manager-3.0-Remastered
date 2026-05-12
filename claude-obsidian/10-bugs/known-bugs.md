@@ -26,6 +26,41 @@ Bug gefunden → in Datei dokumentieren → Fix referenzieren → Status aktuali
 
 ---
 
+## Bug: Flutter Apps — `feature_disabled` 403 obwohl mobile_api aktiv — FIXED (Mai 2026)
+
+**Status:** `fixed`  
+**Commit:** `fix: repair mobile api feature gate access`
+
+### Ursache (Root Cause)
+`FeatureRouteMap` mappt `/api/mobile` → `mobile_api`.  
+Der Router fügt automatisch `feature:mobile_api`-Middleware für alle `/api/mobile/*`-Routen hinzu.
+
+Flutter/Mobile Requests sind **stateless** (kein PHP-Session). Daher:
+1. `Application::bootstrap()`: `$prefix = $session->get('tenant_table_prefix', '')` → `''`
+2. `$hasPrefix = false` → `FeatureGateService` wird NICHT initialisiert (kein Singleton im Container)
+3. Router dispatcht `FeatureMiddleware::handle()` → ruft `$gate->requireFeature('mobile_api')` auf
+4. Container auto-resolved `FeatureGateService` mit `Database` (prefix=`''`)
+5. `syncFromSaas()`: `if ($prefix === '') return null;` → kein Sync → Cache leer
+6. `mobile_api` nicht in CORE_FEATURES → `isEnabled()` = false → **403 `feature_disabled`**
+
+**Betroffen:** Login, alle API-Endpoints, Flutter Android + Windows
+
+### Fix (3 Schichten)
+1. **`FeatureMiddleware::handle()`**: Bypass wenn `db->getPrefix() === ''` UND `Authorization: Bearer` Header vorhanden → Request ist stateless Bearer-API → Controller regelt selbst
+2. **`MobileApiController::requireAuth()`**: Inline `mobile_api` Gate-Check NACH Prefix-Auflösung (korrekte Prüfung mit richtigem Tenant-Prefix)
+3. **`MobileApiController::login()`**: Inline `mobile_api` Gate-Check NACH Credential-Verifikation und Prefix-Setzen → blockiert Login für Tenants ohne Feature
+
+### Geänderte Dateien
+- `app/Middleware/FeatureMiddleware.php` — Bearer-bypass für prefixlose Requests
+- `app/Controllers/MobileApiController.php` — inline Gate-Check in `requireAuth()` + `login()`
+- `saas-platform/migrations/067_repair_mobile_api_feature_gate.sql` — Self-Healing
+
+### Self-Healing Regel
+Wenn `db->getPrefix() === ''` AND `Authorization: Bearer` → Feature-Middleware bypassen.  
+Controller-seitige Gate-Prüfung erfolgt nach Prefix-Auflösung.
+
+---
+
 ## Bug: Hundeschulen-Dashboard Paket-Verkauf-Modal erwartet JSON, Controller redirectet HTML
 
 **Status:** `fixed`  

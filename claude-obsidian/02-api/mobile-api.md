@@ -24,9 +24,40 @@ Flutter `ApiService` → `https://app.therapano.de/api/mobile/*` → `MobileApiC
 - Route-Änderungen brechen Flutter sofort.
 - Tenant-Auflösung im API-Controller ist sicherheitskritisch.
 
+## Feature-Gating (mobile_api)
+
+**Wichtige Architektur-Regel (Mai 2026):**
+
+Mobile API Requests sind stateless (kein PHP-Session). Das bedeutet:
+- Beim Bootstrap ist `db->getPrefix() = ''` → `FeatureGateService` hat keinen Tenant-Kontext
+- `FeatureMiddleware` muss für prefixlose Bearer-token-Requests bypassen
+- Die korrekte `mobile_api`-Prüfung erfolgt **inline in `requireAuth()` und `login()`** nach Prefix-Auflösung
+
+**FeatureMiddleware Bypass-Bedingung:**
+```php
+if ($this->db->getPrefix() === ''
+    && isset($_SERVER['HTTP_AUTHORIZATION'])
+    && stripos($_SERVER['HTTP_AUTHORIZATION'], 'Bearer ') === 0
+) {
+    $next(); return; // Controller macht Gate-Check selbst
+}
+```
+
+**Inline Gate-Check (in requireAuth() + login()):**
+```php
+$gate = Application::getInstance()->getContainer()->get(FeatureGateService::class);
+if (!$gate->isEnabled('mobile_api')) {
+    $this->error('feature_disabled', 403);
+}
+```
+
+Zum Zeitpunkt des Checks ist `db->getPrefix()` auf den Tenant gesetzt → Gate kann korrekt aus Cache/SaaS lesen.
+
+**Tenants ohne mobile_api:** erhalten 403 `feature_disabled` beim Login und bei allen Requests.  
+**Tenants mit mobile_api:** werden korrekt durchgelassen.
+
 ## TODOs
 - Endpoint-Katalog in Teilbereiche splitten (Core, TCP, Mailbox, Portal-Admin).
-- Fehlercodes standardisieren (z. B. `feature_disabled`).
 
 ## Verlinkungen
 - [[04-flutter/flutter-app]]

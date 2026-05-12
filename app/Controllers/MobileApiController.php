@@ -595,6 +595,24 @@ class MobileApiController
             $this->error('Konto ist deaktiviert.', 401);
         }
 
+        // ── Mobile API Feature Gate (inline, post-prefix-resolution) ──────────
+        // The FeatureMiddleware cannot perform this check at dispatch time because
+        // the tenant prefix is not yet known for stateless Bearer-token requests.
+        // We check here once the prefix is confirmed so tenants without mobile_api
+        // are properly blocked while tenants with it are correctly allowed.
+        try {
+            $gate = \App\Core\Application::getInstance()
+                ->getContainer()
+                ->get(\App\Services\FeatureGateService::class);
+            if (!$gate->isEnabled('mobile_api')) {
+                $this->error('feature_disabled', 403);
+            }
+        } catch (\Throwable $gateEx) {
+            /* Gate service unavailable (e.g. no SaaS DB config) — allow access.
+             * A missing gate is not a reason to block legitimate users. */
+            error_log('[MobileApi] feature gate check failed: ' . $gateEx->getMessage());
+        }
+
         // SELF-HEAL: Persist tenant_prefix in the token row if it was inferred.
         if (($tokenRow['tenant_prefix'] ?? '') === '' && $this->db->getPrefix() !== '') {
             try {
@@ -680,6 +698,21 @@ class MobileApiController
         if ($isActive !== 1) {
             error_reporting($prev);
             $this->error('Konto ist deaktiviert.', 403);
+        }
+
+        // ── Mobile API Feature Gate (login, post-prefix-resolution) ───────────
+        // Prefix is resolved and set at this point — gate can query the correct
+        // tenant cache. Tenants without mobile_api must not receive a token.
+        try {
+            $gate = \App\Core\Application::getInstance()
+                ->getContainer()
+                ->get(\App\Services\FeatureGateService::class);
+            if (!$gate->isEnabled('mobile_api')) {
+                error_reporting($prev);
+                $this->error('feature_disabled', 403);
+            }
+        } catch (\Throwable $gateEx) {
+            error_log('[MobileApi] login feature gate check failed: ' . $gateEx->getMessage());
         }
 
         $token     = bin2hex(random_bytes(32));
