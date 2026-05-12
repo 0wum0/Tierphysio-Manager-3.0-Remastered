@@ -11,117 +11,131 @@ class ComposerStaticInit071981c1142c32cd66af22b155e6d9ef
         '6e3fae29631ef280660b3cdad06f25a8' => __DIR__ . '/..' . '/symfony/deprecation-contracts/function.php',
         '320cde22f66dd4f5d3fd621d3e88b98f' => __DIR__ . '/..' . '/symfony/polyfill-ctype/bootstrap.php',
         'a4a119a56e50fbb293281d9a48007e0e' => __DIR__ . '/..' . '/symfony/polyfill-php80/bootstrap.php',
+        '9b38cf48e83f5d8f60375221cd213eee' => __DIR__ . '/..' . '/phpstan/phpstan/bootstrap.php',
         'e39a8b23c42d4e1452234d762b03835a' => __DIR__ . '/..' . '/ramsey/uuid/src/functions.php',
         '89efb1254ef2d1c5d80096acd12c4098' => __DIR__ . '/..' . '/twig/twig/src/Resources/core.php',
         'ffecb95d45175fd40f75be8a23b34f90' => __DIR__ . '/..' . '/twig/twig/src/Resources/debug.php',
         'c7baa00073ee9c61edf148c51917cfb4' => __DIR__ . '/..' . '/twig/twig/src/Resources/escaper.php',
         'f844ccf1d25df8663951193c3fc307c8' => __DIR__ . '/..' . '/twig/twig/src/Resources/string_loader.php',
+        'fec2d4f8b6e2d97f4fc2d480a9355936' => __DIR__ . '/../..' . '/app/helpers.php',
     );
 
     public static $prefixLengthsPsr4 = array (
-        'T' => 
+        'T' =>
         array (
             'Twig\\' => 5,
+            'Tests\\' => 6,
         ),
-        'S' => 
+        'S' =>
         array (
             'Symfony\\Polyfill\\Php80\\' => 23,
             'Symfony\\Polyfill\\Mbstring\\' => 26,
             'Symfony\\Polyfill\\Ctype\\' => 23,
             'Symfony\\Component\\HttpFoundation\\' => 33,
         ),
-        'R' => 
+        'R' =>
         array (
             'Ramsey\\Uuid\\' => 12,
             'Ramsey\\Collection\\' => 18,
         ),
-        'P' => 
+        'P' =>
         array (
             'Plugins\\' => 8,
             'PhpOption\\' => 10,
             'PHPMailer\\PHPMailer\\' => 20,
         ),
-        'G' => 
+        'G' =>
         array (
             'GrahamCampbell\\ResultType\\' => 26,
         ),
-        'D' => 
+        'D' =>
         array (
             'Dotenv\\' => 7,
         ),
-        'B' => 
+        'B' =>
         array (
             'Brick\\Math\\' => 11,
         ),
-        'A' => 
+        'A' =>
         array (
             'App\\' => 4,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
-        'Twig\\' => 
+        'Twig\\' =>
         array (
             0 => __DIR__ . '/..' . '/twig/twig/src',
         ),
-        'Symfony\\Polyfill\\Php80\\' => 
+        'Tests\\' =>
+        array (
+            0 => __DIR__ . '/../..' . '/tests',
+        ),
+        'Symfony\\Polyfill\\Php80\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/polyfill-php80',
         ),
-        'Symfony\\Polyfill\\Mbstring\\' => 
+        'Symfony\\Polyfill\\Mbstring\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/polyfill-mbstring',
         ),
-        'Symfony\\Polyfill\\Ctype\\' => 
+        'Symfony\\Polyfill\\Ctype\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/polyfill-ctype',
         ),
-        'Symfony\\Component\\HttpFoundation\\' => 
+        'Symfony\\Component\\HttpFoundation\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/http-foundation',
         ),
-        'Ramsey\\Uuid\\' => 
+        'Ramsey\\Uuid\\' =>
         array (
             0 => __DIR__ . '/..' . '/ramsey/uuid/src',
         ),
-        'Ramsey\\Collection\\' => 
+        'Ramsey\\Collection\\' =>
         array (
             0 => __DIR__ . '/..' . '/ramsey/collection/src',
         ),
-        'Plugins\\' => 
+        'Plugins\\' =>
         array (
             0 => __DIR__ . '/../..' . '/plugins',
         ),
-        'PhpOption\\' => 
+        'PhpOption\\' =>
         array (
             0 => __DIR__ . '/..' . '/phpoption/phpoption/src/PhpOption',
         ),
-        'PHPMailer\\PHPMailer\\' => 
+        'PHPMailer\\PHPMailer\\' =>
         array (
             0 => __DIR__ . '/..' . '/phpmailer/phpmailer/src',
         ),
-        'GrahamCampbell\\ResultType\\' => 
+        'GrahamCampbell\\ResultType\\' =>
         array (
             0 => __DIR__ . '/..' . '/graham-campbell/result-type/src',
         ),
-        'Dotenv\\' => 
+        'Dotenv\\' =>
         array (
             0 => __DIR__ . '/..' . '/vlucas/phpdotenv/src',
         ),
-        'Brick\\Math\\' => 
+        'Brick\\Math\\' =>
         array (
             0 => __DIR__ . '/..' . '/brick/math/src',
         ),
-        'App\\' => 
+        'App\\' =>
         array (
             0 => __DIR__ . '/../..' . '/app',
         ),
     );
 
     public static $prefixesPsr0 = array (
-        'P' => 
+        'S' =>
         array (
-            'Parsedown' => 
+            'Smalot\\PdfParser\\' =>
+            array (
+                0 => __DIR__ . '/..' . '/smalot/pdfparser/src',
+            ),
+        ),
+        'P' =>
+        array (
+            'Parsedown' =>
             array (
                 0 => __DIR__ . '/..' . '/erusev/parsedown',
             ),
@@ -129,19 +143,45 @@ class ComposerStaticInit071981c1142c32cd66af22b155e6d9ef
     );
 
     public static $classMap = array (
+        'App\\Controllers\\ApiController' => __DIR__ . '/../..' . '/app/Controllers/ApiController.php',
+        'App\\Controllers\\AttendanceController' => __DIR__ . '/../..' . '/app/Controllers/AttendanceController.php',
         'App\\Controllers\\AuthController' => __DIR__ . '/../..' . '/app/Controllers/AuthController.php',
+        'App\\Controllers\\BefundbogenController' => __DIR__ . '/../..' . '/app/Controllers/BefundbogenController.php',
+        'App\\Controllers\\ConsentController' => __DIR__ . '/../..' . '/app/Controllers/ConsentController.php',
+        'App\\Controllers\\CourseCategoryController' => __DIR__ . '/../..' . '/app/Controllers/CourseCategoryController.php',
+        'App\\Controllers\\CourseController' => __DIR__ . '/../..' . '/app/Controllers/CourseController.php',
+        'App\\Controllers\\CronController' => __DIR__ . '/../..' . '/app/Controllers/CronController.php',
+        'App\\Controllers\\CronPixelController' => __DIR__ . '/../..' . '/app/Controllers/CronPixelController.php',
         'App\\Controllers\\DashboardController' => __DIR__ . '/../..' . '/app/Controllers/DashboardController.php',
+        'App\\Controllers\\DatevExportController' => __DIR__ . '/../..' . '/app/Controllers/DatevExportController.php',
+        'App\\Controllers\\DogschoolDashboardController' => __DIR__ . '/../..' . '/app/Controllers/DogschoolDashboardController.php',
+        'App\\Controllers\\DogschoolInvoiceController' => __DIR__ . '/../..' . '/app/Controllers/DogschoolInvoiceController.php',
+        'App\\Controllers\\DogschoolReportController' => __DIR__ . '/../..' . '/app/Controllers/DogschoolReportController.php',
+        'App\\Controllers\\EventController' => __DIR__ . '/../..' . '/app/Controllers/EventController.php',
+        'App\\Controllers\\ExpenseController' => __DIR__ . '/../..' . '/app/Controllers/ExpenseController.php',
+        'App\\Controllers\\HomeworkController' => __DIR__ . '/../..' . '/app/Controllers/HomeworkController.php',
         'App\\Controllers\\InstallerController' => __DIR__ . '/../..' . '/app/Controllers/InstallerController.php',
         'App\\Controllers\\InvoiceController' => __DIR__ . '/../..' . '/app/Controllers/InvoiceController.php',
+        'App\\Controllers\\LeadController' => __DIR__ . '/../..' . '/app/Controllers/LeadController.php',
+        'App\\Controllers\\MobileApiController' => __DIR__ . '/../..' . '/app/Controllers/MobileApiController.php',
+        'App\\Controllers\\NotificationController' => __DIR__ . '/../..' . '/app/Controllers/NotificationController.php',
+        'App\\Controllers\\OnlineBookingController' => __DIR__ . '/../..' . '/app/Controllers/OnlineBookingController.php',
         'App\\Controllers\\OwnerController' => __DIR__ . '/../..' . '/app/Controllers/OwnerController.php',
+        'App\\Controllers\\PackageController' => __DIR__ . '/../..' . '/app/Controllers/PackageController.php',
         'App\\Controllers\\PatientController' => __DIR__ . '/../..' . '/app/Controllers/PatientController.php',
         'App\\Controllers\\ProfileController' => __DIR__ . '/../..' . '/app/Controllers/ProfileController.php',
+        'App\\Controllers\\ReminderDunningController' => __DIR__ . '/../..' . '/app/Controllers/ReminderDunningController.php',
         'App\\Controllers\\SettingsController' => __DIR__ . '/../..' . '/app/Controllers/SettingsController.php',
+        'App\\Controllers\\TrainerController' => __DIR__ . '/../..' . '/app/Controllers/TrainerController.php',
+        'App\\Controllers\\TrainingPlanController' => __DIR__ . '/../..' . '/app/Controllers/TrainingPlanController.php',
+        'App\\Controllers\\UiSettingsController' => __DIR__ . '/../..' . '/app/Controllers/UiSettingsController.php',
         'App\\Core\\Application' => __DIR__ . '/../..' . '/app/Core/Application.php',
+        'App\\Core\\Auth' => __DIR__ . '/../..' . '/app/Core/Auth.php',
         'App\\Core\\Config' => __DIR__ . '/../..' . '/app/Core/Config.php',
         'App\\Core\\Container' => __DIR__ . '/../..' . '/app/Core/Container.php',
         'App\\Core\\Controller' => __DIR__ . '/../..' . '/app/Core/Controller.php',
         'App\\Core\\Database' => __DIR__ . '/../..' . '/app/Core/Database.php',
+        'App\\Core\\PerformanceLogger' => __DIR__ . '/../..' . '/app/Core/PerformanceLogger.php',
         'App\\Core\\PluginManager' => __DIR__ . '/../..' . '/app/Core/PluginManager.php',
         'App\\Core\\Repository' => __DIR__ . '/../..' . '/app/Core/Repository.php',
         'App\\Core\\Router' => __DIR__ . '/../..' . '/app/Core/Router.php',
@@ -151,20 +191,49 @@ class ComposerStaticInit071981c1142c32cd66af22b155e6d9ef
         'App\\Middleware\\AdminMiddleware' => __DIR__ . '/../..' . '/app/Middleware/AdminMiddleware.php',
         'App\\Middleware\\AuthMiddleware' => __DIR__ . '/../..' . '/app/Middleware/AuthMiddleware.php',
         'App\\Middleware\\CsrfMiddleware' => __DIR__ . '/../..' . '/app/Middleware/CsrfMiddleware.php',
+        'App\\Middleware\\FeatureMiddleware' => __DIR__ . '/../..' . '/app/Middleware/FeatureMiddleware.php',
         'App\\Middleware\\GuestMiddleware' => __DIR__ . '/../..' . '/app/Middleware/GuestMiddleware.php',
+        'App\\Repositories\\BefundTemplateRepository' => __DIR__ . '/../..' . '/app/Repositories/BefundTemplateRepository.php',
+        'App\\Repositories\\BefundbogenRepository' => __DIR__ . '/../..' . '/app/Repositories/BefundbogenRepository.php',
+        'App\\Repositories\\ConsentRepository' => __DIR__ . '/../..' . '/app/Repositories/ConsentRepository.php',
+        'App\\Repositories\\CourseRepository' => __DIR__ . '/../..' . '/app/Repositories/CourseRepository.php',
+        'App\\Repositories\\ExpenseRepository' => __DIR__ . '/../..' . '/app/Repositories/ExpenseRepository.php',
+        'App\\Repositories\\HomeworkRepository' => __DIR__ . '/../..' . '/app/Repositories/HomeworkRepository.php',
         'App\\Repositories\\InvoiceRepository' => __DIR__ . '/../..' . '/app/Repositories/InvoiceRepository.php',
+        'App\\Repositories\\LeadRepository' => __DIR__ . '/../..' . '/app/Repositories/LeadRepository.php',
         'App\\Repositories\\OwnerRepository' => __DIR__ . '/../..' . '/app/Repositories/OwnerRepository.php',
+        'App\\Repositories\\PackageRepository' => __DIR__ . '/../..' . '/app/Repositories/PackageRepository.php',
+        'App\\Repositories\\PasswordResetRepository' => __DIR__ . '/../..' . '/app/Repositories/PasswordResetRepository.php',
         'App\\Repositories\\PatientRepository' => __DIR__ . '/../..' . '/app/Repositories/PatientRepository.php',
+        'App\\Repositories\\ReminderDunningRepository' => __DIR__ . '/../..' . '/app/Repositories/ReminderDunningRepository.php',
         'App\\Repositories\\SettingsRepository' => __DIR__ . '/../..' . '/app/Repositories/SettingsRepository.php',
+        'App\\Repositories\\TrainingPlanRepository' => __DIR__ . '/../..' . '/app/Repositories/TrainingPlanRepository.php',
+        'App\\Repositories\\TreatmentTypeRepository' => __DIR__ . '/../..' . '/app/Repositories/TreatmentTypeRepository.php',
+        'App\\Repositories\\UserPreferencesRepository' => __DIR__ . '/../..' . '/app/Repositories/UserPreferencesRepository.php',
         'App\\Repositories\\UserRepository' => __DIR__ . '/../..' . '/app/Repositories/UserRepository.php',
+        'App\\Services\\BefundbogenPdfService' => __DIR__ . '/../..' . '/app/Services/BefundbogenPdfService.php',
+        'App\\Services\\BillingNoticeService' => __DIR__ . '/../..' . '/app/Services/BillingNoticeService.php',
+        'App\\Services\\BirthdayMailService' => __DIR__ . '/../..' . '/app/Services/BirthdayMailService.php',
+        'App\\Services\\CustomVetReportPdfService' => __DIR__ . '/../..' . '/app/Services/CustomVetReportPdfService.php',
         'App\\Services\\DashboardService' => __DIR__ . '/../..' . '/app/Services/DashboardService.php',
+        'App\\Services\\DatevExportService' => __DIR__ . '/../..' . '/app/Services/DatevExportService.php',
+        'App\\Services\\DogschoolInvoiceService' => __DIR__ . '/../..' . '/app/Services/DogschoolInvoiceService.php',
+        'App\\Services\\DogschoolSchemaService' => __DIR__ . '/../..' . '/app/Services/DogschoolSchemaService.php',
+        'App\\Services\\DogschoolSeedService' => __DIR__ . '/../..' . '/app/Services/DogschoolSeedService.php',
+        'App\\Services\\FeatureGateService' => __DIR__ . '/../..' . '/app/Services/FeatureGateService.php',
+        'App\\Services\\FeatureRouteMap' => __DIR__ . '/../..' . '/app/Services/FeatureRouteMap.php',
+        'App\\Services\\InvoiceCancellationService' => __DIR__ . '/../..' . '/app/Services/InvoiceCancellationService.php',
         'App\\Services\\InvoiceService' => __DIR__ . '/../..' . '/app/Services/InvoiceService.php',
         'App\\Services\\MailService' => __DIR__ . '/../..' . '/app/Services/MailService.php',
+        'App\\Services\\MediaOptimizerService' => __DIR__ . '/../..' . '/app/Services/MediaOptimizerService.php',
         'App\\Services\\MigrationService' => __DIR__ . '/../..' . '/app/Services/MigrationService.php',
         'App\\Services\\OwnerService' => __DIR__ . '/../..' . '/app/Services/OwnerService.php',
         'App\\Services\\PatientService' => __DIR__ . '/../..' . '/app/Services/PatientService.php',
         'App\\Services\\PdfService' => __DIR__ . '/../..' . '/app/Services/PdfService.php',
+        'App\\Services\\PluginMigrationService' => __DIR__ . '/../..' . '/app/Services/PluginMigrationService.php',
+        'App\\Services\\ReceiptParserService' => __DIR__ . '/../..' . '/app/Services/ReceiptParserService.php',
         'App\\Services\\SettingsService' => __DIR__ . '/../..' . '/app/Services/SettingsService.php',
+        'App\\Services\\TimelineMediaService' => __DIR__ . '/../..' . '/app/Services/TimelineMediaService.php',
         'Attribute' => __DIR__ . '/..' . '/symfony/polyfill-php80/Resources/stubs/Attribute.php',
         'Brick\\Math\\BigDecimal' => __DIR__ . '/..' . '/brick/math/src/BigDecimal.php',
         'Brick\\Math\\BigInteger' => __DIR__ . '/..' . '/brick/math/src/BigInteger.php',
@@ -385,6 +454,52 @@ class ComposerStaticInit071981c1142c32cd66af22b155e6d9ef
         'Ramsey\\Uuid\\UuidInterface' => __DIR__ . '/..' . '/ramsey/uuid/src/UuidInterface.php',
         'Ramsey\\Uuid\\Validator\\GenericValidator' => __DIR__ . '/..' . '/ramsey/uuid/src/Validator/GenericValidator.php',
         'Ramsey\\Uuid\\Validator\\ValidatorInterface' => __DIR__ . '/..' . '/ramsey/uuid/src/Validator/ValidatorInterface.php',
+        'Smalot\\PdfParser\\Config' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Config.php',
+        'Smalot\\PdfParser\\Document' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Document.php',
+        'Smalot\\PdfParser\\Element' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Element.php',
+        'Smalot\\PdfParser\\Element\\ElementArray' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Element/ElementArray.php',
+        'Smalot\\PdfParser\\Element\\ElementBoolean' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Element/ElementBoolean.php',
+        'Smalot\\PdfParser\\Element\\ElementDate' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Element/ElementDate.php',
+        'Smalot\\PdfParser\\Element\\ElementHexa' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Element/ElementHexa.php',
+        'Smalot\\PdfParser\\Element\\ElementMissing' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Element/ElementMissing.php',
+        'Smalot\\PdfParser\\Element\\ElementName' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Element/ElementName.php',
+        'Smalot\\PdfParser\\Element\\ElementNull' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Element/ElementNull.php',
+        'Smalot\\PdfParser\\Element\\ElementNumeric' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Element/ElementNumeric.php',
+        'Smalot\\PdfParser\\Element\\ElementString' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Element/ElementString.php',
+        'Smalot\\PdfParser\\Element\\ElementStruct' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Element/ElementStruct.php',
+        'Smalot\\PdfParser\\Element\\ElementXRef' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Element/ElementXRef.php',
+        'Smalot\\PdfParser\\Encoding' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Encoding.php',
+        'Smalot\\PdfParser\\Encoding\\AbstractEncoding' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Encoding/AbstractEncoding.php',
+        'Smalot\\PdfParser\\Encoding\\EncodingLocator' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Encoding/EncodingLocator.php',
+        'Smalot\\PdfParser\\Encoding\\ISOLatin1Encoding' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Encoding/ISOLatin1Encoding.php',
+        'Smalot\\PdfParser\\Encoding\\ISOLatin9Encoding' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Encoding/ISOLatin9Encoding.php',
+        'Smalot\\PdfParser\\Encoding\\MacRomanEncoding' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Encoding/MacRomanEncoding.php',
+        'Smalot\\PdfParser\\Encoding\\PDFDocEncoding' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Encoding/PDFDocEncoding.php',
+        'Smalot\\PdfParser\\Encoding\\PostScriptGlyphs' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Encoding/PostScriptGlyphs.php',
+        'Smalot\\PdfParser\\Encoding\\StandardEncoding' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Encoding/StandardEncoding.php',
+        'Smalot\\PdfParser\\Encoding\\WinAnsiEncoding' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Encoding/WinAnsiEncoding.php',
+        'Smalot\\PdfParser\\Exception\\EmptyPdfException' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Exception/EmptyPdfException.php',
+        'Smalot\\PdfParser\\Exception\\EncodingNotFoundException' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Exception/EncodingNotFoundException.php',
+        'Smalot\\PdfParser\\Exception\\InvalidDictionaryObjectException' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Exception/InvalidDictionaryObjectException.php',
+        'Smalot\\PdfParser\\Exception\\MissingCatalogException' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Exception/MissingCatalogException.php',
+        'Smalot\\PdfParser\\Exception\\MissingPdfHeaderException' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Exception/MissingPdfHeaderException.php',
+        'Smalot\\PdfParser\\Exception\\NotImplementedException' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Exception/NotImplementedException.php',
+        'Smalot\\PdfParser\\Font' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Font.php',
+        'Smalot\\PdfParser\\Font\\FontCIDFontType0' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Font/FontCIDFontType0.php',
+        'Smalot\\PdfParser\\Font\\FontCIDFontType2' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Font/FontCIDFontType2.php',
+        'Smalot\\PdfParser\\Font\\FontTrueType' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Font/FontTrueType.php',
+        'Smalot\\PdfParser\\Font\\FontType0' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Font/FontType0.php',
+        'Smalot\\PdfParser\\Font\\FontType1' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Font/FontType1.php',
+        'Smalot\\PdfParser\\Font\\FontType3' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Font/FontType3.php',
+        'Smalot\\PdfParser\\Header' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Header.php',
+        'Smalot\\PdfParser\\PDFObject' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/PDFObject.php',
+        'Smalot\\PdfParser\\Page' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Page.php',
+        'Smalot\\PdfParser\\Pages' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Pages.php',
+        'Smalot\\PdfParser\\Parser' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/Parser.php',
+        'Smalot\\PdfParser\\RawData\\FilterHelper' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/RawData/FilterHelper.php',
+        'Smalot\\PdfParser\\RawData\\RawDataParser' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/RawData/RawDataParser.php',
+        'Smalot\\PdfParser\\XObject\\Form' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/XObject/Form.php',
+        'Smalot\\PdfParser\\XObject\\Image' => __DIR__ . '/..' . '/smalot/pdfparser/src/Smalot/PdfParser/XObject/Image.php',
         'Stringable' => __DIR__ . '/..' . '/symfony/polyfill-php80/Resources/stubs/Stringable.php',
         'Symfony\\Component\\HttpFoundation\\AcceptHeader' => __DIR__ . '/..' . '/symfony/http-foundation/AcceptHeader.php',
         'Symfony\\Component\\HttpFoundation\\AcceptHeaderItem' => __DIR__ . '/..' . '/symfony/http-foundation/AcceptHeaderItem.php',
