@@ -244,6 +244,10 @@ class BefundbogenPdfService
             $felder
         );
 
+        $curY = $this->renderAnatomySummary($pdf, $font, $fontSize, $primaryColor, $grayColor, $darkColor, $lineColor,
+            $contentX, $contentW, $rightEdge, $pageH, $sidebarW, $curY, $felder
+        );
+
         $curY = $this->renderSection($pdf, $font, $fontSize, $primaryColor, $grayColor, $darkColor, $lineColor,
             $contentX, $contentW, $rightEdge, $pageH, $sidebarW, $curY,
             'Naturheilkundliche Diagnostik',
@@ -439,6 +443,84 @@ class BefundbogenPdfService
 
         $curY += 3;
         return $curY;
+    }
+
+    private function renderAnatomySummary(
+        TCPDF $pdf,
+        string $font,
+        float $fontSize,
+        array $primaryColor,
+        array $grayColor,
+        array $darkColor,
+        array $lineColor,
+        float $contentX,
+        float $contentW,
+        float $rightEdge,
+        float $pageH,
+        float $sidebarW,
+        float $curY,
+        array $felder
+    ): float {
+        $markers  = $this->normalizeAnatomyItems($felder['anatomy_markers'] ?? []);
+        $drawings = $this->normalizeAnatomyItems($felder['anatomy_drawings'] ?? []);
+
+        if ($markers === [] && $drawings === []) {
+            return $curY;
+        }
+
+        $species = (string)($felder['anatomy_species'] ?? '');
+        $lines = [];
+        if ($species !== '') {
+            $lines[] = 'Tierart/Modell: ' . $species;
+        }
+
+        if ($markers !== []) {
+            $lines[] = 'Marker: ' . count($markers);
+            foreach (array_slice($markers, 0, 12) as $index => $marker) {
+                $note  = trim((string)($marker['note'] ?? ''));
+                $color = trim((string)($marker['color'] ?? ''));
+                $x     = isset($marker['x']) ? (string)$marker['x'] : '?';
+                $y     = isset($marker['y']) ? (string)$marker['y'] : '?';
+                $label = $note !== '' ? $note : 'ohne Notiz';
+                $lines[] = 'Marker ' . ($index + 1) . ': ' . $label . " (x={$x}, y={$y}" . ($color !== '' ? ", {$color}" : '') . ')';
+            }
+            if (count($markers) > 12) {
+                $lines[] = 'Weitere Marker: ' . (count($markers) - 12);
+            }
+        }
+
+        if ($drawings !== []) {
+            $lines[] = 'Freihand-Zeichnungen: ' . count($drawings);
+            foreach (array_slice($drawings, 0, 8) as $index => $drawing) {
+                $points = is_array($drawing['points'] ?? null) ? count($drawing['points']) : 0;
+                $color  = trim((string)($drawing['color'] ?? ''));
+                $lines[] = 'Zeichnung ' . ($index + 1) . ': ' . $points . ' Punkte' . ($color !== '' ? " ({$color})" : '');
+            }
+            if (count($drawings) > 8) {
+                $lines[] = 'Weitere Zeichnungen: ' . (count($drawings) - 8);
+            }
+        }
+
+        return $this->renderSection($pdf, $font, $fontSize, $primaryColor, $grayColor, $darkColor, $lineColor,
+            $contentX, $contentW, $rightEdge, $pageH, $sidebarW, $curY,
+            'Anatomische Markierungen',
+            ['_anatomy_summary' => ''],
+            ['_anatomy_summary' => implode("\n", $lines)]
+        );
+    }
+
+    private function normalizeAnatomyItems(mixed $value): array
+    {
+        if (is_string($value)) {
+            $decoded = json_decode($value, true);
+            $value = is_array($decoded) ? $decoded : [];
+        }
+
+        if (!is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_filter($value, static fn ($item): bool => is_array($item)));
     }
 
     private function renderScaleText(int $min, int $max, int $current): string

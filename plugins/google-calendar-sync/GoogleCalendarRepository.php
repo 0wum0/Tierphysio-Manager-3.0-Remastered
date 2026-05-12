@@ -322,4 +322,25 @@ class GoogleCalendarRepository
         );
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    public function getRecentImportedMatches(int $limit = 10): array
+    {
+        $limit = max(1, min(50, $limit));
+
+        return $this->db->safeFetchAll(
+            "SELECT e.id, e.google_event_id, e.event_title, e.event_start, e.appointment_id,
+                    a.patient_id, a.owner_id,
+                    p.name AS patient_name,
+                    o.first_name AS owner_first_name,
+                    o.last_name AS owner_last_name
+               FROM `{$this->t('google_calendar_imported_events')}` e
+               LEFT JOIN `{$this->t('appointments')}` a ON a.id = e.appointment_id
+               LEFT JOIN `{$this->t('patients')}` p ON p.id = a.patient_id
+               LEFT JOIN `{$this->t('owners')}` o ON o.id = a.owner_id
+              WHERE e.google_status != 'cancelled'
+              ORDER BY e.last_pulled_at DESC, e.created_at DESC
+              LIMIT ?",
+            [$limit]
+        );
+    }
 }

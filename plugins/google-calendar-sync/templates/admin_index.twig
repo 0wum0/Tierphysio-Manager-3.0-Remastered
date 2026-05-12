@@ -296,6 +296,66 @@
             {% endif %}
         </div>
 
+        {# Imported Event Matches #}
+        <div class="glass-card mb-3">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-semibold" style="font-size:0.95rem;margin:0;">Import-Zuordnungen</h3>
+                <span class="fs-nano text-muted">Letzte 10 Google-Imports</span>
+            </div>
+            {% if recent_imports %}
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Termin</th>
+                            <th>Patient</th>
+                            <th>Halter</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for item in recent_imports %}
+                        <tr>
+                            <td>
+                                <div class="fw-600">{{ item.event_title ?? 'Google-Termin' }}</div>
+                                <div class="fs-nano text-muted">{% if item.event_start %}{{ item.event_start|date('d.m.Y H:i') }}{% else %}ohne Startzeit{% endif %}</div>
+                            </td>
+                            <td>
+                                {% if item.patient_id %}
+                                    {{ item.patient_name ?? ('Patient #' ~ item.patient_id) }}
+                                    <span class="fs-nano text-muted">#{{ item.patient_id }}</span>
+                                {% else %}
+                                    <span class="text-muted">Nicht zugeordnet</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.owner_id %}
+                                    {% set owner_name = (item.owner_first_name ~ ' ' ~ item.owner_last_name)|trim %}
+                                    {{ owner_name is not empty ? owner_name : ('Halter #' ~ item.owner_id) }}
+                                    <span class="fs-nano text-muted">#{{ item.owner_id }}</span>
+                                {% else %}
+                                    <span class="text-muted">Nicht zugeordnet</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.appointment_id %}
+                                    <span class="badge bg-success">Termin #{{ item.appointment_id }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Extern</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="empty-state" style="padding:2rem 1rem;">
+                <div class="empty-state-text">Noch keine importierten Google-Termine.</div>
+            </div>
+            {% endif %}
+        </div>
+
         {# Setup Guide — collapsible #}
         <div class="glass-card">
             <button class="btn btn-secondary btn-sm w-full d-flex align-items-center justify-content-between"

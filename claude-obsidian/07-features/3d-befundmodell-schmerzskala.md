@@ -69,5 +69,5 @@ state = {
 | `app/Repositories/BefundbogenRepository.php` | `saveFelder()` KV-Store |
 
 ## Offene TODOs
-- `show.twig`: NRS-Wert noch als Plain-Zahl — visuelle Read-only-Scale wäre UX-Verbesserung
-- Anatomy-Zeichnungen in PDF-Export noch nicht berücksichtigt
+- Keine bekannten funktionalen offenen Punkte im bestehenden SVG/NRS-Feature.
+- Future: Vollgrafischer PDF-Export der Anatomy-Stage waere ein separates Ausbau-Thema; aktuell exportiert das PDF Marker und Freihand-Zeichnungen strukturiert als Textzusammenfassung.

@@ -38,6 +38,7 @@ class GoogleCalendarController extends Controller
         $lastSuccess = $this->repo->getLastSuccessfulSync();
         $lastError   = $this->repo->getLastError();
         $syncedCount = $this->repo->getRecentSyncedCount(24);
+        $recentImports = $this->repo->getRecentImportedMatches(10);
 
         $calendars = [];
         if ($connection && !empty($connection['access_token'])) {
@@ -54,6 +55,7 @@ class GoogleCalendarController extends Controller
             'last_success'       => $lastSuccess,
             'last_error'         => $lastError,
             'synced_count'       => $syncedCount,
+            'recent_imports'      => $recentImports,
             'is_configured'      => $this->api->isConfigured(),
             'google_account_email'=> $connection['google_email'] ?? null,
             'csrf_token'         => $this->session->generateCsrfToken(),

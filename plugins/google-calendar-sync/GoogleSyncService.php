@@ -344,6 +344,9 @@ class GoogleSyncService
             try {
                 $startDt = new \DateTime($startRaw);
                 $endDt   = $endRaw ? new \DateTime($endRaw) : (clone $startDt)->modify('+1 hour');
+                $berlinTz = new \DateTimeZone('Europe/Berlin');
+                $startDt->setTimezone($berlinTz);
+                $endDt->setTimezone($berlinTz);
             } catch (\Throwable) {
                 continue;
             }

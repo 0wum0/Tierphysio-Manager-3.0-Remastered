@@ -146,6 +146,7 @@ Pull-Aktionen wurden ignoriert, obwohl der Pull erfolgreich war.
 - Kein Cross-Tenant-Datenzugriff möglich
 
 ## Offene TODOs
-- UI: Matched patient_id/owner_id in der Admin-Ansicht anzeigen
-- Recurring Events: noch nicht unterstützt (werden als Einzeltermine importiert)
-- Timezone: aktuell wird PHP-Systemzeit verwendet, explizites Europe/Berlin könnte fehlen
+- Keine bekannten funktionalen offenen Punkte aus dem Audit 2026-05-12.
+- Recurring Events: `singleEvents=true` in `GoogleApiService::listEvents()` expandiert Serientermine als Einzeltermine.
+- Timezone: Push-Payloads nutzen `Europe/Berlin`; Pull-Import normalisiert `DateTime` nach `Europe/Berlin`.
+- Admin-UI: Import-Zuordnungen zeigen Patient/Halter/Appointment in `admin_index.twig`.

@@ -7,6 +7,7 @@
 
 Das Chat-System zwischen Praxis-Admin und Besitzern unterstützt Dateianhänge:
 - **Bilder** (JPG, PNG, GIF, WebP): werden als Inline-Vorschau mit Lightbox angezeigt
+- **Videos** (MP4, WebM, MOV): werden als Inline-Preview mit nativen Browser-Controls angezeigt
 - **Dokumente** (PDF, Word, Excel, TXT, CSV): Download-Karten mit Icon, Dateiname, Größe
 - **Max. Dateigröße**: 10 MB
 - **Tenant-isoliert**: Dateien liegen in `storage/tenants/{prefix}/portal-attachments/{threadId}/`
@@ -120,9 +121,9 @@ private const ALLOWED_MIME = [
 
 1. **Polling überspringt eigene Nachrichten**: In `admin_message_thread.twig` (Zeile 420) werden nur `sender_type === 'owner'`-Nachrichten gerendert. Admin-eigene Nachrichten via Polling werden ignoriert — aber da sie via `appendMsg()` nach dem Send direkt gerendert werden, ist das kein sichtbares Problem.
 
-2. **Kein Video-Support**: Videos werden nicht als Inline-Preview unterstützt.
+2. **Video-Support**: MP4/WebM/MOV werden als Inline-Preview unterstützt.
 
-3. **Keine Thumbnail-Generierung**: Bilder werden als volle Datei geliefert, kein serverseitiges Resize.
+3. **Bildoptimierung**: JPEG/PNG/WebP werden nach Upload via `MediaOptimizerService` serverseitig verkleinert, wenn Schwellwerte überschritten sind. Es gibt keine separate Thumbnail-Datei, weil die Chat-Vorschau direkt die optimierte Datei nutzt.
 
 ---
 

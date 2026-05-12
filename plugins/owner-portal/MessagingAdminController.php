@@ -12,6 +12,7 @@ use App\Core\View;
 use App\Core\Database;
 use App\Repositories\SettingsRepository;
 use App\Services\MailService;
+use App\Services\MediaOptimizerService;
 
 class MessagingAdminController extends Controller
 {
@@ -34,6 +35,10 @@ class MessagingAdminController extends Controller
         'image/png',
         'image/gif',
         'image/webp',
+        // Videos
+        'video/mp4',
+        'video/webm',
+        'video/quicktime',
     ];
 
     private function formatWhatsApp(string $text): string
@@ -199,7 +204,7 @@ class MessagingAdminController extends Controller
             }
             $mime = mime_content_type($file['tmp_name']) ?: '';
             if (!in_array($mime, self::ALLOWED_MIME, true)) {
-                $this->json(['error' => 'Dateityp nicht erlaubt (PDF, Word, Excel, TXT, CSV, JPG, PNG, GIF, WebP).'], 422);
+                $this->json(['error' => 'Dateityp nicht erlaubt (PDF, Word, Excel, TXT, CSV, JPG, PNG, GIF, WebP, MP4, WebM, MOV).'], 422);
                 return;
             }
             $dir = tenant_storage_path('portal-attachments/' . $id);
@@ -212,9 +217,13 @@ class MessagingAdminController extends Controller
                 $this->json(['error' => 'Datei konnte nicht gespeichert werden.'], 500);
                 return;
             }
+            if (in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+                $optimized = (new MediaOptimizerService())->optimize($dir . '/' . $safeName, $mime);
+                $safeName = $optimized['filename'];
+            }
             $attachPath = 'portal-attachments/' . $id . '/' . $safeName;
             $attachName = basename($file['name']);
-            $attachSize = (int)$file['size'];
+            $attachSize = (int)@filesize($dir . '/' . $safeName) ?: (int)$file['size'];
         }
 
         $user   = $this->session->getUser();
@@ -268,7 +277,8 @@ class MessagingAdminController extends Controller
         $name = $msg['attachment_name'] ?: basename($fullPath);
         $mime = @mime_content_type($fullPath) ?: 'application/octet-stream';
         $isImage = in_array($mime, ['image/jpeg', 'image/png', 'image/gif', 'image/webp'], true);
-        $disposition = $isImage ? 'inline' : 'attachment';
+        $isVideo = in_array($mime, ['video/mp4', 'video/webm', 'video/quicktime'], true);
+        $disposition = ($isImage || $isVideo) ? 'inline' : 'attachment';
         header('Content-Type: ' . $mime);
         header('Content-Disposition: ' . $disposition . '; filename="' . addslashes($name) . '"');
         header('Content-Length: ' . filesize($fullPath));

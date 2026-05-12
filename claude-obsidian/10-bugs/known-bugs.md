@@ -22,7 +22,42 @@ Bug gefunden → in Datei dokumentieren → Fix referenzieren → Status aktuali
 - Veraltete Bug-Notizen erzeugen falsche Prioritäten.
 
 ## TODOs
-- Erste konkrete Bugliste aus Issues/Commit-Historie nachziehen.
+- Diese Datei ist inzwischen mit konkreten Bugs befuellt. Neue offene Bugs oben oder nach Prioritaet ergaenzen; erledigte Eintraege auf `fixed` setzen.
+
+---
+
+## Bug: Hundeschulen-Dashboard Paket-Verkauf-Modal erwartet JSON, Controller redirectet HTML
+
+**Status:** `fixed`  
+**Datum:** 2026-05-12  
+**Fix:** `PackageController::sell()` liefert bei AJAX JSON; Dashboard bekommt aktiven Paketkatalog.
+
+### Symptom
+`templates/dogschool/dashboard/index.twig` registriert `#ds-form-sell-package` mit `dsSubmitModal()`.
+Der JavaScript-Handler sendet `fetch()` mit `X-Requested-With: XMLHttpRequest` und ruft danach
+`await res.json()` auf.
+
+`app/Controllers/PackageController.php::sell()` validiert und verkauft zwar serverseitig, antwortet
+aber immer mit Flash + Redirect nach `/pakete`. Bei AJAX entsteht dadurch eine HTML-Response, die
+im Frontend nicht als JSON geparst werden kann.
+
+### Betroffene Dateien
+- `templates/dogschool/dashboard/index.twig`
+- `app/Controllers/PackageController.php`
+
+### Fix
+- `PackageController::sell()` hat jetzt einen `isAjax()`-Branch:
+  - Validierungsfehler: JSON `{success:false,error:"..."}` mit HTTP 422
+  - Erfolg: JSON `{success:true,id,redirect:"/pakete"}`
+  - Fehler bei `createBalance()`: JSON `{success:false,error:"Paket-Verkauf fehlgeschlagen."}`
+- `DogschoolDashboardController::index()` laedt aktive Pakete via `PackageRepository::listActive()`.
+- `templates/dogschool/dashboard/index.twig` befuellt das Paket-Select und zeigt einen Hinweis, wenn noch keine aktiven Pakete existieren.
+
+### Verifikation
+1. Dashboard `/hundeschule` oeffnen.
+2. "Paket verkaufen" absenden.
+3. Bei Fehler erscheint Alert im Modal, kein `res.json()`-Console-Fehler.
+4. Bei Erfolg schliesst das Modal und navigiert/reloadet kontrolliert.
 
 ---
 
@@ -114,7 +149,7 @@ Ursache praktisch unsichtbar und degradierte selbst kleine Fehler in unkritische
   fehlgeschlagen: ... \nStack: ...` mit exakter Fehlerursache.
 - Hund/Katze/Pferd sollten jetzt zuverlässig laden; Silhouette-Check entscheidet über Warnung.
 
-### Offene TODOs
+### Residuale Live-Verifikation
 - Nach Test auf Live-Server: falls Warnung weiterhin erscheint → tatsächlichen
   `console.error`-Eintrag aus der Browser-Console in diese Datei kopieren.
 
@@ -147,9 +182,11 @@ und verließen sich auf Browser-native `href`-Navigation, die im Kontext gestack
 4. Click → `state.nrs = i` + `nrsInput.value = String(i)` (kein Re-Render nötig)
 5. Beim Form-Submit wird `schmerz_nrs` normal durch PHP/`collectFelder()` gespeichert
 
-### Offene TODOs
-- Server-seitige NRS-Anzeige in `show.twig` noch nicht visuell (nur Zahlwert) — könnte
-  mit gleichem CSS-Pattern als read-only Scale dargestellt werden
+### Nachtrag 2026-05-12
+- Server-seitige NRS-Anzeige ist jetzt visuell umgesetzt:
+  - `templates/befunde/show.twig`
+  - `templates/portal/befunde/show.twig`
+  - `templates/portal-admin/befunde/show.twig`
 
 ---
 
@@ -252,9 +289,14 @@ Admin-Drawer hatte keine Lightbox-Implementierung.
 - Admin-Drawer → Bild-Anhänge werden inline mit Lightbox angezeigt
 - Tenant-Isolation: Dateien landen in `storage/tenants/{prefix}/portal-attachments/{threadId}/`
 
-### Offene Punkte
-- Kein Video-Preview-Support (mp4 als Download-Karte dargestellt)
-- Kein server-seitiges Image-Resize/Thumbnail
+### Nachtrag 2026-05-12
+- Video-Preview-Support umgesetzt:
+  - MP4/WebM/MOV sind in `ALLOWED_MIME`
+  - Download-Endpunkte liefern Videos inline aus
+  - Admin-/Owner-Chat und Admin-Drawer rendern `<video controls>`
+- Serverseitige Bildoptimierung umgesetzt:
+  - JPEG/PNG/WebP Uploads laufen nach `move_uploaded_file()` durch `MediaOptimizerService`
+  - Die Chat-Vorschau nutzt die optimierte Datei; separate Thumbnail-Dateien werden nicht angelegt
 
 ---
 

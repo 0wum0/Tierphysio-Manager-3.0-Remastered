@@ -456,8 +456,15 @@
                         <label class="form-label">Paket</label>
                         <select name="package_id" required class="form-select">
                             <option value="">— bitte auswählen —</option>
+                            {% for p in package_catalog %}
+                            <option value="{{ p.id }}">{{ p.name }} ({{ p.total_units }} Einheiten · {{ (p.price_cents / 100)|number_format(2, ',', '.') }} €)</option>
+                            {% endfor %}
                         </select>
-                        <div class="form-text"><a href="/pakete" target="_blank">Paket-Katalog öffnen →</a></div>
+                        {% if package_catalog is empty %}
+                            <div class="form-text text-warning">Noch keine aktiven Pakete. <a href="/pakete" target="_blank">Paket-Katalog öffnen →</a></div>
+                        {% else %}
+                            <div class="form-text"><a href="/pakete" target="_blank">Paket-Katalog öffnen →</a></div>
+                        {% endif %}
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Halter (Owner-ID)</label>

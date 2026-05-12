@@ -1,7 +1,7 @@
 # WhatsApp-Style Chat
 
 ## Status
-**Vollständig implementiert** — inkl. Dateianhänge, Lightbox, Polling, Formatierungsmenü
+**Vollständig implementiert** — inkl. Dateianhänge, Bilder, Videos, Lightbox, Polling, Formatierungsmenü
 
 ## Beschreibung
 Chat-System zwischen Praxis-Admin und Tierhaltern im Besitzerportal.
@@ -42,9 +42,11 @@ Browser Image → GET /api/.../anhang/{msgId} → getMessageById() → tenant_st
 - **Read-Ticks**: Einfach (gesendet) / Doppelt blau (gelesen) via `read_at`-Timestamp
 - **Polling**: alle 4s, `visibilitychange`-aware
 - **Dateianhänge**: Bilder als Inline-Vorschau, Dokumente als Download-Karte
+- **Video-Attachments**: MP4/WebM/MOV als Inline-Preview mit `<video controls>`
 - **Lightbox**: Bild-Vollansicht ohne neuen Tab (eigener `wa-lightbox`-Overlay)
 - **Rechtsklick-Formatierungsmenü**: Fett, Kursiv, Durchgestrichen, Code
 - **Admin-Drawer**: Inline-Chat im Layout ohne Seitenwechsel (eigene Lightbox: `drawer-lightbox`)
+- **Bildoptimierung**: JPEG/PNG/WebP werden nach Upload via `MediaOptimizerService` serverseitig verkleinert, wenn Schwellwerte überschritten sind.
 
 ## Wichtige Regeln
 - API-Verträge dürfen nicht breaking geändert werden.
@@ -52,13 +54,10 @@ Browser Image → GET /api/.../anhang/{msgId} → getMessageById() → tenant_st
 - Image-MIME-Typen müssen in `ALLOWED_MIME` beider Controller stehen.
 
 ## Bekannte Einschränkungen
-- Kein Video-Support als Inline-Preview
-- Kein server-seitiges Image-Resize
 - Polling ignoriert eigene Nachrichten (harmlos, da sofort via `appendMsg()` gerendert)
 
 ## TODOs
-- [ ] Video-Attachments (mp4) mit `<video>`-Tag
-- [ ] Thumbnail-Generierung für hochgeladene Bilder
+- Keine bekannten funktionalen offenen Punkte aus dem Audit 2026-05-12.
 
 ## Verlinkungen
 - [[07-features/chat-media-system]]

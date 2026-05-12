@@ -29,6 +29,7 @@ Jede Änderung am Code muss durch eine Aktualisierung hier gespiegelt werden.
 | Bugs & Fixes | `10-bugs/` |
 | Entscheidungen | `11-decisions/` |
 | Roadmap | `12-roadmap/` |
+| Offene Punkte | `00-start/open-items.md` |
 
 ## Drei Haupt-Apps
 
@@ -46,10 +47,12 @@ Jede Änderung am Code muss durch eine Aktualisierung hier gespiegelt werden.
 - `vendor/` und `dist/` sind read-only
 
 ## TODOs
-- sprint-status.md nach jedem Sprint aktualisieren
+- `sprint-status.md` nach jedem Sprint aktualisieren
+- `open-items.md` nach jedem Audit oder groesserem Bugfix aktualisieren
 
 ## Verlinkungen
 - [[00-start/CRITICAL-RULES]]
+- [[00-start/open-items]]
 - [[15-agent-rules/update-brain]]
 - [[15-agent-rules/git-pr-rules]]
 - [[14-file-map/file-index]]

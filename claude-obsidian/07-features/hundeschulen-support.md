@@ -6,6 +6,8 @@
 ## Status: Implementiert (Mai 2026)
 
 Alle wichtigen Erstellen-/Bearbeiten-Aktionen in der Hundeschulen-Ansicht laufen jetzt über Bootstrap-Modale.
+Das Dashboard-Modal "Paket verkaufen" sendet per AJAX und erhaelt JSON von
+`PackageController::sell()`. Der aktive Paketkatalog wird direkt im Modal befuellt.
 
 ---
 
@@ -93,4 +95,4 @@ Alle folgenden Controller-Methoden haben einen `isAjax()`-Branch erhalten:
 ## Offene TODOs
 - Pakete-Bearbeiten: Link `/pakete/{id}/bearbeiten` führt noch auf eigene Seite (OK für komplexe Paket-Daten)
 - Interessenten-Detail (`/interessenten/{id}`): Bearbeiten läuft noch als eigene Seite (OK)
-- Paket-Verkauf-Modal auf Dashboard: Package-Katalog wird nicht dynamisch befüllt (leer) — Nutzer muss zu `/pakete` für vollständigen Verkauf
+- Keine bekannten funktionalen offenen Punkte im Modal-Flow.

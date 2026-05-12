@@ -165,6 +165,9 @@ class PackageController extends Controller
         $notes     = trim((string)$this->post('notes', '')) ?: null;
 
         if ($packageId === 0 || $ownerId === 0) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'error' => 'Paket und Halter sind erforderlich.'], 422);
+            }
             $this->flash('error', 'Paket und Halter sind erforderlich.');
             $this->redirect('/pakete');
             return;
@@ -172,8 +175,14 @@ class PackageController extends Controller
 
         $ok = $this->packages->createBalance($packageId, $ownerId, $patientId, $notes);
         if ($ok === false) {
+            if ($this->isAjax()) {
+                $this->json(['success' => false, 'error' => 'Paket-Verkauf fehlgeschlagen.'], 422);
+            }
             $this->flash('error', 'Paket-Verkauf fehlgeschlagen.');
         } else {
+            if ($this->isAjax()) {
+                $this->json(['success' => true, 'id' => $ok, 'redirect' => '/pakete']);
+            }
             $this->flash('success', 'Paket verkauft.');
         }
         $this->redirect('/pakete');

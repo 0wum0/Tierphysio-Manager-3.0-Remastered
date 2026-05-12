@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Core\Database;
 use App\Repositories\CourseRepository;
+use App\Repositories\PackageRepository;
 use App\Services\DogschoolInvoiceService;
 use App\Services\DogschoolSeedService;
 use App\Services\FeatureGateService;
@@ -33,6 +34,7 @@ class DogschoolDashboardController extends Controller
         \App\Core\Config $config,
         \App\Core\Translator $translator,
         private readonly CourseRepository $courses,
+        private readonly PackageRepository $packages,
         private readonly DogschoolSeedService $seed,
         private readonly DogschoolInvoiceService $dsInvoices,
         private readonly FeatureGateService $featureGate,
@@ -127,6 +129,15 @@ class DogschoolDashboardController extends Controller
             'dogschool_waitlist'       => $this->featureGate->isEnabled('dogschool_waitlist'),
         ];
 
+        $packageCatalog = [];
+        if ($features['dogschool_packages']) {
+            try {
+                $packageCatalog = $this->packages->listActive();
+            } catch (\Throwable $e) {
+                error_log('[DogschoolDashboard] package catalog failed: ' . $e->getMessage());
+            }
+        }
+
         $this->render('dogschool/dashboard/index.twig', [
             'page_title'          => 'Hundeschul-Übersicht',
             'active_nav'          => 'dashboard',
@@ -138,6 +149,7 @@ class DogschoolDashboardController extends Controller
             'new_booking_requests'=> $newBookingRequests,
             'active_leads'        => $activeLeads,
             'features'            => $features,
+            'package_catalog'     => $packageCatalog,
         ]);
     }
 }

@@ -134,7 +134,14 @@
                             {% if felder[key] is defined and felder[key] is not empty %}
                             <dt class="col-sm-4 text-muted fw-600" style="font-size:.8rem;">{{ label }}</dt>
                             <dd class="col-sm-8 mb-0" style="font-size:.9rem;">
-                                {% if felder[key] is iterable %}
+                                {% if key == 'schmerz_nrs' %}
+                                    {% set current_nrs = felder[key] + 0 %}
+                                    <div class="d-flex align-items-center flex-wrap gap-1" aria-label="Schmerzskala NRS {{ current_nrs }} von 10">
+                                        {% for i in 0..10 %}
+                                            <span class="badge rounded-pill {% if i == current_nrs %}bg-danger{% else %}bg-secondary-subtle text-secondary{% endif %}" style="min-width:2rem;">{{ i }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% elseif felder[key] is iterable %}
                                     {{ felder[key]|join(', ') }}
                                 {% else %}
                                     {{ felder[key] }}
