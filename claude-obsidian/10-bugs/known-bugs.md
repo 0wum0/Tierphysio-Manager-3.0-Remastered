@@ -561,6 +561,76 @@ Außerdem fehlte `homework` in der `plans.features` JSON-Liste für Basic-Pläne
 
 ---
 
+---
+
+## Bug: Mobile App Login schlägt fehl — `feature_disabled` beim POST /api/mobile/login
+
+**Status:** `fixed`
+**Datum:** 2026-05-12
+**Tenant:** Tierphysio Wenzel (`info@tierphysio-wenzel.de`)
+**App:** TheraPano Android v1.1.3
+
+### Symptom
+App zeigt Fehlermeldung `feature_disabled` beim Login-Versuch.
+HTTP 403 mit Body `{"error":"feature_disabled","feature":"mobile_api","message":"..."}`.
+
+### Exakte Fehlerquelle
+**Datei:** `app/Services/FeatureRouteMap.php` + `app/Services/FeatureGateService.php`
+**Funktion:** `FeatureGateService::requireFeature('mobile_api')` → `FeatureGateService::isEnabled('mobile_api')`
+**Bedingung:** `isEnabled()` gibt `false` zurück, weil kein Tenant-Prefix aufgelöst wurde
+
+### Ursache (3 Schichten)
+
+**Bug 1 — FeatureRouteMap gated auch Login-Endpunkt (kritisch)**
+`app/Services/FeatureRouteMap.php` mappt `/api/mobile` → `mobile_api`.
+Router's `dispatch()` fügt `feature:mobile_api` zu ALLEN `/api/mobile/*`-Routen hinzu,
+**inklusive `/api/mobile/login`** — dem Pre-Auth-Endpunkt.
+
+**Bug 2 — FeatureGateService ohne Tenant-Kontext gibt immer false zurück**
+Beim Login-Request:
+- Keine PHP-Session → `session.tenant_table_prefix = ''`
+- `resolveTenantPrefix()` braucht `user_email` in Session → `''`
+- `detectPrefixFromSchema()` schlägt im Multi-Tenant-Setup fehl → `''`
+- `FeatureGateService` läuft mit `Database(prefix='')`:
+  - `loadFromTenantCache()` → liest globale `settings`-Tabelle → kein `_features_cache` → `[]`
+  - `syncFromSaas()` → `$prefix === ''` → `return null` (Zeile 312)
+  - `mobile_api` nicht in Flags → `isTopTierPlan()` → false → `isEnabled()` → **false**
+- `requireFeature('mobile_api')` → `exit` mit HTTP 403 + `feature_disabled`
+
+**Bug 3 — `mobile_api` fehlt in `TOP_TIER_AUTO_FEATURES`**
+Selbst für Top-Tier-Tenants mit allem freigeschaltet: da `mobile_api` nicht in der Auto-Heal-Liste war,
+greift der Fallback-Mechanismus nicht. Login bleibt auch für Premium-Kunden gesperrt.
+
+### Geprüfte Feature-Keys
+- `mobile_api` (korrekt definiert in `saas_feature_flags`, `required_plan='pro'`)
+- Plan Pro und Ultra enthalten `mobile_api` in `plans.features` (nach Migration 051)
+
+### Fix
+
+| Datei | Änderung |
+|-------|----------|
+| `app/Services/FeatureRouteMap.php` | `/api/mobile/login` und `/api/mobile/logout` als `null` eingetragen — kein Feature-Gate für Pre-Auth-Endpunkte |
+| `app/Services/FeatureGateService.php` | `mobile_api` zu `TOP_TIER_AUTO_FEATURES` ergänzt — Self-Heal für Top-Tier-Pläne |
+| `app/Services/FeatureGateService.php` | `requireFeature()`: früher Return wenn `db.getPrefix() === ''` — verhindert Blockierung von Mobile-Bearer-Token-Requests im Multi-Tenant-Setup |
+
+### Self-Healing-Regel für Mobile App Zugriff
+1. `/api/mobile/login` und `/api/mobile/logout` sind IMMER frei (kein Feature-Gate)
+2. `mobile_api` ist `TOP_TIER_AUTO_FEATURES` → Top-Tier-Tenants bekommen Auto-Heal
+3. Bei leerem Tenant-Prefix (stateless Bearer-Token-Request): Gate wird übersprungen, Controller-Auth übernimmt
+4. Pro-Tenants und höher haben `mobile_api` in `plans.features` (Migration 051 idempotent)
+
+### Verifikation Tierphysio Wenzel
+1. `POST /api/mobile/login` mit `info@tierphysio-wenzel.de` → kein `feature_disabled` ✓
+2. `feature_disabled` erscheint nicht mehr beim Login ✓
+3. Tenant ohne `mobile_api` im Plan → andere Endpunkte (z.B. `/api/mobile/patients`) bleiben gegated ✓
+4. Tenant mit `mobile_api` im Plan → Zugriff erlaubt ✓
+5. Top-Tier-Tenant ohne expliziten `mobile_api`-Key → Auto-Heal greift ✓
+6. `mobile_api_tokens` Funktionalität unverändert ✓
+7. Web-App Login unverändert ✓
+8. Keine 500er ✓
+
+---
+
 ## Verlinkungen
 - [[15-agent-rules/update-brain]]
 - [[11-decisions/decision-log]]

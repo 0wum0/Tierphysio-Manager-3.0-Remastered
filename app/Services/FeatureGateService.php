@@ -36,12 +36,17 @@ class FeatureGateService
     /** Plugin-Feature-Keys, die der Code referenziert aber die (noch) nicht
      *  zwingend in saas_feature_flags registriert sein müssen. Für Ultra-
      *  Tier-Pläne werden diese automatisch als aktiv behandelt, damit neue
-     *  Plugins ohne manuelle Admin-Konfiguration nutzbar sind. */
+     *  Plugins ohne manuelle Admin-Konfiguration nutzbar sind.
+     *
+     *  mobile_api: Muss hier enthalten sein, damit Top-Tier-Tenants die App
+     *  nutzen können, selbst wenn die Plan-Feature-Liste den Key noch nicht
+     *  enthält (z. B. ältere Pläne vor Migration 051). */
     private const TOP_TIER_AUTO_FEATURES = [
         'patient_invite',
         'therapy_care',
         'tax_export',
         'vet_report',
+        'mobile_api',
     ];
 
     /** Cache-Lebensdauer in Sekunden.
@@ -235,6 +240,18 @@ class FeatureGateService
         /* Internal cron requests carry X-Internal-Cron: true (set by CronController::executeJob).
          * These are token-secured and must not be blocked by session-dependent feature checks. */
         if (($_SERVER['HTTP_X_INTERNAL_CRON'] ?? '') === 'true') {
+            return;
+        }
+
+        /* Stateless Bearer-Token-Anfragen (Mobile API) können in einem Multi-Tenant-
+         * Setup keinen Tenant-Prefix aus der Session beziehen. Ohne Prefix ist
+         * FeatureGateService blind — loadFromTenantCache() liest eine falsche Tabelle,
+         * syncFromSaas() bricht früh ab. Das gate würde immer false zurückliefern
+         * und ALLE Mobile-API-Requests blockieren, obwohl der Tenant berechtigt ist.
+         * Lösung: ohne Tenant-Kontext durchlassen — requireAuth() im Controller
+         * setzt den richtigen Prefix und authentifiziert den Request korrekt. */
+        if ($this->db->getPrefix() === '') {
+            error_log('[FeatureGate] requireFeature("' . $key . '"): no tenant prefix resolved — skipping gate for stateless/API request');
             return;
         }
 

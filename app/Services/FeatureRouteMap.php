@@ -54,6 +54,15 @@ final class FeatureRouteMap
         '/api/homework'                 => 'homework',
         '/api/patients'                 => 'patients',   // englische Variante
 
+        /* Login + Logout sind Pre-Auth-Endpunkte: der Tenant-Prefix ist zu
+         * diesem Zeitpunkt noch nicht aufgelöst (kein Bearer-Token im
+         * Bootstrap). Die FeatureGateService würde mit leerem Prefix immer
+         * false zurückliefern → feature_disabled beim Login. Diese Routen
+         * müssen immer erreichbar sein; die eigentliche Authentifizierung
+         * übernimmt der Controller. */
+        '/api/mobile/login'             => null,
+        '/api/mobile/logout'            => null,
+
         '/api/mobile'                   => 'mobile_api',
 
         '/kalender'                     => 'calendar',
