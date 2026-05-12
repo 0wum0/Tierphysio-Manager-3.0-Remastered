@@ -523,7 +523,7 @@ class ApiService {
       await post('/profil/passwort', {
         'current_password': current,
         'new_password': newPw,
-        'new_password_confirmation': confirm
+        'confirm_password': confirm
       });
 
   /* ── Search & Notifications ── */
@@ -697,7 +697,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> invoiceStorno(int id, String reason) async =>
       Map<String, dynamic>.from(
-          await post('/rechnungen/$id/storno', {'reason': reason}));
+          await post('/invoices/$id/storno', {'reason': reason}));
 
   Future<void> portalUserDelete(int id) async =>
       await post('/portal-admin/benutzer/$id/loeschen', {});
@@ -964,7 +964,7 @@ class ApiService {
       Map<String, dynamic>.from(
           await postPublic('/portal/passwort-setzen/$token', {
         'password': password,
-        'password_confirmation': password,
+        'confirm_password': password,
       }));
 
   // Dashboard
@@ -1035,7 +1035,7 @@ class ApiService {
       Map<String, dynamic>.from(await post('/portal/profil/passwort', {
         'current_password': currentPassword,
         'new_password': newPassword,
-        'new_password_confirmation': newPassword,
+        'confirm_password': newPassword,
       }));
 
   /// Submit feedback to the SaaS platform (not the tenant backend).

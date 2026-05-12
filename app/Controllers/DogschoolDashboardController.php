@@ -127,6 +127,7 @@ class DogschoolDashboardController extends Controller
             'dogschool_online_booking' => $this->featureGate->isEnabled('dogschool_online_booking'),
             'dogschool_packages'       => $this->featureGate->isEnabled('dogschool_packages'),
             'dogschool_waitlist'       => $this->featureGate->isEnabled('dogschool_waitlist'),
+            'dogschool_attendance'     => $this->featureGate->isEnabled('dogschool_attendance'),
         ];
 
         $packageCatalog = [];

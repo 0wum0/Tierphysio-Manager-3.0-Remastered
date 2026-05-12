@@ -9,6 +9,7 @@ use App\Core\Database;
 use App\Repositories\CourseRepository;
 use App\Repositories\OwnerRepository;
 use App\Repositories\PatientRepository;
+use App\Services\FeatureGateService;
 use App\Services\MailService;
 
 /**
@@ -106,6 +107,7 @@ class CourseController extends Controller
             'waitlist'     => $waitlist,
             'type_list'    => $this->courseTypes(),
             'free_spots'   => max(0, (int)$course['max_participants'] - (int)$course['enrolled_count']),
+            'features'     => $this->dogschoolFeatures(),
         ]);
     }
 
@@ -509,6 +511,17 @@ class CourseController extends Controller
             'workshop'           => 'Workshop',
             'seminar'            => 'Seminar / Vortrag',
             'event'              => 'Event',
+        ];
+    }
+
+    private function dogschoolFeatures(): array
+    {
+        $gate = \App\Core\Application::getInstance()->getContainer()->get(FeatureGateService::class);
+
+        return [
+            'dogschool_invoicing'  => $gate->isEnabled('dogschool_invoicing'),
+            'dogschool_waitlist'   => $gate->isEnabled('dogschool_waitlist'),
+            'dogschool_attendance' => $gate->isEnabled('dogschool_attendance'),
         ];
     }
 }

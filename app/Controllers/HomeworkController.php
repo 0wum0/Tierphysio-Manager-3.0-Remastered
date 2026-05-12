@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controllers;
 
 use App\Core\Auth;
@@ -283,7 +285,11 @@ class HomeworkController
     private function ensurePlansTablesExist(): void
     {
         try {
-        $this->db->getPdo()->exec("CREATE TABLE IF NOT EXISTS `portal_homework_plans` (
+        $plansTable = $this->t('portal_homework_plans');
+        $tasksTable = $this->t('portal_homework_plan_tasks');
+        $constraint = 'fk_' . preg_replace('/[^a-zA-Z0-9_]/', '_', $tasksTable) . '_plan';
+
+        $this->db->getPdo()->exec("CREATE TABLE IF NOT EXISTS `{$plansTable}` (
             `id`                  INT UNSIGNED NOT NULL AUTO_INCREMENT,
             `patient_id`          INT UNSIGNED NOT NULL,
             `owner_id`            INT UNSIGNED NOT NULL DEFAULT 0,
@@ -305,7 +311,7 @@ class HomeworkController
             INDEX `idx_php_patient_id` (`patient_id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
 
-        $this->db->getPdo()->exec("CREATE TABLE IF NOT EXISTS `portal_homework_plan_tasks` (
+        $this->db->getPdo()->exec("CREATE TABLE IF NOT EXISTS `{$tasksTable}` (
             `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
             `plan_id`           INT UNSIGNED NOT NULL,
             `template_id`       INT UNSIGNED NULL,
@@ -318,7 +324,7 @@ class HomeworkController
             `created_at`        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`),
             INDEX `idx_phpt_plan_id` (`plan_id`),
-            CONSTRAINT `fk_phpt_plan` FOREIGN KEY (`plan_id`) REFERENCES `portal_homework_plans` (`id`) ON DELETE CASCADE
+            CONSTRAINT `{$constraint}` FOREIGN KEY (`plan_id`) REFERENCES `{$plansTable}` (`id`) ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         } catch (\Throwable $e) {
             /* Tables already exist or cannot be created — continue anyway */

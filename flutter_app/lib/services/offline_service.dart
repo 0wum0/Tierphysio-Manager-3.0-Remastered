@@ -14,7 +14,7 @@ class OfflineService extends ChangeNotifier {
   static const _dbVersion = 1;
   static const _lastSyncKey = 'last_sync_timestamp';
   static const _offlineLimitDays = 14;
-  
+
   Database? _db;
   bool _isOnline = true;
   DateTime? _lastSync;
@@ -54,7 +54,7 @@ class OfflineService extends ChangeNotifier {
   Future<void> _initDatabase() async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, _dbName);
-    
+
     _db = await openDatabase(
       path,
       version: _dbVersion,
@@ -185,10 +185,10 @@ class OfflineService extends ChangeNotifier {
       final response = await http
           .get(Uri.parse('${ApiService.baseUrl}/api/mobile/ping'))
           .timeout(const Duration(seconds: 5));
-      
+
       final wasOffline = !_isOnline;
       _isOnline = response.statusCode == 200;
-      
+
       if (_isOnline) {
         _lastOnlineCheck = DateTime.now();
         if (wasOffline) {
@@ -196,7 +196,7 @@ class OfflineService extends ChangeNotifier {
           await sync();
         }
       }
-      
+
       notifyListeners();
     } catch (_) {
       _isOnline = false;
@@ -208,7 +208,7 @@ class OfflineService extends ChangeNotifier {
 
   Future<void> savePatient(Map<String, dynamic> patient) async {
     if (_db == null) return;
-    
+
     await _db!.insert(
       'patients',
       {
@@ -217,15 +217,16 @@ class OfflineService extends ChangeNotifier {
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    
+
     if (!_isOnline) {
-      await _addToSyncQueue('patients', patient['id'] as int, 'update', patient);
+      await _addToSyncQueue(
+          'patients', patient['id'] as int, 'update', patient);
     }
   }
 
   Future<void> saveOwner(Map<String, dynamic> owner) async {
     if (_db == null) return;
-    
+
     await _db!.insert(
       'owners',
       {
@@ -234,7 +235,7 @@ class OfflineService extends ChangeNotifier {
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    
+
     if (!_isOnline) {
       await _addToSyncQueue('owners', owner['id'] as int, 'update', owner);
     }
@@ -242,7 +243,7 @@ class OfflineService extends ChangeNotifier {
 
   Future<void> saveInvoice(Map<String, dynamic> invoice) async {
     if (_db == null) return;
-    
+
     await _db!.insert(
       'invoices',
       {
@@ -251,15 +252,16 @@ class OfflineService extends ChangeNotifier {
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    
+
     if (!_isOnline) {
-      await _addToSyncQueue('invoices', invoice['id'] as int, 'update', invoice);
+      await _addToSyncQueue(
+          'invoices', invoice['id'] as int, 'update', invoice);
     }
   }
 
   Future<void> saveAppointment(Map<String, dynamic> appointment) async {
     if (_db == null) return;
-    
+
     await _db!.insert(
       'appointments',
       {
@@ -268,9 +270,10 @@ class OfflineService extends ChangeNotifier {
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    
+
     if (!_isOnline) {
-      await _addToSyncQueue('appointments', appointment['id'] as int, 'update', appointment);
+      await _addToSyncQueue(
+          'appointments', appointment['id'] as int, 'update', appointment);
     }
   }
 
@@ -296,15 +299,17 @@ class OfflineService extends ChangeNotifier {
 
   Future<List<Map<String, dynamic>>> getAppointments() async {
     if (_db == null) return [];
-    final results = await _db!.query('appointments', orderBy: 'appointment_date DESC');
+    final results =
+        await _db!.query('appointments', orderBy: 'appointment_date DESC');
     return results;
   }
 
   // ── SYNC METHODS ──
 
-  Future<void> _addToSyncQueue(String tableName, int recordId, String action, Map<String, dynamic> data) async {
+  Future<void> _addToSyncQueue(String tableName, int recordId, String action,
+      Map<String, dynamic> data) async {
     if (_db == null) return;
-    
+
     await _db!.insert('sync_queue', {
       'table_name': tableName,
       'record_id': recordId,
@@ -316,33 +321,35 @@ class OfflineService extends ChangeNotifier {
 
   Future<void> sync() async {
     if (!_isOnline || _db == null) return;
-    
+
     try {
       // Process sync queue
       final queueItems = await _db!.query('sync_queue');
-      
+
       for (final item in queueItems) {
         final tableName = item['table_name'] as String;
         final recordId = item['record_id'] as int;
         final action = item['action'] as String;
         final data = jsonDecode(item['data'] as String) as Map<String, dynamic>;
-        
+
         await _syncItem(tableName, recordId, action, data);
-        
+
         // Remove from queue
-        await _db!.delete('sync_queue', where: 'id = ?', whereArgs: [item['id']]);
+        await _db!
+            .delete('sync_queue', where: 'id = ?', whereArgs: [item['id']]);
       }
-      
+
       // Fetch fresh data from server
       await _syncFromServer();
-      
+
       await _saveLastSync();
     } catch (_) {
       // Sync failed, will retry later
     }
   }
 
-  Future<void> _syncItem(String tableName, int recordId, String action, Map<String, dynamic> data) async {
+  Future<void> _syncItem(String tableName, int recordId, String action,
+      Map<String, dynamic> data) async {
     final token = await ApiService.getToken();
     if (token == null) return;
 
@@ -360,41 +367,44 @@ class OfflineService extends ChangeNotifier {
       case 'patients':
         if (action == 'update') {
           await http
-              .put(Uri.parse('$base/api/mobile/patients/$recordId'), headers: headers, body: body)
+              .post(Uri.parse('$base/api/mobile/patients/$recordId'),
+                  headers: headers, body: body)
               .timeout(timeout);
         }
         break;
       case 'owners':
         if (action == 'update') {
           await http
-              .put(Uri.parse('$base/api/mobile/owners/$recordId'), headers: headers, body: body)
+              .post(Uri.parse('$base/api/mobile/owners/$recordId'),
+                  headers: headers, body: body)
               .timeout(timeout);
         }
         break;
       case 'invoices':
         if (action == 'update') {
           await http
-              .put(Uri.parse('$base/api/mobile/invoices/$recordId'), headers: headers, body: body)
+              .post(Uri.parse('$base/api/mobile/invoices/$recordId/update'),
+                  headers: headers, body: body)
               .timeout(timeout);
         }
         break;
       case 'appointments':
         if (action == 'update') {
           await http
-              .put(Uri.parse('$base/api/mobile/appointments/$recordId'), headers: headers, body: body)
+              .post(Uri.parse('$base/api/mobile/appointments/$recordId'),
+                  headers: headers, body: body)
               .timeout(timeout);
         }
         break;
     }
   }
 
-
   Future<void> _syncFromServer() async {
     final api = ApiService();
     final token = await ApiService.getToken();
-    
+
     if (token == null) return;
-    
+
     // Sync patients
     try {
       final patients = await api.patients();
@@ -402,7 +412,7 @@ class OfflineService extends ChangeNotifier {
         await savePatient(patient as Map<String, dynamic>);
       }
     } catch (_) {}
-    
+
     // Sync owners
     try {
       final owners = await api.owners();
@@ -410,7 +420,7 @@ class OfflineService extends ChangeNotifier {
         await saveOwner(owner as Map<String, dynamic>);
       }
     } catch (_) {}
-    
+
     // Sync invoices
     try {
       final invoices = await api.invoices();
@@ -418,7 +428,7 @@ class OfflineService extends ChangeNotifier {
         await saveInvoice(invoice as Map<String, dynamic>);
       }
     } catch (_) {}
-    
+
     // Sync appointments
     try {
       final appointments = await api.appointments();

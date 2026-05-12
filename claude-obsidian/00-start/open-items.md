@@ -9,11 +9,34 @@ Detailseiten, sondern priorisiert sie fuer die naechste Umsetzung.
 
 ## P0 - Funktionale Bugs
 
-Keine offenen P0-Bugs aus diesem Audit.
+| Bereich | Punkt | Hinweis |
+|---|---|---|
+| SaaS Migration v065 | `saas-platform/migrations/065_saas_billing_extended.sql` liegt im Tenant-Migrationspfad, enthält aber globale `saas_*` Tabellen. Vor Rollout prüfen und als v067/global Repair sauberziehen. |
+| Cron Dispatcher | `CronController` nutzt `cron_dispatcher_log` unprefixed, während Tenant-Migrationen prefixed Tabellen erzeugen. Code + Repair-Migration v067 nötig. |
+| Cron Logging | `CronAdminController` wird referenziert, Datei fehlt. Logging-Service oder Controller wiederherstellen. |
+| Flutter Owner-Portal | Besitzerportal-Login/Navigation/Token-Speicherung ist getrennt vom Staff-Auth nicht stabil modelliert. Separaten Owner-Portal-Auth-State und Router-Zweig bauen. |
 
 ## P1 - Produkt-/UX-Luecken
 
-Keine offenen P1-Punkte aus diesem Audit. Die bisherigen P1-Punkte wurden am 2026-05-12 umgesetzt:
+Neue P1-Punkte aus dem Sub-Agent-Audit 2026-05-12:
+
+- Hundeschul-Strukturmigrationen liegen noch im Root-Legacy-Ordner `migrations/050...053`; zentralen SaaS-Repair-Rollout planen oder Runtime-Self-Healing explizit als Architekturentscheidung dokumentieren.
+- `DogschoolSchemaService` nutzt `ADD COLUMN IF NOT EXISTS` fuer `tax_rate`; Repair-Migration ohne `IF NOT EXISTS` und Runtime-Code auf kompatibles Pattern umstellen.
+- Paketverkauf/-einloesung fachlich abrunden: Rechnungsstatus/Button sichtbar machen und Einloesung gegen Halter/Hund/Kurs pruefen.
+- Kurs-Terminbearbeitung klaeren: bestehende Sessions werden nach Kursdaten-Aenderung nicht automatisch nachgezogen.
+- Lead-Mindestvalidierung ergaenzen: mindestens Name oder Kontakt plus Interesse/Hund.
+- Mobile Hundeschule/TrainingCare: Capability-/Terminology-Vertrag fuer `practice_type`, Feature-Flags und Labels ergaenzen.
+
+Bereits in diesem Durchlauf umgesetzt:
+
+- Hundeschule: Paketverkauf-Route `/pakete/verkaufen` vor generischer `/pakete/{id}` Route verschoben.
+- Hundeschule: Kursdetail/Dashboard reichen genutzte Feature-Flags fuer Rechnung/Warteliste/Anwesenheit durch.
+- Hundeschule: Lead-/Paketformular enthalten keine verschachtelten Formulare mehr.
+- Homework: fehlendes `declare(strict_types=1)` ergaenzt und Plan-Self-Healing nutzt prefixed Tabellen.
+- Praxis-App: Timeline-Update/-Delete prueft, ob der Eintrag zum Patient der Route gehoert.
+- Mobile API/Flutter: Passwort-Confirm-Felder, Rechnungs-Storno-URL, Offline-POST-Sync und `noshow`/`no_show` Status-Mapping repariert.
+
+Die bisherigen P1-Punkte wurden am 2026-05-12 umgesetzt:
 
 - Hundeschule: Dashboard-Paketverkauf antwortet bei AJAX mit JSON; Paketkatalog wird im Modal befuellt.
 - Befund/Anatomie: `schmerz_nrs` wird in Admin-, Portal- und Praxis-Show-Views als Read-only-Skala angezeigt.

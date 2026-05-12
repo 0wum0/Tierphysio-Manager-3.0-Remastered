@@ -659,9 +659,9 @@ $router->get('/pakete',                               [PackageController::class,
 $router->get('/pakete/neu',                           [PackageController::class, 'create'],  ['auth', 'feature:dogschool_packages']);
 $router->post('/pakete',                              [PackageController::class, 'store'],   ['auth', 'feature:dogschool_packages']);
 $router->get('/pakete/{id}/bearbeiten',               [PackageController::class, 'edit'],    ['auth', 'feature:dogschool_packages']);
+$router->post('/pakete/verkaufen',                    [PackageController::class, 'sell'],    ['auth', 'feature:dogschool_packages']);
 $router->post('/pakete/{id}',                         [PackageController::class, 'update'],  ['auth', 'feature:dogschool_packages']);
 $router->post('/pakete/{id}/loeschen',                [PackageController::class, 'delete'],  ['auth', 'feature:dogschool_packages']);
-$router->post('/pakete/verkaufen',                    [PackageController::class, 'sell'],    ['auth', 'feature:dogschool_packages']);
 $router->get('/pakete/balance/{balance_id}',          [PackageController::class, 'showBalance'], ['auth', 'feature:dogschool_packages']);
 $router->post('/pakete/balance/{balance_id}/einloesen', [PackageController::class, 'redeem'], ['auth', 'feature:dogschool_packages']);
 

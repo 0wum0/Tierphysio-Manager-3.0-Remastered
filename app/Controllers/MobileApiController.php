@@ -850,7 +850,7 @@ class MobileApiController
                  LEFT JOIN `{$pat}` p  ON p.id = a.patient_id
                  LEFT JOIN `{$own}` o    ON o.id = a.owner_id
                  LEFT JOIN `{$tt}` tt ON tt.id = a.treatment_type_id
-                 WHERE DATE(a.start_at) = CURDATE() AND a.status NOT IN ('cancelled','noshow')
+                 WHERE DATE(a.start_at) = CURDATE() AND a.status NOT IN ('cancelled','noshow','no_show')
                  ORDER BY a.start_at ASC"
             );
             $nextAptsList = $this->db->fetchAll(
@@ -863,7 +863,7 @@ class MobileApiController
                  LEFT JOIN `{$pat}` p  ON p.id = a.patient_id
                  LEFT JOIN `{$own}` o    ON o.id = a.owner_id
                  LEFT JOIN `{$tt}` tt ON tt.id = a.treatment_type_id
-                 WHERE DATE(a.start_at) > CURDATE() AND a.status NOT IN ('cancelled','noshow')
+                 WHERE DATE(a.start_at) > CURDATE() AND a.status NOT IN ('cancelled','noshow','no_show')
                  ORDER BY a.start_at ASC
                  LIMIT 3"
             );
@@ -1022,7 +1022,7 @@ class MobileApiController
                         tt.name AS treatment_type_name, tt.color AS treatment_color
                  FROM `{$this->t('appointments')}` a
                  LEFT JOIN `{$this->t('treatment_types')}` tt ON tt.id = a.treatment_type_id
-                 WHERE a.patient_id = ? AND a.start_at >= NOW() AND a.status NOT IN ('cancelled','noshow')
+                 WHERE a.patient_id = ? AND a.start_at >= NOW() AND a.status NOT IN ('cancelled','noshow','no_show')
                  ORDER BY a.start_at ASC
                  LIMIT 1",
                 [$id]
@@ -2687,7 +2687,10 @@ class MobileApiController
 
         $id     = (int)($params['id'] ?? 0);
         $data   = $this->body();
-        $status = $data['status'] ?? '';
+        $status = (string)($data['status'] ?? '');
+        if ($status === 'noshow') {
+            $status = 'no_show';
+        }
         $allowed = ['scheduled','confirmed','cancelled','completed','no_show'];
         if (!in_array($status, $allowed, true)) $this->error('Ungültiger Status.');
 
@@ -3876,7 +3879,7 @@ class MobileApiController
 
         $current = (string)($data['current_password'] ?? '');
         $new     = (string)($data['new_password']     ?? '');
-        $confirm = (string)($data['confirm_password'] ?? '');
+        $confirm = (string)($data['confirm_password'] ?? $data['new_password_confirmation'] ?? '');
 
         if (strlen($new) < 8)      $this->error('Neues Passwort muss mindestens 8 Zeichen lang sein.');
         if ($new !== $confirm)     $this->error('Passwörter stimmen nicht überein.');
@@ -5597,7 +5600,7 @@ class MobileApiController
 
         $current = (string)($data['current_password'] ?? '');
         $new     = (string)($data['new_password']     ?? '');
-        $confirm = (string)($data['confirm_password'] ?? '');
+        $confirm = (string)($data['confirm_password'] ?? $data['password_confirmation'] ?? $data['new_password_confirmation'] ?? '');
 
         if (strlen($new) < 8)  $this->error('Neues Passwort muss mindestens 8 Zeichen lang sein.');
         if ($new !== $confirm)  $this->error('Passwörter stimmen nicht überein.');

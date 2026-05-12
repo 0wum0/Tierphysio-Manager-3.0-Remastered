@@ -108,12 +108,17 @@ Bug in Logik braucht neue DB-Spalte.
 
 | Stand | Wert |
 |---|---|
-| Höchste Migration in `saas-platform/migrations/` | **063** |
+| Höchste Migration in `saas-platform/migrations/` | **066** |
 | Höchste Migration in `migrations/` (Root — wirkungslos!) | 062 (Legacy!) |
 | Alle produktiven Tenants | v61 |
 | v060 erstellt | Mai 2026 — Dogschool Feature-Flags |
 | v061 erstellt | Mai 2026 — Dogschool TCP Feature-Flags |
 | v063 erstellt | Mai 2026 — homework Default aktiv (required_plan: basic, alle Pläne, cache-heal) |
+| v064 erstellt | Mai 2026 — Self-Healing Cron Tokens |
+| v065 erstellt | Mai 2026 — SaaS Billing Extended; Audit-Hinweis: globale `saas_*` Tabellen im Tenant-Migrationspfad vor Rollout pruefen |
+| v066 erstellt | Mai 2026 — Plan-Max-Subscribers |
+
+**Naechste Repair-Version:** v067 reservieren fuer Migration-/Cron-Reparaturen aus dem Audit vom 2026-05-12.
 
 **LERNEFFEKT:** v055 (Root-Ordner) war wirkungslos — einerseits falscher Pfad, andererseits `55 > 61 = false`.
 Die neue Repair-Migration muss IMMER `version > aktueller-Tenant-Stand` UND im richtigen Ordner liegen.

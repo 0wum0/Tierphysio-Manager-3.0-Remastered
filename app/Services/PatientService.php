@@ -60,6 +60,11 @@ class PatientService
         $this->patientRepository->addTimelineEntry($data);
     }
 
+    public function getTimelineEntry(int $entryId): ?array
+    {
+        return $this->patientRepository->getTimelineEntry($entryId);
+    }
+
     public function updateTimelineEntry(int $entryId, array $data): void
     {
         $this->patientRepository->updateTimelineEntry($entryId, $data);

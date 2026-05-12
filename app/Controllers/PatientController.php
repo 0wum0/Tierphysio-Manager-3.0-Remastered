@@ -707,9 +707,17 @@ class PatientController extends Controller
     public function deleteTimelineEntry(array $params = []): void
     {
         $this->validateCsrf();
+        $patientId = (int)$params['id'];
+        $entry = $this->patientService->getTimelineEntry((int)$params['entryId']);
+        if (!$entry || (int)($entry['patient_id'] ?? 0) !== $patientId) {
+            $this->session->flash('error', 'Eintrag nicht gefunden.');
+            $this->redirect("/patienten/{$patientId}");
+            return;
+        }
+
         $this->patientService->deleteTimelineEntry((int)$params['entryId']);
         $this->session->flash('success', $this->translator->trans('patients.timeline_deleted'));
-        $this->redirect("/patienten/{$params['id']}");
+        $this->redirect("/patienten/{$patientId}");
     }
 
     public function updateTimelineEntryJson(array $params = []): void
@@ -717,6 +725,13 @@ class PatientController extends Controller
         $this->validateCsrf();
         $patient = $this->patientService->findById((int)$params['id']);
         if (!$patient) { http_response_code(404); header('Content-Type: application/json'); echo json_encode(['error' => 'not found']); exit; }
+        $entry = $this->patientService->getTimelineEntry((int)$params['entryId']);
+        if (!$entry || (int)($entry['patient_id'] ?? 0) !== (int)$params['id']) {
+            http_response_code(404);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'not found']);
+            exit;
+        }
 
         $ttId = $this->post('treatment_type_id', '');
         $data = [
@@ -741,6 +756,13 @@ class PatientController extends Controller
         $this->validateCsrf();
         $patient = $this->patientService->findById((int)$params['id']);
         if (!$patient) { http_response_code(404); header('Content-Type: application/json'); echo json_encode(['error' => 'not found']); exit; }
+        $entry = $this->patientService->getTimelineEntry((int)$params['entryId']);
+        if (!$entry || (int)($entry['patient_id'] ?? 0) !== (int)$params['id']) {
+            http_response_code(404);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'not found']);
+            exit;
+        }
 
         $this->patientService->deleteTimelineEntry((int)$params['entryId']);
         $timeline = $this->timelineMedia->normalizeTimeline($this->patientService->getTimeline((int)$params['id'], 100));
