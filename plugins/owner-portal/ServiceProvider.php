@@ -23,6 +23,7 @@ class ServiceProvider
         require_once __DIR__ . '/MessagingAdminController.php';
         require_once __DIR__ . '/MessagingOwnerController.php';
         require_once __DIR__ . '/OwnerPortalBookingController.php';
+        require_once __DIR__ . '/OwnerPortalMobileController.php';
         require_once __DIR__ . '/SmartReminderService.php';
 
         $this->runMigrations();
@@ -152,6 +153,25 @@ class ServiceProvider
 
         /* ── Smart Erinnerungen Cron-Endpunkt (Token-gesichert) ── */
         $router->get('/portal/cron/smart-erinnerungen',                              [OwnerPortalAdminController::class, 'cronSmartReminders'], []);
+
+        /* ── Mobile API für Flutter-App (Token-basiert, kein CSRF) ── */
+        $router->post('/api/portal/mobile-login',                                    [OwnerAuthController::class,           'mobileLogin'],       []);
+        $router->post('/api/portal/mobile-logout',                                   [OwnerAuthController::class,           'mobileLogout'],      []);
+        $router->get('/api/portal/mobile/dashboard',                                 [OwnerPortalMobileController::class,   'dashboard'],         []);
+        $router->get('/api/portal/mobile/tiere',                                     [OwnerPortalMobileController::class,   'pets'],              []);
+        $router->get('/api/portal/mobile/tiere/{id}',                                [OwnerPortalMobileController::class,   'petDetail'],         []);
+        $router->get('/api/portal/mobile/termine',                                   [OwnerPortalMobileController::class,   'appointments'],      []);
+        $router->get('/api/portal/mobile/rechnungen',                                [OwnerPortalMobileController::class,   'invoices'],          []);
+        $router->get('/api/portal/mobile/rechnungen/{id}/pdf',                       [OwnerPortalMobileController::class,   'invoicePdf'],        []);
+        $router->get('/api/portal/mobile/befunde',                                   [OwnerPortalMobileController::class,   'befunde'],           []);
+        $router->get('/api/portal/mobile/befunde/{id}/pdf',                          [OwnerPortalMobileController::class,   'befundPdf'],         []);
+        $router->get('/api/portal/mobile/hausaufgaben',                              [OwnerPortalMobileController::class,   'homework'],          []);
+        $router->get('/api/portal/mobile/nachrichten',                               [OwnerPortalMobileController::class,   'threads'],           []);
+        $router->get('/api/portal/mobile/nachrichten/{id}',                          [OwnerPortalMobileController::class,   'threadShow'],        []);
+        $router->post('/api/portal/mobile/nachrichten/{id}/antworten',               [OwnerPortalMobileController::class,   'threadReply'],       []);
+        $router->post('/api/portal/mobile/nachrichten/neu',                          [OwnerPortalMobileController::class,   'threadNew'],         []);
+        $router->get('/api/portal/mobile/nachrichten/ungelesen',                     [OwnerPortalMobileController::class,   'unread'],            []);
+        $router->get('/api/portal/mobile/profil',                                    [OwnerPortalMobileController::class,   'profile'],           []);
     }
 
     public function dashboardWidget(array $context): array

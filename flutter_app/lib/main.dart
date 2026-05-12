@@ -9,6 +9,7 @@ import 'services/api_service.dart';
 import 'services/notification_service.dart';
 import 'services/theme_service.dart';
 import 'services/offline_service.dart';
+import 'services/owner_portal_auth_service.dart';
 import 'screens/splash_screen.dart';
 
 void main() async {
@@ -19,19 +20,22 @@ void main() async {
   await themeService.init();
   final offlineService = OfflineService();
   await offlineService.init();
+  final portalAuth = OwnerPortalAuthService();
+  await portalAuth.init();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
-  runApp(TheraPanoApp(themeService: themeService, offlineService: offlineService));
+  runApp(TheraPanoApp(themeService: themeService, offlineService: offlineService, portalAuth: portalAuth));
 }
 
 class TheraPanoApp extends StatefulWidget {
   final ThemeService themeService;
   final OfflineService offlineService;
-  const TheraPanoApp({super.key, required this.themeService, required this.offlineService});
+  final OwnerPortalAuthService portalAuth;
+  const TheraPanoApp({super.key, required this.themeService, required this.offlineService, required this.portalAuth});
 
   @override
   State<TheraPanoApp> createState() => _TheraPanoAppState();
@@ -47,6 +51,7 @@ class _TheraPanoAppState extends State<TheraPanoApp> {
         ChangeNotifierProvider.value(value: _authService),
         ChangeNotifierProvider.value(value: widget.themeService),
         ChangeNotifierProvider.value(value: widget.offlineService),
+        ChangeNotifierProvider.value(value: widget.portalAuth),
         Provider(create: (_) => ApiService()),
       ],
       child: Builder(builder: (context) {

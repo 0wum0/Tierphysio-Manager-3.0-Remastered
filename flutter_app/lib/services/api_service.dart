@@ -46,6 +46,41 @@ class ApiService {
     await _prefs?.remove(_tokenKey);
   }
 
+  /* ── Portal-specific token (separate from praxis Bearer token) ── */
+  static const _portalTokenKey = 'portal_token';
+
+  static Future<void> savePortalToken(String token) async {
+    await _prefs?.setString(_portalTokenKey, token);
+  }
+
+  static Future<String?> getPortalToken() async {
+    return _prefs?.getString(_portalTokenKey);
+  }
+
+  static Future<void> clearPortalToken() async {
+    await _prefs?.remove(_portalTokenKey);
+  }
+
+  Future<Map<String, String>> _portalAuthHeaders() async {
+    final token = await getPortalToken();
+    return _headers(token);
+  }
+
+  Future<dynamic> portalGet(String path, {Map<String, dynamic>? query}) async {
+    final h = await _portalAuthHeaders();
+    final q = query?.map((k, v) => MapEntry(k, v.toString()));
+    final uri = Uri.parse('$_baseUrl$path').replace(queryParameters: q);
+    final res = await http.get(uri, headers: h).timeout(_timeout);
+    return _parse(res);
+  }
+
+  Future<dynamic> portalPost(String path, Map<String, dynamic> body) async {
+    final h = await _portalAuthHeaders();
+    final uri = Uri.parse('$_baseUrl$path');
+    final res = await http.post(uri, headers: h, body: jsonEncode(body)).timeout(_timeout);
+    return _parse(res);
+  }
+
   Map<String, String> _headers([String? token]) => {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -952,12 +987,35 @@ class ApiService {
   // Auth
   Future<Map<String, dynamic>> portalLogin(
           String email, String password) async =>
-      Map<String, dynamic>.from(await postPublic('/portal/login', {
+      Map<String, dynamic>.from(await portalPost('/api/portal/mobile-login', {
         'email': email,
         'password': password,
       }));
 
-  Future<void> portalLogout() async => await post('/portal/logout', {});
+  /// Raw portal login that stores the token in the portal-specific key.
+  Future<Map<String, dynamic>> portalLoginRaw(
+          String email, String password) async {
+    final h = _headers();
+    final uri = Uri.parse('$_baseUrl/api/portal/mobile-login');
+    final res = await http.post(uri, headers: h, body: jsonEncode({
+      'email': email, 'password': password,
+    })).timeout(_timeout);
+    final data = Map<String, dynamic>.from(_parse(res) as Map);
+    final token = data['token'] as String?;
+    if (token != null && token.isNotEmpty) {
+      await savePortalToken(token);
+    }
+    return data;
+  }
+
+  Future<void> portalLogout() async {
+    try { await portalPost('/api/portal/mobile-logout', {}); } catch (_) {}
+  }
+
+  Future<void> portalLogoutRaw() async {
+    try { await portalPost('/api/portal/mobile-logout', {}); } catch (_) {}
+    await clearPortalToken();
+  }
 
   Future<Map<String, dynamic>> portalSetPassword(
           String token, String password) async =>
@@ -969,70 +1027,86 @@ class ApiService {
 
   // Dashboard
   Future<Map<String, dynamic>> ownerPortalDashboard() async =>
-      Map<String, dynamic>.from(await get('/portal/dashboard'));
+      Map<String, dynamic>.from(await portalGet('/api/portal/mobile/dashboard'));
 
   // Meine Tiere
   Future<List<dynamic>> ownerPortalPetList() async =>
-      List<dynamic>.from(await get('/portal/tiere'));
+      List<dynamic>.from(await portalGet('/api/portal/mobile/tiere'));
 
   Future<Map<String, dynamic>> ownerPortalPetDetail(int id) async =>
-      Map<String, dynamic>.from(await get('/portal/tiere/$id'));
+      Map<String, dynamic>.from(await portalGet('/api/portal/mobile/tiere/$id'));
 
   Future<Map<String, dynamic>> ownerPortalPetEdit(
           int id, Map<String, dynamic> data) async =>
       Map<String, dynamic>.from(
-          await post('/portal/tiere/$id/bearbeiten', data));
+          await portalPost('/api/portal/mobile/tiere/$id/bearbeiten', data));
 
   // Rechnungen
   Future<List<dynamic>> ownerPortalInvoices() async =>
-      List<dynamic>.from(await get('/portal/rechnungen'));
+      List<dynamic>.from(await portalGet('/api/portal/mobile/rechnungen'));
 
   Future<String> ownerPortalInvoicePdfUrl(int id) async {
-    final data = await get('/portal/rechnungen/$id/pdf-url');
-    return (data as Map)['pdf_url'] as String? ?? '';
+    final data = await portalGet('/api/portal/mobile/rechnungen/$id/pdf');
+    return (data as Map)['url'] as String? ?? '';
   }
 
   // Termine
   Future<List<dynamic>> ownerPortalAppointments() async =>
-      List<dynamic>.from(await get('/portal/termine'));
+      List<dynamic>.from(await portalGet('/api/portal/mobile/termine'));
 
   // Nachrichten
   Future<int> ownerPortalUnread() async {
-    final data = await get('/portal/nachrichten/ungelesen');
-    return (data as Map)['unread'] as int? ?? 0;
+    final data = await portalGet('/api/portal/mobile/nachrichten/ungelesen');
+    return (data as Map)['count'] as int? ?? 0;
   }
 
   Future<List<dynamic>> ownerPortalThreadList() async =>
-      List<dynamic>.from(await get('/portal/nachrichten'));
+      List<dynamic>.from(await portalGet('/api/portal/mobile/nachrichten'));
 
   Future<Map<String, dynamic>> ownerPortalNewThread(
           Map<String, dynamic> data) async =>
-      Map<String, dynamic>.from(await post('/portal/nachrichten/neu', data));
+      Map<String, dynamic>.from(await portalPost('/api/portal/mobile/nachrichten/neu', data));
 
   Future<Map<String, dynamic>> ownerPortalThreadShow(int id) async =>
-      Map<String, dynamic>.from(await get('/portal/nachrichten/$id'));
+      Map<String, dynamic>.from(await portalGet('/api/portal/mobile/nachrichten/$id'));
+
+  Future<List<dynamic>> ownerPortalThreadMessages(int id) async {
+    final data = await portalGet('/api/portal/mobile/nachrichten/$id');
+    if (data is Map) {
+      final msgs = data['messages'] ?? data['nachrichten'] ?? [];
+      return msgs is List ? msgs : [];
+    }
+    return [];
+  }
 
   Future<Map<String, dynamic>> ownerPortalReply(
           int id, Map<String, dynamic> data) async =>
       Map<String, dynamic>.from(
-          await post('/portal/nachrichten/$id/antworten', data));
+          await portalPost('/api/portal/mobile/nachrichten/$id/antworten', data));
 
   // Befundbögen
   Future<List<dynamic>> ownerPortalBefunde() async =>
-      List<dynamic>.from(await get('/portal/befunde'));
+      List<dynamic>.from(await portalGet('/api/portal/mobile/befunde'));
 
   Future<String> ownerPortalBefundPdfUrl(int id) async {
-    final data = await get('/portal/befunde/$id/pdf-url');
-    return (data as Map)['pdf_url'] as String? ?? '';
+    final data = await portalGet('/api/portal/mobile/befunde/$id/pdf');
+    return (data as Map)['url'] as String? ?? '';
   }
+
+  // Hausaufgaben / Homework portal
+  Future<List<dynamic>> ownerPortalHomework() async =>
+      List<dynamic>.from(await portalGet('/api/portal/mobile/hausaufgaben'));
+
+  Future<Map<String, dynamic>> ownerPortalHomeworkDetail(int id) async =>
+      Map<String, dynamic>.from(await portalGet('/api/portal/mobile/hausaufgaben/$id'));
 
   // Profil
   Future<Map<String, dynamic>> ownerPortalProfile() async =>
-      Map<String, dynamic>.from(await get('/portal/profil'));
+      Map<String, dynamic>.from(await portalGet('/api/portal/mobile/profil'));
 
   Future<Map<String, dynamic>> ownerPortalChangePassword(
           String currentPassword, String newPassword) async =>
-      Map<String, dynamic>.from(await post('/portal/profil/passwort', {
+      Map<String, dynamic>.from(await portalPost('/api/portal/mobile/profil/passwort', {
         'current_password': currentPassword,
         'new_password': newPassword,
         'confirm_password': newPassword,

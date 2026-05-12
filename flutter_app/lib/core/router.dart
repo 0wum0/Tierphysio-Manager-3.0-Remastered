@@ -46,6 +46,8 @@ import '../screens/owner_portal/owner_portal_invoices_screen.dart';
 import '../screens/owner_portal/owner_portal_appointments_screen.dart';
 import '../screens/owner_portal/owner_portal_messages_screen.dart';
 import '../screens/owner_portal/owner_portal_befunde_screen.dart';
+import '../screens/owner_portal/owner_portal_homework_screen.dart';
+import '../screens/owner_portal/owner_portal_thread_screen.dart';
 
 class AppRouter {
   final AuthService authService;
@@ -159,7 +161,13 @@ class AppRouter {
               GoRoute(path: 'invoices', builder: (_, __) => const OwnerPortalInvoicesScreen()),
               GoRoute(path: 'appointments', builder: (_, __) => const OwnerPortalAppointmentsScreen()),
               GoRoute(path: 'messages', builder: (_, __) => const OwnerPortalMessagesScreen()),
+              GoRoute(
+                path: 'messages/:id',
+                builder: (_, s) => OwnerPortalThreadScreen(
+                  threadId: int.parse(s.pathParameters['id'] ?? '0')),
+              ),
               GoRoute(path: 'befunde', builder: (_, __) => const OwnerPortalBefundeScreen()),
+              GoRoute(path: 'homework', builder: (_, __) => const OwnerPortalHomeworkScreen()),
             ],
           ),
 

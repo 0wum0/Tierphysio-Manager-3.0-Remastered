@@ -112,6 +112,161 @@ class OwnerAuthController extends Controller
         $this->redirect('/portal/dashboard');
     }
 
+    /* ── POST /api/portal/mobile-login ── */
+    public function mobileLogin(array $params = []): void
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->json(['error' => 'Method not allowed'], 405); return;
+        }
+
+        $body     = json_decode(file_get_contents('php://input') ?: '{}', true) ?? [];
+        $email    = strtolower(trim((string)($body['email'] ?? $this->post('email', ''))));
+        $password = (string)($body['password'] ?? $this->post('password', ''));
+        $ip       = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+
+        if ($email === '' || $password === '') {
+            $this->json(['error' => 'E-Mail und Passwort erforderlich.'], 400); return;
+        }
+
+        [$user, $tenantPrefix, $ambiguous] = $this->findUserAcrossAllTenants($email);
+
+        if ($ambiguous) {
+            $this->json(['error' => 'Diese E-Mail ist in mehreren Praxen vorhanden. Bitte verwenden Sie den Einladungslink Ihrer Praxis.'], 409); return;
+        }
+
+        if ($tenantPrefix !== '') {
+            $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $db->setPrefix($tenantPrefix);
+        }
+
+        try { $this->repo->cleanOldAttempts(); } catch (\Throwable) {}
+
+        try {
+            if ($this->repo->countRecentAttempts($email, $ip, 15) >= 5) {
+                $this->json(['error' => 'Zu viele Anmeldeversuche. Bitte warte 15 Minuten.'], 429); return;
+            }
+        } catch (\Throwable) {}
+
+        try { $this->repo->logLoginAttempt($email, $ip); } catch (\Throwable) {}
+
+        if (!$user || !$user['is_active'] || !$user['password_hash'] || !password_verify($password, $user['password_hash'])) {
+            $this->json(['error' => 'E-Mail oder Passwort ist falsch.'], 401); return;
+        }
+
+        $token   = bin2hex(random_bytes(32));
+        $expires = date('Y-m-d H:i:s', strtotime('+90 days'));
+
+        try {
+            $this->repo->updateUser((int)$user['id'], [
+                'mobile_token'         => $token,
+                'mobile_token_expires' => $expires,
+            ]);
+        } catch (\Throwable $e) {
+            error_log('[OwnerPortal] mobile_token update failed: ' . $e->getMessage());
+        }
+
+        $this->repo->updateLastLogin((int)$user['id']);
+
+        $settings = new \App\Repositories\SettingsRepository(
+            \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class)
+        );
+        $practiceType = $settings->get('practice_type', 'therapeut');
+        $isTrainer    = in_array($practiceType, ['trainer', 'dogschool'], true);
+
+        $this->json([
+            'token'         => $token,
+            'expires_at'    => $expires,
+            'tenant_prefix' => $tenantPrefix,
+            'user_id'       => (int)$user['id'],
+            'owner_id'      => (int)$user['owner_id'],
+            'email'         => $user['email'],
+            'name'          => trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')),
+            'is_trainer'    => $isTrainer,
+            'practice_type' => $practiceType,
+        ]);
+    }
+
+    /* ── POST /api/portal/mobile-logout ── */
+    public function mobileLogout(array $params = []): void
+    {
+        $token  = $this->getBearerToken();
+        if ($token === '') { $this->json(['ok' => true]); return; }
+
+        try {
+            $db  = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $pdo = $db->getPdo();
+            $stmt = $pdo->prepare(
+                "SELECT table_name FROM information_schema.tables
+                  WHERE table_schema = DATABASE()
+                    AND table_name LIKE '%_owner_portal_users'
+                  ORDER BY table_name ASC"
+            );
+            $stmt->execute();
+            $tables = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+            foreach ($tables as $table) {
+                $u = $pdo->prepare("UPDATE `{$table}` SET mobile_token = NULL, mobile_token_expires = NULL WHERE mobile_token = ? LIMIT 1");
+                $u->execute([$token]);
+            }
+        } catch (\Throwable) {}
+
+        $this->json(['ok' => true]);
+    }
+
+    /**
+     * Authenticate a mobile portal request by Bearer token.
+     * Returns [user, tenantPrefix] or null on failure.
+     */
+    public function requireMobileAuth(): ?array
+    {
+        $token = $this->getBearerToken();
+        if ($token === '') { $this->json(['error' => 'Unauthorized'], 401); return null; }
+
+        try {
+            $db  = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $pdo = $db->getPdo();
+            $stmt = $pdo->prepare(
+                "SELECT table_name FROM information_schema.tables
+                  WHERE table_schema = DATABASE()
+                    AND table_name LIKE '%_owner_portal_users'
+                  ORDER BY table_name ASC"
+            );
+            $stmt->execute();
+            $tables = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+            foreach ($tables as $table) {
+                $prefix = substr($table, 0, -strlen('owner_portal_users'));
+                $s = $pdo->prepare(
+                    "SELECT u.*, o.first_name, o.last_name, o.phone
+                       FROM `{$table}` u
+                       JOIN `{$prefix}owners` o ON o.id = u.owner_id
+                      WHERE u.mobile_token = ?
+                        AND u.mobile_token_expires > NOW()
+                        AND u.is_active = 1
+                      LIMIT 1"
+                );
+                $s->execute([$token]);
+                $row = $s->fetch(\PDO::FETCH_ASSOC);
+                if ($row) {
+                    $db->setPrefix($prefix);
+                    return [$row, $prefix];
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('[OwnerPortal] requireMobileAuth: ' . $e->getMessage());
+        }
+
+        $this->json(['error' => 'Unauthorized'], 401);
+        return null;
+    }
+
+    private function getBearerToken(): string
+    {
+        $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+        if (str_starts_with($header, 'Bearer ')) {
+            return trim(substr($header, 7));
+        }
+        return '';
+    }
+
     /**
      * Search every tenant's owner_portal_users table for the given invite token.
      * Returns [userRow, tenantPrefix] or [null, ''] if not found.
