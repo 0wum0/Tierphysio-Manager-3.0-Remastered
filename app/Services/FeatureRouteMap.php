@@ -54,7 +54,13 @@ final class FeatureRouteMap
         '/api/homework'                 => 'homework',
         '/api/patients'                 => 'patients',   // englische Variante
 
-        '/api/mobile'                   => 'mobile_api',
+        /* Mobile API: stateless Bearer-token requests — no PHP session at dispatch time.
+         * The tenant prefix is unknown when the router fires, so any feature check here
+         * would always fail (prefix='', cache empty). The MobileApiController resolves
+         * the prefix in requireAuth()/login() and performs the mobile_api gate check
+         * inline AFTER tenant resolution — that is the authoritative security layer.
+         * Setting null here ensures no premature block by the FeatureMiddleware. */
+        '/api/mobile'                   => null,
 
         '/kalender'                     => 'calendar',
         '/api/kalender'                 => 'calendar',

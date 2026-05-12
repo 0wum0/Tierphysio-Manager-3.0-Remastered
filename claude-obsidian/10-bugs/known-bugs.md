@@ -26,38 +26,50 @@ Bug gefunden → in Datei dokumentieren → Fix referenzieren → Status aktuali
 
 ---
 
-## Bug: Flutter Apps — `feature_disabled` 403 obwohl mobile_api aktiv — FIXED (Mai 2026)
+## Bug: Flutter Android — `feature_disabled` 403 beim Login — FIXED (Mai 2026)
 
 **Status:** `fixed`  
-**Commit:** `fix: repair mobile api feature gate access`
+**Commits:** `fix: repair mobile api feature gate access` + `fix: align android mobile api login with windows app`
 
-### Ursache (Root Cause)
-`FeatureRouteMap` mappt `/api/mobile` → `mobile_api`.  
-Der Router fügt automatisch `feature:mobile_api`-Middleware für alle `/api/mobile/*`-Routen hinzu.
+### Ursache Phase 1 (beide Plattformen)
+`FeatureRouteMap` mappte `/api/mobile` → `mobile_api`. Router fügte `feature:mobile_api`-Middleware für alle `/api/mobile/*` Routen hinzu. Stateless Requests → prefix='' → Gate-Check schlug immer fehl → 403.
 
-Flutter/Mobile Requests sind **stateless** (kein PHP-Session). Daher:
-1. `Application::bootstrap()`: `$prefix = $session->get('tenant_table_prefix', '')` → `''`
-2. `$hasPrefix = false` → `FeatureGateService` wird NICHT initialisiert (kein Singleton im Container)
-3. Router dispatcht `FeatureMiddleware::handle()` → ruft `$gate->requireFeature('mobile_api')` auf
-4. Container auto-resolved `FeatureGateService` mit `Database` (prefix=`''`)
-5. `syncFromSaas()`: `if ($prefix === '') return null;` → kein Sync → Cache leer
-6. `mobile_api` nicht in CORE_FEATURES → `isEnabled()` = false → **403 `feature_disabled`**
+### Ursache Phase 2 (Android-spezifisch)
+**Phase-1-Fix war unvollständig**: `FeatureMiddleware`-Bypass griff nur bei `Authorization: Bearer`-Header.  
+**`/login` nutzt `postPublic()`** → sendet **keinen Authorization-Header**.
 
-**Betroffen:** Login, alle API-Endpoints, Flutter Android + Windows
+| Szenario | Authorization Header | Bypass greift? |
+|---|---|---|
+| Windows (gespeicherter Token) | Bearer {token} | ✅ Ja — alle Requests außer Login |
+| Android Erst-Login | keiner | ❌ Nein → feature_disabled |
+| Android nach Login (`/me`, etc.) | Bearer {token} | ✅ Ja |
 
-### Fix (3 Schichten)
-1. **`FeatureMiddleware::handle()`**: Bypass wenn `db->getPrefix() === ''` UND `Authorization: Bearer` Header vorhanden → Request ist stateless Bearer-API → Controller regelt selbst
-2. **`MobileApiController::requireAuth()`**: Inline `mobile_api` Gate-Check NACH Prefix-Auflösung (korrekte Prüfung mit richtigem Tenant-Prefix)
-3. **`MobileApiController::login()`**: Inline `mobile_api` Gate-Check NACH Credential-Verifikation und Prefix-Setzen → blockiert Login für Tenants ohne Feature
+Windows hatte nach dem Phase-1-Fix einen **gespeicherten alten Token** → Auto-Login mit Bearer-Header → Bypass griff → schien zu funktionieren.  
+Android hatte **keinen Token** (Frischinstall oder Cache gelöscht) → `/login` ohne Bearer → Bypass greift nicht → feature_disabled.
+
+### Finaler Fix (Phase 2)
+**`FeatureRouteMap.php`**: `/api/mobile` → `null` (kein Auto-Gate mehr).  
+Der `MobileApiController` hat eigene inline Gate-Checks in `login()` und `requireAuth()` nach Tenant-Prefix-Auflösung — das ist die einzig korrekte Stelle für diesen Check.
+
+**`FeatureMiddleware.php`**: Bearer-Bypass-Workaround entfernt + `Database`-Dependency entfernt.
+
+### ARCHITEKTUR-REGEL (dauerhaft gültig)
+```
+FeatureRouteMap: /api/mobile => null
+                  ↓
+MobileApiController::login()        → inline mobile_api check (nach prefix-Auflösung)
+MobileApiController::requireAuth()  → inline mobile_api check (nach prefix-Auflösung)
+```
+Stateless API-Routes (Bearer-only) dürfen NICHT im FeatureRouteMap stehen.  
+Gate-Check muss im Controller nach Tenant-Auflösung stattfinden.
 
 ### Geänderte Dateien
-- `app/Middleware/FeatureMiddleware.php` — Bearer-bypass für prefixlose Requests
-- `app/Controllers/MobileApiController.php` — inline Gate-Check in `requireAuth()` + `login()`
+- `app/Services/FeatureRouteMap.php` — `/api/mobile` → `null`
+- `app/Middleware/FeatureMiddleware.php` — Bearer-bypass entfernt, DB-Dep. entfernt
+- `app/Controllers/MobileApiController.php` — inline Gate-Checks in `login()` + `requireAuth()`
 - `saas-platform/migrations/067_repair_mobile_api_feature_gate.sql` — Self-Healing
-
-### Self-Healing Regel
-Wenn `db->getPrefix() === ''` AND `Authorization: Bearer` → Feature-Middleware bypassen.  
-Controller-seitige Gate-Prüfung erfolgt nach Prefix-Auflösung.
+- `flutter_app/lib/screens/login_screen.dart` — Version v1.2.0
+- `flutter_app/pubspec.yaml` — msix_version 1.2.0.0
 
 ---
 

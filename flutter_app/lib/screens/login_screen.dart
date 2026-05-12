@@ -495,7 +495,7 @@ class _LoginScreenState extends State<LoginScreen>
       ),
       const SizedBox(height: 12),
       Text(
-        'v1.1.3 · TheraPano · Tierphysiotherapie',
+        'v1.2.0 · TheraPano · Tierphysiotherapie',
         style: TextStyle(
           fontSize: 11,
           color: Colors.white.withValues(alpha: 0.25),

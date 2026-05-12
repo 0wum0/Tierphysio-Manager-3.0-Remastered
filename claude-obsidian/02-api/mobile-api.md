@@ -24,37 +24,38 @@ Flutter `ApiService` → `https://app.therapano.de/api/mobile/*` → `MobileApiC
 - Route-Änderungen brechen Flutter sofort.
 - Tenant-Auflösung im API-Controller ist sicherheitskritisch.
 
-## Feature-Gating (mobile_api)
+## Feature-Gating (mobile_api) — Finale Architektur (Mai 2026)
 
-**Wichtige Architektur-Regel (Mai 2026):**
+**HARTE REGEL:** `/api/mobile` steht in `FeatureRouteMap` als `null` → kein Auto-Gate durch Router.
 
-Mobile API Requests sind stateless (kein PHP-Session). Das bedeutet:
-- Beim Bootstrap ist `db->getPrefix() = ''` → `FeatureGateService` hat keinen Tenant-Kontext
-- `FeatureMiddleware` muss für prefixlose Bearer-token-Requests bypassen
-- Die korrekte `mobile_api`-Prüfung erfolgt **inline in `requireAuth()` und `login()`** nach Prefix-Auflösung
+**Warum:** Mobile API Requests sind stateless (kein PHP-Session). Beim Bootstrap ist `db->getPrefix() = ''`.  
+Jede Gate-Prüfung durch `FeatureMiddleware` zu diesem Zeitpunkt würde immer fehlschlagen  
+(Cache leer, kein Tenant-Kontext). Das gilt insbesondere für `/login` — dieser Endpoint nutzt  
+`postPublic()` (kein Authorization-Header), so dass ein Header-basierter Bypass hier nie greifen kann.
 
-**FeatureMiddleware Bypass-Bedingung:**
+**Die einzig korrekte Stelle für den `mobile_api` Gate-Check** ist im `MobileApiController`  
+selbst, **nach** der Tenant-Prefix-Auflösung:
+
 ```php
-if ($this->db->getPrefix() === ''
-    && isset($_SERVER['HTTP_AUTHORIZATION'])
-    && stripos($_SERVER['HTTP_AUTHORIZATION'], 'Bearer ') === 0
-) {
-    $next(); return; // Controller macht Gate-Check selbst
-}
-```
-
-**Inline Gate-Check (in requireAuth() + login()):**
-```php
+// In login() nach prefix-Auflösung + Credential-Check:
 $gate = Application::getInstance()->getContainer()->get(FeatureGateService::class);
 if (!$gate->isEnabled('mobile_api')) {
     $this->error('feature_disabled', 403);
 }
+
+// In requireAuth() nach prefix-Auflösung + User-Verifikation:
+// (identisches Muster)
 ```
 
-Zum Zeitpunkt des Checks ist `db->getPrefix()` auf den Tenant gesetzt → Gate kann korrekt aus Cache/SaaS lesen.
+Zu diesem Zeitpunkt ist `db->getPrefix()` auf den Tenant gesetzt → Gate liest korrekten Cache/SaaS.
 
-**Tenants ohne mobile_api:** erhalten 403 `feature_disabled` beim Login und bei allen Requests.  
-**Tenants mit mobile_api:** werden korrekt durchgelassen.
+**Tenants ohne mobile_api:** 403 `feature_disabled` beim Login und bei allen Requests.  
+**Tenants mit mobile_api (pro/ultra/praxis):** werden korrekt durchgelassen.
+
+### Android vs Windows (Bug-Historie)
+- Windows schien zu funktionieren weil ein **alter gespeicherter Token** vorhanden war → Bearer-Header → früherer Bypass griff (für alle Requests außer Login)
+- Android (Frischinstall/kein Token) → `/login` ohne Bearer → kein Bypass → feature_disabled
+- Finaler Fix: `FeatureRouteMap` `/api/mobile => null`, kein Bypass-Workaround nötig
 
 ## TODOs
 - Endpoint-Katalog in Teilbereiche splitten (Core, TCP, Mailbox, Portal-Admin).
