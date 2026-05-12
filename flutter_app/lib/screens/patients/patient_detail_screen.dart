@@ -4,9 +4,13 @@ import 'package:flutter_html/flutter_html.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
 import '../../core/theme.dart';
+import '../../core/terminology.dart';
+import '../invoices/invoice_form_screen.dart';
 import '../../widgets/html_editor.dart';
 import '../../widgets/paw_avatar.dart';
 import '../../widgets/shimmer_list.dart';
@@ -32,32 +36,36 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   // Exercises (Übungen)
   List<Map<String, dynamic>> _exercises = [];
   bool _loadingExercises = false;
-  bool _exercisesLoaded  = false;
+  bool _exercisesLoaded = false;
 
   // Homework (Hausaufgaben)
   List<Map<String, dynamic>> _homework = [];
   bool _loadingHomework = false;
-  bool _homeworkLoaded  = false;
+  bool _homeworkLoaded = false;
 
   // Befundbögen
   List<Map<String, dynamic>> _befunde = [];
   bool _loadingBefunde = false;
-  bool _befundeLoaded  = false;
+  bool _befundeLoaded = false;
 
   // TCP (Therapy Care Pro)
   Map<String, dynamic>? _tcpData;
   bool _loadingTcp = false;
-  bool _tcpLoaded  = false;
+  bool _tcpLoaded = false;
 
   // Reports
   List<Map<String, dynamic>> _reports = [];
   bool _loadingReports = false;
-  bool _reportsLoaded  = false;
+  bool _reportsLoaded = false;
 
   // Portal
   List<Map<String, dynamic>> _threads = [];
   bool _loadingThreads = false;
-  bool _threadsLoaded  = false;
+  bool _threadsLoaded = false;
+
+  // Shared reference data for quick actions in the patient record.
+  List<Map<String, dynamic>> _treatmentTypes = [];
+  bool _loadingTreatmentTypes = false;
 
   @override
   void initState() {
@@ -70,11 +78,11 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   void _onTabChanged() {
     if (_tabCtrl.indexIsChanging) return;
     if (_tabCtrl.index == 1 && !_exercisesLoaded) _loadExercises();
-    if (_tabCtrl.index == 2 && !_homeworkLoaded)  _loadHomework();
-    if (_tabCtrl.index == 3 && !_befundeLoaded)   _loadBefunde();
-    if (_tabCtrl.index == 4 && !_tcpLoaded)       _loadTcp();
-    if (_tabCtrl.index == 5 && !_reportsLoaded)   _loadReports();
-    if (_tabCtrl.index == 6 && !_threadsLoaded)   _loadThreads();
+    if (_tabCtrl.index == 2 && !_homeworkLoaded) _loadHomework();
+    if (_tabCtrl.index == 3 && !_befundeLoaded) _loadBefunde();
+    if (_tabCtrl.index == 4 && !_tcpLoaded) _loadTcp();
+    if (_tabCtrl.index == 5 && !_reportsLoaded) _loadReports();
+    if (_tabCtrl.index == 6 && !_threadsLoaded) _loadThreads();
   }
 
   Future<void> _loadTcp() async {
@@ -86,7 +94,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
         _tcpLoaded = true;
         _loadingTcp = false;
       });
-    } catch (_) { setState(() => _loadingTcp = false); }
+    } catch (_) {
+      setState(() => _loadingTcp = false);
+    }
   }
 
   Future<void> _loadReports() async {
@@ -94,11 +104,14 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     try {
       final list = await _api.tcpReports(widget.id);
       setState(() {
-        _reports = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _reports =
+            list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
         _reportsLoaded = true;
         _loadingReports = false;
       });
-    } catch (_) { setState(() => _loadingReports = false); }
+    } catch (_) {
+      setState(() => _loadingReports = false);
+    }
   }
 
   Future<void> _loadThreads() async {
@@ -106,11 +119,14 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     try {
       final list = await _api.portalThreadsByPatient(widget.id);
       setState(() {
-        _threads = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _threads =
+            list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
         _threadsLoaded = true;
         _loadingThreads = false;
       });
-    } catch (_) { setState(() => _loadingThreads = false); }
+    } catch (_) {
+      setState(() => _loadingThreads = false);
+    }
   }
 
   Future<void> _loadExercises() async {
@@ -118,11 +134,14 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     try {
       final list = await _api.exercisesList(widget.id);
       setState(() {
-        _exercises = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        _exercisesLoaded  = true;
+        _exercises =
+            list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _exercisesLoaded = true;
         _loadingExercises = false;
       });
-    } catch (_) { setState(() => _loadingExercises = false); }
+    } catch (_) {
+      setState(() => _loadingExercises = false);
+    }
   }
 
   Future<void> _loadHomework() async {
@@ -130,11 +149,14 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     try {
       final list = await _api.patientHomeworkList(widget.id);
       setState(() {
-        _homework = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        _homeworkLoaded  = true;
+        _homework =
+            list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _homeworkLoaded = true;
         _loadingHomework = false;
       });
-    } catch (_) { setState(() => _loadingHomework = false); }
+    } catch (_) {
+      setState(() => _loadingHomework = false);
+    }
   }
 
   Future<void> _loadBefunde() async {
@@ -142,38 +164,74 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     try {
       final list = await _api.befundeByPatient(widget.id);
       setState(() {
-        _befunde = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
-        _befundeLoaded  = true;
+        _befunde =
+            list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _befundeLoaded = true;
         _loadingBefunde = false;
       });
-    } catch (_) { setState(() => _loadingBefunde = false); }
+    } catch (_) {
+      setState(() => _loadingBefunde = false);
+    }
+  }
+
+  Future<void> _ensureTreatmentTypes() async {
+    if (_treatmentTypes.isNotEmpty || _loadingTreatmentTypes) return;
+    setState(() => _loadingTreatmentTypes = true);
+    try {
+      final list = await _api.treatmentTypes();
+      if (!mounted) return;
+      setState(() {
+        _treatmentTypes =
+            list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _loadingTreatmentTypes = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingTreatmentTypes = false);
+    }
   }
 
   @override
-  void dispose() { _tabCtrl.removeListener(_onTabChanged); _tabCtrl.dispose(); super.dispose(); }
+  void dispose() {
+    _tabCtrl.removeListener(_onTabChanged);
+    _tabCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final data = await _api.patientShow(widget.id);
-      setState(() { _patient = data; _loading = false; });
+      setState(() {
+        _patient = data;
+        _loading = false;
+      });
     } catch (e) {
-      setState(() { _error = e.toString(); _loading = false; });
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
     }
   }
 
   Future<void> _uploadProfilePhoto() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.image, allowMultiple: false);
+    final result = await FilePicker.platform
+        .pickFiles(type: FileType.image, allowMultiple: false);
     if (result == null || result.files.single.path == null) return;
     setState(() => _uploading = true);
     try {
       await _api.patientPhotoUpload(widget.id, File(result.files.single.path!));
       _load();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Foto aktualisiert ✓'), backgroundColor: Colors.green));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Foto aktualisiert ✓'),
+            backgroundColor: Colors.green));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
     } finally {
       if (mounted) setState(() => _uploading = false);
     }
@@ -188,30 +246,40 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
           : _error != null
               ? _buildError()
               : _buildContent(p!),
-      floatingActionButton: p == null ? null : FloatingActionButton.extended(
-        onPressed: _uploading ? null : _showAddBottomSheet,
-        icon: _uploading
-            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-            : const Icon(Icons.add_rounded),
-        label: Text(_uploading ? 'Hochladen…' : 'Eintrag hinzufügen'),
-      ),
+      floatingActionButton: p == null
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _uploading ? null : () => _showActionHub(p),
+              icon: _uploading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.auto_awesome_rounded),
+              label: Text(_uploading ? 'Hochladen...' : 'Aktion'),
+            ),
     );
   }
 
   Widget _buildLoadingSkeleton() {
     return CustomScrollView(slivers: [
-      SliverAppBar(expandedHeight: 160, pinned: true,
+      SliverAppBar(
+        expandedHeight: 160,
+        pinned: true,
         flexibleSpace: FlexibleSpaceBar(
           background: Container(
             decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [AppTheme.primary, AppTheme.secondary]),
+              gradient: LinearGradient(
+                  colors: [AppTheme.primary, AppTheme.secondary]),
             ),
           ),
         ),
       ),
       SliverPadding(
         padding: const EdgeInsets.all(16),
-        sliver: SliverList(delegate: SliverChildListDelegate([
+        sliver: SliverList(
+            delegate: SliverChildListDelegate([
           ShimmerBox(width: double.infinity, height: 90, radius: 16),
           const SizedBox(height: 12),
           ShimmerBox(width: double.infinity, height: 140, radius: 16),
@@ -223,25 +291,30 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   }
 
   Widget _buildError() {
-    return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+    return Center(
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
       Icon(Icons.error_outline_rounded, size: 56, color: AppTheme.danger),
       const SizedBox(height: 12),
       Text(_error!, textAlign: TextAlign.center),
       const SizedBox(height: 16),
-      FilledButton.icon(onPressed: _load, icon: const Icon(Icons.refresh_rounded), label: const Text('Erneut')),
+      FilledButton.icon(
+          onPressed: _load,
+          icon: const Icon(Icons.refresh_rounded),
+          label: const Text('Erneut')),
     ]));
   }
 
   Widget _buildContent(Map<String, dynamic> p) {
     final species = p['species'] as String? ?? '';
     final timeline = List<Map<String, dynamic>>.from(
-        (p['timeline'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)));
+        (p['timeline'] as List? ?? [])
+            .map((e) => Map<String, dynamic>.from(e as Map)));
 
     final statusColor = switch (p['status'] as String? ?? '') {
-      'active'   => AppTheme.success,
+      'active' => AppTheme.success,
       'inactive' => Colors.grey,
       'deceased' => AppTheme.danger,
-      _          => AppTheme.primary,
+      _ => AppTheme.primary,
     };
 
     return RefreshIndicator(
@@ -259,10 +332,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
               IconButton(
                 icon: const Icon(Icons.receipt_long_rounded),
                 tooltip: 'Neue Rechnung',
-                onPressed: () => context.push(
-                  '/rechnungen/neu',
-                  extra: {'patientId': widget.id, 'patientName': p['name'], 'ownerId': p['owner_id'], 'ownerName': '${p['owner_first_name'] ?? ''} ${p['owner_last_name'] ?? ''}'.trim()},
-                ),
+                onPressed: () => _showInvoiceSheet(p),
               ),
               IconButton(
                 icon: const Icon(Icons.event_rounded),
@@ -272,7 +342,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
               IconButton(
                 icon: const Icon(Icons.edit_rounded),
                 tooltip: 'Bearbeiten',
-                onPressed: () => context.push('/patienten/${widget.id}/edit').then((_) => _load()),
+                onPressed: () => context
+                    .push('/patienten/${widget.id}/edit')
+                    .then((_) => _load()),
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
@@ -281,21 +353,35 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                 Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      begin: Alignment.topLeft, end: Alignment.bottomRight,
-                      colors: [statusColor, Color.lerp(statusColor, AppTheme.secondary, 0.5)!],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        statusColor,
+                        Color.lerp(statusColor, AppTheme.secondary, 0.5)!
+                      ],
                     ),
                   ),
                 ),
-                Positioned(right: -20, top: -20, child: Container(
-                  width: 140, height: 140,
-                  decoration: BoxDecoration(shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.07)),
-                )),
-                Positioned(right: 60, bottom: 48, child: Container(
-                  width: 80, height: 80,
-                  decoration: BoxDecoration(shape: BoxShape.circle,
-                    color: Colors.white.withValues(alpha: 0.05)),
-                )),
+                Positioned(
+                    right: -20,
+                    top: -20,
+                    child: Container(
+                      width: 140,
+                      height: 140,
+                      decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: 0.07)),
+                    )),
+                Positioned(
+                    right: 60,
+                    bottom: 48,
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: 0.05)),
+                    )),
                 // Content sits between status bar + back button (top ~56) and TabBar (bottom 48)
                 Positioned.fill(
                   bottom: 48,
@@ -303,80 +389,110 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                     bottom: false,
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(16, 52, 100, 0),
-                      child: Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-                        GestureDetector(
-                          onTap: _uploading ? null : _uploadProfilePhoto,
-                          child: Stack(
-                            children: [
-                              Hero(
-                                tag: 'patient_${widget.id}',
-                                child: PawAvatar(
-                                  photoPath: p['photo_url'] as String?,
-                                  species: species,
-                                  name: p['name'] as String?,
-                                  radius: 30,
-                                ),
-                              ),
-                              Positioned(
-                                bottom: 0, right: 0,
-                                child: Container(
-                                  width: 22, height: 22,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: _uploading
-                                      ? const Padding(
-                                          padding: EdgeInsets.all(3),
-                                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black54))
-                                      : const Icon(Icons.camera_alt_rounded, size: 14, color: Colors.black87),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
+                      child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Text(p['name'] as String? ?? '',
-                              style: const TextStyle(color: Colors.white, fontSize: 20,
-                                  fontWeight: FontWeight.w800, letterSpacing: -0.5),
-                              overflow: TextOverflow.ellipsis),
-                            const SizedBox(height: 2),
-                            Text(
-                              [species, p['breed'] as String? ?? ''].where((s) => s.isNotEmpty).join(' · '),
-                              style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: 12),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Row(children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  _statusLabel(p['status'] as String? ?? ''),
-                                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
-                                ),
+                            GestureDetector(
+                              onTap: _uploading ? null : _uploadProfilePhoto,
+                              child: Stack(
+                                children: [
+                                  Hero(
+                                    tag: 'patient_${widget.id}',
+                                    child: PawAvatar(
+                                      photoPath: p['photo_url'] as String?,
+                                      species: species,
+                                      name: p['name'] as String?,
+                                      radius: 30,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    bottom: 0,
+                                    right: 0,
+                                    child: Container(
+                                      width: 22,
+                                      height: 22,
+                                      decoration: const BoxDecoration(
+                                        color: Colors.white,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: _uploading
+                                          ? const Padding(
+                                              padding: EdgeInsets.all(3),
+                                              child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  color: Colors.black54))
+                                          : const Icon(Icons.camera_alt_rounded,
+                                              size: 14, color: Colors.black87),
+                                    ),
+                                  ),
+                                ],
                               ),
-                              if (p['owner_first_name'] != null) ...[
-                                const SizedBox(width: 6),
-                                Icon(Icons.person_rounded, size: 11, color: Colors.white.withValues(alpha: 0.8)),
-                                const SizedBox(width: 2),
-                                Flexible(child: Text(
-                                  '${p['owner_first_name']} ${p['owner_last_name'] ?? ''}'.trim(),
-                                  style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 11),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                                child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(p['name'] as String? ?? '',
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: -0.5),
+                                    overflow: TextOverflow.ellipsis),
+                                const SizedBox(height: 2),
+                                Text(
+                                  [species, p['breed'] as String? ?? '']
+                                      .where((s) => s.isNotEmpty)
+                                      .join(' · '),
+                                  style: TextStyle(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.85),
+                                      fontSize: 12),
                                   overflow: TextOverflow.ellipsis,
-                                )),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.2),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Text(
+                                      _statusLabel(
+                                          p['status'] as String? ?? ''),
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700),
+                                    ),
+                                  ),
+                                  if (p['owner_first_name'] != null) ...[
+                                    const SizedBox(width: 6),
+                                    Icon(Icons.person_rounded,
+                                        size: 11,
+                                        color: Colors.white
+                                            .withValues(alpha: 0.8)),
+                                    const SizedBox(width: 2),
+                                    Flexible(
+                                        child: Text(
+                                      '${p['owner_first_name']} ${p['owner_last_name'] ?? ''}'
+                                          .trim(),
+                                      style: TextStyle(
+                                          color: Colors.white
+                                              .withValues(alpha: 0.8),
+                                          fontSize: 11),
+                                      overflow: TextOverflow.ellipsis,
+                                    )),
+                                  ],
+                                ]),
                               ],
-                            ]),
-                          ],
-                        )),
-                      ]),
+                            )),
+                          ]),
                     ),
                   ),
                 ),
@@ -390,19 +506,45 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
               indicatorWeight: 3,
               dividerColor: Colors.transparent,
               tabs: const [
-                Tab(text: 'Akte',         icon: Icon(Icons.folder_open_rounded,     size: 16)),
-                Tab(text: 'Übungen',      icon: Icon(Icons.fitness_center_rounded,   size: 16)),
-                Tab(text: 'Hausaufgaben', icon: Icon(Icons.assignment_rounded,       size: 16)),
-                Tab(text: 'Befunde',      icon: Icon(Icons.medical_information_rounded, size: 16)),
-                Tab(text: 'TCP',          icon: Icon(Icons.show_chart_rounded,       size: 16)),
-                Tab(text: 'Berichte',     icon: Icon(Icons.description_rounded,      size: 16)),
-                Tab(text: 'Portal',       icon: Icon(Icons.forum_rounded,            size: 16)),
-                Tab(text: 'Daten',        icon: Icon(Icons.info_outline_rounded,     size: 16)),
+                Tab(
+                    text: 'Akte',
+                    icon: Icon(Icons.folder_open_rounded, size: 16)),
+                Tab(
+                    text: 'Übungen',
+                    icon: Icon(Icons.fitness_center_rounded, size: 16)),
+                Tab(
+                    text: 'Hausaufgaben',
+                    icon: Icon(Icons.assignment_rounded, size: 16)),
+                Tab(
+                    text: 'Befunde',
+                    icon: Icon(Icons.medical_information_rounded, size: 16)),
+                Tab(
+                    text: 'TCP',
+                    icon: Icon(Icons.show_chart_rounded, size: 16)),
+                Tab(
+                    text: 'Berichte',
+                    icon: Icon(Icons.description_rounded, size: 16)),
+                Tab(text: 'Portal', icon: Icon(Icons.forum_rounded, size: 16)),
+                Tab(
+                    text: 'Daten',
+                    icon: Icon(Icons.info_outline_rounded, size: 16)),
               ],
             ),
           ),
 
           // ── Tab content as sliver ──
+          SliverToBoxAdapter(
+            child: _PatientCockpitActions(
+              patient: p,
+              onCall: () => _callOwner(p),
+              onMessage: () => _showMessageSheet(p),
+              onAppointment: () => _showNewAppointmentSheet(p),
+              onInvoice: () => _showInvoiceSheet(p),
+              onRecord: _showAddBottomSheet,
+              onMore: () => _showActionHub(p),
+            ),
+          ),
+
           SliverFillRemaining(
             child: TabBarView(
               controller: _tabCtrl,
@@ -427,12 +569,15 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
 
   Widget _buildTimeline(List<Map<String, dynamic>> timeline) {
     if (timeline.isEmpty) {
-      return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+      return Center(
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         Icon(Icons.folder_open_rounded, size: 64, color: Colors.grey.shade300),
         const SizedBox(height: 12),
-        Text('Noch keine Einträge', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+        Text('Noch keine Einträge',
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
         const SizedBox(height: 8),
-        Text('Tippe auf + um einen Eintrag hinzuzufügen', style: TextStyle(color: Colors.grey.shade400, fontSize: 13)),
+        Text('Tippe auf + um einen Eintrag hinzuzufügen',
+            style: TextStyle(color: Colors.grey.shade400, fontSize: 13)),
       ]));
     }
     return ListView.builder(
@@ -449,18 +594,26 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   // ── Exercises Tab ─────────────────────────────────────────
 
   Widget _buildExercisesTab() {
-    if (_loadingExercises) return const Center(child: CircularProgressIndicator());
+    if (_loadingExercises)
+      return const Center(child: CircularProgressIndicator());
     return RefreshIndicator(
-      onRefresh: () async { _exercisesLoaded = false; await _loadExercises(); },
+      onRefresh: () async {
+        _exercisesLoaded = false;
+        await _loadExercises();
+      },
       child: Stack(
         children: [
           _exercises.isEmpty
               ? ListView(padding: const EdgeInsets.all(32), children: [
-                  Center(child: Column(children: [
+                  Center(
+                      child: Column(children: [
                     const SizedBox(height: 40),
-                    Icon(Icons.fitness_center_rounded, size: 72, color: Colors.grey.shade300),
+                    Icon(Icons.fitness_center_rounded,
+                        size: 72, color: Colors.grey.shade300),
                     const SizedBox(height: 16),
-                    Text('Keine Übungen', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+                    Text('Keine Übungen',
+                        style: TextStyle(
+                            color: Colors.grey.shade500, fontSize: 16)),
                     const SizedBox(height: 8),
                     FilledButton.icon(
                       onPressed: _showAddExerciseSheet,
@@ -480,7 +633,8 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                 ),
           if (_exercises.isNotEmpty)
             Positioned(
-              bottom: 16, right: 16,
+              bottom: 16,
+              right: 16,
               child: FloatingActionButton.small(
                 heroTag: 'add_exercise',
                 onPressed: _showAddExerciseSheet,
@@ -494,53 +648,79 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
 
   void _showAddExerciseSheet() {
     final titleCtrl = TextEditingController();
-    final descCtrl  = TextEditingController();
+    final descCtrl = TextEditingController();
     final videoCtrl = TextEditingController();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, ss) => Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+              Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2))),
               Text('Übung hinzufügen',
-                style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  style: Theme.of(ctx)
+                      .textTheme
+                      .titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 16),
-              TextField(controller: titleCtrl, decoration: const InputDecoration(
-                labelText: 'Titel *', prefixIcon: Icon(Icons.fitness_center_rounded))),
+              TextField(
+                  controller: titleCtrl,
+                  decoration: const InputDecoration(
+                      labelText: 'Titel *',
+                      prefixIcon: Icon(Icons.fitness_center_rounded))),
               const SizedBox(height: 12),
-              TextField(controller: descCtrl, maxLines: 3, decoration: const InputDecoration(
-                labelText: 'Beschreibung', prefixIcon: Icon(Icons.notes_rounded))),
+              TextField(
+                  controller: descCtrl,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                      labelText: 'Beschreibung',
+                      prefixIcon: Icon(Icons.notes_rounded))),
               const SizedBox(height: 12),
-              TextField(controller: videoCtrl, decoration: const InputDecoration(
-                labelText: 'Video-URL (optional)', prefixIcon: Icon(Icons.videocam_rounded))),
+              TextField(
+                  controller: videoCtrl,
+                  decoration: const InputDecoration(
+                      labelText: 'Video-URL (optional)',
+                      prefixIcon: Icon(Icons.videocam_rounded))),
               const SizedBox(height: 20),
-              SizedBox(width: double.infinity, child: FilledButton.icon(
-                icon: const Icon(Icons.save_rounded),
-                label: const Text('Speichern'),
-                onPressed: () async {
-                  if (titleCtrl.text.trim().isEmpty) return;
-                  Navigator.pop(ctx);
-                  try {
-                    await _api.exerciseCreate(widget.id, {
-                      'title':       titleCtrl.text.trim(),
-                      'description': descCtrl.text.trim(),
-                      'video_url':   videoCtrl.text.trim(),
-                    });
-                    _exercisesLoaded = false;
-                    await _loadExercises();
-                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('✓ Übung hinzugefügt'), backgroundColor: Colors.green));
-                  } catch (e) {
-                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
-                  }
-                },
-              )),
+              SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    icon: const Icon(Icons.save_rounded),
+                    label: const Text('Speichern'),
+                    onPressed: () async {
+                      if (titleCtrl.text.trim().isEmpty) return;
+                      Navigator.pop(ctx);
+                      try {
+                        await _api.exerciseCreate(widget.id, {
+                          'title': titleCtrl.text.trim(),
+                          'description': descCtrl.text.trim(),
+                          'video_url': videoCtrl.text.trim(),
+                        });
+                        _exercisesLoaded = false;
+                        await _loadExercises();
+                        if (mounted)
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('✓ Übung hinzugefügt'),
+                                  backgroundColor: Colors.green));
+                      } catch (e) {
+                        if (mounted)
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(e.toString()),
+                              backgroundColor: Colors.red));
+                      }
+                    },
+                  )),
             ]),
           ),
         ),
@@ -557,7 +737,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
         title: const Text('Übung löschen'),
         content: Text('"${ex['title'] ?? ex['name'] ?? ''}" wirklich löschen?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(dlgCtx, false), child: const Text('Abbrechen')),
+          TextButton(
+              onPressed: () => Navigator.pop(dlgCtx, false),
+              child: const Text('Abbrechen')),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(dlgCtx, true),
@@ -571,31 +753,42 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
       await _api.exerciseDelete(id);
       _exercisesLoaded = false;
       await _loadExercises();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Übung gelöscht'), backgroundColor: Colors.orange));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Übung gelöscht'), backgroundColor: Colors.orange));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString()), backgroundColor: Colors.red));
     }
   }
 
   // ── Homework Tab ───────────────────────────────────────────
 
   Widget _buildHomeworkTab() {
-    if (_loadingHomework) return const Center(child: CircularProgressIndicator());
+    if (_loadingHomework)
+      return const Center(child: CircularProgressIndicator());
     return RefreshIndicator(
-      onRefresh: () async { _homeworkLoaded = false; await _loadHomework(); },
+      onRefresh: () async {
+        _homeworkLoaded = false;
+        await _loadHomework();
+      },
       child: _homework.isEmpty
           ? ListView(padding: const EdgeInsets.all(32), children: [
-              Center(child: Column(children: [
+              Center(
+                  child: Column(children: [
                 const SizedBox(height: 40),
-                Icon(Icons.assignment_outlined, size: 72, color: Colors.grey.shade300),
+                Icon(Icons.assignment_outlined,
+                    size: 72, color: Colors.grey.shade300),
                 const SizedBox(height: 16),
-                Text('Keine Hausaufgaben', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+                Text('Keine Hausaufgaben',
+                    style:
+                        TextStyle(color: Colors.grey.shade500, fontSize: 16)),
                 const SizedBox(height: 8),
                 Text('Hausaufgaben werden über das Portal Admin zugewiesen.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+                    textAlign: TextAlign.center,
+                    style:
+                        TextStyle(color: Colors.grey.shade400, fontSize: 12)),
               ])),
             ])
           : ListView.separated(
@@ -610,20 +803,29 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   // ── Befunde Tab ────────────────────────────────────────────
 
   Widget _buildBefundeTab() {
-    if (_loadingBefunde) return const Center(child: CircularProgressIndicator());
+    if (_loadingBefunde)
+      return const Center(child: CircularProgressIndicator());
     return RefreshIndicator(
-      onRefresh: () async { _befundeLoaded = false; await _loadBefunde(); },
+      onRefresh: () async {
+        _befundeLoaded = false;
+        await _loadBefunde();
+      },
       child: _befunde.isEmpty
           ? ListView(padding: const EdgeInsets.all(32), children: [
-              Center(child: Column(children: [
+              Center(
+                  child: Column(children: [
                 const SizedBox(height: 40),
-                Icon(Icons.medical_information_rounded, size: 72, color: Colors.grey.shade300),
+                Icon(Icons.medical_information_rounded,
+                    size: 72, color: Colors.grey.shade300),
                 const SizedBox(height: 16),
-                Text('Keine Befundbögen', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+                Text('Keine Befundbögen',
+                    style:
+                        TextStyle(color: Colors.grey.shade500, fontSize: 16)),
                 const SizedBox(height: 8),
                 Text('Befundbögen werden in der Patientenakte erstellt.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+                    textAlign: TextAlign.center,
+                    style:
+                        TextStyle(color: Colors.grey.shade400, fontSize: 12)),
               ])),
             ])
           : ListView.separated(
@@ -639,24 +841,35 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
 
   Widget _buildTcpTab() {
     if (_loadingTcp) return const Center(child: CircularProgressIndicator());
-    if (_tcpData == null) return const Center(child: Text('Fehler beim Laden von TCP-Daten'));
+    if (_tcpData == null)
+      return const Center(child: Text('Fehler beim Laden von TCP-Daten'));
 
     final latest = List<Map<String, dynamic>>.from(
-        (_tcpData!['latest'] as List? ?? []).map((e) => Map<String, dynamic>.from(e as Map)));
+        (_tcpData!['latest'] as List? ?? [])
+            .map((e) => Map<String, dynamic>.from(e as Map)));
 
     return RefreshIndicator(
-      onRefresh: () async { _tcpLoaded = false; await _loadTcp(); },
+      onRefresh: () async {
+        _tcpLoaded = false;
+        await _loadTcp();
+      },
       child: latest.isEmpty
           ? ListView(padding: const EdgeInsets.all(32), children: [
-              Center(child: Column(children: [
+              Center(
+                  child: Column(children: [
                 const SizedBox(height: 40),
-                Icon(Icons.show_chart_rounded, size: 72, color: Colors.grey.shade300),
+                Icon(Icons.show_chart_rounded,
+                    size: 72, color: Colors.grey.shade300),
                 const SizedBox(height: 16),
-                Text('Keine Fortschrittsdaten', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+                Text('Keine Fortschrittsdaten',
+                    style:
+                        TextStyle(color: Colors.grey.shade500, fontSize: 16)),
                 const SizedBox(height: 8),
-                Text('TCP-Daten werden in der Web-Anwendung oder über "Eintrag hinzufügen" erfasst.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+                Text(
+                    'TCP-Daten werden in der Web-Anwendung oder über "Eintrag hinzufügen" erfasst.',
+                    textAlign: TextAlign.center,
+                    style:
+                        TextStyle(color: Colors.grey.shade400, fontSize: 12)),
               ])),
             ])
           : ListView.separated(
@@ -665,15 +878,21 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
               separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (_, i) {
                 final entry = latest[i];
-                final score = int.tryParse(entry['score']?.toString() ?? '0') ?? 0;
-                final cat   = entry['category_name'] ?? 'Unbekannt';
+                final score =
+                    int.tryParse(entry['score']?.toString() ?? '0') ?? 0;
+                final cat = entry['category_name'] ?? 'Unbekannt';
                 return Card(
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: _scoreColor(score).withValues(alpha: 0.1),
-                      child: Text(score.toString(), style: TextStyle(color: _scoreColor(score), fontWeight: FontWeight.bold)),
+                      backgroundColor:
+                          _scoreColor(score).withValues(alpha: 0.1),
+                      child: Text(score.toString(),
+                          style: TextStyle(
+                              color: _scoreColor(score),
+                              fontWeight: FontWeight.bold)),
                     ),
-                    title: Text(cat, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    title: Text(cat,
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
                     subtitle: Text(entry['notes'] ?? ''),
                     trailing: Text(entry['entry_date'] ?? ''),
                   ),
@@ -692,16 +911,24 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   // ── Reports Tab ──────────────────────────────────────────
 
   Widget _buildReportsTab() {
-    if (_loadingReports) return const Center(child: CircularProgressIndicator());
+    if (_loadingReports)
+      return const Center(child: CircularProgressIndicator());
     return RefreshIndicator(
-      onRefresh: () async { _reportsLoaded = false; await _loadReports(); },
+      onRefresh: () async {
+        _reportsLoaded = false;
+        await _loadReports();
+      },
       child: _reports.isEmpty
           ? ListView(padding: const EdgeInsets.all(32), children: [
-              Center(child: Column(children: [
+              Center(
+                  child: Column(children: [
                 const SizedBox(height: 40),
-                Icon(Icons.description_outlined, size: 72, color: Colors.grey.shade300),
+                Icon(Icons.description_outlined,
+                    size: 72, color: Colors.grey.shade300),
                 const SizedBox(height: 16),
-                Text('Keine Therapieberichte', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+                Text('Keine Therapieberichte',
+                    style:
+                        TextStyle(color: Colors.grey.shade500, fontSize: 16)),
               ])),
             ])
           : ListView.separated(
@@ -712,11 +939,13 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                 final r = _reports[i];
                 return Card(
                   child: ListTile(
-                    leading: const Icon(Icons.picture_as_pdf_rounded, color: Colors.red),
+                    leading: const Icon(Icons.picture_as_pdf_rounded,
+                        color: Colors.red),
                     title: Text(r['title'] ?? 'Therapiebericht'),
                     subtitle: Text(r['created_at'] ?? ''),
                     onTap: () {
-                      if (r['pdf_url'] != null) launchUrl(Uri.parse(ApiService.mediaUrl(r['pdf_url'])));
+                      if (r['pdf_url'] != null)
+                        launchUrl(Uri.parse(ApiService.mediaUrl(r['pdf_url'])));
                     },
                   ),
                 );
@@ -728,20 +957,30 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   // ── Portal Tab ───────────────────────────────────────────
 
   Widget _buildPortalTab() {
-    if (_loadingThreads) return const Center(child: CircularProgressIndicator());
+    if (_loadingThreads)
+      return const Center(child: CircularProgressIndicator());
     return RefreshIndicator(
-      onRefresh: () async { _threadsLoaded = false; await _loadThreads(); },
+      onRefresh: () async {
+        _threadsLoaded = false;
+        await _loadThreads();
+      },
       child: _threads.isEmpty
           ? ListView(padding: const EdgeInsets.all(32), children: [
-              Center(child: Column(children: [
+              Center(
+                  child: Column(children: [
                 const SizedBox(height: 40),
-                Icon(Icons.forum_outlined, size: 72, color: Colors.grey.shade300),
+                Icon(Icons.forum_outlined,
+                    size: 72, color: Colors.grey.shade300),
                 const SizedBox(height: 16),
-                Text('Keine Portal-Nachrichten', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+                Text('Keine Portal-Nachrichten',
+                    style:
+                        TextStyle(color: Colors.grey.shade500, fontSize: 16)),
                 const SizedBox(height: 8),
-                Text('Nutze das Portal, um mit dem Tierhalter zu kommunizieren.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey.shade400, fontSize: 12)),
+                Text(
+                    'Nutze das Portal, um mit dem Tierhalter zu kommunizieren.',
+                    textAlign: TextAlign.center,
+                    style:
+                        TextStyle(color: Colors.grey.shade400, fontSize: 12)),
               ])),
             ])
           : ListView.separated(
@@ -750,23 +989,35 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
               separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (_, i) {
                 final t = _threads[i];
-                final unread = (int.tryParse(t['unread_count']?.toString() ?? '0') ?? 0) > 0;
+                final unread =
+                    (int.tryParse(t['unread_count']?.toString() ?? '0') ?? 0) >
+                        0;
                 return Card(
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundColor: unread ? AppTheme.primary : Colors.grey.shade200,
-                      child: Icon(Icons.forum_rounded, color: unread ? Colors.white : Colors.grey, size: 20),
+                      backgroundColor:
+                          unread ? AppTheme.primary : Colors.grey.shade200,
+                      child: Icon(Icons.forum_rounded,
+                          color: unread ? Colors.white : Colors.grey, size: 20),
                     ),
-                    title: Text(t['subject'] ?? 'Kein Betreff', style: TextStyle(fontWeight: unread ? FontWeight.bold : FontWeight.normal)),
-                    subtitle: Text(t['last_body'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis),
+                    title: Text(t['subject'] ?? 'Kein Betreff',
+                        style: TextStyle(
+                            fontWeight:
+                                unread ? FontWeight.bold : FontWeight.normal)),
+                    subtitle: Text(t['last_body'] ?? '',
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
                     trailing: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(t['last_message_at']?.split(' ')[0] ?? '', style: const TextStyle(fontSize: 10)),
-                        if (unread) Icon(Icons.circle, size: 10, color: AppTheme.primary),
+                        Text(t['last_message_at']?.split(' ')[0] ?? '',
+                            style: const TextStyle(fontSize: 10)),
+                        if (unread)
+                          Icon(Icons.circle, size: 10, color: AppTheme.primary),
                       ],
                     ),
-                    onTap: () => context.push('/nachrichten/${t['id']}').then((_) => _loadThreads()),
+                    onTap: () => context
+                        .push('/nachrichten/${t['id']}')
+                        .then((_) => _loadThreads()),
                   ),
                 );
               },
@@ -780,20 +1031,30 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
       child: Column(children: [
-        _ModernInfoCard(title: 'Patientendaten', icon: Icons.pets_rounded, color: AppTheme.primary, items: {
-          'Geschlecht':   _gender(p['gender'] as String? ?? ''),
-          'Geburtsdatum': _date(p['birth_date'] as String?),
-          'Gewicht':      p['weight'] != null ? '${p['weight']} kg' : '—',
-          'Chip-Nr.':     p['chip_number'] as String? ?? '—',
-          'Farbe':        p['color'] as String? ?? '—',
-        }),
+        _ModernInfoCard(
+            title: 'Patientendaten',
+            icon: Icons.pets_rounded,
+            color: AppTheme.primary,
+            items: {
+              'Geschlecht': _gender(p['gender'] as String? ?? ''),
+              'Geburtsdatum': _date(p['birth_date'] as String?),
+              'Gewicht': p['weight'] != null ? '${p['weight']} kg' : '—',
+              'Chip-Nr.': p['chip_number'] as String? ?? '—',
+              'Farbe': p['color'] as String? ?? '—',
+            }),
         const SizedBox(height: 12),
         if (p['owner_email'] != null || p['owner_phone'] != null)
-          _ModernInfoCard(title: 'Besitzer', icon: Icons.person_rounded, color: AppTheme.secondary, items: {
-            'Name':    '${p['owner_first_name'] ?? ''} ${p['owner_last_name'] ?? ''}'.trim(),
-            'E-Mail':  p['owner_email'] as String? ?? '—',
-            'Telefon': p['owner_phone'] as String? ?? '—',
-          }),
+          _ModernInfoCard(
+              title: 'Besitzer',
+              icon: Icons.person_rounded,
+              color: AppTheme.secondary,
+              items: {
+                'Name':
+                    '${p['owner_first_name'] ?? ''} ${p['owner_last_name'] ?? ''}'
+                        .trim(),
+                'E-Mail': p['owner_email'] as String? ?? '—',
+                'Telefon': p['owner_phone'] as String? ?? '—',
+              }),
         if ((p['notes'] as String? ?? '').isNotEmpty) ...[
           const SizedBox(height: 12),
           Container(
@@ -802,16 +1063,21 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
             decoration: BoxDecoration(
               color: Theme.of(context).cardTheme.color,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.warning.withValues(alpha: 0.2)),
+              border:
+                  Border.all(color: AppTheme.warning.withValues(alpha: 0.2)),
             ),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 Icon(Icons.notes_rounded, color: AppTheme.warning, size: 18),
                 const SizedBox(width: 8),
-                Text('Notizen', style: TextStyle(fontWeight: FontWeight.w700, color: AppTheme.warning)),
+                Text('Notizen',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w700, color: AppTheme.warning)),
               ]),
               const SizedBox(height: 10),
-              Text(p['notes'] as String, style: Theme.of(context).textTheme.bodyMedium),
+              Text(p['notes'] as String,
+                  style: Theme.of(context).textTheme.bodyMedium),
             ]),
           ),
         ],
@@ -821,10 +1087,16 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
         // Invoice stats if present
         if (p['invoice_stats'] != null) ...[
           const SizedBox(height: 12),
-          _ModernInfoCard(title: 'Rechnungsstatistik', icon: Icons.receipt_long_rounded, color: AppTheme.tertiary, items: {
-            'Offen':   '${p['invoice_stats']['open_count'] ?? p['invoice_stats']['open'] ?? 0}',
-            'Bezahlt': '${p['invoice_stats']['paid_count'] ?? p['invoice_stats']['paid'] ?? 0}',
-          }),
+          _ModernInfoCard(
+              title: 'Rechnungsstatistik',
+              icon: Icons.receipt_long_rounded,
+              color: AppTheme.tertiary,
+              items: {
+                'Offen':
+                    '${p['invoice_stats']['open_count'] ?? p['invoice_stats']['open'] ?? 0}',
+                'Bezahlt':
+                    '${p['invoice_stats']['paid_count'] ?? p['invoice_stats']['paid'] ?? 0}',
+              }),
         ],
       ]),
     );
@@ -846,14 +1118,16 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1A1D27) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: accent.withValues(alpha: isDark ? 0.25 : 0.18)),
+        border:
+            Border.all(color: accent.withValues(alpha: isDark ? 0.25 : 0.18)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Icon(Icons.event_rounded, color: accent, size: 18),
           const SizedBox(width: 8),
           Text('Nächster Termin',
-            style: TextStyle(fontWeight: FontWeight.w700, color: accent, fontSize: 14)),
+              style: TextStyle(
+                  fontWeight: FontWeight.w700, color: accent, fontSize: 14)),
           const Spacer(),
           GestureDetector(
             onTap: () => context.go('/kalender'),
@@ -864,20 +1138,27 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text('Kalender',
-                style: TextStyle(color: accent, fontSize: 11, fontWeight: FontWeight.w600)),
+                  style: TextStyle(
+                      color: accent,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600)),
             ),
           ),
         ]),
         const SizedBox(height: 10),
         if (next == null)
           Row(children: [
-            Icon(Icons.event_busy_rounded, size: 16,
-              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+            Icon(Icons.event_busy_rounded,
+                size: 16,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurfaceVariant
+                    .withValues(alpha: 0.5)),
             const SizedBox(width: 8),
             Text('Kein Termin geplant',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontSize: 13)),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 13)),
           ])
         else
           _buildNextAptDetail(next, accent),
@@ -887,7 +1168,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
 
   Widget _buildNextAptDetail(Map<String, dynamic> apt, Color accent) {
     DateTime? start;
-    try { start = DateTime.parse(apt['start_at'] as String? ?? ''); } catch (_) {}
+    try {
+      start = DateTime.parse(apt['start_at'] as String? ?? '');
+    } catch (_) {}
     final isToday = start != null &&
         start.year == DateTime.now().year &&
         start.month == DateTime.now().month &&
@@ -897,17 +1180,21 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
         : '—';
     final timeStr = start != null ? DateFormat('HH:mm').format(start) : '';
     final treatName = apt['treatment_type_name'] as String? ?? '';
-    final title     = apt['title'] as String? ?? '';
+    final title = apt['title'] as String? ?? '';
 
     Color aptColor = accent;
-    final colorHex = apt['treatment_color'] as String? ?? apt['color'] as String?;
+    final colorHex =
+        apt['treatment_color'] as String? ?? apt['color'] as String?;
     if (colorHex != null && colorHex.isNotEmpty) {
-      try { aptColor = Color(int.parse('FF${colorHex.replaceAll('#', '')}', radix: 16)); }
-      catch (_) {}
+      try {
+        aptColor =
+            Color(int.parse('FF${colorHex.replaceAll('#', '')}', radix: 16));
+      } catch (_) {}
     }
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Container(
-        width: 48, height: 48,
+        width: 48,
+        height: 48,
         decoration: BoxDecoration(
           color: aptColor.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(12),
@@ -916,44 +1203,69 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           if (start != null) ...[
             Text(DateFormat('d', 'de_DE').format(start),
-              style: TextStyle(fontWeight: FontWeight.w800, color: aptColor, fontSize: 16, height: 1.0)),
+                style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: aptColor,
+                    fontSize: 16,
+                    height: 1.0)),
             Text(DateFormat('MMM', 'de_DE').format(start),
-              style: TextStyle(fontSize: 9, color: aptColor, fontWeight: FontWeight.w600)),
+                style: TextStyle(
+                    fontSize: 9, color: aptColor, fontWeight: FontWeight.w600)),
           ] else
             Icon(Icons.event_rounded, color: aptColor, size: 20),
         ]),
       ),
       const SizedBox(width: 12),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Expanded(
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Expanded(child: Text(title.isNotEmpty ? title : (treatName.isNotEmpty ? treatName : 'Termin'),
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
-            maxLines: 1, overflow: TextOverflow.ellipsis)),
+          Expanded(
+              child: Text(
+                  title.isNotEmpty
+                      ? title
+                      : (treatName.isNotEmpty ? treatName : 'Termin'),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700, fontSize: 13.5),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis)),
           if (isToday)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               decoration: BoxDecoration(
-                color: aptColor, borderRadius: BorderRadius.circular(8)),
+                  color: aptColor, borderRadius: BorderRadius.circular(8)),
               child: const Text('Heute',
-                style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700)),
             ),
         ]),
         const SizedBox(height: 3),
-        Text(dateStr, style: TextStyle(
-          fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        Text(dateStr,
+            style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant)),
         if (timeStr.isNotEmpty) ...[
           const SizedBox(height: 2),
           Row(children: [
             Icon(Icons.schedule_rounded, size: 12, color: aptColor),
             const SizedBox(width: 4),
             Text(timeStr + ' Uhr',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: aptColor)),
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: aptColor)),
             if (treatName.isNotEmpty) ...[
               const SizedBox(width: 8),
-              Expanded(child: Text('· $treatName',
-                style: TextStyle(fontSize: 11,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant),
-                maxLines: 1, overflow: TextOverflow.ellipsis)),
+              Expanded(
+                  child: Text('· $treatName',
+                      style: TextStyle(
+                          fontSize: 11,
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis)),
             ],
           ]),
         ],
@@ -964,12 +1276,12 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   // ── Helpers ───────────────────────────────────────────────
 
   String _gender(String g) => switch (g) {
-    'männlich'    => '♂ Männlich',
-    'weiblich'    => '♀ Weiblich',
-    'kastriert'   => '⚲ Kastriert',
-    'sterilisiert'=> '⚲ Sterilisiert',
-    _             => 'Unbekannt',
-  };
+        'männlich' => '♂ Männlich',
+        'weiblich' => '♀ Weiblich',
+        'kastriert' => 'âš² Kastriert',
+        'sterilisiert' => 'âš² Sterilisiert',
+        _ => 'Unbekannt',
+      };
 
   String _date(String? d) {
     if (d == null || d.isEmpty) return '—';
@@ -977,99 +1289,539 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
       final dt = DateTime.parse(d);
       final age = DateTime.now().difference(dt).inDays ~/ 365;
       return '${DateFormat('dd.MM.yyyy').format(dt)} ($age J.)';
-    } catch (_) { return d; }
+    } catch (_) {
+      return d;
+    }
   }
 
   String _statusLabel(String s) => switch (s) {
-    'active'   => 'Aktiv',
-    'inactive' => 'Inaktiv',
-    'deceased' => 'Verstorben',
-    _          => s,
-  };
+        'active' => 'Aktiv',
+        'inactive' => 'Inaktiv',
+        'deceased' => 'Verstorben',
+        _ => s,
+      };
 
   // ── New Appointment from patient ─────────────────────────
 
-  void _showNewAppointmentSheet(Map<String, dynamic> p) {
-    final titleCtrl = TextEditingController(text: p['name'] as String? ?? '');
+  int? _patientOwnerId(Map<String, dynamic> p) =>
+      int.tryParse(p['owner_id']?.toString() ?? '');
+
+  String _ownerDisplayName(Map<String, dynamic> p) =>
+      '${p['owner_first_name'] ?? ''} ${p['owner_last_name'] ?? ''}'.trim();
+
+  String _patientInvoiceOwnerName(Map<String, dynamic> p) =>
+      '${p['owner_last_name'] ?? ''}, ${p['owner_first_name'] ?? ''}'
+          .replaceAll(RegExp(r'^[, ]+|[, ]+$'), '')
+          .trim();
+
+  Future<void> _callOwner(Map<String, dynamic> p) async {
+    final phone = (p['owner_phone'] as String? ?? '').trim();
+    if (phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                'Für diesen Tierhalter ist keine Telefonnummer hinterlegt.')),
+      );
+      return;
+    }
+    final uri = Uri(scheme: 'tel', path: phone);
+    if (!await launchUrl(uri)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Telefon-App konnte nicht geöffnet werden: $phone')),
+      );
+    }
+  }
+
+  Future<void> _showInvoiceSheet(Map<String, dynamic> p) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.94,
+        minChildSize: 0.72,
+        maxChildSize: 0.98,
+        builder: (_, __) => ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: InvoiceFormScreen(
+            prefill: {
+              'patientId': widget.id,
+              'patientName': p['name'],
+              'ownerId': p['owner_id'],
+              'ownerName': _patientInvoiceOwnerName(p),
+            },
+          ),
+        ),
+      ),
+    );
+    if (mounted) _load();
+  }
+
+  Future<void> _showMessageSheet(Map<String, dynamic> p) async {
+    final ownerId = _patientOwnerId(p);
+    if (ownerId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Dieser Patient ist keinem Tierhalter zugeordnet.')),
+      );
+      return;
+    }
+
+    final subjectCtrl =
+        TextEditingController(text: 'Rückfrage zu ${p['name'] ?? 'Patient'}');
+    final bodyCtrl = TextEditingController();
+    var saving = false;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => Padding(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            10,
+            20,
+            MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              width: 42,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Theme.of(ctx).colorScheme.outlineVariant,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(children: [
+              _ModalIcon(icon: Icons.chat_rounded, color: AppTheme.primary),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Nachricht an ${_ownerDisplayName(p)}',
+                        style: Theme.of(ctx)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      Text(
+                        p['name'] as String? ?? '',
+                        style: TextStyle(
+                            color: Theme.of(ctx).colorScheme.onSurfaceVariant),
+                      ),
+                    ]),
+              ),
+            ]),
+            const SizedBox(height: 16),
+            TextField(
+              controller: subjectCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Betreff',
+                prefixIcon: Icon(Icons.subject_rounded),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: bodyCtrl,
+              maxLines: 5,
+              decoration: const InputDecoration(
+                labelText: 'Nachricht',
+                alignLabelWithHint: true,
+                prefixIcon: Padding(
+                  padding: EdgeInsets.only(bottom: 72),
+                  child: Icon(Icons.message_rounded),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            FilledButton.icon(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      if (subjectCtrl.text.trim().isEmpty ||
+                          bodyCtrl.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(
+                              content: Text(
+                                  'Bitte Betreff und Nachricht ausfüllen.')),
+                        );
+                        return;
+                      }
+                      setS(() => saving = true);
+                      try {
+                        await _api.messageCreate(
+                          ownerId: ownerId,
+                          subject: subjectCtrl.text.trim(),
+                          body: bodyCtrl.text.trim(),
+                        );
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Nachricht gesendet.')),
+                          );
+                        }
+                      } catch (e) {
+                        setS(() => saving = false);
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                              SnackBar(content: Text(e.toString())));
+                        }
+                      }
+                    },
+              icon: saving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.send_rounded),
+              label: Text(saving ? 'Senden...' : 'Senden'),
+            ),
+          ]),
+        ),
+      ),
+    );
+
+    subjectCtrl.dispose();
+    bodyCtrl.dispose();
+  }
+
+  void _showActionHub(Map<String, dynamic> p) {
+    final t = Terminology(isTrainer: context.read<AuthService>().isTrainer);
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 24),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: 42,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Theme.of(ctx).colorScheme.outlineVariant,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(children: [
+            _ModalIcon(
+                icon: Icons.auto_awesome_rounded, color: AppTheme.primary),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${t.patientRecord}: ${p['name'] ?? ''}',
+                      style: Theme.of(ctx)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                    Text(
+                      'Alles Wichtige direkt aus der Akte starten',
+                      style: TextStyle(
+                          color: Theme.of(ctx).colorScheme.onSurfaceVariant),
+                    ),
+                  ]),
+            ),
+          ]),
+          const SizedBox(height: 18),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 3,
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            childAspectRatio: 0.96,
+            children: [
+              _ActionHubTile(Icons.event_rounded, 'Termin', AppTheme.primary,
+                  () {
+                Navigator.pop(ctx);
+                _showNewAppointmentSheet(p);
+              }),
+              _ActionHubTile(
+                  Icons.receipt_long_rounded, 'Rechnung', AppTheme.success, () {
+                Navigator.pop(ctx);
+                _showInvoiceSheet(p);
+              }),
+              _ActionHubTile(Icons.chat_rounded, 'Nachricht', AppTheme.tertiary,
+                  () {
+                Navigator.pop(ctx);
+                _showMessageSheet(p);
+              }),
+              _ActionHubTile(Icons.call_rounded, 'Anrufen', AppTheme.warning,
+                  () {
+                Navigator.pop(ctx);
+                _callOwner(p);
+              }),
+              _ActionHubTile(Icons.note_add_rounded, 'Akte', AppTheme.secondary,
+                  () {
+                Navigator.pop(ctx);
+                _showAddBottomSheet();
+              }),
+              _ActionHubTile(
+                  Icons.assignment_rounded, 'Aufgaben', AppTheme.primary, () {
+                Navigator.pop(ctx);
+                _tabCtrl.animateTo(2);
+                if (!_homeworkLoaded) _loadHomework();
+              }),
+              _ActionHubTile(
+                  Icons.medical_information_rounded, 'Befund', AppTheme.danger,
+                  () {
+                Navigator.pop(ctx);
+                _tabCtrl.animateTo(3);
+                if (!_befundeLoaded) _loadBefunde();
+              }),
+              _ActionHubTile(
+                  Icons.fitness_center_rounded, 'Übung', AppTheme.tertiary, () {
+                Navigator.pop(ctx);
+                _showAddExerciseSheet();
+              }),
+              _ActionHubTile(
+                  Icons.edit_rounded, 'Bearbeiten', AppTheme.secondary, () {
+                Navigator.pop(ctx);
+                context
+                    .push('/patienten/${widget.id}/edit')
+                    .then((_) => _load());
+              }),
+            ],
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Future<void> _showNewAppointmentSheet(Map<String, dynamic> p) async {
+    await _ensureTreatmentTypes();
+    final titleCtrl = TextEditingController();
     final notesCtrl = TextEditingController();
     DateTime selDate = DateTime.now().add(const Duration(days: 1));
     TimeOfDay selTime = const TimeOfDay(hour: 10, minute: 0);
+    int durationMinutes = 60;
+    int? treatmentTypeId;
+    var titleEdited = false;
+
+    String buildTitle() {
+      final ownerLast = (p['owner_last_name'] as String? ?? '').trim();
+      final patientName = (p['name'] as String? ?? '').trim();
+      final treatment = treatmentTypeId == null
+          ? ''
+          : (_treatmentTypes
+                  .where(
+                      (t) => t['id']?.toString() == treatmentTypeId.toString())
+                  .map((t) => t['name'] as String? ?? '')
+                  .firstOrNull) ??
+              '';
+      return [ownerLast, patientName, treatment]
+          .where((part) => part.isNotEmpty)
+          .join(' - ');
+    }
+
+    void syncTitle(StateSetter setSS) {
+      if (titleEdited) return;
+      setSS(() => titleCtrl.text = buildTitle());
+    }
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSS) => Padding(
-          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          padding:
+              EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 28),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
-              Text('Neuer Termin', style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              Container(
+                width: 42,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(ctx).colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Row(children: [
+                _ModalIcon(icon: Icons.event_rounded, color: AppTheme.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Neuer Termin',
+                          style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                        ),
+                        Text(
+                          '${_ownerDisplayName(p)} - ${p['name'] ?? ''}',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color:
+                                  Theme.of(ctx).colorScheme.onSurfaceVariant),
+                        ),
+                      ]),
+                ),
+              ]),
               const SizedBox(height: 16),
-              TextField(controller: titleCtrl, decoration: InputDecoration(
-                labelText: 'Titel *',
-                prefixIcon: const Icon(Icons.pets_rounded),
-                hintText: p['name'] as String? ?? '',
-              )),
+              TextField(
+                controller: titleCtrl,
+                decoration: InputDecoration(
+                  labelText: 'Titel *',
+                  prefixIcon: const Icon(Icons.title_rounded),
+                  hintText: buildTitle(),
+                ),
+                onChanged: (_) => titleEdited = true,
+              ),
               const SizedBox(height: 12),
               Row(children: [
-                Expanded(child: InkWell(
+                Expanded(
+                    child: InkWell(
                   borderRadius: BorderRadius.circular(8),
                   onTap: () async {
-                    final d = await showDatePicker(context: ctx,
-                      initialDate: selDate, firstDate: DateTime.now(),
-                      lastDate: DateTime.now().add(const Duration(days: 365)));
+                    final d = await showDatePicker(
+                        context: ctx,
+                        initialDate: selDate,
+                        firstDate: DateTime.now(),
+                        lastDate:
+                            DateTime.now().add(const Duration(days: 365)));
                     if (d != null) setSS(() => selDate = d);
                   },
                   child: InputDecorator(
-                    decoration: const InputDecoration(labelText: 'Datum', prefixIcon: Icon(Icons.calendar_today_rounded)),
-                    child: Text('${selDate.day.toString().padLeft(2,'0')}.${selDate.month.toString().padLeft(2,'0')}.${selDate.year}'),
+                    decoration: const InputDecoration(
+                        labelText: 'Datum',
+                        prefixIcon: Icon(Icons.calendar_today_rounded)),
+                    child: Text(
+                        '${selDate.day.toString().padLeft(2, '0')}.${selDate.month.toString().padLeft(2, '0')}.${selDate.year}'),
                   ),
                 )),
                 const SizedBox(width: 12),
-                Expanded(child: InkWell(
+                Expanded(
+                    child: InkWell(
                   borderRadius: BorderRadius.circular(8),
                   onTap: () async {
-                    final t = await showTimePicker(context: ctx, initialTime: selTime);
+                    final t = await showTimePicker(
+                        context: ctx, initialTime: selTime);
                     if (t != null) setSS(() => selTime = t);
                   },
                   child: InputDecorator(
-                    decoration: const InputDecoration(labelText: 'Uhrzeit', prefixIcon: Icon(Icons.access_time_rounded)),
-                    child: Text('${selTime.hour.toString().padLeft(2,'0')}:${selTime.minute.toString().padLeft(2,'0')}'),
+                    decoration: const InputDecoration(
+                        labelText: 'Uhrzeit',
+                        prefixIcon: Icon(Icons.access_time_rounded)),
+                    child: Text(
+                        '${selTime.hour.toString().padLeft(2, '0')}:${selTime.minute.toString().padLeft(2, '0')}'),
                   ),
                 )),
               ]),
               const SizedBox(height: 12),
-              TextField(controller: notesCtrl, decoration: const InputDecoration(
-                labelText: 'Notizen', prefixIcon: Icon(Icons.notes_rounded))),
+              if (_loadingTreatmentTypes)
+                const LinearProgressIndicator()
+              else if (_treatmentTypes.isNotEmpty)
+                DropdownButtonFormField<int>(
+                  initialValue: treatmentTypeId,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Behandlung / Trainingseinheit',
+                    prefixIcon: Icon(Icons.category_rounded),
+                  ),
+                  items: [
+                    const DropdownMenuItem<int>(
+                      value: null,
+                      child: Text('Keine Behandlungsart'),
+                    ),
+                    ..._treatmentTypes.map((t) => DropdownMenuItem<int>(
+                          value: int.tryParse(t['id'].toString()),
+                          child: Text(t['name'] as String? ?? '',
+                              overflow: TextOverflow.ellipsis),
+                        )),
+                  ],
+                  onChanged: (v) {
+                    treatmentTypeId = v;
+                    syncTitle(setSS);
+                  },
+                ),
+              if (_treatmentTypes.isNotEmpty) const SizedBox(height: 12),
+              DropdownButtonFormField<int>(
+                initialValue: durationMinutes,
+                decoration: const InputDecoration(
+                  labelText: 'Dauer',
+                  prefixIcon: Icon(Icons.timer_rounded),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 30, child: Text('30 Minuten')),
+                  DropdownMenuItem(value: 45, child: Text('45 Minuten')),
+                  DropdownMenuItem(value: 60, child: Text('60 Minuten')),
+                  DropdownMenuItem(value: 90, child: Text('90 Minuten')),
+                  DropdownMenuItem(value: 120, child: Text('120 Minuten')),
+                ],
+                onChanged: (v) => setSS(() => durationMinutes = v ?? 60),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                  controller: notesCtrl,
+                  decoration: const InputDecoration(
+                      labelText: 'Notizen',
+                      prefixIcon: Icon(Icons.notes_rounded))),
               const SizedBox(height: 20),
-              SizedBox(width: double.infinity, child: FilledButton.icon(
-                icon: const Icon(Icons.save_rounded),
-                label: const Text('Termin erstellen'),
-                onPressed: () async {
-                  if (titleCtrl.text.trim().isEmpty) return;
-                  Navigator.pop(ctx);
-                  final start = DateTime(selDate.year, selDate.month, selDate.day, selTime.hour, selTime.minute);
-                  final end   = start.add(const Duration(hours: 1));
-                  try {
-                    await _api.appointmentCreate({
-                      'title':      titleCtrl.text.trim(),
-                      'patient_id': widget.id,
-                      'owner_id':   p['owner_id'],
-                      'start':      start.toIso8601String(),
-                      'end':        end.toIso8601String(),
-                      'notes':      notesCtrl.text.trim(),
-                    });
-                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Termin erstellt ✓'), backgroundColor: Colors.green));
-                  } catch (e) {
-                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(e.toString()), backgroundColor: AppTheme.danger));
-                  }
-                },
-              )),
+              SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    icon: const Icon(Icons.save_rounded),
+                    label: const Text('Termin erstellen'),
+                    onPressed: () async {
+                      final title = titleCtrl.text.trim().isEmpty
+                          ? buildTitle()
+                          : titleCtrl.text.trim();
+                      if (title.isEmpty) return;
+                      Navigator.pop(ctx);
+                      final start = DateTime(selDate.year, selDate.month,
+                          selDate.day, selTime.hour, selTime.minute);
+                      final end = start.add(Duration(minutes: durationMinutes));
+                      try {
+                        await _api.appointmentCreate({
+                          'title': title,
+                          'patient_id': widget.id,
+                          'owner_id': p['owner_id'],
+                          if (treatmentTypeId != null)
+                            'treatment_type_id': treatmentTypeId,
+                          'start_at': start
+                              .toIso8601String()
+                              .substring(0, 16)
+                              .replaceAll('T', ' '),
+                          'end_at': end
+                              .toIso8601String()
+                              .substring(0, 16)
+                              .replaceAll('T', ' '),
+                          'status': 'scheduled',
+                          'notes': notesCtrl.text.trim(),
+                        });
+                        if (mounted)
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Termin erstellt.'),
+                                  backgroundColor: Colors.green));
+                        if (mounted) _load();
+                      } catch (e) {
+                        if (mounted)
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                              content: Text(e.toString()),
+                              backgroundColor: AppTheme.danger));
+                      }
+                    },
+                  )),
             ]),
           ),
         ),
@@ -1084,7 +1836,8 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
       context: context,
       isScrollControlled: true,
       builder: (ctx) => _AddEntrySheet(
-        onSubmit: (type, title, content, treatmentTypeId, statusBadge, files) async {
+        onSubmit:
+            (type, title, content, treatmentTypeId, statusBadge, files) async {
           Navigator.pop(ctx);
           setState(() => _uploading = true);
           try {
@@ -1099,8 +1852,10 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
             );
             _load();
           } catch (e) {
-            if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(e.toString()), backgroundColor: AppTheme.danger));
+            if (mounted)
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text(e.toString()),
+                  backgroundColor: AppTheme.danger));
           } finally {
             if (mounted) setState(() => _uploading = false);
           }
@@ -1110,10 +1865,190 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   }
 }
 
+class _PatientCockpitActions extends StatelessWidget {
+  final Map<String, dynamic> patient;
+  final VoidCallback onCall;
+  final VoidCallback onMessage;
+  final VoidCallback onAppointment;
+  final VoidCallback onInvoice;
+  final VoidCallback onRecord;
+  final VoidCallback onMore;
+
+  const _PatientCockpitActions({
+    required this.patient,
+    required this.onCall,
+    required this.onMessage,
+    required this.onAppointment,
+    required this.onInvoice,
+    required this.onRecord,
+    required this.onMore,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final ownerName =
+        '${patient['owner_first_name'] ?? ''} ${patient['owner_last_name'] ?? ''}'
+            .trim();
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF161A24) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.07)
+              : Colors.black.withValues(alpha: 0.06),
+        ),
+        boxShadow: [
+          if (!isDark)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+        ],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          _ModalIcon(
+              icon: Icons.local_activity_rounded, color: AppTheme.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(
+                'Praxis-Cockpit',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w800),
+              ),
+              Text(
+                ownerName.isEmpty
+                    ? 'Direkt aus der Akte arbeiten'
+                    : 'Für $ownerName direkt handeln',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+              ),
+            ]),
+          ),
+          IconButton(
+            onPressed: onMore,
+            tooltip: 'Alle Aktionen',
+            icon: const Icon(Icons.apps_rounded),
+          ),
+        ]),
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(children: [
+            _CockpitChip(
+                Icons.event_rounded, 'Termin', AppTheme.primary, onAppointment),
+            _CockpitChip(Icons.receipt_long_rounded, 'Rechnung',
+                AppTheme.success, onInvoice),
+            _CockpitChip(
+                Icons.chat_rounded, 'Nachricht', AppTheme.tertiary, onMessage),
+            _CockpitChip(
+                Icons.call_rounded, 'Anrufen', AppTheme.warning, onCall),
+            _CockpitChip(
+                Icons.note_add_rounded, 'Akte', AppTheme.secondary, onRecord),
+          ]),
+        ),
+      ]),
+    );
+  }
+}
+
+class _CockpitChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _CockpitChip(this.icon, this.label, this.color, this.onTap);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ActionChip(
+        avatar: Icon(icon, size: 17, color: color),
+        label: Text(label),
+        onPressed: onTap,
+        side: BorderSide(color: color.withValues(alpha: 0.18)),
+        backgroundColor: color.withValues(alpha: 0.08),
+        labelStyle: TextStyle(color: color, fontWeight: FontWeight.w700),
+      ),
+    );
+  }
+}
+
+class _ModalIcon extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+
+  const _ModalIcon({required this.icon, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Icon(icon, color: color, size: 22),
+    );
+  }
+}
+
+class _ActionHubTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _ActionHubTile(this.icon, this.label, this.color, this.onTap);
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Ink(
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.09),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withValues(alpha: 0.16)),
+        ),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Icon(icon, color: color, size: 26),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
 // ── Add Entry Bottom Sheet ────────────────────────────────────────────────────
 
 class _AddEntrySheet extends StatefulWidget {
-  final Future<void> Function(String type, String title, String content, int? treatmentTypeId, String? statusBadge, List<File> files) onSubmit;
+  final Future<void> Function(String type, String title, String content,
+      int? treatmentTypeId, String? statusBadge, List<File> files) onSubmit;
   const _AddEntrySheet({required this.onSubmit});
 
   @override
@@ -1121,11 +2056,11 @@ class _AddEntrySheet extends StatefulWidget {
 }
 
 class _AddEntrySheetState extends State<_AddEntrySheet> {
-  final _api         = ApiService();
-  final _titleCtrl   = TextEditingController();
-  String _type       = 'note';
+  final _api = ApiService();
+  final _titleCtrl = TextEditingController();
+  String _type = 'note';
   String _htmlContent = '';
-  bool   _loadingTx  = false;
+  bool _loadingTx = false;
   final List<File> _files = [];
   final List<String> _fileNames = [];
 
@@ -1145,7 +2080,8 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
     try {
       final list = await _api.treatmentTypes();
       setState(() {
-        _treatmentTypes = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _treatmentTypes =
+            list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
         _loadingTx = false;
       });
     } catch (_) {
@@ -1170,7 +2106,8 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: _buildForm(context),
     );
   }
@@ -1180,11 +2117,18 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 40, height: 4, decoration: BoxDecoration(
-          color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
+        Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2))),
         const SizedBox(height: 12),
         Text('Akte-Eintrag hinzufügen',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(fontWeight: FontWeight.w700)),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
           initialValue: _type,
@@ -1216,9 +2160,11 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
           items: const [
             DropdownMenuItem(value: null, child: Text('Normal (Standard)')),
             DropdownMenuItem(value: 'info', child: Text('Info (Blau)')),
-            DropdownMenuItem(value: 'warning', child: Text('Wichtig (Gelb/Orange)')),
+            DropdownMenuItem(
+                value: 'warning', child: Text('Wichtig (Gelb/Orange)')),
             DropdownMenuItem(value: 'danger', child: Text('Kritisch (Rot)')),
-            DropdownMenuItem(value: 'success', child: Text('Abgeschlossen (Grün)')),
+            DropdownMenuItem(
+                value: 'success', child: Text('Abgeschlossen (Grün)')),
           ],
           onChanged: (v) => setState(() => _statusBadge = v),
         ),
@@ -1239,20 +2185,26 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
                 prefixIcon: Icon(Icons.category_rounded),
               ),
               hint: const Text('Behandlungsart wählen…'),
-              items: _treatmentTypes.map((t) => DropdownMenuItem<int>(
-                value: t['id'] as int,
-                child: Row(children: [
-                  Container(
-                    width: 12, height: 12,
-                    margin: const EdgeInsets.only(right: 8),
-                    decoration: BoxDecoration(
-                      color: _parseColor(t['color'] as String? ?? '#4f7cff'),
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  Expanded(child: Text(t['name'] as String? ?? '', overflow: TextOverflow.ellipsis)),
-                ]),
-              )).toList(),
+              items: _treatmentTypes
+                  .map((t) => DropdownMenuItem<int>(
+                        value: t['id'] as int,
+                        child: Row(children: [
+                          Container(
+                            width: 12,
+                            height: 12,
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              color: _parseColor(
+                                  t['color'] as String? ?? '#4f7cff'),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          Expanded(
+                              child: Text(t['name'] as String? ?? '',
+                                  overflow: TextOverflow.ellipsis)),
+                        ]),
+                      ))
+                  .toList(),
               onChanged: (v) => setState(() => _selectedTreatmentTypeId = v),
             ),
           const SizedBox(height: 12),
@@ -1282,14 +2234,21 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
                 ? Html(
                     data: _htmlContent,
                     style: {
-                      'body': Style(margin: Margins.zero, padding: HtmlPaddings.zero, fontSize: FontSize(13)),
+                      'body': Style(
+                          margin: Margins.zero,
+                          padding: HtmlPaddings.zero,
+                          fontSize: FontSize(13)),
                     },
                   )
                 : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Icon(Icons.edit_note_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    Icon(Icons.edit_note_rounded,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
                     const SizedBox(width: 8),
                     Text('Inhalt bearbeiten (Rich Text)…',
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                        style: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant)),
                   ]),
           ),
         ),
@@ -1307,7 +2266,8 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
           alignment: Alignment.centerLeft,
           child: OutlinedButton.icon(
             onPressed: () async {
-              final result = await FilePicker.platform.pickFiles(type: FileType.any, allowMultiple: true);
+              final result = await FilePicker.platform
+                  .pickFiles(type: FileType.any, allowMultiple: true);
               if (result == null) return;
               setState(() {
                 _files.clear();
@@ -1331,7 +2291,10 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
               child: Wrap(
                 spacing: 6,
                 runSpacing: 6,
-                children: _fileNames.map((name) => Chip(label: Text(name, overflow: TextOverflow.ellipsis))).toList(),
+                children: _fileNames
+                    .map((name) => Chip(
+                        label: Text(name, overflow: TextOverflow.ellipsis)))
+                    .toList(),
               ),
             ),
           ),
@@ -1358,10 +2321,10 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
   }
 
   String _typeLabel(String t) => switch (t) {
-    'treatment' => 'Behandlung',
-    'other'     => 'Sonstiges',
-    _           => 'Notiz',
-  };
+        'treatment' => 'Behandlung',
+        'other' => 'Sonstiges',
+        _ => 'Notiz',
+      };
 
   Color _parseColor(String hex) {
     try {
@@ -1378,21 +2341,22 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
 class _TimelineCard extends StatelessWidget {
   final Map<String, dynamic> entry;
   final bool isFirst, isLast;
-  const _TimelineCard({required this.entry, required this.isFirst, required this.isLast});
+  const _TimelineCard(
+      {required this.entry, required this.isFirst, required this.isLast});
 
   static const _typeConfig = {
     'treatment': (Icons.medical_services_rounded, AppTheme.primary),
-    'photo':     (Icons.photo_rounded,             AppTheme.secondary),
-    'video':     (Icons.videocam_rounded,           AppTheme.tertiary),
-    'document':  (Icons.description_rounded,        AppTheme.warning),
-    'note':      (Icons.note_rounded,               AppTheme.success),
+    'photo': (Icons.photo_rounded, AppTheme.secondary),
+    'video': (Icons.videocam_rounded, AppTheme.tertiary),
+    'document': (Icons.description_rounded, AppTheme.warning),
+    'note': (Icons.note_rounded, AppTheme.success),
   };
 
   @override
   Widget build(BuildContext context) {
-    final type  = entry['type'] as String? ?? 'note';
-    final cfg   = _typeConfig[type] ?? (Icons.note_rounded, AppTheme.success);
-    final icon  = cfg.$1;
+    final type = entry['type'] as String? ?? 'note';
+    final cfg = _typeConfig[type] ?? (Icons.note_rounded, AppTheme.success);
+    final icon = cfg.$1;
     final color = cfg.$2;
 
     String dateStr = '';
@@ -1402,29 +2366,42 @@ class _TimelineCard extends StatelessWidget {
     } catch (_) {}
 
     final media = List<Map<String, dynamic>>.from(
-      (entry['media'] as List? ?? []).map((m) => Map<String, dynamic>.from(m as Map)),
+      (entry['media'] as List? ?? [])
+          .map((m) => Map<String, dynamic>.from(m as Map)),
     );
     final fileUrl = entry['file_url'] as String?;
     if (media.isEmpty && fileUrl != null && fileUrl.isNotEmpty) {
-      media.add({'url': fileUrl, 'kind': type == 'photo' ? 'image' : (type == 'video' ? 'video' : 'file')});
+      media.add({
+        'url': fileUrl,
+        'kind': type == 'photo' ? 'image' : (type == 'video' ? 'video' : 'file')
+      });
     }
 
     return IntrinsicHeight(
       child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         // Timeline line
-        SizedBox(width: 40, child: Column(children: [
-          if (!isFirst) Container(width: 2, height: 12, color: color.withValues(alpha: 0.3)),
-          Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-              border: Border.all(color: color.withValues(alpha: 0.4), width: 2),
-            ),
-            child: Icon(icon, color: color, size: 17),
-          ),
-          if (!isLast) Expanded(child: Container(width: 2, color: color.withValues(alpha: 0.3))),
-        ])),
+        SizedBox(
+            width: 40,
+            child: Column(children: [
+              if (!isFirst)
+                Container(
+                    width: 2, height: 12, color: color.withValues(alpha: 0.3)),
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                  border:
+                      Border.all(color: color.withValues(alpha: 0.4), width: 2),
+                ),
+                child: Icon(icon, color: color, size: 17),
+              ),
+              if (!isLast)
+                Expanded(
+                    child: Container(
+                        width: 2, color: color.withValues(alpha: 0.3))),
+            ])),
         const SizedBox(width: 12),
         // Card
         Expanded(
@@ -1435,21 +2412,29 @@ class _TimelineCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: color.withValues(alpha: 0.18)),
             ),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
                 child: Row(children: [
-                  Expanded(child: Text(
+                  Expanded(
+                      child: Text(
                     entry['title'] as String? ?? '',
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 14),
                   )),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(dateStr, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600)),
+                    child: Text(dateStr,
+                        style: TextStyle(
+                            color: color,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w600)),
                   ),
                 ]),
               ),
@@ -1457,11 +2442,15 @@ class _TimelineCard extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: _statusColor(entry['status_badge']).withValues(alpha: 0.1),
+                      color: _statusColor(entry['status_badge'])
+                          .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: _statusColor(entry['status_badge']).withValues(alpha: 0.2)),
+                      border: Border.all(
+                          color: _statusColor(entry['status_badge'])
+                              .withValues(alpha: 0.2)),
                     ),
                     child: Text(
                       _statusLabel(entry['status_badge']),
@@ -1505,11 +2494,14 @@ class _TimelineCard extends StatelessWidget {
                         onPressed: () async {
                           final uri = Uri.parse(fullUrl);
                           if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                            await launchUrl(uri,
+                                mode: LaunchMode.externalApplication);
                           }
                         },
                         icon: const Icon(Icons.attach_file_rounded, size: 16),
-                        label: Text((m['original_name'] ?? m['filename'] ?? 'Datei').toString()),
+                        label: Text(
+                            (m['original_name'] ?? m['filename'] ?? 'Datei')
+                                .toString()),
                       ),
                     ),
                   );
@@ -1527,11 +2519,15 @@ class _TimelineCard extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
                   child: Row(children: [
-                    Icon(Icons.person_rounded, size: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                    Icon(Icons.person_rounded,
+                        size: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
                     const SizedBox(width: 4),
                     Text(entry['user_name'] as String,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant)),
                   ]),
                 ),
             ]),
@@ -1544,22 +2540,22 @@ class _TimelineCard extends StatelessWidget {
   Color _statusColor(dynamic badge) {
     if (badge == null) return Colors.grey;
     return switch (badge.toString()) {
-      'info'    => Colors.blue,
+      'info' => Colors.blue,
       'warning' => Colors.orange,
-      'danger'  => Colors.red,
+      'danger' => Colors.red,
       'success' => Colors.green,
-      _         => Colors.grey,
+      _ => Colors.grey,
     };
   }
 
   String _statusLabel(dynamic badge) {
     if (badge == null) return '';
     return switch (badge.toString()) {
-      'info'    => 'Info',
+      'info' => 'Info',
       'warning' => 'Wichtig',
-      'danger'  => 'Kritisch',
+      'danger' => 'Kritisch',
       'success' => 'Erledigt',
-      _         => badge.toString().toUpperCase(),
+      _ => badge.toString().toUpperCase(),
     };
   }
 }
@@ -1573,10 +2569,14 @@ class _ExerciseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sets  = exercise['sets'] as int? ?? exercise['repetitions_sets'] as int?;
-    final reps  = exercise['repetitions'] as int? ?? exercise['reps'] as int?;
-    final dur   = exercise['duration'] as int? ?? exercise['duration_seconds'] as int?;
-    final notes = exercise['notes'] as String? ?? exercise['description'] as String? ?? '';
+    final sets =
+        exercise['sets'] as int? ?? exercise['repetitions_sets'] as int?;
+    final reps = exercise['repetitions'] as int? ?? exercise['reps'] as int?;
+    final dur =
+        exercise['duration'] as int? ?? exercise['duration_seconds'] as int?;
+    final notes = exercise['notes'] as String? ??
+        exercise['description'] as String? ??
+        '';
     final videoUrl = exercise['video_url'] as String?;
 
     return Container(
@@ -1590,21 +2590,27 @@ class _ExerciseCard extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             Container(
-              width: 36, height: 36,
+              width: 36,
+              height: 36,
               decoration: BoxDecoration(
                 color: AppTheme.secondary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.fitness_center_rounded, color: AppTheme.secondary, size: 18),
+              child: Icon(Icons.fitness_center_rounded,
+                  color: AppTheme.secondary, size: 18),
             ),
             const SizedBox(width: 10),
-            Expanded(child: Text(
-              exercise['name'] as String? ?? exercise['title'] as String? ?? '—',
+            Expanded(
+                child: Text(
+              exercise['name'] as String? ??
+                  exercise['title'] as String? ??
+                  '—',
               style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
             )),
             if (onDelete != null)
               IconButton(
-                icon: Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red.shade300),
+                icon: Icon(Icons.delete_outline_rounded,
+                    size: 18, color: Colors.red.shade300),
                 onPressed: onDelete,
                 tooltip: 'Löschen',
                 padding: EdgeInsets.zero,
@@ -1613,23 +2619,31 @@ class _ExerciseCard extends StatelessWidget {
           ]),
           if (notes.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text(notes, style: TextStyle(fontSize: 12, color: Colors.grey.shade600, height: 1.4),
-              maxLines: 3, overflow: TextOverflow.ellipsis),
+            Text(notes,
+                style: TextStyle(
+                    fontSize: 12, color: Colors.grey.shade600, height: 1.4),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis),
           ],
           if (sets != null || reps != null || dur != null) ...[
             const SizedBox(height: 10),
             Wrap(spacing: 8, runSpacing: 4, children: [
               if (sets != null) _chip('${sets}× Sätze', AppTheme.secondary),
               if (reps != null) _chip('${reps}× Wdh.', AppTheme.primary),
-              if (dur  != null) _chip('${dur} Sek.', AppTheme.tertiary),
+              if (dur != null) _chip('${dur} Sek.', AppTheme.tertiary),
             ]),
           ],
           if (videoUrl != null && videoUrl.isNotEmpty) ...[
             const SizedBox(height: 8),
             Row(children: [
-              Icon(Icons.play_circle_outline_rounded, size: 14, color: AppTheme.tertiary),
+              Icon(Icons.play_circle_outline_rounded,
+                  size: 14, color: AppTheme.tertiary),
               const SizedBox(width: 4),
-              Text('Video verfügbar', style: TextStyle(fontSize: 11, color: AppTheme.tertiary, fontWeight: FontWeight.w600)),
+              Text('Video verfügbar',
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: AppTheme.tertiary,
+                      fontWeight: FontWeight.w600)),
             ]),
           ],
         ]),
@@ -1638,10 +2652,14 @@ class _ExerciseCard extends StatelessWidget {
   }
 
   Widget _chip(String label, Color color) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-    decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
-    child: Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
-  );
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+        decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(20)),
+        child: Text(label,
+            style: TextStyle(
+                color: color, fontSize: 11, fontWeight: FontWeight.w600)),
+      );
 }
 
 // ── Homework Card ─────────────────────────────────────────────────────────────
@@ -1652,20 +2670,25 @@ class _HomeworkCard extends StatelessWidget {
 
   String _fmt(String? d) {
     if (d == null) return '—';
-    try { return DateFormat('dd.MM.yyyy', 'de_DE').format(DateTime.parse(d)); } catch (_) { return d; }
+    try {
+      return DateFormat('dd.MM.yyyy', 'de_DE').format(DateTime.parse(d));
+    } catch (_) {
+      return d;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     // portal_homework_plans fields
-    final planDate  = homework['plan_date'] as String?;
-    final therapist = homework['therapist_name'] as String?
-                   ?? homework['therapist_name_resolved'] as String?;
-    final title     = planDate != null ? 'Hausaufgaben ${_fmt(planDate)}' : '—';
-    final desc      = homework['general_notes'] as String?
-                   ?? homework['physio_principles'] as String? ?? '';
-    final done      = homework['status'] == 'archived';
-    final color     = done ? AppTheme.success : AppTheme.primary;
+    final planDate = homework['plan_date'] as String?;
+    final therapist = homework['therapist_name'] as String? ??
+        homework['therapist_name_resolved'] as String?;
+    final title = planDate != null ? 'Hausaufgaben ${_fmt(planDate)}' : '—';
+    final desc = homework['general_notes'] as String? ??
+        homework['physio_principles'] as String? ??
+        '';
+    final done = homework['status'] == 'archived';
+    final color = done ? AppTheme.success : AppTheme.primary;
 
     // tasks sub-list
     final tasks = List<dynamic>.from(homework['tasks'] as List? ?? []);
@@ -1681,54 +2704,79 @@ class _HomeworkCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
           child: Row(children: [
             Container(
-              width: 36, height: 36,
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
-              child: Icon(done ? Icons.check_circle_rounded : Icons.assignment_rounded, color: color, size: 18),
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
+              child: Icon(
+                  done ? Icons.check_circle_rounded : Icons.assignment_rounded,
+                  color: color,
+                  size: 18),
             ),
             const SizedBox(width: 10),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-              if (therapist != null && therapist.isNotEmpty)
-                Text(therapist,
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-            ])),
+            Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Text(title,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, fontSize: 14)),
+                  if (therapist != null && therapist.isNotEmpty)
+                    Text(therapist,
+                        style: TextStyle(
+                            fontSize: 11, color: Colors.grey.shade500)),
+                ])),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
+              decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20)),
               child: Text(done ? 'Erledigt' : 'Offen',
-                style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w700)),
+                  style: TextStyle(
+                      color: color, fontSize: 10, fontWeight: FontWeight.w700)),
             ),
           ]),
         ),
         if (desc.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-            child: Text(desc, style: TextStyle(fontSize: 12, color: Colors.grey.shade600, height: 1.4),
-              maxLines: 3, overflow: TextOverflow.ellipsis),
+            child: Text(desc,
+                style: TextStyle(
+                    fontSize: 12, color: Colors.grey.shade600, height: 1.4),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis),
           ),
         if (tasks.isNotEmpty) ...[
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('${tasks.length} Aufgaben',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: color)),
+                  style: TextStyle(
+                      fontSize: 11, fontWeight: FontWeight.w700, color: color)),
               const SizedBox(height: 6),
               ...tasks.take(3).map((t) {
                 final task = t as Map;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Row(children: [
-                    Icon(Icons.radio_button_unchecked_rounded, size: 12, color: Colors.grey.shade400),
+                    Icon(Icons.radio_button_unchecked_rounded,
+                        size: 12, color: Colors.grey.shade400),
                     const SizedBox(width: 6),
-                    Expanded(child: Text(task['title'] as String? ?? task['name'] as String? ?? '—',
-                      style: const TextStyle(fontSize: 12))),
+                    Expanded(
+                        child: Text(
+                            task['title'] as String? ??
+                                task['name'] as String? ??
+                                '—',
+                            style: const TextStyle(fontSize: 12))),
                   ]),
                 );
               }),
               if (tasks.length > 3)
                 Text('+ ${tasks.length - 3} weitere',
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+                    style:
+                        TextStyle(fontSize: 11, color: Colors.grey.shade400)),
             ]),
           ),
         ],
@@ -1745,24 +2793,25 @@ class _BefundCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark   = Theme.of(context).brightness == Brightness.dark;
-    final status   = befund['status'] as String? ?? '';
-    final color    = switch (status) {
-      'versendet'    => Colors.green,
-      'abgeschlossen'=> Colors.blue,
-      _              => Colors.grey,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final status = befund['status'] as String? ?? '';
+    final color = switch (status) {
+      'versendet' => Colors.green,
+      'abgeschlossen' => Colors.blue,
+      _ => Colors.grey,
     };
     final label = switch (status) {
-      'versendet'    => 'Versendet',
-      'abgeschlossen'=> 'Abgeschlossen',
-      _              => 'Entwurf',
+      'versendet' => 'Versendet',
+      'abgeschlossen' => 'Abgeschlossen',
+      _ => 'Entwurf',
     };
-    final id      = int.tryParse(befund['id']?.toString() ?? '0') ?? 0;
-    final datum   = befund['datum'] as String? ?? '';
+    final id = int.tryParse(befund['id']?.toString() ?? '0') ?? 0;
+    final datum = befund['datum'] as String? ?? '';
     String datumFmt = datum;
     try {
       final d = DateTime.parse(datum);
-      datumFmt = '${d.day.toString().padLeft(2,'0')}.${d.month.toString().padLeft(2,'0')}.${d.year}';
+      datumFmt =
+          '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}.${d.year}';
     } catch (_) {}
     final ersteller = befund['ersteller_name'] as String? ?? '';
 
@@ -1771,31 +2820,48 @@ class _BefundCard extends StatelessWidget {
         color: isDark ? const Color(0xFF1A1D27) : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: color.withValues(alpha: 0.22)),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04), blurRadius: 6, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2))
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(children: [
           Container(
-            width: 40, height: 40,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(Icons.medical_information_rounded, color: color, size: 20),
+            child:
+                Icon(Icons.medical_information_rounded, color: color, size: 20),
           ),
           const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('BF-${id.toString().padLeft(4, '0')}',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13,
-                color: isDark ? Colors.white : Colors.black87, fontFamily: 'monospace')),
-            const SizedBox(height: 2),
-            Text(datumFmt, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
-            if (ersteller.isNotEmpty) ...[
-              const SizedBox(height: 1),
-              Text(ersteller, style: TextStyle(fontSize: 11, color: Colors.grey.shade400)),
-            ],
-          ])),
+          Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                Text('BF-${id.toString().padLeft(4, '0')}',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                        color: isDark ? Colors.white : Colors.black87,
+                        fontFamily: 'monospace')),
+                const SizedBox(height: 2),
+                Text(datumFmt,
+                    style:
+                        TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+                if (ersteller.isNotEmpty) ...[
+                  const SizedBox(height: 1),
+                  Text(ersteller,
+                      style:
+                          TextStyle(fontSize: 11, color: Colors.grey.shade400)),
+                ],
+              ])),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
@@ -1803,7 +2869,8 @@ class _BefundCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(label,
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: color)),
+                style: TextStyle(
+                    fontSize: 10, fontWeight: FontWeight.w700, color: color)),
           ),
         ]),
       ),
@@ -1818,7 +2885,11 @@ class _ModernInfoCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final Map<String, String> items;
-  const _ModernInfoCard({required this.title, required this.icon, required this.color, required this.items});
+  const _ModernInfoCard(
+      {required this.title,
+      required this.icon,
+      required this.color,
+      required this.items});
 
   @override
   Widget build(BuildContext context) {
@@ -1838,21 +2909,37 @@ class _ModernInfoCard extends StatelessWidget {
           child: Row(children: [
             Icon(icon, color: color, size: 18),
             const SizedBox(width: 8),
-            Text(title, style: TextStyle(fontWeight: FontWeight.w700, color: color, fontSize: 14)),
+            Text(title,
+                style: TextStyle(
+                    fontWeight: FontWeight.w700, color: color, fontSize: 14)),
           ]),
         ),
         Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(children: items.entries.map((e) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5),
-            child: Row(children: [
-              SizedBox(width: 110, child: Text(e.key,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500))),
-              Expanded(child: Text(e.value.isEmpty ? '—' : e.value,
-                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
-            ]),
-          )).toList()),
+          child: Column(
+              children: items.entries
+                  .map((e) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 5),
+                        child: Row(children: [
+                          SizedBox(
+                              width: 110,
+                              child: Text(e.key,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.copyWith(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant,
+                                          fontWeight: FontWeight.w500))),
+                          Expanded(
+                              child: Text(e.value.isEmpty ? '—' : e.value,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13))),
+                        ]),
+                      ))
+                  .toList()),
         ),
       ]),
     );
