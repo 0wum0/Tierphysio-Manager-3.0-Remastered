@@ -575,12 +575,16 @@
                 bellBtn.classList.remove('has-new');
             }
 
-            /* Ring bell animation if new items arrived since last poll */
+            /* Ring bell animation if new items arrived since last poll — defer to next
+               animation frame to avoid forced synchronous reflow during poll callback */
             if (count > lastCount && lastCount >= 0) {
-                bellBtn.querySelector('svg').style.animation = 'none';
-                /* force reflow */
-                void bellBtn.querySelector('svg').offsetWidth;
-                bellBtn.querySelector('svg').style.animation = '';
+                requestAnimationFrame(function() {
+                    var svg = bellBtn.querySelector('svg');
+                    if (!svg) return;
+                    svg.style.animation = 'none';
+                    void svg.offsetWidth; /* intentional reflow inside rAF — not on main thread */
+                    svg.style.animation = '';
+                });
             }
             lastCount = count;
 
@@ -605,14 +609,13 @@
         .catch(function () { /* silently ignore network errors */ });
     }
 
-    /* Poll every 30 seconds */
+    /* Poll every 30 seconds; first poll deferred 5s after page load */
+    setTimeout(poll, 5000);
     setInterval(poll, 30000);
 
     /* Ring bell once on page load if there are new notifications */
     if (lastCount > 0) {
-        setTimeout(function () {
-            bellBtn.classList.add('has-new');
-        }, 800);
+        requestAnimationFrame(function() { bellBtn.classList.add('has-new'); });
     }
 })();
 </script>

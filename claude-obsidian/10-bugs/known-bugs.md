@@ -736,6 +736,105 @@ Bei `error` Event: `img.src` → `/assets/img/placeholder-paw.svg`.
 
 ---
 
+---
+
+## Bug: ApexCharts `v.toFixed is not a function` Crash im Dashboard (Mai 2026)
+**Status:** `fixed`
+**Commit:** `fix: stabilize dashboard charts and patient media fallbacks`
+
+### Symptom
+```
+dashboard:5116 Uncaught (in promise) TypeError: v.toFixed is not a function
+at formatter (dashboard:5116:157)
+at apexcharts.min.js
+```
+
+### Ursache
+Alle `formatter`-Funktionen in `templates/dashboard/index.twig` riefen `v.toFixed()` direkt auf:
+```js
+formatter: function(v) { return v.toFixed(2) + ' €'; }  // CRASH wenn v = null/undefined/NaN/"0"
+```
+ApexCharts übergibt `v` als raw-Wert — kann `null`, `undefined`, `NaN` oder ein String sein (z.B. wenn PHP-Daten als leere Arrays oder `null`-Felder kommen).
+
+### Fix
+Zentrales Safe-Formatter-System:
+```js
+function safeNum(v) { var n = Number(v); return Number.isFinite(n) ? n : 0; }
+function fmtEur(v)  { var n = safeNum(v); return n.toFixed(2).replace('.',',') + ' €'; }
+function fmtEurK(v) { var n = safeNum(v); return n >= 1000 ? (n/1000).toFixed(1)+'k €' : n.toFixed(0)+' €'; }
+function fmtCnt(v)  { return Math.round(safeNum(v))+''; }
+```
+Alle `formatter`-Aufrufe in allen ~10 Charts auf `fmtEur`, `fmtEurK`, `fmtCnt` umgestellt.
+
+### Regel (dauerhaft)
+**Nie `.toFixed()` direkt auf ApexCharts-`v` aufrufen.**
+Immer `safeNum(v)` vorschalten. `v` ist niemals garantiert numerisch.
+
+---
+
+## Performance: Dashboard DOMContentLoaded 428ms / Forced Reflow 1400ms (Mai 2026)
+**Status:** `improved`
+**Commit:** `fix: stabilize dashboard charts and patient media fallbacks`
+
+### Symptom
+```
+[Violation] Forced reflow while executing JavaScript took 1400ms
+[Violation] 'DOMContentLoaded' handler took 428ms
+[Violation] Forced reflow while executing JavaScript took 407ms  (Rechnungen)
+```
+
+### Ursachen
+1. **Charts synchron in IIFE**: Alle ~10 ApexCharts wurden sofort beim Script-Parse gebaut → blockieren DOMContentLoaded-Phase
+2. **Bell-Animation Reflow**: `void svg.offsetWidth` (forced reflow) wurde synchron im Polling-Callback ausgeführt
+3. **Intake-Poll sofort beim Seitenstart**: Erster fetch() feuerte ohne Delay, konkurrierte mit DOM-Aufbau
+
+### Fixes
+1. Alle Chart-Initialisierungen in `defer(fn)` gewrapped:
+   ```js
+   function defer(fn) {
+       if (typeof requestIdleCallback !== 'undefined') {
+           requestIdleCallback(fn, { timeout: 2000 });
+       } else { setTimeout(fn, 0); }
+   }
+   ```
+2. Bell-Animation-Reflow in `requestAnimationFrame()` verschoben
+3. Erster Intake-Poll: `setTimeout(poll, 5000)` statt sofortigem Aufruf
+
+### Geänderte Dateien
+- `templates/dashboard/index.twig` — `defer()` für alle Charts + Safe Formatters
+- `templates/layouts/base.twig` — Bell-rAF + 5s initaler Poll-Delay
+
+---
+
+## Bug: Patientenfoto 422 (Unprocessable Content) für `invite_*.jpg` (Mai 2026)
+**Status:** `analysiert / teilweise mitigiert`
+**Commit:** `fix: stabilize dashboard charts and patient media fallbacks`
+
+### Symptom
+```
+GET https://app.therapano.de/patienten/1001/foto/invite_69ea4d5cba5ba.jpg 422 (Unprocessable Content)
+```
+
+### Analyse
+- PHP-Code (`PatientController::servePhoto()`) liefert **kein** 422 — Quellcode-Analyse bestätigt: kein `http_response_code(422)` im Controller oder in Middleware für GET-Routen.
+- 422 kommt von einem **externen WAF/ModSecurity** auf dem Produktivserver — der Dateiname `invite_*.jpg` oder der URL-Pfad triggert eine ModSec-Regel.
+- PHP-Controller wurde bereits in der vorherigen Session korrekt implementiert: fehlende Datei → `servePawPlaceholder()` → HTTP 200 + SVG.
+- Wenn WAF die Anfrage abfängt, erreicht PHP den Controller nie → `onerror` in `<img>` feuert bei 422 genauso wie bei 404.
+
+### Mitigations
+1. **Server-seitig**: `X-TheraPano-Media-Fallback: missing-file` Header in `servePawPlaceholder()` für Diagnose
+2. **Client-seitig**: Globaler `MutationObserver`-Image-Fallback in `app.js` fängt 422 genauso ab wie 404 → Paw-Placeholder erscheint automatisch
+3. **Server-WAF**: ModSecurity-Regel für `/patienten/*/foto/*.jpg` muss auf dem Produktivserver whitelistet werden — außerhalb dieses Repos
+
+### Empfehlung für Server-Admin
+ModSec-Ausnahme für:
+```
+SecRule REQUEST_URI "@beginsWith /patienten/" "id:9001,phase:1,allow,nolog"
+```
+oder spezifisch für die `foto`-Route.
+
+---
+
 ## Verlinkungen
 - [[15-agent-rules/update-brain]]
 - [[11-decisions/decision-log]]

@@ -1070,6 +1070,7 @@ class PatientController extends Controller
         http_response_code(200);
         header('Content-Type: image/svg+xml');
         header('Cache-Control: public, max-age=3600');
+        header('X-TheraPano-Media-Fallback: missing-file');
         if (file_exists($svg)) {
             header('Content-Length: ' . filesize($svg));
             readfile($svg);
