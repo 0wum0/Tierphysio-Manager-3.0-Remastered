@@ -612,6 +612,21 @@ $router->get('/patient-photos/{id}/{file}', function(array $p) {
 $router->get('/patient-timeline/{id}/{file}', function(array $p) {
     serveStorageFile('patients/' . (int)($p['id'] ?? 0) . '/timeline', $p['file'] ?? '');
 });
+$router->get('/storage/feedback/{file}', function(array $p) {
+    $file = basename($p['file'] ?? '');
+    if ($file === '') { http_response_code(403); exit; }
+    $base = defined('STORAGE_PATH') ? STORAGE_PATH : (dirname(__DIR__) . '/storage');
+    $path = realpath($base . '/feedback/' . $file);
+    if ($path === false || !str_starts_with($path, $base . DIRECTORY_SEPARATOR . 'feedback' . DIRECTORY_SEPARATOR)) {
+        http_response_code(404); exit;
+    }
+    $mime = mime_content_type($path) ?: 'application/octet-stream';
+    header('Content-Type: ' . $mime);
+    header('Content-Length: ' . filesize($path));
+    header('Cache-Control: private, max-age=3600');
+    readfile($path);
+    exit;
+}, ['auth']);
 
 // ══════════════════════════════════════════════════════════════════════
 //  HUNDESCHUL-/HUNDETRAINER-MODUL

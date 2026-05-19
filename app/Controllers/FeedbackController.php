@@ -441,20 +441,20 @@ class FeedbackController
 
     private function resolveTenantInfo(): array
     {
-        $saasDb = $this->config->get('saas_db.database', '');
-        $prefix = $this->session->get('tenant_table_prefix', '');
-        $user   = Auth::user();
+        $user  = Auth::user();
+        $email = $user['email'] ?? null;
 
         $tenantId   = null;
         $tenantName = null;
-        $email      = $user['email'] ?? null;
 
-        if ($saasDb !== '' && $prefix !== '') {
+        if ($email !== null) {
             try {
                 $pdo = $this->getSaasDb();
                 if ($pdo !== null) {
-                    $stmt = $pdo->prepare("SELECT id, practice_name FROM tenants WHERE db_name = ? LIMIT 1");
-                    $stmt->execute([trim($prefix, '_')]);
+                    $stmt = $pdo->prepare(
+                        "SELECT id, practice_name FROM tenants WHERE email = ? AND status IN ('active','trial') LIMIT 1"
+                    );
+                    $stmt->execute([$email]);
                     $row = $stmt->fetch();
                     if ($row) {
                         $tenantId   = (int)$row['id'];
