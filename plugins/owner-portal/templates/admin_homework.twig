@@ -249,7 +249,7 @@ var _csrfToken         = {{ csrf_token|json_encode|replace({'</': '<\/'})|raw }}
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24" class="me-2"><path stroke="currentColor" stroke-width="2" d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path stroke="currentColor" stroke-width="2" d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                     Übungsbibliothek
                 </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" onclick="closeSubModal(document.getElementById('modal-library-picker'))"></button>
             </div>
             <div class="modal-body">
                 <div class="row g-2 mb-3">
@@ -285,7 +285,7 @@ var _csrfToken         = {{ csrf_token|json_encode|replace({'</': '<\/'})|raw }}
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Vorlage auswählen</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" onclick="closeSubModal(document.getElementById('modal-template-select'))"></button>
             </div>
             <div class="modal-body">
                 <div class="row g-2">
@@ -330,6 +330,35 @@ function cleanupStaleModalState() {
         document.body.classList.remove('modal-open');
         document.body.style.removeProperty('overflow');
         document.body.style.removeProperty('padding-right');
+    }
+}
+
+/* ── Close a sub-modal WITHOUT triggering Bootstrap's global body/backdrop cleanup.
+ * Bootstrap 5's modal.hide() unconditionally removes body.modal-open and the backdrop,
+ * even when another modal is still open. This helper closes the sub-modal by directly
+ * manipulating the DOM so the parent modal (modal-create-plan) remains interactive. ── */
+function closeSubModal(modalEl) {
+    if (!modalEl) return;
+    // Dispose Bootstrap instance so it doesn't interfere
+    var inst = bootstrap.Modal.getInstance(modalEl);
+    if (inst) { try { inst.dispose(); } catch(e) {} }
+    // Manually hide without Bootstrap's body cleanup
+    modalEl.classList.remove('show');
+    modalEl.style.display = 'none';
+    modalEl.setAttribute('aria-hidden', 'true');
+    modalEl.removeAttribute('aria-modal');
+    modalEl.removeAttribute('role');
+    // Ensure parent modal state is intact
+    var createPlanEl = document.getElementById('modal-create-plan');
+    if (createPlanEl && createPlanEl.classList.contains('show')) {
+        document.body.classList.add('modal-open');
+        if (!document.querySelector('.modal-backdrop')) {
+            var bd = document.createElement('div');
+            bd.className = 'modal-backdrop fade show';
+            document.body.appendChild(bd);
+        }
+    } else {
+        cleanupStaleModalState();
     }
 }
 
@@ -409,32 +438,22 @@ function updateTasksEmpty() {
 }
 
 function openTemplateSelector() {
-    bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-template-select')).show();
+    var el = document.getElementById('modal-template-select');
+    if (!el) return;
+    el.style.display = 'block';
+    el.classList.add('show');
+    el.setAttribute('aria-modal', 'true');
+    el.setAttribute('role', 'dialog');
+    el.removeAttribute('aria-hidden');
+    // Bring template modal above the existing backdrop
+    el.style.zIndex = '1060';
+    // Add close-on-backdrop-click for the template modal
+    el._subModalBdHandler = el._subModalBdHandler || function(evt) {
+        if (evt.target === el) closeSubModal(el);
+    };
+    el.removeEventListener('click', el._subModalBdHandler);
+    el.addEventListener('click', el._subModalBdHandler);
 }
-
-/* When the template-select modal finishes hiding, restore the create-plan modal state.
- * Bootstrap 5 removes body.modal-open and the backdrop when ANY modal hides, even if
- * another modal is still open. This listener re-adds the class and backdrop so the
- * parent modal (modal-create-plan) remains fully interactive. */
-(function() {
-    var tplEl = document.getElementById('modal-template-select');
-    if (!tplEl) return;
-    tplEl.addEventListener('hidden.bs.modal', function() {
-        var createPlanEl = document.getElementById('modal-create-plan');
-        if (!createPlanEl) return;
-        var isOpen = createPlanEl.classList.contains('show');
-        if (isOpen) {
-            document.body.classList.add('modal-open');
-            if (!document.querySelector('.modal-backdrop')) {
-                var bd = document.createElement('div');
-                bd.className = 'modal-backdrop fade show';
-                document.body.appendChild(bd);
-            }
-        } else {
-            cleanupStaleModalState();
-        }
-    });
-})();
 
 /* Delegated click handler for template cards (replaces inline onclick) */
 document.addEventListener('click', function(e) {
@@ -471,8 +490,7 @@ function selectTemplate(tpl) {
         duration:        tpl.duration_value ? (tpl.duration_value + ' ' + (unitMap[tpl.duration_unit] || tpl.duration_unit)) : '',
         therapist_notes: tpl.therapist_notes || '',
     });
-    var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-template-select'));
-    modal.hide();
+    closeSubModal(document.getElementById('modal-template-select'));
 }
 
 // On date pick: offer to create appointment if none exists on that date
@@ -531,8 +549,19 @@ var _libAllExercises  = null;
 var _libModal         = null;
 
 function openLibraryPicker() {
-    _libModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-library-picker'));
-    _libModal.show();
+    var el = document.getElementById('modal-library-picker');
+    if (!el) return;
+    el.style.display = 'block';
+    el.classList.add('show');
+    el.setAttribute('aria-modal', 'true');
+    el.setAttribute('role', 'dialog');
+    el.removeAttribute('aria-hidden');
+    el.style.zIndex = '1060';
+    el._subModalBdHandler = el._subModalBdHandler || function(evt) {
+        if (evt.target === el) closeSubModal(el);
+    };
+    el.removeEventListener('click', el._subModalBdHandler);
+    el.addEventListener('click', el._subModalBdHandler);
     if (_libAllExercises === null) {
         loadLibrary();
     } else {
@@ -639,7 +668,7 @@ document.addEventListener('click', function(e) {
             duration:        ex.duration     || '',
             therapist_notes: ex.contraindications ? 'Kontraindikationen: ' + ex.contraindications : '',
         });
-        if (_libModal) _libModal.hide();
+        closeSubModal(document.getElementById('modal-library-picker'));
     } catch(err) {}
 });
 
@@ -647,27 +676,6 @@ document.getElementById('lib-search').addEventListener('keydown', function(e){
     if (e.key === 'Enter') { e.preventDefault(); filterLibrary(); }
 });
 
-/* Same fix as template-select: restore body.modal-open / backdrop when library picker
- * closes while the create-plan modal is still open. */
-(function() {
-    var libEl = document.getElementById('modal-library-picker');
-    if (!libEl) return;
-    libEl.addEventListener('hidden.bs.modal', function() {
-        var createPlanEl = document.getElementById('modal-create-plan');
-        if (!createPlanEl) return;
-        var isOpen = createPlanEl.classList.contains('show');
-        if (isOpen) {
-            document.body.classList.add('modal-open');
-            if (!document.querySelector('.modal-backdrop')) {
-                var bd = document.createElement('div');
-                bd.className = 'modal-backdrop fade show';
-                document.body.appendChild(bd);
-            }
-        } else {
-            cleanupStaleModalState();
-        }
-    });
-})();
 </script>
 
 </div>
