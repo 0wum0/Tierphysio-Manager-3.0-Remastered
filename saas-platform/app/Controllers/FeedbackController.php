@@ -132,6 +132,33 @@ class FeedbackController extends Controller
         $this->redirect('/admin/feedback');
     }
 
+    public function updateStatus(array $params = []): void
+    {
+        $this->requireAuth();
+        $this->verifyCsrf();
+
+        $id     = (int)($params['id'] ?? 0);
+        $status = $_POST['status'] ?? '';
+        $note   = trim($_POST['admin_note'] ?? '');
+
+        $allowed = ['open', 'in_progress', 'resolved', 'closed'];
+        if (!in_array($status, $allowed, true)) {
+            $this->session->flash('error', 'Ungültiger Status.');
+            $this->redirect('/admin/feedback/' . $id);
+            return;
+        }
+
+        $resolvedAt = in_array($status, ['resolved', 'closed'], true) ? 'NOW()' : 'NULL';
+
+        $this->db->execute(
+            "UPDATE feedback SET status = ?, admin_note = ?, resolved_at = {$resolvedAt}, is_read = 1, read_at = COALESCE(read_at, NOW()) WHERE id = ?",
+            [$status, $note ?: null, $id]
+        );
+
+        $this->session->flash('success', 'Status aktualisiert.');
+        $this->redirect('/admin/feedback/' . $id);
+    }
+
     // ── Public API: called by TierPhysio mobile app ────────────────────────
     public function apiSubmit(array $params = []): void
     {

@@ -33,6 +33,7 @@ use App\Controllers\OnlineBookingController;
 use App\Controllers\DogschoolInvoiceController;
 use App\Controllers\DatevExportController;
 use App\Controllers\EventController;
+use App\Controllers\FeedbackController;
 
 /** @var \App\Core\Router $router */
 
@@ -747,3 +748,6 @@ $router->get('/buchung/danke',                                       [OnlineBook
 
 // Events / Workshops / Social Walks (Filter auf courses.type)
 $router->get('/events',                                              [EventController::class, 'index'], ['auth', 'feature:dogschool_events']);
+
+// ── Feedback & Support (Praxis-App → SaaS-Feedback-Tabelle) ──────────────────
+$router->post('/feedback/submit',                                    [FeedbackController::class, 'submit'], ['auth']);

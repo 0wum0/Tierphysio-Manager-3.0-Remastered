@@ -26,6 +26,18 @@ Bug gefunden → in Datei dokumentieren → Fix referenzieren → Status aktuali
 
 ---
 
+## Bug: Feedback-FAB überdeckte Chat-Send-Button — FIXED (Mai 2026)
+
+### Symptom
+Der Feedback-FAB (fixed bottom-right) überdeckte Senden-Buttons auf Seiten mit festem unterem Eingabebereich.
+
+### Fix
+CSS-Regel: `body[data-chat-bar="1"] #feedback-fab { bottom: 5rem; }`.
+Seiten mit Chat-Eingabebereich setzen `data-chat-bar="1"` am `<body>`.
+Status: `fixed` — FAB-Positionierungsregel in `claude-obsidian/07-features/feedback-system.md` dokumentiert.
+
+---
+
 ## Bug: Portal-Admin Hausaufgaben — Seite nach Vorlagenauswahl nicht mehr klickbar — FIXED (Mai 2026)
 
 ### Symptom

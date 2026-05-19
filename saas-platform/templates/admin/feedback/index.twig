@@ -65,12 +65,12 @@
         <table class="table table-hover table-sm mb-0">
             <thead>
                 <tr>
-                    <th class="px-3" style="width:30%">Von</th>
-                    <th style="width:8%">Kat.</th>
-                    <th style="width:8%">Bewertung</th>
+                    <th class="px-3" style="width:28%">Von</th>
+                    <th style="width:8%">Typ</th>
+                    <th style="width:9%">Status</th>
                     <th>Nachricht</th>
-                    <th style="width:10%">Plattform</th>
-                    <th style="width:12%">Datum</th>
+                    <th style="width:9%">Plattform</th>
+                    <th style="width:11%">Datum</th>
                     <th style="width:5%"></th>
                 </tr>
             </thead>
@@ -82,16 +82,14 @@
                         {% if item.email %}<div class="text-muted fs-xs">{{ item.email }}</div>{% endif %}
                     </td>
                     <td>
-                        {% set catClass = {'bug':'cat-bug','feature':'cat-feature','praise':'cat-praise','other':'cat-other'} %}
-                        {% set catIcon  = {'bug':'🐛','feature':'💡','praise':'⭐','other':'💬'} %}
-                        <span class="cat-badge {{ catClass[item.category] ?? 'cat-other' }}">{{ catIcon[item.category] ?? '💬' }} {{ item.category }}</span>
+                        {% set typeIcons = {'bug':'🐛','feature':'💡','support':'🆘','question':'❓','praise':'⭐','other':'💬'} %}
+                        <span class="text-muted fs-xs">{{ typeIcons[item.type ?? item.category] ?? '💬' }} {{ item.type ?? item.category }}</span>
                     </td>
                     <td>
-                        {% if item.rating %}
-                        <span class="text-warning fs-sm">{% for s in 1..item.rating %}★{% endfor %}<span class="text-muted">{% for s in 1..(5 - item.rating) %}★{% endfor %}</span></span>
-                        {% else %}
-                        <span class="text-muted">–</span>
-                        {% endif %}
+                        {% set sColors = {'open':'warning','in_progress':'primary','resolved':'success','closed':'secondary'} %}
+                        {% set sLabels = {'open':'Offen','in_progress':'Läuft','resolved':'Fertig','closed':'Zu'} %}
+                        {% set st = item.status ?? 'open' %}
+                        <span class="badge bg-{{ sColors[st] ?? 'secondary' }} bg-opacity-75 fs-nano">{{ sLabels[st] ?? st }}</span>
                     </td>
                     <td style="max-width:280px;">
                         <div class="text-muted fs-sm text-truncate">{{ item.message }}</div>
@@ -108,7 +106,7 @@
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="7" class="text-center text-muted py-5">
+                <tr><td colspan="6" class="text-center text-muted py-5">
                     <svg class="sa-icon sa-icon-3x mb-2 d-block mx-auto opacity-25"><use href="/sa/icons/sprite.svg#message-square"></use></svg>
                     Noch kein Feedback eingegangen.
                 </td></tr>

@@ -737,5 +737,280 @@
     }, { passive: true });
 })();
 </script>
+
+{# ══════════════════════════════════════════════════════════════════════════
+   FEEDBACK & SUPPORT FAB
+   Dauerhaft sichtbar auf allen Praxis-Seiten.
+   Position: rechts unten, 1.25rem Abstand.
+   Auf Seiten mit festem Chat-Send-Button (data-has-chat-bar) wird der FAB
+   per CSS automatisch nach oben verschoben (bottom: 4.5rem).
+   KEIN Backdrop-Problem: bootstrap.Modal.getOrCreateInstance() genutzt.
+   ══════════════════════════════════════════════════════════════════════════ #}
+{% if current_user is defined and current_user %}
+<style>
+/* ── Feedback FAB ─────────────────────────────────────────────────────── */
+#feedback-fab {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    z-index: 1040;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: var(--color-primary, #2563eb);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(37,99,235,.45);
+    transition: transform .18s ease, box-shadow .18s ease, bottom .2s ease;
+    outline: none;
+}
+#feedback-fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 22px rgba(37,99,235,.55);
+}
+#feedback-fab:active { transform: scale(.95); }
+
+/* Seiten mit festem unterem Bereich (z.B. Chat-Eingabe) können
+   data-chat-bar="1" am <body> setzen → FAB hebt sich automatisch */
+body[data-chat-bar="1"] #feedback-fab { bottom: 5rem; }
+
+/* Mobile: etwas kleiner, weg vom Nav */
+@media (max-width: 600px) {
+    #feedback-fab { width: 42px; height: 42px; right: .9rem; bottom: .9rem; }
+    body[data-chat-bar="1"] #feedback-fab { bottom: 4.5rem; }
+}
+
+/* ── Feedback Modal tweaks ─────────────────────────────────────────── */
+#feedback-modal .modal-header { border-bottom: 1px solid var(--glass-border, rgba(255,255,255,.1)); }
+#feedback-modal .modal-footer { border-top: 1px solid var(--glass-border, rgba(255,255,255,.1)); }
+#feedback-modal select,
+#feedback-modal textarea,
+#feedback-modal input[type="text"],
+#feedback-modal input[type="file"] {
+    background: var(--bg-elevated, #334155);
+    border-color: var(--glass-border, rgba(255,255,255,.15));
+    color: var(--text-primary, #e2e8f0);
+}
+#feedback-modal select:focus,
+#feedback-modal textarea:focus,
+#feedback-modal input:focus {
+    border-color: var(--color-primary, #2563eb);
+    box-shadow: 0 0 0 3px rgba(37,99,235,.2);
+    outline: none;
+}
+#feedback-modal .form-label { font-size: .82rem; color: var(--text-secondary, #94a3b8); }
+#feedback-modal textarea { resize: vertical; min-height: 100px; }
+#feedback-success { display: none; }
+</style>
+
+{# ── FAB Button ─── #}
+<button id="feedback-fab" title="Feedback &amp; Support" aria-label="Feedback und Support senden" data-no-ripple>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        <line x1="9" y1="10" x2="15" y2="10"/>
+        <line x1="9" y1="14" x2="13" y2="14"/>
+    </svg>
+</button>
+
+{# ── Feedback Modal ─── #}
+<div class="modal fade" id="feedback-modal" tabindex="-1" aria-labelledby="feedback-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:520px;">
+        <div class="modal-content" style="background:var(--bg-card,#1e293b);border:1px solid var(--glass-border,rgba(255,255,255,.1));">
+            <div class="modal-header py-3 px-4">
+                <h6 class="modal-title fw-semibold mb-0" id="feedback-modal-label">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2" style="vertical-align:-.1em;">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                    </svg>
+                    Feedback &amp; Support
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            </div>
+            <form id="feedback-form" enctype="multipart/form-data" novalidate>
+                <input type="hidden" name="_csrf_token" id="feedback-csrf" value="{{ csrf_token }}">
+                <input type="hidden" name="current_url" id="feedback-current-url">
+
+                <div class="modal-body px-4 py-3">
+
+                    {# Success state #}
+                    <div id="feedback-success" class="text-center py-4">
+                        <div style="font-size:2.5rem;margin-bottom:.5rem;">✅</div>
+                        <div class="fw-semibold fs-sm mb-1">Danke für dein Feedback!</div>
+                        <div class="text-muted fs-xs">Wir werden es schnellstmöglich bearbeiten.</div>
+                    </div>
+
+                    {# Form fields #}
+                    <div id="feedback-fields">
+                        <div class="row g-3 mb-3">
+                            <div class="col-sm-6">
+                                <label class="form-label" for="fb-type">Art der Anfrage *</label>
+                                <select class="form-select form-select-sm" id="fb-type" name="type" required>
+                                    <option value="bug">🐛 Fehler melden</option>
+                                    <option value="support" selected>🆘 Support-Anfrage</option>
+                                    <option value="feature">💡 Verbesserungsvorschlag</option>
+                                    <option value="question">❓ Frage</option>
+                                    <option value="praise">⭐ Lob</option>
+                                    <option value="other">💬 Sonstiges</option>
+                                </select>
+                            </div>
+                            <div class="col-sm-6">
+                                <label class="form-label" for="fb-priority">Priorität</label>
+                                <select class="form-select form-select-sm" id="fb-priority" name="priority">
+                                    <option value="low">Niedrig</option>
+                                    <option value="normal" selected>Normal</option>
+                                    <option value="high">Hoch</option>
+                                    <option value="critical">Kritisch 🚨</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="fb-subject">Betreff</label>
+                            <input type="text" class="form-control form-control-sm" id="fb-subject" name="subject"
+                                   placeholder="Kurze Zusammenfassung…" maxlength="255">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" for="fb-message">Nachricht *</label>
+                            <textarea class="form-control form-control-sm" id="fb-message" name="message"
+                                      placeholder="Beschreibe dein Anliegen so detailliert wie möglich…"
+                                      rows="5" required></textarea>
+                            <div id="fb-message-err" class="text-danger fs-xs mt-1" style="display:none;">Bitte eine Nachricht eingeben.</div>
+                        </div>
+
+                        <div class="mb-1">
+                            <label class="form-label" for="fb-attachment">Screenshot / Anhang <span class="text-muted">(optional, max. 5 MB)</span></label>
+                            <input type="file" class="form-control form-control-sm" id="fb-attachment" name="attachment"
+                                   accept="image/jpeg,image/png,image/webp,image/gif,application/pdf">
+                        </div>
+
+                        <div id="feedback-error" class="alert alert-danger py-2 px-3 mt-3 fs-xs" style="display:none;"></div>
+                    </div>
+
+                </div>
+                <div class="modal-footer px-4 py-3" id="feedback-footer">
+                    <span class="text-muted fs-xs me-auto">
+                        Aktuelle Seite wird automatisch erfasst.
+                    </span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-sm btn-primary" id="fb-submit-btn">
+                        <span id="fb-btn-text">Absenden</span>
+                        <span id="fb-btn-spinner" style="display:none;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                 stroke-width="2" style="animation:spin .8s linear infinite;vertical-align:-.15em;">
+                                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                            </svg>
+                        </span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<script>
+(function () {
+    'use strict';
+
+    var fab      = document.getElementById('feedback-fab');
+    var modal    = document.getElementById('feedback-modal');
+    var form     = document.getElementById('feedback-form');
+    var fields   = document.getElementById('feedback-fields');
+    var success  = document.getElementById('feedback-success');
+    var footer   = document.getElementById('feedback-footer');
+    var errBox   = document.getElementById('feedback-error');
+    var msgErr   = document.getElementById('fb-message-err');
+    var submitBtn= document.getElementById('fb-submit-btn');
+    var btnText  = document.getElementById('fb-btn-text');
+    var btnSpinner = document.getElementById('fb-btn-spinner');
+    var urlInput = document.getElementById('feedback-current-url');
+
+    if (!fab || !modal) return;
+
+    var bsModal = bootstrap.Modal.getOrCreateInstance(modal);
+
+    /* ── Open modal ── */
+    fab.addEventListener('click', function () {
+        if (urlInput) urlInput.value = window.location.pathname;
+        resetForm();
+        bsModal.show();
+    });
+
+    /* ── Reset on hide ── */
+    modal.addEventListener('hidden.bs.modal', function () {
+        resetForm();
+    });
+
+    function resetForm() {
+        form.reset();
+        if (fields)  fields.style.display  = '';
+        if (success) success.style.display = 'none';
+        if (footer)  footer.style.display  = '';
+        if (errBox)  { errBox.style.display = 'none'; errBox.textContent = ''; }
+        if (msgErr)  msgErr.style.display   = 'none';
+        submitBtn.disabled = false;
+        btnText.style.display   = '';
+        btnSpinner.style.display = 'none';
+    }
+
+    /* ── Submit ── */
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        var msg = document.getElementById('fb-message').value.trim();
+        if (!msg) {
+            if (msgErr) msgErr.style.display = '';
+            return;
+        }
+        if (msgErr) msgErr.style.display = 'none';
+
+        submitBtn.disabled    = true;
+        btnText.style.display = 'none';
+        btnSpinner.style.display = '';
+        if (errBox) errBox.style.display = 'none';
+
+        var fd = new FormData(form);
+
+        fetch('/feedback/submit', {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: fd,
+        })
+        .then(function (r) { return r.json().then(function(d){ return { ok: r.ok, data: d }; }); })
+        .then(function (res) {
+            if (res.ok && res.data.success) {
+                /* Show success state */
+                if (fields)  fields.style.display  = 'none';
+                if (success) success.style.display = '';
+                if (footer)  footer.style.display  = 'none';
+                /* Auto-close after 2.8s */
+                setTimeout(function () { bsModal.hide(); }, 2800);
+            } else {
+                var msg2 = (res.data && res.data.error) ? res.data.error : 'Unbekannter Fehler.';
+                if (errBox) { errBox.textContent = msg2; errBox.style.display = ''; }
+                submitBtn.disabled    = false;
+                btnText.style.display = '';
+                btnSpinner.style.display = 'none';
+            }
+        })
+        .catch(function () {
+            if (errBox) { errBox.textContent = 'Netzwerkfehler. Bitte versuche es erneut.'; errBox.style.display = ''; }
+            submitBtn.disabled    = false;
+            btnText.style.display = '';
+            btnSpinner.style.display = 'none';
+        });
+    });
+})();
+</script>
+{% endif %}
 </body>
 </html>
