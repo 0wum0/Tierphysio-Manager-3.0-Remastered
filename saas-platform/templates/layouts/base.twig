@@ -641,8 +641,30 @@
         } catch (e) {}
     }
 
+    // ── Feedback-Badge (offene Support-Anfragen) ──────────────────────────
+    async function loadFeedbackCount() {
+        try {
+            const res = await fetch('/api/admin/feedback/unread-count', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            const badge = document.getElementById('nav-feedback-badge');
+            if (!badge) return;
+            const n = data.open || 0;
+            if (n > 0) {
+                badge.textContent  = n > 99 ? '99+' : String(n);
+                badge.style.display = '';
+            } else {
+                badge.style.display = 'none';
+            }
+        } catch (e) {}
+    }
+
     loadNotifications();
     setInterval(loadNotifications, 60000);
+    loadFeedbackCount();
+    setInterval(loadFeedbackCount, 60000);
     setTimeout(checkForUpdate, 4000);
 })();
 </script>

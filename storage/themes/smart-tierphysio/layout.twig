@@ -2241,13 +2241,15 @@ window.SearchableSelect = (function(){
 <img src="/cron/pixel.gif" width="1" height="1" alt="" style="position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;" aria-hidden="true">
 
 {# ══════════════════════════════════════════════════════════════════════════
-   FEEDBACK & SUPPORT FAB
-   Dauerhaft sichtbar auf allen Praxis-Seiten.
-   Position: rechts unten, 1.25rem Abstand.
-   body[data-chat-bar="1"] → FAB hebt sich automatisch auf bottom: 5rem.
+   FEEDBACK & SUPPORT FAB — vollständiges bidirektionales Support-System
+   - FAB mit Badge für ungelesene Antworten
+   - Modal: Tab "Neu senden" + Tab "Meine Anfragen" (Chat-Threads)
+   - Bell-Indikator wird über /feedback/replies Polling gesetzt
+   - body[data-chat-bar="1"] → FAB hebt sich automatisch auf bottom: 5rem
    ══════════════════════════════════════════════════════════════════════════ #}
 {% if current_user is defined and current_user %}
 <style>
+/* ── FAB ── */
 #feedback-fab {
     position: fixed;
     right: 1.25rem;
@@ -2270,33 +2272,79 @@ window.SearchableSelect = (function(){
 #feedback-fab:hover { transform: scale(1.1); box-shadow: 0 6px 22px rgba(37,99,235,.55); }
 #feedback-fab:active { transform: scale(.95); }
 body[data-chat-bar="1"] #feedback-fab { bottom: 5rem; }
-@media (max-width: 600px) {
-    #feedback-fab { width: 42px; height: 42px; right: .9rem; bottom: .9rem; }
-    body[data-chat-bar="1"] #feedback-fab { bottom: 4.5rem; }
+@media (max-width:600px) {
+    #feedback-fab { width:42px;height:42px;right:.9rem;bottom:.9rem; }
+    body[data-chat-bar="1"] #feedback-fab { bottom:4.5rem; }
 }
-#feedback-modal .modal-header { border-bottom: 1px solid rgba(255,255,255,.1); }
-#feedback-modal .modal-footer { border-top: 1px solid rgba(255,255,255,.1); }
+#fb-badge {
+    position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;
+    background:#ef4444;color:#fff;border-radius:9px;font-size:.65rem;
+    font-weight:700;display:none;align-items:center;justify-content:center;
+    padding:0 4px;line-height:1;border:2px solid var(--bs-body-bg,#0f172a);
+}
+
+/* ── Bell indicator for support replies ── */
+#support-bell-badge {
+    display:none;
+}
+
+/* ── Modal ── */
+#feedback-modal .modal-header { border-bottom:1px solid rgba(255,255,255,.1); }
+#feedback-modal .modal-footer { border-top:1px solid rgba(255,255,255,.1); }
+#feedback-modal .nav-tabs { border-bottom:1px solid rgba(255,255,255,.1); }
+#feedback-modal .nav-link { color:rgba(255,255,255,.6);font-size:.82rem;padding:.4rem .9rem; }
+#feedback-modal .nav-link.active { color:#fff;border-color:transparent transparent var(--bs-primary); }
 #feedback-modal select,
 #feedback-modal textarea,
 #feedback-modal input[type="text"],
 #feedback-modal input[type="file"] {
-    background: var(--bs-body-bg);
-    border-color: rgba(255,255,255,.15);
-    color: var(--bs-body-color);
+    background:var(--bs-body-bg);border-color:rgba(255,255,255,.15);color:var(--bs-body-color);
 }
-#feedback-modal select:focus,
-#feedback-modal textarea:focus,
-#feedback-modal input:focus {
-    border-color: var(--bs-primary);
-    box-shadow: 0 0 0 3px rgba(37,99,235,.2);
+#feedback-modal select:focus,#feedback-modal textarea:focus,#feedback-modal input:focus {
+    border-color:var(--bs-primary);box-shadow:0 0 0 3px rgba(37,99,235,.2);
 }
-#feedback-modal .form-label { font-size: .82rem; opacity: .75; }
-#feedback-modal textarea { resize: vertical; min-height: 100px; }
-#feedback-success { display: none; }
-@keyframes fb-spin { to { transform: rotate(360deg); } }
+#feedback-modal .form-label { font-size:.82rem;opacity:.75; }
+#feedback-modal textarea { resize:vertical;min-height:90px; }
+#feedback-success { display:none; }
+
+/* ── Chat thread ── */
+.fb-thread { max-height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:.6rem;padding:.75rem 1rem; }
+.fb-msg-admin { display:flex;gap:.5rem;flex-direction:row-reverse;align-items:flex-start; }
+.fb-msg-tenant { display:flex;gap:.5rem;align-items:flex-start; }
+.fb-avatar {
+    flex-shrink:0;width:28px;height:28px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:.65rem;font-weight:700;color:#fff;
+}
+.fb-bubble {
+    max-width:78%;border-radius:12px;padding:.45rem .75rem;
+    font-size:.82rem;white-space:pre-wrap;line-height:1.45;
+}
+.fb-bubble-admin { background:rgba(124,58,237,.25);text-align:left; }
+.fb-bubble-tenant { background:rgba(255,255,255,.08); }
+.fb-meta { font-size:.7rem;opacity:.55;margin-bottom:.2rem; }
+.fb-thread-loading { text-align:center;padding:1.5rem;opacity:.5;font-size:.82rem; }
+
+.fb-ticket-item {
+    cursor:pointer;padding:.55rem .85rem;border-radius:8px;
+    transition:background .15s;border:1px solid rgba(255,255,255,.08);
+    margin-bottom:.4rem;
+}
+.fb-ticket-item:hover { background:rgba(255,255,255,.06); }
+.fb-ticket-item.has-unread { border-color:var(--bs-primary); }
+.fb-ticket-item .fb-ticket-title { font-size:.82rem;font-weight:600; }
+.fb-ticket-item .fb-ticket-meta { font-size:.72rem;opacity:.55; }
+
+@keyframes fb-spin { to { transform:rotate(360deg); } }
 </style>
 
-<button id="feedback-fab" title="Feedback &amp; Support" aria-label="Feedback und Support senden" data-no-ripple>
+{# ── Bell indicator for support in top nav ── #}
+<span id="support-bell-badge" class="badge badge-icon pos-top pos-end"
+      style="display:none;background:#7c3aed;"
+      title="Neue Support-Antwort"></span>
+
+<button id="feedback-fab" title="Feedback &amp; Support" aria-label="Feedback und Support senden" data-no-ripple style="position:relative;">
+    <span id="fb-badge"></span>
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
          stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -2305,12 +2353,13 @@ body[data-chat-bar="1"] #feedback-fab { bottom: 5rem; }
     </svg>
 </button>
 
+{# ── Feedback Modal ── #}
 <div class="modal fade" id="feedback-modal" tabindex="-1" aria-labelledby="feedback-modal-label" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" style="max-width:520px;">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:540px;">
         <div class="modal-content">
             <div class="modal-header py-3 px-4">
                 <h6 class="modal-title fw-semibold mb-0" id="feedback-modal-label">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                          stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-2" style="vertical-align:-.1em;">
                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                     </svg>
@@ -2318,72 +2367,130 @@ body[data-chat-bar="1"] #feedback-fab { bottom: 5rem; }
                 </h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Schließen"></button>
             </div>
-            <form id="feedback-form" enctype="multipart/form-data" novalidate>
-                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-                <input type="hidden" name="current_url" id="feedback-current-url">
-                <div class="modal-body px-4 py-3">
-                    <div id="feedback-success" class="text-center py-4">
-                        <div style="font-size:2.5rem;margin-bottom:.5rem;">✅</div>
-                        <div class="fw-semibold mb-1">Danke für dein Feedback!</div>
-                        <div class="text-muted" style="font-size:.82rem;">Wir werden es schnellstmöglich bearbeiten.</div>
-                    </div>
-                    <div id="feedback-fields">
-                        <div class="row g-3 mb-3">
-                            <div class="col-sm-6">
-                                <label class="form-label" for="fb-type">Art der Anfrage *</label>
-                                <select class="form-select form-select-sm" id="fb-type" name="type" required>
-                                    <option value="bug">🐛 Fehler melden</option>
-                                    <option value="support" selected>🆘 Support-Anfrage</option>
-                                    <option value="feature">💡 Verbesserungsvorschlag</option>
-                                    <option value="question">❓ Frage</option>
-                                    <option value="praise">⭐ Lob</option>
-                                    <option value="other">💬 Sonstiges</option>
-                                </select>
-                            </div>
-                            <div class="col-sm-6">
-                                <label class="form-label" for="fb-priority">Priorität</label>
-                                <select class="form-select form-select-sm" id="fb-priority" name="priority">
-                                    <option value="low">Niedrig</option>
-                                    <option value="normal" selected>Normal</option>
-                                    <option value="high">Hoch</option>
-                                    <option value="critical">Kritisch 🚨</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="fb-subject">Betreff</label>
-                            <input type="text" class="form-control form-control-sm" id="fb-subject" name="subject"
-                                   placeholder="Kurze Zusammenfassung…" maxlength="255">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="fb-message">Nachricht *</label>
-                            <textarea class="form-control form-control-sm" id="fb-message" name="message"
-                                      placeholder="Beschreibe dein Anliegen so detailliert wie möglich…"
-                                      rows="5" required></textarea>
-                            <div id="fb-message-err" class="text-danger mt-1" style="font-size:.8rem;display:none;">Bitte eine Nachricht eingeben.</div>
-                        </div>
-                        <div class="mb-1">
-                            <label class="form-label" for="fb-attachment">Screenshot / Anhang <span class="text-muted">(optional, max. 5 MB)</span></label>
-                            <input type="file" class="form-control form-control-sm" id="fb-attachment" name="attachment"
-                                   accept="image/jpeg,image/png,image/webp,image/gif,application/pdf">
-                        </div>
-                        <div id="feedback-error" class="alert alert-danger py-2 px-3 mt-3" style="font-size:.82rem;display:none;"></div>
-                    </div>
-                </div>
-                <div class="modal-footer px-4 py-3" id="feedback-footer">
-                    <span class="text-muted me-auto" style="font-size:.78rem;">Aktuelle Seite wird automatisch erfasst.</span>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Abbrechen</button>
-                    <button type="submit" class="btn btn-sm btn-primary" id="fb-submit-btn">
-                        <span id="fb-btn-text">Absenden</span>
-                        <span id="fb-btn-spinner" style="display:none;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                 stroke-width="2" style="animation:fb-spin .8s linear infinite;vertical-align:-.15em;">
-                                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-                            </svg>
-                        </span>
+
+            {# Tabs #}
+            <ul class="nav nav-tabs px-3 pt-2" id="fbModalTabs">
+                <li class="nav-item">
+                    <button class="nav-link active" id="fb-tab-new" data-bs-toggle="tab" data-bs-target="#fb-pane-new" type="button">
+                        Neue Anfrage
                     </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="fb-tab-inbox" data-bs-toggle="tab" data-bs-target="#fb-pane-inbox" type="button">
+                        Meine Anfragen
+                        <span id="fb-inbox-badge" style="display:none;margin-left:4px;background:#ef4444;color:#fff;border-radius:8px;font-size:.65rem;padding:1px 5px;font-weight:700;"></span>
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                {# ── Tab: Neue Anfrage ── #}
+                <div class="tab-pane fade show active" id="fb-pane-new">
+                    <form id="feedback-form" enctype="multipart/form-data" novalidate>
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="current_url" id="feedback-current-url">
+                        <div class="modal-body px-4 py-3">
+                            <div id="feedback-success" class="text-center py-4">
+                                <div style="font-size:2.5rem;margin-bottom:.5rem;">✅</div>
+                                <div class="fw-semibold mb-1">Danke für dein Feedback!</div>
+                                <div class="text-muted" style="font-size:.82rem;">Wir werden es schnellstmöglich bearbeiten.</div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary mt-3" id="fb-goto-inbox">Zu meinen Anfragen →</button>
+                            </div>
+                            <div id="feedback-fields">
+                                <div class="row g-2 mb-3">
+                                    <div class="col-sm-6">
+                                        <label class="form-label" for="fb-type">Art der Anfrage *</label>
+                                        <select class="form-select form-select-sm" id="fb-type" name="type" required>
+                                            <option value="bug">🐛 Fehler melden</option>
+                                            <option value="support" selected>🆘 Support-Anfrage</option>
+                                            <option value="feature">💡 Verbesserungsvorschlag</option>
+                                            <option value="question">❓ Frage</option>
+                                            <option value="praise">⭐ Lob</option>
+                                            <option value="other">💬 Sonstiges</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <label class="form-label" for="fb-priority">Priorität</label>
+                                        <select class="form-select form-select-sm" id="fb-priority" name="priority">
+                                            <option value="low">Niedrig</option>
+                                            <option value="normal" selected>Normal</option>
+                                            <option value="high">Hoch</option>
+                                            <option value="critical">Kritisch 🚨</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label" for="fb-subject">Betreff</label>
+                                    <input type="text" class="form-control form-control-sm" id="fb-subject" name="subject"
+                                           placeholder="Kurze Zusammenfassung…" maxlength="255">
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label" for="fb-message">Nachricht *</label>
+                                    <textarea class="form-control form-control-sm" id="fb-message" name="message"
+                                              placeholder="Beschreibe dein Anliegen so detailliert wie möglich…"
+                                              rows="4" required></textarea>
+                                    <div id="fb-message-err" class="text-danger mt-1" style="font-size:.8rem;display:none;">Pflichtfeld.</div>
+                                </div>
+                                <div class="mb-1">
+                                    <label class="form-label" for="fb-attachment">Screenshot <span class="text-muted">(optional, max. 5 MB)</span></label>
+                                    <input type="file" class="form-control form-control-sm" id="fb-attachment" name="attachment"
+                                           accept="image/jpeg,image/png,image/webp,image/gif,application/pdf">
+                                </div>
+                                <div id="feedback-error" class="alert alert-danger py-2 px-3 mt-2" style="font-size:.82rem;display:none;"></div>
+                            </div>
+                        </div>
+                        <div class="modal-footer px-4 py-2" id="feedback-footer">
+                            <span class="text-muted me-auto" style="font-size:.75rem;">Seite wird automatisch erfasst.</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                            <button type="submit" class="btn btn-sm btn-primary" id="fb-submit-btn">
+                                <span id="fb-btn-text">Absenden</span>
+                                <span id="fb-btn-spinner" style="display:none;">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                         stroke-width="2" style="animation:fb-spin .8s linear infinite;vertical-align:-.15em;">
+                                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                                    </svg>
+                                </span>
+                            </button>
+                        </div>
+                    </form>
                 </div>
-            </form>
+
+                {# ── Tab: Meine Anfragen (Inbox / Chat) ── #}
+                <div class="tab-pane fade" id="fb-pane-inbox">
+                    <div class="modal-body p-0" style="min-height:280px;">
+
+                        {# Ticket list view #}
+                        <div id="fb-ticket-list" style="padding:.75rem 1rem;">
+                            <div class="fb-thread-loading" id="fb-inbox-loading">Lädt…</div>
+                        </div>
+
+                        {# Single thread view (hidden initially) #}
+                        <div id="fb-thread-view" style="display:none;">
+                            <div class="d-flex align-items-center gap-2 px-3 pt-2 pb-1 border-bottom" style="border-color:rgba(255,255,255,.1)!important;">
+                                <button class="btn btn-xs btn-outline-secondary" id="fb-back-btn" style="font-size:.72rem;padding:2px 8px;">← Zurück</button>
+                                <span id="fb-thread-subject" class="fw-semibold fs-sm text-truncate flex-1"></span>
+                                <span id="fb-thread-status" class="badge bg-secondary" style="font-size:.65rem;"></span>
+                            </div>
+                            <div class="fb-thread" id="fb-thread-messages"></div>
+                            <div class="border-top px-3 py-2" style="border-color:rgba(255,255,255,.1)!important;" id="fb-reply-area">
+                                <div class="d-flex gap-2 align-items-end">
+                                    <textarea id="fb-reply-input" class="form-control form-control-sm flex-1"
+                                              rows="2" placeholder="Antwort schreiben…" style="resize:none;"></textarea>
+                                    <button class="btn btn-sm btn-primary flex-shrink-0" id="fb-reply-send">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="22" y1="2" x2="11" y2="13"/>
+                                            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>
@@ -2391,47 +2498,121 @@ body[data-chat-bar="1"] #feedback-fab { bottom: 5rem; }
 <script>
 (function () {
     'use strict';
-    var fab       = document.getElementById('feedback-fab');
-    var modal     = document.getElementById('feedback-modal');
-    var form      = document.getElementById('feedback-form');
-    var fields    = document.getElementById('feedback-fields');
-    var success   = document.getElementById('feedback-success');
-    var footer    = document.getElementById('feedback-footer');
-    var errBox    = document.getElementById('feedback-error');
-    var msgErr    = document.getElementById('fb-message-err');
-    var submitBtn = document.getElementById('fb-submit-btn');
-    var btnText   = document.getElementById('fb-btn-text');
-    var btnSpinner= document.getElementById('fb-btn-spinner');
-    var urlInput  = document.getElementById('feedback-current-url');
+
+    var CSRF        = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+    var fab         = document.getElementById('feedback-fab');
+    var fbBadge     = document.getElementById('fb-badge');
+    var inboxBadge  = document.getElementById('fb-inbox-badge');
+    var bellBadge   = document.getElementById('support-bell-badge');
+    var modal       = document.getElementById('feedback-modal');
+    var form        = document.getElementById('feedback-form');
+    var fields      = document.getElementById('feedback-fields');
+    var success     = document.getElementById('feedback-success');
+    var footer      = document.getElementById('feedback-footer');
+    var errBox      = document.getElementById('feedback-error');
+    var msgErr      = document.getElementById('fb-message-err');
+    var submitBtn   = document.getElementById('fb-submit-btn');
+    var btnText     = document.getElementById('fb-btn-text');
+    var btnSpinner  = document.getElementById('fb-btn-spinner');
+    var urlInput    = document.getElementById('feedback-current-url');
+    var tabInbox    = document.getElementById('fb-tab-inbox');
+    var ticketList  = document.getElementById('fb-ticket-list');
+    var threadView  = document.getElementById('fb-thread-view');
+    var threadMsgs  = document.getElementById('fb-thread-messages');
+    var threadSubj  = document.getElementById('fb-thread-subject');
+    var threadStat  = document.getElementById('fb-thread-status');
+    var backBtn     = document.getElementById('fb-back-btn');
+    var replyInput  = document.getElementById('fb-reply-input');
+    var replySend   = document.getElementById('fb-reply-send');
+    var gotoInbox   = document.getElementById('fb-goto-inbox');
 
     if (!fab || !modal) return;
-    var bsModal = bootstrap.Modal.getOrCreateInstance(modal);
 
+    var bsModal      = bootstrap.Modal.getOrCreateInstance(modal);
+    var currentFbId  = null;
+    var unreadCount  = 0;
+    var pollTimer    = null;
+
+    /* ─── Badge helpers ─── */
+    function setBadge(n) {
+        unreadCount = n;
+        if (n > 0) {
+            fbBadge.textContent  = n > 9 ? '9+' : String(n);
+            fbBadge.style.display = 'flex';
+            inboxBadge.textContent = n > 9 ? '9+' : String(n);
+            inboxBadge.style.display = '';
+            if (bellBadge) { bellBadge.textContent = n > 9 ? '9+' : String(n); bellBadge.style.display = ''; }
+        } else {
+            fbBadge.style.display   = 'none';
+            inboxBadge.style.display = 'none';
+            if (bellBadge) bellBadge.style.display = 'none';
+        }
+    }
+
+    /* ─── Polling ─── */
+    function pollReplies() {
+        fetch('/feedback/replies', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function(r){ return r.ok ? r.json() : null; })
+            .then(function(d){
+                if (!d) return;
+                var n = d.unread || 0;
+                if (n > unreadCount) {
+                    window.showAppToast && window.showAppToast({
+                        id:      'support_' + Date.now(),
+                        type:    'support',
+                        message: '💬 Neue Support-Antwort eingegangen',
+                        url:     '#',
+                    });
+                }
+                setBadge(n);
+            })
+            .catch(function(){});
+    }
+
+    pollReplies();
+    pollTimer = setInterval(pollReplies, 45000);
+
+    /* ─── FAB click ─── */
     fab.addEventListener('click', function () {
         if (urlInput) urlInput.value = window.location.pathname;
-        resetForm();
         bsModal.show();
     });
-    modal.addEventListener('hidden.bs.modal', resetForm);
+
+    /* ─── When inbox tab shown: load ticket list ─── */
+    document.getElementById('fb-tab-inbox')?.addEventListener('shown.bs.tab', function () {
+        loadTicketList();
+    });
+
+    /* ─── Go-to-inbox from success screen ─── */
+    gotoInbox && gotoInbox.addEventListener('click', function () {
+        bootstrap.Tab.getOrCreateInstance(tabInbox).show();
+    });
+
+    /* ─── Reset on modal hide ─── */
+    modal.addEventListener('hidden.bs.modal', function () {
+        resetForm();
+        showTicketList();
+        currentFbId = null;
+    });
 
     function resetForm() {
         form.reset();
         fields.style.display  = '';
         success.style.display = 'none';
         footer.style.display  = '';
-        errBox.style.display  = 'none';
-        errBox.textContent    = '';
+        errBox.style.display  = 'none'; errBox.textContent = '';
         msgErr.style.display  = 'none';
         submitBtn.disabled    = false;
         btnText.style.display = '';
         btnSpinner.style.display = 'none';
     }
 
+    /* ─── Submit new feedback ─── */
     form.addEventListener('submit', function (e) {
         e.preventDefault();
         var msg = document.getElementById('fb-message').value.trim();
         if (!msg) { msgErr.style.display = ''; return; }
-        msgErr.style.display = 'none';
+        msgErr.style.display  = 'none';
         submitBtn.disabled    = true;
         btnText.style.display = 'none';
         btnSpinner.style.display = '';
@@ -2442,22 +2623,21 @@ body[data-chat-bar="1"] #feedback-fab { bottom: 5rem; }
             headers: { 'X-Requested-With': 'XMLHttpRequest' },
             body: new FormData(form),
         })
-        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
-        .then(function (res) {
+        .then(function(r){ return r.json().then(function(d){ return {ok:r.ok,data:d}; }); })
+        .then(function(res) {
             if (res.ok && res.data.success) {
                 fields.style.display  = 'none';
                 success.style.display = '';
                 footer.style.display  = 'none';
-                setTimeout(function () { bsModal.hide(); }, 2800);
             } else {
-                errBox.textContent   = (res.data && res.data.error) ? res.data.error : 'Unbekannter Fehler.';
+                errBox.textContent   = res.data?.error ?? 'Unbekannter Fehler.';
                 errBox.style.display = '';
                 submitBtn.disabled    = false;
                 btnText.style.display = '';
                 btnSpinner.style.display = 'none';
             }
         })
-        .catch(function () {
+        .catch(function(){
             errBox.textContent   = 'Netzwerkfehler. Bitte versuche es erneut.';
             errBox.style.display = '';
             submitBtn.disabled    = false;
@@ -2465,6 +2645,196 @@ body[data-chat-bar="1"] #feedback-fab { bottom: 5rem; }
             btnSpinner.style.display = 'none';
         });
     });
+
+    /* ─── Ticket list ─── */
+    function showTicketList() {
+        ticketList.style.display = '';
+        threadView.style.display = 'none';
+        currentFbId = null;
+        if (replyInput) replyInput.value = '';
+    }
+
+    function loadTicketList() {
+        ticketList.innerHTML = '<div class="fb-thread-loading">Lädt…</div>';
+        ticketList.style.display = '';
+        threadView.style.display = 'none';
+
+        fetch('/feedback/replies', { headers: {'X-Requested-With':'XMLHttpRequest'} })
+            .then(function(r){ return r.ok ? r.json() : null; })
+            .then(function(d){
+                // We need the full ticket list: use a separate endpoint
+                // For now, use the unread items as entry points + load list via history trick
+                fetchTicketHistory();
+            })
+            .catch(function(){ ticketList.innerHTML = '<div class="fb-thread-loading text-danger">Fehler beim Laden.</div>'; });
+    }
+
+    function fetchTicketHistory() {
+        // Load last 10 feedback items for this tenant via the same replies endpoint
+        // but also get feedback IDs. We reuse /feedback/replies which gives us feedback_id + subject.
+        fetch('/feedback/replies', { headers: {'X-Requested-With':'XMLHttpRequest'} })
+            .then(function(r){ return r.ok ? r.json() : {unread:0,items:[]}; })
+            .then(function(d){
+                renderTicketList(d.items || [], d.unread || 0);
+                setBadge(d.unread || 0);
+            });
+    }
+
+    function renderTicketList(items, unreadTotal) {
+        if (items.length === 0) {
+            ticketList.innerHTML =
+                '<div class="fb-thread-loading">Keine ungelesenen Antworten.<br>' +
+                '<span style="font-size:.75rem;opacity:.6;">Klicke auf „Neue Anfrage" um den Support zu kontaktieren.</span></div>';
+            return;
+        }
+
+        var html = '<div style="font-size:.75rem;opacity:.55;margin-bottom:.5rem;padding:0 .1rem;">' +
+                   unreadTotal + ' ungelesene Antwort(en)</div>';
+
+        // Group by feedback_id
+        var seen = {};
+        items.forEach(function(it) {
+            if (!seen[it.feedback_id]) {
+                seen[it.feedback_id] = it;
+            }
+        });
+
+        Object.values(seen).forEach(function(it) {
+            html += '<div class="fb-ticket-item has-unread" data-id="' + it.feedback_id + '">' +
+                    '<div class="fb-ticket-title">' + escHtml(it.subject || 'Support-Anfrage #' + it.feedback_id) + '</div>' +
+                    '<div class="fb-ticket-meta">Neue Antwort · ' + escHtml(it.sender_name || 'Support') + '</div>' +
+                    '</div>';
+        });
+
+        ticketList.innerHTML = html;
+
+        ticketList.querySelectorAll('.fb-ticket-item').forEach(function(el) {
+            el.addEventListener('click', function(){
+                openThread(parseInt(el.dataset.id));
+            });
+        });
+    }
+
+    function openThread(feedbackId) {
+        currentFbId = feedbackId;
+        ticketList.style.display = 'none';
+        threadView.style.display = '';
+        threadMsgs.innerHTML     = '<div class="fb-thread-loading">Lädt…</div>';
+        if (threadSubj) threadSubj.textContent = 'Lädt…';
+
+        fetch('/feedback/' + feedbackId + '/thread', { headers: {'X-Requested-With':'XMLHttpRequest'} })
+            .then(function(r){ return r.ok ? r.json() : null; })
+            .then(function(d){
+                if (!d || d.error) {
+                    threadMsgs.innerHTML = '<div class="fb-thread-loading text-danger">Fehler beim Laden.</div>';
+                    return;
+                }
+                renderThread(d.original, d.replies || []);
+                // Recount unread after opening
+                setTimeout(pollReplies, 500);
+            })
+            .catch(function(){
+                threadMsgs.innerHTML = '<div class="fb-thread-loading text-danger">Netzwerkfehler.</div>';
+            });
+    }
+
+    function renderThread(original, replies) {
+        var statusMap = {open:'Offen',in_progress:'In Bearbeitung',resolved:'Erledigt',closed:'Geschlossen'};
+        var statusColor = {open:'warning',in_progress:'primary',resolved:'success',closed:'secondary'};
+        var st = original.status || 'open';
+
+        if (threadSubj) threadSubj.textContent = original.subject || ('Anfrage #' + original.id);
+        if (threadStat) {
+            threadStat.textContent = statusMap[st] || st;
+            threadStat.className   = 'badge bg-' + (statusColor[st] || 'secondary');
+            threadStat.style.fontSize = '.65rem';
+        }
+
+        var html = '';
+
+        // Original message (from tenant)
+        html += renderBubble({
+            sender_type: 'tenant',
+            sender_name: original.sender_name,
+            message:     original.message,
+            created_at:  original.created_at,
+        });
+
+        replies.forEach(function(r){ html += renderBubble(r); });
+
+        threadMsgs.innerHTML = html;
+        threadMsgs.scrollTop = threadMsgs.scrollHeight;
+
+        // Disable reply if resolved/closed
+        if (document.getElementById('fb-reply-area')) {
+            document.getElementById('fb-reply-area').style.display =
+                (st === 'closed') ? 'none' : '';
+        }
+    }
+
+    function renderBubble(r) {
+        var isAdmin = r.sender_type === 'admin';
+        var cls     = isAdmin ? 'fb-msg-admin' : 'fb-msg-tenant';
+        var bg      = isAdmin ? '#7c3aed' : 'var(--bs-primary,#2563eb)';
+        var bub     = isAdmin ? 'fb-bubble-admin' : 'fb-bubble-tenant';
+        var initials= isAdmin ? 'S' : (r.sender_name ? r.sender_name.charAt(0).toUpperCase() : 'P');
+        var time    = r.created_at ? r.created_at.substr(0,16).replace('T',' ') : '';
+
+        return '<div class="' + cls + '">' +
+               '<div class="fb-avatar" style="background:' + bg + ';">' + initials + '</div>' +
+               '<div style="max-width:78%;">' +
+               '<div class="fb-meta ' + (isAdmin ? 'text-end' : '') + '">' +
+               escHtml(r.sender_name || (isAdmin ? 'Support' : 'Du')) + ' · ' + time +
+               '</div>' +
+               '<div class="fb-bubble ' + bub + '">' + escHtml(r.message) + '</div>' +
+               '</div></div>';
+    }
+
+    /* ─── Back button ─── */
+    backBtn && backBtn.addEventListener('click', function () {
+        showTicketList();
+        loadTicketList();
+    });
+
+    /* ─── Send reply from practice ─── */
+    replySend && replySend.addEventListener('click', function () {
+        if (!currentFbId) return;
+        var msg = replyInput.value.trim();
+        if (!msg) return;
+
+        replySend.disabled = true;
+
+        fetch('/feedback/' + currentFbId + '/reply', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({ _csrf_token: CSRF, message: msg }).toString(),
+        })
+        .then(function(r){ return r.json(); })
+        .then(function(res){
+            replySend.disabled = false;
+            if (res.success && res.reply) {
+                replyInput.value = '';
+                threadMsgs.insertAdjacentHTML('beforeend', renderBubble(res.reply));
+                threadMsgs.scrollTop = threadMsgs.scrollHeight;
+            }
+        })
+        .catch(function(){ replySend.disabled = false; });
+    });
+
+    replyInput && replyInput.addEventListener('keydown', function(e){
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); replySend.click(); }
+    });
+
+    /* ─── Utility ─── */
+    function escHtml(str) {
+        return String(str ?? '')
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;').replace(/\n/g,'<br>');
+    }
+
 })();
 </script>
 {% endif %}

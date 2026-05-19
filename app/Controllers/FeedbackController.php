@@ -115,6 +115,236 @@ class FeedbackController
         }
     }
 
+    /**
+     * GET /feedback/replies
+     * Returns unread admin replies for the current tenant (JSON, for polling).
+     */
+    public function replies(array $params = []): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $user = Auth::user();
+        if (!$user) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Unauthenticated']);
+            return;
+        }
+
+        $tenantInfo = $this->resolveTenantInfo();
+        $tenantId   = $tenantInfo['tenant_id'];
+
+        if (!$tenantId) {
+            echo json_encode(['unread' => 0, 'items' => []]);
+            return;
+        }
+
+        try {
+            $pdo = $this->getSaasDb();
+            if ($pdo === null) {
+                echo json_encode(['unread' => 0, 'items' => []]);
+                return;
+            }
+
+            $stmt = $pdo->prepare("
+                SELECT r.id, r.feedback_id, r.sender_name, r.message, r.is_read, r.created_at,
+                       f.subject, f.type
+                FROM feedback_replies r
+                JOIN feedback f ON f.id = r.feedback_id
+                WHERE f.tenant_id = ?
+                  AND r.sender_type = 'admin'
+                  AND r.is_read = 0
+                ORDER BY r.created_at DESC
+                LIMIT 20
+            ");
+            $stmt->execute([$tenantId]);
+            $items = $stmt->fetchAll();
+
+            echo json_encode(['unread' => count($items), 'items' => $items]);
+        } catch (\Throwable $e) {
+            error_log('[FeedbackController::replies] ' . $e->getMessage());
+            echo json_encode(['unread' => 0, 'items' => []]);
+        }
+    }
+
+    /**
+     * POST /feedback/replies/read
+     * Marks admin replies as read for the current tenant.
+     */
+    public function markRepliesRead(array $params = []): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $user = Auth::user();
+        if (!$user) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Unauthenticated']);
+            return;
+        }
+
+        $token = $this->post('_csrf_token') ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+        if (!$this->session->validateCsrfToken($token)) {
+            http_response_code(403);
+            echo json_encode(['error' => 'CSRF invalid']);
+            return;
+        }
+
+        $tenantInfo = $this->resolveTenantInfo();
+        $tenantId   = $tenantInfo['tenant_id'];
+        if (!$tenantId) {
+            echo json_encode(['success' => true]);
+            return;
+        }
+
+        try {
+            $pdo = $this->getSaasDb();
+            if ($pdo) {
+                $stmt = $pdo->prepare("
+                    UPDATE feedback_replies r
+                    JOIN feedback f ON f.id = r.feedback_id
+                    SET r.is_read = 1, r.read_at = NOW()
+                    WHERE f.tenant_id = ? AND r.sender_type = 'admin' AND r.is_read = 0
+                ");
+                $stmt->execute([$tenantId]);
+
+                $pdo->prepare("UPDATE feedback SET unread_replies = 0 WHERE tenant_id = ?")->execute([$tenantId]);
+            }
+        } catch (\Throwable) {}
+
+        echo json_encode(['success' => true]);
+    }
+
+    /**
+     * POST /feedback/{id}/reply
+     * Allows the practice user to reply to a support conversation.
+     */
+    public function replyFromPractice(array $params = []): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $user = Auth::user();
+        if (!$user) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Nicht authentifiziert.']);
+            return;
+        }
+
+        $token = $this->post('_csrf_token') ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+        if (!$this->session->validateCsrfToken($token)) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Ungültiger CSRF-Token.']);
+            return;
+        }
+
+        $feedbackId = (int)($params['id'] ?? 0);
+        $message    = $this->sanitize($this->post('message', ''));
+
+        if ($message === '' || $feedbackId === 0) {
+            http_response_code(422);
+            echo json_encode(['error' => 'Nachricht darf nicht leer sein.']);
+            return;
+        }
+
+        $tenantInfo = $this->resolveTenantInfo();
+        $tenantId   = $tenantInfo['tenant_id'];
+
+        try {
+            $pdo = $this->getSaasDb();
+            if ($pdo === null) {
+                http_response_code(500);
+                echo json_encode(['error' => 'Datenbankfehler.']);
+                return;
+            }
+
+            // Verify feedback belongs to this tenant
+            $check = $pdo->prepare("SELECT id FROM feedback WHERE id = ? AND tenant_id = ? LIMIT 1");
+            $check->execute([$feedbackId, $tenantId]);
+            if (!$check->fetch()) {
+                http_response_code(403);
+                echo json_encode(['error' => 'Kein Zugriff.']);
+                return;
+            }
+
+            $stmt = $pdo->prepare(
+                "INSERT INTO feedback_replies (feedback_id, sender_type, sender_name, message) VALUES (?, 'tenant', ?, ?)"
+            );
+            $stmt->execute([$feedbackId, $user['name'] ?? 'Praxis', $message]);
+
+            $replyId = (int)$pdo->lastInsertId();
+
+            $row = $pdo->prepare("SELECT id, sender_type, sender_name, message, created_at FROM feedback_replies WHERE id = ?");
+            $row->execute([$replyId]);
+            $reply = $row->fetch();
+
+            echo json_encode(['success' => true, 'reply' => $reply]);
+        } catch (\Throwable $e) {
+            error_log('[FeedbackController::replyFromPractice] ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['error' => 'Fehler beim Speichern.']);
+        }
+    }
+
+    /**
+     * GET /feedback/{id}/thread
+     * Returns full conversation thread for a specific feedback item.
+     */
+    public function thread(array $params = []): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $user = Auth::user();
+        if (!$user) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Unauthenticated']);
+            return;
+        }
+
+        $feedbackId = (int)($params['id'] ?? 0);
+        $tenantInfo = $this->resolveTenantInfo();
+        $tenantId   = $tenantInfo['tenant_id'];
+
+        try {
+            $pdo = $this->getSaasDb();
+            if ($pdo === null) {
+                echo json_encode(['items' => []]);
+                return;
+            }
+
+            $stmt = $pdo->prepare("
+                SELECT f.id, f.subject, f.type, f.message, f.created_at, f.status,
+                       f.user_name AS sender_name, 'tenant' AS sender_type
+                FROM feedback f
+                WHERE f.id = ? AND f.tenant_id = ?
+                LIMIT 1
+            ");
+            $stmt->execute([$feedbackId, $tenantId]);
+            $original = $stmt->fetch();
+
+            if (!$original) {
+                http_response_code(403);
+                echo json_encode(['error' => 'Kein Zugriff.']);
+                return;
+            }
+
+            $stmt2 = $pdo->prepare(
+                "SELECT id, sender_type, sender_name, message, created_at FROM feedback_replies WHERE feedback_id = ? ORDER BY created_at ASC"
+            );
+            $stmt2->execute([$feedbackId]);
+            $replies = $stmt2->fetchAll();
+
+            // Mark all admin replies as read
+            $pdo->prepare("
+                UPDATE feedback_replies SET is_read = 1, read_at = NOW()
+                WHERE feedback_id = ? AND sender_type = 'admin' AND is_read = 0
+            ")->execute([$feedbackId]);
+            $pdo->prepare("UPDATE feedback SET unread_replies = 0 WHERE id = ?")->execute([$feedbackId]);
+
+            echo json_encode(['original' => $original, 'replies' => $replies]);
+        } catch (\Throwable $e) {
+            error_log('[FeedbackController::thread] ' . $e->getMessage());
+            echo json_encode(['items' => []]);
+        }
+    }
+
     // ── Private Helpers ──────────────────────────────────────────────────────
 
     private function post(string $key, mixed $default = null): mixed

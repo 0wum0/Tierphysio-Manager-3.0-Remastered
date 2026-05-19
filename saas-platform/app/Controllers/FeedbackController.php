@@ -107,10 +107,68 @@ class FeedbackController extends Controller
             $item['is_read'] = 1;
         }
 
+        $replies = $this->db->fetchAll(
+            "SELECT * FROM feedback_replies WHERE feedback_id = ? ORDER BY created_at ASC",
+            [$id]
+        );
+
         $this->render('admin/feedback/show.twig', [
             'item'       => $item,
+            'replies'    => $replies,
             'page_title' => 'Feedback #' . $id,
         ]);
+    }
+
+    public function reply(array $params = []): void
+    {
+        $this->requireAuth();
+        $this->verifyCsrf();
+
+        $id      = (int)($params['id'] ?? 0);
+        $message = trim($_POST['reply_message'] ?? '');
+
+        if ($message === '' || $id === 0) {
+            $this->session->flash('error', 'Nachricht darf nicht leer sein.');
+            $this->redirect('/admin/feedback/' . $id);
+            return;
+        }
+
+        $adminName = $this->session->get('admin_name', 'Support');
+
+        $this->db->execute(
+            "INSERT INTO feedback_replies (feedback_id, sender_type, sender_name, message) VALUES (?, 'admin', ?, ?)",
+            [$id, $adminName, $message]
+        );
+
+        // Mark feedback as having unread reply for tenant, set status to in_progress if still open
+        $this->db->execute(
+            "UPDATE feedback SET unread_replies = 1, status = IF(status = 'open', 'in_progress', status) WHERE id = ?",
+            [$id]
+        );
+
+        // Create SaaS notification
+        try {
+            $fb = $this->db->fetch("SELECT tenant_name FROM feedback WHERE id = ?", [$id]);
+            $this->notifRepo->create(
+                'feedback',
+                'Support-Antwort gesendet',
+                ($fb['tenant_name'] ?? 'Praxis') . ': Antwort auf Feedback #' . $id,
+                ['feedback_id' => $id]
+            );
+        } catch (\Throwable) {}
+
+        $this->session->flash('success', 'Antwort gesendet.');
+        $this->redirect('/admin/feedback/' . $id);
+    }
+
+    public function apiUnreadCount(array $params = []): void
+    {
+        header('Content-Type: application/json');
+        $this->requireAuth();
+        $open = (int)$this->db->fetchColumn(
+            "SELECT COUNT(*) FROM feedback WHERE status IN ('open','in_progress')"
+        );
+        echo json_encode(['open' => $open]);
     }
 
     public function delete(array $params = []): void

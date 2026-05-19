@@ -196,9 +196,11 @@ $router->get('/register/payment-success', function (array $params): void {
 // ── Feedback ────────────────────────────────────────────────────────────────
 $router->get('/admin/feedback',                    [FeedbackController::class, 'index']);
 $router->get('/admin/feedback/{id}',               [FeedbackController::class, 'show']);
+$router->post('/admin/feedback/{id}/reply',        [FeedbackController::class, 'reply']);
 $router->post('/admin/feedback/{id}/status',       [FeedbackController::class, 'updateStatus']);
 $router->post('/admin/feedback/{id}/delete',       [FeedbackController::class, 'delete']);
 $router->post('/admin/feedback/mark-all-read',     [FeedbackController::class, 'markAllRead']);
+$router->get('/api/admin/feedback/unread-count',   [FeedbackController::class, 'apiUnreadCount']);
 
 // ── Public Feedback API (called by TierPhysio App) ──────────────────────────
 $router->post('/api/feedback',                     [FeedbackController::class, 'apiSubmit']);
