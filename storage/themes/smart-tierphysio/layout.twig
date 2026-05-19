@@ -2403,6 +2403,12 @@ body[data-chat-bar="1"] #feedback-fab-wrap { bottom: 5rem; }
                         <span id="fb-inbox-badge" style="display:none;margin-left:4px;background:#ef4444;color:#fff;border-radius:8px;font-size:.65rem;padding:1px 5px;font-weight:700;"></span>
                     </button>
                 </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="fb-tab-news" data-bs-toggle="tab" data-bs-target="#fb-pane-news" type="button">
+                        📢 Neuigkeiten
+                        <span id="fb-news-badge" style="display:none;margin-left:4px;background:#7c3aed;color:#fff;border-radius:8px;font-size:.65rem;padding:1px 5px;font-weight:700;"></span>
+                    </button>
+                </li>
             </ul>
 
             <div class="tab-content">
@@ -2511,6 +2517,42 @@ body[data-chat-bar="1"] #feedback-fab-wrap { bottom: 5rem; }
 
                     </div>
                 </div>
+
+                {# ── Tab: Neuigkeiten (Broadcasts) ── #}
+                <div class="tab-pane fade" id="fb-pane-news">
+                    <div class="modal-body p-0" style="min-height:280px;">
+
+                        {# News list view #}
+                        <div id="fb-news-list" style="padding:.75rem 1rem;">
+                            <div class="fb-thread-loading">Lädt…</div>
+                        </div>
+
+                        {# News thread view (hidden initially) #}
+                        <div id="fb-news-thread-view" style="display:none;">
+                            <div class="d-flex align-items-center gap-2 px-3 pt-2 pb-1 border-bottom" style="border-color:rgba(255,255,255,.1)!important;">
+                                <button class="btn btn-xs btn-outline-secondary" id="fb-news-back-btn" style="font-size:.72rem;padding:2px 8px;">← Zurück</button>
+                                <span id="fb-news-thread-subject" class="fw-semibold fs-sm text-truncate flex-1"></span>
+                                <span id="fb-news-thread-status" class="badge" style="font-size:.65rem;background:#7c3aed;">Neuigkeit</span>
+                            </div>
+                            <div class="fb-thread" id="fb-news-thread-messages"></div>
+                            <div class="border-top px-3 py-2" style="border-color:rgba(255,255,255,.1)!important;" id="fb-news-reply-area">
+                                <div class="d-flex gap-2 align-items-end">
+                                    <textarea id="fb-news-reply-input" class="form-control form-control-sm flex-1"
+                                              rows="2" placeholder="Antwort schreiben…" style="resize:none;"></textarea>
+                                    <button class="btn btn-sm btn-primary flex-shrink-0" id="fb-news-reply-send">
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="22" y1="2" x2="11" y2="13"/>
+                                            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
             </div>
 
         </div>
@@ -2547,6 +2589,17 @@ body[data-chat-bar="1"] #feedback-fab-wrap { bottom: 5rem; }
     var replyInput  = document.getElementById('fb-reply-input');
     var replySend   = document.getElementById('fb-reply-send');
     var gotoInbox   = document.getElementById('fb-goto-inbox');
+    /* ─ Neuigkeiten-Tab ─ */
+    var tabNews         = document.getElementById('fb-tab-news');
+    var newsBadge       = document.getElementById('fb-news-badge');
+    var newsList        = document.getElementById('fb-news-list');
+    var newsThreadView  = document.getElementById('fb-news-thread-view');
+    var newsThreadMsgs  = document.getElementById('fb-news-thread-messages');
+    var newsThreadSubj  = document.getElementById('fb-news-thread-subject');
+    var newsBackBtn     = document.getElementById('fb-news-back-btn');
+    var newsReplyInput  = document.getElementById('fb-news-reply-input');
+    var newsReplySend   = document.getElementById('fb-news-reply-send');
+    var currentNewsId   = null;
 
     if (!fab || !modal) return;
 
@@ -2556,18 +2609,33 @@ body[data-chat-bar="1"] #feedback-fab-wrap { bottom: 5rem; }
     var pollTimer    = null;
 
     /* ─── Badge helpers ─── */
-    function setBadge(n) {
+    function setBadge(n, broadcastUnread) {
         unreadCount = n;
-        if (n > 0) {
-            fbBadge.textContent  = n > 9 ? '9+' : String(n);
+        var total = n + (broadcastUnread || 0);
+        if (total > 0) {
+            fbBadge.textContent   = total > 9 ? '9+' : String(total);
             fbBadge.style.display = 'flex';
+            if (bellBadge) { bellBadge.textContent = total > 9 ? '9+' : String(total); bellBadge.style.display = ''; }
+        } else {
+            fbBadge.style.display = 'none';
+            if (bellBadge) bellBadge.style.display = 'none';
+        }
+        // Inbox badge — only non-broadcast unread
+        if (n > 0) {
             inboxBadge.textContent = n > 9 ? '9+' : String(n);
             inboxBadge.style.display = '';
-            if (bellBadge) { bellBadge.textContent = n > 9 ? '9+' : String(n); bellBadge.style.display = ''; }
         } else {
-            fbBadge.style.display   = 'none';
             inboxBadge.style.display = 'none';
-            if (bellBadge) bellBadge.style.display = 'none';
+        }
+        // News badge — only broadcast unread
+        var bu = broadcastUnread || 0;
+        if (newsBadge) {
+            if (bu > 0) {
+                newsBadge.textContent = bu > 9 ? '9+' : String(bu);
+                newsBadge.style.display = '';
+            } else {
+                newsBadge.style.display = 'none';
+            }
         }
     }
 
@@ -2603,7 +2671,7 @@ body[data-chat-bar="1"] #feedback-fab-wrap { bottom: 5rem; }
             var title    = escHtml(it.subject || (isBc ? 'Nachricht von TheraPano.de' : 'Support #' + it.id));
             var preview  = escHtml(it.last_message ? it.last_message.substr(0, 80) + (it.last_message.length > 80 ? '…' : '') : '');
             var dot      = hasUnrd ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#ef4444;margin-left:4px;flex-shrink:0;"></span>' : '';
-            html += '<li class="alert alert-dismissable' + (hasUnrd ? ' unread' : '') + '" style="cursor:pointer;" data-fb-id="' + it.id + '">' +
+            html += '<li class="alert alert-dismissable' + (hasUnrd ? ' unread' : '') + '" style="cursor:pointer;" data-fb-id="' + it.id + '" data-type="' + escHtml(it.type || '') + '">' +
                     '<span class="d-flex align-items-start gap-2">' +
                     '<span style="font-size:1rem;line-height:1;margin-top:1px;">' + icon + '</span>' +
                     '<span class="d-flex flex-column flex-1 overflow-hidden">' +
@@ -2618,15 +2686,23 @@ body[data-chat-bar="1"] #feedback-fab-wrap { bottom: 5rem; }
         bellSupportList.querySelectorAll('li[data-fb-id]').forEach(function(el) {
             el.addEventListener('click', function(e) {
                 e.stopPropagation();
-                var fbId = parseInt(el.dataset.fbId);
+                var fbId   = parseInt(el.dataset.fbId);
+                var isBc   = el.dataset.type === 'broadcast';
                 // Close dropdown
                 var ddInstance = bootstrap.Dropdown.getInstance(document.getElementById('bell-btn-topbar'));
                 if (ddInstance) ddInstance.hide();
-                // Open modal on inbox tab → thread
                 if (!bsModal || !modal) return;
-                bootstrap.Tab.getOrCreateInstance(document.getElementById('fb-tab-inbox')).show();
-                bsModal.show();
-                setTimeout(function(){ openThread(fbId); }, 180);
+                if (isBc) {
+                    // Open news tab → thread
+                    bootstrap.Tab.getOrCreateInstance(document.getElementById('fb-tab-news')).show();
+                    bsModal.show();
+                    setTimeout(function(){ openNewsThread(fbId); }, 180);
+                } else {
+                    // Open inbox tab → thread
+                    bootstrap.Tab.getOrCreateInstance(document.getElementById('fb-tab-inbox')).show();
+                    bsModal.show();
+                    setTimeout(function(){ openThread(fbId); }, 180);
+                }
             });
         });
     }
@@ -2637,17 +2713,20 @@ body[data-chat-bar="1"] #feedback-fab-wrap { bottom: 5rem; }
             .then(function(r){ return r.ok ? r.json() : null; })
             .then(function(d){
                 if (!d) return;
-                var n = d.unread || 0;
-                if (n > unreadCount) {
+                var items     = d.items || [];
+                var inboxUnrd = items.filter(function(it){ return it.type !== 'broadcast' && parseInt(it.unread_replies) > 0; }).length;
+                var newsUnrd  = items.filter(function(it){ return it.type === 'broadcast' && parseInt(it.unread_replies) > 0; }).length;
+                var total     = inboxUnrd + newsUnrd;
+                if (total > unreadCount) {
                     window.showAppToast && window.showAppToast({
                         id:      'support_' + Date.now(),
                         type:    'support',
-                        message: '💬 Neue Support-Antwort eingegangen',
+                        message: newsUnrd > 0 ? '📢 Neue Neuigkeit von TheraPano.de' : '💬 Neue Support-Antwort eingegangen',
                         url:     '#',
                     });
                 }
-                setBadge(n);
-                renderBellSupport(d.items || [], n);
+                setBadge(inboxUnrd, newsUnrd);
+                renderBellSupport(items, total);
             })
             .catch(function(){});
     }
@@ -2697,6 +2776,11 @@ body[data-chat-bar="1"] #feedback-fab-wrap { bottom: 5rem; }
         loadTicketList();
     });
 
+    /* ─── When news tab shown: load news list ─── */
+    tabNews && tabNews.addEventListener('shown.bs.tab', function () {
+        loadNewsList();
+    });
+
     /* ─── Go-to-inbox from success screen ─── */
     gotoInbox && gotoInbox.addEventListener('click', function () {
         bootstrap.Tab.getOrCreateInstance(tabInbox).show();
@@ -2706,7 +2790,9 @@ body[data-chat-bar="1"] #feedback-fab-wrap { bottom: 5rem; }
     modal.addEventListener('hidden.bs.modal', function () {
         resetForm();
         showTicketList();
-        currentFbId = null;
+        showNewsList();
+        currentFbId  = null;
+        currentNewsId = null;
     });
 
     function resetForm() {
@@ -2768,6 +2854,137 @@ body[data-chat-bar="1"] #feedback-fab-wrap { bottom: 5rem; }
         if (replyInput) replyInput.value = '';
     }
 
+    /* ─── News list ─── */
+    function showNewsList() {
+        if (newsList)       newsList.style.display = '';
+        if (newsThreadView) newsThreadView.style.display = 'none';
+        currentNewsId = null;
+        if (newsReplyInput) newsReplyInput.value = '';
+    }
+
+    function loadNewsList() {
+        if (!newsList) return;
+        newsList.innerHTML = '<div class="fb-thread-loading">Lädt…</div>';
+        newsList.style.display = '';
+        if (newsThreadView) newsThreadView.style.display = 'none';
+
+        fetch('/feedback/history', { headers: {'X-Requested-With':'XMLHttpRequest'} })
+            .then(function(r){ return r.ok ? r.json() : {items:[],unread:0}; })
+            .then(function(d){
+                var broadcasts = (d.items || []).filter(function(it){ return it.type === 'broadcast'; });
+                renderNewsList(broadcasts);
+            })
+            .catch(function(){ newsList.innerHTML = '<div class="fb-thread-loading text-danger">Fehler beim Laden.</div>'; });
+    }
+
+    function renderNewsList(items) {
+        if (!newsList) return;
+        if (items.length === 0) {
+            newsList.innerHTML = '<div class="fb-thread-loading">Keine Neuigkeiten vorhanden.<br>' +
+                '<span style="font-size:.75rem;opacity:.6;">Hier erscheinen Nachrichten von TheraPano.de.</span></div>';
+            return;
+        }
+
+        var html = '';
+        items.forEach(function(it) {
+            var hasUnread = parseInt(it.unread_replies) > 0;
+            var newBadge  = hasUnread
+                ? '<span style="background:#7c3aed;color:#fff;border-radius:8px;font-size:.65rem;padding:1px 6px;font-weight:700;white-space:nowrap;">Neu</span>'
+                : '';
+            var preview = it.last_message
+                ? '<div style="font-size:.75rem;opacity:.65;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:90%;">' + escHtml(it.last_message.substr(0, 80)) + '</div>'
+                : '';
+            html += '<div class="fb-ticket-item fb-ticket-broadcast' + (hasUnread ? ' has-unread' : '') + '" data-id="' + it.id + '">' +
+                    '<div class="d-flex align-items-center justify-content-between gap-1">' +
+                    '<div class="fb-ticket-title d-flex align-items-center gap-1">📢 ' + escHtml(it.subject || 'Neuigkeit von TheraPano.de') +
+                    '<span style="background:#7c3aed;color:#fff;border-radius:8px;font-size:.6rem;padding:1px 5px;font-weight:700;margin-left:4px;">TheraPano.de</span>' +
+                    '</div>' +
+                    newBadge +
+                    '</div>' +
+                    preview +
+                    '<div class="fb-ticket-meta" style="margin-top:2px;">' +
+                    escHtml((it.created_at || '').substr(0, 10)) +
+                    '</div>' +
+                    '</div>';
+        });
+
+        newsList.innerHTML = html;
+
+        newsList.querySelectorAll('.fb-ticket-item').forEach(function(el) {
+            el.addEventListener('click', function(){
+                openNewsThread(parseInt(el.dataset.id));
+            });
+        });
+    }
+
+    function openNewsThread(feedbackId) {
+        currentNewsId = feedbackId;
+        if (newsList)       newsList.style.display = 'none';
+        if (newsThreadView) newsThreadView.style.display = '';
+        if (newsThreadMsgs) newsThreadMsgs.innerHTML = '<div class="fb-thread-loading">Lädt…</div>';
+        if (newsThreadSubj) newsThreadSubj.textContent = 'Lädt…';
+
+        fetch('/feedback/' + feedbackId + '/thread', { headers: {'X-Requested-With':'XMLHttpRequest'} })
+            .then(function(r){ return r.ok ? r.json() : null; })
+            .then(function(d){
+                if (!d || d.error) {
+                    if (newsThreadMsgs) newsThreadMsgs.innerHTML = '<div class="fb-thread-loading text-danger">Fehler beim Laden.</div>';
+                    return;
+                }
+                if (newsThreadSubj) newsThreadSubj.textContent = d.original.subject || 'Neuigkeit von TheraPano.de';
+                var html = '';
+                var isBc = d.original.type === 'broadcast';
+                html += renderBubble({
+                    sender_type: 'admin',
+                    sender_name: 'TheraPano.de',
+                    message:     d.original.message,
+                    created_at:  d.original.created_at,
+                });
+                var replyList = d.replies || [];
+                if (replyList.length > 0 && replyList[0].message === d.original.message) {
+                    replyList = replyList.slice(1);
+                }
+                replyList.forEach(function(r){ html += renderBubble(r); });
+                if (newsThreadMsgs) {
+                    newsThreadMsgs.innerHTML = html;
+                    newsThreadMsgs.scrollTop = newsThreadMsgs.scrollHeight;
+                }
+                setTimeout(pollReplies, 400);
+            })
+            .catch(function(){
+                if (newsThreadMsgs) newsThreadMsgs.innerHTML = '<div class="fb-thread-loading text-danger">Netzwerkfehler.</div>';
+            });
+    }
+
+    newsBackBtn && newsBackBtn.addEventListener('click', function() {
+        showNewsList();
+        loadNewsList();
+    });
+
+    newsReplySend && newsReplySend.addEventListener('click', function() {
+        var msg = newsReplyInput ? newsReplyInput.value.trim() : '';
+        if (!msg || !currentNewsId) return;
+        newsReplySend.disabled = true;
+        fetch('/feedback/' + currentNewsId + '/reply', {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({ _csrf_token: CSRF, message: msg }).toString(),
+        })
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(d){
+            newsReplySend.disabled = false;
+            if (d && d.success && d.reply && newsThreadMsgs) {
+                newsReplyInput.value = '';
+                newsThreadMsgs.innerHTML += renderBubble(d.reply);
+                newsThreadMsgs.scrollTop = newsThreadMsgs.scrollHeight;
+            }
+        })
+        .catch(function(){ newsReplySend.disabled = false; });
+    });
+
     function loadTicketList() {
         ticketList.innerHTML = '<div class="fb-thread-loading">Lädt…</div>';
         ticketList.style.display = '';
@@ -2776,8 +2993,12 @@ body[data-chat-bar="1"] #feedback-fab-wrap { bottom: 5rem; }
         fetch('/feedback/history', { headers: {'X-Requested-With':'XMLHttpRequest'} })
             .then(function(r){ return r.ok ? r.json() : {items:[],unread:0}; })
             .then(function(d){
-                renderTicketList(d.items || [], d.unread || 0);
-                setBadge(d.unread || 0);
+                var items    = d.items || [];
+                var inboxItems = items.filter(function(it){ return it.type !== 'broadcast'; });
+                var inboxUnrd  = inboxItems.filter(function(it){ return parseInt(it.unread_replies) > 0; }).length;
+                var newsUnrd   = items.filter(function(it){ return it.type === 'broadcast' && parseInt(it.unread_replies) > 0; }).length;
+                renderTicketList(inboxItems, inboxUnrd);
+                setBadge(inboxUnrd, newsUnrd);
             })
             .catch(function(){ ticketList.innerHTML = '<div class="fb-thread-loading text-danger">Fehler beim Laden.</div>'; });
     }
@@ -2789,7 +3010,7 @@ body[data-chat-bar="1"] #feedback-fab-wrap { bottom: 5rem; }
         if (items.length === 0) {
             ticketList.innerHTML =
                 '<div class="fb-thread-loading">Noch keine Anfragen gesendet.<br>' +
-                '<span style="font-size:.75rem;opacity:.6;">Klicke auf „Neue Anfrage" um den Support zu kontaktieren.</span></div>';
+                '<span style="font-size:.75rem;opacity:.6;">Klicke auf „Neue Anfrage“ um den Support zu kontaktieren.</span></div>';
             return;
         }
 
@@ -2800,24 +3021,19 @@ body[data-chat-bar="1"] #feedback-fab-wrap { bottom: 5rem; }
         }
 
         items.forEach(function(it) {
-            var hasUnread   = parseInt(it.unread_replies) > 0;
-            var replies     = parseInt(it.reply_count) || 0;
-            var isBroadcast = it.type === 'broadcast';
-            var stLabel     = statusLabel[it.status] || it.status || 'Offen';
-            var tLabel      = typeLabel[it.type] || it.type || '';
-            var titleText   = isBroadcast ? (it.subject || '📢 Nachricht von TheraPano.de') : escHtml(it.subject || tLabel || 'Anfrage #' + it.id);
-            var fromBadge   = isBroadcast
-                ? '<span style="background:#7c3aed;color:#fff;border-radius:8px;font-size:.6rem;padding:1px 5px;font-weight:700;white-space:nowrap;margin-left:4px;">TheraPano.de</span>'
-                : '';
-            var newBadge    = hasUnread
+            var hasUnread = parseInt(it.unread_replies) > 0;
+            var replies   = parseInt(it.reply_count) || 0;
+            var stLabel   = statusLabel[it.status] || it.status || 'Offen';
+            var tLabel    = typeLabel[it.type] || it.type || '';
+            var newBadge  = hasUnread
                 ? '<span style="background:#ef4444;color:#fff;border-radius:8px;font-size:.65rem;padding:1px 6px;font-weight:700;white-space:nowrap;">Neu</span>'
                 : '';
-            html += '<div class="fb-ticket-item' + (hasUnread ? ' has-unread' : '') + (isBroadcast ? ' fb-ticket-broadcast' : '') + '" data-id="' + it.id + '">' +
+            html += '<div class="fb-ticket-item' + (hasUnread ? ' has-unread' : '') + '" data-id="' + it.id + '">' +
                     '<div class="d-flex align-items-center justify-content-between gap-1">' +
-                    '<div class="fb-ticket-title d-flex align-items-center gap-1">' + (isBroadcast ? '📢 ' : '') + escHtml(it.subject || (isBroadcast ? 'Nachricht von TheraPano.de' : tLabel) || 'Anfrage #' + it.id) + fromBadge + '</div>' +
+                    '<div class="fb-ticket-title">' + escHtml(it.subject || tLabel || 'Anfrage #' + it.id) + '</div>' +
                     newBadge +
                     '</div>' +
-                    '<div class="fb-ticket-meta">' + (isBroadcast ? '<span style="color:#a78bfa;">TheraPano.de</span> · ' : '') + stLabel +
+                    '<div class="fb-ticket-meta">' + stLabel +
                     (replies > 0 ? ' · ' + replies + ' Nachricht(en)' : '') +
                     ' · ' + escHtml((it.created_at || '').substr(0,10)) +
                     '</div>' +
