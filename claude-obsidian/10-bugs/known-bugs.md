@@ -26,6 +26,37 @@ Bug gefunden → in Datei dokumentieren → Fix referenzieren → Status aktuali
 
 ---
 
+## Bug: Portal-Admin Hausaufgaben — Seite nach Vorlagenauswahl nicht mehr klickbar — FIXED (Mai 2026)
+
+### Symptom
+Nach Klick auf eine Vorlage in `/portal-admin/Tiere/{id}/Hausaufgaben` blockierte die Seite vollständig.
+Kein Element mehr klickbar. Erst nach Seitenreload war die Seite wieder bedienbar.
+
+### Ursache (Root Cause)
+Bootstrap 5 Modal Stacking Bug:
+- `modal-create-plan` öffnet sich (Backdrop + `body.modal-open` gesetzt)
+- `openTemplateSelector()` → `new bootstrap.Modal(el).show()` öffnet `modal-template-select` als Sub-Modal
+- Problem 1: `new bootstrap.Modal(el)` erstellt eine neue Instanz ohne die vorherige freizugeben → Instanz-Leak
+- Problem 2 (Hauptursache): Beim `.hide()` des Sub-Modals (`modal-template-select`) ruft Bootstrap intern `_resetAdjustments()` auf und entfernt `body.modal-open` sowie das `.modal-backdrop` — weil Bootstrap das hiding-Modal für das einzige offene Modal hält
+- Ergebnis: `modal-create-plan` hat `show`-Klasse und `display:block`, aber kein Backdrop und kein `body.modal-open` mehr → unsichtbares Overlay blockiert alle Klicks
+
+### Betroffene Dateien
+- `plugins/owner-portal/templates/admin_homework.twig`
+- `plugins/owner-portal/templates/admin_homework_edit.twig`
+
+### Fix (Mai 2026)
+1. `new bootstrap.Modal(el)` → `bootstrap.Modal.getOrCreateInstance(el)` überall (kein Instanz-Leak)
+2. `hidden.bs.modal`-Listener auf `modal-template-select` und `modal-library-picker`:
+   - Prüft ob `modal-create-plan` noch `.show` hat
+   - Wenn ja: `body.modal-open` wiederherstellen + neues `.modal-backdrop.fade.show` einfügen
+3. `cleanupStaleModalState()` Safety-Funktion: entfernt verwaiste Backdrops/`modal-open` NUR wenn kein Modal mehr `.show` hat
+4. Gleiches Muster auf `admin_homework_edit.twig` für Konsistenz
+
+### Status
+`fixed` — Commit: fix: prevent homework template selection from blocking portal admin
+
+---
+
 ## Bug: Flutter Android — `feature_disabled` 403 beim Login — FIXED (Mai 2026)
 
 **Status:** `fixed`  

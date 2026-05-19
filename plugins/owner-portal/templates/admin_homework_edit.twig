@@ -332,6 +332,17 @@ document.addEventListener('click', function(e) {
     } catch(err) {}
 });
 
+/* ── Safety: remove stranded backdrops only when no modal is truly open ── */
+function cleanupStaleModalState() {
+    var openModals = document.querySelectorAll('.modal.show');
+    if (openModals.length === 0) {
+        document.querySelectorAll('.modal-backdrop').forEach(function(el){ el.remove(); });
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+    }
+}
+
 function selectTemplate(tpl) {
     var freqMap = {
         'daily': 'Täglich', 'twice_daily': '2x täglich',
@@ -346,8 +357,8 @@ function selectTemplate(tpl) {
         duration:        tpl.duration_value ? (tpl.duration_value + ' ' + (unitMap[tpl.duration_unit] || tpl.duration_unit)) : '',
         therapist_notes: tpl.therapist_notes || '',
     });
-    var modal = bootstrap.Modal.getInstance(document.getElementById('modal-template-select'));
-    if (modal) modal.hide();
+    var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-template-select'));
+    modal.hide();
 }
 
 function escHtml(str) {

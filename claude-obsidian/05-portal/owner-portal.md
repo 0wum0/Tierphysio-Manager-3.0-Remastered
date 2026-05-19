@@ -69,6 +69,14 @@ Web-Portal (session-basiert) + Flutter Mobile App (token-basiert, seit Commit 01
 - Portal-Domain: `app.therapano.de` (mobile API unter app.therapano.de/api/portal/*)
 - Session-Auth (Web) und Token-Auth (Mobile) koexistieren — kein Umbau der Web-Auth
 
+## Portal-Admin Hausaufgaben — Bekannte Pitfalls
+
+### Bootstrap Modal Stacking (Mai 2026, gefixt)
+`/portal-admin/Tiere/{id}/Hausaufgaben` nutzt verschachtelte Modals.
+Regel: **immer `getOrCreateInstance(el)` statt `new bootstrap.Modal(el)`**.
+Nach `hidden.bs.modal` eines Sub-Modals: `body.modal-open` und Backdrop für das Eltern-Modal wiederherstellen.
+Details: `claude-obsidian/10-bugs/known-bugs.md`
+
 ## TODOs
 - Profil-Passwort-Änderung Backend-Endpoint implementieren
 - Tierfoto-Upload via API ergänzen

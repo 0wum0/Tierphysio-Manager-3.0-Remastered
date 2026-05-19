@@ -63,6 +63,18 @@ Beim nächsten Request wird der Cache aus der SaaS-DB neu aufgebaut, dabei greif
 - `required_plan = 'basic'` → homework ist für alle Pläne freigegeben
 - Alle Pläne haben `homework` in ihrer Feature-Liste
 
+## Bootstrap Modal Stacking — Wichtiger Hinweis (Mai 2026)
+
+`admin_homework.twig` öffnet bei der Plan-Erstellung **verschachtelte Modals**:
+- `modal-create-plan` (Eltern-Modal)
+- `modal-template-select` / `modal-library-picker` (Sub-Modale)
+
+**Bootstrap 5 Regel**: Beim `.hide()` eines Sub-Modals entfernt Bootstrap `body.modal-open` und das Backdrop,
+auch wenn ein anderes Modal noch offen ist. Daher:
+- **Immer `getOrCreateInstance(el)`** statt `new bootstrap.Modal(el)` verwenden
+- Nach dem `hidden.bs.modal`-Event jedes Sub-Modals: prüfen ob Eltern-Modal noch `.show` hat → ggf. `body.modal-open` + Backdrop wiederherstellen
+- `cleanupStaleModalState()` räumt NUR auf wenn kein Modal mehr `.show` hat
+
 ## Änderungshistorie
 
 | Datum | Änderung |
@@ -70,6 +82,7 @@ Beim nächsten Request wird der Cache aus der SaaS-DB neu aufgebaut, dabei greif
 | Mai 2026 | homework von `pro` auf `basic` Plan gehoben — Migration 063 |
 | Mai 2026 | homework in alle Plan-Feature-Listen aufgenommen (v063) |
 | Mai 2026 | Bestehende Tenants werden via Cache-Invalidierung automatisch geheilt |
+| Mai 2026 | Bootstrap Modal Stacking Bug behoben — Seite nach Vorlagenauswahl nicht mehr blockiert |
 
 ## Verlinkungen
 - [[01-architecture/migrations]]

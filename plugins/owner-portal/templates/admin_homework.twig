@@ -322,6 +322,17 @@ var _csrfToken         = {{ csrf_token|json_encode|replace({'</': '<\/'})|raw }}
 <script>
 var taskCount = 0;
 
+/* ── Safety: remove stranded backdrops only when no modal is truly open ── */
+function cleanupStaleModalState() {
+    var openModals = document.querySelectorAll('.modal.show');
+    if (openModals.length === 0) {
+        document.querySelectorAll('.modal-backdrop').forEach(function(el){ el.remove(); });
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+    }
+}
+
 function openCreatePlan(patientId, patientName) {
     document.getElementById('create-patient-id').value = patientId;
     document.getElementById('create-patient-name').textContent = patientName;
@@ -350,7 +361,7 @@ function openCreatePlan(patientId, patientName) {
     dateInput.dataset.patientId   = patientId;
     dateInput.dataset.patientName = patientName;
 
-    new bootstrap.Modal(document.getElementById('modal-create-plan')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-create-plan')).show();
 }
 
 function addTask(prefill) {
@@ -398,8 +409,32 @@ function updateTasksEmpty() {
 }
 
 function openTemplateSelector() {
-    new bootstrap.Modal(document.getElementById('modal-template-select')).show();
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-template-select')).show();
 }
+
+/* When the template-select modal finishes hiding, restore the create-plan modal state.
+ * Bootstrap 5 removes body.modal-open and the backdrop when ANY modal hides, even if
+ * another modal is still open. This listener re-adds the class and backdrop so the
+ * parent modal (modal-create-plan) remains fully interactive. */
+(function() {
+    var tplEl = document.getElementById('modal-template-select');
+    if (!tplEl) return;
+    tplEl.addEventListener('hidden.bs.modal', function() {
+        var createPlanEl = document.getElementById('modal-create-plan');
+        if (!createPlanEl) return;
+        var isOpen = createPlanEl.classList.contains('show');
+        if (isOpen) {
+            document.body.classList.add('modal-open');
+            if (!document.querySelector('.modal-backdrop')) {
+                var bd = document.createElement('div');
+                bd.className = 'modal-backdrop fade show';
+                document.body.appendChild(bd);
+            }
+        } else {
+            cleanupStaleModalState();
+        }
+    });
+})();
 
 /* Delegated click handler for template cards (replaces inline onclick) */
 document.addEventListener('click', function(e) {
@@ -436,8 +471,8 @@ function selectTemplate(tpl) {
         duration:        tpl.duration_value ? (tpl.duration_value + ' ' + (unitMap[tpl.duration_unit] || tpl.duration_unit)) : '',
         therapist_notes: tpl.therapist_notes || '',
     });
-    var modal = bootstrap.Modal.getInstance(document.getElementById('modal-template-select'));
-    if (modal) modal.hide();
+    var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-template-select'));
+    modal.hide();
 }
 
 // On date pick: offer to create appointment if none exists on that date
@@ -611,6 +646,28 @@ document.addEventListener('click', function(e) {
 document.getElementById('lib-search').addEventListener('keydown', function(e){
     if (e.key === 'Enter') { e.preventDefault(); filterLibrary(); }
 });
+
+/* Same fix as template-select: restore body.modal-open / backdrop when library picker
+ * closes while the create-plan modal is still open. */
+(function() {
+    var libEl = document.getElementById('modal-library-picker');
+    if (!libEl) return;
+    libEl.addEventListener('hidden.bs.modal', function() {
+        var createPlanEl = document.getElementById('modal-create-plan');
+        if (!createPlanEl) return;
+        var isOpen = createPlanEl.classList.contains('show');
+        if (isOpen) {
+            document.body.classList.add('modal-open');
+            if (!document.querySelector('.modal-backdrop')) {
+                var bd = document.createElement('div');
+                bd.className = 'modal-backdrop fade show';
+                document.body.appendChild(bd);
+            }
+        } else {
+            cleanupStaleModalState();
+        }
+    });
+})();
 </script>
 
 </div>
