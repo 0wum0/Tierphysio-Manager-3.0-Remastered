@@ -284,6 +284,64 @@ class FeedbackController
     }
 
     /**
+     * GET /feedback/history
+     * Returns the last 10 feedback items (any status) for the current tenant.
+     */
+    public function history(array $params = []): void
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        $user = Auth::user();
+        if (!$user) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Unauthenticated']);
+            return;
+        }
+
+        $tenantInfo = $this->resolveTenantInfo();
+        $tenantId   = $tenantInfo['tenant_id'];
+
+        if (!$tenantId) {
+            echo json_encode(['items' => []]);
+            return;
+        }
+
+        try {
+            $pdo = $this->getSaasDb();
+            if ($pdo === null) {
+                echo json_encode(['items' => []]);
+                return;
+            }
+
+            $stmt = $pdo->prepare("
+                SELECT f.id, f.subject, f.type, f.status, f.created_at,
+                       f.unread_replies,
+                       (SELECT COUNT(*) FROM feedback_replies r WHERE r.feedback_id = f.id) AS reply_count
+                FROM feedback f
+                WHERE f.tenant_id = ?
+                ORDER BY f.created_at DESC
+                LIMIT 10
+            ");
+            $stmt->execute([$tenantId]);
+            $items = $stmt->fetchAll();
+
+            // Count total unread
+            $unreadStmt = $pdo->prepare("
+                SELECT COUNT(*) FROM feedback_replies r
+                JOIN feedback f ON f.id = r.feedback_id
+                WHERE f.tenant_id = ? AND r.sender_type = 'admin' AND r.is_read = 0
+            ");
+            $unreadStmt->execute([$tenantId]);
+            $unread = (int)$unreadStmt->fetchColumn();
+
+            echo json_encode(['items' => $items, 'unread' => $unread]);
+        } catch (\Throwable $e) {
+            error_log('[FeedbackController::history] ' . $e->getMessage());
+            echo json_encode(['items' => []]);
+        }
+    }
+
+    /**
      * GET /feedback/{id}/thread
      * Returns full conversation thread for a specific feedback item.
      */

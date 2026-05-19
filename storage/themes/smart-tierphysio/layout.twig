@@ -2249,33 +2249,45 @@ window.SearchableSelect = (function(){
    ══════════════════════════════════════════════════════════════════════════ #}
 {% if current_user is defined and current_user %}
 <style>
-/* ── FAB ── */
-#feedback-fab {
-    position: fixed;
+/* ── FAB wrapper (fixed position on div, not button — avoids SmartAdmin button resets) ── */
+#feedback-fab-wrap {
+    position: fixed !important;
     right: 1.25rem;
     bottom: 1.25rem;
-    z-index: 1040;
+    z-index: 9999;
     width: 46px;
     height: 46px;
+    pointer-events: none;
+    transition: bottom .2s ease;
+}
+body[data-chat-bar="1"] #feedback-fab-wrap { bottom: 5rem; }
+@media (max-width:600px) {
+    #feedback-fab-wrap { width:42px;height:42px;right:.9rem;bottom:.9rem; }
+    body[data-chat-bar="1"] #feedback-fab-wrap { bottom:4.5rem; }
+}
+/* ── FAB button ── */
+#feedback-fab {
+    position: static !important;
+    width: 100%;
+    height: 100%;
     border-radius: 50%;
-    background: var(--bs-primary, #2563eb);
-    color: #fff;
-    border: none;
+    background: var(--bs-primary, #2563eb) !important;
+    color: #fff !important;
+    border: none !important;
     cursor: pointer;
-    display: flex;
+    display: flex !important;
     align-items: center;
     justify-content: center;
     box-shadow: 0 4px 16px rgba(37,99,235,.45);
-    transition: transform .18s ease, box-shadow .18s ease, bottom .2s ease;
+    transition: transform .18s ease, box-shadow .18s ease;
     outline: none;
+    pointer-events: auto;
+    padding: 0;
+    margin: 0;
+    line-height: 1;
 }
 #feedback-fab:hover { transform: scale(1.1); box-shadow: 0 6px 22px rgba(37,99,235,.55); }
 #feedback-fab:active { transform: scale(.95); }
-body[data-chat-bar="1"] #feedback-fab { bottom: 5rem; }
-@media (max-width:600px) {
-    #feedback-fab { width:42px;height:42px;right:.9rem;bottom:.9rem; }
-    body[data-chat-bar="1"] #feedback-fab { bottom:4.5rem; }
-}
 
 /* ── Modal ── */
 #feedback-modal .modal-header { border-bottom:1px solid rgba(255,255,255,.1); }
@@ -2327,17 +2339,17 @@ body[data-chat-bar="1"] #feedback-fab { bottom: 5rem; }
 @keyframes fb-spin { to { transform:rotate(360deg); } }
 </style>
 
-<button id="feedback-fab" type="button" title="Feedback &amp; Support" aria-label="Feedback und Support senden" data-no-ripple style="position:relative;">
-    <span id="fb-badge" style="position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;background:#ef4444;color:#fff;border-radius:9px;font-size:.65rem;font-weight:700;display:none;align-items:center;justify-content:center;padding:0 4px;line-height:1;border:2px solid var(--bs-body-bg,#0f172a);pointer-events:none;"></span>
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        <line x1="9" y1="10" x2="15" y2="10"/>
-        <line x1="9" y1="14" x2="13" y2="14"/>
-    </svg>
-</button>
-
-{# Bell badge ist jetzt nur noch für Polling-Zwecke als verstecktes Element #}
+<div id="feedback-fab-wrap">
+    <button id="feedback-fab" type="button" title="Feedback &amp; Support" aria-label="Feedback und Support senden" data-no-ripple>
+        <span id="fb-badge" style="position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;background:#ef4444;color:#fff;border-radius:9px;font-size:.65rem;font-weight:700;display:none;align-items:center;justify-content:center;padding:0 4px;line-height:1;border:2px solid var(--bs-body-bg,#0f172a);pointer-events:none;"></span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <line x1="9" y1="10" x2="15" y2="10"/>
+            <line x1="9" y1="14" x2="13" y2="14"/>
+        </svg>
+    </button>
+</div>
 <span id="support-bell-badge" style="display:none;" aria-hidden="true"></span>
 
 {# ── Feedback Modal ── #}
@@ -2646,50 +2658,46 @@ body[data-chat-bar="1"] #feedback-fab { bottom: 5rem; }
         ticketList.style.display = '';
         threadView.style.display = 'none';
 
-        fetch('/feedback/replies', { headers: {'X-Requested-With':'XMLHttpRequest'} })
-            .then(function(r){ return r.ok ? r.json() : null; })
+        fetch('/feedback/history', { headers: {'X-Requested-With':'XMLHttpRequest'} })
+            .then(function(r){ return r.ok ? r.json() : {items:[],unread:0}; })
             .then(function(d){
-                // We need the full ticket list: use a separate endpoint
-                // For now, use the unread items as entry points + load list via history trick
-                fetchTicketHistory();
+                renderTicketList(d.items || [], d.unread || 0);
+                setBadge(d.unread || 0);
             })
             .catch(function(){ ticketList.innerHTML = '<div class="fb-thread-loading text-danger">Fehler beim Laden.</div>'; });
     }
 
-    function fetchTicketHistory() {
-        // Load last 10 feedback items for this tenant via the same replies endpoint
-        // but also get feedback IDs. We reuse /feedback/replies which gives us feedback_id + subject.
-        fetch('/feedback/replies', { headers: {'X-Requested-With':'XMLHttpRequest'} })
-            .then(function(r){ return r.ok ? r.json() : {unread:0,items:[]}; })
-            .then(function(d){
-                renderTicketList(d.items || [], d.unread || 0);
-                setBadge(d.unread || 0);
-            });
-    }
+    var statusLabel = {open:'Offen', in_progress:'In Bearbeitung', resolved:'Erledigt', closed:'Geschlossen'};
+    var typeLabel   = {bug:'🐛 Fehler', support:'🆘 Support', feature:'💡 Idee', question:'❓ Frage', praise:'⭐ Lob', other:'💬 Sonstiges'};
 
     function renderTicketList(items, unreadTotal) {
         if (items.length === 0) {
             ticketList.innerHTML =
-                '<div class="fb-thread-loading">Keine ungelesenen Antworten.<br>' +
+                '<div class="fb-thread-loading">Noch keine Anfragen gesendet.<br>' +
                 '<span style="font-size:.75rem;opacity:.6;">Klicke auf „Neue Anfrage" um den Support zu kontaktieren.</span></div>';
             return;
         }
 
-        var html = '<div style="font-size:.75rem;opacity:.55;margin-bottom:.5rem;padding:0 .1rem;">' +
-                   unreadTotal + ' ungelesene Antwort(en)</div>';
+        var html = '';
+        if (unreadTotal > 0) {
+            html += '<div style="font-size:.75rem;color:#ef4444;margin-bottom:.5rem;padding:0 .1rem;font-weight:600;">' +
+                    '● ' + unreadTotal + ' neue Antwort(en)</div>';
+        }
 
-        // Group by feedback_id
-        var seen = {};
         items.forEach(function(it) {
-            if (!seen[it.feedback_id]) {
-                seen[it.feedback_id] = it;
-            }
-        });
-
-        Object.values(seen).forEach(function(it) {
-            html += '<div class="fb-ticket-item has-unread" data-id="' + it.feedback_id + '">' +
-                    '<div class="fb-ticket-title">' + escHtml(it.subject || 'Support-Anfrage #' + it.feedback_id) + '</div>' +
-                    '<div class="fb-ticket-meta">Neue Antwort · ' + escHtml(it.sender_name || 'Support') + '</div>' +
+            var hasUnread = parseInt(it.unread_replies) > 0;
+            var replies   = parseInt(it.reply_count) || 0;
+            var stLabel   = statusLabel[it.status] || it.status || 'Offen';
+            var tLabel    = typeLabel[it.type] || it.type || '';
+            html += '<div class="fb-ticket-item' + (hasUnread ? ' has-unread' : '') + '" data-id="' + it.id + '">' +
+                    '<div class="d-flex align-items-center justify-content-between">' +
+                    '<div class="fb-ticket-title">' + escHtml(it.subject || tLabel || 'Anfrage #' + it.id) + '</div>' +
+                    (hasUnread ? '<span style="background:#ef4444;color:#fff;border-radius:8px;font-size:.65rem;padding:1px 6px;font-weight:700;white-space:nowrap;">Neu</span>' : '') +
+                    '</div>' +
+                    '<div class="fb-ticket-meta">' + stLabel +
+                    (replies > 0 ? ' · ' + replies + ' Nachricht(en)' : '') +
+                    ' · ' + escHtml((it.created_at || '').substr(0,10)) +
+                    '</div>' +
                     '</div>';
         });
 

@@ -751,6 +751,7 @@ $router->get('/events',                                              [EventContr
 
 // ── Feedback & Support (Praxis-App → SaaS-Feedback-Tabelle) ──────────────────
 $router->post('/feedback/submit',                                    [FeedbackController::class, 'submit'],             ['auth']);
+$router->get('/feedback/history',                                    [FeedbackController::class, 'history'],            ['auth']);
 $router->get('/feedback/replies',                                    [FeedbackController::class, 'replies'],            ['auth']);
 $router->post('/feedback/replies/read',                              [FeedbackController::class, 'markRepliesRead'],    ['auth']);
 $router->post('/feedback/{id}/reply',                                [FeedbackController::class, 'replyFromPractice'],  ['auth']);
