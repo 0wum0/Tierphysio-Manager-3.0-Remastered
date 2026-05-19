@@ -740,13 +740,10 @@
 
 {# ══════════════════════════════════════════════════════════════════════════
    FEEDBACK & SUPPORT FAB
-   Dauerhaft sichtbar auf allen Praxis-Seiten.
-   Position: rechts unten, 1.25rem Abstand.
-   Auf Seiten mit festem Chat-Send-Button (data-has-chat-bar) wird der FAB
-   per CSS automatisch nach oben verschoben (bottom: 4.5rem).
-   KEIN Backdrop-Problem: bootstrap.Modal.getOrCreateInstance() genutzt.
+   Nur als Fallback wenn kein aktives Theme-Layout vorhanden.
+   Primärer Ort: storage/themes/smart-tierphysio/layout.twig
    ══════════════════════════════════════════════════════════════════════════ #}
-{% if current_user is defined and current_user %}
+{% if current_user is defined and current_user and active_theme_layout is not defined %}
 <style>
 /* ── Feedback FAB ─────────────────────────────────────────────────────── */
 #feedback-fab {
