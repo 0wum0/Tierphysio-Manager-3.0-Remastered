@@ -119,9 +119,54 @@ created_at TIMESTAMP
 | GET | `/patienten/{id}/tierarztbericht` | Auto-PDF generieren |
 | POST | `/patienten/{id}/tierarztbericht/custom` | Manuellen Bericht erstellen |
 | GET | `/patienten/{id}/tierarztbericht/verlauf` | Berichtsliste (JSON) |
+| GET | `/patienten/{id}/tierarztbericht/{rid}/load` | Bericht-Content laden (JSON, für Edit) |
 | GET | `/patienten/{id}/tierarztbericht/{rid}/download` | PDF herunterladen |
 | DELETE | `/patienten/{id}/tierarztbericht/{rid}` | Bericht löschen |
+| POST | `/patienten/{id}/tierarztbericht/{rid}/update` | Bericht aktualisieren (neu-generiert PDF) |
 | POST | `/patienten/{id}/tierarztbericht/{rid}/email` | Per E-Mail versenden |
+
+## Bearbeiten-Flow (seit Mai 2026)
+
+### Sicherheit
+- `loadReport()`: prüft `patient_id = ?` → Tenant-Isolation
+- `updateCustom()`: prüft `patient_id = ? AND type = 'custom'` → nur Custom-Berichte editierbar, kein fremder Tenant-Zugriff
+- Auto-Berichte (`type = 'auto'`) sind nicht editierbar → HTTP 422
+
+### Edit-Ablauf
+1. Klick auf "Bearbeiten"-Button (nur bei `type = 'custom'`)
+2. `openEditVetReportModal(patientId, reportId)` aufgerufen
+3. Modal öffnet sich sofort (Ladeindikator)
+4. `GET /…/{rid}/load` → JSON: `{ok, content, recipient}`
+5. Quill-Editor mit `content` befüllt:
+   - HTML-Content → `dangerouslyPasteHTML()` (formatiert)
+   - Plain-Text-Legacy → `setText()` (backward-compat)
+6. Empfänger-Feld vorausgefüllt
+7. Benutzer bearbeitet
+8. Submit → `POST /…/{rid}/update`
+9. Controller: altes PDF löschen → neues PDF generieren → DB UPDATE
+10. Modal schließt → Liste neu laden → Toast
+
+### Modal-Modus-Erkennung
+- `<input id="cvr-edit-mode" value="">` → leer = Create, `"1"` = Edit
+- `<input id="cvr-edit-report-id">` → Report-ID im Edit-Modus
+- Modal-Titel: "Tierarztbericht manuell verfassen" / "Tierarztbericht bearbeiten"
+- Speichern-Button-Label: "PDF generieren & speichern" / "PDF aktualisieren & speichern"
+
+### PDF-Cache-Regel
+- Beim Update: altes PDF-File wird gelöscht, neues generiert (kein Cache-Problem)
+- Neuer Dateiname wird in DB gespeichert (`filename`-Spalte wird überschrieben)
+- Download-Link zeigt immer auf aktuelle Version
+
+### Editor-Reinit
+- `window.cvrQuill` bleibt als Singleton erhalten
+- Create-Mode: `setContents([])` zum Reset
+- Edit-Mode: `setContents([])` dann Content laden via fetch
+
+## Geänderte Dateien (Mai 2026)
+- `app/Services/CustomVetReportPdfService.php` — looksLikeHtml, sanitizeHtml, injectPdfCss, writeHTML
+- `plugins/vet-report/VetReportController.php` — sanitizeRichText(), loadReport(), updateCustom()
+- `plugins/vet-report/ServiceProvider.php` — loadReport + updateCustom Routen
+- `templates/partials/patient-modal-global.twig` — Quill-Editor, CSS, Templates, Form-Submit, Edit-Modus
 
 ## Bekannte Limits
 - TCPDF `writeHTML()` unterstützt nur Subset von CSS (kein flexbox, kein grid)

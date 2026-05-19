@@ -725,11 +725,13 @@
     <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header" style="padding-bottom:0.5rem;">
-                <h5 class="modal-title fw-bold">Tierarztbericht manuell verfassen</h5>
+                <h5 class="modal-title fw-bold" id="cvr-modal-title">Tierarztbericht manuell verfassen</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
             </div>
             <form id="custom-vet-report-form">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" id="cvr-edit-mode" name="cvr_edit_mode" value="">
+                <input type="hidden" id="cvr-edit-report-id" name="cvr_edit_report_id" value="">
                 <div class="modal-body" style="padding:0;overflow-y:auto;max-height:calc(100vh - 200px);">
                     <div id="cvr-doc-header" style="background:var(--bs-secondary-bg,#f8f9fa);border-bottom:1px solid var(--bs-border-color);padding:1.25rem 1.75rem 1.1rem;position:relative;">
                         <div style="position:absolute;top:0;left:0;bottom:0;width:4px;background:var(--bs-primary,#4f7cff);border-radius:0 2px 2px 0;"></div>
@@ -773,7 +775,7 @@
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
                     <button type="submit" class="btn btn-primary" id="btn-save-custom-vet-report">
                         <svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:0.4rem;margin-top:-2px;"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>
-                        PDF generieren &amp; speichern
+                        <span id="cvr-save-btn-label">PDF generieren &amp; speichern</span>
                     </button>
                 </div>
             </form>
@@ -1477,9 +1479,12 @@ function loadVetReports(patientId) {
                 html += '<div style="font-size:0.7rem;color:var(--bs-secondary-color);margin-top:0.1rem;">Erstellt'+esc(by)+'</div>';
                 if (r.recipient) html += '<div style="font-size:0.7rem;color:var(--bs-secondary-color);margin-top:0.1rem;">An: '+esc(r.recipient)+'</div>';
                 html += '</div></div>';
-                html += '<div style="display:flex;gap:0.3rem;margin-top:0.55rem;justify-content:flex-end;">';
+                html += '<div style="display:flex;gap:0.3rem;margin-top:0.55rem;justify-content:flex-end;flex-wrap:wrap;">';
                 html += '<a href="/patienten/'+patientId+'/tierarztbericht/'+r.id+'/download" target="_blank" class="btn btn-sm btn-outline-secondary" style="font-size:0.72rem;">Öffnen</a>';
-                html += '<button onclick="sendVetReportEmail('+patientId+','+r.id+',this)" class="btn btn-sm btn-outline-primary" style="font-size:0.72rem;" title="Per E-Mail an Tierhalter senden">📧 E-Mail</button>';
+                if (r.type === 'custom') {
+                    html += '<button onclick="openEditVetReportModal('+patientId+','+r.id+')" class="btn btn-sm btn-outline-primary" style="font-size:0.72rem;" title="Bericht bearbeiten"><svg width="11" height="11" fill="none" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:2px;"><path stroke="currentColor" stroke-width="2" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path stroke="currentColor" stroke-width="2" d="M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Bearbeiten</button>';
+                }
+                html += '<button onclick="sendVetReportEmail('+patientId+','+r.id+',this)" class="btn btn-sm btn-outline-secondary" style="font-size:0.72rem;" title="Per E-Mail an Tierhalter senden">📧 E-Mail</button>';
                 html += '<button onclick="deleteVetReport('+patientId+','+r.id+',this)" class="btn btn-sm btn-outline-danger" style="font-size:0.72rem;" title="Löschen"><svg width="11" height="11" fill="none" viewBox="0 0 24 24" style="vertical-align:middle;"><polyline stroke="currentColor" stroke-width="2" points="3 6 5 6 21 6"/><path stroke="currentColor" stroke-width="2" d="M19 6l-1 14H6L5 6"/></svg> Löschen</button>';
                 html += '</div>';
                 html += '</div>';
@@ -2857,6 +2862,13 @@ window.openPdCustomVetReportModal = function() {
     if (!pid) return;
     var form = document.getElementById('custom-vet-report-form');
     if (form) form.reset();
+    /* Reset to create mode */
+    document.getElementById('cvr-edit-mode').value      = '';
+    document.getElementById('cvr-edit-report-id').value = '';
+    var titleEl = document.getElementById('cvr-modal-title');
+    if (titleEl) titleEl.textContent = 'Tierarztbericht manuell verfassen';
+    var lblEl = document.getElementById('cvr-save-btn-label');
+    if (lblEl) lblEl.innerHTML = 'PDF generieren &amp; speichern';
     var nameEl = document.getElementById('cvr-patient-name');
     if (nameEl) {
         if (currentPatientData && currentPatientData.patient) {
@@ -2914,6 +2926,111 @@ window.openPdCustomVetReportModal = function() {
     });
 };
 
+window.openEditVetReportModal = function(patientId, reportId) {
+    if (!patientId || !reportId) return;
+    /* Store patient id so submit handler can use it */
+    window._vrChoicePatientId = patientId;
+
+    /* Show modal immediately with loading state */
+    var form = document.getElementById('custom-vet-report-form');
+    if (form) form.reset();
+
+    document.getElementById('cvr-edit-mode').value      = '1';
+    document.getElementById('cvr-edit-report-id').value = String(reportId);
+
+    var titleEl = document.getElementById('cvr-modal-title');
+    if (titleEl) titleEl.textContent = 'Tierarztbericht bearbeiten';
+    var lblEl = document.getElementById('cvr-save-btn-label');
+    if (lblEl) lblEl.innerHTML = 'PDF aktualisieren &amp; speichern';
+
+    /* Fill patient name from cached data */
+    var nameEl = document.getElementById('cvr-patient-name');
+    if (nameEl && currentPatientData && currentPatientData.patient) {
+        var p = currentPatientData.patient;
+        var o = currentPatientData.owner;
+        var info = p.name || '';
+        if (p.species) info += ' \u00b7 ' + p.species;
+        if (p.breed) info += ' (' + p.breed + ')';
+        if (o) info += ' \u2014 ' + esc((o.first_name||'') + ' ' + (o.last_name||''));
+        nameEl.textContent = info;
+    }
+    var dateEl = document.getElementById('cvr-date-display');
+    if (dateEl) {
+        dateEl.textContent = new Date().toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit',year:'numeric'});
+    }
+
+    var el = document.getElementById('modal-custom-vet-report');
+    var m = bootstrap.Modal.getInstance(el) || new bootstrap.Modal(el, {backdrop: false});
+    m.show();
+
+    /* Show loading indicator in editor area */
+    var editorEl = document.getElementById('cvr-quill-editor');
+    if (editorEl) editorEl.style.opacity = '0.4';
+    document.getElementById('btn-save-custom-vet-report').disabled = true;
+
+    /* Load Quill, then fetch the report content */
+    loadQuill(function() {
+        if (!window.cvrQuill) {
+            window.cvrQuill = new Quill(document.getElementById('cvr-quill-editor'), {
+                theme: 'snow',
+                placeholder: '',
+                modules: {
+                    toolbar: [
+                        [{ header: [1, 2, 3, false] }],
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ color: [] }, { background: [] }],
+                        [{ list: 'ordered' }, { list: 'bullet' }, { indent: '-1' }, { indent: '+1' }],
+                        ['blockquote', 'code-block'],
+                        [{ align: [] }],
+                        ['link'],
+                        ['clean']
+                    ]
+                }
+            });
+        } else {
+            /* Clear previous content before loading */
+            window.cvrQuill.setContents([]);
+        }
+
+        fetch('/patienten/' + patientId + '/tierarztbericht/' + reportId + '/load')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.ok) {
+                    alert('Fehler: ' + (data.error || 'Bericht konnte nicht geladen werden.'));
+                    bootstrap.Modal.getInstance(document.getElementById('modal-custom-vet-report'))?.hide();
+                    return;
+                }
+                /* Pre-fill recipient */
+                var recipEl = document.getElementById('cvr-recipient');
+                if (recipEl) recipEl.value = data.recipient || '';
+
+                /* Pre-fill editor — plain text gets wrapped, HTML is pasted directly */
+                var content = data.content || '';
+                if (content) {
+                    var looksHtml = /<\/?(?:p|br|ul|ol|li|h[1-6]|strong|em|b|i|u|s|blockquote)[>\s\/]/i.test(content);
+                    if (looksHtml) {
+                        window.cvrQuill.clipboard.dangerouslyPasteHTML(content);
+                    } else {
+                        /* Plain-text legacy: insert as plain text preserving line breaks */
+                        window.cvrQuill.setText(content);
+                    }
+                } else {
+                    window.cvrQuill.setContents([]);
+                }
+
+                document.getElementById('cvr-editor-empty-warn').style.display = 'none';
+            })
+            .catch(function(err) {
+                alert('Netzwerkfehler: ' + err.message);
+                bootstrap.Modal.getInstance(document.getElementById('modal-custom-vet-report'))?.hide();
+            })
+            .finally(function() {
+                if (editorEl) editorEl.style.opacity = '';
+                document.getElementById('btn-save-custom-vet-report').disabled = false;
+            });
+    });
+};
+
 document.getElementById('custom-vet-report-form')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     var pid = window._vrChoicePatientId || window.pdAktPatientId || (typeof patientId !== 'undefined' ? patientId : null) || window.customVetReportPatientId;
@@ -2932,13 +3049,19 @@ document.getElementById('custom-vet-report-form')?.addEventListener('submit', as
         document.getElementById('cvr-content').value = html;
     }
 
+    var isEditMode = document.getElementById('cvr-edit-mode').value === '1';
+    var editReportId = document.getElementById('cvr-edit-report-id').value;
+    var url = isEditMode
+        ? '/patienten/' + pid + '/tierarztbericht/' + editReportId + '/update'
+        : '/patienten/' + pid + '/tierarztbericht/custom';
+
     var btn = document.getElementById('btn-save-custom-vet-report');
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generiere...';
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>' + (isEditMode ? 'Aktualisiere...' : 'Generiere...');
     
     var fd = new FormData(this);
     try {
-        var res = await fetch('/patienten/' + pid + '/tierarztbericht/custom', {
+        var res = await fetch(url, {
             method: 'POST',
             body: fd
         });
@@ -2948,6 +3071,9 @@ document.getElementById('custom-vet-report-form')?.addEventListener('submit', as
                 alert('Fehler: ' + (rdata.error || 'Unbekannter Fehler'));
             } else {
                 bootstrap.Modal.getInstance(document.getElementById('modal-custom-vet-report'))?.hide();
+                if (typeof _hwShowToast !== 'undefined') {
+                    _hwShowToast(isEditMode ? 'Bericht aktualisiert.' : 'Bericht erstellt.', 'success');
+                }
                 if (window.pdAktPatientId && typeof loadVetReports !== 'undefined') {
                     document.getElementById('pd-vr-list').innerHTML = '<div style="text-align:center;padding:2rem;"><div class="pd-spinner"></div></div>';
                     _vrLoaded = false;
@@ -2958,14 +3084,20 @@ document.getElementById('custom-vet-report-form')?.addEventListener('submit', as
             }
         } else {
             var errData = await res.json().catch(function(){ return {}; });
-            alert('Fehler beim Generieren: ' + (errData.error || res.status));
+            alert('Fehler beim Speichern: ' + (errData.error || res.status));
         }
     } catch (err) {
         console.error(err);
         alert('Fehler: ' + err.message);
     } finally {
         btn.disabled = false;
-        btn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:0.4rem;margin-top:-2px;"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>PDF generieren &amp; speichern';
+        var svgIcon = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:0.4rem;margin-top:-2px;"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>';
+        var lblEl2 = document.getElementById('cvr-save-btn-label');
+        if (lblEl2) {
+            btn.innerHTML = svgIcon + '<span id="cvr-save-btn-label">' + (isEditMode ? 'PDF aktualisieren &amp; speichern' : 'PDF generieren &amp; speichern') + '</span>';
+        } else {
+            btn.innerHTML = svgIcon + 'PDF generieren &amp; speichern';
+        }
     }
 });
 

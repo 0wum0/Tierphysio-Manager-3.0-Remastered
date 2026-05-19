@@ -116,6 +116,122 @@ class VetReportController extends Controller
         $this->json(['ok' => true]);
     }
 
+    /* ── GET /patienten/{id}/tierarztbericht/{reportId}/load ── */
+    public function loadReport(array $params = []): void
+    {
+        $patientId = (int)($params['id']       ?? 0);
+        $reportId  = (int)($params['reportId'] ?? 0);
+        if ($patientId < 1 || $reportId < 1) {
+            $this->json(['ok' => false, 'error' => 'invalid_params'], 400);
+            return;
+        }
+
+        try {
+            $row = $this->db->query(
+                "SELECT id, type, content, recipient FROM `{$this->t('vet_reports')}`
+                 WHERE id = ? AND patient_id = ? LIMIT 1",
+                [$reportId, $patientId]
+            )->fetch(\PDO::FETCH_ASSOC);
+        } catch (\Throwable) {
+            $row = null;
+        }
+
+        if (!$row) {
+            $this->json(['ok' => false, 'error' => 'not_found'], 404);
+            return;
+        }
+
+        if ($row['type'] !== 'custom') {
+            $this->json(['ok' => false, 'error' => 'auto_report_not_editable'], 422);
+            return;
+        }
+
+        $this->json([
+            'ok'        => true,
+            'content'   => $row['content']   ?? '',
+            'recipient' => $row['recipient'] ?? '',
+        ]);
+    }
+
+    /* ── POST /patienten/{id}/tierarztbericht/{reportId}/update ── */
+    public function updateCustom(array $params = []): void
+    {
+        $patientId = (int)($params['id']       ?? 0);
+        $reportId  = (int)($params['reportId'] ?? 0);
+
+        $patient = $this->loadPatient($patientId);
+        if (!$patient) { $this->abort(404); return; }
+
+        if ($patientId < 1 || $reportId < 1) {
+            $this->json(['ok' => false, 'error' => 'invalid_params'], 400);
+            return;
+        }
+
+        // Verify report belongs to this patient and is a custom report
+        try {
+            $existing = $this->db->query(
+                "SELECT id, filename FROM `{$this->t('vet_reports')}`
+                 WHERE id = ? AND patient_id = ? AND type = 'custom' LIMIT 1",
+                [$reportId, $patientId]
+            )->fetch(\PDO::FETCH_ASSOC);
+        } catch (\Throwable $e) {
+            $this->json(['ok' => false, 'error' => $e->getMessage()], 500);
+            return;
+        }
+
+        if (!$existing) {
+            $this->json(['ok' => false, 'error' => 'not_found'], 404);
+            return;
+        }
+
+        $content   = $this->sanitizeRichText($this->post('content', ''));
+        $recipient = $this->post('recipient', '');
+
+        $owner         = $this->extractOwner($patient);
+        $customService = new CustomVetReportPdfService($this->settingsRepository);
+        $settings      = $this->settingsRepository->all();
+
+        $reportData = [
+            'created_at' => date('Y-m-d H:i:s'),
+            'content'    => $content,
+            'recipient'  => $recipient,
+        ];
+
+        try {
+            $pdfContent = $customService->generate($reportData, $patient, $owner ?? [], $settings);
+
+            // Delete old PDF file if it exists
+            $oldFilename  = basename($existing['filename'] ?? '');
+            $storageDir   = realpath(tenant_storage_path('vet-reports'));
+            if ($storageDir && $oldFilename) {
+                $oldPath     = $storageDir . '/' . $oldFilename;
+                $oldRealPath = realpath($oldPath);
+                if ($oldRealPath && strpos($oldRealPath, $storageDir) === 0 && is_file($oldRealPath)) {
+                    unlink($oldRealPath);
+                }
+            }
+
+            // Write new PDF file
+            $newFilename = $this->buildFilename($patient['name'] ?? 'Patient', true);
+            $dir = tenant_storage_path('vet-reports');
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            file_put_contents($dir . '/' . $newFilename, $pdfContent);
+
+            // Update DB record
+            $this->db->query(
+                "UPDATE `{$this->t('vet_reports')}` SET filename = ?, content = ?, recipient = ? WHERE id = ? AND patient_id = ?",
+                [$newFilename, $content, $recipient, $reportId, $patientId]
+            );
+        } catch (\Throwable $e) {
+            $this->json(['ok' => false, 'error' => $e->getMessage()], 500);
+            return;
+        }
+
+        $this->json(['ok' => true]);
+    }
+
     /* ── GET /patienten/{id}/tierarztbericht/verlauf (JSON) ── */
     public function history(array $params = []): void
     {
