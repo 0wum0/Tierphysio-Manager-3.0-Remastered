@@ -3,6 +3,14 @@ RewriteEngine On
 
 RewriteRule ^favicon\.ico$ /themes/smart-tierphysio/img/favicon-32x32.png [L,R=301]
 
+# Disable ModSecurity scanning for patient media serving routes to prevent
+# WAF false-positives on invite_* / intake_* filenames (causes HTTP 422).
+# SecRule with ctl:ruleEngine=Off is the .htaccess-compatible way.
+<IfModule mod_security2.c>
+    SecRule REQUEST_URI "^/patienten/[0-9]+/(foto|dokumente)/" \
+        "id:1001,phase:1,pass,nolog,ctl:ruleEngine=Off"
+</IfModule>
+
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^(.*)$ index.php [QSA,L]
