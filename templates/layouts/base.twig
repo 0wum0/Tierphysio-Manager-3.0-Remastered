@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token }}">
     <title>{% block title %}{{ page_title ?? app_name }}{% endblock %} — {{ app_name }}</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/themes/smart-tierphysio/img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/themes/smart-tierphysio/img/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="/themes/smart-tierphysio/img/favicon-192x192.png">
     {# Theme FOUC prevention — MUST be before any stylesheet, runs synchronously #}
     <script>!function(){try{var t=localStorage.getItem('theme');document.documentElement.setAttribute('data-theme',t==='light'?'light':'dark');}catch(e){}}();</script>
     <link rel="preconnect" href="https://fonts.googleapis.com">

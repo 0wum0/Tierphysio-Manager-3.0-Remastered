@@ -978,9 +978,31 @@ class PatientController extends Controller
         }
 
         $file = basename($this->sanitize($params['file']));
-        $path = tenant_storage_path('patients/' . (int)$params['id'] . '/timeline/' . $file);
+        $pid  = (int)$params['id'];
 
-        if (!file_exists($path) || !is_file($path)) {
+        /* Primary location: docs/ (where uploadDocument() saves files).
+           Legacy fallback: timeline/ (older uploads stored there). */
+        $candidates = [
+            tenant_storage_path('patients/' . $pid . '/docs/' . $file),
+            tenant_storage_path('patients/' . $pid . '/timeline/' . $file),
+            tenant_storage_path('patients/' . $pid . '/' . $file),
+        ];
+
+        $path = null;
+        foreach ($candidates as $candidate) {
+            if (file_exists($candidate) && is_file($candidate)) {
+                $path = $candidate;
+                break;
+            }
+        }
+
+        if ($path === null) {
+            /* For image requests serve a friendly paw placeholder instead of a broken icon. */
+            $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+            if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'], true)) {
+                $this->servePawPlaceholder();
+            }
+            error_log('[PatientController] Missing document: patients/' . $pid . '/docs/' . $file);
             $this->abort(404);
         }
 
@@ -1024,7 +1046,8 @@ class PatientController extends Controller
         }
 
         if ($path === null) {
-            $this->abort(404);
+            error_log('[PatientController] Missing photo: patients/' . (int)$params['id'] . '/' . $file);
+            $this->servePawPlaceholder();
         }
 
         $finfo    = new \finfo(FILEINFO_MIME_TYPE);
@@ -1038,6 +1061,23 @@ class PatientController extends Controller
         header('Content-Length: ' . filesize($path));
         header('Cache-Control: public, max-age=86400');
         readfile($path);
+        exit;
+    }
+
+    private function servePawPlaceholder(): never
+    {
+        $svg = PUBLIC_PATH . '/assets/img/placeholder-paw.svg';
+        http_response_code(200);
+        header('Content-Type: image/svg+xml');
+        header('Cache-Control: public, max-age=3600');
+        if (file_exists($svg)) {
+            header('Content-Length: ' . filesize($svg));
+            readfile($svg);
+        } else {
+            $inline = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" rx="12" fill="#1e293b"/><ellipse cx="100" cy="118" rx="32" ry="26" fill="#334155"/><ellipse cx="68" cy="88" rx="14" ry="16" fill="#334155"/><ellipse cx="92" cy="76" rx="13" ry="15" fill="#334155"/><ellipse cx="116" cy="76" rx="13" ry="15" fill="#334155"/><ellipse cx="140" cy="88" rx="14" ry="16" fill="#334155"/><ellipse cx="100" cy="118" rx="32" ry="26" fill="none" stroke="#a78bfa" stroke-width="1.5" opacity="0.4"/><text x="100" y="162" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" fill="#64748b">Kein Bild</text></svg>';
+            header('Content-Length: ' . strlen($inline));
+            echo $inline;
+        }
         exit;
     }
 

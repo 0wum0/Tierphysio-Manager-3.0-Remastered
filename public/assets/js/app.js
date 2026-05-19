@@ -633,6 +633,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('theme-toggle')?.addEventListener('click', () => ThemeManager.toggle());
 
+    /* ── Global image fallback: replace broken images with paw placeholder ── */
+    (function () {
+        const PAW = '/assets/img/placeholder-paw.svg';
+
+        function applyFallback(img) {
+            if (img.dataset.pawFallback) return;
+            img.dataset.pawFallback = '1';
+            img.addEventListener('error', function handler() {
+                if (this.src && this.src.indexOf(PAW) === -1) {
+                    this.src = PAW;
+                    this.style.objectFit = 'contain';
+                }
+                this.removeEventListener('error', handler);
+            });
+        }
+
+        document.querySelectorAll('img').forEach(applyFallback);
+
+        const obs = new MutationObserver(function (mutations) {
+            mutations.forEach(function (m) {
+                m.addedNodes.forEach(function (node) {
+                    if (node.nodeType !== 1) return;
+                    if (node.tagName === 'IMG') { applyFallback(node); }
+                    node.querySelectorAll && node.querySelectorAll('img').forEach(applyFallback);
+                });
+            });
+        });
+        obs.observe(document.body, { childList: true, subtree: true });
+    })();
+
     document.querySelectorAll('[data-modal-open]').forEach(btn => {
         btn.addEventListener('click', () => Modal.open(btn.getAttribute('data-modal-open')));
     });

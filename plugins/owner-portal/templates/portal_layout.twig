@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>{{ page_title ?? 'Besitzerportal' }}</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/themes/smart-tierphysio/img/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/themes/smart-tierphysio/img/favicon-16x16.png">
 
     <link rel="stylesheet" href="/themes/smart-tierphysio/plugins/waves/waves.min.css">
     <link rel="stylesheet" href="/themes/smart-tierphysio/css/smartapp.min.css">
@@ -318,6 +320,29 @@
 <script src="/themes/smart-tierphysio/plugins/bootstrap/bootstrap.bundle.min.js"></script>
 <script src="/themes/smart-tierphysio/scripts/core/smartApp.js"></script>
 {% block scripts %}{% endblock %}
+<script>
+(function(){
+    var PAW='/assets/img/placeholder-paw.svg';
+    function applyFallback(img){
+        if(img.dataset.pawFallback) return;
+        img.dataset.pawFallback='1';
+        img.addEventListener('error',function h(){
+            if(this.src&&this.src.indexOf(PAW)===-1){this.src=PAW;this.style.objectFit='contain';}
+            this.removeEventListener('error',h);
+        });
+    }
+    document.querySelectorAll('img').forEach(applyFallback);
+    new MutationObserver(function(ms){
+        ms.forEach(function(m){
+            m.addedNodes.forEach(function(n){
+                if(n.nodeType!==1) return;
+                if(n.tagName==='IMG') applyFallback(n);
+                if(n.querySelectorAll) n.querySelectorAll('img').forEach(applyFallback);
+            });
+        });
+    }).observe(document.body,{childList:true,subtree:true});
+})();
+</script>
 {% if portal_user is defined and portal_user %}
 <script>
 (function(){

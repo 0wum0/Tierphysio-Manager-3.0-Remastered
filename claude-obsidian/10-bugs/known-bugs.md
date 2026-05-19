@@ -608,6 +608,134 @@ Außerdem fehlte `homework` in der `plans.features` JSON-Liste für Basic-Pläne
 
 ---
 
+---
+
+## Bug: CSP font-src blockiert FullCalendar fcicons Base64-Font (Mai 2026)
+**Status:** `fixed`
+**Commit:** `fix: repair csp font assets and patient media routes`
+
+### Symptom
+Browser-Console: `Loading the font 'data:application/x-font-ttf;charset=utf-8;base64,...' violates CSP: font-src 'self' https://fonts.gstatic.com`
+
+### Ursache
+`smartapp.css` (FullCalendar-CSS, eingebettet im SmartAdmin Theme) enthält einen `@font-face`-Block für `fcicons` mit einer Base64-codierten TTF-Schrift als Inline-`data:`-URI.
+`public/.htaccess` erlaubte in `font-src` nur `'self'` und `https://fonts.gstatic.com` — kein `data:`.
+
+### Fix
+`public/.htaccess` `font-src` um `data:` erweitert:
+```
+font-src 'self' https://fonts.gstatic.com data:
+```
+Nur `data:` für Fonts erlaubt (nicht `script-src`, kein `unsafe-eval`). CSP bleibt sonst unverändert.
+
+### Geänderte Dateien
+- `public/.htaccess` — `font-src` + `data:`
+
+---
+
+## Bug: `/patienten/{id}/dokumente/{file}` liefert 404 (Mai 2026)
+**Status:** `fixed`
+**Commit:** `fix: repair csp font assets and patient media routes`
+
+### Symptom
+`GET /patienten/14/dokumente/6ca47236adb81b83770328c35c591ec3.jpg 404`
+
+### Ursache (Path Mismatch)
+- `uploadDocument()` speichert in `patients/{id}/docs/`
+- `downloadDocument()` suchte in `patients/{id}/timeline/` ← **falscher Pfad!**
+
+Die Dateinamen in der DB zeigten auf `docs/`, der Controller las aber aus `timeline/` → immer 404.
+
+### Fix
+`downloadDocument()` sucht jetzt in folgender Reihenfolge:
+1. `patients/{id}/docs/` ← primärer Upload-Pfad
+2. `patients/{id}/timeline/` ← Legacy-Fallback (alte Uploads)
+3. `patients/{id}/` ← weiterer Legacy-Fallback
+
+Bei fehlender Bilddatei: Tatzen-Placeholder statt kaputtem Broken-Image-Icon.
+Fehlende Datei wird per `error_log()` geloggt.
+
+### Geänderte Dateien
+- `app/Controllers/PatientController.php` — `downloadDocument()` neue Kandidaten-Liste + Placeholder-Fallback
+
+---
+
+## Bug: `/patienten/{id}/foto/{file}` liefert 404 für fehlende Fotos (Mai 2026)
+**Status:** `fixed`
+**Commit:** `fix: repair csp font assets and patient media routes`
+
+### Symptom
+`GET /patienten/1001/foto/invite_69ea4d5cba5ba.jpg 404`
+
+### Ursache
+`servePhoto()` in `PatientController` hatte bereits korrekte Kandidaten-Logik (inkl. `intake/` für `invite_`-Präfix), rief aber `$this->abort(404)` wenn keine Datei gefunden → kaputtes Broken-Image-Icon in der UI.
+
+### Fix
+Bei nicht gefundener Foto-Datei: `servePawPlaceholder()` → HTTP 200 + SVG Tatzen-Placeholder.
+Fehlende Datei wird per `error_log()` geloggt.
+
+### Neue Methode `servePawPlaceholder()`
+- Liefert `/assets/img/placeholder-paw.svg` aus (wenn vorhanden), sonst inline SVG
+- HTTP 200 + `Content-Type: image/svg+xml`
+- Keine 404/Broken-Image in der UI
+
+### Geänderte Dateien
+- `app/Controllers/PatientController.php` — `servePhoto()` + neue `servePawPlaceholder()` Methode
+- `public/assets/img/placeholder-paw.svg` — Neues Tatzen-Placeholder-SVG
+
+---
+
+## Bug: `/favicon.ico` liefert 404 (Mai 2026)
+**Status:** `fixed`
+**Commit:** `fix: repair csp font assets and patient media routes`
+
+### Symptom
+`GET https://app.therapano.de/favicon.ico 404`
+
+### Ursache
+Kein `favicon.ico` in `public/`. Kein `<link rel="icon">` in den HTML-Layouts. Browser fragt automatisch `/favicon.ico` → PHP-Router → keine Route → 404.
+
+### Fix
+1. `.htaccess` RewriteRule: `favicon.ico` → `R=301` auf `/themes/smart-tierphysio/img/favicon-32x32.png`
+2. `templates/layouts/base.twig` — `<link rel="icon">` + `<link rel="apple-touch-icon">` Tags
+3. `plugins/owner-portal/templates/portal_layout.twig` — gleiche Favicon-Links
+
+### Geänderte Dateien
+- `public/.htaccess` — RewriteRule `^favicon\.ico$`
+- `templates/layouts/base.twig` — `<link rel="icon">` Tags
+- `plugins/owner-portal/templates/portal_layout.twig` — `<link rel="icon">` Tags
+
+---
+
+## Bug: Fehlende Medien zeigen Browser-Broken-Image statt Platzhalter (Mai 2026)
+**Status:** `fixed`
+**Commit:** `fix: repair csp font assets and patient media routes`
+
+### Problem
+Fotos, Dokument-Vorschauen, Chat-Bilder, Timeline-Medien — wenn Datei fehlt: hässliches Browser-Broken-Image-Icon.
+
+### Fix: Globaler JS Image-Fallback
+`public/assets/js/app.js` + `portal_layout.twig`: `MutationObserver`-basierter globaler `onerror`-Handler für alle `<img>` Tags.
+
+Bei `error` Event: `img.src` → `/assets/img/placeholder-paw.svg`.
+- Deckt alle dynamisch geladenen Inhalte ab (Modal-Tabs, Chat, Timeline AJAX)
+- Kein Copy-Paste in Templates
+- `data-paw-fallback` Guard verhindert Loop bei fehlender Placeholder-Datei selbst
+
+### Paw-Placeholder SVG
+`public/assets/img/placeholder-paw.svg` — Modernes dunkles Tatzen-Design, passend zu TheraPano:
+- Hintergrund `#1e293b` (bg-card)
+- Tatzen-Pads `#334155` (bg-elevated)
+- Akzent-Outline `#a78bfa` (color-accent)
+- Label `#64748b` (text-muted): "Kein Bild"
+
+### Geänderte Dateien
+- `public/assets/js/app.js` — globaler Image-Fallback + MutationObserver
+- `plugins/owner-portal/templates/portal_layout.twig` — gleicher Fallback-Block
+- `public/assets/img/placeholder-paw.svg` — Neues SVG
+
+---
+
 ## Verlinkungen
 - [[15-agent-rules/update-brain]]
 - [[11-decisions/decision-log]]
