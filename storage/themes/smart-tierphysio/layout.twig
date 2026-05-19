@@ -2276,17 +2276,6 @@ body[data-chat-bar="1"] #feedback-fab { bottom: 5rem; }
     #feedback-fab { width:42px;height:42px;right:.9rem;bottom:.9rem; }
     body[data-chat-bar="1"] #feedback-fab { bottom:4.5rem; }
 }
-#fb-badge {
-    position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;
-    background:#ef4444;color:#fff;border-radius:9px;font-size:.65rem;
-    font-weight:700;display:none;align-items:center;justify-content:center;
-    padding:0 4px;line-height:1;border:2px solid var(--bs-body-bg,#0f172a);
-}
-
-/* ── Bell indicator for support replies ── */
-#support-bell-badge {
-    display:none;
-}
 
 /* ── Modal ── */
 #feedback-modal .modal-header { border-bottom:1px solid rgba(255,255,255,.1); }
@@ -2338,20 +2327,18 @@ body[data-chat-bar="1"] #feedback-fab { bottom: 5rem; }
 @keyframes fb-spin { to { transform:rotate(360deg); } }
 </style>
 
-{# ── Bell indicator for support in top nav ── #}
-<span id="support-bell-badge" class="badge badge-icon pos-top pos-end"
-      style="display:none;background:#7c3aed;"
-      title="Neue Support-Antwort"></span>
-
-<button id="feedback-fab" title="Feedback &amp; Support" aria-label="Feedback und Support senden" data-no-ripple style="position:relative;">
-    <span id="fb-badge"></span>
+<button id="feedback-fab" type="button" title="Feedback &amp; Support" aria-label="Feedback und Support senden" data-no-ripple style="position:relative;">
+    <span id="fb-badge" style="position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;background:#ef4444;color:#fff;border-radius:9px;font-size:.65rem;font-weight:700;display:none;align-items:center;justify-content:center;padding:0 4px;line-height:1;border:2px solid var(--bs-body-bg,#0f172a);pointer-events:none;"></span>
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none;">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
         <line x1="9" y1="10" x2="15" y2="10"/>
         <line x1="9" y1="14" x2="13" y2="14"/>
     </svg>
 </button>
+
+{# Bell badge ist jetzt nur noch für Polling-Zwecke als verstecktes Element #}
+<span id="support-bell-badge" style="display:none;" aria-hidden="true"></span>
 
 {# ── Feedback Modal ── #}
 <div class="modal fade" id="feedback-modal" tabindex="-1" aria-labelledby="feedback-modal-label" aria-hidden="true">
