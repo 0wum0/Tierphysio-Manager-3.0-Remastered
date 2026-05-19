@@ -753,8 +753,19 @@
                         </div>
                         <div>
                             <label class="form-label" style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Berichtsinhalt <span class="text-danger">*</span></label>
-                            <textarea name="content" id="cvr-content" class="form-control" rows="14" required
-                                placeholder="Sehr geehrte Kollegin, sehr geehrter Kollege,&#10;&#10;ich berichte Ihnen über den Patienten…&#10;&#10;Befund:&#10;…&#10;&#10;Empfehlung / Weiteres Vorgehen:&#10;…&#10;&#10;Mit freundlichen kollegialen Grüßen" style="font-size:0.93rem;line-height:1.75;font-family:inherit;resize:vertical;"></textarea>
+                            <input type="hidden" name="content" id="cvr-content">
+                            {# ── Medizinische Schnellvorlagen ── #}
+                            <div id="cvr-templates" style="display:flex;flex-wrap:wrap;gap:0.4rem;margin-bottom:0.6rem;">
+                                <span style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--bs-secondary-color);align-self:center;margin-right:0.25rem;">Vorlage:</span>
+                                <button type="button" class="btn btn-outline-secondary btn-sm cvr-tpl-btn" data-tpl="anschreiben" style="font-size:0.75rem;padding:0.2rem 0.6rem;border-radius:20px;">Anschreiben</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm cvr-tpl-btn" data-tpl="befund" style="font-size:0.75rem;padding:0.2rem 0.6rem;border-radius:20px;">Befundbericht</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm cvr-tpl-btn" data-tpl="rueckueberweisung" style="font-size:0.75rem;padding:0.2rem 0.6rem;border-radius:20px;">Rücküberweisung</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm cvr-tpl-btn" data-tpl="verlauf" style="font-size:0.75rem;padding:0.2rem 0.6rem;border-radius:20px;">Verlaufsbericht</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm cvr-tpl-btn" data-tpl="hundeschule" style="font-size:0.75rem;padding:0.2rem 0.6rem;border-radius:20px;">Hundetraining</button>
+                            </div>
+                            {# ── Quill Rich-Text Editor ── #}
+                            <div id="cvr-quill-editor" style="min-height:340px;font-size:0.93rem;line-height:1.7;background:var(--bs-body-bg, #fff);"></div>
+                            <div id="cvr-editor-empty-warn" style="display:none;color:#dc3545;font-size:0.8rem;margin-top:0.3rem;">Bitte Berichtsinhalt eingeben.</div>
                         </div>
                     </div>
                 </div>
@@ -1110,6 +1121,62 @@
 }
 /* Stacked-Modal Backdrop darker */
 .modal-backdrop.show + .modal-backdrop.show { z-index: 1069; }
+/* ── Custom Vet Report Quill Editor ── */
+#cvr-quill-editor {
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    background: var(--bs-body-bg, #fff);
+    color: var(--bs-body-color, #212529);
+}
+#cvr-quill-editor .ql-editor {
+    min-height: 320px;
+    max-height: 55vh;
+    overflow-y: auto;
+    font-size: 0.93rem;
+    line-height: 1.75;
+    padding: 1rem 1.1rem;
+}
+#cvr-quill-editor .ql-editor h1 { font-size: 1.4rem; font-weight: 700; margin: 1em 0 0.4em; }
+#cvr-quill-editor .ql-editor h2 { font-size: 1.15rem; font-weight: 700; margin: 0.9em 0 0.35em; border-bottom: 1px solid var(--bs-border-color, #dee2e6); padding-bottom: 0.2em; }
+#cvr-quill-editor .ql-editor h3 { font-size: 1rem; font-weight: 700; margin: 0.8em 0 0.3em; }
+#cvr-quill-editor .ql-editor p  { margin: 0 0 0.5em; }
+#cvr-quill-editor .ql-editor ul,
+#cvr-quill-editor .ql-editor ol { padding-left: 1.5em; margin: 0.4em 0 0.6em; }
+#cvr-quill-editor .ql-editor blockquote {
+    border-left: 3px solid var(--bs-primary, #2563eb);
+    margin: 0.5em 0;
+    padding: 0.4em 0.8em;
+    color: var(--bs-secondary-color, #6c757d);
+    font-style: italic;
+}
+#cvr-quill-editor + .ql-container.ql-snow,
+#cvr-quill-editor .ql-container.ql-snow { border: none; }
+#cvr-quill-editor ~ .ql-toolbar.ql-snow,
+#modal-custom-vet-report .ql-toolbar.ql-snow {
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 6px 6px 0 0;
+    background: var(--bs-secondary-bg, #f8f9fa);
+    flex-wrap: wrap;
+    padding: 0.3rem 0.5rem;
+}
+#modal-custom-vet-report .ql-toolbar.ql-snow .ql-formats { margin-right: 0.4rem; }
+@media (max-width: 600px) {
+    #modal-custom-vet-report .ql-toolbar.ql-snow { overflow-x: auto; display: flex; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+    #cvr-quill-editor .ql-editor { max-height: 45vh; }
+}
+/* Dark mode adjustments for CVR editor */
+[data-bs-theme="dark"] #cvr-quill-editor {
+    background: var(--bs-secondary-bg, #1e293b);
+    color: var(--bs-body-color, #e2e8f0);
+}
+[data-bs-theme="dark"] #modal-custom-vet-report .ql-toolbar.ql-snow {
+    background: var(--bs-secondary-bg, #1e293b);
+    color: var(--bs-body-color, #e2e8f0);
+}
+[data-bs-theme="dark"] #modal-custom-vet-report .ql-toolbar.ql-snow .ql-stroke { stroke: var(--bs-body-color, #e2e8f0); }
+[data-bs-theme="dark"] #modal-custom-vet-report .ql-toolbar.ql-snow .ql-fill   { fill:   var(--bs-body-color, #e2e8f0); }
+[data-bs-theme="dark"] #modal-custom-vet-report .ql-toolbar.ql-snow .ql-picker-label { color: var(--bs-body-color, #e2e8f0); }
 </style>
 
 {# ── Global Patient Modal JS ───────────────────────────── #}
@@ -2819,12 +2886,52 @@ window.openPdCustomVetReportModal = function() {
     var el = document.getElementById('modal-custom-vet-report');
     var m = bootstrap.Modal.getInstance(el) || new bootstrap.Modal(el, {backdrop: false});
     m.show();
+    /* init Quill rich-text editor for custom vet report */
+    loadQuill(function() {
+        if (!window.cvrQuill) {
+            var editorEl = document.getElementById('cvr-quill-editor');
+            if (!editorEl) return;
+            window.cvrQuill = new Quill(editorEl, {
+                theme: 'snow',
+                placeholder: 'Sehr geehrte Kollegin, sehr geehrter Kollege,\n\nich berichte Ihnen über den Patienten…',
+                modules: {
+                    toolbar: [
+                        [{ header: [1, 2, 3, false] }],
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ color: [] }, { background: [] }],
+                        [{ list: 'ordered' }, { list: 'bullet' }, { indent: '-1' }, { indent: '+1' }],
+                        ['blockquote', 'code-block'],
+                        [{ align: [] }],
+                        ['link'],
+                        ['clean']
+                    ]
+                }
+            });
+        } else {
+            window.cvrQuill.setContents([]);
+        }
+        document.getElementById('cvr-editor-empty-warn').style.display = 'none';
+    });
 };
 
 document.getElementById('custom-vet-report-form')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     var pid = window._vrChoicePatientId || window.pdAktPatientId || (typeof patientId !== 'undefined' ? patientId : null) || window.customVetReportPatientId;
     if (!pid) return;
+
+    /* Sync Quill HTML into hidden input */
+    var warnEl = document.getElementById('cvr-editor-empty-warn');
+    if (window.cvrQuill) {
+        var html = window.cvrQuill.root.innerHTML;
+        var isEmpty = !html || html === '<p><br></p>' || window.cvrQuill.getText().trim() === '';
+        if (isEmpty) {
+            if (warnEl) warnEl.style.display = '';
+            return;
+        }
+        if (warnEl) warnEl.style.display = 'none';
+        document.getElementById('cvr-content').value = html;
+    }
+
     var btn = document.getElementById('btn-save-custom-vet-report');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generiere...';
@@ -2906,6 +3013,29 @@ window.deleteVetReport = function(patientId, reportId, btn) {
     })
     .catch(function() { alert('Netzwerkfehler.'); });
 };
+
+/* ═══════════════════════════════════════════════════════
+   CUSTOM VET REPORT — Medizinische Schnellvorlagen
+═══════════════════════════════════════════════════════ */
+var _cvrTemplates = {
+    anschreiben: '<p>Sehr geehrte Kollegin, sehr geehrter Kollege,</p><p>ich berichte Ihnen über unseren gemeinsamen Patienten/unsere gemeinsame Patientin.</p><h2>Anamnese</h2><p></p><h2>Behandlungsverlauf</h2><p></p><h2>Aktueller Befund</h2><p></p><h2>Therapieempfehlung</h2><p></p><p>Für Rückfragen stehe ich Ihnen jederzeit zur Verfügung.</p><p>Mit freundlichen kollegialen Grüßen</p>',
+    befund: '<h2>Befundbericht</h2><h3>Anamnese</h3><p></p><h3>Klinischer Befund</h3><ul><li><strong>Allgemeinbefinden:</strong> </li><li><strong>Haltungs- und Bewegungsapparat:</strong> </li><li><strong>Muskulatur / Tonus:</strong> </li><li><strong>Schmerzsymptomatik:</strong> </li><li><strong>Bewegungseinschränkungen:</strong> </li></ul><h3>Diagnostische Maßnahmen</h3><p></p><h3>Diagnose</h3><p></p><h3>Durchgeführte Therapie</h3><p></p><h3>Empfehlung / Weiteres Vorgehen</h3><p></p>',
+    rueckueberweisung: '<p>Sehr geehrte Kollegin, sehr geehrter Kollege,</p><p>ich überweise Ihnen nachfolgenden Patienten zur weiteren Diagnostik / Behandlung.</p><h2>Überweisungsgrund</h2><p></p><h2>Bisherige Behandlung</h2><p></p><h2>Aktuelle Symptomatik</h2><ul><li></li></ul><h2>Dringlich empfohlene Untersuchung</h2><p></p><p>Ich bitte um kurze Rückmeldung über das Ergebnis.</p><p>Mit freundlichen kollegialen Grüßen</p>',
+    verlauf: '<h2>Verlaufsbericht Physiotherapie</h2><h3>Behandlungszeitraum</h3><p></p><h3>Ausgangsbefund</h3><p></p><h3>Therapieziele</h3><ul><li></li></ul><h3>Durchgeführte Maßnahmen</h3><ul><li></li></ul><h3>Verlauf und Zwischenbefund</h3><p></p><h3>Aktueller Status</h3><p></p><h3>Weitere Empfehlungen / Heimübungen</h3><p></p><h3>Prognose</h3><p></p>',
+    hundeschule: '<h2>Trainingsbericht</h2><h3>Aufnahmegrund</h3><p></p><h3>Verhalten bei Aufnahme</h3><p></p><h3>Trainingsplan</h3><ul><li></li></ul><h3>Trainingsfortschritt</h3><p></p><h3>Erreichte Ziele</h3><ul><li></li></ul><h3>Offene Punkte</h3><p></p><h3>Empfehlungen für zuhause</h3><p></p>'
+};
+
+document.addEventListener('click', function(ev) {
+    var btn = ev.target.closest('.cvr-tpl-btn');
+    if (!btn) return;
+    var tpl = btn.dataset.tpl;
+    if (!tpl || !_cvrTemplates[tpl]) return;
+    if (!window.cvrQuill) return;
+    var isEmpty = window.cvrQuill.getText().trim() === '';
+    if (!isEmpty && !confirm('Aktuellen Inhalt mit Vorlage überschreiben?')) return;
+    window.cvrQuill.clipboard.dangerouslyPasteHTML(_cvrTemplates[tpl]);
+    setTimeout(function(){ window.cvrQuill.focus(); }, 50);
+});
 
 /* ═══════════════════════════════════════════════════════
    BEFUND-TIERAUSWAHL — öffnet sich beim Klick auf

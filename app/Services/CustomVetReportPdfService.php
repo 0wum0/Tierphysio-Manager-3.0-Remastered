@@ -289,26 +289,42 @@ class CustomVetReportPdfService
             $pdf->SetFont($font, '', $fontSize);
             $pdf->SetTextColor(30, 30, 30);
 
-            // Split content by line breaks and check page breaks for each line
-            $lines = explode("\n", $content);
-            foreach ($lines as $line) {
-                $line = trim($line);
-                if ($line === '') {
-                    $curY += 3;
-                    continue;
-                }
+            // Detect whether content is rich HTML or plain text
+            $isHtml = $this->looksLikeHtml($content);
 
-                $numLines = $pdf->getNumLines($line, $contentW);
-                $neededHeight = max(5, $numLines * 5);
+            if ($isHtml) {
+                // Sanitize + prepare HTML for TCPDF writeHTML
+                $htmlContent = $this->sanitizeHtml($content);
+                $htmlContent = $this->injectPdfCss($htmlContent, $font, $fontSize);
 
-                $this->checkPageBreak($pdf, $curY, $neededHeight, $pageH, $drawSidebar, $contentX, $font, $fontSize);
-                $curY = $pdf->GetY();
-
+                // Set margins so writeHTML respects the sidebar and page edge
+                $pdf->SetMargins($contentX, 0, 210 - $rightEdge);
                 $pdf->SetXY($contentX, $curY);
-                $pdf->MultiCell($contentW, 5, $line, 0, 'L');
-                $curY = $pdf->GetY();
+                $pdf->SetAutoPageBreak(true, 22);
+                $pdf->writeHTML($htmlContent, true, false, true, false, '');
+                $pdf->SetAutoPageBreak(false);
+                // Restore zero margins after HTML rendering
+                $pdf->SetMargins(0, 0, 0);
+                $curY = $pdf->GetY() + 5;
+            } else {
+                // Legacy plain-text fallback: render line by line
+                $lines = explode("\n", $content);
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if ($line === '') {
+                        $curY += 3;
+                        continue;
+                    }
+                    $numLines    = $pdf->getNumLines($line, $contentW);
+                    $neededHeight = max(5, $numLines * 5);
+                    $this->checkPageBreak($pdf, $curY, $neededHeight, $pageH, $drawSidebar, $contentX, $font, $fontSize);
+                    $curY = $pdf->GetY();
+                    $pdf->SetXY($contentX, $curY);
+                    $pdf->MultiCell($contentW, 5, $line, 0, 'L');
+                    $curY = $pdf->GetY();
+                }
+                $curY += 5;
             }
-            $curY += 5;
         }
 
         // ── Footer ───────────────────────────────────────────────────────────
@@ -387,5 +403,80 @@ class CustomVetReportPdfService
             'dejavusans'=> 'dejavusans',
         ];
         return $map[strtolower($fontName)] ?? 'helvetica';
+    }
+
+    private function looksLikeHtml(string $content): bool
+    {
+        return (bool) preg_match('/<\/?(?:p|br|ul|ol|li|h[1-6]|strong|em|b|i|u|s|blockquote|table|tr|td|th|hr|div|span)[>\s\/]/i', $content);
+    }
+
+    /**
+     * Sanitize HTML for TCPDF rendering.
+     * Allows safe formatting tags, strips scripts/events/iframes.
+     */
+    private function sanitizeHtml(string $html): string
+    {
+        // Strip script, style, iframe, object, form elements
+        $html = preg_replace('/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/i', '', $html);
+        $html = preg_replace('/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/i',   '', $html);
+        $html = preg_replace('/<(iframe|object|embed|form|input|button|select|textarea|base|meta|link)\b[^>]*>/i', '', $html);
+        $html = preg_replace('/<\/(iframe|object|embed|form|input|button|select|textarea|base|meta|link)>/i', '', $html);
+
+        // Strip event handlers (on*)
+        $html = preg_replace('/\s+on\w+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]*)/i', '', $html);
+
+        // Strip javascript: and data: URIs in href/src
+        $html = preg_replace('/\s+(?:href|src)\s*=\s*["\']?\s*(?:javascript|data):[^"\'>\s]*/i', '', $html);
+
+        // Convert Quill-specific classes to clean HTML TCPDF understands
+        // Quill indent classes → blockquote-like indent
+        $html = preg_replace('/class="ql-indent-(\d+)"/', 'style="margin-left:$1em"', $html);
+
+        // Quill align classes
+        $html = preg_replace('/class="ql-align-center"/', 'style="text-align:center"', $html);
+        $html = preg_replace('/class="ql-align-right"/',  'style="text-align:right"',  $html);
+        $html = preg_replace('/class="ql-align-justify"/', 'style="text-align:justify"', $html);
+
+        // Remove leftover class attributes (TCPDF ignores them anyway)
+        $html = preg_replace('/\s+class="[^"]*"/', '', $html);
+
+        // Quill wraps code-blocks in <pre class="ql-syntax"> → normalize
+        $html = preg_replace('/<pre[^>]*>/', '<pre>', $html);
+
+        return $html;
+    }
+
+    /**
+     * Inject a CSS <style> block for TCPDF that maps HTML tags to proper PDF typography.
+     * TCPDF supports a subset of CSS inline and via <style>.
+     */
+    private function injectPdfCss(string $html, string $font, float $fontSize): string
+    {
+        $h1Size = round($fontSize * 1.55, 1);
+        $h2Size = round($fontSize * 1.28, 1);
+        $h3Size = round($fontSize * 1.1,  1);
+
+        $css = <<<CSS
+<style>
+body        { font-family: {$font}; font-size: {$fontSize}pt; color: #1e1e1e; line-height: 1.6; }
+p           { margin: 0 0 4pt; }
+h1          { font-size: {$h1Size}pt; font-weight: bold; margin: 8pt 0 3pt; }
+h2          { font-size: {$h2Size}pt; font-weight: bold; margin: 7pt 0 3pt; border-bottom: 0.3pt solid #b0b0b0; padding-bottom: 1pt; }
+h3          { font-size: {$h3Size}pt; font-weight: bold; margin: 6pt 0 2pt; }
+ul, ol      { margin: 2pt 0 4pt; padding-left: 14pt; }
+li          { margin-bottom: 1.5pt; }
+blockquote  { margin: 3pt 0 3pt 8pt; padding: 2pt 6pt; border-left: 2pt solid #8B9E8B; font-style: italic; color: #555; }
+strong, b   { font-weight: bold; }
+em, i       { font-style: italic; }
+u           { text-decoration: underline; }
+s           { text-decoration: line-through; }
+table       { border-collapse: collapse; width: 100%; margin: 4pt 0; }
+th          { background-color: #e8ede8; font-weight: bold; border: 0.3pt solid #aaa; padding: 2pt 4pt; }
+td          { border: 0.3pt solid #ccc; padding: 2pt 4pt; }
+pre         { background-color: #f5f5f5; font-family: courier; font-size: {$fontSize}pt; padding: 4pt; margin: 3pt 0; }
+hr          { border: none; border-top: 0.4pt solid #ccc; margin: 6pt 0; }
+</style>
+CSS;
+        return $css . "\n" . $html;
     }
 }

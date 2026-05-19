@@ -73,7 +73,7 @@ class VetReportController extends Controller
         $patient   = $this->loadPatient($patientId);
         if (!$patient) { $this->abort(404); return; }
 
-        $content   = $this->post('content', '');
+        $content   = $this->sanitizeRichText($this->post('content', ''));
         $recipient = $this->post('recipient', '');
 
         $owner    = $this->extractOwner($patient);
@@ -279,6 +279,33 @@ class VetReportController extends Controller
     }
 
     /* ── Private helpers ─────────────────────────────────────────────── */
+
+    /**
+     * Strip dangerous HTML from rich-text content before storing.
+     * Allows all safe formatting tags (p, strong, em, h1-h6, ul, ol, li,
+     * blockquote, br, table, tr, td, th, pre, hr, span, div, a) while
+     * removing scripts, event handlers, and dangerous URI schemes.
+     */
+    private function sanitizeRichText(string $html): string
+    {
+        if ($html === '') {
+            return '';
+        }
+
+        // Remove script/style/iframe/form elements entirely
+        $html = preg_replace('/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/i', '', $html) ?? $html;
+        $html = preg_replace('/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/i',   '', $html) ?? $html;
+        $html = preg_replace('/<(iframe|object|embed|form|input|button|select|meta|link|base)\b[^>]*>/i', '', $html) ?? $html;
+        $html = preg_replace('/<\/(iframe|object|embed|form|input|button|select|meta|link|base)>/i',       '', $html) ?? $html;
+
+        // Strip all event handler attributes
+        $html = preg_replace('/\s+on\w+\s*=\s*(?:"[^"]*"|\'[^\']*\'|[^\s>]*)/i', '', $html) ?? $html;
+
+        // Strip javascript:/data: URI schemes
+        $html = preg_replace('/\s+(?:href|src)\s*=\s*["\']?\s*(?:javascript|data):[^"\'>\s]*/i', '', $html) ?? $html;
+
+        return trim($html);
+    }
 
     private function loadPatient(int $id): ?array
     {
