@@ -297,8 +297,8 @@ class CustomVetReportPdfService
                 $htmlContent = $this->sanitizeHtml($content);
                 $htmlContent = $this->injectPdfCss($htmlContent, $font, $fontSize);
 
-                // Set margins so writeHTML respects the sidebar and page edge
-                $pdf->SetMargins($contentX, 0, 210 - $rightEdge);
+                // Set margins so writeHTML respects the sidebar, page edge, and top padding
+                $pdf->SetMargins($contentX, 15, 210 - $rightEdge);
                 $pdf->SetXY($contentX, $curY);
                 $pdf->SetAutoPageBreak(true, 22);
                 $pdf->writeHTML($htmlContent, true, false, true, false, '');
