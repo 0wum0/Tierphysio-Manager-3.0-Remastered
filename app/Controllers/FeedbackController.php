@@ -316,20 +316,22 @@ class FeedbackController
             $stmt = $pdo->prepare("
                 SELECT f.id, f.subject, f.type, f.status, f.created_at,
                        f.unread_replies,
-                       (SELECT COUNT(*) FROM feedback_replies r WHERE r.feedback_id = f.id) AS reply_count
+                       (SELECT COUNT(*) FROM feedback_replies r WHERE r.feedback_id = f.id) AS reply_count,
+                       COALESCE(
+                           (SELECT r2.message FROM feedback_replies r2 WHERE r2.feedback_id = f.id ORDER BY r2.created_at DESC LIMIT 1),
+                           f.message
+                       ) AS last_message
                 FROM feedback f
                 WHERE f.tenant_id = ?
                 ORDER BY f.created_at DESC
-                LIMIT 10
+                LIMIT 15
             ");
             $stmt->execute([$tenantId]);
             $items = $stmt->fetchAll();
 
-            // Count total unread
+            // Count total unread — use feedback.unread_replies flag (covers both replies and broadcasts)
             $unreadStmt = $pdo->prepare("
-                SELECT COUNT(*) FROM feedback_replies r
-                JOIN feedback f ON f.id = r.feedback_id
-                WHERE f.tenant_id = ? AND r.sender_type = 'admin' AND r.is_read = 0
+                SELECT COUNT(*) FROM feedback WHERE tenant_id = ? AND unread_replies = 1
             ");
             $unreadStmt->execute([$tenantId]);
             $unread = (int)$unreadStmt->fetchColumn();
@@ -369,7 +371,8 @@ class FeedbackController
 
             $stmt = $pdo->prepare("
                 SELECT f.id, f.subject, f.type, f.message, f.created_at, f.status,
-                       f.user_name AS sender_name, 'tenant' AS sender_type
+                       CASE WHEN f.type = 'broadcast' THEN 'TheraPano.de' ELSE f.user_name END AS sender_name,
+                       CASE WHEN f.type = 'broadcast' THEN 'admin' ELSE 'tenant' END AS sender_type
                 FROM feedback f
                 WHERE f.id = ? AND f.tenant_id = ?
                 LIMIT 1
