@@ -50,12 +50,17 @@
             <a href="/admin/feedback?category=praise" class="btn btn-sm {% if category == 'praise' %}btn-success{% else %}btn-outline-secondary{% endif %}">⭐ Lob</a>
             <a href="/admin/feedback?category=other" class="btn btn-sm {% if category == 'other' %}btn-secondary{% else %}btn-outline-secondary{% endif %}">💬 Sonstiges</a>
         </div>
-        {% if stats.unread > 0 %}
-        <form method="POST" action="/admin/feedback/mark-all-read" class="mb-0">
-            {{ csrf_field()|raw }}
-            <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-check2-all me-1"></i>Alle gelesen</button>
-        </form>
-        {% endif %}
+        <div class="d-flex gap-2">
+            {% if stats.unread > 0 %}
+            <form method="POST" action="/admin/feedback/mark-all-read" class="mb-0">
+                {{ csrf_field()|raw }}
+                <button class="btn btn-sm btn-outline-secondary">✓ Alle gelesen</button>
+            </form>
+            {% endif %}
+            <a href="/admin/feedback/broadcast" class="btn btn-sm btn-primary">
+                📢 Massen-Nachricht
+            </a>
+        </div>
     </div>
 </div>
 

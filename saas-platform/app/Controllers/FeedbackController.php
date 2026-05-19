@@ -133,7 +133,7 @@ class FeedbackController extends Controller
             return;
         }
 
-        $adminName = $this->session->get('admin_name', 'Support');
+        $adminName = $this->session->get('saas_user', 'TheraPano Support');
 
         $this->db->execute(
             "INSERT INTO feedback_replies (feedback_id, sender_type, sender_name, message) VALUES (?, 'admin', ?, ?)",
@@ -215,6 +215,96 @@ class FeedbackController extends Controller
 
         $this->session->flash('success', 'Status aktualisiert.');
         $this->redirect('/admin/feedback/' . $id);
+    }
+
+    /**
+     * GET  /admin/feedback/broadcast  — Broadcast-Formular
+     * POST /admin/feedback/broadcast  — Broadcast senden
+     */
+    public function broadcast(array $params = []): void
+    {
+        $this->requireAuth();
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $this->verifyCsrf();
+
+            $subject = trim($_POST['subject'] ?? '');
+            $message = trim($_POST['message'] ?? '');
+            $filter  = $_POST['filter'] ?? 'all'; // all | active | trial
+
+            if ($subject === '' || $message === '') {
+                $this->session->flash('error', 'Betreff und Nachricht sind Pflichtfelder.');
+                $this->redirect('/admin/feedback/broadcast');
+                return;
+            }
+
+            $allowed = ['all', 'active', 'trial'];
+            if (!in_array($filter, $allowed, true)) {
+                $filter = 'all';
+            }
+
+            $statusCond = match($filter) {
+                'active' => "status = 'active'",
+                'trial'  => "status = 'trial'",
+                default  => "status IN ('active','trial')",
+            };
+
+            $tenants = $this->db->fetchAll(
+                "SELECT id, practice_name, email FROM tenants WHERE {$statusCond} ORDER BY practice_name ASC"
+            );
+
+            $senderName = 'TheraPano.de';
+            $sent       = 0;
+
+            foreach ($tenants as $tenant) {
+                try {
+                    // Insert as a broadcast feedback entry
+                    $this->db->execute(
+                        "INSERT INTO feedback (tenant_id, tenant_name, email, category, subject, type, status, message, platform)
+                         VALUES (?, ?, ?, 'broadcast', ?, 'broadcast', 'open', ?, 'web')",
+                        [
+                            $tenant['id'],
+                            $tenant['practice_name'],
+                            $tenant['email'],
+                            $subject,
+                            $message,
+                        ]
+                    );
+                    $newId = (int)$this->db->lastInsertId();
+
+                    // Add a reply from admin so it shows in chat
+                    $this->db->execute(
+                        "INSERT INTO feedback_replies (feedback_id, sender_type, sender_name, message) VALUES (?, 'admin', ?, ?)",
+                        [$newId, $senderName, $message]
+                    );
+
+                    // Mark as having unread reply for tenant
+                    $this->db->execute(
+                        "UPDATE feedback SET unread_replies = 1 WHERE id = ?",
+                        [$newId]
+                    );
+
+                    $sent++;
+                } catch (\Throwable $e) {
+                    error_log('[FeedbackController::broadcast] tenant ' . $tenant['id'] . ': ' . $e->getMessage());
+                }
+            }
+
+            $this->session->flash('success', "Nachricht an {$sent} Praxen gesendet.");
+            $this->redirect('/admin/feedback/broadcast');
+            return;
+        }
+
+        // GET — Formular anzeigen
+        $stats = [
+            'active' => (int)$this->db->fetchColumn("SELECT COUNT(*) FROM tenants WHERE status = 'active'"),
+            'trial'  => (int)$this->db->fetchColumn("SELECT COUNT(*) FROM tenants WHERE status = 'trial'"),
+        ];
+
+        $this->render('admin/feedback/broadcast.twig', [
+            'stats'      => $stats,
+            'page_title' => 'Massen-Nachricht senden',
+        ]);
     }
 
     // ── Public API: called by TierPhysio mobile app ────────────────────────

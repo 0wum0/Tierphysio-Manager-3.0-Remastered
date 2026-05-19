@@ -1,0 +1,116 @@
+{% extends 'layouts/base.twig' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+
+        <div class="d-flex align-items-center gap-3 mb-4">
+            <a href="/admin/feedback" class="btn btn-sm btn-outline-secondary">← Zurück</a>
+            <h5 class="mb-0 fw-semibold">📢 Massen-Nachricht senden</h5>
+        </div>
+
+        {# Stats cards #}
+        <div class="row g-3 mb-4">
+            <div class="col-sm-4">
+                <div class="card text-center py-3">
+                    <div class="fs-1 fw-700 text-success">{{ stats.active }}</div>
+                    <div class="text-muted fs-sm">Aktive Praxen</div>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="card text-center py-3">
+                    <div class="fs-1 fw-700 text-info">{{ stats.trial }}</div>
+                    <div class="text-muted fs-sm">Test-Praxen</div>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="card text-center py-3">
+                    <div class="fs-1 fw-700 text-primary">{{ stats.active + stats.trial }}</div>
+                    <div class="text-muted fs-sm">Gesamt Empfänger</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header py-3 px-4">
+                <span class="fw-semibold fs-sm">📢 Nachricht verfassen</span>
+                <div class="text-muted fs-xs mt-1">
+                    Die Nachricht erscheint im <strong>Feedback & Support FAB</strong> jeder Praxis als neue Nachricht von <strong>TheraPano.de</strong>.
+                    Ein roter Badge informiert die Nutzer automatisch.
+                </div>
+            </div>
+            <div class="card-body px-4 py-3">
+                <form method="POST" action="/admin/feedback/broadcast"
+                      onsubmit="return confirm('Nachricht an alle ausgewählten Praxen senden?')">
+                    {{ csrf_field()|raw }}
+
+                    <div class="row g-3">
+                        <div class="col-sm-8">
+                            <label class="form-label fw-500 fs-sm" for="bc-subject">Betreff *</label>
+                            <input type="text" class="form-control form-control-sm" id="bc-subject" name="subject"
+                                   placeholder="z.B. Neues Feature: Tierarztbericht-Editor" required maxlength="255">
+                        </div>
+                        <div class="col-sm-4">
+                            <label class="form-label fw-500 fs-sm" for="bc-filter">Empfänger</label>
+                            <select class="form-select form-select-sm" id="bc-filter" name="filter">
+                                <option value="all">Alle (aktiv + trial)</option>
+                                <option value="active">Nur aktive Praxen</option>
+                                <option value="trial">Nur Trial-Praxen</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-500 fs-sm" for="bc-message">Nachricht *</label>
+                            <textarea class="form-control form-control-sm" id="bc-message" name="message"
+                                      rows="6" required placeholder="Schreibe hier deine Nachricht an alle Praxen…"
+                                      style="resize:vertical;"></textarea>
+                            <div class="form-text text-muted fs-xs">
+                                Die Nachricht wird im Chat-Bereich des Support-FABs angezeigt. Absender ist immer <strong>TheraPano.de</strong>.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 d-flex gap-2 align-items-center">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            📢 Nachricht senden
+                        </button>
+                        <a href="/admin/feedback" class="btn btn-outline-secondary btn-sm">Abbrechen</a>
+                        <span class="text-muted fs-xs ms-auto">
+                            Sendet an: <strong id="bc-count">{{ stats.active + stats.trial }}</strong> Praxen
+                        </span>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header py-2 px-4">
+                <span class="fw-semibold fs-sm">ℹ️ Wie funktioniert es?</span>
+            </div>
+            <div class="card-body px-4 py-3">
+                <ol class="fs-sm lh-lg mb-0" style="padding-left:1.2rem;">
+                    <li>Die Nachricht erscheint als neuer Eintrag im <strong>„Meine Anfragen"</strong>-Tab des Support-FABs jeder Praxis.</li>
+                    <li>Der Badge am FAB (rote Zahl) zeigt an, dass eine neue Nachricht vorliegt.</li>
+                    <li>Die Bell in der Topbar leuchtet lila auf.</li>
+                    <li>Absender ist immer <strong>TheraPano.de</strong>.</li>
+                    <li>Praxen können auf die Nachricht antworten — du siehst Antworten im normalen Feedback-Bereich.</li>
+                </ol>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+(function(){
+    var filter  = document.getElementById('bc-filter');
+    var countEl = document.getElementById('bc-count');
+    var active  = {{ stats.active }};
+    var trial   = {{ stats.trial }};
+    if (!filter || !countEl) return;
+    filter.addEventListener('change', function(){
+        var n = filter.value === 'active' ? active : filter.value === 'trial' ? trial : active + trial;
+        countEl.textContent = n;
+    });
+})();
+</script>
+{% endblock %}

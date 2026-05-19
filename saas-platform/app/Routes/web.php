@@ -195,6 +195,8 @@ $router->get('/register/payment-success', function (array $params): void {
 
 // ── Feedback ────────────────────────────────────────────────────────────────
 $router->get('/admin/feedback',                    [FeedbackController::class, 'index']);
+$router->get('/admin/feedback/broadcast',          [FeedbackController::class, 'broadcast']);
+$router->post('/admin/feedback/broadcast',         [FeedbackController::class, 'broadcast']);
 $router->get('/admin/feedback/{id}',               [FeedbackController::class, 'show']);
 $router->post('/admin/feedback/{id}/reply',        [FeedbackController::class, 'reply']);
 $router->post('/admin/feedback/{id}/status',       [FeedbackController::class, 'updateStatus']);

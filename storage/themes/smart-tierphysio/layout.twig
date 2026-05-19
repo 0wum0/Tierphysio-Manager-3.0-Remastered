@@ -288,13 +288,16 @@
             </svg>
         </button>
 
-        {# Notifications (intake plugin) #}
+        {# Notifications (intake plugin + support replies) #}
         {% if intake_unread_count is defined %}
-        <button type="button" class="btn btn-system dropdown-toggle no-arrow"
+        <button type="button" class="btn btn-system dropdown-toggle no-arrow position-relative"
+                id="bell-btn-topbar"
                 data-bs-toggle="dropdown" aria-expanded="false" aria-label="Benachrichtigungen">
             {% if intake_unread_count > 0 %}
-            <span class="badge badge-icon pos-top pos-end">{{ intake_unread_count > 9 ? '9+' : intake_unread_count }}</span>
+            <span class="badge badge-icon pos-top pos-end" id="bell-intake-badge">{{ intake_unread_count > 9 ? '9+' : intake_unread_count }}</span>
             {% endif %}
+            <span id="support-bell-badge" class="badge badge-icon pos-top pos-end"
+                  style="display:none;background:#7c3aed;font-size:.6rem;min-width:16px;height:16px;padding:0 3px;pointer-events:none;"></span>
             <svg class="sa-icon sa-icon-2x">
                 <use href="/themes/smart-tierphysio/icons/sprite.svg#bell"></use>
             </svg>
@@ -2333,6 +2336,8 @@ body[data-chat-bar="1"] #feedback-fab-wrap { bottom: 5rem; }
 }
 .fb-ticket-item:hover { background:rgba(255,255,255,.06); }
 .fb-ticket-item.has-unread { border-color:var(--bs-primary); }
+.fb-ticket-item.fb-ticket-broadcast { border-color:rgba(124,58,237,.45);background:rgba(124,58,237,.06); }
+.fb-ticket-item.fb-ticket-broadcast:hover { background:rgba(124,58,237,.12); }
 .fb-ticket-item .fb-ticket-title { font-size:.82rem;font-weight:600; }
 .fb-ticket-item .fb-ticket-meta { font-size:.72rem;opacity:.55; }
 
@@ -2685,16 +2690,24 @@ body[data-chat-bar="1"] #feedback-fab-wrap { bottom: 5rem; }
         }
 
         items.forEach(function(it) {
-            var hasUnread = parseInt(it.unread_replies) > 0;
-            var replies   = parseInt(it.reply_count) || 0;
-            var stLabel   = statusLabel[it.status] || it.status || 'Offen';
-            var tLabel    = typeLabel[it.type] || it.type || '';
-            html += '<div class="fb-ticket-item' + (hasUnread ? ' has-unread' : '') + '" data-id="' + it.id + '">' +
-                    '<div class="d-flex align-items-center justify-content-between">' +
-                    '<div class="fb-ticket-title">' + escHtml(it.subject || tLabel || 'Anfrage #' + it.id) + '</div>' +
-                    (hasUnread ? '<span style="background:#ef4444;color:#fff;border-radius:8px;font-size:.65rem;padding:1px 6px;font-weight:700;white-space:nowrap;">Neu</span>' : '') +
+            var hasUnread   = parseInt(it.unread_replies) > 0;
+            var replies     = parseInt(it.reply_count) || 0;
+            var isBroadcast = it.type === 'broadcast';
+            var stLabel     = statusLabel[it.status] || it.status || 'Offen';
+            var tLabel      = typeLabel[it.type] || it.type || '';
+            var titleText   = isBroadcast ? (it.subject || '📢 Nachricht von TheraPano.de') : escHtml(it.subject || tLabel || 'Anfrage #' + it.id);
+            var fromBadge   = isBroadcast
+                ? '<span style="background:#7c3aed;color:#fff;border-radius:8px;font-size:.6rem;padding:1px 5px;font-weight:700;white-space:nowrap;margin-left:4px;">TheraPano.de</span>'
+                : '';
+            var newBadge    = hasUnread
+                ? '<span style="background:#ef4444;color:#fff;border-radius:8px;font-size:.65rem;padding:1px 6px;font-weight:700;white-space:nowrap;">Neu</span>'
+                : '';
+            html += '<div class="fb-ticket-item' + (hasUnread ? ' has-unread' : '') + (isBroadcast ? ' fb-ticket-broadcast' : '') + '" data-id="' + it.id + '">' +
+                    '<div class="d-flex align-items-center justify-content-between gap-1">' +
+                    '<div class="fb-ticket-title d-flex align-items-center gap-1">' + (isBroadcast ? '📢 ' : '') + escHtml(it.subject || (isBroadcast ? 'Nachricht von TheraPano.de' : tLabel) || 'Anfrage #' + it.id) + fromBadge + '</div>' +
+                    newBadge +
                     '</div>' +
-                    '<div class="fb-ticket-meta">' + stLabel +
+                    '<div class="fb-ticket-meta">' + (isBroadcast ? '<span style="color:#a78bfa;">TheraPano.de</span> · ' : '') + stLabel +
                     (replies > 0 ? ' · ' + replies + ' Nachricht(en)' : '') +
                     ' · ' + escHtml((it.created_at || '').substr(0,10)) +
                     '</div>' +
