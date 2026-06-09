@@ -134,7 +134,9 @@ class TenantProvisioningService
                         $adminPassword,
                         $licenseToken
                     );
-                } catch (\Throwable) {}
+                } catch (\Throwable $e) {
+                    error_log('[TenantProvisioning] Welcome-Mail fehlgeschlagen für ' . $data['email'] . ': ' . $e->getMessage());
+                }
 
                 return [
                     'tenant_id'      => $tenantId,
