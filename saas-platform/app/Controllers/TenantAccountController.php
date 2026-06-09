@@ -117,9 +117,14 @@ class TenantAccountController extends Controller
             $this->redirect('/account');
         }
 
-        $this->tenantRepo->update((int)$tenant['id'], [
-            'password_hash' => password_hash($new, PASSWORD_BCRYPT, ['cost' => 12]),
-        ]);
+        $newHash = password_hash($new, PASSWORD_BCRYPT, ['cost' => 12]);
+
+        $this->tenantRepo->update((int)$tenant['id'], ['password_hash' => $newHash]);
+
+        // Passwort auch in den App-Tabellen synchronisieren (app.therapano.de)
+        if (!empty($tenant['db_name'])) {
+            $this->tenantRepo->syncAppUserPassword($tenant['db_name'], $tenant['email'], $newHash);
+        }
 
         $this->session->flash('success', 'Passwort erfolgreich geändert.');
         $this->redirect('/account');
