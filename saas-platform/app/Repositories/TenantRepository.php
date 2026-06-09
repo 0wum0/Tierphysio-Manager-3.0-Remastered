@@ -161,6 +161,29 @@ class TenantRepository
             "UPDATE tenants SET password_hash = ?, reset_token = NULL, reset_token_expires_at = NULL WHERE id = ?",
             [$newPasswordHash, $id]
         );
+        // Passwort auch in den App-Tabellen des Tenants synchronisieren,
+        // damit app.therapano.de und therapano.de dieselben Zugangsdaten nutzen.
+        $tenant = $this->find($id);
+        if ($tenant && !empty($tenant['db_name'])) {
+            $this->syncAppUserPassword($tenant['db_name'], $tenant['email'], $newPasswordHash);
+        }
+    }
+
+    /**
+     * Synchronisiert das Passwort in die prefixed App-Tabelle des Tenants.
+     * Wird nach Portal-Passwortänderungen aufgerufen damit app.therapano.de
+     * und therapano.de dieselben Zugangsdaten haben.
+     */
+    public function syncAppUserPassword(string $tablePrefix, string $email, string $passwordHash): void
+    {
+        try {
+            $this->db->execute(
+                "UPDATE `{$tablePrefix}users` SET `password` = ? WHERE `email` = ?",
+                [$passwordHash, $email]
+            );
+        } catch (\Throwable $e) {
+            error_log('[TenantRepository] syncAppUserPassword fehlgeschlagen für prefix=' . $tablePrefix . ': ' . $e->getMessage());
+        }
     }
 
     public function create(array $data): int
