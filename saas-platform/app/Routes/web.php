@@ -20,13 +20,36 @@ use Saas\Controllers\PraxisCronController;
 use Saas\Controllers\RevenueController;
 use Saas\Controllers\RegistrationController;
 use Saas\Controllers\FeaturesController;
+use Saas\Controllers\TenantAuthController;
+use Saas\Controllers\TenantAccountController;
 
 // ── License API (called by Praxissoftware) ─────────────────────────────────
 $router->post('/api/license/verify',  [LicenseApiController::class, 'verify']);
 $router->get('/api/license/check',    [LicenseApiController::class, 'check']);
 $router->post('/api/license/token',   [LicenseApiController::class, 'token']);
 
-// ── Auth ───────────────────────────────────────────────────────────────────
+// ── Landing Page ────────────────────────────────────────────────────────────
+$router->get('/', [TenantAuthController::class, 'landing']);
+
+// ── Tenant Login / Logout ───────────────────────────────────────────────────
+$router->get('/login',          [TenantAuthController::class, 'loginForm']);
+$router->post('/login',         [TenantAuthController::class, 'login']);
+$router->get('/logout',         [TenantAuthController::class, 'logout']);
+$router->post('/api/check-tid', [TenantAuthController::class, 'checkTid']);
+
+// ── Passwort vergessen / zurücksetzen ───────────────────────────────────────
+$router->get('/forgot-password',  [TenantAuthController::class, 'forgotForm']);
+$router->post('/forgot-password', [TenantAuthController::class, 'forgotSubmit']);
+$router->get('/reset-password',   [TenantAuthController::class, 'resetForm']);
+$router->post('/reset-password',  [TenantAuthController::class, 'resetSubmit']);
+
+// ── Tenant Account (Portal) ─────────────────────────────────────────────────
+$router->get('/account',                  [TenantAccountController::class, 'index']);
+$router->post('/account/update',          [TenantAccountController::class, 'update']);
+$router->post('/account/change-password', [TenantAccountController::class, 'changePassword']);
+$router->post('/account/change-plan',     [TenantAccountController::class, 'changePlan']);
+
+// ── SaaS Admin Auth ─────────────────────────────────────────────────────────
 $router->get('/admin/login',  [AuthController::class, 'loginForm']);
 $router->post('/admin/login', [AuthController::class, 'login']);
 $router->get('/admin/logout', [AuthController::class, 'logout']);
