@@ -41,12 +41,15 @@ CREATE TABLE IF NOT EXISTS `owners` (
     `street`     VARCHAR(255) NULL,
     `zip`        VARCHAR(10) NULL,
     `city`       VARCHAR(100) NULL,
-    `notes`      TEXT NULL,
-    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `notes`            TEXT NULL,
+    `gdpr_consent`     TINYINT(1) NOT NULL DEFAULT 0,
+    `gdpr_consent_at`  DATETIME NULL,
+    `created_at`       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at`       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
-    INDEX `idx_last_name` (`last_name`),
-    INDEX `idx_email` (`email`)
+    INDEX `idx_last_name`    (`last_name`),
+    INDEX `idx_email`        (`email`),
+    INDEX `idx_gdpr_consent` (`gdpr_consent`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ── patients (Migration 001 + 003 + 005 + 022) ───────────────
