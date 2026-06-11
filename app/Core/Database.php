@@ -82,7 +82,7 @@ class Database
         $options = [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES   => false,
+            PDO::ATTR_EMULATE_PREPARES   => true, // true = lastInsertId() works reliably on Hostinger shared hosting
         ];
         if (defined('PDO::MYSQL_ATTR_USE_BUFFERED_QUERY')) {
             $options[PDO::MYSQL_ATTR_USE_BUFFERED_QUERY] = true;
@@ -164,9 +164,20 @@ class Database
     public function insert(string $sql, array $params = []): string
     {
         $stmt = $this->query($sql, $params);
-        $id   = $this->pdo->lastInsertId(); // BEFORE closeCursor() — some MySQL configs reset it after
+        $id   = $this->pdo->lastInsertId();
         $stmt->closeCursor();
-        return $id;
+
+        // Fallback: some MySQL/PDO configs on shared hosting return "0"
+        // Use SELECT LAST_INSERT_ID() directly over the same connection
+        if ($id === '0' || $id === '' || $id === false) {
+            try {
+                $s  = $this->pdo->query('SELECT LAST_INSERT_ID()');
+                $id = (string)$s->fetchColumn();
+                $s->closeCursor();
+            } catch (\Throwable) {}
+        }
+
+        return (string)$id;
     }
 
     public function beginTransaction(): void
