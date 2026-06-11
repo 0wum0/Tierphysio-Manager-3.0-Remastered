@@ -488,21 +488,46 @@ class PatientController extends Controller
             'user_id'     => (int)$this->session->get('user_id'),
         ];
 
-        $file = null;
-        if (!empty($_FILES['attachment']['name'])) {
+        $allowedMimes = [
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+            'application/pdf', 'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
+            'video/x-msvideo', 'video/x-matroska', 'video/x-m4v',
+        ];
+        // attachment[] — multiple files (show.twig uses name="attachment[]")
+        $rawFiles = $_FILES['attachment'] ?? [];
+        if (!empty($rawFiles['name'])) {
             $destination = tenant_storage_path('patients/' . $params['id'] . '/timeline');
             if (!is_dir($destination)) {
                 mkdir($destination, 0755, true);
             }
-            $file = $this->uploadFile('attachment', $destination, [
-                'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-                'application/pdf', 'application/msword',
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
-                'video/x-msvideo', 'video/x-matroska', 'video/x-m4v',
-            ]);
-            if ($file) {
-                $data['attachment'] = $file;
+            // Normalize both single (name is string) and multiple (name is array)
+            $names    = is_array($rawFiles['name'])     ? $rawFiles['name']     : [$rawFiles['name']];
+            $tmpNames = is_array($rawFiles['tmp_name']) ? $rawFiles['tmp_name'] : [$rawFiles['tmp_name']];
+            $errors   = is_array($rawFiles['error'])    ? $rawFiles['error']    : [$rawFiles['error']];
+            $savedFilenames = [];
+            foreach ($names as $idx => $origName) {
+                if (empty($origName) || ($errors[$idx] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                    continue;
+                }
+                // Re-inject as single file into $_FILES for uploadFile()
+                $_FILES['_tmp_attach'] = [
+                    'name'     => $origName,
+                    'tmp_name' => $tmpNames[$idx],
+                    'error'    => $errors[$idx],
+                    'size'     => $rawFiles['size'][$idx] ?? 0,
+                    'type'     => $rawFiles['type'][$idx] ?? '',
+                ];
+                $saved = $this->uploadFile('_tmp_attach', $destination, $allowedMimes);
+                if ($saved) {
+                    $savedFilenames[] = $saved;
+                }
+            }
+            if (count($savedFilenames) === 1) {
+                $data['attachment'] = $savedFilenames[0];
+            } elseif (count($savedFilenames) > 1) {
+                $data['attachment'] = json_encode($savedFilenames, JSON_UNESCAPED_UNICODE);
             }
         }
 
@@ -572,15 +597,31 @@ class PatientController extends Controller
             'user_id'           => (int)$this->session->get('user_id'),
         ];
 
-        // Bereits hochgeladener Dateiname (vom uploadAttachment-Endpoint)
-        $preUploaded = $this->post('uploaded_filename', '');
-        if ($preUploaded !== '') {
-            // Sicherheitscheck: nur Dateiname, kein Pfad-Traversal
-            $safeFilename = basename($preUploaded);
-            $uploadedPath = tenant_storage_path('patients/' . (int)$params['id'] . '/timeline/' . $safeFilename);
-            if (file_exists($uploadedPath)) {
-                $data['attachment'] = $safeFilename;
+        // Bereits hochgeladene Dateinamen (vom uploadAttachment-Endpoint) — ein oder mehrere
+        $preUploadedMulti = $_POST['uploaded_filenames'] ?? [];
+        if (!is_array($preUploadedMulti)) {
+            $preUploadedMulti = [$preUploadedMulti];
+        }
+        // Fallback: altes Einzelfeld
+        $preUploadedSingle = $this->post('uploaded_filename', '');
+        if ($preUploadedSingle !== '' && empty($preUploadedMulti)) {
+            $preUploadedMulti = [$preUploadedSingle];
+        }
+        $validFilenames = [];
+        foreach ($preUploadedMulti as $raw) {
+            $safe = basename((string)$raw);
+            if ($safe === '') {
+                continue;
             }
+            $path = tenant_storage_path('patients/' . (int)$params['id'] . '/timeline/' . $safe);
+            if (file_exists($path)) {
+                $validFilenames[] = $safe;
+            }
+        }
+        if (count($validFilenames) === 1) {
+            $data['attachment'] = $validFilenames[0];
+        } elseif (count($validFilenames) > 1) {
+            $data['attachment'] = json_encode($validFilenames, JSON_UNESCAPED_UNICODE);
         } elseif (!empty($_FILES['attachment']['name']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
             // Fallback: direkter Upload (kleine Dateien / Bilder)
             $destination = tenant_storage_path('patients/' . $params['id'] . '/timeline');
