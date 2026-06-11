@@ -3564,6 +3564,7 @@ function saveBefundInline(patientId) {
         var el = form.querySelector('[name="' + name + '"]');
         if (el && el.value.trim() !== '') params.append(name, el.value);
     });
+    console.log('[saveBefund] params:', params.toString().substring(0, 500));
 
     fetch('/patienten/' + patientId + '/befunde/speichern', {
         method:  'POST',
