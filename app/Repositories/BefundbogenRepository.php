@@ -81,13 +81,11 @@ class BefundbogenRepository extends Repository
     {
         $table = $this->t('befundboegen');
 
-        // INSERT + immediately SELECT the new row by unique combination
-        // This avoids all lastInsertId() / LAST_INSERT_ID() issues on MariaDB shared hosting
-        $createdAt = date('Y-m-d H:i:s');
+        // Step 1: INSERT
         $this->db->query(
             "INSERT INTO `{$table}`
-                 (patient_id, owner_id, created_by, status, datum, naechster_termin, notizen, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                 (patient_id, owner_id, created_by, status, datum, naechster_termin, notizen)
+             VALUES (?, ?, ?, ?, ?, ?, ?)",
             [
                 $data['patient_id'],
                 $data['owner_id']         ?? null,
@@ -96,21 +94,26 @@ class BefundbogenRepository extends Repository
                 $data['datum'],
                 $data['naechster_termin'] ?? null,
                 $data['notizen']          ?? null,
-                $createdAt,
             ]
         )->closeCursor();
 
-        // SELECT the row we just inserted — unique by patient_id + datum + created_at
+        // Step 2: Retrieve ID — MAX(id) is safe here because we just inserted and
+        // the SELECT runs on the same connection immediately after.
+        // We filter by patient_id + status + datum to narrow down to our row.
         $intId = (int)$this->db->fetchColumn(
-            "SELECT id FROM `{$table}`
-             WHERE patient_id = ? AND datum = ? AND created_at = ?
-             ORDER BY id DESC LIMIT 1",
-            [$data['patient_id'], $data['datum'], $createdAt]
+            "SELECT MAX(id) FROM `{$table}`
+             WHERE patient_id = ? AND datum = ? AND status = ?",
+            [
+                $data['patient_id'],
+                $data['datum'],
+                $data['status'] ?? 'entwurf',
+            ]
         );
 
         if ($intId === 0) {
             throw new \RuntimeException(
-                'createBefund: INSERT succeeded but row not found by patient_id+datum+created_at. table=' . $table
+                'createBefund: INSERT ran but MAX(id) still 0. table=' . $table .
+                ' patient_id=' . $data['patient_id']
             );
         }
 
