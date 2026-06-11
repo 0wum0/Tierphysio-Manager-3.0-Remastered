@@ -682,6 +682,9 @@ class BefundbogenController extends Controller
                     KEY `idx_befundbogen` (`befundbogen_id`)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             ");
+            // Self-Heal: befundbogen_felder.id AUTO_INCREMENT sicherstellen
+            try { $db->execute("DELETE FROM `{$tFelder}` WHERE id = 0"); } catch (\Throwable) {}
+            try { $db->execute("ALTER TABLE `{$tFelder}` MODIFY `id` INT UNSIGNED NOT NULL AUTO_INCREMENT"); } catch (\Throwable $e) { error_log('[BefundSchema] felder MODIFY AI: ' . $e->getMessage()); }
 
             // ── Textbausteine ─────────────────────────────────────
             $db->safeExecute("
