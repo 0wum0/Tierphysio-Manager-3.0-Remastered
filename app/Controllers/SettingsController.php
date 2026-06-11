@@ -39,7 +39,6 @@ class SettingsController extends Controller
 
     public function pdfPreview(array $params = []): void
     {
-        $this->requireAuth();
         $settings  = $this->pdfService->getSettings();
         $today     = date('Y-m-d');
         $invoice   = [
