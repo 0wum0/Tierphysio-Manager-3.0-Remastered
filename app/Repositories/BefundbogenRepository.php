@@ -79,44 +79,9 @@ class BefundbogenRepository extends Repository
 
     public function createBefund(array $data): int
     {
-        $table   = $this->t('befundboegen');
-        $tFelder = $this->t('befundbogen_felder');
+        $table = $this->t('befundboegen');
 
-        // ── Step 1: Repair id=0 corruption (Tenants ohne AUTO_INCREMENT angelegt) ──
-        // Löscht Felder-Referenzen auf id=0, entfernt id=0-Zeile, repariert AUTO_INCREMENT.
-        // Wird direkt vor dem INSERT ausgeführt damit der INSERT sicher klappt.
-        try {
-            $this->db->execute("DELETE FROM `{$tFelder}` WHERE befundbogen_id = 0");
-            $this->db->execute("DELETE FROM `{$table}` WHERE id = 0");
-        } catch (\Throwable $e) {
-            error_log('[createBefund] cleanup id=0: ' . $e->getMessage());
-        }
-
-        // AUTO_INCREMENT-Attribut auf id-Spalte setzen (fehlt bei alten Tenants)
-        // Nur ausführen wenn AUTO_INCREMENT noch nicht gesetzt ist
-        try {
-            $colInfo = $this->db->fetch(
-                "SELECT EXTRA FROM information_schema.COLUMNS
-                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = 'id'",
-                [$table]
-            );
-            if ($colInfo && stripos((string)($colInfo['EXTRA'] ?? ''), 'auto_increment') === false) {
-                $this->db->execute(
-                    "ALTER TABLE `{$table}` MODIFY `id` INT UNSIGNED NOT NULL AUTO_INCREMENT"
-                );
-                error_log('[createBefund] AUTO_INCREMENT added to ' . $table);
-            }
-        } catch (\Throwable $e) {
-            error_log('[createBefund] AUTO_INCREMENT repair: ' . $e->getMessage());
-        }
-
-        // AUTO_INCREMENT Counter korrekt setzen
-        try {
-            $maxId = (int)($this->db->fetchColumn("SELECT MAX(id) FROM `{$table}`") ?: 0);
-            $this->db->execute("ALTER TABLE `{$table}` AUTO_INCREMENT = " . ($maxId + 1));
-        } catch (\Throwable) {}
-
-        // ── Step 2: INSERT ──
+        // ── INSERT ──
         $this->db->query(
             "INSERT INTO `{$table}`
                  (patient_id, owner_id, created_by, status, datum, naechster_termin, notizen)
