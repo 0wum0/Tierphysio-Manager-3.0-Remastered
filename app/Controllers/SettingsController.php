@@ -13,6 +13,7 @@ use App\Core\PluginManager;
 use App\Services\SettingsService;
 use App\Services\MigrationService;
 use App\Services\MailService;
+use App\Services\PdfService;
 use App\Repositories\UserRepository;
 use App\Repositories\TreatmentTypeRepository;
 use App\Repositories\HomeworkRepository;
@@ -30,9 +31,41 @@ class SettingsController extends Controller
         private readonly UserRepository $userRepository,
         private readonly TreatmentTypeRepository $treatmentTypeRepository,
         private readonly HomeworkRepository $homeworkRepository,
-        private readonly MailService $mailService
+        private readonly MailService $mailService,
+        private readonly PdfService $pdfService
     ) {
         parent::__construct($view, $session, $config, $translator);
+    }
+
+    public function pdfPreview(array $params = []): void
+    {
+        $this->requireAuth();
+        $settings  = $this->pdfService->getSettings();
+        $today     = date('Y-m-d');
+        $invoice   = [
+            'id' => 0, 'invoice_number' => 'DEMO-0001', 'issue_date' => $today,
+            'due_date' => date('Y-m-d', strtotime('+14 days')),
+            'status' => 'offen', 'total_net' => '155.00', 'total_tax' => '29.45',
+            'total_gross' => '184.45', 'tax_rate' => '19', 'owner_id' => null,
+            'patient_id' => null, 'notes' => '', 'payment_method' => '',
+            'invoice_type' => 'rechnung', 'cancel_reason' => '',
+        ];
+        $positions = [[
+            'description' => 'Physiotherapeutische Behandlung', 'quantity' => '1',
+            'unit' => 'Std.', 'unit_price' => '85.00', 'total' => '85.00', 'tax_rate' => '19',
+        ], [
+            'description' => 'Manuelle Therapie', 'quantity' => '2',
+            'unit' => 'x', 'unit_price' => '35.00', 'total' => '70.00', 'tax_rate' => '19',
+        ]];
+        $owner  = ['first_name' => 'Max', 'last_name' => 'Mustermann', 'street' => 'Musterstr. 1', 'zip' => '12345', 'city' => 'Musterstadt', 'email' => 'max@beispiel.de'];
+        $patient = ['name' => 'Bello', 'species' => 'Hund', 'chip_number' => '123456789'];
+
+        $pdf = $this->pdfService->generateInvoicePdf($invoice, $positions, $owner, $patient);
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: inline; filename="PDF-Vorschau.pdf"');
+        header('X-Frame-Options: SAMEORIGIN');
+        echo $pdf;
+        exit;
     }
 
     public function index(array $params = []): void

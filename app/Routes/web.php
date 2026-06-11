@@ -519,6 +519,7 @@ $router->get('/api/rechnungen/{id}/mahnwesen', [ReminderDunningController::class
 $router->get('/api/mahnwesen/alert', [ReminderDunningController::class, 'alertJson'], ['auth']);
 
 $router->get('/einstellungen', [SettingsController::class, 'index'], ['admin']);
+$router->get('/einstellungen/pdf-vorschau', [SettingsController::class, 'pdfPreview'], ['admin']);
 $router->post('/einstellungen', [SettingsController::class, 'update'], ['admin']);
 $router->post('/einstellungen/logo', [SettingsController::class, 'uploadLogo'], ['admin']);
 $router->post('/einstellungen/pdf-rechnung-bild', [SettingsController::class, 'uploadPdfRechnungBild'], ['admin']);
