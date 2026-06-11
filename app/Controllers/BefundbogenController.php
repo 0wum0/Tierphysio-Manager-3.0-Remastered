@@ -105,13 +105,13 @@ class BefundbogenController extends Controller
             ]);
             $this->repo->saveFelder($id, $this->collectFelder());
         } catch (\Throwable $e) {
-            error_log('[Befund store] ' . $e->getMessage());
+            error_log('[Befund store] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
             if ($this->isAjax()) {
                 header('Content-Type: application/json; charset=utf-8');
-                echo json_encode(['success' => false, 'error' => 'Befundbogen konnte nicht gespeichert werden.']);
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
                 exit;
             }
-            $this->flash('error', 'Befundbogen konnte nicht gespeichert werden. Bitte versuche es erneut.');
+            $this->flash('error', 'Befundbogen konnte nicht gespeichert werden: ' . $e->getMessage());
             $this->redirect('/patienten/' . $patientId . '/befunde/neu');
             return;
         }
