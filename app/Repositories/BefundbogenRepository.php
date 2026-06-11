@@ -93,30 +93,38 @@ class BefundbogenRepository extends Repository
             $data['notizen']          ?? null,
         ];
 
-        $pdo  = $this->db->getPdo();
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
+        // Use $this->db->query() — same Database instance that has the correct tenant prefix
+        $stmt     = $this->db->query($sql, $params);
+        $affected = $stmt->rowCount();
 
-        // Try pdo->lastInsertId() first
-        $intId = (int)$pdo->lastInsertId();
+        // Read lastInsertId() BEFORE closeCursor() — MariaDB resets it after cursor close
+        $intId = (int)$this->db->lastInsertId();
+        $stmt->closeCursor();
 
-        // Fallback 1: SELECT LAST_INSERT_ID()
-        if ($intId === 0) {
-            $row   = $pdo->query('SELECT LAST_INSERT_ID() AS id')->fetch(\PDO::FETCH_ASSOC);
-            $intId = (int)($row['id'] ?? 0);
+        if ($affected === 0) {
+            throw new \RuntimeException(
+                'createBefund INSERT affected 0 rows | table=' . $table .
+                ' patient_id=' . $data['patient_id']
+            );
         }
 
-        // Fallback 2: SELECT MAX(id) for this patient — same connection, just inserted
+        // Fallback: SELECT LAST_INSERT_ID() via same connection
         if ($intId === 0) {
-            $row   = $pdo->prepare("SELECT MAX(id) AS id FROM `{$table}` WHERE patient_id = ? AND datum = ?");
-            $row->execute([$data['patient_id'], $data['datum']]);
-            $intId = (int)(($row->fetch(\PDO::FETCH_ASSOC))['id'] ?? 0);
+            $intId = (int)$this->db->fetchColumn('SELECT LAST_INSERT_ID()');
+        }
+
+        // Last resort: MAX(id) WHERE patient_id + datum match
+        if ($intId === 0) {
+            $intId = (int)$this->db->fetchColumn(
+                "SELECT MAX(id) FROM `{$table}` WHERE patient_id = ? AND datum = ?",
+                [$data['patient_id'], $data['datum']]
+            );
         }
 
         if ($intId === 0) {
             throw new \RuntimeException(
-                'createBefund: could not retrieve inserted ID (tried lastInsertId, LAST_INSERT_ID(), MAX(id)). ' .
-                'patient_id=' . $data['patient_id'] . ' datum=' . $data['datum']
+                'createBefund: could not determine inserted ID. table=' . $table .
+                ' patient_id=' . $data['patient_id'] . ' datum=' . $data['datum']
             );
         }
 
