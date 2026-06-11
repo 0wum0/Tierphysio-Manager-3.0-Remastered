@@ -79,7 +79,7 @@ class BefundbogenRepository extends Repository
 
     public function createBefund(array $data): int
     {
-        $this->db->execute(
+        $id = $this->db->insert(
             "INSERT INTO `{$this->t('befundboegen')}`
                 (patient_id, owner_id, created_by, status, datum, naechster_termin, notizen)
              VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -93,7 +93,11 @@ class BefundbogenRepository extends Repository
                 $data['notizen']          ?? null,
             ]
         );
-        return (int)$this->db->getPdo()->lastInsertId();
+        $intId = (int)$id;
+        if ($intId === 0) {
+            throw new \RuntimeException('createBefund: lastInsertId returned 0 — INSERT failed silently.');
+        }
+        return $intId;
     }
 
     public function updateBefund(int $id, array $data): void
