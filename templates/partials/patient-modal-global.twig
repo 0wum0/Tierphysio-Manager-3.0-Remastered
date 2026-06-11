@@ -3249,8 +3249,8 @@ document.addEventListener('click', function(ev) {
 });
 
 /* ═══════════════════════════════════════════════════════
-   BEFUND SPECIES CARD — öffnet Anatomie INLINE im Modal
-   Kein Seitenwechsel. Species → Anatomie in #pd-befunde-list
+   BEFUND SPECIES CARD — öffnet vollständiges Befundformular
+   INLINE im Modal. Kein Seitenwechsel.
 ═══════════════════════════════════════════════════════ */
 document.addEventListener('click', function(ev) {
     var card = ev.target.closest('.befund-species-card');
@@ -3262,55 +3262,41 @@ document.addEventListener('click', function(ev) {
     var patientId = window.pdAktPatientId || '';
     if (!patientId) return;
 
-    // Species-Modal schließen
     var speciesModal = document.getElementById('modal-pd-befund-species');
     if (speciesModal) {
         try { var m = bootstrap.Modal.getInstance(speciesModal); if (m) m.hide(); } catch (e) {}
     }
 
-    openAnatomyInModal(patientId, species);
+    openBefundInlineForm(patientId, species);
 });
 
-function openAnatomyInModal(patientId, species) {
+function openBefundInlineForm(patientId, species) {
     var container = document.getElementById('pd-befunde-list');
     if (!container) return;
 
-    // Anatomy-HTML inline aufbauen
-    container.innerHTML = [
-        '<div id="befund-anatomy" style="padding:.5rem 0;">',
-        '  <input type="hidden" name="anatomy_species" value="' + escapeHtmlPd(species) + '">',
-        '  <input type="hidden" name="anatomy_markers" value="[]">',
-        '  <input type="hidden" name="anatomy_drawings" value="[]">',
-        '  <input type="number" name="schmerz_nrs" style="display:none;" min="0" max="10" value="">',
-        '  <div class="anatomy-toolbar"></div>',
-        '  <div class="anatomy-wrap"><div class="anatomy-stage"></div></div>',
-        '  <div class="anatomy-legend"></div>',
-        '  <h6 class="fw-700 mt-3 mb-1 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.05em;">Schmerzskala NRS (0\u201310)</h6>',
-        '  <div class="anatomy-nrs-scale"></div>',
-        '  <h6 class="fw-700 mt-3 mb-1 text-muted text-uppercase" style="font-size:.7rem;letter-spacing:.05em;">Markierungen</h6>',
-        '  <div class="anatomy-marker-list"></div>',
-        '  <div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;">',
-        '    <button type="button" class="btn btn-primary btn-sm" id="pd-befund-inline-save">Befund speichern</button>',
-        '    <button type="button" class="btn btn-outline-secondary btn-sm" id="pd-befund-inline-cancel">Abbrechen</button>',
-        '  </div>',
-        '</div>',
-    ].join('');
+    var csrfToken = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+    var today = new Date().toISOString().slice(0, 10);
 
-    // CSS laden (einmalig)
-    if (!document.querySelector('link[data-befund-anatomy]')) {
-        var lnk = document.createElement('link');
-        lnk.rel = 'stylesheet';
-        lnk.href = '/assets/css/befund-anatomy.css';
-        lnk.setAttribute('data-befund-anatomy', '1');
-        document.head.appendChild(lnk);
-        // Stage-Sizing (normalerweise in form.twig inline — hier nachladen)
-        var stg = document.createElement('style');
-        stg.setAttribute('data-befund-anatomy', '1');
-        stg.textContent = '#befund-anatomy .anatomy-stage{position:relative;width:100%;padding-top:60%;background:#e8edf2;border-radius:10px;border:1px solid #c0cdd8;overflow:hidden;cursor:crosshair;}' +
+    /* ── Tab-Styles (einmalig) ── */
+    if (!document.getElementById('pd-befund-inline-style')) {
+        var st = document.createElement('style');
+        st.id = 'pd-befund-inline-style';
+        st.textContent =
+            '.bfi-tabs{display:flex;gap:0;border-bottom:1px solid var(--bs-border-color);margin-bottom:1rem;overflow-x:auto;flex-shrink:0;}' +
+            '.bfi-tab{padding:.4rem .8rem;font-size:.8rem;font-weight:600;cursor:pointer;border:none;background:none;color:var(--bs-secondary-color);border-bottom:2px solid transparent;white-space:nowrap;}' +
+            '.bfi-tab.active{color:var(--bs-primary);border-bottom-color:var(--bs-primary);}' +
+            '.bfi-section{display:none;}.bfi-section.active{display:block;}' +
+            '.bfi-label{font-size:.78rem;font-weight:600;margin-bottom:.25rem;display:block;}' +
+            '.bfi-card{border:1px solid var(--bs-border-color);border-radius:8px;padding:.75rem;margin-bottom:.75rem;}' +
+            '.bfi-card-title{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bs-secondary-color);margin-bottom:.6rem;}' +
+            '.bfi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:.5rem;}' +
+            '.bfi-row-2{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;}' +
+            '.bfi-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.5rem;}' +
+            '.bfi-full{grid-column:1/-1;}' +
+            '#befund-anatomy .anatomy-stage{position:relative;width:100%;padding-top:60%;background:#e8edf2;border-radius:10px;border:1px solid #c0cdd8;overflow:hidden;cursor:crosshair;}' +
             '[data-bs-theme="dark"] #befund-anatomy .anatomy-stage,body.dark #befund-anatomy .anatomy-stage{background:#1b2230;border-color:#2d3a4a;}' +
             '#befund-anatomy .anatomy-stage svg{position:absolute;inset:0;width:100%;height:100%;}' +
             '#befund-anatomy .anatomy-stage svg.anatomy-silhouette{z-index:1;pointer-events:none;opacity:.95;}' +
-            '#befund-anatomy .anatomy-stage svg.anatomy-silhouette path.anatomy-region{fill:#9fb1c2;fill-opacity:.55;stroke:#5b738a;stroke-width:.7;}' +
             '#befund-anatomy .anatomy-stage svg.anatomy-overlay{z-index:2;}' +
             '#befund-anatomy .anatomy-side-picker{position:absolute;z-index:10;transform:translate(-50%,-110%);background:#fff;border:1px solid #c0cdd8;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.18);padding:.4rem .5rem;min-width:160px;}' +
             '[data-bs-theme="dark"] #befund-anatomy .anatomy-side-picker{background:#1b2230;border-color:#2d3a4a;color:#e2e8f0;}' +
@@ -3318,27 +3304,195 @@ function openAnatomyInModal(patientId, species) {
             '#befund-anatomy .anatomy-side-picker-buttons{display:flex;gap:.25rem;}' +
             '#befund-anatomy .anatomy-side-picker-buttons button{flex:1;padding:.35rem .5rem;font-size:.78rem;border:1px solid #dee2e6;background:transparent;border-radius:5px;cursor:pointer;color:inherit;}' +
             '#befund-anatomy .anatomy-side-picker-buttons button:hover{background:#2563eb;color:#fff;border-color:#2563eb;}';
-        document.head.appendChild(stg);
+        document.head.appendChild(st);
     }
 
-    // JS laden und Anatomie initialisieren
+    if (!document.querySelector('link[data-befund-anatomy]')) {
+        var lnk = document.createElement('link');
+        lnk.rel = 'stylesheet';
+        lnk.href = '/assets/css/befund-anatomy.css';
+        lnk.setAttribute('data-befund-anatomy', '1');
+        document.head.appendChild(lnk);
+    }
+
+    container.innerHTML = [
+        '<div id="pd-befund-inline-form">',
+
+        /* ── Meta (Datum, Status, Notizen) ── */
+        '<div class="bfi-card">',
+        '<div class="bfi-card-title">Allgemein</div>',
+        '<div class="bfi-row-3">',
+        '<div><label class="bfi-label">Datum <span style="color:#ef4444">*</span></label><input type="date" name="datum" class="form-control form-control-sm" value="' + today + '" required></div>',
+        '<div><label class="bfi-label">Status</label><select name="status" class="form-select form-select-sm"><option value="entwurf" selected>Entwurf</option><option value="abgeschlossen">Abgeschlossen</option></select></div>',
+        '<div><label class="bfi-label">Nächster Termin</label><input type="date" name="naechster_termin" class="form-control form-control-sm"></div>',
+        '</div>',
+        '<div style="margin-top:.5rem"><label class="bfi-label">Allgemeine Notizen</label><textarea name="notizen" class="form-control form-control-sm" rows="2" placeholder="Interne Bemerkungen…"></textarea></div>',
+        '</div>',
+
+        /* ── Sub-Tab-Navigation ── */
+        '<div class="bfi-tabs">',
+        '<button class="bfi-tab active" data-bfi-tab="anamnese">Anamnese</button>',
+        '<button class="bfi-tab" data-bfi-tab="allgemein">Allgemeinbefund</button>',
+        '<button class="bfi-tab" data-bfi-tab="bewegung">Bewegungsapparat</button>',
+        '<button class="bfi-tab" data-bfi-tab="naturheil">Naturheilkunde</button>',
+        '<button class="bfi-tab" data-bfi-tab="physio">Physiotherapie</button>',
+        '<button class="bfi-tab" data-bfi-tab="verlauf">Verlauf</button>',
+        '<button class="bfi-tab" data-bfi-tab="schmerzanalyse">Schmerzanalyse (SVG)</button>',
+        '</div>',
+
+        /* ── TAB: Anamnese ── */
+        '<div class="bfi-section active" data-bfi-section="anamnese">',
+        '<div class="bfi-card">',
+        '<div class="bfi-card-title">Anamnese &amp; Vorgeschichte</div>',
+        '<div style="margin-bottom:.5rem"><label class="bfi-label">Hauptbeschwerde</label><textarea name="hauptbeschwerde" class="form-control form-control-sm" rows="2" placeholder="Beschreibung der Hauptbeschwerde…"></textarea></div>',
+        '<div class="bfi-row-2">',
+        '<div><label class="bfi-label">Seit wann / Verlauf</label><input type="text" name="seit_wann" class="form-control form-control-sm" placeholder="z.B. seit 3 Wochen, zunehmend"></div>',
+        '<div><label class="bfi-label">Vorerkrankungen / OPs</label><input type="text" name="vorerkrankungen" class="form-control form-control-sm" placeholder="z.B. Bandscheibenvorfall 2022"></div>',
+        '<div><label class="bfi-label">Medikamente</label><input type="text" name="medikamente" class="form-control form-control-sm" placeholder="z.B. Carprofen 2x täglich"></div>',
+        '<div><label class="bfi-label">Allergien</label><input type="text" name="allergien" class="form-control form-control-sm" placeholder="z.B. keine bekannt"></div>',
+        '</div>',
+        '<div class="bfi-row-3" style="margin-top:.5rem">',
+        '<div><label class="bfi-label">Ernährung</label><input type="text" name="ernaehrung" class="form-control form-control-sm" placeholder="z.B. Trockenfutter, 2x täglich"></div>',
+        '<div><label class="bfi-label">Bewegung</label><input type="text" name="bewegung" class="form-control form-control-sm" placeholder="z.B. 30 min täglich"></div>',
+        '<div><label class="bfi-label">Haltung</label><input type="text" name="haltung" class="form-control form-control-sm" placeholder="z.B. Wohnungshund"></div>',
+        '</div>',
+        '<div style="margin-top:.5rem"><label class="bfi-label">Bisherige Therapien</label><textarea name="bisherige_therapien" class="form-control form-control-sm" rows="2" placeholder="z.B. Physiotherapie, Akupunktur…"></textarea></div>',
+        '</div>',
+        '</div>',
+
+        /* ── TAB: Allgemeinbefund ── */
+        '<div class="bfi-section" data-bfi-section="allgemein">',
+        '<div class="bfi-card">',
+        '<div class="bfi-card-title">Allgemeinbefund</div>',
+        '<div class="bfi-row-3">',
+        '<div><label class="bfi-label">Allgemeinbefinden</label><select name="allgemeinbefinden" class="form-select form-select-sm"><option value="">— wählen —</option><option>gut</option><option>mäßig</option><option>reduziert</option><option>schlecht</option></select></div>',
+        '<div><label class="bfi-label">Ernährungszustand</label><select name="ernaehrungszustand" class="form-select form-select-sm"><option value="">— wählen —</option><option>ideal</option><option>übergewichtig</option><option>untergewichtig</option><option>kachektisch</option></select></div>',
+        '<div><label class="bfi-label">Temperament</label><select name="temperament" class="form-select form-select-sm"><option value="">— wählen —</option><option>ruhig</option><option>ausgeglichen</option><option>nervös</option><option>aggressiv</option><option>ängstlich</option></select></div>',
+        '<div><label class="bfi-label">Körpertemperatur (°C)</label><input type="text" name="koerpertemperatur" class="form-control form-control-sm" placeholder="z.B. 38,5"></div>',
+        '<div><label class="bfi-label">Körperhaltung</label><input type="text" name="koerperhaltung" class="form-control form-control-sm" placeholder="z.B. Hohlkreuz"></div>',
+        '<div><label class="bfi-label">Gangbild</label><input type="text" name="gangbild" class="form-control form-control-sm" placeholder="z.B. lahmend links hinten"></div>',
+        '<div><label class="bfi-label">Lahmheitsgrad (0–5)</label><input type="number" name="lahmheitsgrad" class="form-control form-control-sm" min="0" max="5" placeholder="0"></div>',
+        '</div>',
+        '</div>',
+        '</div>',
+
+        /* ── TAB: Bewegungsapparat ── */
+        '<div class="bfi-section" data-bfi-section="bewegung">',
+        '<div class="bfi-card">',
+        '<div class="bfi-card-title">Bewegungsapparat &amp; Muskulatur</div>',
+        '<div class="bfi-row-2">',
+        '<div><label class="bfi-label">Betroffene Regionen</label><input type="text" name="betroffene_regionen" class="form-control form-control-sm" placeholder="z.B. LWS, linkes Hüftgelenk"></div>',
+        '<div><label class="bfi-label">Muskeltonus</label><input type="text" name="muskeltonus" class="form-control form-control-sm" placeholder="z.B. hyerton paravertebral"></div>',
+        '<div><label class="bfi-label">Triggerpunkte / Verspannungen</label><input type="text" name="triggerpunkte" class="form-control form-control-sm" placeholder="z.B. M. iliopsoas bds."></div>',
+        '<div><label class="bfi-label">Gelenkbefund</label><input type="text" name="gelenke_befund" class="form-control form-control-sm" placeholder="z.B. Erguss Knie re."></div>',
+        '</div>',
+        '<div style="margin-top:.5rem"><label class="bfi-label">Neurologischer Status</label><textarea name="neurologischer_status" class="form-control form-control-sm" rows="2" placeholder="z.B. Propriozeption reduziert links hinten…"></textarea></div>',
+        '</div>',
+        '</div>',
+
+        /* ── TAB: Naturheilkunde ── */
+        '<div class="bfi-section" data-bfi-section="naturheil">',
+        '<div class="bfi-card">',
+        '<div class="bfi-card-title">Naturheilkundliche Diagnostik</div>',
+        '<div class="bfi-row-2">',
+        '<div><label class="bfi-label">Konstitutionstyp / Miasma</label><input type="text" name="konstitutionstyp" class="form-control form-control-sm" placeholder="z.B. Sycose, Psora"></div>',
+        '<div><label class="bfi-label">Energetischer Gesamteindruck</label><input type="text" name="energetischer_eindruck" class="form-control form-control-sm" placeholder="z.B. erschöpft, lebendig"></div>',
+        '<div><label class="bfi-label">Bach-Blüten Mischung</label><input type="text" name="bachblueten_auswahl" class="form-control form-control-sm" placeholder="z.B. Mimulus, Aspen"></div>',
+        '<div><label class="bfi-label">Bach-Blüten Dosierung</label><input type="text" name="bachblueten_dosierung" class="form-control form-control-sm" placeholder="z.B. 4x2 Tropfen täglich"></div>',
+        '<div><label class="bfi-label">Homöopathisches Mittel</label><input type="text" name="homoeopathie_mittel" class="form-control form-control-sm" placeholder="z.B. Arnica montana"></div>',
+        '<div><label class="bfi-label">Potenz</label><input type="text" name="homoeopathie_potenz" class="form-control form-control-sm" placeholder="z.B. C30"></div>',
+        '<div><label class="bfi-label">Wiederholung / Dauer</label><input type="text" name="homoeopathie_dauer" class="form-control form-control-sm" placeholder="z.B. 1x wöchentlich 4 Wochen"></div>',
+        '<div><label class="bfi-label">Phytotherapie / Kräuter</label><input type="text" name="phytotherapie" class="form-control form-control-sm" placeholder="z.B. Teufelskralle Tinktur"></div>',
+        '<div><label class="bfi-label">Schüssler Salze</label><input type="text" name="schuesslersalze" class="form-control form-control-sm" placeholder="z.B. Nr. 8 und Nr. 11"></div>',
+        '<div><label class="bfi-label">Weitere Naturheilmittel</label><input type="text" name="weitere_naturheilmittel" class="form-control form-control-sm" placeholder="z.B. Akupunktur, Laser…"></div>',
+        '</div>',
+        '</div>',
+        '</div>',
+
+        /* ── TAB: Physiotherapie ── */
+        '<div class="bfi-section" data-bfi-section="physio">',
+        '<div class="bfi-card">',
+        '<div class="bfi-card-title">Physiotherapeutische Maßnahmen</div>',
+        '<div style="margin-bottom:.5rem"><label class="bfi-label">Angewandte Methoden</label><textarea name="pt_methoden" class="form-control form-control-sm" rows="2" placeholder="z.B. Massage, TENS, Ultraschall…"></textarea></div>',
+        '<div style="margin-bottom:.5rem"><label class="bfi-label">Therapieziele</label><textarea name="therapieziele" class="form-control form-control-sm" rows="2" placeholder="z.B. Schmerzreduktion, Verbesserung Beweglichkeit…"></textarea></div>',
+        '<div style="margin-bottom:.5rem"><label class="bfi-label">Hausaufgaben / Heimübungen</label><textarea name="hausaufgaben" class="form-control form-control-sm" rows="2" placeholder="z.B. 3x täglich Sit-to-Stand Übung…"></textarea></div>',
+        '<div class="bfi-row-3">',
+        '<div><label class="bfi-label">Frequenz</label><input type="text" name="therapiefrequenz" class="form-control form-control-sm" placeholder="z.B. 1x wöchentlich"></div>',
+        '<div><label class="bfi-label">Dauer</label><input type="text" name="therapiedauer" class="form-control form-control-sm" placeholder="z.B. 45 Minuten"></div>',
+        '<div><label class="bfi-label">Kontrolltermin</label><input type="text" name="kontrolltermin" class="form-control form-control-sm" placeholder="z.B. in 4 Wochen"></div>',
+        '</div>',
+        '</div>',
+        '</div>',
+
+        /* ── TAB: Verlauf ── */
+        '<div class="bfi-section" data-bfi-section="verlauf">',
+        '<div class="bfi-card">',
+        '<div class="bfi-card-title">Verlauf &amp; Notizen</div>',
+        '<textarea name="verlauf_notizen" class="form-control form-control-sm" rows="5" placeholder="Verlaufsbeobachtungen, Reaktionen auf Therapie…"></textarea>',
+        '</div>',
+        '</div>',
+
+        /* ── TAB: Schmerzanalyse (SVG) ── */
+        '<div class="bfi-section" data-bfi-section="schmerzanalyse">',
+        '<div id="befund-anatomy">',
+        '  <input type="hidden" name="anatomy_species" value="' + escapeHtmlPd(species) + '">',
+        '  <input type="hidden" name="anatomy_markers" value="[]">',
+        '  <input type="hidden" name="anatomy_drawings" value="[]">',
+        '  <input type="number" name="schmerz_nrs" style="display:none;" min="0" max="10" value="">',
+        '  <div class="anatomy-toolbar"></div>',
+        '  <div class="anatomy-wrap"><div class="anatomy-stage"></div></div>',
+        '  <div class="anatomy-legend"></div>',
+        '  <h6 style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bs-secondary-color);margin-top:.75rem;">Schmerzskala NRS (0–10)</h6>',
+        '  <div class="anatomy-nrs-scale"></div>',
+        '  <h6 style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--bs-secondary-color);margin-top:.5rem;">Markierungen</h6>',
+        '  <div class="anatomy-marker-list"></div>',
+        '</div>',
+        '</div>',
+
+        /* ── Footer-Buttons ── */
+        '<div style="margin-top:1rem;display:flex;gap:.5rem;flex-wrap:wrap;border-top:1px solid var(--bs-border-color);padding-top:.75rem;">',
+        '<button type="button" class="btn btn-primary btn-sm" id="pd-befund-inline-save">Befund speichern</button>',
+        '<a id="pd-befund-fullform-link" href="/patienten/' + encodeURIComponent(patientId) + '/befunde/neu" target="_blank" class="btn btn-outline-secondary btn-sm">Vollformular öffnen ↗</a>',
+        '<button type="button" class="btn btn-link btn-sm" id="pd-befund-inline-cancel">Abbrechen</button>',
+        '</div>',
+
+        '</div>',
+    ].join('');
+
+    /* ── Sub-Tab-Switching ── */
+    container.querySelectorAll('.bfi-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            var target = tab.getAttribute('data-bfi-tab');
+            container.querySelectorAll('.bfi-tab').forEach(function(t){ t.classList.remove('active'); });
+            container.querySelectorAll('.bfi-section').forEach(function(s){ s.classList.remove('active'); });
+            tab.classList.add('active');
+            var sec = container.querySelector('[data-bfi-section="' + target + '"]');
+            if (sec) sec.classList.add('active');
+            /* SVG-Anatomie initialisieren wenn Tab sichtbar wird */
+            if (target === 'schmerzanalyse') {
+                var aRoot = document.getElementById('befund-anatomy');
+                if (aRoot && window.befundAnatomyInit) {
+                    setTimeout(function(){ window.befundAnatomyInit(aRoot); }, 50);
+                }
+            }
+        });
+    });
+
+    /* ── SVG JS laden (einmalig) ── */
     if (window.befundAnatomyInit) {
-        // Bereits geladen — direkt auf neuem Container init
-        window.befundAnatomyInit(document.getElementById('befund-anatomy'));
+        /* nichts — wird on-demand beim Tab-Klick aufgerufen */
     } else if (!document.querySelector('script[data-befund-anatomy]')) {
-        // Script erstmalig laden — boot() init automatisch sobald geladen
         var scr = document.createElement('script');
         scr.src = '/assets/js/befund-anatomy.js';
         scr.setAttribute('data-befund-anatomy', '1');
         document.head.appendChild(scr);
     }
-    // Lädt gerade: boot() übernimmt wenn DOM+Script bereit
 
-    // Speichern
+    /* ── Speichern ── */
     var saveBtn = document.getElementById('pd-befund-inline-save');
     if (saveBtn) saveBtn.addEventListener('click', function() { saveBefundInline(patientId); });
 
-    // Abbrechen → zurück zur Liste
+    /* ── Abbrechen → zurück zur Liste ── */
     var cancelBtn = document.getElementById('pd-befund-inline-cancel');
     if (cancelBtn) cancelBtn.addEventListener('click', function() {
         _befundeLoaded = false;
@@ -3347,19 +3501,35 @@ function openAnatomyInModal(patientId, species) {
 }
 
 function saveBefundInline(patientId) {
-    var root = document.getElementById('befund-anatomy');
-    if (!root) return;
+    var form = document.getElementById('pd-befund-inline-form');
+    if (!form) return;
 
     var btn = document.getElementById('pd-befund-inline-save');
     if (btn) { btn.disabled = true; btn.textContent = 'Speichern\u2026'; }
 
     var csrfToken = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
-    var params = new URLSearchParams({
-        _csrf_token:      csrfToken,
-        anatomy_species:  (root.querySelector('[name="anatomy_species"]') || {}).value  || 'dog',
-        anatomy_markers:  (root.querySelector('[name="anatomy_markers"]') || {}).value  || '[]',
-        anatomy_drawings: (root.querySelector('[name="anatomy_drawings"]') || {}).value || '[]',
-        schmerz_nrs:      (root.querySelector('[name="schmerz_nrs"]') || {}).value      || '',
+
+    /* Alle benannten Felder im Formular sammeln */
+    var fields = [
+        'datum','status','naechster_termin','notizen',
+        'hauptbeschwerde','seit_wann','vorerkrankungen','medikamente','allergien',
+        'ernaehrung','bewegung','haltung','bisherige_therapien',
+        'allgemeinbefinden','ernaehrungszustand','temperament','koerpertemperatur',
+        'koerperhaltung','gangbild','lahmheitsgrad',
+        'betroffene_regionen','muskeltonus','triggerpunkte','gelenke_befund',
+        'neurologischer_status',
+        'konstitutionstyp','energetischer_eindruck','bachblueten_auswahl',
+        'bachblueten_dosierung','homoeopathie_mittel','homoeopathie_potenz',
+        'homoeopathie_dauer','phytotherapie','schuesslersalze','weitere_naturheilmittel',
+        'pt_methoden','therapieziele','hausaufgaben','therapiefrequenz',
+        'therapiedauer','kontrolltermin','verlauf_notizen',
+        'anatomy_species','anatomy_markers','anatomy_drawings','schmerz_nrs',
+    ];
+
+    var params = new URLSearchParams({ _csrf_token: csrfToken });
+    fields.forEach(function(name) {
+        var el = form.querySelector('[name="' + name + '"]');
+        if (el && el.value.trim() !== '') params.append(name, el.value);
     });
 
     fetch('/patienten/' + patientId + '/befunde/speichern', {
