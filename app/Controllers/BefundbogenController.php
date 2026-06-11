@@ -106,7 +106,7 @@ class BefundbogenController extends Controller
             $this->repo->saveFelder($id, $this->collectFelder());
         } catch (\Throwable $e) {
             error_log('[Befund store] ' . $e->getMessage());
-            if ($this->isXhr()) {
+            if ($this->isAjax()) {
                 header('Content-Type: application/json; charset=utf-8');
                 echo json_encode(['success' => false, 'error' => 'Befundbogen konnte nicht gespeichert werden.']);
                 exit;
@@ -117,9 +117,13 @@ class BefundbogenController extends Controller
         }
 
         // AJAX-Support für Modal-Inline-Flow
-        if ($this->isXhr()) {
+        if ($this->isAjax()) {
             header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['success' => true, 'id' => $id]);
+            echo json_encode([
+                'success' => true,
+                'id'      => $id,
+                'url'     => '/patienten/' . $patientId . '/befunde/' . $id,
+            ]);
             exit;
         }
 
@@ -273,8 +277,18 @@ class BefundbogenController extends Controller
 
         if ($sent) {
             $this->repo->markVersendet((int)$params['id'], $owner['email'], 'befunde/' . $filename);
+            if ($this->isAjax()) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => true, 'email' => $owner['email']]);
+                exit;
+            }
             $this->flash('success', 'Befundbogen wurde per E-Mail an ' . $owner['email'] . ' versendet.');
         } else {
+            if ($this->isAjax()) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'error' => $this->mailService->getLastError()]);
+                exit;
+            }
             $this->flash('error', 'E-Mail konnte nicht gesendet werden: ' . $this->mailService->getLastError());
         }
 
@@ -471,6 +485,8 @@ class BefundbogenController extends Controller
             // ── Erweiterung: Interaktive Anatomie + Physio-Bereiche ──
             'anatomy_species', 'anatomy_markers', 'anatomy_drawings',
             'physio_bereiche',
+            // ── Inline-Formular: zusätzliche Meta-Felder ──
+            'naechster_termin',
         ];
 
         $felder = [];

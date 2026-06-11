@@ -1444,6 +1444,7 @@ function loadBefundboegen(patientId) {
                 html += '</div>';
                 html += '<span style="font-size:0.65rem;padding:2px 8px;border-radius:6px;background:'+esc(c)+'22;color:'+esc(c)+';border:1px solid '+esc(c)+'44;white-space:nowrap;">'+esc(l)+'</span>';
                 html += '<a href="/patienten/'+patientId+'/befunde/'+b.id+'" class="btn btn-sm btn-outline-secondary" style="font-size:0.75rem;padding:3px 8px;white-space:nowrap;">Ansehen</a>';
+                html += '<button type="button" class="btn btn-sm btn-outline-primary" style="font-size:0.75rem;padding:3px 8px;white-space:nowrap;" onclick="sendBefundFromModal('+patientId+','+b.id+',this)">📧 Senden</button>';
                 html += '</div>';
             });
             container.innerHTML = html;
@@ -3540,8 +3541,21 @@ function saveBefundInline(patientId) {
     .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
     .then(function(data) {
         if (data.success) {
-            _befundeLoaded = false;
-            loadBefundboegen(patientId);
+            var container = document.getElementById('pd-befunde-list');
+            if (container) {
+                container.innerHTML =
+                    '<div style="border:1px solid #22c55e44;border-radius:10px;padding:1rem;background:rgba(34,197,94,.08);">' +
+                    '<div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem;">' +
+                    '<svg width="20" height="20" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="#22c55e" stroke-width="2"/><path stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8 12l3 3 5-5"/></svg>' +
+                    '<span style="font-weight:700;color:#22c55e;">Befundbogen gespeichert!</span>' +
+                    '</div>' +
+                    '<div style="display:flex;gap:.5rem;flex-wrap:wrap;">' +
+                    '<a href="' + escapeHtmlPd(data.url || '/patienten/'+patientId+'/befunde/'+data.id) + '" target="_blank" class="btn btn-sm btn-outline-secondary" style="font-size:.8rem;">Befund ansehen ↗</a>' +
+                    '<button type="button" class="btn btn-sm btn-primary" style="font-size:.8rem;" onclick="sendBefundFromModal(' + escapeHtmlPd(String(patientId)) + ',' + escapeHtmlPd(String(data.id)) + ',this)">📧 Per E-Mail senden</button>' +
+                    '<button type="button" class="btn btn-sm btn-link" style="font-size:.8rem;" onclick="(function(){_befundeLoaded=false;loadBefundboegen('+escapeHtmlPd(String(patientId))+')}())">Zur Liste</button>' +
+                    '</div>' +
+                    '</div>';
+            }
         } else {
             throw new Error(data.error || 'Fehler');
         }
@@ -3549,7 +3563,37 @@ function saveBefundInline(patientId) {
     .catch(function(e) {
         console.error('[Befund inline save]', e);
         if (btn) { btn.disabled = false; btn.textContent = 'Befund speichern'; }
-        alert('Befund konnte nicht gespeichert werden.');
+        alert('Befund konnte nicht gespeichert werden: ' + e.message);
+    });
+}
+
+function sendBefundFromModal(patientId, befundId, triggerBtn) {
+    if (!confirm('Befundbogen per E-Mail an den Tierhalter senden?')) return;
+    if (triggerBtn) { triggerBtn.disabled = true; triggerBtn.textContent = 'Senden…'; }
+
+    var csrfToken = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+    fetch('/patienten/' + patientId + '/befunde/' + befundId + '/senden', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+        body:    new URLSearchParams({ _csrf_token: csrfToken }).toString(),
+    })
+    .then(function(r) { return r.json().catch(function(){ return {}; }); })
+    .then(function(data) {
+        if (triggerBtn) {
+            if (data.success !== false) {
+                triggerBtn.textContent = '✓ Versendet';
+                triggerBtn.classList.replace('btn-primary', 'btn-success');
+            } else {
+                triggerBtn.disabled = false;
+                triggerBtn.textContent = '📧 Per E-Mail senden';
+                alert('Fehler: ' + (data.error || 'E-Mail konnte nicht gesendet werden.'));
+            }
+        }
+    })
+    .catch(function(e) {
+        console.error('[Befund send]', e);
+        if (triggerBtn) { triggerBtn.disabled = false; triggerBtn.textContent = '📧 Per E-Mail senden'; }
+        alert('E-Mail konnte nicht gesendet werden.');
     });
 }
 
