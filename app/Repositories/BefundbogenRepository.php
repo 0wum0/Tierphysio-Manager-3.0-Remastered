@@ -79,52 +79,38 @@ class BefundbogenRepository extends Repository
 
     public function createBefund(array $data): int
     {
-        $table  = $this->t('befundboegen');
-        $sql    = "INSERT INTO `{$table}`
-                       (patient_id, owner_id, created_by, status, datum, naechster_termin, notizen)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)";
-        $params = [
-            $data['patient_id'],
-            $data['owner_id']         ?? null,
-            $data['created_by']       ?? null,
-            $data['status']           ?? 'entwurf',
-            $data['datum'],
-            $data['naechster_termin'] ?? null,
-            $data['notizen']          ?? null,
-        ];
+        $table = $this->t('befundboegen');
 
-        // Use $this->db->query() — same Database instance that has the correct tenant prefix
-        $stmt     = $this->db->query($sql, $params);
-        $affected = $stmt->rowCount();
+        // INSERT + immediately SELECT the new row by unique combination
+        // This avoids all lastInsertId() / LAST_INSERT_ID() issues on MariaDB shared hosting
+        $createdAt = date('Y-m-d H:i:s');
+        $this->db->query(
+            "INSERT INTO `{$table}`
+                 (patient_id, owner_id, created_by, status, datum, naechster_termin, notizen, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            [
+                $data['patient_id'],
+                $data['owner_id']         ?? null,
+                $data['created_by']       ?? null,
+                $data['status']           ?? 'entwurf',
+                $data['datum'],
+                $data['naechster_termin'] ?? null,
+                $data['notizen']          ?? null,
+                $createdAt,
+            ]
+        )->closeCursor();
 
-        // Read lastInsertId() BEFORE closeCursor() — MariaDB resets it after cursor close
-        $intId = (int)$this->db->lastInsertId();
-        $stmt->closeCursor();
-
-        if ($affected === 0) {
-            throw new \RuntimeException(
-                'createBefund INSERT affected 0 rows | table=' . $table .
-                ' patient_id=' . $data['patient_id']
-            );
-        }
-
-        // Fallback: SELECT LAST_INSERT_ID() via same connection
-        if ($intId === 0) {
-            $intId = (int)$this->db->fetchColumn('SELECT LAST_INSERT_ID()');
-        }
-
-        // Last resort: MAX(id) WHERE patient_id + datum match
-        if ($intId === 0) {
-            $intId = (int)$this->db->fetchColumn(
-                "SELECT MAX(id) FROM `{$table}` WHERE patient_id = ? AND datum = ?",
-                [$data['patient_id'], $data['datum']]
-            );
-        }
+        // SELECT the row we just inserted — unique by patient_id + datum + created_at
+        $intId = (int)$this->db->fetchColumn(
+            "SELECT id FROM `{$table}`
+             WHERE patient_id = ? AND datum = ? AND created_at = ?
+             ORDER BY id DESC LIMIT 1",
+            [$data['patient_id'], $data['datum'], $createdAt]
+        );
 
         if ($intId === 0) {
             throw new \RuntimeException(
-                'createBefund: could not determine inserted ID. table=' . $table .
-                ' patient_id=' . $data['patient_id'] . ' datum=' . $data['datum']
+                'createBefund: INSERT succeeded but row not found by patient_id+datum+created_at. table=' . $table
             );
         }
 
