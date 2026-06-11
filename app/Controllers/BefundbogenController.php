@@ -305,6 +305,13 @@ class BefundbogenController extends Controller
         }
 
         $this->repo->deleteBefund((int)$params['id']);
+
+        if ($this->isAjax()) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => true]);
+            exit;
+        }
+
         $this->flash('success', 'Befundbogen wurde gelöscht.');
         $this->redirect('/patienten/' . $params['patient_id'] . '/befunde');
     }

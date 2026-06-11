@@ -1445,11 +1445,35 @@ function loadBefundboegen(patientId) {
                 html += '<span style="font-size:0.65rem;padding:2px 8px;border-radius:6px;background:'+esc(c)+'22;color:'+esc(c)+';border:1px solid '+esc(c)+'44;white-space:nowrap;">'+esc(l)+'</span>';
                 html += '<a href="/patienten/'+patientId+'/befunde/'+b.id+'" class="btn btn-sm btn-outline-secondary" style="font-size:0.75rem;padding:3px 8px;white-space:nowrap;">Ansehen</a>';
                 html += '<button type="button" class="btn btn-sm btn-outline-primary" style="font-size:0.75rem;padding:3px 8px;white-space:nowrap;" onclick="sendBefundFromModal('+patientId+','+b.id+',this)">📧 Senden</button>';
+                html += '<button type="button" class="btn btn-sm btn-outline-danger" style="font-size:0.75rem;padding:3px 8px;white-space:nowrap;" onclick="deleteBefundFromModal('+patientId+','+b.id+',this)">🗑 Löschen</button>';
                 html += '</div>';
             });
             container.innerHTML = html;
         })
         .catch(function() { container.innerHTML = '<a href="/patienten/'+patientId+'/befunde" class="btn btn-sm btn-outline-secondary">Alle Befundbögen anzeigen</a>'; });
+}
+
+function deleteBefundFromModal(patientId, befundId, btn) {
+    if (!confirm('Befundbogen BF-' + String(befundId).padStart(4,'0') + ' wirklich löschen? Dies kann nicht rückgängig gemacht werden.')) return;
+    var orig = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Lösche…';
+    var csrf = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+    fetch('/patienten/' + patientId + '/befunde/' + befundId + '/loeschen', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
+        body: new URLSearchParams({ _csrf_token: csrf }).toString(),
+    })
+    .then(function(r) { return r.json().catch(function(){ return {success: r.ok}; }); })
+    .then(function(data) {
+        if (data.success !== false) {
+            _befundeLoaded = false;
+            loadBefundboegen(patientId);
+        } else {
+            btn.disabled = false; btn.textContent = orig;
+            alert('Löschen fehlgeschlagen: ' + (data.error || 'Unbekannter Fehler'));
+        }
+    })
+    .catch(function() { btn.disabled = false; btn.textContent = orig; alert('Löschen fehlgeschlagen.'); });
 }
 
 /* --- Tierarztberichte --- */

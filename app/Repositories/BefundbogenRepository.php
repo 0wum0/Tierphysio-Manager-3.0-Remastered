@@ -79,7 +79,26 @@ class BefundbogenRepository extends Repository
 
     public function createBefund(array $data): int
     {
-        $table = $this->t('befundboegen');
+        $table      = $this->t('befundboegen');
+        $tFelder    = $this->t('befundbogen_felder');
+
+        // ── Pre-flight repair: id=0 Schrottzeilen löschen + AUTO_INCREMENT sicherstellen ──
+        // Dies behebt Tenants bei denen die Tabelle ohne AUTO_INCREMENT angelegt wurde.
+        try {
+            $this->db->execute("DELETE FROM `{$tFelder}` WHERE befundbogen_id = 0");
+        } catch (\Throwable) {}
+        try {
+            $this->db->execute("DELETE FROM `{$table}` WHERE id = 0");
+        } catch (\Throwable) {}
+        try {
+            $this->db->execute("ALTER TABLE `{$table}` MODIFY `id` INT UNSIGNED NOT NULL AUTO_INCREMENT");
+        } catch (\Throwable $e) {
+            error_log('[createBefund] MODIFY AUTO_INCREMENT failed: ' . $e->getMessage());
+        }
+        try {
+            $maxId = (int)($this->db->fetchColumn("SELECT MAX(id) FROM `{$table}`") ?: 0);
+            $this->db->execute("ALTER TABLE `{$table}` AUTO_INCREMENT = " . ($maxId + 1));
+        } catch (\Throwable) {}
 
         // Step 1: INSERT
         $this->db->query(
