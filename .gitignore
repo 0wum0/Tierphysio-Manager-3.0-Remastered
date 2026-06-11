@@ -1,3 +1,6 @@
+# Database dumps (sensitive data, never commit)
+/*.sql
+
 # Environment
 .env
 .env.local
