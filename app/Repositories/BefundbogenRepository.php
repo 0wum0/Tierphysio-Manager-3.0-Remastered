@@ -81,12 +81,15 @@ class BefundbogenRepository extends Repository
     {
         $table = $this->t('befundboegen');
 
-        // ── INSERT ──
+        // Berechne next ID manuell — umgeht AUTO_INCREMENT-Probleme auf Hostinger
+        $nextId = (int)($this->db->fetchColumn("SELECT COALESCE(MAX(id), 0) + 1 FROM `{$table}`") ?: 1);
+
         $this->db->query(
             "INSERT INTO `{$table}`
-                 (patient_id, owner_id, created_by, status, datum, naechster_termin, notizen)
-             VALUES (?, ?, ?, ?, ?, ?, ?)",
+                 (id, patient_id, owner_id, created_by, status, datum, naechster_termin, notizen)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             [
+                $nextId,
                 $data['patient_id'],
                 $data['owner_id']         ?? null,
                 $data['created_by']       ?? null,
@@ -97,25 +100,7 @@ class BefundbogenRepository extends Repository
             ]
         )->closeCursor();
 
-        // ── Step 3: ID ermitteln ──
-        $intId = (int)$this->db->fetchColumn(
-            "SELECT MAX(id) FROM `{$table}`
-             WHERE patient_id = ? AND datum = ? AND status = ?",
-            [
-                $data['patient_id'],
-                $data['datum'],
-                $data['status'] ?? 'entwurf',
-            ]
-        );
-
-        if ($intId === 0) {
-            throw new \RuntimeException(
-                'createBefund: INSERT lief durch aber keine ID gefunden. table=' . $table .
-                ' | Bitte AUTO_INCREMENT und Tabellenstatus prüfen.'
-            );
-        }
-
-        return $intId;
+        return $nextId;
     }
 
     public function updateBefund(int $id, array $data): void
