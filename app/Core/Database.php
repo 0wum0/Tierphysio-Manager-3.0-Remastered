@@ -164,8 +164,9 @@ class Database
     public function insert(string $sql, array $params = []): string
     {
         $stmt = $this->query($sql, $params);
+        $id   = $this->pdo->lastInsertId(); // BEFORE closeCursor() — some MySQL configs reset it after
         $stmt->closeCursor();
-        return $this->pdo->lastInsertId();
+        return $id;
     }
 
     public function beginTransaction(): void
