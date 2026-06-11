@@ -200,10 +200,12 @@ class InvoiceRepository extends Repository
     public function getStats(): array
     {
         $now   = date('Y-m-d');
-        $week  = date('Y-m-d', strtotime('-7 days'));
+        // Montag der aktuellen Kalenderwoche (ISO: Woche beginnt Montag)
+        $week  = date('Y-m-d', strtotime('monday this week'));
         $month = date('Y-m-01');
         $year  = date('Y-01-01');
-        $prevMonth = date('Y-m-d', strtotime('-1 month'));
+        $prevMonth = date('Y-m-01', strtotime('first day of last month'));
+        $prevMonthEnd = date('Y-m-t', strtotime('last month'));
         $prevYear  = date('Y-01-01', strtotime('-1 year'));
 
         $inv = $this->t('invoices');

@@ -283,6 +283,20 @@ class DogschoolInvoiceService
             $yearStart  = date('Y-01-01');
             $today      = date('Y-m-d');
 
+            /* Umsatz-Datum: paid_at (Zahlungsdatum) bevorzugt, Fallback issue_date.
+             * Identische Logik wie InvoiceRepository::getStats() — damit Dashboard-
+             * KPI und Rechnungslisten-Filter immer dieselbe Menge zeigen.
+             * Rechnungen die im Vormonat ausgestellt aber diesen Monat bezahlt
+             * wurden, zählen so korrekt zum aktuellen Monat. */
+            $hasPaidAt = false;
+            try {
+                $this->db->safeFetchColumn("SELECT `paid_at` FROM `{$inv}` LIMIT 0");
+                $hasPaidAt = true;
+            } catch (\Throwable) {}
+            $revDate = $hasPaidAt
+                ? "DATE(COALESCE(i.paid_at, i.issue_date))"
+                : "DATE(i.issue_date)";
+
             $openRow = $this->db->safeFetch(
                 "SELECT COUNT(*) AS c, COALESCE(SUM({$gross}), 0) AS s
                    FROM `{$inv}` i
@@ -304,7 +318,7 @@ class DogschoolInvoiceService
                 "SELECT COUNT(*) AS c, COALESCE(SUM({$gross}), 0) AS s
                    FROM `{$inv}` i
                   WHERE i.status = 'paid' AND {$notCancelled}
-                    AND i.issue_date >= ?",
+                    AND {$revDate} >= ?",
                 [$monthStart]
             ) ?: ['c' => 0, 's' => 0];
 
@@ -312,7 +326,7 @@ class DogschoolInvoiceService
                 "SELECT COUNT(*) AS c, COALESCE(SUM({$gross}), 0) AS s
                    FROM `{$inv}` i
                   WHERE i.status = 'paid' AND {$notCancelled}
-                    AND i.issue_date >= ?",
+                    AND {$revDate} >= ?",
                 [$yearStart]
             ) ?: ['c' => 0, 's' => 0];
 
