@@ -1453,7 +1453,7 @@ function loadBefundboegen(patientId) {
         .catch(function() { container.innerHTML = '<a href="/patienten/'+patientId+'/befunde" class="btn btn-sm btn-outline-secondary">Alle Befundbögen anzeigen</a>'; });
 }
 
-function deleteBefundFromModal(patientId, befundId, btn) {
+window.deleteBefundFromModal = function deleteBefundFromModal(patientId, befundId, btn) {
     if (!confirm('Befundbogen BF-' + String(befundId).padStart(4,'0') + ' wirklich löschen? Dies kann nicht rückgängig gemacht werden.')) return;
     var orig = btn.textContent;
     btn.disabled = true; btn.textContent = 'Lösche…';
@@ -3645,7 +3645,7 @@ function saveBefundInline(patientId) {
     });
 }
 
-function sendBefundFromModal(patientId, befundId, triggerBtn) {
+window.sendBefundFromModal = function sendBefundFromModal(patientId, befundId, triggerBtn) {
     if (!confirm('Befundbogen per E-Mail an den Tierhalter senden?')) return;
     if (triggerBtn) { triggerBtn.disabled = true; triggerBtn.textContent = 'Senden…'; }
 
