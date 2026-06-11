@@ -79,24 +79,32 @@ class BefundbogenRepository extends Repository
 
     public function createBefund(array $data): int
     {
-        $id = $this->db->insert(
-            "INSERT INTO `{$this->t('befundboegen')}`
-                (patient_id, owner_id, created_by, status, datum, naechster_termin, notizen)
-             VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [
-                $data['patient_id'],
-                $data['owner_id']         ?? null,
-                $data['created_by']       ?? null,
-                $data['status']           ?? 'entwurf',
-                $data['datum'],
-                $data['naechster_termin'] ?? null,
-                $data['notizen']          ?? null,
-            ]
-        );
-        $intId = (int)$id;
+        $table  = $this->t('befundboegen');
+        $sql    = "INSERT INTO `{$table}`
+                       (patient_id, owner_id, created_by, status, datum, naechster_termin, notizen)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)";
+        $params = [
+            $data['patient_id'],
+            $data['owner_id']         ?? null,
+            $data['created_by']       ?? null,
+            $data['status']           ?? 'entwurf',
+            $data['datum'],
+            $data['naechster_termin'] ?? null,
+            $data['notizen']          ?? null,
+        ];
+
+        $pdo  = $this->db->getPdo();
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        // Use SELECT LAST_INSERT_ID() — most reliable on MariaDB/Hostinger
+        $idRow = $pdo->query('SELECT LAST_INSERT_ID() AS id')->fetch(\PDO::FETCH_ASSOC);
+        $intId = (int)($idRow['id'] ?? 0);
+
         if ($intId === 0) {
-            throw new \RuntimeException('createBefund: lastInsertId returned 0 — INSERT failed silently.');
+            throw new \RuntimeException('createBefund: LAST_INSERT_ID() returned 0 — INSERT may have failed.');
         }
+
         return $intId;
     }
 
