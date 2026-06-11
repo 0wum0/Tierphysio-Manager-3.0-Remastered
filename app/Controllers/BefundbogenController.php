@@ -632,6 +632,12 @@ class BefundbogenController extends Controller
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             ");
 
+            // ── Self-Heal: id=0 Schrotteinträge bereinigen + AUTO_INCREMENT reparieren ──
+            $db->safeExecute("DELETE FROM `{$tFelder}` WHERE befundbogen_id = 0");
+            $db->safeExecute("DELETE FROM `{$tBefunde}` WHERE id = 0");
+            $maxId = (int)($db->safeFetchColumn("SELECT MAX(id) FROM `{$tBefunde}`") ?? 0);
+            $db->safeExecute("ALTER TABLE `{$tBefunde}` AUTO_INCREMENT = " . ($maxId + 1));
+
             // Fehlende Spalten nachrüsten (für Tenants die die Migration nie sahen)
             $existingCols = array_column(
                 $db->safeFetchAll("SHOW COLUMNS FROM `{$tBefunde}`"),

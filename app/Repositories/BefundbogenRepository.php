@@ -97,12 +97,27 @@ class BefundbogenRepository extends Repository
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
 
-        // Use SELECT LAST_INSERT_ID() — most reliable on MariaDB/Hostinger
-        $idRow = $pdo->query('SELECT LAST_INSERT_ID() AS id')->fetch(\PDO::FETCH_ASSOC);
-        $intId = (int)($idRow['id'] ?? 0);
+        // Try pdo->lastInsertId() first
+        $intId = (int)$pdo->lastInsertId();
+
+        // Fallback 1: SELECT LAST_INSERT_ID()
+        if ($intId === 0) {
+            $row   = $pdo->query('SELECT LAST_INSERT_ID() AS id')->fetch(\PDO::FETCH_ASSOC);
+            $intId = (int)($row['id'] ?? 0);
+        }
+
+        // Fallback 2: SELECT MAX(id) for this patient — same connection, just inserted
+        if ($intId === 0) {
+            $row   = $pdo->prepare("SELECT MAX(id) AS id FROM `{$table}` WHERE patient_id = ? AND datum = ?");
+            $row->execute([$data['patient_id'], $data['datum']]);
+            $intId = (int)(($row->fetch(\PDO::FETCH_ASSOC))['id'] ?? 0);
+        }
 
         if ($intId === 0) {
-            throw new \RuntimeException('createBefund: LAST_INSERT_ID() returned 0 — INSERT may have failed.');
+            throw new \RuntimeException(
+                'createBefund: could not retrieve inserted ID (tried lastInsertId, LAST_INSERT_ID(), MAX(id)). ' .
+                'patient_id=' . $data['patient_id'] . ' datum=' . $data['datum']
+            );
         }
 
         return $intId;
