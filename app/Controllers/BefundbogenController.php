@@ -633,17 +633,15 @@ class BefundbogenController extends Controller
             ");
 
             // ── Self-Heal: id=0 Schrotteinträge bereinigen + AUTO_INCREMENT sicherstellen ──
-            $db->safeExecute("DELETE FROM `{$tFelder}` WHERE befundbogen_id = 0");
-            $db->safeExecute("DELETE FROM `{$tBefunde}` WHERE id = 0");
-
-            // Sicherstellen dass die id-Spalte AUTO_INCREMENT hat (fehlt bei alten Tenants)
-            $db->safeExecute(
-                "ALTER TABLE `{$tBefunde}` MODIFY `id` INT UNSIGNED NOT NULL AUTO_INCREMENT"
-            );
-
-            // AUTO_INCREMENT Counter auf MAX(id)+1 setzen
+            // Step 1: felder-Referenzen auf id=0 löschen
+            try { $db->execute("DELETE FROM `{$tFelder}` WHERE befundbogen_id = 0"); } catch (\Throwable $e) { error_log('[BefundSchema] delete felder id=0: ' . $e->getMessage()); }
+            // Step 2: id=0 Haupteintrag löschen
+            try { $db->execute("DELETE FROM `{$tBefunde}` WHERE id = 0"); } catch (\Throwable $e) { error_log('[BefundSchema] delete befunde id=0: ' . $e->getMessage()); }
+            // Step 3: id-Spalte auf AUTO_INCREMENT umstellen (fehlt bei alten Tenants die per SQL-Dump angelegt wurden)
+            try { $db->execute("ALTER TABLE `{$tBefunde}` MODIFY `id` INT UNSIGNED NOT NULL AUTO_INCREMENT"); } catch (\Throwable $e) { error_log('[BefundSchema] modify id AUTO_INCREMENT: ' . $e->getMessage()); }
+            // Step 4: AUTO_INCREMENT Counter korrekt setzen
             $maxId = (int)($db->safeFetchColumn("SELECT MAX(id) FROM `{$tBefunde}`") ?? 0);
-            $db->safeExecute("ALTER TABLE `{$tBefunde}` AUTO_INCREMENT = " . ($maxId + 1));
+            try { $db->execute("ALTER TABLE `{$tBefunde}` AUTO_INCREMENT = " . ($maxId + 1)); } catch (\Throwable $e) { error_log('[BefundSchema] set AUTO_INCREMENT: ' . $e->getMessage()); }
 
             // Fehlende Spalten nachrüsten (für Tenants die die Migration nie sahen)
             $existingCols = array_column(
