@@ -79,28 +79,44 @@ class BefundbogenRepository extends Repository
 
     public function createBefund(array $data): int
     {
-        $table      = $this->t('befundboegen');
-        $tFelder    = $this->t('befundbogen_felder');
+        $table   = $this->t('befundboegen');
+        $tFelder = $this->t('befundbogen_felder');
 
-        // ── Pre-flight repair: id=0 Schrottzeilen löschen + AUTO_INCREMENT sicherstellen ──
-        // Dies behebt Tenants bei denen die Tabelle ohne AUTO_INCREMENT angelegt wurde.
+        // ── Step 1: Repair id=0 corruption (Tenants ohne AUTO_INCREMENT angelegt) ──
+        // Löscht Felder-Referenzen auf id=0, entfernt id=0-Zeile, repariert AUTO_INCREMENT.
+        // Wird direkt vor dem INSERT ausgeführt damit der INSERT sicher klappt.
         try {
             $this->db->execute("DELETE FROM `{$tFelder}` WHERE befundbogen_id = 0");
-        } catch (\Throwable) {}
-        try {
             $this->db->execute("DELETE FROM `{$table}` WHERE id = 0");
-        } catch (\Throwable) {}
-        try {
-            $this->db->execute("ALTER TABLE `{$table}` MODIFY `id` INT UNSIGNED NOT NULL AUTO_INCREMENT");
         } catch (\Throwable $e) {
-            error_log('[createBefund] MODIFY AUTO_INCREMENT failed: ' . $e->getMessage());
+            error_log('[createBefund] cleanup id=0: ' . $e->getMessage());
         }
+
+        // AUTO_INCREMENT-Attribut auf id-Spalte setzen (fehlt bei alten Tenants)
+        // Nur ausführen wenn AUTO_INCREMENT noch nicht gesetzt ist
+        try {
+            $colInfo = $this->db->fetch(
+                "SELECT EXTRA FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = 'id'",
+                [$table]
+            );
+            if ($colInfo && stripos((string)($colInfo['EXTRA'] ?? ''), 'auto_increment') === false) {
+                $this->db->execute(
+                    "ALTER TABLE `{$table}` MODIFY `id` INT UNSIGNED NOT NULL AUTO_INCREMENT"
+                );
+                error_log('[createBefund] AUTO_INCREMENT added to ' . $table);
+            }
+        } catch (\Throwable $e) {
+            error_log('[createBefund] AUTO_INCREMENT repair: ' . $e->getMessage());
+        }
+
+        // AUTO_INCREMENT Counter korrekt setzen
         try {
             $maxId = (int)($this->db->fetchColumn("SELECT MAX(id) FROM `{$table}`") ?: 0);
             $this->db->execute("ALTER TABLE `{$table}` AUTO_INCREMENT = " . ($maxId + 1));
         } catch (\Throwable) {}
 
-        // Step 1: INSERT
+        // ── Step 2: INSERT ──
         $this->db->query(
             "INSERT INTO `{$table}`
                  (patient_id, owner_id, created_by, status, datum, naechster_termin, notizen)
@@ -116,9 +132,7 @@ class BefundbogenRepository extends Repository
             ]
         )->closeCursor();
 
-        // Step 2: Retrieve ID — MAX(id) is safe here because we just inserted and
-        // the SELECT runs on the same connection immediately after.
-        // We filter by patient_id + status + datum to narrow down to our row.
+        // ── Step 3: ID ermitteln ──
         $intId = (int)$this->db->fetchColumn(
             "SELECT MAX(id) FROM `{$table}`
              WHERE patient_id = ? AND datum = ? AND status = ?",
@@ -131,8 +145,8 @@ class BefundbogenRepository extends Repository
 
         if ($intId === 0) {
             throw new \RuntimeException(
-                'createBefund: INSERT ran but MAX(id) still 0. table=' . $table .
-                ' patient_id=' . $data['patient_id']
+                'createBefund: INSERT lief durch aber keine ID gefunden. table=' . $table .
+                ' | Bitte AUTO_INCREMENT und Tabellenstatus prüfen.'
             );
         }
 
