@@ -11,10 +11,10 @@
         <h1 class="page-title">{% if is_trainer ?? false %}Hunde{% else %}{{ t('patients.title') }}{% endif %}</h1>
         <p class="page-subtitle">{{ pagination.total }} {{ t('common.entries') }}</p>
     </div>
-    <a href="/patienten/neu" class="btn btn-primary">
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal-wizard-patient">
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         {% if is_trainer ?? false %}Neuen Hund anlegen{% else %}{{ t('patients.new_patient') }}{% endif %}
-    </a>
+    </button>
 </div>
 
 
@@ -125,85 +125,379 @@
         </div>
         <div class="empty-state-title">{% if is_trainer ?? false %}Noch keine Hunde angelegt.{% else %}{{ t('patients.no_patients') }}{% endif %}</div>
         <div class="empty-state-text mb-4">{{ search ? 'Keine Ergebnisse für "' ~ search ~ '"' : (is_trainer ?? false ? 'Noch keine Hunde angelegt.' : 'Noch keine Patienten angelegt.') }}</div>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal-new-patient">{% if is_trainer ?? false %}Neuen Hund anlegen{% else %}{{ t('patients.new_patient') }}{% endif %}</button>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal-wizard-patient">{% if is_trainer ?? false %}Neuen Hund anlegen{% else %}{{ t('patients.new_patient') }}{% endif %}</button>
     </div>
 {% endif %}
 
-{# New Patient Modal #}
-<div class="modal fade" id="modal-new-patient" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title">{% if is_trainer ?? false %}Neuen Hund anlegen{% else %}{{ t('patients.new_patient') }}{% endif %}</h3>
-            <button class="modal-close" data-bs-dismiss="modal" type="button">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            </button>
+{# ══════════ Wizard Modal ══════════ #}
+<div class="modal fade" id="modal-wizard-patient" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width:780px;">
+        <div class="modal-content">
+
+            <div class="modal-header" style="flex-shrink:0;border-bottom:1px solid var(--bs-border-color);padding:1rem 1.5rem;">
+                <h4 class="modal-title fw-700" style="font-size:1rem;">
+                    {% if is_trainer ?? false %}Neuen Hund anlegen{% else %}Neuer Patient anlegen{% endif %}
+                </h4>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="wiz.reset()" aria-label="Schließen"></button>
+            </div>
+
+            {# Step indicator #}
+            <div style="padding:.75rem 1.5rem 0;flex-shrink:0;">
+                <div class="d-flex align-items-center" id="mwiz-steps">
+                    <div class="mwstep active" id="mwstep-1" style="flex:1;display:flex;flex-direction:column;align-items:center;position:relative;">
+                        <div class="mwstep-circle" id="mwsc-1">1</div>
+                        <div class="mwstep-label">Tierhalter</div>
+                    </div>
+                    <div class="mwstep" id="mwstep-2" style="flex:1;display:flex;flex-direction:column;align-items:center;position:relative;">
+                        <div class="mwstep-circle" id="mwsc-2">2</div>
+                        <div class="mwstep-label">Tier</div>
+                    </div>
+                    <div class="mwstep" id="mwstep-3" style="flex:1;display:flex;flex-direction:column;align-items:center;position:relative;">
+                        <div class="mwstep-circle" id="mwsc-3">3</div>
+                        <div class="mwstep-label">Bestätigung</div>
+                    </div>
+                </div>
+            </div>
+
+            <form action="/patienten/wizard" method="POST" id="mwiz-form" enctype="multipart/form-data">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="owner_mode" id="mwiz_owner_mode" value="existing">
+                <input type="hidden" name="owner_id" id="mwiz_owner_id" value="">
+                <input type="hidden" name="species" id="mwiz_species" value="">
+
+                <div class="modal-body" style="padding:1.25rem 1.5rem;">
+
+                    {# ── Panel 1: Tierhalter ── #}
+                    <div class="mwpanel active" id="mwpanel-1">
+                        <h5 class="fw-700 mb-1" style="font-size:.95rem;">Tierhalter zuordnen</h5>
+                        <p class="text-muted" style="font-size:.8rem;margin-bottom:1rem;">Bestehenden suchen oder neuen anlegen.</p>
+
+                        <div class="d-flex gap-2 mb-3">
+                            <button type="button" class="btn btn-sm mwtab active" id="mwtab-existing" onclick="wiz.setMode('existing')">🔍 Bestehenden suchen</button>
+                            <button type="button" class="btn btn-sm mwtab" id="mwtab-new" onclick="wiz.setMode('new')">+ Neuen anlegen</button>
+                        </div>
+
+                        <div id="mw-panel-existing">
+                            <div style="position:relative;">
+                                <input type="text" id="mw-owner-search" class="form-control" placeholder="Name oder E-Mail…" autocomplete="off">
+                                <div id="mw-owner-results" style="position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--bs-tertiary-bg);border:1px solid var(--bs-border-color);border-radius:10px;z-index:200;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.18);display:none;"></div>
+                            </div>
+                            <div id="mw-selected-owner" style="display:none;margin-top:.75rem;background:color-mix(in srgb,var(--bs-primary) 8%,transparent);border:1px solid color-mix(in srgb,var(--bs-primary) 25%,transparent);border-radius:10px;padding:.75rem 1rem;display:none;align-items:center;gap:.75rem;">
+                                <div id="mwso-avatar" style="width:36px;height:36px;border-radius:50%;background:var(--bs-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;"></div>
+                                <div style="flex:1;">
+                                    <div class="fw-700" id="mwso-name" style="font-size:.88rem;"></div>
+                                    <div class="text-muted" id="mwso-meta" style="font-size:.75rem;"></div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-secondary" onclick="wiz.clearOwner()">Ändern</button>
+                            </div>
+                        </div>
+
+                        <div id="mw-panel-new" style="display:none;">
+                            <div class="row g-2">
+                                <div class="col-md-6"><label class="form-label">Vorname *</label><input type="text" name="owner_first_name" id="mw_owner_fn" class="form-control" placeholder="Max"></div>
+                                <div class="col-md-6"><label class="form-label">Nachname *</label><input type="text" name="owner_last_name" id="mw_owner_ln" class="form-control" placeholder="Mustermann"></div>
+                                <div class="col-md-6"><label class="form-label">E-Mail</label><input type="email" name="owner_email" class="form-control"></div>
+                                <div class="col-md-6"><label class="form-label">Telefon</label><input type="tel" name="owner_phone" class="form-control"></div>
+                                <div class="col-12"><label class="form-label">Straße &amp; Hausnummer</label><input type="text" name="owner_street" class="form-control"></div>
+                                <div class="col-md-4"><label class="form-label">PLZ</label><input type="text" name="owner_zip" class="form-control"></div>
+                                <div class="col-md-8"><label class="form-label">Stadt</label><input type="text" name="owner_city" class="form-control"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {# ── Panel 2: Tier ── #}
+                    <div class="mwpanel" id="mwpanel-2" style="display:none;">
+                        <h5 class="fw-700 mb-1" style="font-size:.95rem;">Tier-Daten</h5>
+                        <p class="text-muted" style="font-size:.8rem;margin-bottom:1rem;">Alle Angaben außer Name sind optional.</p>
+
+                        <label class="form-label">Tierart</label>
+                        <div class="d-flex flex-wrap gap-2 mb-3" id="mw-species-grid">
+                            <button type="button" class="btn btn-sm btn-outline-secondary mw-species-btn" onclick="wiz.pickSpecies('Hund',this)">🐕 Hund</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary mw-species-btn" onclick="wiz.pickSpecies('Katze',this)">🐈 Katze</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary mw-species-btn" onclick="wiz.pickSpecies('Pferd',this)">🐎 Pferd</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary mw-species-btn" onclick="wiz.pickSpecies('Kaninchen',this)">🐇 Kaninchen</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary mw-species-btn" onclick="wiz.pickSpecies('Vogel',this)">🐦 Vogel</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary mw-species-btn" onclick="wiz.pickSpecies('Reptil',this)">🦎 Reptil</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary mw-species-btn" onclick="wiz.pickSpecies('Nager',this)">🐹 Nager</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary mw-species-btn" onclick="wiz.pickSpecies('',this,'other')">🐾 Andere</button>
+                        </div>
+                        <div id="mw-species-other" style="display:none;margin-bottom:.75rem;">
+                            <input type="text" id="mw-species-other-input" class="form-control" placeholder="Tierart eingeben…" oninput="document.getElementById('mwiz_species').value=this.value">
+                        </div>
+
+                        <div class="row g-2">
+                            <div class="col-12"><label class="form-label">Name *</label><input type="text" name="name" id="mwiz_name" class="form-control" placeholder="Bello"></div>
+                            <div class="col-md-6"><label class="form-label">Rasse</label><input type="text" name="breed" class="form-control" placeholder="z.B. Labrador"></div>
+                            <div class="col-md-6"><label class="form-label">Geschlecht</label>
+                                <select name="gender" class="form-control"><option value="">— wählen —</option><option>männlich</option><option>weiblich</option><option>kastriert</option><option>sterilisiert</option><option>unbekannt</option></select>
+                            </div>
+                            <div class="col-md-6"><label class="form-label">Geburtsdatum</label><input type="date" name="birth_date" class="form-control"></div>
+                            <div class="col-md-6"><label class="form-label">Farbe / Fellfarbe</label><input type="text" name="color" class="form-control" placeholder="z.B. braun-weiß"></div>
+                            <div class="col-md-6"><label class="form-label">Chip-Nummer</label><input type="text" name="chip_number" class="form-control" placeholder="15-stellige Transponder-Nr."></div>
+                            <div class="col-md-6"><label class="form-label">Gewicht (kg)</label><input type="number" name="weight" class="form-control" step="0.1" min="0" placeholder="z.B. 12.5"></div>
+                            <div class="col-md-6"><label class="form-label">Impfpass-Nummer</label><input type="text" name="passport_number" class="form-control"></div>
+                            <div class="col-md-6"><label class="form-label">Versicherungsart</label>
+                                <select name="insurance_type" class="form-control"><option value="">— keine —</option><option>Tierkrankenversicherung</option><option>Tier-OP-Versicherung</option><option>Tierhaftpflicht</option><option>Sonstige</option></select>
+                            </div>
+                            <div class="col-md-6"><label class="form-label">Versicherungsgesellschaft</label><input type="text" name="insurance_company" class="form-control" placeholder="z.B. Allianz"></div>
+                            <div class="col-md-6"><label class="form-label">Versicherungs-Police-Nr.</label><input type="text" name="insurance_policy" class="form-control"></div>
+                            <div class="col-12"><label class="form-label">Foto des Tieres</label>
+                                <input type="file" name="photo" id="mwiz_photo" class="form-control" accept="image/jpeg,image/png,image/webp,image/gif">
+                                <div id="mwiz-photo-preview" style="display:none;margin-top:.4rem;"><img id="mwiz-photo-img" src="" alt="" style="max-height:100px;border-radius:8px;"></div>
+                            </div>
+                            <div class="col-12"><label class="form-label">Notizen</label><textarea name="notes" class="form-control" rows="2" placeholder="Besonderheiten, Allergien…"></textarea></div>
+                        </div>
+                    </div>
+
+                    {# ── Panel 3: Bestätigung ── #}
+                    <div class="mwpanel" id="mwpanel-3" style="display:none;">
+                        <h5 class="fw-700 mb-3" style="font-size:.95rem;">Zusammenfassung</h5>
+                        <p class="text-muted fw-600 mb-1" style="font-size:.72rem;text-transform:uppercase;">Tierhalter</p>
+                        <div id="mwsum-owner" class="mb-3 p-3" style="background:var(--bs-secondary-bg);border-radius:10px;">—</div>
+                        <p class="text-muted fw-600 mb-1" style="font-size:.72rem;text-transform:uppercase;">Patient</p>
+                        <div id="mwsum-patient" style="background:var(--bs-secondary-bg);border-radius:10px;padding:.75rem 1rem;"></div>
+                    </div>
+
+                </div>{# end modal-body #}
+
+                <div class="modal-footer" style="flex-shrink:0;justify-content:space-between;">
+                    <button type="button" class="btn btn-secondary" id="mwiz-back" style="display:none;" onclick="wiz.go(wiz.step-1)">
+                        ← Zurück
+                    </button>
+                    <button type="button" class="btn btn-secondary ms-auto" data-bs-dismiss="modal" onclick="wiz.reset()" id="mwiz-cancel">Abbrechen</button>
+                    <button type="button" class="btn btn-primary ms-2" id="mwiz-next" onclick="wiz.go(wiz.step+1)">Weiter: Tier →</button>
+                    <button type="submit" class="btn btn-primary ms-2" id="mwiz-submit" style="display:none;">
+                        ✓ Patienten anlegen
+                    </button>
+                </div>
+
+            </form>
         </div>
-        <form action="/patienten" method="POST" class="modal-body">
-            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-            <div class="form-grid form-grid-2">
-                <div class="form-group">
-                    <label class="form-label" for="p-name">{{ t('patients.name') }} *</label>
-                    <input type="text" id="p-name" name="name" class="form-control" required placeholder="z.B. Bello">
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="p-species">{{ t('patients.species') }}</label>
-                    <input type="text" id="p-species" name="species" class="form-control" placeholder="z.B. Hund">
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="p-breed">{{ t('patients.breed') }}</label>
-                    <input type="text" id="p-breed" name="breed" class="form-control" placeholder="z.B. Labrador">
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="p-birth">{{ t('patients.birth_date') }}</label>
-                    <input type="date" id="p-birth" name="birth_date" class="form-control">
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="p-gender">{{ t('patients.gender') }}</label>
-                    <select id="p-gender" name="gender" class="form-control">
-                        <option value="unbekannt">{{ t('patients.unknown') }}</option>
-                        <option value="männlich">{{ t('patients.male') }}</option>
-                        <option value="weiblich">{{ t('patients.female') }}</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="p-color">{{ t('patients.color') }}</label>
-                    <input type="text" id="p-color" name="color" class="form-control" placeholder="z.B. Schwarz">
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="p-chip">{{ t('patients.chip_number') }}</label>
-                    <input type="text" id="p-chip" name="chip_number" class="form-control">
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="p-status">{{ t('patients.status') }}</label>
-                    <select id="p-status" name="status" class="form-control">
-                        <option value="aktiv">Aktiv</option>
-                        <option value="in_behandlung">In Behandlung</option>
-                        <option value="schmerzfrei">Schmerzfrei</option>
-                        <option value="kontrolltermin">Kontrolltermin</option>
-                        <option value="inaktiv">Inaktiv</option>
-                    </select>
-                </div>
-            </div>
-            <div class="form-group mt-3">
-                <label class="form-label" for="p-owner">{{ t('patients.owner') }} *</label>
-                <select id="p-owner" name="owner_id" class="form-control" required>
-                    <option value="">— Tierhalter wählen —</option>
-                </select>
-                <div class="form-hint">
-                    <a href="/tierhalter" target="_blank" style="color:var(--accent)">Neuen Tierhalter anlegen</a>
-                </div>
-            </div>
-            <div class="form-group mt-3">
-                <label class="form-label" for="p-notes">{{ t('patients.notes') }}</label>
-                <textarea id="p-notes" name="notes" class="form-control" rows="3" placeholder="Notizen..."></textarea>
-            </div>
-            <div class="modal-footer" style="padding:1rem 0 0;margin-top:1rem;border-top:1px solid var(--glass-border);">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('common.cancel') }}</button>
-                <button type="submit" class="btn btn-primary">{{ t('common.create') }}</button>
-            </div>
-        </form>
-    </div></div>
+    </div>
 </div>
+
+<style>
+.mwstep-circle{width:32px;height:32px;border-radius:50%;border:2px solid var(--bs-border-color);background:var(--bs-body-bg);display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700;color:var(--bs-secondary-color);position:relative;z-index:1;transition:all .25s;}
+.mwstep.active .mwstep-circle{border-color:var(--bs-primary);background:var(--bs-primary);color:#fff;}
+.mwstep.done .mwstep-circle{border-color:#22c55e;background:#22c55e;color:#fff;}
+.mwstep-label{font-size:.7rem;margin-top:.3rem;color:var(--bs-secondary-color);font-weight:500;}
+.mwstep.active .mwstep-label{color:var(--bs-primary);font-weight:700;}
+.mwstep.done .mwstep-label{color:#22c55e;}
+#mwiz-steps>div:not(:last-child)::after{content:'';position:absolute;top:16px;left:50%;width:100%;height:2px;background:var(--bs-border-color);z-index:0;}
+#mwiz-steps>.mwstep.done:not(:last-child)::after{background:var(--bs-primary);}
+.mwtab{border:2px solid var(--bs-border-color);background:transparent;color:var(--bs-secondary-color);}
+.mwtab.active{border-color:var(--bs-primary);color:var(--bs-primary);background:color-mix(in srgb,var(--bs-primary) 10%,transparent);}
+.mw-species-btn{border:2px solid var(--bs-border-color);}
+.mw-species-btn.active{border-color:var(--bs-primary);background:color-mix(in srgb,var(--bs-primary) 12%,transparent);color:var(--bs-primary);}
+.mwsum-row{display:flex;justify-content:space-between;padding:.4rem 0;border-bottom:1px solid var(--bs-border-color);font-size:.85rem;}
+.mwsum-row:last-child{border-bottom:none;}
+</style>
+
+<script>
+(function(){
+    const wiz = window.wiz = {
+        step: 1,
+        mode: 'existing',
+        owner: null,
+        searchTimer: null,
+
+        go(step) {
+            if (step === 2 && !this.validateStep1()) return;
+            if (step === 3 && !this.validateStep2()) return;
+            if (step === 3) this.buildSummary();
+            document.getElementById('mwpanel-' + this.step).style.display = 'none';
+            document.getElementById('mwpanel-' + step).style.display = '';
+            this.step = step;
+            this.updateStepIndicator();
+            this.updateNavButtons();
+        },
+
+        updateStepIndicator() {
+            for (let i = 1; i <= 3; i++) {
+                const el = document.getElementById('mwstep-' + i);
+                el.className = 'mwstep' + (i < this.step ? ' done' : i === this.step ? ' active' : '');
+            }
+        },
+
+        updateNavButtons() {
+            const back   = document.getElementById('mwiz-back');
+            const next   = document.getElementById('mwiz-next');
+            const submit = document.getElementById('mwiz-submit');
+            back.style.display   = this.step > 1 ? '' : 'none';
+            next.style.display   = this.step < 3 ? '' : 'none';
+            submit.style.display = this.step === 3 ? '' : 'none';
+            if (this.step === 2) next.textContent = 'Weiter: Prüfen →';
+            if (this.step === 1) next.textContent = 'Weiter: Tier →';
+        },
+
+        validateStep1() {
+            if (this.mode === 'existing') {
+                if (!this.owner) { alert('Bitte einen Tierhalter auswählen.'); return false; }
+            } else {
+                const fn = document.getElementById('mw_owner_fn').value.trim();
+                const ln = document.getElementById('mw_owner_ln').value.trim();
+                if (!fn || !ln) { alert('Bitte Vor- und Nachname angeben.'); return false; }
+            }
+            return true;
+        },
+
+        validateStep2() {
+            const name = document.getElementById('mwiz_name').value.trim();
+            if (!name) { alert('Bitte einen Namen für das Tier angeben.'); document.getElementById('mwiz_name').focus(); return false; }
+            return true;
+        },
+
+        setMode(mode) {
+            this.mode = mode;
+            document.getElementById('mwiz_owner_mode').value = mode;
+            document.getElementById('mwtab-existing').classList.toggle('active', mode === 'existing');
+            document.getElementById('mwtab-new').classList.toggle('active', mode === 'new');
+            document.getElementById('mw-panel-existing').style.display = mode === 'existing' ? '' : 'none';
+            document.getElementById('mw-panel-new').style.display = mode === 'new' ? '' : 'none';
+        },
+
+        pickSpecies(val, btn, type) {
+            document.querySelectorAll('.mw-species-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const otherWrap = document.getElementById('mw-species-other');
+            if (type === 'other') {
+                otherWrap.style.display = '';
+                document.getElementById('mwiz_species').value = document.getElementById('mw-species-other-input').value;
+            } else {
+                otherWrap.style.display = 'none';
+                document.getElementById('mwiz_species').value = val;
+            }
+        },
+
+        selectOwner(o) {
+            this.owner = o;
+            document.getElementById('mwiz_owner_id').value = o.id;
+            const res = document.getElementById('mw-owner-results');
+            res.style.display = 'none';
+            const inp = document.getElementById('mw-owner-search');
+            inp.value = o.first_name + ' ' + o.last_name;
+            inp.style.display = 'none';
+            const card = document.getElementById('mw-selected-owner');
+            card.style.display = 'flex';
+            document.getElementById('mwso-avatar').textContent = (o.first_name[0] + o.last_name[0]).toUpperCase();
+            document.getElementById('mwso-name').textContent = o.first_name + ' ' + o.last_name;
+            document.getElementById('mwso-meta').textContent = [o.phone, o.email].filter(Boolean).join(' · ');
+        },
+
+        clearOwner() {
+            this.owner = null;
+            document.getElementById('mwiz_owner_id').value = '';
+            document.getElementById('mw-selected-owner').style.display = 'none';
+            const inp = document.getElementById('mw-owner-search');
+            inp.style.display = '';
+            inp.value = '';
+            inp.focus();
+        },
+
+        buildSummary() {
+            const o = this.owner;
+            const ownerMode = this.mode;
+            let ownerHtml = '';
+            if (ownerMode === 'existing' && o) {
+                ownerHtml = `<strong>${o.first_name} ${o.last_name}</strong>`;
+                if (o.email) ownerHtml += `<br><small class="text-muted">${o.email}</small>`;
+            } else {
+                const fn = document.getElementById('mw_owner_fn').value;
+                const ln = document.getElementById('mw_owner_ln').value;
+                ownerHtml = `<strong>${fn} ${ln}</strong> <span class="badge bg-success ms-1">Neu</span>`;
+            }
+            document.getElementById('mwsum-owner').innerHTML = ownerHtml;
+
+            const form = document.getElementById('mwiz-form');
+            const get = n => form.querySelector('[name="' + n + '"]')?.value || '';
+            const species = document.getElementById('mwiz_species').value;
+            const photoFile = document.getElementById('mwiz_photo')?.files[0];
+            const rows = [
+                ['Name', get('name')],
+                ['Tierart', species],
+                ['Rasse', get('breed')],
+                ['Geschlecht', get('gender')],
+                ['Geburtsdatum', get('birth_date')],
+                ['Chip-Nr.', get('chip_number')],
+                ['Gewicht', get('weight') ? get('weight') + ' kg' : ''],
+                ['Impfpass-Nr.', get('passport_number')],
+                ['Versicherungsart', get('insurance_type')],
+                ['Versicherung', get('insurance_company')],
+                ['Police-Nr.', get('insurance_policy')],
+                ['Foto', photoFile ? '📷 ' + photoFile.name : ''],
+            ].filter(([,v]) => v);
+            document.getElementById('mwsum-patient').innerHTML =
+                rows.map(([l,v]) => `<div class="mwsum-row"><span class="text-muted">${l}</span><span>${v}</span></div>`).join('');
+        },
+
+        reset() {
+            this.step = 1; this.mode = 'existing'; this.owner = null;
+            document.querySelectorAll('.mwpanel').forEach((p,i) => p.style.display = i === 0 ? '' : 'none');
+            this.updateStepIndicator();
+            this.updateNavButtons();
+            this.setMode('existing');
+            this.clearOwner();
+            document.getElementById('mwiz-form').reset();
+            document.getElementById('mwiz_species').value = '';
+            document.querySelectorAll('.mw-species-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('mwiz-photo-preview').style.display = 'none';
+        }
+    };
+
+    // Owner search
+    const searchInp = document.getElementById('mw-owner-search');
+    searchInp.addEventListener('input', function() {
+        clearTimeout(wiz.searchTimer);
+        const q = this.value.trim();
+        const res = document.getElementById('mw-owner-results');
+        if (q.length < 2) { res.style.display = 'none'; return; }
+        wiz.searchTimer = setTimeout(() => {
+            fetch('/api/tierhalter/suche?q=' + encodeURIComponent(q))
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.length) {
+                        res.innerHTML = '<div style="padding:.6rem 1rem;font-size:.82rem;color:var(--bs-secondary-color);">Keine Ergebnisse</div>';
+                    } else {
+                        res.innerHTML = data.map(o => {
+                            const ini = ((o.first_name||'')[0] + (o.last_name||'')[0]).toUpperCase();
+                            const meta = [o.phone, o.email].filter(Boolean).join(' · ');
+                            return `<div onclick='wiz.selectOwner(${JSON.stringify(o).replace(/"/g,"&quot;")})'
+                                style="padding:.6rem .9rem;cursor:pointer;border-bottom:1px solid var(--bs-border-color);display:flex;gap:.6rem;align-items:center;"
+                                onmouseenter="this.style.background='var(--bs-secondary-bg)'" onmouseleave="this.style.background=''">
+                                <div style="width:32px;height:32px;border-radius:50%;background:var(--bs-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;flex-shrink:0;">${ini}</div>
+                                <div><div style="font-weight:600;font-size:.85rem;">${o.first_name} ${o.last_name}</div>${meta ? `<div style="font-size:.72rem;color:var(--bs-secondary-color);">${meta}</div>` : ''}</div>
+                            </div>`;
+                        }).join('');
+                    }
+                    res.style.display = 'block';
+                });
+        }, 250);
+    });
+    document.addEventListener('click', e => {
+        if (!e.target.closest('#mw-owner-search') && !e.target.closest('#mw-owner-results'))
+            document.getElementById('mw-owner-results').style.display = 'none';
+    });
+    searchInp.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+
+    // Photo preview
+    document.getElementById('mwiz_photo')?.addEventListener('change', function() {
+        const file = this.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            document.getElementById('mwiz-photo-img').src = e.target.result;
+            document.getElementById('mwiz-photo-preview').style.display = '';
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // Reset wizard when modal is closed
+    document.getElementById('modal-wizard-patient')?.addEventListener('hidden.bs.modal', () => wiz.reset());
+
+    // Init
+    wiz.setMode('existing');
+    wiz.updateNavButtons();
+})();
+</script>
 
 {# Legacy inline edit modal markup removed (global modal is injected via partials/patient-modal-global.twig) #}
 
