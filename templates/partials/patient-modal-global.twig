@@ -1316,23 +1316,24 @@ window._hwShowToast = _hwShowToast;
 function resetModal() {
     var pdLoading = document.getElementById('pd-loading');
     var pdBody    = document.getElementById('pd-body');
-    pdLoading.style.display = 'flex';
-    pdBody.style.display    = 'none';
-    document.getElementById('pd-name').textContent    = '';
-    document.getElementById('pd-badge').style.display = 'none';
-    document.getElementById('pd-species').textContent = '';
-    document.getElementById('pd-photo').innerHTML = '<svg width="20" height="20" fill="none" viewBox="0 0 24 24" style="opacity:0.3;"><path stroke="currentColor" stroke-width="1.5" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
-    document.getElementById('pd-photo-full').innerHTML = '<svg width="36" height="36" fill="none" viewBox="0 0 24 24" style="opacity:0.2;"><path stroke="currentColor" stroke-width="1.5" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
-    document.getElementById('pd-details').innerHTML = '';
-    document.getElementById('pd-owner').innerHTML   = '';
-    document.getElementById('pd-timeline').innerHTML = '';
-    if (document.getElementById('pd-timeline-search')) document.getElementById('pd-timeline-search').value = '';
-    /* reset tab content */
-    document.getElementById('pd-hw-plans-list').innerHTML  = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);"><div class="pd-spinner" style="margin:0 auto 1rem;"></div>Lade…</div>';
-    document.getElementById('pd-befunde-list').innerHTML   = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);"><div class="pd-spinner" style="margin:0 auto 1rem;"></div>Lade…</div>';
-    document.getElementById('pd-vr-list').innerHTML        = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);"><div class="pd-spinner" style="margin:0 auto 1rem;"></div>Lade…</div>';
-    document.getElementById('pd-fortschritt-list').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">Keine Fortschrittsdaten vorhanden.</div>';
-    document.getElementById('pd-portal-list').innerHTML    = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">Noch keine abgehakten Aufgaben.</div>';
+    if (pdLoading) pdLoading.style.display = 'flex';
+    if (pdBody)    pdBody.style.display    = 'none';
+    var el;
+    el = document.getElementById('pd-name');      if (el) el.textContent    = '';
+    el = document.getElementById('pd-badge');     if (el) el.style.display = 'none';
+    el = document.getElementById('pd-species');   if (el) el.textContent    = '';
+    el = document.getElementById('pd-photo');     if (el) el.innerHTML = '<svg width="20" height="20" fill="none" viewBox="0 0 24 24" style="opacity:0.3;"><path stroke="currentColor" stroke-width="1.5" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+    el = document.getElementById('pd-photo-full');if (el) el.innerHTML = '<svg width="36" height="36" fill="none" viewBox="0 0 24 24" style="opacity:0.2;"><path stroke="currentColor" stroke-width="1.5" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+    el = document.getElementById('pd-details');   if (el) el.innerHTML = '';
+    el = document.getElementById('pd-owner');     if (el) el.innerHTML   = '';
+    el = document.getElementById('pd-timeline');  if (el) el.innerHTML = '';
+    el = document.getElementById('pd-timeline-search'); if (el) el.value = '';
+    /* reset tab content — all guarded, some may not exist due to feature gates */
+    el = document.getElementById('pd-hw-plans-list');   if (el) el.innerHTML  = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);"><div class="pd-spinner" style="margin:0 auto 1rem;"></div>Lade…</div>';
+    el = document.getElementById('pd-befunde-list');    if (el) el.innerHTML   = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);"><div class="pd-spinner" style="margin:0 auto 1rem;"></div>Lade…</div>';
+    el = document.getElementById('pd-vr-list');         if (el) el.innerHTML        = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);"><div class="pd-spinner" style="margin:0 auto 1rem;"></div>Lade…</div>';
+    el = document.getElementById('pd-fortschritt-list');if (el) el.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">Keine Fortschrittsdaten vorhanden.</div>';
+    el = document.getElementById('pd-portal-list');     if (el) el.innerHTML    = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">Noch keine abgehakten Aufgaben.</div>';
     /* badge count reset */
     ['pd-befunde-count','pd-vr-count','pd-portal-count'].forEach(function(id) { var el=document.getElementById(id); if(el){el.style.display='none'; el.textContent='0';} });
     /* switch back to akte tab */
