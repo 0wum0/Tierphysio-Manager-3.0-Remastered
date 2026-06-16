@@ -3767,7 +3767,7 @@ function init3DViewer(patientId) {
         _3dScriptAppended = true;
         var s = document.createElement('script');
         s.type = 'module';
-        s.src  = '/assets/js/anatomy-3d-viewer.js';
+        s.src  = '/assets/js/anatomy-3d-viewer.js?v=20260616c';
         s.onerror = function() {
             _3dInitPending = false;
             var w = document.getElementById('pd-3d-viewer-wrap');

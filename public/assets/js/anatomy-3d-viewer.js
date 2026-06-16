@@ -567,6 +567,7 @@ class Anatomy3DViewer {
             const mesh = new THREE.Mesh(geo, mat);
             mesh.position.set(def.pos[0], def.pos[1], def.pos[2]);
             mesh.renderOrder = 999;
+            mesh.visible = false; /* raycasting only — never rendered */
             mesh.userData.hotspot = def;
             this.scene.add(mesh);
 
@@ -599,8 +600,11 @@ class Anatomy3DViewer {
         if (!this.hotspots.length) return;
         this.raycaster.setFromCamera(this.pointer, this.camera);
 
+        /* Three.js skips invisible objects — temporarily enable for raycasting */
         const targets = this.hotspots.map(h => h.mesh);
-        const hits    = this.raycaster.intersectObjects(targets, false);
+        targets.forEach(m => { m.visible = true; });
+        const hits = this.raycaster.intersectObjects(targets, false);
+        targets.forEach(m => { m.visible = false; });
 
         const hitMesh = hits.length ? hits[0].object : null;
 
@@ -611,8 +615,6 @@ class Anatomy3DViewer {
                 if (prevEntry) {
                     const key     = `${prevEntry.def.id}::${prevEntry.def.side}`;
                     const hasPain = this.painData[key]?.painLevel > 0;
-                    /* raycast box stays invisible */
-                    this.hoveredMesh.material.opacity = 0;
                     /* marker: show if pain, else hide (unless debug) */
                     prevEntry.marker.material.opacity  = hasPain ? 0.9 : (this.debugMode ? 0.4 : 0);
                     prevEntry.marker.material.color.set(
@@ -798,8 +800,7 @@ class Anatomy3DViewer {
         this.hotspots.forEach(({ mesh, marker, def }) => {
             const key   = `${def.id}::${def.side}`;
             const entry = this.painData[key];
-            /* raycast box always invisible */
-            mesh.material.opacity = 0;
+            mesh.visible = false; /* raycasting box never visible */
 
             if (entry && entry.painLevel > 0) {
                 marker.material.color.set(painColor(entry.painLevel));
