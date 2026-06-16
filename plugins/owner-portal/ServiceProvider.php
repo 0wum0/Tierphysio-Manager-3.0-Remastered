@@ -213,34 +213,16 @@ class ServiceProvider
     private function runMigrations(): void
     {
         try {
-            $db           = Application::getInstance()->getContainer()->get(\App\Core\Database::class);
-            $prefix       = $db->getPrefix();
-            $migrationDir = __DIR__ . '/migrations';
-            if (!is_dir($migrationDir)) return;
+            $container    = Application::getInstance()->getContainer();
+            $db           = $container->get(\App\Core\Database::class);
+            $session      = $container->has(\App\Core\Session::class)
+                ? $container->get(\App\Core\Session::class)
+                : null;
 
-            $files = glob($migrationDir . '/*.sql');
-            if (!$files) return;
-            sort($files);
-
-            foreach ($files as $file) {
-                $sql = file_get_contents($file);
-
-                /* Replace {PREFIX} placeholder with actual tenant prefix */
-                $sql = str_replace('{PREFIX}', $prefix, $sql);
-
-                $statements = array_filter(array_map('trim', explode(';', $sql)));
-                foreach ($statements as $stmt) {
-                    if (!empty($stmt)) {
-                        try {
-                            $db->execute($stmt);
-                        } catch (\Throwable) {
-                            /* Table already exists or constraint duplicate — skip */
-                        }
-                    }
-                }
-            }
-        } catch (\Throwable) {
-            /* DB not available yet */
+            $runner = new \App\Services\PluginMigrationService($db, $session);
+            $runner->runPending('owner_portal', __DIR__ . '/migrations');
+        } catch (\Throwable $e) {
+            error_log('[owner-portal] migration bootstrap failed: ' . $e->getMessage());
         }
     }
 }

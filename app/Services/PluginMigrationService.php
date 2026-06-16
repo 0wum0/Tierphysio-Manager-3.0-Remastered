@@ -130,7 +130,7 @@ class PluginMigrationService
     private function runSingleMigration(string $file, string $prefix): void
     {
         $sql = (string)file_get_contents($file);
-        $sql = str_replace('{{prefix}}', $prefix, $sql);
+        $sql = str_replace(['{{prefix}}', '{PREFIX}'], $prefix, $sql);
 
         foreach ($this->splitStatements($sql) as $stmt) {
             if ($stmt === '') continue;
