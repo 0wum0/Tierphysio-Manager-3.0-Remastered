@@ -928,6 +928,7 @@ class PatientController extends Controller
                 'last_name'  => $this->sanitize($this->post('owner_last_name', '')),
                 'email'      => $this->sanitize($this->post('owner_email', '')),
                 'phone'      => $this->sanitize($this->post('owner_phone', '')),
+                'birth_date' => $this->post('owner_birth_date', null) ?: null,
                 'street'     => $this->sanitize($this->post('owner_street', '')),
                 'zip'        => $this->sanitize($this->post('owner_zip', '')),
                 'city'       => $this->sanitize($this->post('owner_city', '')),
