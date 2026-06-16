@@ -1368,15 +1368,16 @@ function renderTimeline(timeline, patientId) {
         var ep = encodeURIComponent(JSON.stringify(e));
         var media = Array.isArray(e.media) ? e.media : [];
         if (!media.length && e.attachment) {
-            media = [{ filename: e.attachment, kind: 'file', web_url: '/patienten/'+patientId+'/dokumente/'+encodeURIComponent(e.attachment) }];
+            media = [{ filename: e.attachment, kind: 'file', web_url: '/patient-timeline/'+patientId+'/'+encodeURIComponent(e.attachment) }];
         }
         var attachHtml = '';
         media.forEach(function(m) {
-            /* Always use the web route — never the mobile-API URL (requires Bearer token) */
-            var rawSrc = m.web_url || m.url || '';
+            /* Use web_url if it's not the mobile-API route (requires Bearer token).
+               /patient-timeline/ has no feature-gate and no auth — safe for <img src>. */
+            var rawSrc = m.web_url || '';
             var src = (rawSrc && !rawSrc.startsWith('/api/mobile/'))
                 ? rawSrc
-                : '/patienten/'+patientId+'/dokumente/'+encodeURIComponent(m.filename || '');
+                : '/patient-timeline/'+patientId+'/'+encodeURIComponent(m.filename || '');
             var filename = m.original_name || m.filename || 'Datei';
             if (m.kind === 'image') attachHtml += '<div class="mt-2"><a href="'+src+'" data-lightbox-modal="'+src+'" data-filename="'+esc(filename)+'" style="cursor:pointer;display:inline-block;"><img src="'+src+'" style="max-height:120px;max-width:100%;border-radius:6px;border:1px solid var(--bs-border-color);display:block;"></a></div>';
             else if (m.kind === 'video') attachHtml += '<div class="mt-2"><a href="'+src+'" data-lightbox-modal="'+src+'" data-filename="'+esc(filename)+'" style="cursor:pointer;display:inline-block;position:relative;"><video src="'+src+'" style="max-height:120px;max-width:100%;border-radius:6px;display:block;background:#000;" preload="metadata"></video><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.35);border-radius:6px;"><svg width="36" height="36" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="rgba(0,0,0,0.55)"/><polygon points="10,8 18,12 10,16" fill="white"/></svg></div></a></div>';

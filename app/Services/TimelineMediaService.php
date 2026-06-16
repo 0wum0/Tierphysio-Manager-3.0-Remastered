@@ -118,7 +118,8 @@ class TimelineMediaService
         $safeFilename = basename($filename);
         $relativePath = 'patients/' . $patientId . '/timeline/' . $safeFilename;
         $mobileUrl = '/api/mobile/patients/' . $patientId . '/media/' . rawurlencode($safeFilename);
-        $webUrl = '/patienten/' . $patientId . '/dokumente/' . rawurlencode($safeFilename);
+        /* /patient-timeline/ route has no feature-gate and no auth — safe for <img src> in web context */
+        $webUrl = '/patient-timeline/' . $patientId . '/' . rawurlencode($safeFilename);
         $kind = $this->kindFromMimeOrFilename($mimeType, $safeFilename);
 
         return [
