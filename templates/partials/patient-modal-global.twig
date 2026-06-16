@@ -1353,8 +1353,9 @@ function resetModal() {
     _tcpLoaded      = false;
     _portalLoaded   = false;
     _hwLoaded       = false;
-    _3dViewerLoaded = false;
-    _tcpCache       = null;
+    _3dViewerLoaded  = false;
+    _3dModuleLoading = false;
+    _tcpCache        = null;
 }
 
 var _befundeLoaded = false, _vrLoaded = false, _tcpLoaded = false, _portalLoaded = false, _hwLoaded = false, _3dViewerLoaded = false;
@@ -3767,19 +3768,17 @@ function init3DViewer(patientId) {
     _3dModuleLoading = true;
 
     /* Dynamic ES-module load via src= (works with importmaps on mobile browsers).
-     * Inline textContent modules cannot access importmaps on Android Chrome / Samsung Internet. */
+     * Inline textContent modules cannot access importmaps on Android Chrome / Samsung Internet.
+     * onload is NOT used — _waitForViewer polls until window.Anatomy3D is set by the module. */
     var s = document.createElement('script');
     s.type = 'module';
     s.src  = '/assets/js/anatomy-3d-viewer.js';
-    s.onload = function() {
-        _waitForViewer(function() { _doInit3D(patientId, species, csrfToken); });
-    };
     s.onerror = function() {
+        _3dModuleLoading = false;
         var wrap = document.getElementById('pd-3d-viewer-wrap');
         if (wrap) wrap.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ef4444;font-size:.85rem;padding:1rem;text-align:center;">3D-Viewer konnte nicht geladen werden.</div>';
     };
     document.body.appendChild(s);
-    /* Fallback poll in case onload fires before window.Anatomy3D is set */
     _waitForViewer(function() { _doInit3D(patientId, species, csrfToken); });
 }
 
