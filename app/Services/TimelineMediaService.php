@@ -129,7 +129,7 @@ class TimelineMediaService
             'kind' => $kind,
             'url' => $mobileUrl,
             'web_url' => $webUrl,
-            'thumbnail_url' => $kind === 'image' ? $mobileUrl : null,
+            'thumbnail_url' => $kind === 'image' ? $webUrl : null,
             'size' => $size,
             'original_name' => $originalName,
         ];
