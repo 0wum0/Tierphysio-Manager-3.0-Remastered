@@ -7,8 +7,14 @@ RewriteRule ^favicon\.ico$ /themes/smart-tierphysio/img/favicon-32x32.png [L,R=3
 # WAF false-positives on invite_* / intake_* filenames (causes HTTP 422).
 # SecRule with ctl:ruleEngine=Off is the .htaccess-compatible way.
 <IfModule mod_security2.c>
-    SecRule REQUEST_URI "^/(patienten/[0-9]+/(foto|dokumente)|patient-timeline|patient-photos)/" \
+    SecRule REQUEST_URI "^/patienten/[0-9]+/foto/" \
         "id:1001,phase:1,pass,nolog,ctl:ruleEngine=Off"
+    SecRule REQUEST_URI "^/patienten/[0-9]+/dokumente/" \
+        "id:1002,phase:1,pass,nolog,ctl:ruleEngine=Off"
+    SecRule REQUEST_URI "^/patient-timeline/" \
+        "id:1003,phase:1,pass,nolog,ctl:ruleEngine=Off"
+    SecRule REQUEST_URI "^/patient-photos/" \
+        "id:1004,phase:1,pass,nolog,ctl:ruleEngine=Off"
 </IfModule>
 
 RewriteCond %{REQUEST_FILENAME} !-f
