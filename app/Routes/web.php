@@ -34,6 +34,7 @@ use App\Controllers\DogschoolInvoiceController;
 use App\Controllers\DatevExportController;
 use App\Controllers\EventController;
 use App\Controllers\FeedbackController;
+use App\Controllers\PainPoint3dController;
 
 /** @var \App\Core\Router $router */
 
@@ -449,6 +450,11 @@ $router->post('/patienten/{patient_id}/befunde/{id}/aktualisieren',        [Befu
 $router->get('/patienten/{patient_id}/befunde/{id}/pdf',                   [BefundbogenController::class, 'pdf'],    ['auth']);
 $router->post('/patienten/{patient_id}/befunde/{id}/senden',               [BefundbogenController::class, 'senden'], ['auth']);
 $router->post('/patienten/{patient_id}/befunde/{id}/loeschen',             [BefundbogenController::class, 'delete'], ['auth']);
+
+// ── 3D Schmerzanalyse ────────────────────────────────────────────────
+$router->get ('/api/patienten/{patient_id}/schmerzpunkte',               [PainPoint3dController::class, 'index'],  ['auth']);
+$router->post('/api/patienten/{patient_id}/schmerzpunkte',               [PainPoint3dController::class, 'store'],  ['auth']);
+$router->post('/api/patienten/{patient_id}/schmerzpunkte/{id}/loeschen', [PainPoint3dController::class, 'delete'], ['auth']);
 
 // ── Befundbögen — Portal Admin ────────────────────────────────────────
 $router->get('/portal-admin/befunde',                                      [BefundbogenController::class, 'adminIndex'],  ['auth']);
