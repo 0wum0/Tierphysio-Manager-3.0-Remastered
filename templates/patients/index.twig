@@ -131,8 +131,8 @@
 
 {# ══════════ Wizard Modal ══════════ #}
 <div class="modal fade" id="modal-wizard-patient" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width:780px;">
-        <div class="modal-content">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" style="max-width:780px;max-height:92vh;">
+        <div class="modal-content" style="display:flex;flex-direction:column;max-height:92vh;">
 
             <div class="modal-header" style="flex-shrink:0;border-bottom:1px solid var(--bs-border-color);padding:1rem 1.5rem;">
                 <h4 class="modal-title fw-700" style="font-size:1rem;">
@@ -159,13 +159,13 @@
                 </div>
             </div>
 
-            <form action="/patienten/wizard" method="POST" id="mwiz-form" enctype="multipart/form-data">
+            <form action="/patienten/wizard" method="POST" id="mwiz-form" enctype="multipart/form-data" style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" name="owner_mode" id="mwiz_owner_mode" value="existing">
                 <input type="hidden" name="owner_id" id="mwiz_owner_id" value="">
                 <input type="hidden" name="species" id="mwiz_species" value="">
 
-                <div class="modal-body" style="padding:1.25rem 1.5rem;">
+                <div class="modal-body" style="padding:1.25rem 1.5rem;overflow-y:auto;flex:1;">
 
                     {# ── Panel 1: Tierhalter ── #}
                     <div class="mwpanel active" id="mwpanel-1">
