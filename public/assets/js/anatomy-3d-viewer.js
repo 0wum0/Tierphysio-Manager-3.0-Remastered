@@ -1,18 +1,16 @@
 /**
- * TheraPano — 3D Anatomie-Schmerzanalyse Viewer
+ * TheraPano — 3D Anatomie-Schmerzanalyse Viewer v2
  * Three.js r160 ESM, keine externe CDN-Abhängigkeit zur Laufzeit.
  *
  * Einstieg: window.Anatomy3D.init(containerId, patientId, animalType, csrfToken)
  *
- * Architektur:
- *  - GLB-Modell laden via GLTFLoader
- *  - Mesh-Inspektion: falls Named Meshes brauchbar → direkt nutzen
- *  - Fallback: Hotspot-Zonen als unsichtbare BoxGeometry über dem Modell
- *  - Raycasting auf Hotspots + sichtbares Modell
- *  - Material-Cloning für Highlight (Originale werden NICHT mutiert)
- *  - Schmerzformular als Overlay-Panel
- *  - AJAX POST/GET gegen /api/patienten/{id}/schmerzpunkte
- *  - Vollbild via Fullscreen API
+ * ARCHITEKTUR (v2 — korrekte Hotspot-Kopplung):
+ *  - modelRoot (THREE.Group) wird der Scene hinzugefügt
+ *  - modelRoot enthält: gltf.scene (das Mesh) + alle Hotspot-Meshes
+ *  - Skalierung + Zentrierung werden auf modelRoot angewendet
+ *  - Hotspots sind in lokalen Modell-Koordinaten definiert ([-1..1])
+ *  - def.pos = lokale Position relativ zur normierten BoundingBox
+ *  - Hotspots transformieren automatisch mit dem Modell mit
  */
 
 import * as THREE from '/assets/js/vendor/three/three.module.min.js';
@@ -158,9 +156,8 @@ class Anatomy3DViewer {
         this.pointer     = new THREE.Vector2(-9999, -9999);
 
         /* Model state */
-        this.modelGroup  = null;     /* loaded GLB root */
-        this.hotspots    = [];       /* { mesh, def } */
-        this.origMats    = new Map();/* mesh → original material */
+        this.modelRoot   = null;     /* THREE.Group: enthält GLB + Hotspots */
+        this.hotspots    = [];       /* { mesh, marker, def } */
         this.painData    = {};       /* key → {painLevel, painType, notes, id} */
 
         /* UI state */
@@ -191,9 +188,12 @@ class Anatomy3DViewer {
             <button class="a3d-species-btn" data-sp="cat"   style="padding:4px 10px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;font-weight:600;">🐈 Katze</button>
             <button class="a3d-species-btn" data-sp="horse" style="padding:4px 10px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;font-weight:600;">🐎 Pferd</button>
             <div style="width:1px;height:18px;background:rgba(255,255,255,.15);margin:0 2px;"></div>
-            <button id="a3d-reset-btn"  title="Ansicht zurücksetzen"  style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">↺ Reset</button>
-            <button id="a3d-debug-btn"  title="Zonen anzeigen"        style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">🔲 Zonen</button>
-            <button id="a3d-fs-btn"     title="Vollbild"              style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">⛶ Vollbild</button>
+            <button id="a3d-view-side-l" title="Linke Seite"        style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">◁ Links</button>
+            <button id="a3d-view-side-r" title="Rechte Seite"       style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">Rechts ▷</button>
+            <button id="a3d-view-front"  title="Frontalansicht"     style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">Front</button>
+            <button id="a3d-reset-btn"   title="Ansicht zurücksetzen" style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">↺ Reset</button>
+            <button id="a3d-debug-btn"   title="Zonen anzeigen"      style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">🔲 Zonen</button>
+            <button id="a3d-fs-btn"      title="Vollbild"            style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">⛶ Vollbild</button>
           </div>
 
           <!-- Loading overlay -->
@@ -327,9 +327,12 @@ class Anatomy3DViewer {
         });
         this._updateSpeciesBtn();
 
-        c.querySelector('#a3d-reset-btn').addEventListener('click', () => this._resetCamera());
-        c.querySelector('#a3d-debug-btn').addEventListener('click', () => this._toggleDebug());
-        c.querySelector('#a3d-fs-btn').addEventListener('click', () => this._toggleFullscreen());
+        c.querySelector('#a3d-view-side-l').addEventListener('click', () => this._setCameraView('left'));
+        c.querySelector('#a3d-view-side-r').addEventListener('click', () => this._setCameraView('right'));
+        c.querySelector('#a3d-view-front').addEventListener('click',  () => this._setCameraView('front'));
+        c.querySelector('#a3d-reset-btn').addEventListener('click',   () => this._resetCamera());
+        c.querySelector('#a3d-debug-btn').addEventListener('click',   () => this._toggleDebug());
+        c.querySelector('#a3d-fs-btn').addEventListener('click',      () => this._toggleFullscreen());
 
         c.querySelector('#a3d-form-close').addEventListener('click', () => this._closeForm());
         c.querySelector('#a3d-cancel-btn').addEventListener('click', () => this._closeForm());
@@ -366,54 +369,60 @@ class Anatomy3DViewer {
         const canvas = this.container.querySelector('#a3d-canvas');
 
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-        this.renderer.setPixelRatio(window.devicePixelRatio);
+        /* Cap pixel ratio for mobile performance */
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.renderer.shadowMap.enabled = true;
 
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x0a0f1a);
-        this.scene.fog = new THREE.FogExp2(0x0a0f1a, 0.08);
+        this.scene.fog = new THREE.FogExp2(0x0a0f1a, 0.06);
 
-        this.camera = new THREE.PerspectiveCamera(45, 1, 0.01, 100);
-        this.camera.position.set(0, 0.5, 3.2);
+        this.camera = new THREE.PerspectiveCamera(45, 1, 0.01, 200);
+        this.camera.position.set(0, 0.3, 3.5);
 
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
         this.controls.enableDamping = true;
         this.controls.dampingFactor = 0.06;
-        this.controls.minDistance = 0.5;
-        this.controls.maxDistance = 8;
+        this.controls.minDistance   = 0.3;
+        this.controls.maxDistance   = 10;
+        this.controls.touches = {
+            ONE: THREE.TOUCH ? THREE.TOUCH.ROTATE : 0,
+            TWO: THREE.TOUCH ? THREE.TOUCH.DOLLY_PAN : 1,
+        };
 
         /* Lighting */
-        const amb = new THREE.AmbientLight(0xffffff, 0.6);
-        this.scene.add(amb);
+        this.scene.add(new THREE.AmbientLight(0xffffff, 0.7));
         const key = new THREE.DirectionalLight(0xffffff, 1.4);
-        key.position.set(2, 3, 2);
+        key.position.set(3, 4, 3);
         key.castShadow = true;
         this.scene.add(key);
-        const fill = new THREE.DirectionalLight(0x8888ff, 0.5);
-        fill.position.set(-2, 1, -1);
+        const fill = new THREE.DirectionalLight(0x8899ff, 0.4);
+        fill.position.set(-3, 1, -2);
         this.scene.add(fill);
-        const rim = new THREE.DirectionalLight(0xffeedd, 0.4);
+        const rim = new THREE.DirectionalLight(0xffeedd, 0.35);
         rim.position.set(0, -1, -3);
         this.scene.add(rim);
 
         /* Ground grid */
-        const grid = new THREE.GridHelper(6, 20, 0x1e293b, 0x1e293b);
-        grid.position.y = -0.6;
+        const grid = new THREE.GridHelper(8, 24, 0x1e293b, 0x1e293b);
+        grid.position.y = -0.7;
         this.scene.add(grid);
 
         /* Events */
         canvas.addEventListener('pointermove', e => this._onPointerMove(e));
         canvas.addEventListener('pointerdown', e => this._onClick(e));
-        window.addEventListener('resize', () => this._resize());
+        this._resizeHandler = () => this._resize();
+        window.addEventListener('resize', this._resizeHandler);
 
         this._resize();
         this._animate();
     }
 
     _resize() {
-        const w = this.container.clientWidth;
+        const w = this.container.clientWidth  || 400;
         const h = this.container.clientHeight || 400;
+        if (w < 10 || h < 10) return; /* not yet visible — skip */
         this.renderer.setSize(w, h, false);
         this.camera.aspect = w / h;
         this.camera.updateProjectionMatrix();
@@ -428,151 +437,163 @@ class Anatomy3DViewer {
 
     destroy() {
         if (this._animId) cancelAnimationFrame(this._animId);
+        if (this._resizeHandler) window.removeEventListener('resize', this._resizeHandler);
         this.renderer.dispose();
     }
 
     /* ── Model Loading ────────────────────────────────────── */
     _loadModel(species) {
-        const paths = {
-            dog:   '/assets/3D/Hund.glb',
-            cat:   '/assets/3D/katze.glb',
-            horse: '/assets/3D/Pferd.glb',
+        /* Prefer optimized GLB, fall back to original */
+        const label = species === 'dog' ? 'Hund' : species === 'cat' ? 'Katze' : 'Pferd';
+        const fileMap = {
+            dog:   { opt: '/assets/3D/Hund.optimized.glb',  orig: '/assets/3D/Hund.glb' },
+            cat:   { opt: '/assets/3D/Katze.optimized.glb', orig: '/assets/3D/katze.glb' },
+            horse: { opt: '/assets/3D/Pferd.optimized.glb', orig: '/assets/3D/Pferd.glb' },
         };
-        const path = paths[species] || paths.dog;
+        const fm   = fileMap[species] || fileMap.dog;
+        const path = fm.opt; /* server returns 404 → GLTFLoader error → we retry with orig */
 
-        this._showLoading(`Lade ${species === 'dog' ? 'Hund' : species === 'cat' ? 'Katze' : 'Pferd'}…`);
+        this._showLoading(`Lade ${label}…`);
 
-        /* Remove old model + hotspots */
-        if (this.modelGroup) {
-            this.scene.remove(this.modelGroup);
-            this.modelGroup = null;
+        /* Remove old modelRoot (contains GLB + all hotspot meshes) */
+        if (this.modelRoot) {
+            this.scene.remove(this.modelRoot);
+            this.modelRoot = null;
         }
-        this.hotspots.forEach(h => {
-            this.scene.remove(h.mesh);
-            if (h.marker) this.scene.remove(h.marker);
-        });
         this.hotspots = [];
-        this._modelBox = null;
+        this.hoveredMesh = null;
 
-        this.loader.load(
-            path,
-            gltf => this._onModelLoaded(gltf, species),
-            xhr  => {
-                if (xhr.total > 0) {
-                    const pct = Math.round(xhr.loaded / xhr.total * 100);
-                    this._showLoading(`Lade… ${pct}%`);
+        const tryLoad = (p) => {
+            this.loader.load(
+                p,
+                gltf => this._onModelLoaded(gltf, species),
+                xhr  => {
+                    if (xhr.total > 0) {
+                        const pct = Math.round(xhr.loaded / xhr.total * 100);
+                        this._showLoading(`Lade ${label}… ${pct}%`);
+                    }
+                },
+                err  => {
+                    if (p === fm.opt) {
+                        console.info(`[Anatomy3D] optimized GLB not found, loading original: ${fm.orig}`);
+                        tryLoad(fm.orig);
+                    } else {
+                        console.error('[Anatomy3D] GLB load error:', err);
+                        this._showLoading('Fehler beim Laden des Modells.');
+                    }
                 }
-            },
-            err  => {
-                console.error('[Anatomy3D] GLB load error:', err);
-                this._showLoading('Fehler beim Laden des Modells.');
-            }
-        );
+            );
+        };
+        tryLoad(path);
     }
 
     _onModelLoaded(gltf, species) {
-        const model = gltf.scene;
+        const glbScene = gltf.scene;
 
-        /* ── Inspect meshes */
+        /* ── Log mesh names for debugging */
         const meshNames = [];
-        model.traverse(obj => {
-            if (obj.isMesh) meshNames.push(obj.name || '[unnamed]');
-        });
+        glbScene.traverse(obj => { if (obj.isMesh) meshNames.push(obj.name || '[unnamed]'); });
         console.log(`[Anatomy3D] ${species} — ${meshNames.length} Meshes:`, meshNames);
 
-        /* ── Auto-scale + center */
-        const box = new THREE.Box3().setFromObject(model);
-        const size = new THREE.Vector3();
-        box.getSize(size);
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scale  = 2.0 / maxDim;
-        model.scale.setScalar(scale);
-
-        /* Recompute box after scale, then center */
-        model.updateMatrixWorld(true);
-        const box2 = new THREE.Box3().setFromObject(model);
-        const center = new THREE.Vector3();
-        box2.getCenter(center);
-        model.position.sub(center);
-
-        /* Recompute final bounding box in world space after centering */
-        model.updateMatrixWorld(true);
-        const finalBox = new THREE.Box3().setFromObject(model);
-        const finalSize = new THREE.Vector3();
-        finalBox.getSize(finalSize);
-        const finalMin = finalBox.min.clone();
-
-        /* Store final dimensions for hotspot placement */
-        this._modelBox = { box: finalBox, size: finalSize, min: finalMin };
-
-        console.log(`[Anatomy3D] ${species} final bounds:`,
-            'min', finalBox.min.x.toFixed(3), finalBox.min.y.toFixed(3), finalBox.min.z.toFixed(3),
-            'max', finalBox.max.x.toFixed(3), finalBox.max.y.toFixed(3), finalBox.max.z.toFixed(3),
-            'size', finalSize.x.toFixed(3), finalSize.y.toFixed(3), finalSize.z.toFixed(3)
-        );
-
-        /* Preserve original GLB materials — do NOT override textures */
-        model.traverse(obj => {
-            if (obj.isMesh) {
-                obj.castShadow    = true;
-                obj.receiveShadow = true;
-            }
+        /* ── Shadows on all meshes (do NOT touch materials/textures) */
+        glbScene.traverse(obj => {
+            if (obj.isMesh) { obj.castShadow = true; obj.receiveShadow = true; }
         });
 
-        this.modelGroup = model;
-        this.scene.add(model);
+        /* ──────────────────────────────────────────────────────────
+         *  KEY FIX: Erstelle modelRoot Group.
+         *  Das GLB wird OHNE eigene Transformationen hinzugefügt.
+         *  Skalierung + Zentrierung erfolgt auf modelRoot.
+         *  Hotspots werden EBENFALLS als Kinder von modelRoot hinzugefügt
+         *  → sie bewegen sich automatisch mit dem Modell mit!
+         * ────────────────────────────────────────────────────────── */
+        this.modelRoot = new THREE.Group();
+        this.modelRoot.add(glbScene);
+        this.scene.add(this.modelRoot);
 
-        /* ── Build hotspot markers using real model bounding box */
+        /* ── Compute bounding box of raw GLB scene (in its local space) */
+        const rawBox  = new THREE.Box3().setFromObject(glbScene);
+        const rawSize = new THREE.Vector3();
+        const rawCtr  = new THREE.Vector3();
+        rawBox.getSize(rawSize);
+        rawBox.getCenter(rawCtr);
+
+        /* ── Scale modelRoot so longest axis = 2.0 */
+        const maxDim = Math.max(rawSize.x, rawSize.y, rawSize.z);
+        const scale  = 2.0 / maxDim;
+        this.modelRoot.scale.setScalar(scale);
+
+        /* ── Center modelRoot so bounding box center is at world origin */
+        this.modelRoot.position.set(
+            -rawCtr.x * scale,
+            -rawCtr.y * scale,
+            -rawCtr.z * scale
+        );
+
+        /* Log final world bounds for calibration */
+        this.modelRoot.updateMatrixWorld(true);
+        const worldBox  = new THREE.Box3().setFromObject(this.modelRoot);
+        const worldSize = new THREE.Vector3();
+        worldBox.getSize(worldSize);
+        console.log(`[Anatomy3D] ${species} world bounds:`,
+            'min', worldBox.min.x.toFixed(3), worldBox.min.y.toFixed(3), worldBox.min.z.toFixed(3),
+            'max', worldBox.max.x.toFixed(3), worldBox.max.y.toFixed(3), worldBox.max.z.toFixed(3),
+            'size', worldSize.x.toFixed(3), worldSize.y.toFixed(3), worldSize.z.toFixed(3)
+        );
+
+        /* ── Build hotspot meshes as children of modelRoot */
         this._buildHotspots(species);
 
         /* ── Apply existing pain data */
         this._applyPainToHotspots();
+
+        /* ── Fit camera to loaded model */
+        this._fitCamera();
 
         this._hideLoading();
         this._updateSpeciesBtn();
     }
 
     _buildHotspots(species) {
+        if (!this.modelRoot) return;
         const groups = MUSCLE_GROUPS[species] || [];
-        const mb     = this._modelBox;
-        if (!mb) return;
 
-        /* Map normalised [0..1] hotspot coordinates onto actual model bounding box.
-         * def.pos is defined in a [-1..1] space centered at model origin after
-         * auto-scale. We use it directly as world-space offsets since the model
-         * is already centered and scaled to ~2 units. */
+        /* WICHTIG: Hotspots werden als Kinder von modelRoot hinzugefügt!
+         * def.pos sind lokale Koordinaten im normierten Raum [-1..1].
+         * Da modelRoot skaliert und zentriert ist, sitzen die Hotspots
+         * automatisch korrekt auf dem Modell — ohne manuelle Weltkoordinaten. */
         groups.forEach(def => {
-            /* Invisible raycasting box — matches the zone size */
-            const geo  = new THREE.BoxGeometry(
+            /* Invisible hit-box for raycasting — larger than the marker */
+            const hitGeo = new THREE.BoxGeometry(
                 def.size[0] * 2,
                 def.size[1] * 2,
                 def.size[2] * 2
             );
-            const mat  = new THREE.MeshBasicMaterial({
-                color: 0x4f7cff,
+            const hitMat = new THREE.MeshBasicMaterial({
                 transparent: true,
                 opacity: 0,
                 depthWrite: false,
                 depthTest: false,
+                side: THREE.DoubleSide,
             });
-            const mesh = new THREE.Mesh(geo, mat);
+            const mesh = new THREE.Mesh(hitGeo, hitMat);
             mesh.position.set(def.pos[0], def.pos[1], def.pos[2]);
-            mesh.renderOrder = 999;
+            mesh.renderOrder  = 999;
             mesh.userData.hotspot = def;
-            this.scene.add(mesh);
+            this.modelRoot.add(mesh); /* ← child of modelRoot! */
 
-            /* Visible marker sphere — small dot on model surface */
-            const markerGeo = new THREE.SphereGeometry(0.022, 8, 8);
+            /* Visible sphere marker */
+            const markerGeo = new THREE.SphereGeometry(0.028, 10, 10);
             const markerMat = new THREE.MeshBasicMaterial({
-                color: 0x4f7cff,
+                color:       0x4f7cff,
                 transparent: true,
-                opacity: 0,
-                depthWrite: false,
+                opacity:     0,
+                depthWrite:  false,
             });
             const marker = new THREE.Mesh(markerGeo, markerMat);
             marker.position.set(def.pos[0], def.pos[1], def.pos[2]);
             marker.renderOrder = 1000;
-            this.scene.add(marker);
+            this.modelRoot.add(marker); /* ← child of modelRoot! */
 
             this.hotspots.push({ mesh, marker, def });
         });
@@ -840,11 +861,56 @@ class Anatomy3DViewer {
     }
 
     _focusHotspot(def) {
-        const pos  = new THREE.Vector3(...def.pos);
+        /* Convert local hotspot pos to world position via modelRoot */
+        const localPos = new THREE.Vector3(...def.pos);
+        const worldPos = localPos.clone();
+        if (this.modelRoot) this.modelRoot.localToWorld(worldPos);
         const dist = 1.2;
-        const dir  = this.camera.position.clone().sub(pos).normalize().multiplyScalar(dist);
-        this.camera.position.copy(pos.clone().add(dir));
-        this.controls.target.copy(pos);
+        const dir  = this.camera.position.clone().sub(worldPos).normalize().multiplyScalar(dist);
+        this.camera.position.copy(worldPos.clone().add(dir));
+        this.controls.target.copy(worldPos);
+        this.controls.update();
+    }
+
+    /* ── Fit camera to loaded model ───────────────────────── */
+    _fitCamera() {
+        if (!this.modelRoot) return;
+        this.modelRoot.updateMatrixWorld(true);
+        const box    = new THREE.Box3().setFromObject(this.modelRoot);
+        const center = new THREE.Vector3();
+        const size   = new THREE.Vector3();
+        box.getCenter(center);
+        box.getSize(size);
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const fov    = this.camera.fov * (Math.PI / 180);
+        const dist   = Math.abs(maxDim / Math.sin(fov / 2)) * 0.75;
+
+        /* Default: left side view (model faces +X, so looking from +Z gives left side) */
+        this.camera.position.set(center.x, center.y + size.y * 0.08, center.z + dist);
+        this.camera.near = dist * 0.01;
+        this.camera.far  = dist * 10;
+        this.camera.updateProjectionMatrix();
+        this.controls.target.copy(center);
+        this.controls.update();
+    }
+
+    /* ── Camera preset views ─────────────────────────────── */
+    _setCameraView(view) {
+        if (!this.modelRoot) return;
+        const box    = new THREE.Box3().setFromObject(this.modelRoot);
+        const center = new THREE.Vector3();
+        const size   = new THREE.Vector3();
+        box.getCenter(center);
+        box.getSize(size);
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const fov    = this.camera.fov * (Math.PI / 180);
+        const dist   = Math.abs(maxDim / Math.sin(fov / 2)) * 0.75;
+
+        const cx = center.x, cy = center.y, cz = center.z;
+        if (view === 'left')  this.camera.position.set(cx, cy + size.y * 0.08,  cz + dist);
+        if (view === 'right') this.camera.position.set(cx, cy + size.y * 0.08,  cz - dist);
+        if (view === 'front') this.camera.position.set(cx + dist, cy + size.y * 0.08, cz);
+        this.controls.target.copy(center);
         this.controls.update();
     }
 
@@ -897,9 +963,7 @@ class Anatomy3DViewer {
     }
 
     _resetCamera() {
-        this.camera.position.set(0, 0.5, 3.2);
-        this.controls.target.set(0, 0, 0);
-        this.controls.update();
+        this._fitCamera();
     }
 
     _toggleDebug() {
@@ -941,7 +1005,31 @@ window.Anatomy3D = {
             this._instance = null;
         }
 
-        this._instance = new Anatomy3DViewer(el, patientId, animalType, csrfToken);
+        const doInit = () => {
+            this._instance = new Anatomy3DViewer(el, patientId, animalType, csrfToken);
+            /* Force resize after first paint — critical for modals/hidden tabs */
+            requestAnimationFrame(() => {
+                setTimeout(() => this._instance?._resize(), 80);
+            });
+        };
+
+        /* If container has no size yet (hidden tab/modal), wait for it */
+        if (el.clientWidth < 10 || el.clientHeight < 10) {
+            let attempts = 0;
+            const poll = setInterval(() => {
+                attempts++;
+                if (el.clientWidth > 10 && el.clientHeight > 10) {
+                    clearInterval(poll);
+                    doInit();
+                } else if (attempts > 40) {
+                    clearInterval(poll);
+                    console.warn('[Anatomy3D] Container noch nicht sichtbar nach 2s, initialisiere trotzdem.');
+                    doInit();
+                }
+            }, 50);
+        } else {
+            doInit();
+        }
     },
 
     switchAnimal(species) {
