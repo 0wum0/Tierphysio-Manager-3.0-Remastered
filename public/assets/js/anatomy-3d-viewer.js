@@ -31,63 +31,67 @@ import { GLTFLoader }    from '/assets/js/vendor/three/GLTFLoader.js';
 /** @type {Record<string, MuscleGroupDef[]>} */
 const MUSCLE_GROUPS = {
 
-  /* ── HUND ─────────────────────────────────────────────────── */
+  /* ── HUND ─────────────────────────────────────────────────────────────────────
+   *  Koordinaten nach Auto-Scale auf 2 Einheiten + Zentrierung:
+   *  Modell schaut nach +X (Kopf rechts), Y=Höhe, Z=Seite (links=-Z, rechts=+Z)
+   *  Körper-Ausdehnung ca.: X: -0.85..+0.85, Y: -0.45..+0.55, Z: -0.12..+0.12
+   * ──────────────────────────────────────────────────────────────────────────── */
   dog: [
-    { id:'dog_head',             label:'Kopfmuskulatur',              anatomical:'Musculi capitis',              region:'head',      side:'midline', pos:[ 0.72, 0.28, 0],    size:[0.10,0.10,0.10] },
-    { id:'dog_jaw',              label:'Kaumuskulatur',               anatomical:'M. masseter / temporalis',     region:'head',      side:'midline', pos:[ 0.65, 0.18, 0],    size:[0.08,0.06,0.08] },
-    { id:'dog_neck',             label:'Nackenmuskulatur',            anatomical:'Mm. nuchae',                   region:'neck',      side:'midline', pos:[ 0.55, 0.22, 0],    size:[0.08,0.08,0.08] },
-    { id:'dog_neck_ventral',     label:'Halsmuskulatur ventral',      anatomical:'Mm. colli ventrales',          region:'neck',      side:'midline', pos:[ 0.52, 0.12, 0],    size:[0.07,0.07,0.07] },
-    { id:'dog_shoulder_l',       label:'Schultermuskulatur links',    anatomical:'M. deltoideus / infraspinatus',region:'shoulder',  side:'left',   pos:[ 0.38, 0.20,-0.08], size:[0.10,0.10,0.07] },
-    { id:'dog_shoulder_r',       label:'Schultermuskulatur rechts',   anatomical:'M. deltoideus / infraspinatus',region:'shoulder',  side:'right',  pos:[ 0.38, 0.20, 0.08], size:[0.10,0.10,0.07] },
-    { id:'dog_chest',            label:'Brustmuskulatur',             anatomical:'M. pectoralis',                region:'chest',     side:'midline', pos:[ 0.40, 0.05, 0],    size:[0.10,0.08,0.12] },
-    { id:'dog_thoracic',         label:'Rückenmuskulatur (BWS)',      anatomical:'M. longissimus dorsi',         region:'back',      side:'midline', pos:[ 0.10, 0.22, 0],    size:[0.20,0.08,0.10] },
-    { id:'dog_lumbar',           label:'Lendenmuskulatur',            anatomical:'M. iliopsoas / multifidus',    region:'lumbar',    side:'midline', pos:[-0.15, 0.20, 0],    size:[0.14,0.08,0.10] },
-    { id:'dog_belly',            label:'Bauchmuskulatur',             anatomical:'M. rectus abdominis',          region:'abdomen',   side:'midline', pos:[ 0.00, 0.02, 0],    size:[0.25,0.08,0.12] },
-    { id:'dog_hip_l',            label:'Hüftmuskulatur links',        anatomical:'M. gluteus medius',            region:'hip',       side:'left',   pos:[-0.28, 0.18,-0.06], size:[0.10,0.10,0.07] },
-    { id:'dog_hip_r',            label:'Hüftmuskulatur rechts',       anatomical:'M. gluteus medius',            region:'hip',       side:'right',  pos:[-0.28, 0.18, 0.06], size:[0.10,0.10,0.07] },
-    { id:'dog_glute_l',          label:'Glutealmuskulatur links',     anatomical:'M. gluteus superficialis',     region:'gluteal',   side:'left',   pos:[-0.32, 0.10,-0.06], size:[0.10,0.10,0.07] },
-    { id:'dog_glute_r',          label:'Glutealmuskulatur rechts',    anatomical:'M. gluteus superficialis',     region:'gluteal',   side:'right',  pos:[-0.32, 0.10, 0.06], size:[0.10,0.10,0.07] },
-    { id:'dog_fore_l',           label:'Vorderbeinmuskulatur links',  anatomical:'M. triceps brachii',           region:'forelimb',  side:'left',   pos:[ 0.32,-0.08,-0.06], size:[0.08,0.16,0.06] },
-    { id:'dog_fore_r',           label:'Vorderbeinmuskulatur rechts', anatomical:'M. triceps brachii',           region:'forelimb',  side:'right',  pos:[ 0.32,-0.08, 0.06], size:[0.08,0.16,0.06] },
-    { id:'dog_hind_l',           label:'Hinterbeinmuskulatur links',  anatomical:'M. biceps femoris',            region:'hindlimb',  side:'left',   pos:[-0.30,-0.08,-0.06], size:[0.08,0.18,0.06] },
-    { id:'dog_hind_r',           label:'Hinterbeinmuskulatur rechts', anatomical:'M. biceps femoris',            region:'hindlimb',  side:'right',  pos:[-0.30,-0.08, 0.06], size:[0.08,0.18,0.06] },
-    { id:'dog_carpus_l',         label:'Karpalgelenk links',          anatomical:'Regio carpalis',               region:'carpus',    side:'left',   pos:[ 0.32,-0.32,-0.06], size:[0.05,0.05,0.05] },
-    { id:'dog_carpus_r',         label:'Karpalgelenk rechts',         anatomical:'Regio carpalis',               region:'carpus',    side:'right',  pos:[ 0.32,-0.32, 0.06], size:[0.05,0.05,0.05] },
-    { id:'dog_tarsus_l',         label:'Sprunggelenk links',          anatomical:'Regio tarsi',                  region:'tarsus',    side:'left',   pos:[-0.30,-0.32,-0.06], size:[0.05,0.05,0.05] },
-    { id:'dog_tarsus_r',         label:'Sprunggelenk rechts',         anatomical:'Regio tarsi',                  region:'tarsus',    side:'right',  pos:[-0.30,-0.32, 0.06], size:[0.05,0.05,0.05] },
-    { id:'dog_paw_fl',           label:'Pfote vorne links',           anatomical:'Regio manus',                  region:'paw',       side:'left',   pos:[ 0.33,-0.42,-0.06], size:[0.04,0.04,0.04] },
-    { id:'dog_paw_fr',           label:'Pfote vorne rechts',          anatomical:'Regio manus',                  region:'paw',       side:'right',  pos:[ 0.33,-0.42, 0.06], size:[0.04,0.04,0.04] },
-    { id:'dog_paw_hl',           label:'Pfote hinten links',          anatomical:'Regio pedis',                  region:'paw',       side:'left',   pos:[-0.31,-0.42,-0.06], size:[0.04,0.04,0.04] },
-    { id:'dog_paw_hr',           label:'Pfote hinten rechts',         anatomical:'Regio pedis',                  region:'paw',       side:'right',  pos:[-0.31,-0.42, 0.06], size:[0.04,0.04,0.04] },
-    { id:'dog_tail',             label:'Schwanzbasis',                anatomical:'Regio caudalis',               region:'tail',      side:'midline', pos:[-0.48, 0.12, 0],    size:[0.06,0.06,0.06] },
+    { id:'dog_head',             label:'Kopfmuskulatur',              anatomical:'Musculi capitis',              region:'head',      side:'midline', pos:[ 0.80, 0.30, 0.00], size:[0.12,0.12,0.12] },
+    { id:'dog_jaw',              label:'Kaumuskulatur',               anatomical:'M. masseter / temporalis',     region:'head',      side:'midline', pos:[ 0.78, 0.14, 0.00], size:[0.10,0.08,0.10] },
+    { id:'dog_neck',             label:'Nackenmuskulatur',            anatomical:'Mm. nuchae',                   region:'neck',      side:'midline', pos:[ 0.60, 0.32, 0.00], size:[0.10,0.08,0.08] },
+    { id:'dog_neck_ventral',     label:'Halsmuskulatur ventral',      anatomical:'Mm. colli ventrales',          region:'neck',      side:'midline', pos:[ 0.58, 0.10, 0.00], size:[0.09,0.08,0.08] },
+    { id:'dog_shoulder_l',       label:'Schultermuskulatur links',    anatomical:'M. deltoideus / infraspinatus',region:'shoulder',  side:'left',   pos:[ 0.42, 0.30,-0.09], size:[0.12,0.12,0.07] },
+    { id:'dog_shoulder_r',       label:'Schultermuskulatur rechts',   anatomical:'M. deltoideus / infraspinatus',region:'shoulder',  side:'right',  pos:[ 0.42, 0.30, 0.09], size:[0.12,0.12,0.07] },
+    { id:'dog_chest',            label:'Brustmuskulatur',             anatomical:'M. pectoralis',                region:'chest',     side:'midline', pos:[ 0.45, 0.00, 0.00], size:[0.12,0.10,0.14] },
+    { id:'dog_thoracic',         label:'Rückenmuskulatur (BWS)',      anatomical:'M. longissimus dorsi',         region:'back',      side:'midline', pos:[ 0.15, 0.40, 0.00], size:[0.22,0.08,0.10] },
+    { id:'dog_lumbar',           label:'Lendenmuskulatur',            anatomical:'M. iliopsoas / multifidus',    region:'lumbar',    side:'midline', pos:[-0.20, 0.38, 0.00], size:[0.16,0.08,0.10] },
+    { id:'dog_belly',            label:'Bauchmuskulatur',             anatomical:'M. rectus abdominis',          region:'abdomen',   side:'midline', pos:[ 0.10,-0.05, 0.00], size:[0.28,0.08,0.12] },
+    { id:'dog_hip_l',            label:'Hüftmuskulatur links',        anatomical:'M. gluteus medius',            region:'hip',       side:'left',   pos:[-0.38, 0.28,-0.07], size:[0.12,0.12,0.07] },
+    { id:'dog_hip_r',            label:'Hüftmuskulatur rechts',       anatomical:'M. gluteus medius',            region:'hip',       side:'right',  pos:[-0.38, 0.28, 0.07], size:[0.12,0.12,0.07] },
+    { id:'dog_glute_l',          label:'Glutealmuskulatur links',     anatomical:'M. gluteus superficialis',     region:'gluteal',   side:'left',   pos:[-0.45, 0.15,-0.07], size:[0.12,0.12,0.07] },
+    { id:'dog_glute_r',          label:'Glutealmuskulatur rechts',    anatomical:'M. gluteus superficialis',     region:'gluteal',   side:'right',  pos:[-0.45, 0.15, 0.07], size:[0.12,0.12,0.07] },
+    { id:'dog_fore_l',           label:'Vorderbeinmuskulatur links',  anatomical:'M. triceps brachii',           region:'forelimb',  side:'left',   pos:[ 0.40,-0.15,-0.08], size:[0.10,0.18,0.06] },
+    { id:'dog_fore_r',           label:'Vorderbeinmuskulatur rechts', anatomical:'M. triceps brachii',           region:'forelimb',  side:'right',  pos:[ 0.40,-0.15, 0.08], size:[0.10,0.18,0.06] },
+    { id:'dog_hind_l',           label:'Hinterbeinmuskulatur links',  anatomical:'M. biceps femoris',            region:'hindlimb',  side:'left',   pos:[-0.42,-0.12,-0.07], size:[0.10,0.20,0.06] },
+    { id:'dog_hind_r',           label:'Hinterbeinmuskulatur rechts', anatomical:'M. biceps femoris',            region:'hindlimb',  side:'right',  pos:[-0.42,-0.12, 0.07], size:[0.10,0.20,0.06] },
+    { id:'dog_carpus_l',         label:'Karpalgelenk links',          anatomical:'Regio carpalis',               region:'carpus',    side:'left',   pos:[ 0.40,-0.35,-0.07], size:[0.06,0.06,0.05] },
+    { id:'dog_carpus_r',         label:'Karpalgelenk rechts',         anatomical:'Regio carpalis',               region:'carpus',    side:'right',  pos:[ 0.40,-0.35, 0.07], size:[0.06,0.06,0.05] },
+    { id:'dog_tarsus_l',         label:'Sprunggelenk links',          anatomical:'Regio tarsi',                  region:'tarsus',    side:'left',   pos:[-0.45,-0.30,-0.07], size:[0.06,0.06,0.05] },
+    { id:'dog_tarsus_r',         label:'Sprunggelenk rechts',         anatomical:'Regio tarsi',                  region:'tarsus',    side:'right',  pos:[-0.45,-0.30, 0.07], size:[0.06,0.06,0.05] },
+    { id:'dog_paw_fl',           label:'Pfote vorne links',           anatomical:'Regio manus',                  region:'paw',       side:'left',   pos:[ 0.42,-0.44,-0.07], size:[0.05,0.04,0.05] },
+    { id:'dog_paw_fr',           label:'Pfote vorne rechts',          anatomical:'Regio manus',                  region:'paw',       side:'right',  pos:[ 0.42,-0.44, 0.07], size:[0.05,0.04,0.05] },
+    { id:'dog_paw_hl',           label:'Pfote hinten links',          anatomical:'Regio pedis',                  region:'paw',       side:'left',   pos:[-0.48,-0.44,-0.07], size:[0.05,0.04,0.05] },
+    { id:'dog_paw_hr',           label:'Pfote hinten rechts',         anatomical:'Regio pedis',                  region:'paw',       side:'right',  pos:[-0.48,-0.44, 0.07], size:[0.05,0.04,0.05] },
+    { id:'dog_tail',             label:'Schwanzbasis',                anatomical:'Regio caudalis',               region:'tail',      side:'midline', pos:[-0.72, 0.22, 0.00], size:[0.08,0.07,0.07] },
   ],
 
   /* ── KATZE ─────────────────────────────────────────────────── */
   cat: [
-    { id:'cat_head',             label:'Kopfmuskulatur',              anatomical:'Musculi capitis',              region:'head',      side:'midline', pos:[ 0.72, 0.28, 0],    size:[0.09,0.09,0.09] },
-    { id:'cat_jaw',              label:'Kaumuskulatur',               anatomical:'M. masseter / temporalis',     region:'head',      side:'midline', pos:[ 0.65, 0.18, 0],    size:[0.07,0.06,0.07] },
-    { id:'cat_neck',             label:'Nackenmuskulatur',            anatomical:'Mm. nuchae',                   region:'neck',      side:'midline', pos:[ 0.56, 0.22, 0],    size:[0.07,0.07,0.07] },
-    { id:'cat_neck_ventral',     label:'Halsmuskulatur ventral',      anatomical:'Mm. colli ventrales',          region:'neck',      side:'midline', pos:[ 0.52, 0.12, 0],    size:[0.06,0.06,0.06] },
-    { id:'cat_shoulder_l',       label:'Schultermuskulatur links',    anatomical:'M. deltoideus',                region:'shoulder',  side:'left',   pos:[ 0.38, 0.20,-0.07], size:[0.09,0.09,0.07] },
-    { id:'cat_shoulder_r',       label:'Schultermuskulatur rechts',   anatomical:'M. deltoideus',                region:'shoulder',  side:'right',  pos:[ 0.38, 0.20, 0.07], size:[0.09,0.09,0.07] },
-    { id:'cat_chest',            label:'Brustmuskulatur',             anatomical:'M. pectoralis',                region:'chest',     side:'midline', pos:[ 0.40, 0.05, 0],    size:[0.09,0.07,0.10] },
-    { id:'cat_thoracic',         label:'Rückenmuskulatur (BWS)',      anatomical:'M. longissimus dorsi',         region:'back',      side:'midline', pos:[ 0.08, 0.22, 0],    size:[0.20,0.07,0.09] },
-    { id:'cat_lumbar',           label:'Lendenmuskulatur',            anatomical:'M. iliopsoas',                 region:'lumbar',    side:'midline', pos:[-0.15, 0.20, 0],    size:[0.13,0.07,0.09] },
-    { id:'cat_belly',            label:'Bauchmuskulatur',             anatomical:'M. rectus abdominis',          region:'abdomen',   side:'midline', pos:[ 0.00, 0.02, 0],    size:[0.23,0.07,0.10] },
-    { id:'cat_hip_l',            label:'Hüftmuskulatur links',        anatomical:'M. gluteus medius',            region:'hip',       side:'left',   pos:[-0.28, 0.18,-0.06], size:[0.09,0.09,0.06] },
-    { id:'cat_hip_r',            label:'Hüftmuskulatur rechts',       anatomical:'M. gluteus medius',            region:'hip',       side:'right',  pos:[-0.28, 0.18, 0.06], size:[0.09,0.09,0.06] },
-    { id:'cat_glute_l',          label:'Glutealmuskulatur links',     anatomical:'M. gluteus superficialis',     region:'gluteal',   side:'left',   pos:[-0.32, 0.10,-0.06], size:[0.09,0.09,0.06] },
-    { id:'cat_glute_r',          label:'Glutealmuskulatur rechts',    anatomical:'M. gluteus superficialis',     region:'gluteal',   side:'right',  pos:[-0.32, 0.10, 0.06], size:[0.09,0.09,0.06] },
-    { id:'cat_fore_l',           label:'Vorderbeinmuskulatur links',  anatomical:'M. triceps brachii',           region:'forelimb',  side:'left',   pos:[ 0.32,-0.08,-0.06], size:[0.07,0.15,0.05] },
-    { id:'cat_fore_r',           label:'Vorderbeinmuskulatur rechts', anatomical:'M. triceps brachii',           region:'forelimb',  side:'right',  pos:[ 0.32,-0.08, 0.06], size:[0.07,0.15,0.05] },
-    { id:'cat_hind_l',           label:'Hinterbeinmuskulatur links',  anatomical:'M. biceps femoris',            region:'hindlimb',  side:'left',   pos:[-0.30,-0.08,-0.06], size:[0.07,0.17,0.05] },
-    { id:'cat_hind_r',           label:'Hinterbeinmuskulatur rechts', anatomical:'M. biceps femoris',            region:'hindlimb',  side:'right',  pos:[-0.30,-0.08, 0.06], size:[0.07,0.17,0.05] },
-    { id:'cat_paw_fl',           label:'Pfote vorne links',           anatomical:'Regio manus',                  region:'paw',       side:'left',   pos:[ 0.33,-0.40,-0.05], size:[0.04,0.04,0.04] },
-    { id:'cat_paw_fr',           label:'Pfote vorne rechts',          anatomical:'Regio manus',                  region:'paw',       side:'right',  pos:[ 0.33,-0.40, 0.05], size:[0.04,0.04,0.04] },
-    { id:'cat_paw_hl',           label:'Pfote hinten links',          anatomical:'Regio pedis',                  region:'paw',       side:'left',   pos:[-0.31,-0.40,-0.05], size:[0.04,0.04,0.04] },
-    { id:'cat_paw_hr',           label:'Pfote hinten rechts',         anatomical:'Regio pedis',                  region:'paw',       side:'right',  pos:[-0.31,-0.40, 0.05], size:[0.04,0.04,0.04] },
-    { id:'cat_tail_base',        label:'Schwanzbasis',                anatomical:'Regio caudalis',               region:'tail',      side:'midline', pos:[-0.46, 0.14, 0],    size:[0.06,0.06,0.06] },
-    { id:'cat_tail',             label:'Schwanzmuskulatur',           anatomical:'Mm. caudales',                 region:'tail',      side:'midline', pos:[-0.56, 0.16, 0],    size:[0.08,0.05,0.05] },
+    { id:'cat_head',             label:'Kopfmuskulatur',              anatomical:'Musculi capitis',              region:'head',      side:'midline', pos:[ 0.80, 0.32, 0.00], size:[0.11,0.11,0.11] },
+    { id:'cat_jaw',              label:'Kaumuskulatur',               anatomical:'M. masseter / temporalis',     region:'head',      side:'midline', pos:[ 0.78, 0.16, 0.00], size:[0.09,0.08,0.09] },
+    { id:'cat_neck',             label:'Nackenmuskulatur',            anatomical:'Mm. nuchae',                   region:'neck',      side:'midline', pos:[ 0.60, 0.34, 0.00], size:[0.09,0.08,0.08] },
+    { id:'cat_neck_ventral',     label:'Halsmuskulatur ventral',      anatomical:'Mm. colli ventrales',          region:'neck',      side:'midline', pos:[ 0.58, 0.12, 0.00], size:[0.08,0.08,0.08] },
+    { id:'cat_shoulder_l',       label:'Schultermuskulatur links',    anatomical:'M. deltoideus',                region:'shoulder',  side:'left',   pos:[ 0.42, 0.30,-0.08], size:[0.11,0.11,0.07] },
+    { id:'cat_shoulder_r',       label:'Schultermuskulatur rechts',   anatomical:'M. deltoideus',                region:'shoulder',  side:'right',  pos:[ 0.42, 0.30, 0.08], size:[0.11,0.11,0.07] },
+    { id:'cat_chest',            label:'Brustmuskulatur',             anatomical:'M. pectoralis',                region:'chest',     side:'midline', pos:[ 0.45, 0.02, 0.00], size:[0.11,0.09,0.12] },
+    { id:'cat_thoracic',         label:'Rückenmuskulatur (BWS)',      anatomical:'M. longissimus dorsi',         region:'back',      side:'midline', pos:[ 0.15, 0.42, 0.00], size:[0.22,0.07,0.09] },
+    { id:'cat_lumbar',           label:'Lendenmuskulatur',            anatomical:'M. iliopsoas',                 region:'lumbar',    side:'midline', pos:[-0.18, 0.40, 0.00], size:[0.15,0.07,0.09] },
+    { id:'cat_belly',            label:'Bauchmuskulatur',             anatomical:'M. rectus abdominis',          region:'abdomen',   side:'midline', pos:[ 0.10,-0.02, 0.00], size:[0.26,0.07,0.10] },
+    { id:'cat_hip_l',            label:'Hüftmuskulatur links',        anatomical:'M. gluteus medius',            region:'hip',       side:'left',   pos:[-0.36, 0.28,-0.07], size:[0.11,0.11,0.06] },
+    { id:'cat_hip_r',            label:'Hüftmuskulatur rechts',       anatomical:'M. gluteus medius',            region:'hip',       side:'right',  pos:[-0.36, 0.28, 0.07], size:[0.11,0.11,0.06] },
+    { id:'cat_glute_l',          label:'Glutealmuskulatur links',     anatomical:'M. gluteus superficialis',     region:'gluteal',   side:'left',   pos:[-0.44, 0.14,-0.07], size:[0.11,0.11,0.06] },
+    { id:'cat_glute_r',          label:'Glutealmuskulatur rechts',    anatomical:'M. gluteus superficialis',     region:'gluteal',   side:'right',  pos:[-0.44, 0.14, 0.07], size:[0.11,0.11,0.06] },
+    { id:'cat_fore_l',           label:'Vorderbeinmuskulatur links',  anatomical:'M. triceps brachii',           region:'forelimb',  side:'left',   pos:[ 0.40,-0.14,-0.07], size:[0.09,0.17,0.06] },
+    { id:'cat_fore_r',           label:'Vorderbeinmuskulatur rechts', anatomical:'M. triceps brachii',           region:'forelimb',  side:'right',  pos:[ 0.40,-0.14, 0.07], size:[0.09,0.17,0.06] },
+    { id:'cat_hind_l',           label:'Hinterbeinmuskulatur links',  anatomical:'M. biceps femoris',            region:'hindlimb',  side:'left',   pos:[-0.40,-0.12,-0.07], size:[0.09,0.19,0.06] },
+    { id:'cat_hind_r',           label:'Hinterbeinmuskulatur rechts', anatomical:'M. biceps femoris',            region:'hindlimb',  side:'right',  pos:[-0.40,-0.12, 0.07], size:[0.09,0.19,0.06] },
+    { id:'cat_paw_fl',           label:'Pfote vorne links',           anatomical:'Regio manus',                  region:'paw',       side:'left',   pos:[ 0.42,-0.42,-0.06], size:[0.05,0.04,0.05] },
+    { id:'cat_paw_fr',           label:'Pfote vorne rechts',          anatomical:'Regio manus',                  region:'paw',       side:'right',  pos:[ 0.42,-0.42, 0.06], size:[0.05,0.04,0.05] },
+    { id:'cat_paw_hl',           label:'Pfote hinten links',          anatomical:'Regio pedis',                  region:'paw',       side:'left',   pos:[-0.46,-0.42,-0.06], size:[0.05,0.04,0.05] },
+    { id:'cat_paw_hr',           label:'Pfote hinten rechts',         anatomical:'Regio pedis',                  region:'paw',       side:'right',  pos:[-0.46,-0.42, 0.06], size:[0.05,0.04,0.05] },
+    { id:'cat_tail_base',        label:'Schwanzbasis',                anatomical:'Regio caudalis',               region:'tail',      side:'midline', pos:[-0.68, 0.20, 0.00], size:[0.07,0.07,0.07] },
+    { id:'cat_tail',             label:'Schwanzmuskulatur',           anatomical:'Mm. caudales',                 region:'tail',      side:'midline', pos:[-0.82, 0.30, 0.00], size:[0.10,0.06,0.06] },
   ],
 
   /* ── PFERD ──────────────────────────────────────────────────── */
@@ -500,6 +504,12 @@ class Anatomy3DViewer {
 
         /* Store final dimensions for hotspot placement */
         this._modelBox = { box: finalBox, size: finalSize, min: finalMin };
+
+        console.log(`[Anatomy3D] ${species} final bounds:`,
+            'min', finalBox.min.x.toFixed(3), finalBox.min.y.toFixed(3), finalBox.min.z.toFixed(3),
+            'max', finalBox.max.x.toFixed(3), finalBox.max.y.toFixed(3), finalBox.max.z.toFixed(3),
+            'size', finalSize.x.toFixed(3), finalSize.y.toFixed(3), finalSize.z.toFixed(3)
+        );
 
         /* Preserve original GLB materials — do NOT override textures */
         model.traverse(obj => {

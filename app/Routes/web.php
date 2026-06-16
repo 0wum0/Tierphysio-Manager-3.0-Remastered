@@ -618,7 +618,7 @@ $router->get('/patient-photos/{id}/{file}', function(array $p) {
 });
 $router->get('/patient-timeline/{id}/{file}', function(array $p) {
     serveStorageFile('patients/' . (int)($p['id'] ?? 0) . '/timeline', $p['file'] ?? '');
-});
+}, ['auth']);
 $router->get('/storage/feedback/{file}', function(array $p) {
     $file = basename($p['file'] ?? '');
     if ($file === '') { http_response_code(403); exit; }
