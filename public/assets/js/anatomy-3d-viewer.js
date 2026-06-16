@@ -1,39 +1,41 @@
-/**
- * TheraPano — 3D Anatomie-Schmerzanalyse Viewer v2
- * Three.js r160 ESM, keine externe CDN-Abhängigkeit zur Laufzeit.
+﻿/**
+ * TheraPano ÔÇö 3D Anatomie-Schmerzanalyse Viewer
+ * Three.js r160 ESM, keine externe CDN-Abh├ñngigkeit zur Laufzeit.
  *
  * Einstieg: window.Anatomy3D.init(containerId, patientId, animalType, csrfToken)
  *
- * ARCHITEKTUR (v2 — korrekte Hotspot-Kopplung):
- *  - modelRoot (THREE.Group) wird der Scene hinzugefügt
- *  - modelRoot enthält: gltf.scene (das Mesh) + alle Hotspot-Meshes
- *  - Skalierung + Zentrierung werden auf modelRoot angewendet
- *  - Hotspots sind in lokalen Modell-Koordinaten definiert ([-1..1])
- *  - def.pos = lokale Position relativ zur normierten BoundingBox
- *  - Hotspots transformieren automatisch mit dem Modell mit
+ * Architektur:
+ *  - GLB-Modell laden via GLTFLoader
+ *  - Mesh-Inspektion: falls Named Meshes brauchbar ÔåÆ direkt nutzen
+ *  - Fallback: Hotspot-Zonen als unsichtbare BoxGeometry ├╝ber dem Modell
+ *  - Raycasting auf Hotspots + sichtbares Modell
+ *  - Material-Cloning f├╝r Highlight (Originale werden NICHT mutiert)
+ *  - Schmerzformular als Overlay-Panel
+ *  - AJAX POST/GET gegen /api/patienten/{id}/schmerzpunkte
+ *  - Vollbild via Fullscreen API
  */
 
 import * as THREE from '/assets/js/vendor/three/three.module.min.js';
 import { OrbitControls } from '/assets/js/vendor/three/OrbitControls.js';
 import { GLTFLoader }    from '/assets/js/vendor/three/GLTFLoader.js';
 
-/* ═══════════════════════════════════════════════════════
+/* ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
    MUSCLE GROUP DEFINITIONS
    Manuelle Hotspot-Zonen in normalisiertem Modell-Raum.
    position: Schwerpunkt der Region [x, y, z]
    size:     halbe Box-Ausdehnung   [w, h, d]
    (Koordinaten gelten nach Auto-Zentrierung/-Skalierung
     des geladenen GLB auf eine 2-Einheiten-Boundingbox)
-═══════════════════════════════════════════════════════ */
+ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ */
 
 /** @type {Record<string, MuscleGroupDef[]>} */
 const MUSCLE_GROUPS = {
 
-  /* ── HUND ─────────────────────────────────────────────────────────────────────
+  /* ÔöÇÔöÇ HUND ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
    *  Koordinaten nach Auto-Scale auf 2 Einheiten + Zentrierung:
-   *  Modell schaut nach +X (Kopf rechts), Y=Höhe, Z=Seite (links=-Z, rechts=+Z)
-   *  Körper-Ausdehnung ca.: X: -0.85..+0.85, Y: -0.45..+0.55, Z: -0.12..+0.12
-   * ──────────────────────────────────────────────────────────────────────────── */
+   *  Modell schaut nach +X (Kopf rechts), Y=H├Âhe, Z=Seite (links=-Z, rechts=+Z)
+   *  K├Ârper-Ausdehnung ca.: X: -0.85..+0.85, Y: -0.45..+0.55, Z: -0.12..+0.12
+   * ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */
   dog: [
     { id:'dog_head',             label:'Kopfmuskulatur',              anatomical:'Musculi capitis',              region:'head',      side:'midline', pos:[ 0.80, 0.30, 0.00], size:[0.12,0.12,0.12] },
     { id:'dog_jaw',              label:'Kaumuskulatur',               anatomical:'M. masseter / temporalis',     region:'head',      side:'midline', pos:[ 0.78, 0.14, 0.00], size:[0.10,0.08,0.10] },
@@ -42,11 +44,11 @@ const MUSCLE_GROUPS = {
     { id:'dog_shoulder_l',       label:'Schultermuskulatur links',    anatomical:'M. deltoideus / infraspinatus',region:'shoulder',  side:'left',   pos:[ 0.42, 0.30,-0.09], size:[0.12,0.12,0.07] },
     { id:'dog_shoulder_r',       label:'Schultermuskulatur rechts',   anatomical:'M. deltoideus / infraspinatus',region:'shoulder',  side:'right',  pos:[ 0.42, 0.30, 0.09], size:[0.12,0.12,0.07] },
     { id:'dog_chest',            label:'Brustmuskulatur',             anatomical:'M. pectoralis',                region:'chest',     side:'midline', pos:[ 0.45, 0.00, 0.00], size:[0.12,0.10,0.14] },
-    { id:'dog_thoracic',         label:'Rückenmuskulatur (BWS)',      anatomical:'M. longissimus dorsi',         region:'back',      side:'midline', pos:[ 0.15, 0.40, 0.00], size:[0.22,0.08,0.10] },
+    { id:'dog_thoracic',         label:'R├╝ckenmuskulatur (BWS)',      anatomical:'M. longissimus dorsi',         region:'back',      side:'midline', pos:[ 0.15, 0.40, 0.00], size:[0.22,0.08,0.10] },
     { id:'dog_lumbar',           label:'Lendenmuskulatur',            anatomical:'M. iliopsoas / multifidus',    region:'lumbar',    side:'midline', pos:[-0.20, 0.38, 0.00], size:[0.16,0.08,0.10] },
     { id:'dog_belly',            label:'Bauchmuskulatur',             anatomical:'M. rectus abdominis',          region:'abdomen',   side:'midline', pos:[ 0.10,-0.05, 0.00], size:[0.28,0.08,0.12] },
-    { id:'dog_hip_l',            label:'Hüftmuskulatur links',        anatomical:'M. gluteus medius',            region:'hip',       side:'left',   pos:[-0.38, 0.28,-0.07], size:[0.12,0.12,0.07] },
-    { id:'dog_hip_r',            label:'Hüftmuskulatur rechts',       anatomical:'M. gluteus medius',            region:'hip',       side:'right',  pos:[-0.38, 0.28, 0.07], size:[0.12,0.12,0.07] },
+    { id:'dog_hip_l',            label:'H├╝ftmuskulatur links',        anatomical:'M. gluteus medius',            region:'hip',       side:'left',   pos:[-0.38, 0.28,-0.07], size:[0.12,0.12,0.07] },
+    { id:'dog_hip_r',            label:'H├╝ftmuskulatur rechts',       anatomical:'M. gluteus medius',            region:'hip',       side:'right',  pos:[-0.38, 0.28, 0.07], size:[0.12,0.12,0.07] },
     { id:'dog_glute_l',          label:'Glutealmuskulatur links',     anatomical:'M. gluteus superficialis',     region:'gluteal',   side:'left',   pos:[-0.45, 0.15,-0.07], size:[0.12,0.12,0.07] },
     { id:'dog_glute_r',          label:'Glutealmuskulatur rechts',    anatomical:'M. gluteus superficialis',     region:'gluteal',   side:'right',  pos:[-0.45, 0.15, 0.07], size:[0.12,0.12,0.07] },
     { id:'dog_fore_l',           label:'Vorderbeinmuskulatur links',  anatomical:'M. triceps brachii',           region:'forelimb',  side:'left',   pos:[ 0.40,-0.15,-0.08], size:[0.10,0.18,0.06] },
@@ -64,7 +66,7 @@ const MUSCLE_GROUPS = {
     { id:'dog_tail',             label:'Schwanzbasis',                anatomical:'Regio caudalis',               region:'tail',      side:'midline', pos:[-0.72, 0.22, 0.00], size:[0.08,0.07,0.07] },
   ],
 
-  /* ── KATZE ─────────────────────────────────────────────────── */
+  /* ÔöÇÔöÇ KATZE ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */
   cat: [
     { id:'cat_head',             label:'Kopfmuskulatur',              anatomical:'Musculi capitis',              region:'head',      side:'midline', pos:[ 0.80, 0.32, 0.00], size:[0.11,0.11,0.11] },
     { id:'cat_jaw',              label:'Kaumuskulatur',               anatomical:'M. masseter / temporalis',     region:'head',      side:'midline', pos:[ 0.78, 0.16, 0.00], size:[0.09,0.08,0.09] },
@@ -73,11 +75,11 @@ const MUSCLE_GROUPS = {
     { id:'cat_shoulder_l',       label:'Schultermuskulatur links',    anatomical:'M. deltoideus',                region:'shoulder',  side:'left',   pos:[ 0.42, 0.30,-0.08], size:[0.11,0.11,0.07] },
     { id:'cat_shoulder_r',       label:'Schultermuskulatur rechts',   anatomical:'M. deltoideus',                region:'shoulder',  side:'right',  pos:[ 0.42, 0.30, 0.08], size:[0.11,0.11,0.07] },
     { id:'cat_chest',            label:'Brustmuskulatur',             anatomical:'M. pectoralis',                region:'chest',     side:'midline', pos:[ 0.45, 0.02, 0.00], size:[0.11,0.09,0.12] },
-    { id:'cat_thoracic',         label:'Rückenmuskulatur (BWS)',      anatomical:'M. longissimus dorsi',         region:'back',      side:'midline', pos:[ 0.15, 0.42, 0.00], size:[0.22,0.07,0.09] },
+    { id:'cat_thoracic',         label:'R├╝ckenmuskulatur (BWS)',      anatomical:'M. longissimus dorsi',         region:'back',      side:'midline', pos:[ 0.15, 0.42, 0.00], size:[0.22,0.07,0.09] },
     { id:'cat_lumbar',           label:'Lendenmuskulatur',            anatomical:'M. iliopsoas',                 region:'lumbar',    side:'midline', pos:[-0.18, 0.40, 0.00], size:[0.15,0.07,0.09] },
     { id:'cat_belly',            label:'Bauchmuskulatur',             anatomical:'M. rectus abdominis',          region:'abdomen',   side:'midline', pos:[ 0.10,-0.02, 0.00], size:[0.26,0.07,0.10] },
-    { id:'cat_hip_l',            label:'Hüftmuskulatur links',        anatomical:'M. gluteus medius',            region:'hip',       side:'left',   pos:[-0.36, 0.28,-0.07], size:[0.11,0.11,0.06] },
-    { id:'cat_hip_r',            label:'Hüftmuskulatur rechts',       anatomical:'M. gluteus medius',            region:'hip',       side:'right',  pos:[-0.36, 0.28, 0.07], size:[0.11,0.11,0.06] },
+    { id:'cat_hip_l',            label:'H├╝ftmuskulatur links',        anatomical:'M. gluteus medius',            region:'hip',       side:'left',   pos:[-0.36, 0.28,-0.07], size:[0.11,0.11,0.06] },
+    { id:'cat_hip_r',            label:'H├╝ftmuskulatur rechts',       anatomical:'M. gluteus medius',            region:'hip',       side:'right',  pos:[-0.36, 0.28, 0.07], size:[0.11,0.11,0.06] },
     { id:'cat_glute_l',          label:'Glutealmuskulatur links',     anatomical:'M. gluteus superficialis',     region:'gluteal',   side:'left',   pos:[-0.44, 0.14,-0.07], size:[0.11,0.11,0.06] },
     { id:'cat_glute_r',          label:'Glutealmuskulatur rechts',    anatomical:'M. gluteus superficialis',     region:'gluteal',   side:'right',  pos:[-0.44, 0.14, 0.07], size:[0.11,0.11,0.06] },
     { id:'cat_fore_l',           label:'Vorderbeinmuskulatur links',  anatomical:'M. triceps brachii',           region:'forelimb',  side:'left',   pos:[ 0.40,-0.14,-0.07], size:[0.09,0.17,0.06] },
@@ -92,7 +94,7 @@ const MUSCLE_GROUPS = {
     { id:'cat_tail',             label:'Schwanzmuskulatur',           anatomical:'Mm. caudales',                 region:'tail',      side:'midline', pos:[-0.82, 0.30, 0.00], size:[0.10,0.06,0.06] },
   ],
 
-  /* ── PFERD ──────────────────────────────────────────────────── */
+  /* ÔöÇÔöÇ PFERD ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */
   horse: [
     { id:'horse_head',           label:'Kopfmuskulatur',              anatomical:'Musculi capitis',              region:'head',      side:'midline', pos:[ 0.76, 0.10, 0],    size:[0.10,0.14,0.10] },
     { id:'horse_jaw',            label:'Kaumuskulatur',               anatomical:'M. masseter',                  region:'head',      side:'midline', pos:[ 0.68, 0.04, 0],    size:[0.08,0.08,0.08] },
@@ -102,11 +104,11 @@ const MUSCLE_GROUPS = {
     { id:'horse_shoulder_r',     label:'Schultermuskulatur rechts',   anatomical:'M. deltoideus / infraspinatus',region:'shoulder',  side:'right',  pos:[ 0.38, 0.22, 0.10], size:[0.12,0.12,0.08] },
     { id:'horse_chest',          label:'Brustmuskulatur',             anatomical:'M. pectoralis profundus',      region:'chest',     side:'midline', pos:[ 0.40, 0.05, 0],    size:[0.12,0.10,0.14] },
     { id:'horse_withers',        label:'Widerristregion',             anatomical:'Processus spinosus T3-T9',     region:'withers',   side:'midline', pos:[ 0.28, 0.34, 0],    size:[0.12,0.08,0.08] },
-    { id:'horse_thoracic',       label:'Rückenmuskulatur (Sattellage)',anatomical:'M. longissimus dorsi',        region:'back',      side:'midline', pos:[ 0.05, 0.28, 0],    size:[0.22,0.08,0.12] },
+    { id:'horse_thoracic',       label:'R├╝ckenmuskulatur (Sattellage)',anatomical:'M. longissimus dorsi',        region:'back',      side:'midline', pos:[ 0.05, 0.28, 0],    size:[0.22,0.08,0.12] },
     { id:'horse_lumbar',         label:'Lendenmuskulatur',            anatomical:'M. iliopsoas / multifidus',    region:'lumbar',    side:'midline', pos:[-0.18, 0.26, 0],    size:[0.14,0.08,0.12] },
     { id:'horse_belly',          label:'Bauchmuskulatur',             anatomical:'M. obliquus abdominis',        region:'abdomen',   side:'midline', pos:[ 0.00, 0.02, 0],    size:[0.30,0.10,0.14] },
-    { id:'horse_hip_l',          label:'Hüftmuskulatur links',        anatomical:'M. tensor fasciae latae',      region:'hip',       side:'left',   pos:[-0.28, 0.22,-0.08], size:[0.12,0.12,0.08] },
-    { id:'horse_hip_r',          label:'Hüftmuskulatur rechts',       anatomical:'M. tensor fasciae latae',      region:'hip',       side:'right',  pos:[-0.28, 0.22, 0.08], size:[0.12,0.12,0.08] },
+    { id:'horse_hip_l',          label:'H├╝ftmuskulatur links',        anatomical:'M. tensor fasciae latae',      region:'hip',       side:'left',   pos:[-0.28, 0.22,-0.08], size:[0.12,0.12,0.08] },
+    { id:'horse_hip_r',          label:'H├╝ftmuskulatur rechts',       anatomical:'M. tensor fasciae latae',      region:'hip',       side:'right',  pos:[-0.28, 0.22, 0.08], size:[0.12,0.12,0.08] },
     { id:'horse_glute_l',        label:'Glutealmuskulatur links',     anatomical:'M. gluteus medius',            region:'gluteal',   side:'left',   pos:[-0.34, 0.14,-0.08], size:[0.12,0.12,0.08] },
     { id:'horse_glute_r',        label:'Glutealmuskulatur rechts',    anatomical:'M. gluteus medius',            region:'gluteal',   side:'right',  pos:[-0.34, 0.14, 0.08], size:[0.12,0.12,0.08] },
     { id:'horse_thigh_l',        label:'Oberschenkelmuskulatur links', anatomical:'M. biceps femoris',           region:'hindlimb',  side:'left',   pos:[-0.34,-0.04,-0.08], size:[0.10,0.16,0.07] },
@@ -131,14 +133,14 @@ const MUSCLE_GROUPS = {
   ],
 };
 
-/* NRS → Farbe */
+/* NRS ÔåÆ Farbe */
 const NRS_COLOR = ['#22c55e','#65a30d','#a3e635','#facc15','#fb923c','#f97316','#ef4444','#dc2626','#b91c1c','#991b1b','#7f1d1d'];
 
 function painColor(level) { return NRS_COLOR[Math.min(10, Math.max(0, level))]; }
 
-/* ═══════════════════════════════════════════════════════
+/* ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
    VIEWER CLASS
-═══════════════════════════════════════════════════════ */
+ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ */
 class Anatomy3DViewer {
     constructor(container, patientId, animalType, csrfToken) {
         this.container   = container;
@@ -156,9 +158,10 @@ class Anatomy3DViewer {
         this.pointer     = new THREE.Vector2(-9999, -9999);
 
         /* Model state */
-        this.modelRoot   = null;     /* THREE.Group: enthält GLB + Hotspots */
-        this.hotspots    = [];       /* { mesh, marker, def } */
-        this.painData    = {};       /* key → {painLevel, painType, notes, id} */
+        this.modelGroup  = null;     /* loaded GLB root */
+        this.hotspots    = [];       /* { mesh, def } */
+        this.origMats    = new Map();/* mesh ÔåÆ original material */
+        this.painData    = {};       /* key ÔåÆ {painLevel, painType, notes, id} */
 
         /* UI state */
         this.selectedKey = null;
@@ -172,7 +175,7 @@ class Anatomy3DViewer {
         this._loadPainData();
     }
 
-    /* ── Build HTML skeleton ──────────────────────────────── */
+    /* ÔöÇÔöÇ Build HTML skeleton ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */
     _buildUI() {
         this.container.style.cssText = 'position:relative;width:100%;height:100%;background:#0a0f1a;border-radius:12px;overflow:hidden;';
         this.container.innerHTML = `
@@ -184,16 +187,13 @@ class Anatomy3DViewer {
             display:flex;gap:6px;z-index:20;background:rgba(10,15,26,.85);
             backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1);
             border-radius:10px;padding:5px 8px;align-items:center;flex-wrap:wrap;">
-            <button class="a3d-species-btn" data-sp="dog"   style="padding:4px 10px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;font-weight:600;">🐕 Hund</button>
-            <button class="a3d-species-btn" data-sp="cat"   style="padding:4px 10px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;font-weight:600;">🐈 Katze</button>
-            <button class="a3d-species-btn" data-sp="horse" style="padding:4px 10px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;font-weight:600;">🐎 Pferd</button>
+            <button class="a3d-species-btn" data-sp="dog"   style="padding:4px 10px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;font-weight:600;">­ƒÉò Hund</button>
+            <button class="a3d-species-btn" data-sp="cat"   style="padding:4px 10px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;font-weight:600;">­ƒÉê Katze</button>
+            <button class="a3d-species-btn" data-sp="horse" style="padding:4px 10px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;font-weight:600;">­ƒÉÄ Pferd</button>
             <div style="width:1px;height:18px;background:rgba(255,255,255,.15);margin:0 2px;"></div>
-            <button id="a3d-view-side-l" title="Linke Seite"        style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">◁ Links</button>
-            <button id="a3d-view-side-r" title="Rechte Seite"       style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">Rechts ▷</button>
-            <button id="a3d-view-front"  title="Frontalansicht"     style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">Front</button>
-            <button id="a3d-reset-btn"   title="Ansicht zurücksetzen" style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">↺ Reset</button>
-            <button id="a3d-debug-btn"   title="Zonen anzeigen"      style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">🔲 Zonen</button>
-            <button id="a3d-fs-btn"      title="Vollbild"            style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">⛶ Vollbild</button>
+            <button id="a3d-reset-btn"  title="Ansicht zur├╝cksetzen"  style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">Ôå║ Reset</button>
+            <button id="a3d-debug-btn"  title="Zonen anzeigen"        style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">­ƒö▓ Zonen</button>
+            <button id="a3d-fs-btn"     title="Vollbild"              style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">ÔøÂ Vollbild</button>
           </div>
 
           <!-- Loading overlay -->
@@ -202,7 +202,7 @@ class Anatomy3DViewer {
             align-items:center;justify-content:center;z-index:30;
             background:rgba(10,15,26,.9);">
             <div style="width:36px;height:36px;border:3px solid rgba(255,255,255,.15);border-top-color:#4f7cff;border-radius:50%;animation:a3d-spin .8s linear infinite;"></div>
-            <div id="a3d-load-text" style="margin-top:12px;font-size:.8rem;color:#94a3b8;">Lade Modell…</div>
+            <div id="a3d-load-text" style="margin-top:12px;font-size:.8rem;color:#94a3b8;">Lade ModellÔÇª</div>
           </div>
 
           <!-- Hover tooltip -->
@@ -223,7 +223,7 @@ class Anatomy3DViewer {
               ${NRS_COLOR.map((c,i)=>`<div title="${i}" style="width:16px;height:8px;background:${c};border-radius:2px;"></div>`).join('')}
             </div>
             <div style="display:flex;justify-content:space-between;margin-top:2px;">
-              <span>0 – kein</span><span>10 – extrem</span>
+              <span>0 ÔÇô kein</span><span>10 ÔÇô extrem</span>
             </div>
           </div>
 
@@ -235,7 +235,7 @@ class Anatomy3DViewer {
             overflow-y:auto;z-index:20;padding:8px;display:none;font-size:.72rem;">
             <div style="font-weight:700;color:#e2e8f0;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;">
               <span>Schmerzpunkte</span>
-              <button id="a3d-list-close" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:.9rem;">✕</button>
+              <button id="a3d-list-close" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:.9rem;">Ô£ò</button>
             </div>
             <div id="a3d-list-body"></div>
           </div>
@@ -243,7 +243,7 @@ class Anatomy3DViewer {
             position:absolute;top:54px;right:10px;z-index:20;
             background:rgba(10,15,26,.85);border:1px solid rgba(255,255,255,.1);
             border-radius:8px;padding:5px 9px;font-size:.72rem;color:#e2e8f0;
-            cursor:pointer;">📋 Liste</button>
+            cursor:pointer;">­ƒôï Liste</button>
 
           <!-- Pain form panel -->
           <div id="a3d-form" style="
@@ -256,12 +256,12 @@ class Anatomy3DViewer {
                 <div id="a3d-form-title" style="font-weight:700;font-size:.85rem;color:#e2e8f0;"></div>
                 <div id="a3d-form-sub"   style="font-size:.7rem;color:#64748b;margin-top:2px;"></div>
               </div>
-              <button id="a3d-form-close" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1rem;padding:2px 6px;">✕</button>
+              <button id="a3d-form-close" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:1rem;padding:2px 6px;">Ô£ò</button>
             </div>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
               <div>
-                <label style="font-size:.7rem;color:#64748b;display:block;margin-bottom:4px;">Schmerzstärke (0–10)</label>
+                <label style="font-size:.7rem;color:#64748b;display:block;margin-bottom:4px;">Schmerzst├ñrke (0ÔÇô10)</label>
                 <div style="display:flex;align-items:center;gap:8px;">
                   <input type="range" id="a3d-pain-slider" min="0" max="10" value="0"
                     style="flex:1;accent-color:#4f7cff;">
@@ -283,7 +283,7 @@ class Anatomy3DViewer {
             <div style="margin-bottom:10px;">
               <label style="font-size:.7rem;color:#64748b;display:block;margin-bottom:4px;">Schmerzart</label>
               <div id="a3d-pain-types" style="display:flex;flex-wrap:wrap;gap:5px;">
-                ${['Druckschmerz','Bewegungsschmerz','Ruheschmerz','Verspannung','Verhärtung','Triggerpunkt','Schwellung','Wärme','Schonhaltung','Unklar'].map(t=>`
+                ${['Druckschmerz','Bewegungsschmerz','Ruheschmerz','Verspannung','Verh├ñrtung','Triggerpunkt','Schwellung','W├ñrme','Schonhaltung','Unklar'].map(t=>`
                   <button type="button" class="a3d-pt-btn" data-pt="${t}"
                     style="padding:3px 8px;border-radius:20px;border:1px solid rgba(255,255,255,.15);
                     background:transparent;color:#94a3b8;font-size:.68rem;cursor:pointer;">${t}</button>
@@ -294,7 +294,7 @@ class Anatomy3DViewer {
             <div style="margin-bottom:12px;">
               <label style="font-size:.7rem;color:#64748b;display:block;margin-bottom:4px;">Notiz</label>
               <textarea id="a3d-notes" rows="2" class="form-control form-control-sm"
-                placeholder="Freitext…" style="font-size:.78rem;resize:none;"></textarea>
+                placeholder="FreitextÔÇª" style="font-size:.78rem;resize:none;"></textarea>
             </div>
 
             <div style="display:flex;gap:8px;">
@@ -327,12 +327,9 @@ class Anatomy3DViewer {
         });
         this._updateSpeciesBtn();
 
-        c.querySelector('#a3d-view-side-l').addEventListener('click', () => this._setCameraView('left'));
-        c.querySelector('#a3d-view-side-r').addEventListener('click', () => this._setCameraView('right'));
-        c.querySelector('#a3d-view-front').addEventListener('click',  () => this._setCameraView('front'));
-        c.querySelector('#a3d-reset-btn').addEventListener('click',   () => this._resetCamera());
-        c.querySelector('#a3d-debug-btn').addEventListener('click',   () => this._toggleDebug());
-        c.querySelector('#a3d-fs-btn').addEventListener('click',      () => this._toggleFullscreen());
+        c.querySelector('#a3d-reset-btn').addEventListener('click', () => this._resetCamera());
+        c.querySelector('#a3d-debug-btn').addEventListener('click', () => this._toggleDebug());
+        c.querySelector('#a3d-fs-btn').addEventListener('click', () => this._toggleFullscreen());
 
         c.querySelector('#a3d-form-close').addEventListener('click', () => this._closeForm());
         c.querySelector('#a3d-cancel-btn').addEventListener('click', () => this._closeForm());
@@ -364,65 +361,59 @@ class Anatomy3DViewer {
         });
     }
 
-    /* ── Three.js init ────────────────────────────────────── */
+    /* ÔöÇÔöÇ Three.js init ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */
     _initThree() {
         const canvas = this.container.querySelector('#a3d-canvas');
 
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-        /* Cap pixel ratio for mobile performance */
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+        this.renderer.setPixelRatio(window.devicePixelRatio);
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
         this.renderer.shadowMap.enabled = true;
 
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x0a0f1a);
-        this.scene.fog = new THREE.FogExp2(0x0a0f1a, 0.06);
+        this.scene.fog = new THREE.FogExp2(0x0a0f1a, 0.08);
 
-        this.camera = new THREE.PerspectiveCamera(45, 1, 0.01, 200);
-        this.camera.position.set(0, 0.3, 3.5);
+        this.camera = new THREE.PerspectiveCamera(45, 1, 0.01, 100);
+        this.camera.position.set(0, 0.5, 3.2);
 
         this.controls = new OrbitControls(this.camera, this.renderer.domElement);
         this.controls.enableDamping = true;
         this.controls.dampingFactor = 0.06;
-        this.controls.minDistance   = 0.3;
-        this.controls.maxDistance   = 10;
-        this.controls.touches = {
-            ONE: THREE.TOUCH ? THREE.TOUCH.ROTATE : 0,
-            TWO: THREE.TOUCH ? THREE.TOUCH.DOLLY_PAN : 1,
-        };
+        this.controls.minDistance = 0.5;
+        this.controls.maxDistance = 8;
 
         /* Lighting */
-        this.scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+        const amb = new THREE.AmbientLight(0xffffff, 0.6);
+        this.scene.add(amb);
         const key = new THREE.DirectionalLight(0xffffff, 1.4);
-        key.position.set(3, 4, 3);
+        key.position.set(2, 3, 2);
         key.castShadow = true;
         this.scene.add(key);
-        const fill = new THREE.DirectionalLight(0x8899ff, 0.4);
-        fill.position.set(-3, 1, -2);
+        const fill = new THREE.DirectionalLight(0x8888ff, 0.5);
+        fill.position.set(-2, 1, -1);
         this.scene.add(fill);
-        const rim = new THREE.DirectionalLight(0xffeedd, 0.35);
+        const rim = new THREE.DirectionalLight(0xffeedd, 0.4);
         rim.position.set(0, -1, -3);
         this.scene.add(rim);
 
         /* Ground grid */
-        const grid = new THREE.GridHelper(8, 24, 0x1e293b, 0x1e293b);
-        grid.position.y = -0.7;
+        const grid = new THREE.GridHelper(6, 20, 0x1e293b, 0x1e293b);
+        grid.position.y = -0.6;
         this.scene.add(grid);
 
         /* Events */
         canvas.addEventListener('pointermove', e => this._onPointerMove(e));
         canvas.addEventListener('pointerdown', e => this._onClick(e));
-        this._resizeHandler = () => this._resize();
-        window.addEventListener('resize', this._resizeHandler);
+        window.addEventListener('resize', () => this._resize());
 
         this._resize();
         this._animate();
     }
 
     _resize() {
-        const w = this.container.clientWidth  || 400;
+        const w = this.container.clientWidth;
         const h = this.container.clientHeight || 400;
-        if (w < 10 || h < 10) return; /* not yet visible — skip */
         this.renderer.setSize(w, h, false);
         this.camera.aspect = w / h;
         this.camera.updateProjectionMatrix();
@@ -437,169 +428,157 @@ class Anatomy3DViewer {
 
     destroy() {
         if (this._animId) cancelAnimationFrame(this._animId);
-        if (this._resizeHandler) window.removeEventListener('resize', this._resizeHandler);
         this.renderer.dispose();
     }
 
-    /* ── Model Loading ────────────────────────────────────── */
+    /* ÔöÇÔöÇ Model Loading ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */
     _loadModel(species) {
-        /* Prefer optimized GLB, fall back to original */
-        const label = species === 'dog' ? 'Hund' : species === 'cat' ? 'Katze' : 'Pferd';
-        const fileMap = {
-            dog:   { opt: '/assets/3D/Hund.optimized.glb',  orig: '/assets/3D/Hund.glb' },
-            cat:   { opt: '/assets/3D/Katze.optimized.glb', orig: '/assets/3D/katze.glb' },
-            horse: { opt: '/assets/3D/Pferd.optimized.glb', orig: '/assets/3D/Pferd.glb' },
+        const paths = {
+            dog:   '/assets/3D/Hund.glb',
+            cat:   '/assets/3D/katze.glb',
+            horse: '/assets/3D/Pferd.glb',
         };
-        const fm   = fileMap[species] || fileMap.dog;
-        const path = fm.opt; /* server returns 404 → GLTFLoader error → we retry with orig */
+        const path = paths[species] || paths.dog;
 
-        this._showLoading(`Lade ${label}…`);
+        this._showLoading(`Lade ${species === 'dog' ? 'Hund' : species === 'cat' ? 'Katze' : 'Pferd'}ÔÇª`);
 
-        /* Remove old modelRoot (contains GLB + all hotspot meshes) */
-        if (this.modelRoot) {
-            this.scene.remove(this.modelRoot);
-            this.modelRoot = null;
+        /* Remove old model + hotspots */
+        if (this.modelGroup) {
+            this.scene.remove(this.modelGroup);
+            this.modelGroup = null;
         }
+        this.hotspots.forEach(h => {
+            this.scene.remove(h.mesh);
+            if (h.marker) this.scene.remove(h.marker);
+        });
         this.hotspots = [];
-        this.hoveredMesh = null;
+        this._modelBox = null;
 
-        const tryLoad = (p) => {
-            this.loader.load(
-                p,
-                gltf => this._onModelLoaded(gltf, species),
-                xhr  => {
-                    if (xhr.total > 0) {
-                        const pct = Math.round(xhr.loaded / xhr.total * 100);
-                        this._showLoading(`Lade ${label}… ${pct}%`);
-                    }
-                },
-                err  => {
-                    if (p === fm.opt) {
-                        console.info(`[Anatomy3D] optimized GLB not found, loading original: ${fm.orig}`);
-                        tryLoad(fm.orig);
-                    } else {
-                        console.error('[Anatomy3D] GLB load error:', err);
-                        this._showLoading('Fehler beim Laden des Modells.');
-                    }
+        this.loader.load(
+            path,
+            gltf => this._onModelLoaded(gltf, species),
+            xhr  => {
+                if (xhr.total > 0) {
+                    const pct = Math.round(xhr.loaded / xhr.total * 100);
+                    this._showLoading(`LadeÔÇª ${pct}%`);
                 }
-            );
-        };
-        tryLoad(path);
+            },
+            err  => {
+                console.error('[Anatomy3D] GLB load error:', err);
+                this._showLoading('Fehler beim Laden des Modells.');
+            }
+        );
     }
 
     _onModelLoaded(gltf, species) {
-        const glbScene = gltf.scene;
+        const model = gltf.scene;
 
-        /* ── Log mesh names for debugging */
+        /* ÔöÇÔöÇ Inspect meshes */
         const meshNames = [];
-        glbScene.traverse(obj => { if (obj.isMesh) meshNames.push(obj.name || '[unnamed]'); });
-        console.log(`[Anatomy3D] ${species} — ${meshNames.length} Meshes:`, meshNames);
+        model.traverse(obj => {
+            if (obj.isMesh) meshNames.push(obj.name || '[unnamed]');
+        });
+        console.log(`[Anatomy3D] ${species} ÔÇö ${meshNames.length} Meshes:`, meshNames);
 
-        /* ── Shadows on all meshes (do NOT touch materials/textures) */
-        glbScene.traverse(obj => {
-            if (obj.isMesh) { obj.castShadow = true; obj.receiveShadow = true; }
+        /* ÔöÇÔöÇ Auto-scale + center */
+        const box = new THREE.Box3().setFromObject(model);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        const maxDim = Math.max(size.x, size.y, size.z);
+        const scale  = 2.0 / maxDim;
+        model.scale.setScalar(scale);
+
+        /* Recompute box after scale, then center */
+        model.updateMatrixWorld(true);
+        const box2 = new THREE.Box3().setFromObject(model);
+        const center = new THREE.Vector3();
+        box2.getCenter(center);
+        model.position.sub(center);
+
+        /* Recompute final bounding box in world space after centering */
+        model.updateMatrixWorld(true);
+        const finalBox = new THREE.Box3().setFromObject(model);
+        const finalSize = new THREE.Vector3();
+        finalBox.getSize(finalSize);
+        const finalMin = finalBox.min.clone();
+
+        /* Store final dimensions for hotspot placement */
+        this._modelBox = { box: finalBox, size: finalSize, min: finalMin };
+
+        console.log(`[Anatomy3D] ${species} final bounds:`,
+            'min', finalBox.min.x.toFixed(3), finalBox.min.y.toFixed(3), finalBox.min.z.toFixed(3),
+            'max', finalBox.max.x.toFixed(3), finalBox.max.y.toFixed(3), finalBox.max.z.toFixed(3),
+            'size', finalSize.x.toFixed(3), finalSize.y.toFixed(3), finalSize.z.toFixed(3)
+        );
+
+        /* Preserve original GLB materials ÔÇö do NOT override textures */
+        model.traverse(obj => {
+            if (obj.isMesh) {
+                obj.castShadow    = true;
+                obj.receiveShadow = true;
+            }
         });
 
-        /* ──────────────────────────────────────────────────────────
-         *  KEY FIX: Erstelle modelRoot Group.
-         *  Das GLB wird OHNE eigene Transformationen hinzugefügt.
-         *  Skalierung + Zentrierung erfolgt auf modelRoot.
-         *  Hotspots werden EBENFALLS als Kinder von modelRoot hinzugefügt
-         *  → sie bewegen sich automatisch mit dem Modell mit!
-         * ────────────────────────────────────────────────────────── */
-        this.modelRoot = new THREE.Group();
-        this.modelRoot.add(glbScene);
-        this.scene.add(this.modelRoot);
+        this.modelGroup = model;
+        this.scene.add(model);
 
-        /* ── Compute bounding box of raw GLB scene (in its local space) */
-        const rawBox  = new THREE.Box3().setFromObject(glbScene);
-        const rawSize = new THREE.Vector3();
-        const rawCtr  = new THREE.Vector3();
-        rawBox.getSize(rawSize);
-        rawBox.getCenter(rawCtr);
-
-        /* ── Scale modelRoot so longest axis = 2.0 */
-        const maxDim = Math.max(rawSize.x, rawSize.y, rawSize.z);
-        const scale  = 2.0 / maxDim;
-        this.modelRoot.scale.setScalar(scale);
-
-        /* ── Center modelRoot so bounding box center is at world origin */
-        this.modelRoot.position.set(
-            -rawCtr.x * scale,
-            -rawCtr.y * scale,
-            -rawCtr.z * scale
-        );
-
-        /* Log final world bounds for calibration */
-        this.modelRoot.updateMatrixWorld(true);
-        const worldBox  = new THREE.Box3().setFromObject(this.modelRoot);
-        const worldSize = new THREE.Vector3();
-        worldBox.getSize(worldSize);
-        console.log(`[Anatomy3D] ${species} world bounds:`,
-            'min', worldBox.min.x.toFixed(3), worldBox.min.y.toFixed(3), worldBox.min.z.toFixed(3),
-            'max', worldBox.max.x.toFixed(3), worldBox.max.y.toFixed(3), worldBox.max.z.toFixed(3),
-            'size', worldSize.x.toFixed(3), worldSize.y.toFixed(3), worldSize.z.toFixed(3)
-        );
-
-        /* ── Build hotspot meshes as children of modelRoot */
+        /* ÔöÇÔöÇ Build hotspot markers using real model bounding box */
         this._buildHotspots(species);
 
-        /* ── Apply existing pain data */
+        /* ÔöÇÔöÇ Apply existing pain data */
         this._applyPainToHotspots();
-
-        /* ── Fit camera to loaded model */
-        this._fitCamera();
 
         this._hideLoading();
         this._updateSpeciesBtn();
     }
 
     _buildHotspots(species) {
-        if (!this.modelRoot) return;
         const groups = MUSCLE_GROUPS[species] || [];
+        const mb     = this._modelBox;
+        if (!mb) return;
 
-        /* WICHTIG: Hotspots werden als Kinder von modelRoot hinzugefügt!
-         * def.pos sind lokale Koordinaten im normierten Raum [-1..1].
-         * Da modelRoot skaliert und zentriert ist, sitzen die Hotspots
-         * automatisch korrekt auf dem Modell — ohne manuelle Weltkoordinaten. */
+        /* Map normalised [0..1] hotspot coordinates onto actual model bounding box.
+         * def.pos is defined in a [-1..1] space centered at model origin after
+         * auto-scale. We use it directly as world-space offsets since the model
+         * is already centered and scaled to ~2 units. */
         groups.forEach(def => {
-            /* Invisible hit-box for raycasting — larger than the marker */
-            const hitGeo = new THREE.BoxGeometry(
+            /* Invisible raycasting box ÔÇö matches the zone size */
+            const geo  = new THREE.BoxGeometry(
                 def.size[0] * 2,
                 def.size[1] * 2,
                 def.size[2] * 2
             );
-            const hitMat = new THREE.MeshBasicMaterial({
+            const mat  = new THREE.MeshBasicMaterial({
+                color: 0x4f7cff,
                 transparent: true,
                 opacity: 0,
                 depthWrite: false,
                 depthTest: false,
-                side: THREE.DoubleSide,
             });
-            const mesh = new THREE.Mesh(hitGeo, hitMat);
+            const mesh = new THREE.Mesh(geo, mat);
             mesh.position.set(def.pos[0], def.pos[1], def.pos[2]);
-            mesh.renderOrder  = 999;
+            mesh.renderOrder = 999;
             mesh.userData.hotspot = def;
-            this.modelRoot.add(mesh); /* ← child of modelRoot! */
+            this.scene.add(mesh);
 
-            /* Visible sphere marker */
-            const markerGeo = new THREE.SphereGeometry(0.028, 10, 10);
+            /* Visible marker sphere ÔÇö small dot on model surface */
+            const markerGeo = new THREE.SphereGeometry(0.022, 8, 8);
             const markerMat = new THREE.MeshBasicMaterial({
-                color:       0x4f7cff,
+                color: 0x4f7cff,
                 transparent: true,
-                opacity:     0,
-                depthWrite:  false,
+                opacity: 0,
+                depthWrite: false,
             });
             const marker = new THREE.Mesh(markerGeo, markerMat);
             marker.position.set(def.pos[0], def.pos[1], def.pos[2]);
             marker.renderOrder = 1000;
-            this.modelRoot.add(marker); /* ← child of modelRoot! */
+            this.scene.add(marker);
 
             this.hotspots.push({ mesh, marker, def });
         });
     }
 
-    /* ── Raycasting / Hover ───────────────────────────────── */
+    /* ÔöÇÔöÇ Raycasting / Hover ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */
     _onPointerMove(e) {
         const rect = this.renderer.domElement.getBoundingClientRect();
         this.pointer.x =  ((e.clientX - rect.left)  / rect.width)  * 2 - 1;
@@ -617,7 +596,7 @@ class Anatomy3DViewer {
         const hitMesh = hits.length ? hits[0].object : null;
 
         if (hitMesh !== this.hoveredMesh) {
-            /* Restore previous hover — hide invisible raycast box, update marker */
+            /* Restore previous hover ÔÇö hide invisible raycast box, update marker */
             if (this.hoveredMesh) {
                 const prevEntry = this.hotspots.find(h => h.mesh === this.hoveredMesh);
                 if (prevEntry) {
@@ -659,7 +638,7 @@ class Anatomy3DViewer {
         this._openForm(def);
     }
 
-    /* ── Pain form ────────────────────────────────────────── */
+    /* ÔöÇÔöÇ Pain form ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */
     _openForm(def) {
         this.selectedKey = `${def.id}::${def.side}`;
         const existing   = this.painData[this.selectedKey] || {};
@@ -667,7 +646,7 @@ class Anatomy3DViewer {
         const c = this.container;
         c.querySelector('#a3d-form-title').textContent = def.label;
         c.querySelector('#a3d-form-sub').textContent   =
-            `${def.anatomical} · ${def.region} · ${def.side}`;
+            `${def.anatomical} ┬À ${def.region} ┬À ${def.side}`;
 
         const lvl = existing.painLevel ?? 0;
         const slider = c.querySelector('#a3d-pain-slider');
@@ -724,7 +703,7 @@ class Anatomy3DViewer {
 
         const btn = c.querySelector('#a3d-save-btn');
         btn.disabled = true;
-        btn.textContent = 'Speichere…';
+        btn.textContent = 'SpeichereÔÇª';
 
         try {
             const body = new URLSearchParams({
@@ -779,7 +758,7 @@ class Anatomy3DViewer {
         }
     }
 
-    /* ── Load existing pain data from API ─────────────────── */
+    /* ÔöÇÔöÇ Load existing pain data from API ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */
     async _loadPainData() {
         try {
             const res  = await fetch(`/api/patienten/${this.patientId}/schmerzpunkte?animal_type=${this.animalType}`, {
@@ -805,7 +784,7 @@ class Anatomy3DViewer {
         }
     }
 
-    /* ── Apply pain colors to hotspot markers ─────────────── */
+    /* ÔöÇÔöÇ Apply pain colors to hotspot markers ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */
     _applyPainToHotspots() {
         this.hotspots.forEach(({ mesh, marker, def }) => {
             const key   = `${def.id}::${def.side}`;
@@ -825,7 +804,7 @@ class Anatomy3DViewer {
         });
     }
 
-    /* ── Pain points list ─────────────────────────────────── */
+    /* ÔöÇÔöÇ Pain points list ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */
     _renderList() {
         const body    = this.container.querySelector('#a3d-list-body');
         const entries = Object.entries(this.painData).filter(([,v]) => v.painLevel > 0);
@@ -844,7 +823,7 @@ class Anatomy3DViewer {
                 <div style="width:10px;height:10px;border-radius:50%;background:${col};flex-shrink:0;"></div>
                 <div style="min-width:0;">
                   <div style="font-weight:600;color:#e2e8f0;font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${def?.label || key}</div>
-                  <div style="color:#64748b;font-size:.65rem;">NRS ${v.painLevel} · ${v.painType || '–'}</div>
+                  <div style="color:#64748b;font-size:.65rem;">NRS ${v.painLevel} ┬À ${v.painType || 'ÔÇô'}</div>
                 </div>
               </div>`;
         }).join('');
@@ -861,66 +840,21 @@ class Anatomy3DViewer {
     }
 
     _focusHotspot(def) {
-        /* Convert local hotspot pos to world position via modelRoot */
-        const localPos = new THREE.Vector3(...def.pos);
-        const worldPos = localPos.clone();
-        if (this.modelRoot) this.modelRoot.localToWorld(worldPos);
+        const pos  = new THREE.Vector3(...def.pos);
         const dist = 1.2;
-        const dir  = this.camera.position.clone().sub(worldPos).normalize().multiplyScalar(dist);
-        this.camera.position.copy(worldPos.clone().add(dir));
-        this.controls.target.copy(worldPos);
+        const dir  = this.camera.position.clone().sub(pos).normalize().multiplyScalar(dist);
+        this.camera.position.copy(pos.clone().add(dir));
+        this.controls.target.copy(pos);
         this.controls.update();
     }
 
-    /* ── Fit camera to loaded model ───────────────────────── */
-    _fitCamera() {
-        if (!this.modelRoot) return;
-        this.modelRoot.updateMatrixWorld(true);
-        const box    = new THREE.Box3().setFromObject(this.modelRoot);
-        const center = new THREE.Vector3();
-        const size   = new THREE.Vector3();
-        box.getCenter(center);
-        box.getSize(size);
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const fov    = this.camera.fov * (Math.PI / 180);
-        const dist   = Math.abs(maxDim / Math.sin(fov / 2)) * 0.75;
-
-        /* Default: left side view (model faces +X, so looking from +Z gives left side) */
-        this.camera.position.set(center.x, center.y + size.y * 0.08, center.z + dist);
-        this.camera.near = dist * 0.01;
-        this.camera.far  = dist * 10;
-        this.camera.updateProjectionMatrix();
-        this.controls.target.copy(center);
-        this.controls.update();
-    }
-
-    /* ── Camera preset views ─────────────────────────────── */
-    _setCameraView(view) {
-        if (!this.modelRoot) return;
-        const box    = new THREE.Box3().setFromObject(this.modelRoot);
-        const center = new THREE.Vector3();
-        const size   = new THREE.Vector3();
-        box.getCenter(center);
-        box.getSize(size);
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const fov    = this.camera.fov * (Math.PI / 180);
-        const dist   = Math.abs(maxDim / Math.sin(fov / 2)) * 0.75;
-
-        const cx = center.x, cy = center.y, cz = center.z;
-        if (view === 'left')  this.camera.position.set(cx, cy + size.y * 0.08,  cz + dist);
-        if (view === 'right') this.camera.position.set(cx, cy + size.y * 0.08,  cz - dist);
-        if (view === 'front') this.camera.position.set(cx + dist, cy + size.y * 0.08, cz);
-        this.controls.target.copy(center);
-        this.controls.update();
-    }
-
-    /* ── Tooltip ─────────────────────────────────────────── */
+    /* ÔöÇÔöÇ Tooltip ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */
     _showTooltip(def) {
         const tt  = this.container.querySelector('#a3d-tooltip');
         const key = `${def.id}::${def.side}`;
         const p   = this.painData[key];
         tt.innerHTML = `<strong style="color:#e2e8f0;">${def.label}</strong>` +
-            (p?.painLevel > 0 ? `<br><span style="color:${painColor(p.painLevel)}">▲ NRS ${p.painLevel}</span>` : '');
+            (p?.painLevel > 0 ? `<br><span style="color:${painColor(p.painLevel)}">Ôû▓ NRS ${p.painLevel}</span>` : '');
         tt.style.display = 'block';
     }
     _hideTooltip() {
@@ -933,14 +867,14 @@ class Anatomy3DViewer {
         tt.style.top  = `${cy - rect.top  - 10}px`;
     }
 
-    /* ── Helpers ─────────────────────────────────────────── */
+    /* ÔöÇÔöÇ Helpers ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ */
     _defFromKey(key) {
         const groups = MUSCLE_GROUPS[this.animalType] || [];
         const [id, side] = key.split('::');
         return groups.find(d => d.id === id && d.side === side) || null;
     }
 
-    _showLoading(msg = 'Lade…') {
+    _showLoading(msg = 'LadeÔÇª') {
         const el = this.container.querySelector('#a3d-loading');
         this.container.querySelector('#a3d-load-text').textContent = msg;
         el.style.display = 'flex';
@@ -963,7 +897,9 @@ class Anatomy3DViewer {
     }
 
     _resetCamera() {
-        this._fitCamera();
+        this.camera.position.set(0, 0.5, 3.2);
+        this.controls.target.set(0, 0, 0);
+        this.controls.update();
     }
 
     _toggleDebug() {
@@ -984,16 +920,16 @@ class Anatomy3DViewer {
     }
 }
 
-/* ═══════════════════════════════════════════════════════
+/* ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ
    PUBLIC API
-═══════════════════════════════════════════════════════ */
+ÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉÔòÉ */
 window.Anatomy3D = {
     _instance: null,
 
     /**
-     * @param {string} containerId  — DOM-ID des Container-Div
+     * @param {string} containerId  ÔÇö DOM-ID des Container-Div
      * @param {number} patientId
-     * @param {string} animalType   — 'dog'|'cat'|'horse'
+     * @param {string} animalType   ÔÇö 'dog'|'cat'|'horse'
      * @param {string} csrfToken
      */
     init(containerId, patientId, animalType, csrfToken) {
@@ -1005,31 +941,7 @@ window.Anatomy3D = {
             this._instance = null;
         }
 
-        const doInit = () => {
-            this._instance = new Anatomy3DViewer(el, patientId, animalType, csrfToken);
-            /* Force resize after first paint — critical for modals/hidden tabs */
-            requestAnimationFrame(() => {
-                setTimeout(() => this._instance?._resize(), 80);
-            });
-        };
-
-        /* If container has no size yet (hidden tab/modal), wait for it */
-        if (el.clientWidth < 10 || el.clientHeight < 10) {
-            let attempts = 0;
-            const poll = setInterval(() => {
-                attempts++;
-                if (el.clientWidth > 10 && el.clientHeight > 10) {
-                    clearInterval(poll);
-                    doInit();
-                } else if (attempts > 40) {
-                    clearInterval(poll);
-                    console.warn('[Anatomy3D] Container noch nicht sichtbar nach 2s, initialisiere trotzdem.');
-                    doInit();
-                }
-            }, 50);
-        } else {
-            doInit();
-        }
+        this._instance = new Anatomy3DViewer(el, patientId, animalType, csrfToken);
     },
 
     switchAnimal(species) {
