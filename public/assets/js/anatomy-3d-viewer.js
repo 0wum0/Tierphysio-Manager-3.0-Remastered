@@ -451,8 +451,8 @@ class Anatomy3DViewer {
             this.modelGroup = null;
         }
         this.hotspots.forEach(h => {
-            this.scene.remove(h.mesh);
-            if (h.marker) this.scene.remove(h.marker);
+            if (h.mesh.parent)   h.mesh.parent.remove(h.mesh);
+            if (h.marker?.parent) h.marker.parent.remove(h.marker);
         });
         this.hotspots = [];
         this._modelBox = null;
@@ -508,10 +508,16 @@ class Anatomy3DViewer {
         /* Store final dimensions for hotspot placement */
         this._modelBox = { box: finalBox, size: finalSize, min: finalMin };
 
+        const finalCenter = new THREE.Vector3();
+        finalBox.getCenter(finalCenter);
         console.log(`[Anatomy3D] ${species} final bounds:`,
             'min', finalBox.min.x.toFixed(3), finalBox.min.y.toFixed(3), finalBox.min.z.toFixed(3),
             'max', finalBox.max.x.toFixed(3), finalBox.max.y.toFixed(3), finalBox.max.z.toFixed(3),
             'size', finalSize.x.toFixed(3), finalSize.y.toFixed(3), finalSize.z.toFixed(3)
+        );
+        console.log(`[Anatomy3D] ${species} model.position after centering:`,
+            model.position.x.toFixed(4), model.position.y.toFixed(4), model.position.z.toFixed(4),
+            '| finalCenter:', finalCenter.x.toFixed(4), finalCenter.y.toFixed(4), finalCenter.z.toFixed(4)
         );
 
         /* Preserve original GLB materials — do NOT override textures */
@@ -525,7 +531,8 @@ class Anatomy3DViewer {
         this.modelGroup = model;
         this.scene.add(model);
 
-        /* ── Build hotspot markers using real model bounding box */
+        /* ── Build hotspot markers in world space (pos[] are world coords
+         *    matching the final auto-scaled + centered bounding box). */
         this._buildHotspots(species);
 
         /* ── Apply existing pain data */
@@ -540,10 +547,9 @@ class Anatomy3DViewer {
         const mb     = this._modelBox;
         if (!mb) return;
 
-        /* Map normalised [0..1] hotspot coordinates onto actual model bounding box.
-         * def.pos is defined in a [-1..1] space centered at model origin after
-         * auto-scale. We use it directly as world-space offsets since the model
-         * is already centered and scaled to ~2 units. */
+        /* def.pos[] are world-space coordinates matching the final bounding box
+         * after auto-scale (scale=2/maxDim) and centering (position.sub(center)).
+         * Real dog bounds: X±0.360, Y±0.840, Z±1.000 — same space as pos[] values. */
         groups.forEach(def => {
             /* Invisible raycasting box — matches the zone size */
             const geo  = new THREE.BoxGeometry(
