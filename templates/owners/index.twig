@@ -8,10 +8,10 @@
         <h1 class="page-title">{% if is_trainer ?? false %}Halter{% else %}{{ t('owners.title') }}{% endif %}</h1>
         <p class="page-subtitle">{{ pagination.total }} {{ t('common.entries') }}</p>
     </div>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal-new-owner">
+    <a href="/patienten/neu" class="btn btn-primary">
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        {% if is_trainer ?? false %}Neuen Halter anlegen{% else %}{{ t('owners.new_owner') }}{% endif %}
-    </button>
+        {% if is_trainer ?? false %}Neuen Halter + Tier anlegen{% else %}Neuen Tierhalter + Tier anlegen{% endif %}
+    </a>
 </div>
 
 {# ── Panel ── #}
@@ -151,10 +151,10 @@
                 <svg width="48" height="48" fill="none" viewBox="0 0 24 24" class="mb-3 text-muted" style="opacity:.3;"><path stroke="currentColor" stroke-width="1.5" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4" stroke="currentColor" stroke-width="1.5"/><path stroke="currentColor" stroke-width="1.5" d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 <h5 class="text-muted fw-400">{{ t('owners.no_owners') }}</h5>
                 <p class="text-muted fs-sm mb-4">{{ search ? 'Keine Ergebnisse für "' ~ search ~ '"' : (is_trainer ?? false ? 'Noch keine Halter angelegt.' : 'Noch keine Tierhalter angelegt.') }}</p>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal-new-owner">
+                <a href="/patienten/neu" class="btn btn-primary">
                     <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                    {% if is_trainer ?? false %}Neuen Halter anlegen{% else %}{{ t('owners.new_owner') }}{% endif %}
-                </button>
+                    {% if is_trainer ?? false %}Neuen Halter + Tier anlegen{% else %}Neuen Tierhalter + Tier anlegen{% endif %}
+                </a>
             </div>
         {% endif %}
 

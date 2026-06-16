@@ -292,21 +292,27 @@ class PatientController extends Controller
             $this->abort(404);
         }
 
+        $weightRaw = $this->post('weight', '');
         $data = [
-            'name'          => $this->sanitize($this->post('name', '')),
-            'species'       => $this->sanitize($this->post('species', '')),
-            'breed'         => $this->sanitize($this->post('breed', '')),
-            'birth_date'    => $this->post('birth_date', null),
-            'gender'        => $this->sanitize($this->post('gender', '')),
-            'color'         => $this->sanitize($this->post('color', '')),
-            'chip_number'   => $this->sanitize($this->post('chip_number', '')),
-            'vet_name'      => $this->sanitize($this->post('vet_name', '')),
-            'vet_phone'     => $this->sanitize($this->post('vet_phone', '')),
-            'vet_address'   => $this->post('vet_address', ''),
-            'owner_id'      => (int)$this->post('owner_id', 0),
-            'notes'         => $this->post('notes', ''),
-            'status'        => $this->sanitize($this->post('status', 'aktiv')),
-            'deceased_date' => $this->post('deceased_date', null) ?: null,
+            'name'              => $this->sanitize($this->post('name', '')),
+            'species'           => $this->sanitize($this->post('species', '')),
+            'breed'             => $this->sanitize($this->post('breed', '')),
+            'birth_date'        => $this->post('birth_date', null),
+            'gender'            => $this->sanitize($this->post('gender', '')),
+            'color'             => $this->sanitize($this->post('color', '')),
+            'chip_number'       => $this->sanitize($this->post('chip_number', '')),
+            'weight'            => $weightRaw !== '' ? (float)$weightRaw : null,
+            'passport_number'   => $this->sanitize($this->post('passport_number', '')),
+            'insurance_type'    => $this->sanitize($this->post('insurance_type', '')),
+            'insurance_company' => $this->sanitize($this->post('insurance_company', '')),
+            'insurance_policy'  => $this->sanitize($this->post('insurance_policy', '')),
+            'vet_name'          => $this->sanitize($this->post('vet_name', '')),
+            'vet_phone'         => $this->sanitize($this->post('vet_phone', '')),
+            'vet_address'       => $this->post('vet_address', ''),
+            'owner_id'          => (int)$this->post('owner_id', 0),
+            'notes'             => $this->post('notes', ''),
+            'status'            => $this->sanitize($this->post('status', 'aktiv')),
+            'deceased_date'     => $this->post('deceased_date', null) ?: null,
         ];
 
         /* ── Photo upload (optional, included in edit modal form) ── */
@@ -943,17 +949,23 @@ class PatientController extends Controller
             return;
         }
 
+        $weightRaw = $this->post('weight', '');
         $patientData = [
-            'name'        => $this->sanitize($this->post('name', '')),
-            'species'     => $this->sanitize($this->post('species', '')),
-            'breed'       => $this->sanitize($this->post('breed', '')),
-            'birth_date'  => $this->post('birth_date', null) ?: null,
-            'gender'      => $this->sanitize($this->post('gender', '')),
-            'color'       => $this->sanitize($this->post('color', '')),
-            'chip_number' => $this->sanitize($this->post('chip_number', '')),
-            'notes'       => $this->post('notes', ''),
-            'status'      => 'aktiv',
-            'owner_id'    => $ownerId,
+            'name'              => $this->sanitize($this->post('name', '')),
+            'species'           => $this->sanitize($this->post('species', '')),
+            'breed'             => $this->sanitize($this->post('breed', '')),
+            'birth_date'        => $this->post('birth_date', null) ?: null,
+            'gender'            => $this->sanitize($this->post('gender', '')),
+            'color'             => $this->sanitize($this->post('color', '')),
+            'chip_number'       => $this->sanitize($this->post('chip_number', '')),
+            'weight'            => $weightRaw !== '' ? (float)$weightRaw : null,
+            'passport_number'   => $this->sanitize($this->post('passport_number', '')),
+            'insurance_type'    => $this->sanitize($this->post('insurance_type', '')),
+            'insurance_company' => $this->sanitize($this->post('insurance_company', '')),
+            'insurance_policy'  => $this->sanitize($this->post('insurance_policy', '')),
+            'notes'             => $this->post('notes', ''),
+            'status'            => 'aktiv',
+            'owner_id'          => $ownerId,
         ];
 
         if (empty($patientData['name'])) {
@@ -963,6 +975,21 @@ class PatientController extends Controller
         }
 
         $patientId = (int)$this->patientService->create($patientData);
+
+        // Foto-Upload nach Patient-Erstellung
+        if (!empty($_FILES['photo']['name']) && $_FILES['photo']['error'] === UPLOAD_ERR_OK) {
+            $destination = tenant_storage_path('patients/' . $patientId);
+            if (!is_dir($destination)) {
+                @mkdir($destination, 0755, true);
+            }
+            $filename = $this->uploadFile('photo', $destination, [
+                'image/jpeg', 'image/png', 'image/gif', 'image/webp'
+            ]);
+            if ($filename !== false) {
+                $this->patientService->update($patientId, ['photo' => $filename]);
+            }
+        }
+
         $this->session->flash('success', 'Patient "' . $patientData['name'] . '" wurde erfolgreich angelegt.');
         $this->redirect("/patienten/{$patientId}");
     }

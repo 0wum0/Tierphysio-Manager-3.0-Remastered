@@ -210,7 +210,7 @@
         </div>
     </div>
 
-    <form action="/patienten/wizard" method="POST" id="wizard-form">
+    <form action="/patienten/wizard" method="POST" id="wizard-form" enctype="multipart/form-data">
         <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="owner_mode" id="owner_mode" value="existing">
         <input type="hidden" name="owner_id" id="hidden_owner_id" value="">
@@ -345,9 +345,42 @@
                         <label class="form-label">Farbe / Fellfarbe</label>
                         <input type="text" name="color" class="form-control" placeholder="z.B. braun-weiß">
                     </div>
-                    <div class="col-12">
+                    <div class="col-md-6">
                         <label class="form-label">Chip-Nummer</label>
                         <input type="text" name="chip_number" class="form-control" placeholder="15-stellige Transponder-Nr.">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Gewicht (kg)</label>
+                        <input type="number" name="weight" class="form-control" step="0.1" min="0" placeholder="z.B. 12.5">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Impfpass-Nummer</label>
+                        <input type="text" name="passport_number" class="form-control" placeholder="z.B. EU-DE-123456">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Versicherungsart</label>
+                        <select name="insurance_type" class="form-control">
+                            <option value="">— keine —</option>
+                            <option value="Tierkrankenversicherung">Tierkrankenversicherung</option>
+                            <option value="Tier-OP-Versicherung">Tier-OP-Versicherung</option>
+                            <option value="Tierhaftpflicht">Tierhaftpflicht</option>
+                            <option value="Sonstige">Sonstige</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Versicherungsgesellschaft</label>
+                        <input type="text" name="insurance_company" class="form-control" placeholder="z.B. Allianz, AXA…">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Versicherungsnummer / Police</label>
+                        <input type="text" name="insurance_policy" class="form-control" placeholder="z.B. VN-123456789">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Foto des Tieres</label>
+                        <input type="file" name="photo" id="wizard_photo" class="form-control" accept="image/jpeg,image/png,image/webp,image/gif">
+                        <div id="wizard-photo-preview" style="display:none;margin-top:.5rem;">
+                            <img id="wizard-photo-img" src="" alt="Vorschau" style="max-height:120px;border-radius:8px;object-fit:cover;">
+                        </div>
                     </div>
                     <div class="col-12">
                         <label class="form-label">Notizen</label>
@@ -558,13 +591,20 @@
         const form = document.getElementById('wizard-form');
         const get  = name => form.querySelector('[name="' + name + '"]')?.value || '—';
         const species = document.getElementById('hidden_species').value || '—';
+        const photoFile = document.getElementById('wizard_photo')?.files[0];
         const rows = [
-            ['Name',         get('name')],
-            ['Tierart',      species],
-            ['Rasse',        get('breed')],
-            ['Geschlecht',   get('gender')],
-            ['Geburtsdatum', get('birth_date')],
-            ['Chip-Nr.',     get('chip_number')],
+            ['Name',              get('name')],
+            ['Tierart',           species],
+            ['Rasse',             get('breed')],
+            ['Geschlecht',        get('gender')],
+            ['Geburtsdatum',      get('birth_date')],
+            ['Chip-Nr.',          get('chip_number')],
+            ['Gewicht',           get('weight') ? get('weight') + ' kg' : ''],
+            ['Impfpass-Nr.',      get('passport_number')],
+            ['Versicherungsart',  get('insurance_type')],
+            ['Versicherung',      get('insurance_company')],
+            ['Police-Nr.',        get('insurance_policy')],
+            ['Foto',              photoFile ? '📷 ' + photoFile.name : ''],
         ].filter(([, v]) => v && v !== '—');
 
         document.getElementById('summary-patient').innerHTML =
@@ -573,6 +613,18 @@
 
     /* ── prevent submit on enter in search ── */
     searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') e.preventDefault(); });
+
+    /* ── photo preview ── */
+    document.getElementById('wizard_photo')?.addEventListener('change', function () {
+        const file = this.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = e => {
+            document.getElementById('wizard-photo-img').src = e.target.result;
+            document.getElementById('wizard-photo-preview').style.display = '';
+        };
+        reader.readAsDataURL(file);
+    });
 
     /* ── pre-select existing mode ── */
     setOwnerMode('existing');

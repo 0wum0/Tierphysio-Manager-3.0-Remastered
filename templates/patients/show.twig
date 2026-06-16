@@ -182,6 +182,40 @@
                     <div style="font-size:0.72rem;text-muted mb-1">{{ t('patients.chip_number') }}</div>
                     <div class="small font-medium" style="font-family:monospace;">{{ patient.chip_number ?: '—' }}</div>
                 </div>
+                {% if patient.weight %}
+                <div>
+                    <div style="font-size:0.72rem;color:var(--bs-secondary-color);">Gewicht</div>
+                    <div class="small font-medium">{{ patient.weight }} kg</div>
+                </div>
+                {% endif %}
+                {% if patient.passport_number %}
+                <div>
+                    <div style="font-size:0.72rem;color:var(--bs-secondary-color);">Impfpass-Nummer</div>
+                    <div class="small font-medium" style="font-family:monospace;">{{ patient.passport_number }}</div>
+                </div>
+                {% endif %}
+                {% if patient.insurance_type or patient.insurance_company or patient.insurance_policy %}
+                <div style="border-top:1px solid var(--bs-border-color);padding-top:0.75rem;">
+                    <div style="font-size:0.72rem;color:var(--bs-secondary-color);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:.5rem;">
+                        🛡️ Versicherung
+                    </div>
+                    {% if patient.insurance_type %}
+                    <div class="small font-medium mb-1">
+                        <span style="font-size:.7rem;color:var(--bs-secondary-color);">Art: </span>{{ patient.insurance_type }}
+                    </div>
+                    {% endif %}
+                    {% if patient.insurance_company %}
+                    <div class="small font-medium mb-1">
+                        <span style="font-size:.7rem;color:var(--bs-secondary-color);">Gesellschaft: </span>{{ patient.insurance_company }}
+                    </div>
+                    {% endif %}
+                    {% if patient.insurance_policy %}
+                    <div class="small font-medium" style="font-family:monospace;">
+                        <span style="font-size:.7rem;color:var(--bs-secondary-color);">Police-Nr.: </span>{{ patient.insurance_policy }}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
                 {% if patient.notes %}
                 <div style="border-top:1px solid var(--bs-border-color);padding-top:0.75rem;">
                     <div style="font-size:0.72rem;text-muted mb-1">{{ t('patients.notes') }}</div>
@@ -1084,6 +1118,32 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="form-group">
                         <label class="form-label">{{ t('patients.chip_number') }}</label>
                         <input type="text" name="chip_number" class="form-control" value="{{ patient.chip_number }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Gewicht (kg)</label>
+                        <input type="number" name="weight" class="form-control" step="0.1" min="0" value="{{ patient.weight }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Impfpass-Nummer</label>
+                        <input type="text" name="passport_number" class="form-control" value="{{ patient.passport_number }}">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Versicherungsart</label>
+                        <select name="insurance_type" class="form-control">
+                            <option value="">— keine —</option>
+                            <option value="Tierkrankenversicherung" {{ patient.insurance_type == 'Tierkrankenversicherung' ? 'selected' : '' }}>Tierkrankenversicherung</option>
+                            <option value="Tier-OP-Versicherung" {{ patient.insurance_type == 'Tier-OP-Versicherung' ? 'selected' : '' }}>Tier-OP-Versicherung</option>
+                            <option value="Tierhaftpflicht" {{ patient.insurance_type == 'Tierhaftpflicht' ? 'selected' : '' }}>Tierhaftpflicht</option>
+                            <option value="Sonstige" {{ patient.insurance_type == 'Sonstige' ? 'selected' : '' }}>Sonstige</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Versicherungsgesellschaft</label>
+                        <input type="text" name="insurance_company" class="form-control" value="{{ patient.insurance_company }}" placeholder="z.B. Allianz, AXA…">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Versicherungsnummer / Police</label>
+                        <input type="text" name="insurance_policy" class="form-control" value="{{ patient.insurance_policy }}" placeholder="z.B. VN-123456789">
                     </div>
                     <div class="form-group">
                         <label class="form-label">{{ t('patients.status') }}</label>
