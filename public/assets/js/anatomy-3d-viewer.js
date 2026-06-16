@@ -443,9 +443,12 @@ class Anatomy3DViewer {
             this.scene.remove(this.modelGroup);
             this.modelGroup = null;
         }
-        this.hotspots.forEach(h => this.scene.remove(h.mesh));
+        this.hotspots.forEach(h => {
+            this.scene.remove(h.mesh);
+            if (h.marker) this.scene.remove(h.marker);
+        });
         this.hotspots = [];
-        this.origMats.clear();
+        this._modelBox = null;
 
         this.loader.load(
             path,
@@ -466,7 +469,7 @@ class Anatomy3DViewer {
     _onModelLoaded(gltf, species) {
         const model = gltf.scene;
 
-        /* ── Inspect meshes (log to console for developer reference) */
+        /* ── Inspect meshes */
         const meshNames = [];
         model.traverse(obj => {
             if (obj.isMesh) meshNames.push(obj.name || '[unnamed]');
@@ -481,28 +484,35 @@ class Anatomy3DViewer {
         const scale  = 2.0 / maxDim;
         model.scale.setScalar(scale);
 
+        /* Recompute box after scale, then center */
+        model.updateMatrixWorld(true);
+        const box2 = new THREE.Box3().setFromObject(model);
         const center = new THREE.Vector3();
-        box.getCenter(center);
-        model.position.sub(center.multiplyScalar(scale));
+        box2.getCenter(center);
+        model.position.sub(center);
 
-        /* Make all model meshes receive/cast shadows and store original materials */
+        /* Recompute final bounding box in world space after centering */
+        model.updateMatrixWorld(true);
+        const finalBox = new THREE.Box3().setFromObject(model);
+        const finalSize = new THREE.Vector3();
+        finalBox.getSize(finalSize);
+        const finalMin = finalBox.min.clone();
+
+        /* Store final dimensions for hotspot placement */
+        this._modelBox = { box: finalBox, size: finalSize, min: finalMin };
+
+        /* Preserve original GLB materials — do NOT override textures */
         model.traverse(obj => {
             if (obj.isMesh) {
-                obj.castShadow = true;
+                obj.castShadow    = true;
                 obj.receiveShadow = true;
-                /* Store original material for restore */
-                if (!this.origMats.has(obj)) {
-                    this.origMats.set(obj, Array.isArray(obj.material)
-                        ? obj.material.map(m => m)
-                        : obj.material);
-                }
             }
         });
 
         this.modelGroup = model;
         this.scene.add(model);
 
-        /* ── Build hotspot zones */
+        /* ── Build hotspot markers using real model bounding box */
         this._buildHotspots(species);
 
         /* ── Apply existing pain data */
@@ -514,20 +524,47 @@ class Anatomy3DViewer {
 
     _buildHotspots(species) {
         const groups = MUSCLE_GROUPS[species] || [];
+        const mb     = this._modelBox;
+        if (!mb) return;
 
+        /* Map normalised [0..1] hotspot coordinates onto actual model bounding box.
+         * def.pos is defined in a [-1..1] space centered at model origin after
+         * auto-scale. We use it directly as world-space offsets since the model
+         * is already centered and scaled to ~2 units. */
         groups.forEach(def => {
-            const geo  = new THREE.BoxGeometry(...def.size.map(s => s * 2));
+            /* Invisible raycasting box — matches the zone size */
+            const geo  = new THREE.BoxGeometry(
+                def.size[0] * 2,
+                def.size[1] * 2,
+                def.size[2] * 2
+            );
             const mat  = new THREE.MeshBasicMaterial({
                 color: 0x4f7cff,
                 transparent: true,
-                opacity: 0,           /* invisible by default */
+                opacity: 0,
                 depthWrite: false,
+                depthTest: false,
             });
             const mesh = new THREE.Mesh(geo, mat);
-            mesh.position.set(...def.pos);
+            mesh.position.set(def.pos[0], def.pos[1], def.pos[2]);
+            mesh.renderOrder = 999;
             mesh.userData.hotspot = def;
             this.scene.add(mesh);
-            this.hotspots.push({ mesh, def });
+
+            /* Visible marker sphere — small dot on model surface */
+            const markerGeo = new THREE.SphereGeometry(0.022, 8, 8);
+            const markerMat = new THREE.MeshBasicMaterial({
+                color: 0x4f7cff,
+                transparent: true,
+                opacity: 0,
+                depthWrite: false,
+            });
+            const marker = new THREE.Mesh(markerGeo, markerMat);
+            marker.position.set(def.pos[0], def.pos[1], def.pos[2]);
+            marker.renderOrder = 1000;
+            this.scene.add(marker);
+
+            this.hotspots.push({ mesh, marker, def });
         });
     }
 
@@ -549,22 +586,32 @@ class Anatomy3DViewer {
         const hitMesh = hits.length ? hits[0].object : null;
 
         if (hitMesh !== this.hoveredMesh) {
-            /* Restore previous hover */
+            /* Restore previous hover — hide invisible raycast box, update marker */
             if (this.hoveredMesh) {
-                const def = this.hoveredMesh.userData.hotspot;
-                const key = `${def.id}::${def.side}`;
-                const hasPain = !!this.painData[key];
-                const mat = this.hoveredMesh.material;
-                mat.opacity = hasPain ? 0.35 : (this.debugMode ? 0.15 : 0);
-                if (!hasPain) mat.color.setHex(0x4f7cff);
+                const prevEntry = this.hotspots.find(h => h.mesh === this.hoveredMesh);
+                if (prevEntry) {
+                    const key     = `${prevEntry.def.id}::${prevEntry.def.side}`;
+                    const hasPain = this.painData[key]?.painLevel > 0;
+                    /* raycast box stays invisible */
+                    this.hoveredMesh.material.opacity = 0;
+                    /* marker: show if pain, else hide (unless debug) */
+                    prevEntry.marker.material.opacity  = hasPain ? 0.9 : (this.debugMode ? 0.4 : 0);
+                    prevEntry.marker.material.color.set(
+                        hasPain ? painColor(this.painData[key].painLevel) : 0x4f7cff
+                    );
+                    prevEntry.marker.scale.setScalar(1);
+                }
             }
             this.hoveredMesh = hitMesh;
             if (hitMesh) {
-                const def = hitMesh.userData.hotspot;
-                const key = `${def.id}::${def.side}`;
-                hitMesh.material.color.setHex(0x818cf8);
-                hitMesh.material.opacity = 0.45;
-                this._showTooltip(def);
+                const entry = this.hotspots.find(h => h.mesh === hitMesh);
+                if (entry) {
+                    /* Scale up marker and make visible as hover indicator */
+                    entry.marker.material.color.setHex(0xfbbf24);
+                    entry.marker.material.opacity = 0.95;
+                    entry.marker.scale.setScalar(1.8);
+                    this._showTooltip(entry.def);
+                }
                 this.renderer.domElement.style.cursor = 'pointer';
             } else {
                 this._hideTooltip();
@@ -620,13 +667,15 @@ class Anatomy3DViewer {
     _previewPain(key, level) {
         const entry = this.hotspots.find(h => `${h.def.id}::${h.def.side}` === key);
         if (!entry) return;
-        const mat = entry.mesh.material;
+        const mat = entry.marker.material;
         if (level === 0) {
             mat.color.setHex(0x4f7cff);
-            mat.opacity = this.debugMode ? 0.15 : 0;
+            mat.opacity = this.debugMode ? 0.45 : 0;
+            entry.marker.scale.setScalar(1);
         } else {
             mat.color.set(painColor(level));
-            mat.opacity = 0.55;
+            mat.opacity = 0.9;
+            entry.marker.scale.setScalar(1.4);
         }
     }
 
@@ -725,19 +774,22 @@ class Anatomy3DViewer {
         }
     }
 
-    /* ── Apply pain colors to hotspot meshes ──────────────── */
+    /* ── Apply pain colors to hotspot markers ─────────────── */
     _applyPainToHotspots() {
-        this.hotspots.forEach(({ mesh, def }) => {
+        this.hotspots.forEach(({ mesh, marker, def }) => {
             const key   = `${def.id}::${def.side}`;
             const entry = this.painData[key];
-            const mat   = mesh.material;
+            /* raycast box always invisible */
+            mesh.material.opacity = 0;
 
             if (entry && entry.painLevel > 0) {
-                mat.color.set(painColor(entry.painLevel));
-                mat.opacity = 0.55;
+                marker.material.color.set(painColor(entry.painLevel));
+                marker.material.opacity = 0.9;
+                marker.scale.setScalar(1.2);
             } else {
-                mat.color.setHex(0x4f7cff);
-                mat.opacity = this.debugMode ? 0.15 : 0;
+                marker.material.color.setHex(0x4f7cff);
+                marker.material.opacity = this.debugMode ? 0.45 : 0;
+                marker.scale.setScalar(1);
             }
         });
     }
