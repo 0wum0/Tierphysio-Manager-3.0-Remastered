@@ -1354,6 +1354,7 @@ function resetModal() {
     _portalLoaded   = false;
     _hwLoaded       = false;
     _3dViewerLoaded = false;
+    _3dInitPending  = false;
     _tcpCache       = null;
 }
 
@@ -3732,10 +3733,12 @@ function escapeHtmlPd(s) {
    3D SCHMERZANALYSE VIEWER
 ═══════════════════════════════════════════════════════ */
 var _3dScriptAppended = false;
+var _3dInitPending   = false;
 
 function init3DViewer(patientId) {
     if (_3dViewerLoaded) return;
     _3dViewerLoaded = true;
+    _3dInitPending   = true;
 
     var wrap = document.getElementById('pd-3d-viewer-wrap');
     if (!wrap) return;
@@ -3766,13 +3769,14 @@ function init3DViewer(patientId) {
         s.type = 'module';
         s.src  = '/assets/js/anatomy-3d-viewer.js';
         s.onerror = function() {
+            _3dInitPending = false;
             var w = document.getElementById('pd-3d-viewer-wrap');
             if (w) w.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#ef4444;font-size:.85rem;padding:1rem;text-align:center;">3D-Viewer konnte nicht geladen werden.</div>';
         };
         document.body.appendChild(s);
     }
 
-    /* Poll until window.Anatomy3D is set by the module */
+    /* Poll until window.Anatomy3D is set by the module — fires exactly once */
     _waitForViewer(function() { _doInit3D(patientId, species, csrfToken); });
 }
 
@@ -3791,8 +3795,9 @@ function _waitForViewer(cb) {
 }
 
 function _doInit3D(patientId, species, csrfToken) {
+    if (!_3dInitPending) return; /* guard against double calls */
+    _3dInitPending = false;
     if (!window.Anatomy3D) return;
-    /* Re-assign container id in case innerHTML was cleared */
     var wrap = document.getElementById('pd-3d-viewer-wrap');
     if (!wrap) return;
     wrap.innerHTML = '';
