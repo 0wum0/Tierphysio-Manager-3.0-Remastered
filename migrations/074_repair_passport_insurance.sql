@@ -1,6 +1,7 @@
--- Migration 064: Repair passport_number + insurance columns
--- Migration 037_patient_insurance_passport.sql was never executed
--- because 037_gobd_infrastructure.sql shared the same version number.
+-- Migration 074: Repair passport_number + insurance columns
+-- 037_patient_insurance_passport.sql was never executed because
+-- 037_gobd_infrastructure.sql shared the same version prefix.
+-- Tenant is already at v73, so this runs as v74.
 
 ALTER TABLE `patients`
     ADD COLUMN `insurance_company`  VARCHAR(255) NULL DEFAULT NULL AFTER `weight`,
