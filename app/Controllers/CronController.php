@@ -513,7 +513,16 @@ class CronController extends Controller
     private function dbLog(string $jobKey, string $status, string $message, int $startHrtime): void
     {
         $ms = (int)((hrtime(true) - $startHrtime) / 1_000_000);
-        \App\Controllers\CronAdminController::logRun($this->db, $jobKey, $status, $message, $ms, 'cron');
+        try {
+            $table = $this->db->prefix('cron_job_log');
+            $this->db->query(
+                "INSERT INTO `{$table}` (job_key, status, message, duration_ms, triggered_by)
+                 VALUES (?, ?, ?, ?, 'cron')",
+                [$jobKey, $status, mb_substr($message, 0, 2000), $ms]
+            );
+        } catch (\Throwable) {
+            /* Logging must never crash the cron job */
+        }
     }
 
     /* ─────────────────────────────────────────────────────────
