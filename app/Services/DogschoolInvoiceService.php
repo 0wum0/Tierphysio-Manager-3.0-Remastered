@@ -257,40 +257,32 @@ class DogschoolInvoiceService
             $inv = $this->db->prefix('invoices');
             $ip  = $this->db->prefix('invoice_positions');
 
-            /* Gleiche Brutto-Formel wie InvoiceRepository::getStats(): erst
-             * denormalisiertes total_gross, sonst Summe der Positionen. */
-            $gross = "COALESCE(
-                NULLIF(i.total_gross, 0),
-                (SELECT SUM(ip.total) FROM `{$ip}` ip WHERE ip.invoice_id = i.id),
-                0
-            )";
+            /* Brutto-Ausdruck: total_gross bevorzugt (denormalisiert), Fallback
+             * auf Positionssumme. columnExists verhindert SQL-Fehler auf älteren
+             * Tenant-Schemas, die total_gross noch nicht kennen. */
+            $hasTotalGross = $this->db->columnExists($inv, 'total_gross');
+            $gross = $hasTotalGross
+                ? "COALESCE(NULLIF(i.total_gross, 0), (SELECT SUM(ip.total) FROM `{$ip}` ip WHERE ip.invoice_id = i.id), 0)"
+                : "COALESCE((SELECT SUM(ip.total) FROM `{$ip}` ip WHERE ip.invoice_id = i.id), 0)";
 
-            /* WICHTIG — KEIN Filter auf Notes-Präfix mehr:
-             * Früher zählte dieses Stats-Set nur Rechnungen mit Notes LIKE
-             * 'Automatisch aus Kurs-Einschreibung%' / 'Automatisch aus Paket-
-             * Verkauf%' — also NUR jene die das Portal/Admin automatisch aus
-             * Enrollment/Package-Kauf erzeugt hat. Manuell angelegte Rechnungen
-             * (z.B. „Training einmalig", „Einzelstunde") blieben dadurch
-             * unsichtbar im Dashboard. Da ein Trainer-Tenant strukturell nur
-             * Hundeschul-Rechnungen hat, werden jetzt ALLE seiner Rechnungen
-             * gezählt — identisches Verhalten wie die Praxis-KPIs. Storno-
-             * und Cancellation-Rechnungen werden aus der Bezahlt-Summe
-             * ausgeschlossen, sonst würde ein Storno die Monats-Summe
-             * reduzieren statt neutralisieren. */
-            $notCancelled = "i.status != 'cancelled' AND (i.invoice_type IS NULL OR i.invoice_type != 'cancellation')";
+            /* Storno-Filter: invoice_type nur referenzieren wenn die Spalte existiert
+             * (Migration 035). Ohne Prüfung schlagen ALLE Queries mit
+             * "Unknown column 'invoice_type'" fehl → alle KPIs zeigen 0. */
+            $hasInvType   = $this->db->columnExists($inv, 'invoice_type');
+            $notCancelled = $hasInvType
+                ? "i.status NOT IN ('cancelled','cancellation') AND (i.invoice_type IS NULL OR i.invoice_type != 'cancellation')"
+                : "i.status NOT IN ('cancelled','cancellation')";
 
             $monthStart = date('Y-m-01');
             $yearStart  = date('Y-01-01');
             $today      = date('Y-m-d');
 
-            /* Umsatz-Datum: paid_at (Zahlungsdatum) bevorzugt, Fallback issue_date.
-             * Identische Logik wie InvoiceRepository::getStats() — damit Dashboard-
-             * KPI und Rechnungslisten-Filter immer dieselbe Menge zeigen.
-             * Rechnungen die im Vormonat ausgestellt aber diesen Monat bezahlt
-             * wurden, zählen so korrekt zum aktuellen Monat. */
+            /* Umsatz-Datum: paid_at bevorzugt, Fallback issue_date.
+             * fetchColumn (nicht safeFetchColumn) wirft bei fehlendem Column,
+             * damit der catch greift und $hasPaidAt korrekt false bleibt. */
             $hasPaidAt = false;
             try {
-                $this->db->safeFetchColumn("SELECT `paid_at` FROM `{$inv}` LIMIT 0");
+                $this->db->fetchColumn("SELECT `paid_at` FROM `{$inv}` LIMIT 0");
                 $hasPaidAt = true;
             } catch (\Throwable) {}
             $revDate = $hasPaidAt
