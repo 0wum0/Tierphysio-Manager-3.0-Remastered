@@ -225,14 +225,14 @@
     <div class="modal-dialog" style="max-width:520px;">
         <div class="modal-content">
         <div class="modal-header">
-            <h5 class="modal-title">Einladung senden</h5>
+            <h5 class="modal-title" id="invite-modal-title">Einladung senden</h5>
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
         </div>
+
+        {# ── Formular-Ansicht ── #}
         <form action="/einladungen/senden" method="POST" id="invite-form">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
             <div class="modal-body" style="display:flex;flex-direction:column;gap:1.1rem;">
-
-                {# Via selector #}
                 <div>
                     <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.5rem;">SENDEN VIA</label>
                     <div style="display:flex;gap:0.5rem;" id="via-toggle">
@@ -250,18 +250,15 @@
                         </label>
                     </div>
                 </div>
-
                 <div id="field-email">
                     <label class="form-label">E-Mail-Adresse</label>
                     <input type="email" name="email" class="form-control" placeholder="kunde@beispiel.de">
                 </div>
-
                 <div id="field-phone" style="display:none;">
                     <label class="form-label">WhatsApp-Nummer</label>
                     <input type="tel" name="phone" class="form-control" placeholder="+49 151 12345678">
                     <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.35rem;">Mit Ländervorwahl, z.B. +49 151 ...</div>
                 </div>
-
                 <div>
                     <label class="form-label">Persönliche Nachricht <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label>
                     <textarea name="note" class="form-control" rows="3" placeholder="Hallo! Wir würden uns freuen, Ihr Tier bei uns betreuen zu dürfen..."></textarea>
@@ -275,6 +272,40 @@
                 </button>
             </div>
         </form>
+
+        {# ── Erfolgs-Ansicht (wird nach dem Senden eingeblendet) ── #}
+        <div id="invite-success" style="display:none;">
+            <div class="modal-body" style="padding:2rem;text-align:center;">
+                <div style="font-size:3rem;margin-bottom:0.75rem;">✅</div>
+                <div style="font-weight:700;font-size:1.1rem;margin-bottom:0.5rem;">Einladung erstellt!</div>
+                <div id="invite-success-email-msg" style="font-size:0.875rem;color:var(--text-muted);margin-bottom:1.25rem;display:none;">
+                    E-Mail wurde versendet.
+                </div>
+                <div id="invite-success-wa-wrap" style="display:none;margin-bottom:1rem;">
+                    <div style="font-size:0.875rem;color:var(--text-muted);margin-bottom:0.75rem;">
+                        Jetzt in WhatsApp teilen — klicken Sie auf den Button um den Link als Nachricht zu senden:
+                    </div>
+                    <a id="invite-wa-link" href="#" target="_blank" rel="noopener"
+                       style="display:inline-flex;align-items:center;gap:0.5rem;background:#25D366;color:#fff;padding:0.7rem 1.5rem;border-radius:0.5rem;text-decoration:none;font-weight:600;">
+                        💬 In WhatsApp öffnen
+                    </a>
+                </div>
+                <div id="invite-success-link-wrap" style="margin-top:1rem;">
+                    <div style="font-size:0.8rem;color:var(--text-muted);margin-bottom:0.4rem;">Einladungslink (zum manuellen Teilen):</div>
+                    <div style="display:flex;gap:0.5rem;align-items:center;">
+                        <input type="text" id="invite-success-link" readonly class="form-control form-control-sm"
+                               style="font-size:0.75rem;font-family:monospace;">
+                        <button type="button" id="invite-copy-btn" class="btn btn-outline-secondary btn-sm" style="white-space:nowrap;">
+                            Kopieren
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="invite-done-btn">Fertig</button>
+            </div>
+        </div>
+
         </div>
     </div>
 </div>
@@ -360,24 +391,93 @@ document.querySelectorAll('.wa-btn').forEach(function (btn) {
 });
 
 /* ─────────────────────────────────────────────────────────────
- * Send-Invite Modal: ALLE Submit-Modi (email, whatsapp, both)
- * laufen über AJAX. Das Modal wird danach sauber über die
- * Bootstrap-API geschlossen — kein Standard-Form-POST mehr.
- * Dadurch bleibt der Backdrop nicht hängen wenn der Server
- * langsam ist (z.B. SMTP-Verbindungsaufbau).
+ * Send-Invite Modal: AJAX für alle Modi.
+ * Nach Erfolg: Erfolgs-Ansicht mit klickbarem WhatsApp-Link
+ * statt window.open() — vermeidet Popup-Blocker.
  * ───────────────────────────────────────────────────────────── */
 (function () {
     var form    = document.getElementById('invite-form');
     var sendBtn = document.getElementById('send-btn');
     if (!form || !sendBtn) return;
 
+    var SEND_ICON = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon points="22 2 15 22 11 13 2 9 22 2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg> Einladung senden';
+
+    function showSuccess(data) {
+        /* Formular ausblenden, Erfolgs-Panel einblenden */
+        document.getElementById('invite-form').style.display    = 'none';
+        document.getElementById('invite-success').style.display = '';
+        document.getElementById('invite-modal-title').textContent = 'Einladung erstellt';
+
+        var via = data.via || '';
+
+        /* E-Mail-Bestätigung */
+        if (via === 'email' || via === 'both') {
+            document.getElementById('invite-success-email-msg').style.display = '';
+        }
+
+        /* WhatsApp-Link als echter <a>-Button → kein Popup-Blocker */
+        if (data.whatsapp_url) {
+            document.getElementById('invite-success-wa-wrap').style.display = '';
+            document.getElementById('invite-wa-link').href = data.whatsapp_url;
+        }
+
+        /* Einladungslink zum Kopieren */
+        if (data.invite_url) {
+            document.getElementById('invite-success-link').value = data.invite_url;
+        }
+    }
+
+    /* Kopieren-Button */
+    document.getElementById('invite-copy-btn').addEventListener('click', function () {
+        var inp = document.getElementById('invite-success-link');
+        inp.select();
+        navigator.clipboard.writeText(inp.value).then(function () {
+            var btn = document.getElementById('invite-copy-btn');
+            btn.textContent = 'Kopiert ✓';
+            btn.classList.add('btn-success');
+            btn.classList.remove('btn-outline-secondary');
+        });
+    });
+
+    /* Fertig-Button: Modal schließen, Seite neu laden */
+    document.getElementById('invite-done-btn').addEventListener('click', function () {
+        var modalEl = document.getElementById('invite-modal');
+        var modal   = bootstrap.Modal.getInstance(modalEl);
+        if (modal) {
+            modalEl.addEventListener('hidden.bs.modal', function () {
+                window.location.reload();
+            }, { once: true });
+            modal.hide();
+        } else {
+            window.location.reload();
+        }
+    });
+
+    /* Modal zurücksetzen wenn es erneut geöffnet wird */
+    document.getElementById('invite-modal').addEventListener('show.bs.modal', function () {
+        document.getElementById('invite-form').style.display    = '';
+        document.getElementById('invite-success').style.display = 'none';
+        document.getElementById('invite-modal-title').textContent = 'Einladung senden';
+        document.getElementById('invite-success-email-msg').style.display  = 'none';
+        document.getElementById('invite-success-wa-wrap').style.display    = 'none';
+        document.getElementById('invite-success-link-wrap').style.display  = '';
+        document.getElementById('invite-success-link').value = '';
+        var copyBtn = document.getElementById('invite-copy-btn');
+        copyBtn.textContent = 'Kopieren';
+        copyBtn.classList.remove('btn-success');
+        copyBtn.classList.add('btn-outline-secondary');
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = SEND_ICON;
+    });
+
     form.addEventListener('submit', function (e) {
         e.preventDefault();
-        if (sendBtn.disabled) return; /* Double-Click-Schutz */
+        if (sendBtn.disabled) return;
         sendBtn.disabled = true;
         sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Senden…';
 
-        var fd = new FormData(form);
+        var via = (document.querySelector('input[name="via"]:checked') || {}).value || 'email';
+        var fd  = new FormData(form);
         fetch(form.action, {
             method: 'POST',
             body: fd,
@@ -391,31 +491,19 @@ document.querySelectorAll('.wa-btn').forEach(function (btn) {
         })
         .then(function (data) {
             if (data.ok) {
-                if (data.whatsapp_url) {
-                    window.open(data.whatsapp_url, '_blank');
-                }
-                /* Modal sauber schließen, dann Seite neu laden */
-                var modalEl = document.getElementById('invite-modal');
-                var modal   = bootstrap.Modal.getInstance(modalEl);
-                if (modal) {
-                    modalEl.addEventListener('hidden.bs.modal', function () {
-                        window.location.reload();
-                    }, { once: true });
-                    modal.hide();
-                } else {
-                    window.location.reload();
-                }
+                data.via = via;
+                showSuccess(data);
                 return;
             }
             var msg = data.errors ? data.errors.join('\n') : (data.error || 'Fehler beim Anlegen der Einladung');
             alert(msg);
             sendBtn.disabled = false;
-            sendBtn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon points="22 2 15 22 11 13 2 9 22 2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg> Einladung senden';
+            sendBtn.innerHTML = SEND_ICON;
         })
         .catch(function () {
             alert('Netzwerkfehler. Bitte erneut versuchen.');
             sendBtn.disabled = false;
-            sendBtn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon points="22 2 15 22 11 13 2 9 22 2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg> Einladung senden';
+            sendBtn.innerHTML = SEND_ICON;
         });
     });
 })();
