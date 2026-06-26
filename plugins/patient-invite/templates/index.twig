@@ -360,9 +360,11 @@ document.querySelectorAll('.wa-btn').forEach(function (btn) {
 });
 
 /* ─────────────────────────────────────────────────────────────
- * Send-Invite Modal: bei via=whatsapp/both AJAX-submit, Einladung
- * wird erzeugt und danach WhatsApp sofort geöffnet. Bei via=email
- * bleibt der klassische Form-Submit (Redirect mit Flash) unverändert.
+ * Send-Invite Modal: ALLE Submit-Modi (email, whatsapp, both)
+ * laufen über AJAX. Das Modal wird danach sauber über die
+ * Bootstrap-API geschlossen — kein Standard-Form-POST mehr.
+ * Dadurch bleibt der Backdrop nicht hängen wenn der Server
+ * langsam ist (z.B. SMTP-Verbindungsaufbau).
  * ───────────────────────────────────────────────────────────── */
 (function () {
     var form    = document.getElementById('invite-form');
@@ -370,12 +372,10 @@ document.querySelectorAll('.wa-btn').forEach(function (btn) {
     if (!form || !sendBtn) return;
 
     form.addEventListener('submit', function (e) {
-        var via = (document.querySelector('input[name="via"]:checked') || {}).value || 'email';
-        if (via !== 'whatsapp' && via !== 'both') return; /* E-Mail: Standard-POST */
-
         e.preventDefault();
         if (sendBtn.disabled) return; /* Double-Click-Schutz */
         sendBtn.disabled = true;
+        sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> Senden…';
 
         var fd = new FormData(form);
         fetch(form.action, {
@@ -390,21 +390,32 @@ document.querySelectorAll('.wa-btn').forEach(function (btn) {
             });
         })
         .then(function (data) {
-            if (data.ok && data.whatsapp_url) {
-                /* Einladung ist persistiert → WhatsApp öffnen und Liste neu laden.
-                 * Öffnen MUSS synchron im Click-Handler-Pfad passieren (Popup-
-                 * Blocker), ist durch den user-initiated submit noch legitim. */
-                window.open(data.whatsapp_url, '_blank');
-                window.location.reload();
+            if (data.ok) {
+                if (data.whatsapp_url) {
+                    window.open(data.whatsapp_url, '_blank');
+                }
+                /* Modal sauber schließen, dann Seite neu laden */
+                var modalEl = document.getElementById('invite-modal');
+                var modal   = bootstrap.Modal.getInstance(modalEl);
+                if (modal) {
+                    modalEl.addEventListener('hidden.bs.modal', function () {
+                        window.location.reload();
+                    }, { once: true });
+                    modal.hide();
+                } else {
+                    window.location.reload();
+                }
                 return;
             }
             var msg = data.errors ? data.errors.join('\n') : (data.error || 'Fehler beim Anlegen der Einladung');
             alert(msg);
             sendBtn.disabled = false;
+            sendBtn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon points="22 2 15 22 11 13 2 9 22 2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg> Einladung senden';
         })
         .catch(function () {
             alert('Netzwerkfehler. Bitte erneut versuchen.');
             sendBtn.disabled = false;
+            sendBtn.innerHTML = '<svg width="14" height="14" fill="none" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><polygon points="22 2 15 22 11 13 2 9 22 2" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg> Einladung senden';
         });
     });
 })();
