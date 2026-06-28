@@ -301,6 +301,10 @@ $router->post('/api/mobile/portal/nachrichten/{id}/antworten',           [Mobile
 $router->get('/api/mobile/portal/befunde',                               [MobileApiController::class, 'ownerPortalBefunde']);
 $router->get('/api/mobile/portal/befunde/{id}/pdf-url',                  [MobileApiController::class, 'ownerPortalBefundPdfUrl']);
 
+// ── Owner Portal — Hausaufgaben / Trainingsaufgaben ───────────────────
+$router->get('/api/mobile/portal/hausaufgaben',                          [MobileApiController::class, 'ownerPortalHomework']);
+$router->get('/api/mobile/portal/hausaufgaben/{id}',                     [MobileApiController::class, 'ownerPortalHomeworkDetail']);
+
 // ── Befundbögen (admin API) ────────────────────────────────────────────
 $router->get('/api/mobile/befunde',                                      [MobileApiController::class, 'befundeList']);
 $router->get('/api/mobile/befunde/patient/{id}',                         [MobileApiController::class, 'befundeByPatient']);

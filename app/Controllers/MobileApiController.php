@@ -6055,6 +6055,119 @@ class MobileApiController
     }
 
     /* ══════════════════════════════════════════════════════
+       OWNER PORTAL — HAUSAUFGABEN / TRAININGSAUFGABEN
+    ══════════════════════════════════════════════════════ */
+
+    /** GET /api/mobile/portal/hausaufgaben — alle Hausaufgabenpläne des Besitzers */
+    public function ownerPortalHomework(array $params = []): void
+    {
+        $this->cors();
+        $pUser   = $this->requirePortalAuth();
+        $ownerId = (int)$pUser['owner_id'];
+
+        /* Respect portal_show_homework setting (default: enabled) */
+        try {
+            $enabled = ($this->settings->get('portal_show_homework', '1') === '1');
+        } catch (\Throwable) { $enabled = true; }
+        if (!$enabled) { $this->json([]); return; }
+
+        $plans = [];
+        try {
+            $rows = $this->db->fetchAll(
+                "SELECT hp.*,
+                        p.name AS patient_name,
+                        COALESCE(hp.general_notes, hp.physio_principles, '') AS description
+                 FROM `{$this->t('portal_homework_plans')}` hp
+                 LEFT JOIN `{$this->t('patients')}` p ON p.id = hp.patient_id
+                 WHERE hp.owner_id = ?
+                 ORDER BY hp.plan_date DESC, hp.id DESC LIMIT 50",
+                [$ownerId]
+            );
+
+            foreach ($rows as &$plan) {
+                /* Compose a human-readable title */
+                $date  = $plan['plan_date'] ?? '';
+                if ($date) {
+                    $parts = explode('-', $date);
+                    $label = count($parts) === 3
+                        ? $parts[2] . '.' . $parts[1] . '.' . $parts[0]
+                        : $date;
+                    $plan['title'] = 'Plan vom ' . $label;
+                } else {
+                    $plan['title'] = 'Hausaufgabenplan';
+                }
+
+                /* Alias plan_date for the Flutter screen */
+                $plan['datum']      = $date;
+                $plan['created_at'] = $plan['created_at'] ?? $date;
+
+                /* Load tasks / exercises */
+                try {
+                    $tasks = $this->db->fetchAll(
+                        "SELECT *, title AS name, frequency AS repetitions
+                         FROM `{$this->t('portal_homework_plan_tasks')}`
+                         WHERE plan_id = ? ORDER BY sort_order ASC, id ASC",
+                        [(int)$plan['id']]
+                    );
+                    $plan['exercises'] = $tasks;
+                } catch (\Throwable) {
+                    $plan['exercises'] = [];
+                }
+            }
+            unset($plan);
+            $plans = $rows;
+        } catch (\Throwable) {}
+
+        $this->json($plans);
+    }
+
+    /** GET /api/mobile/portal/hausaufgaben/{id} — Detailansicht eines Hausaufgabenplans */
+    public function ownerPortalHomeworkDetail(array $params = []): void
+    {
+        $this->cors();
+        $pUser   = $this->requirePortalAuth();
+        $ownerId = (int)$pUser['owner_id'];
+        $id      = (int)($params['id'] ?? 0);
+
+        try {
+            $plan = $this->db->fetch(
+                "SELECT hp.*,
+                        p.name AS patient_name,
+                        COALESCE(hp.general_notes, hp.physio_principles, '') AS description
+                 FROM `{$this->t('portal_homework_plans')}` hp
+                 LEFT JOIN `{$this->t('patients')}` p ON p.id = hp.patient_id
+                 WHERE hp.id = ? AND hp.owner_id = ? LIMIT 1",
+                [$id, $ownerId]
+            );
+        } catch (\Throwable) { $plan = null; }
+
+        if (!$plan) $this->error('Hausaufgabenplan nicht gefunden.', 404);
+
+        $date  = $plan['plan_date'] ?? '';
+        if ($date) {
+            $parts = explode('-', $date);
+            $plan['title'] = count($parts) === 3
+                ? 'Plan vom ' . $parts[2] . '.' . $parts[1] . '.' . $parts[0]
+                : 'Hausaufgabenplan';
+        } else {
+            $plan['title'] = 'Hausaufgabenplan';
+        }
+        $plan['datum'] = $date;
+
+        try {
+            $tasks = $this->db->fetchAll(
+                "SELECT *, title AS name, frequency AS repetitions
+                 FROM `{$this->t('portal_homework_plan_tasks')}`
+                 WHERE plan_id = ? ORDER BY sort_order ASC, id ASC",
+                [$id]
+            );
+            $plan['exercises'] = $tasks;
+        } catch (\Throwable) { $plan['exercises'] = []; }
+
+        $this->json($plan);
+    }
+
+    /* ══════════════════════════════════════════════════════
        PATIENT INVITE (Einladungslinks)
     ══════════════════════════════════════════════════════ */
 
