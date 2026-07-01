@@ -26,6 +26,27 @@ den echten Code verifiziert. Ergebnis — Status korrigiert in den jeweiligen De
 Details je Feature stehen in den jeweiligen `07-features/*.md`-Dateien unter "Audit-Befund (2026-07-01)".
 Neue Roadmap-Punkte dazu in [[12-roadmap/roadmap]] (P1/P2).
 
+## Vollaudit 2026-07-01 Teil 2 — Kritischer Fund + 11 komplett fehlende Feature-Docs
+
+Der Produktverantwortliche wies darauf hin, dass die Doku "nicht alles" abbildet — konkretes
+Beispiel: ein 3D-Schmerzanalyse-Tab im Patient-Modal mit echten 3D-Modellen (Hund/Katze/Pferd,
+Three.js) war im Code voll produktiv, aber in [[07-features/veterinary-anatomy-engine]] als
+"blockiert bis 3D-Modelle vorhanden" dokumentiert — **die Modelle existieren bereits** unter
+`public/assets/3D/*.glb`. Das ist die gravierendste bisher gefundene Doku-Code-Abweichung
+(P0-Korrektur, siehe Status-Hinweis oben in der Datei).
+
+Ein zweiter, breiterer Code-Sweep (alle Controller, Plugins, große JS-Module, Patient-Modal-Tabs)
+fand 11 weitere Features ganz ohne Doku-Entsprechung — jetzt neu angelegt:
+[[07-features/gobd-audit-log]], [[07-features/tax-export-pro]], [[07-features/mailbox-plugin]],
+[[07-features/bulk-mail]], [[07-features/theme-manager]], [[07-features/patient-invite]],
+[[07-features/patient-intake]], [[07-features/consent-management]], [[07-features/online-booking]],
+[[07-features/ui-settings-notifications]], [[07-features/media-compressor]],
+[[07-features/portal-checkliste]] (Detailumfang bei letzterem noch offen).
+
+**Wichtige Lehre:** Dieser zweite Sweep war noch keine vollständige Abdeckung von `app/Controllers/`
+und `plugins/*` — nur eine gezielte Suche nach den auffälligsten Lücken. Ein systematischer
+1:1-Abgleich aller Controller/Plugins gegen `07-features/*.md` steht noch aus (siehe Roadmap P2).
+
 ## Zweck
 Zentrale Sicht auf offene, nicht abgearbeitete Punkte aus dem Brain. Diese Datei ersetzt nicht die
 Detailseiten, sondern priorisiert sie fuer die naechste Umsetzung.

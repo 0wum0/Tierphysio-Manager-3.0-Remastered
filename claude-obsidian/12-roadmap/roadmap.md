@@ -42,6 +42,9 @@ Produktidee → Entscheidung → Implementierung → Brain-Update.
 | P2 | TherapyCare AI / TrainingCare AI: echte KI-Funktionalitaet bauen oder Namen auf tatsaechlichen Funktionsumfang korrigieren | open, aus Vollaudit 2026-07-01 | [[07-features/therapycare-ai]] · [[07-features/trainingcare-ai]] |
 | P2 | Marketing Automation: Kampagnen-/Automations-Backend bauen (aktuell nur Reporting-Dashboard) | open, aus Vollaudit 2026-07-01 | [[07-features/marketing-automation]] |
 | P2 | Gamification: Punkte/Streaks/Achievements bauen oder Feature auf "Fortschritts-Badges" umbenennen | open, aus Vollaudit 2026-07-01 | [[07-features/gamification]] |
+| P0 | Veterinary Anatomy Engine: Status-Korrektur "blocked" → "implemented", Marketing/Vertrieb informieren | released 2026-07-01 (Doku-Fix) | [[07-features/veterinary-anatomy-engine]] |
+| P2 | Portal-Checkliste: Backend-Controller identifizieren und Funktionsumfang dokumentieren | open, aus Vollaudit 2026-07-01 | [[07-features/portal-checkliste]] |
+| P2 | Weiterer Vollaudit-Sweep: restliche `plugins/*` und `app/Controllers/*` systematisch gegen 07-features abgleichen (bisher nur Stichprobe der auffaelligsten Luecken) | open | [[07-features/README]] |
 
 ## TODOs
 - Nach jedem Fix Status in dieser Tabelle und in [[00-start/open-items]] synchronisieren.

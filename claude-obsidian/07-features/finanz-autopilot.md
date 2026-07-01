@@ -33,6 +33,11 @@ Name "Autopilot" ist irreführend, solange keine automatische Cron-gesteuerte Es
 - Cron-basierte automatische Mahnstufen-Eskalation bauen, oder Feature intern als
   "Erinnerungs-/Mahnungs-Verwaltung (manuell)" statt "Autopilot" führen.
 
+## Ergänzung (2026-07-01, Vollaudit)
+Der Finanz-Bereich ist größer als diese Seite bisher abbildete: [[07-features/tax-export-pro]]
+(DATEV/ZIP-Export, Kassenbuch, Steuerbericht) und [[07-features/gobd-audit-log]] (unveränderliches
+Rechnungs-Änderungsprotokoll) sind eigenständige, implementierte Module im selben Fachbereich.
+
 ## Verlinkungen
 - [[02-api/mobile-api]]
 - [[03-web/web-app]]
