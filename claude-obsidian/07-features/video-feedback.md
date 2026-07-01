@@ -17,14 +17,23 @@ Client/Web/Portal → Route/Controller/Plugin → Repository/Service → UI/Resp
 ## Wichtige Regeln
 - API-Verträge dürfen nicht breaking geändert werden.
 - Tenant-Isolation bleibt erhalten.
-- Status: **implemented (media timeline/progress), verify UX scope**.
+- Status: **partial** — Upload & Vorher/Nachher-Anzeige implementiert, kein Feedback-/Annotations-Modul.
+
+## Audit-Befund (2026-07-01, gegen echten Code verifiziert)
+`migrations/002_progress_media.sql` speichert `tcp_progress_media` mit `file_path`, `media_type`
+(image/video/audio/other) und `phase_label` (vorher/nachher/verlauf) — **keine** Spalten für
+Annotation, Zeitstempel-Kommentare oder Therapeut-ID. `progress_story.twig` rendert Videos nur
+als Read-Only-Player (`<video>`-Tag mit Play-Icon-Overlay). `smartVideoPlayer.js` ist ein reiner
+HTML5-Player (Play/Pause), keine Annotation-API. Die Flutter-Progress-Screen zeigt keine
+Video-Feedback-Funktion. Therapeuten können also Vorher/Nachher-Videos hochladen und ansehen,
+aber **kein zeitbasiertes Kommentar-/Feedback-System** nutzen.
 
 ## Risiken
 - Teilimplementierungen können zu falschen Erwartungen führen.
 
 ## TODOs
-- Fachlichen Soll-/Ist-Vergleich ergänzen.
-- E2E-Flow dokumentieren.
+- Falls "Video-Feedback" im Vertrieb als Kommentar-/Annotations-Feature beworben wird: entweder
+  bauen (Timestamp-Kommentare, Zeichnen auf Video-Frame) oder Beschreibung auf "Video-Verlauf" korrigieren.
 
 ## Verlinkungen
 - [[02-api/mobile-api]]

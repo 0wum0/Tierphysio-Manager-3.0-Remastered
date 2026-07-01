@@ -1,7 +1,30 @@
 # Open Items Audit
 
-**Zuletzt aktualisiert:** 2026-05-12  
+**Zuletzt aktualisiert:** 2026-07-01  
 **Quelle:** Abgleich `claude-obsidian/**` gegen Repo-Dateien per `rg`, punktueller Code-Review und Fix-Durchlauf.
+
+## Vollaudit 2026-07-01 — Doku-Korrekturen (Status war veraltet/zu optimistisch)
+
+Anlass: `claude-obsidian/07-features/*.md` wies mehrere Features als "implemented"/"partial" aus,
+obwohl der Code das nicht hergab (Auslöser: Wettbewerbsvergleich TheraPano vs. externem Anbieter,
+bei dem auffiel, dass die Doku nicht mehr aktuell ist). Zwei Sub-Agenten haben je 5 Features gegen
+den echten Code verifiziert. Ergebnis — Status korrigiert in den jeweiligen Detailseiten und in
+[[07-features/README]]:
+
+| Feature | Alter Status | Neuer Status |
+|---|---|---|
+| TherapyCare AI | partial/verify AI scope | **not_found (AI)** — Basissystem ohne KI ist implementiert |
+| TrainingCare AI | planned/unknown | **implemented (Trainingsplan-System)**, AI-Anteil not_found |
+| Gamification | unknown/planned | **partial** — nur Score-Badges, keine echte Gamification |
+| Video Feedback | implemented, verify UX | **partial** — Upload/Anzeige ja, kein Feedback-/Annotations-Modul |
+| Finanz-Autopilot | partial indicators | **partial** — nur manuelle Mahnungen, keine Cron-Eskalation |
+| Marketing Automation | partial/verify | **not_found** — nur Reporting-Dashboard, kein Backend |
+| Zahlung im Portal | partial/verify | **partial** — nur Rechnungsliste, keine Online-Zahlfunktion |
+| Kurs-System Hundeschulen | implemented | implemented (bestätigt), Endkunden-Webshop-Buchung offen |
+| Praxis vs. Hundeschule | implemented basis | **implemented** — Terminology-Switching bestätigt |
+
+Details je Feature stehen in den jeweiligen `07-features/*.md`-Dateien unter "Audit-Befund (2026-07-01)".
+Neue Roadmap-Punkte dazu in [[12-roadmap/roadmap]] (P1/P2).
 
 ## Zweck
 Zentrale Sicht auf offene, nicht abgearbeitete Punkte aus dem Brain. Diese Datei ersetzt nicht die

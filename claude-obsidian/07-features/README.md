@@ -23,7 +23,7 @@ Feature auswählen → Detaildatei öffnen → verlinkte Quell-Dateien prüfen.
 
 ## Statusmatrix
 
-**Zuletzt aktualisiert:** 2026-05-12
+**Zuletzt aktualisiert:** 2026-07-01 — Vollaudit gegen echten Code (nicht nur gegen alte Doku-Stände).
 
 | Feature | Status | Offene Punkte |
 |---|---|---|
@@ -34,18 +34,18 @@ Feature auswählen → Detaildatei öffnen → verlinkte Quell-Dateien prüfen.
 | [[07-features/3d-befundmodell-schmerzskala]] | implemented basis | Read-only-NRS in Show-Views, PDF-Zusammenfassung fuer Marker/Zeichnungen |
 | [[07-features/veterinary-anatomy-engine]] | planned/blocked by assets | Layer-Engine/3D-Assets noch nicht umgesetzt |
 | [[07-features/hundeschulen-support]] | implemented | Dashboard-Paketverkauf per AJAX/JSON und befuelltem Paketkatalog |
-| [[07-features/kurs-system-hundeschulen]] | implemented | Soll-/Ist- und E2E-Doku offen |
+| [[07-features/kurs-system-hundeschulen]] | implemented | Öffentliche Endkunden-Online-Buchung ohne Login pruefen |
 | [[07-features/terminbuchung]] | implemented | Soll-/Ist- und E2E-Doku offen |
 | [[07-features/smart-erinnerungen]] | implemented | Soll-/Ist- und E2E-Doku offen |
-| [[07-features/fortschrittssystem]] | implemented via TherapyCarePro | Soll-/Ist- und E2E-Doku offen |
-| [[07-features/video-feedback]] | implemented/verify UX scope | Soll-/Ist- und E2E-Doku offen |
-| [[07-features/finanz-autopilot]] | partial | Fachlicher Scope und E2E-Flow klaeren |
-| [[07-features/marketing-automation]] | partial/verify | Backend-Automation verifizieren |
-| [[07-features/zahlung-im-portal]] | partial/verify | Zahlungsflow fachlich pruefen |
-| [[07-features/praxis-vs-hundeschule]] | implemented basis | Harmonisierung laufend |
-| [[07-features/therapycare-ai]] | partial/unknown AI scope | AI-Anteil fachlich und technisch klaeren |
-| [[07-features/trainingcare-ai]] | planned/unknown | Umsetzung im Code verifizieren/planen |
-| [[07-features/gamification]] | planned/unknown | Scope definieren |
+| [[07-features/fortschrittssystem]] | implemented via TherapyCarePro | E2E-Doku offen |
+| [[07-features/video-feedback]] | **partial** | Upload/Vorher-Nachher ja, kein Annotations-/Kommentar-Modul |
+| [[07-features/finanz-autopilot]] | **partial** | Nur manuelle Mahnungen, keine automatische Fristen-Eskalation |
+| [[07-features/marketing-automation]] | **not_found** | Nur Dashboard-Reporting, kein Kampagnen-/Automations-Backend |
+| [[07-features/zahlung-im-portal]] | **partial** | Nur Rechnungsliste/PDF, keine Online-Zahlfunktion fuer Tierbesitzer |
+| [[07-features/praxis-vs-hundeschule]] | implemented | Terminology-Switching in `terminology.dart` bestaetigt |
+| [[07-features/therapycare-ai]] | **not_found (AI)** | Basissystem ohne KI implementiert; "AI" ist Branding ohne Backend |
+| [[07-features/trainingcare-ai]] | **implemented (Trainingsplan-System), AI: not_found** | Trainingsplaene real umgesetzt, KI-Anteil existiert nicht |
+| [[07-features/gamification]] | **partial** | Nur Score-Badges/Fortschrittsbalken, keine Punkte/Streaks/Achievements |
 
 ## TODOs
 - Detailseiten mit generischem TODO "Fachlichen Soll-/Ist-Vergleich ergänzen" schrittweise konkretisieren.

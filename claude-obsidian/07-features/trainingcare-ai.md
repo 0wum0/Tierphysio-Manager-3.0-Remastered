@@ -17,14 +17,22 @@ Client/Web/Portal → Route/Controller/Plugin → Repository/Service → UI/Resp
 ## Wichtige Regeln
 - API-Verträge dürfen nicht breaking geändert werden.
 - Tenant-Isolation bleibt erhalten.
-- Status: **planned/unknown in codebase**.
+- Status: **implemented (Trainingsplan-System), AI-Anteil: not_found**.
+
+## Audit-Befund (2026-07-01, gegen echten Code verifiziert)
+`TrainingPlanController.php` (431 Zeilen) implementiert ein vollständiges CRUD-System für
+Trainingspläne, Übungs-Katalog, Plan-Zuweisungen an Hunde, Fortschritts-Erfassung und
+Hausaufgaben (Feature-Gates: `dogschool_training_plans`, `dogschool_exercises`,
+`dogschool_progress`, `dogschool_homework`). Das ist real und produktiv.
+Eine **KI-Komponente existiert nicht** — keine Trainingsempfehlungen, kein LLM-Call, keine
+automatische Plan-Generierung. "AI" im Namen ist Branding ohne technisches Gegenstück.
 
 ## Risiken
-- Teilimplementierungen können zu falschen Erwartungen führen.
+- Marketing/Vertrieb darf "TrainingCare AI" nicht als KI-Feature bewerben, solange kein KI-Backend existiert.
 
 ## TODOs
-- Fachlichen Soll-/Ist-Vergleich ergänzen.
-- E2E-Flow dokumentieren.
+- Entweder echte KI-Funktionalität bauen (z.B. automatische Trainingsempfehlungen aus Fortschrittsdaten)
+  oder Feature-Namen auf den tatsächlichen Funktionsumfang ("Trainingsplan-System") korrigieren.
 
 ## Verlinkungen
 - [[02-api/mobile-api]]

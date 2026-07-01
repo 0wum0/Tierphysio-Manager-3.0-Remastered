@@ -22,3 +22,21 @@
 ## Kritische Stolpersteine
 
 Siehe `claude-obsidian/bugs/dispatcher-mysql-1103.md`
+
+---
+
+# Brain-Vollaudit — 2026-07-01
+
+**Branch:** `claude/therapano-theratap-comparison-qinkwt`
+
+## Fertig
+
+- ✅ Auslöser: Wettbewerbsvergleich TheraPano vs. theratap.de angefragt, User meldete "Obsidian ist nicht mehr aktuell"
+- ✅ 10 Feature-Status in `07-features/*.md` gegen echten Code verifiziert und korrigiert (siehe `00-start/open-items.md` → "Vollaudit 2026-07-01")
+- ✅ `07-features/README.md` Statusmatrix aktualisiert
+- ✅ `12-roadmap/roadmap.md` um 6 neue P1/P2-Punkte aus dem Audit ergänzt
+
+## Offen
+
+- Vergleich TheraPano vs. theratap.de wird im Anschluss auf Basis der korrigierten Doku neu geschrieben
+- Weitere Feature-Seiten mit generischem TODO ("Fachlichen Soll-/Ist-Vergleich ergänzen") sind noch nicht vollständig auditiert — nur die 10 im Wettbewerbsvergleich relevanten Features wurden geprüft
