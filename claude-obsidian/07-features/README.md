@@ -42,7 +42,7 @@ vollständig implementiert — daraufhin wurde ein zweiter Sweep über den gesam
 | [[07-features/smart-erinnerungen]] | implemented | Soll-/Ist- und E2E-Doku offen |
 | [[07-features/fortschrittssystem]] | implemented via TherapyCarePro | E2E-Doku offen |
 | [[07-features/video-feedback]] | **partial** | Upload/Vorher-Nachher ja, kein Annotations-/Kommentar-Modul |
-| [[07-features/finanz-autopilot]] | **partial** | Nur manuelle Mahnungen, keine automatische Fristen-Eskalation |
+| [[07-features/finanz-autopilot]] | **implemented** (korrigiert Teil 4) | Vollwertiges mehrstufiges Mahnwesen (1./2./3. Mahnung, Gebühren, PDF, Überfälligkeits-Alerts) pro Tenant nutzbar — Eskalation bewusst nutzergesteuert statt cron-automatisch |
 | [[07-features/marketing-automation]] | **not_found** | Nur Dashboard-Reporting, kein Kampagnen-/Automations-Backend |
 | [[07-features/zahlung-im-portal]] | **partial** | Nur Rechnungsliste/PDF, keine Online-Zahlfunktion fuer Tierbesitzer |
 | [[07-features/praxis-vs-hundeschule]] | implemented | Terminology-Switching in `terminology.dart` bestaetigt |

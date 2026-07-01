@@ -36,7 +36,7 @@ Produktidee → Entscheidung → Implementierung → Brain-Update.
 | P2 | Google Kalender: Recurring Events und Timezone-Verhalten klaeren | verified/released 2026-05-12 | [[07-features/google-calendar-sync]] |
 | P2 | Veterinary Anatomy Engine: Layer-Engine/Assets planen | blocked/planned | [[07-features/veterinary-anatomy-engine]] |
 | P2 | Feature-Dokus: Soll-/Ist- und E2E-Flows konkretisieren | open | [[07-features/README]] |
-| P1 | Finanz-Autopilot: automatische Mahnstufen-Eskalation per Cron bauen (aktuell nur manuell) | open, aus Vollaudit 2026-07-01 | [[07-features/finanz-autopilot]] |
+| P2 | Finanz-Autopilot: Cron-Erinnerung an Mitarbeiter bei unbearbeiteten überfälligen Rechnungen (Mahnwesen selbst ist bereits vollstaendig, siehe Korrektur Teil 4) | open, optionale Ergaenzung | [[07-features/finanz-autopilot]] |
 | P1 | Zahlung im Portal: Online-Zahlfunktion fuer Tierbesitzer im Owner-Portal bauen (aktuell nur Rechnungsliste) | open, aus Vollaudit 2026-07-01 | [[07-features/zahlung-im-portal]] |
 | P1 | Video-Feedback: Annotations-/Kommentar-Modul ergaenzen oder Feature-Namen korrigieren | open, aus Vollaudit 2026-07-01 | [[07-features/video-feedback]] |
 | P2 | TherapyCare AI / TrainingCare AI: echte KI-Funktionalitaet bauen oder Namen auf tatsaechlichen Funktionsumfang korrigieren | open, aus Vollaudit 2026-07-01 | [[07-features/therapycare-ai]] · [[07-features/trainingcare-ai]] |
