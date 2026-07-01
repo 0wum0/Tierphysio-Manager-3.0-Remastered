@@ -38,5 +38,11 @@ Siehe `claude-obsidian/bugs/dispatcher-mysql-1103.md`
 
 ## Offen
 
-- Vergleich TheraPano vs. theratap.de wird im Anschluss auf Basis der korrigierten Doku neu geschrieben
-- Weitere Feature-Seiten mit generischem TODO ("Fachlichen Soll-/Ist-Vergleich ergänzen") sind noch nicht vollständig auditiert — nur die 10 im Wettbewerbsvergleich relevanten Features wurden geprüft
+- Weitere Feature-Seiten mit generischem TODO ("Fachlichen Soll-/Ist-Vergleich ergänzen") sind noch nicht vollständig auditiert
+- Optionale Ergänzung: Cron-Erinnerung an Mitarbeiter bei unbearbeiteten überfälligen Rechnungen (siehe Roadmap P2)
+
+## Nachtrag — 2026-07-01, Teil 4/5
+
+- ✅ Nutzerhinweis "Mahnwesen ist auch pro Tenant nutzbar" verifiziert und `finanz-autopilot.md` korrigiert (war fälschlich als reine SaaS-interne Funktion unterbewertet)
+- ✅ Landingpage (`saas-platform/templates/landing/index.twig`) mit vollständigem, verifiziertem Funktionsumfang überarbeitet: 3D-Schmerzanalyse, Rechnungsdesign, Steuerexport, Hundeschule, Besitzerportal neu ergänzt; App-Plattform-Angaben korrigiert (kein falsches macOS/iOS-Beta-Versprechen mehr)
+- ✅ Drei Vertriebs-/Marketing-Dokumente erstellt: `13-marketing/staerken-dokumentation.md`, `13-marketing/video-skript.md`, `13-marketing/vergleich-therapano-vs-theratap.md`
