@@ -574,10 +574,18 @@ class Anatomy3DViewer {
         const mb     = this._modelBox;
         if (!mb) return;
 
-        /* def.pos[] are world-space coordinates matching the final bounding box
-         * after auto-scale (scale=2/maxDim) and centering (position.sub(center)).
-         * Real dog bounds: X±0.360, Y±0.840, Z±1.000 — same space as pos[] values. */
+        /* Collect the real model meshes so hotspots can be projected onto the
+         * actual surface. The def.pos[] values are only approximate anchors in
+         * normalized model space; the true surface depends on each GLB's real
+         * proportions, so we snap every point onto the mesh at runtime. This
+         * prevents markers from floating in the air or sinking into the body. */
+        const modelMeshes = [];
+        this.modelGroup.traverse(o => { if (o.isMesh) modelMeshes.push(o); });
+
         groups.forEach(def => {
+            /* Surface-projected world position for this muscle group */
+            const snapped = this._projectToSurface(def, mb, modelMeshes);
+
             /* Invisible raycasting box — matches the zone size */
             const geo  = new THREE.BoxGeometry(
                 def.size[0] * 2,
@@ -592,7 +600,7 @@ class Anatomy3DViewer {
                 depthTest: false,
             });
             const mesh = new THREE.Mesh(geo, mat);
-            mesh.position.set(def.pos[0], def.pos[1], def.pos[2]);
+            mesh.position.copy(snapped);
             mesh.renderOrder = 999;
             mesh.visible = false; /* raycasting only — never rendered */
             mesh.userData.hotspot = def;
@@ -607,12 +615,45 @@ class Anatomy3DViewer {
                 depthWrite: false,
             });
             const marker = new THREE.Mesh(markerGeo, markerMat);
-            marker.position.set(def.pos[0], def.pos[1], def.pos[2]);
+            marker.position.copy(snapped);
             marker.renderOrder = 1000;
             this.scene.add(marker);
 
-            this.hotspots.push({ mesh, marker, def });
+            this.hotspots.push({ mesh, marker, def, pos: snapped });
         });
+    }
+
+    /* ── Snap a muscle-group anchor onto the real model surface ──────────────
+     * The anchor (def.pos) is projected radially outward from the body's
+     * longitudinal axis (the spine, running along Z at x=0, y=vertical center).
+     * A ray is cast from far outside back toward that axis through the anchor;
+     * the first surface hit is the outer skin facing that direction. The marker
+     * is then placed just above the surface so it is always visible on the body
+     * regardless of the individual GLB's proportions. Falls back to the raw
+     * anchor if the ray misses the mesh entirely. */
+    _projectToSurface(def, mb, modelMeshes) {
+        const anchor = new THREE.Vector3(def.pos[0], def.pos[1], def.pos[2]);
+        if (!modelMeshes || !modelMeshes.length) return anchor;
+
+        const centerY = mb.box.min.y + mb.size.y / 2;
+        const axis    = new THREE.Vector3(0, centerY, def.pos[2]);
+
+        /* Outward direction: from the spine axis toward the anchor */
+        const outward = anchor.clone().sub(axis);
+        if (outward.lengthSq() < 1e-6) outward.set(0, 1, 0); /* dead-on axis → up */
+        outward.normalize();
+
+        /* Cast from outside the bounding sphere back toward the axis */
+        const reach = mb.size.length();
+        const start = axis.clone().add(outward.clone().multiplyScalar(reach));
+        const ray   = new THREE.Raycaster(start, outward.clone().negate(), 0, reach * 2.2);
+
+        const hits = ray.intersectObjects(modelMeshes, true);
+        if (hits.length) {
+            /* Lift marker slightly off the surface so it renders on top */
+            return hits[0].point.clone().add(outward.clone().multiplyScalar(0.015));
+        }
+        return anchor;
     }
 
     /* ── Raycasting / Hover ───────────────────────────────── */
@@ -877,7 +918,10 @@ class Anatomy3DViewer {
     }
 
     _focusHotspot(def) {
-        const pos  = new THREE.Vector3(...def.pos);
+        /* Prefer the surface-projected position of the built hotspot; fall back
+         * to the raw anchor if the hotspot was not built (e.g. model reloading). */
+        const entry = this.hotspots.find(h => h.def.id === def.id && h.def.side === def.side);
+        const pos  = entry?.pos ? entry.pos.clone() : new THREE.Vector3(...def.pos);
         const dist = 1.2;
         const dir  = this.camera.position.clone().sub(pos).normalize().multiplyScalar(dist);
         this.camera.position.copy(pos.clone().add(dir));

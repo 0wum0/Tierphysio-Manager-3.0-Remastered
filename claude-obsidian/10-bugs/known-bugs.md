@@ -878,6 +878,53 @@ oder spezifisch für die `foto`-Route.
 
 ---
 
+## Bug: 3D-Schmerzanalyse — Muskelpunkte schweben in der Luft / stecken im Tier (Juli 2026)
+**Status:** `fixed`
+**Datei:** `public/assets/js/anatomy-3d-viewer.js`
+
+### Symptom
+Im 3D-Schmerzanalyse-Tab (Hund/Katze/Pferd) saßen die klickbaren Muskelpunkte
+nicht auf der Modelloberfläche: Abstände waren zu groß, Punkte schwebten neben
+dem Tier in der Luft oder verschwanden im Körperinneren.
+
+### Ursache
+`MUSCLE_GROUPS` definiert für jede Muskelgruppe eine feste `pos`-Koordinate im
+angenommenen normalisierten Modell-Raum (z.B. Hund `X±0.360`). Die GLB-Modelle
+werden zur Laufzeit auf eine 2-Einheiten-Boundingbox (`scale = 2/maxDim`) skaliert
+und zentriert. Die tatsächliche Breite/Höhe des Tieres an einer bestimmten Stelle
+weicht aber von den angenommenen Werten ab (unterschiedliche Proportionen je GLB),
+sodass seitliche Marker neben dem Körper landeten und dorsale/ventrale Marker zu
+weit innen/außen. Die Punkte wurden hart auf `def.pos` gesetzt — ohne Bezug zur
+echten Geometrie.
+
+### Fix (Oberflächen-Projektion per Raycasting)
+Neue Methode `_projectToSurface(def, mb, modelMeshes)`:
+- Berechnet aus `def.pos` eine radiale Richtung ausgehend von der Körperlängsachse
+  (Wirbelsäule bei `x=0`, `y=vertikaler Mittelpunkt`, entlang `z`).
+- Wirft einen Strahl von außerhalb der Boundingsphere zurück zur Achse durch den
+  Anker; der erste Treffer auf dem echten Mesh ist die Außenhaut in dieser Richtung.
+- Der Marker wird `0.015` Einheiten über die Oberfläche gehoben, damit er sichtbar
+  auf dem Körper liegt.
+- Fällt auf den rohen `def.pos` zurück, falls der Strahl das Mesh verfehlt.
+
+`_buildHotspots()` snappt jetzt jeden Hotspot (Raycast-Box + sichtbarer Marker) auf
+die projizierte Position und speichert sie als `entry.pos`. `_focusHotspot()` nutzt
+die projizierte Position statt der rohen `def.pos`.
+
+### Warum das robust ist
+Die Marker sitzen immer auf der tatsächlich geladenen Mesh-Oberfläche — unabhängig
+von den individuellen Proportionen jedes GLB. Die anatomischen Anker-Koordinaten in
+`MUSCLE_GROUPS` bleiben unverändert (nur noch Richtungs-/Positionshinweis), sodass
+Labels, Seiten, Regionen und die API (`muscle_group_id`, `side`) unverändert bleiben —
+keine Breaking Changes an gespeicherten Schmerzpunkten.
+
+### Verifikation
+- Debug-Modus („🔲 Zonen") zeigt alle Marker jetzt direkt auf der Tieroberfläche.
+- Hover/Klick trifft die Zonen dort, wo der Marker sichtbar ist.
+- Gespeicherte Schmerzpunkte erscheinen farbig am korrekten Körperbereich.
+
+---
+
 ## Verlinkungen
 - [[15-agent-rules/update-brain]]
 - [[11-decisions/decision-log]]
