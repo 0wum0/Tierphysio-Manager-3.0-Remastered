@@ -55,7 +55,9 @@ vollständig implementiert — daraufhin wurde ein zweiter Sweep über den gesam
 | Feature | Status | Kurzbeschreibung |
 |---|---|---|
 | [[07-features/gobd-audit-log]] | implemented | Unveränderliches Rechnungs-Änderungsprotokoll (Steuerprüfungs-Nachweis) |
-| [[07-features/tax-export-pro]] | implemented | ZIP/CSV/DATEV-Export, Kassenbuch, PDF-Steuerbericht |
+| [[07-features/tax-export-pro]] | implemented | DATEV/CSV/ZIP-Export inkl. Belegen, Kassenbuch, PDF-Steuerbericht, SKR03-Kontenrahmen — Rechnungen UND Ausgaben kombiniert |
+| [[07-features/invoice-branding]] | implemented | Rechnungsdesign: Logo-Upload, Farben, Schriftart, individuelle Bilder pro Dokumenttyp |
+| [[07-features/expense-management]] | implemented | Ausgabenerfassung mit OCR-Belegerkennung |
 | [[07-features/mailbox-plugin]] | implemented | Vollwertiger IMAP/SMTP-Mail-Client in der App |
 | [[07-features/bulk-mail]] | implemented | Serienmails + automatisches Feiertags-Mailing |
 | [[07-features/theme-manager]] | implemented | Tenant-Custom-Themes per ZIP-Upload |
@@ -66,6 +68,12 @@ vollständig implementiert — daraufhin wurde ein zweiter Sweep über den gesam
 | [[07-features/ui-settings-notifications]] | implemented | Persönliches UI-Layout + Notification-Center |
 | [[07-features/media-compressor]] | implemented | Client-seitige Video-/Bildkompression via ffmpeg.wasm |
 | [[07-features/portal-checkliste]] | implemented, Detail offen | Portal-Freigabe-Checkliste im Patient-Modal |
+| [[07-features/cron-pixel-system]] | implemented | Pixel-getriggerte Background-Jobs ohne Server-Cron nötig |
+| [[07-features/hundeschule-erweiterte-funktionen]] | implemented | Anwesenheit, Trainerverwaltung, Business-Reports, Hundeschul-Rechnungen, eigenständiger Kalender |
+| [[07-features/patient-timeline]] | implemented | Zentrale Verlaufsansicht pro Patient mit Medien + Portal-Mail-Trigger |
+| [[07-features/flutter-offline-mode]] | implemented | SQLite-Offline-Cache (14 Tage) mit Auto-Sync |
+| [[07-features/data-migration-import]] | implemented | SQL-Dump-Import für Wechsel von Konkurrenzsoftware (Smart-/Raw-Modus) |
+| [[06-saas/saas-admin-erweiterte-funktionen]] | implemented | Revenue-Analytics, 3-Ebenen-Feature-Gating, GoBD-SaaS-Rechnungen, Stripe+PayPal, Lizenz-API |
 
 ## TODOs
 - Detailseiten mit generischem TODO "Fachlichen Soll-/Ist-Vergleich ergänzen" schrittweise konkretisieren.

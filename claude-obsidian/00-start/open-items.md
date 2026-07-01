@@ -47,6 +47,32 @@ fand 11 weitere Features ganz ohne Doku-Entsprechung — jetzt neu angelegt:
 und `plugins/*` — nur eine gezielte Suche nach den auffälligsten Lücken. Ein systematischer
 1:1-Abgleich aller Controller/Plugins gegen `07-features/*.md` steht noch aus (siehe Roadmap P2).
 
+## Vollaudit 2026-07-01 Teil 3 — systematischer 1:1-Abgleich aller Controller/Plugins
+
+Auf Wunsch des Produktverantwortlichen ("wir haben extrem viel, schau ins kleinste Detail") wurde
+jetzt (fast) jeder Controller in `app/Controllers/` (34 Dateien), jedes Plugin (14 Ordner) und
+`saas-platform/app/Controllers/` (22 Dateien) einzeln gegen die Doku geprüft. Ergebnis: **weitere
+13 Features** waren komplett undokumentiert, darunter zwei besonders vertriebsrelevante:
+
+- **Rechnungsdesign** ([[07-features/invoice-branding]]): Logo-Upload, Farbwahl, Schriftart,
+  individuelle Bilder je Dokumenttyp (Rechnung/Mahnung/Quittung/…) — genau das, was der
+  Produktverantwortliche als Beispiel nannte.
+- **Steuerexport** ([[07-features/tax-export-pro]]) ist deutlich umfangreicher als in Teil 1
+  dokumentiert: DATEV-Buchungsstapel-Format, SKR03-Kontenrahmen, ZIP mit allen Rechnungs-PDFs +
+  allen Ausgaben-Belegen + SHA-256-Manifest — geeignet zur direkten Übergabe an Steuerberater
+  oder zum Import in Steuersoftware (DATEV Unternehmen Online, Lexware, BuchhaltungsButler).
+
+Weitere neu dokumentierte Funde: [[07-features/expense-management]] (OCR-Belegerkennung),
+[[07-features/cron-pixel-system]] (Cron ohne Server-Zugriff), [[07-features/hundeschule-erweiterte-funktionen]]
+(Anwesenheit, Trainer, Reports, Rechnungen, eigener Kalender), [[07-features/patient-timeline]],
+[[07-features/flutter-offline-mode]], [[07-features/data-migration-import]] (Wechsel-Assistent von
+Konkurrenzsoftware — starkes Vertriebsargument), [[06-saas/saas-admin-erweiterte-funktionen]]
+(Revenue-Analytics, Feature-Gating, GoBD-SaaS-Rechnungen, Stripe+PayPal, Lizenz-API).
+
+**Bewusst nicht mehr einzeln vertieft** (geprüft, aber als simples CRUD ohne Marketing-Relevanz
+eingestuft): `EventController.php` (reiner View-Filter auf bestehende Kursdaten), `DemoController.php`
+(nur Landingpage-Stub, kein automatisiertes Demo-Provisioning).
+
 ## Zweck
 Zentrale Sicht auf offene, nicht abgearbeitete Punkte aus dem Brain. Diese Datei ersetzt nicht die
 Detailseiten, sondern priorisiert sie fuer die naechste Umsetzung.
