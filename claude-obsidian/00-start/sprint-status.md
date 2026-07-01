@@ -70,3 +70,20 @@ Siehe `claude-obsidian/bugs/dispatcher-mysql-1103.md`
 - Caching von KI-Antworten
 - Audit-Log für KI-Nutzung
 - Weitere Integrationspunkte (Marketing-Automation, Feedback-Kategorisierung) sind denkbar, aber bewusst nicht in dieser Runde umgesetzt
+
+## Nachtrag — 2026-07-01, Teil 6: TheraTap-Vergleich korrigiert (Tiefenrecherche)
+
+User wies zu Recht darauf hin, dass die erste TheraTap-Analyse nur auf einem einzigen
+WebFetch-Aufruf der Startseite beruhte. Nachrecherche mit 14 Unterseiten
+(`13-marketing/vergleich-therapano-vs-theratap.md` aktualisiert) ergab u. a.:
+- TheraTap hat eine eigene KI-Funktionsseite (Sprache-zu-Formular, automatische
+  KI-Rechnungserstellung aus Terminen) — Add-on 7,90€/Monat, andere Anwendungsfälle als unsere
+  Grok/Gemini-Integration
+- TheraTap-Tiermodelle sind explizit **2D** (nicht 3D), aber mit mehr anatomischen Ebenen als
+  unser aktuelles 2D-System — unser 3D-Vorteil bleibt bestehen
+- TheraTap unterstützt laut eigener FAQ **nur 1:1-Training, kein Gruppentraining/Kurse** — unser
+  Hundeschul-Kurssystem-Vorteil ist damit doppelt bestätigt
+- Neu entdeckte TheraTap-Stärken, die wir nicht haben: tiefe GOT-Abrechnung, Tourenplanung mit
+  Google Routes API, Praxis-Analytics mit Heatmap/Geo-Karte/Team-Vergleich, Kalender-Sync +
+  einbettbares Buchungs-Widget, universelles Stempelkartensystem, E-Rechnung (XRechnung) +
+  Multi-Land-Support, praxisübergreifende Consumer-App "Mein Tier"
