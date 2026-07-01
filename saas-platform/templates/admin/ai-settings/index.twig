@@ -1,5 +1,5 @@
 {% extends 'layouts/base.twig' %}
-{% block title %}KI-Integration (Grok / Gemini){% endblock %}
+{% block title %}KI-Integration (Groq / Gemini){% endblock %}
 {% block content %}
 
 <div class="row g-4 mb-4">
@@ -33,7 +33,7 @@
                 <ol class="mb-0" style="line-height:1.8;">
                     <li class="mb-3">
                         <strong>Zwei Provider zur Wahl</strong><br>
-                        <span class="text-muted">xAI Grok oder Google Gemini. Du kannst beide gleichzeitig hinterlegen — der "Standard-Provider" wird verwendet, fällt aber automatisch auf den jeweils anderen zurück, falls dieser nicht erreichbar ist.</span>
+                        <span class="text-muted">Groq (schnelles, kostengünstiges Hosting offener Modelle wie Llama 3.3) oder Google Gemini. Du kannst beide gleichzeitig hinterlegen — der "Standard-Provider" wird bevorzugt, fällt aber automatisch auf den jeweils anderen zurück, falls dieser nicht konfiguriert/erreichbar ist.</span>
                     </li>
                     <li class="mb-3">
                         <strong>Feature-Gate</strong><br>
@@ -66,31 +66,43 @@
                         <label class="form-label">Standard-Provider</label>
                         <select name="ai_default_provider" class="form-select">
                             <option value="gemini" {% if (settings.ai_default_provider ?? 'gemini') == 'gemini' %}selected{% endif %}>Google Gemini</option>
-                            <option value="grok" {% if (settings.ai_default_provider ?? '') == 'grok' %}selected{% endif %}>xAI Grok</option>
+                            <option value="groq" {% if (settings.ai_default_provider ?? '') == 'groq' %}selected{% endif %}>Groq</option>
                         </select>
                         <div class="form-text text-muted">Wird bevorzugt genutzt; bei Nichtverfügbarkeit automatischer Fallback auf den anderen konfigurierten Provider.</div>
                     </div>
 
                     <hr class="my-4">
-                    <h6 class="fw-bold mb-3">xAI Grok</h6>
+                    <h6 class="fw-bold mb-3">Groq</h6>
                     <div class="mb-3">
-                        <label class="form-label">Grok API-Key</label>
-                        <input type="password" name="ai_grok_api_key" class="form-control"
-                               value="{{ settings.ai_grok_api_key ?? '' }}"
-                               placeholder="xai-...">
-                        <div class="form-text text-muted">Aus der xAI-Konsole (console.x.ai).</div>
+                        <label class="form-label">Groq API-Key</label>
+                        <input type="password" name="ai_groq_api_key" class="form-control"
+                               value="{{ settings.ai_groq_api_key ?? '' }}"
+                               placeholder="gsk_...">
+                        <div class="form-text text-muted">Kostenlos erhältlich in der <a href="https://console.groq.com/keys" target="_blank" rel="noopener">Groq-Konsole</a>.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Groq Modell</label>
+                        <div class="d-flex flex-column gap-2">
+                            {% for key, model in groq_models %}
+                            <label class="d-flex align-items-start gap-2 p-2" style="border:1px solid var(--bs-border-color, #333);border-radius:.5rem;cursor:pointer;">
+                                <input type="radio" name="ai_groq_model" value="{{ key }}" class="form-check-input mt-1"
+                                       {% if (settings.ai_groq_model ?? 'llama-3.3-70b-versatile') == key %}checked{% endif %}>
+                                <span>
+                                    <span class="fw-semibold">{{ model.label }}</span>
+                                    {% if model.recommended %}<span class="badge bg-primary ms-1" style="font-size:.65rem;">Empfohlen</span>{% endif %}
+                                    <br>
+                                    <span class="text-muted" style="font-size:.8rem;">{{ model.description }}</span>
+                                </span>
+                            </label>
+                            {% endfor %}
+                        </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Grok Modell</label>
-                        <input type="text" name="ai_grok_model" class="form-control"
-                               value="{{ settings.ai_grok_model ?? 'grok-4' }}"
-                               placeholder="grok-4">
-                    </div>
-                    <div class="mb-3">
-                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-test-grok">
-                            <i class="bi bi-plug me-2"></i>Grok-Verbindung testen
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-test-groq">
+                            <i class="bi bi-plug me-2"></i>Groq-Verbindung testen
                         </button>
-                        <div id="test-result-grok" class="mt-2"></div>
+                        <div id="test-result-groq" class="mt-2"></div>
                     </div>
 
                     <hr class="my-4">
@@ -146,8 +158,8 @@ function testAiProvider(url, resultId, btn) {
         .finally(() => { btn.disabled = false; btn.innerHTML = origHtml; });
 }
 
-document.getElementById('btn-test-grok').addEventListener('click', function() {
-    testAiProvider('/admin/ai-settings/test-grok', 'test-result-grok', this);
+document.getElementById('btn-test-groq').addEventListener('click', function() {
+    testAiProvider('/admin/ai-settings/test-groq', 'test-result-groq', this);
 });
 document.getElementById('btn-test-gemini').addEventListener('click', function() {
     testAiProvider('/admin/ai-settings/test-gemini', 'test-result-gemini', this);

@@ -172,10 +172,10 @@ $router->get('/admin/google-settings',               [GoogleSettingsController::
 $router->post('/admin/google-settings/update',       [GoogleSettingsController::class, 'update']);
 $router->get('/admin/google-settings/test',          [GoogleSettingsController::class, 'testConnection']);
 
-// ── KI-Einstellungen / Grok+Gemini (Admin) ──────────────────────────────────────────
+// ── KI-Einstellungen / Groq+Gemini (Admin) ──────────────────────────────────────────
 $router->get('/admin/ai-settings',                   [AiSettingsController::class, 'index']);
 $router->post('/admin/ai-settings/update',           [AiSettingsController::class, 'update']);
-$router->get('/admin/ai-settings/test-grok',         [AiSettingsController::class, 'testGrok']);
+$router->get('/admin/ai-settings/test-groq',         [AiSettingsController::class, 'testGroq']);
 $router->get('/admin/ai-settings/test-gemini',       [AiSettingsController::class, 'testGemini']);
 
 // ── Praxis Cronjobs (Admin) ───────────────────────────────────────────────────────────────

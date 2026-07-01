@@ -87,3 +87,21 @@ WebFetch-Aufruf der Startseite beruhte. Nachrecherche mit 14 Unterseiten
   Google Routes API, Praxis-Analytics mit Heatmap/Geo-Karte/Team-Vergleich, Kalender-Sync +
   einbettbares Buchungs-Widget, universelles Stempelkartensystem, E-Rechnung (XRechnung) +
   Multi-Land-Support, praxisübergreifende Consumer-App "Mein Tier"
+
+## Nachtrag — 2026-07-01, Teil 7: Provider-Wechsel Grok → Groq
+
+User-Referenz war eine andere Instanz ("inc.therapano.de") mit besserer, kostenloser
+API-Anbindung — gemeint war **Groq** (api.groq.com, LPU-Hosting offener Modelle, kostenloses
+Tier), nicht xAI Grok. Umgestellt:
+- ✅ `app/Services/AiService.php`: Endpoint auf `api.groq.com/openai/v1/chat/completions`,
+  Konfigurationsschlüssel `groq_api_key`/`groq_model` statt `grok_*`, neue kuratierte
+  Modell-Konstante `AiService::GROQ_MODELS` (Llama 3.3 70B Versatile als Empfohlen, plus
+  Llama 3.1 8B Instant, GPT-OSS 120B/20B, Gemma 2 9B, DeepSeek R1 Distill Llama 70B)
+- ✅ SaaS-Admin (`AiSettingsController`): Radio-Button-Modellauswahl statt Freitext, serverseitig
+  validiert gegen die kuratierte Liste; **wichtig:** Modell-Liste dort dupliziert, weil
+  Praxis-App (`App\`) und SaaS-Platform (`Saas\`) getrennte Composer-Projekte ohne gemeinsames
+  Autoloading sind (ursprünglicher `use App\Services\AiService;`-Import wäre zur Laufzeit
+  fehlgeschlagen — vor dem Commit korrigiert)
+- ✅ Routen, Nav-Text und alle Doku-Referenzen (`ai-integration.md`, Marketing-Dateien) von
+  Grok auf Groq umbenannt
+- Gemini bleibt unverändert als zweiter Provider

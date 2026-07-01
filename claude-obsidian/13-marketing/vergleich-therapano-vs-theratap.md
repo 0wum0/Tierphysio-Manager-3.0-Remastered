@@ -32,7 +32,7 @@ Add-on **€7,90/Monat**, nicht in allen Tarifen automatisch enthalten):
    letzten Rechnung und leitet Rechnungspositionen automatisch ab
 4. **KI-Zusammenfassung** von Anamnese/Befunden zu präzisem Text
 
-**Einordnung:** Das ist eine andere KI-Anwendung als unsere (Grok/Gemini-Integration seit
+**Einordnung:** Das ist eine andere KI-Anwendung als unsere (Groq/Gemini-Integration seit
 2026-07-01, siehe [[07-features/ai-integration]]): TheraTap fokussiert auf **Spracheingabe →
 strukturierte Felder** und **automatische Rechnungsableitung aus Terminen**. TheraPano fokussiert
 auf **Zusammenfassung/Empfehlung aus bestehenden Verlaufsdaten** (Therapiefortschritt,
@@ -74,7 +74,7 @@ haben wir nicht.
 | **Stempelkarten (universell)** | Beliebige Kartengrößen, eigene Icons/Farben, **automatische Stempelvergabe bei Terminabschluss** (nicht nur manuell), PDF-Export im Scheckkartenformat, Duplikat-Sicherung | Wir haben das nur für Hundeschul-Pakete (Kurspakete/Mehrfachkarten), nicht als universelles, automatisches Stempelsystem für jede Terminart |
 | **Rechnungen: E-Rechnung + Multi-Land** | XRechnung-3.0-konforme E-Rechnungen für öffentliche Auftraggeber, QR-Code-Zahlung auf Rechnungen, **explizite Unterstützung für Deutschland, Schweiz, Österreich, Dänemark, Niederlande** mit länderspezifischen Anforderungen | TheraPano ist auf Deutschland/DATEV/GoBD fokussiert — keine E-Rechnung (XRechnung), kein Multi-Land-Support verifiziert |
 | **"Mein Tier" — praxisübergreifende Consumer-App** | Eigenständige, kostenlose Tierhalter-App (unabhängig von einer einzelnen Praxis): digitales Gesundheitsbuch, Termine bei **beliebigen** TheraTap-Praxen buchen, automatische Übernahme von Befunden/Plänen jeder nutzenden Praxis, Premium-KI-Assistent „Malina" (2,99€/Monat) für Gesundheitsfragen 24/7 | TheraPano hat ein Besitzerportal **pro Praxis** (Tenant-gebunden), keine praxisübergreifende Consumer-App mit Netzwerkeffekt |
-| **KI-Sprachfunktion für Diktat** | Sprache/Audio → strukturierte Formularfelder (Anamnese, Verträge, Futterpläne), als Add-on 7,90€/Monat | Nicht vorhanden — unsere KI (Grok/Gemini) fasst zusammen/empfiehlt, transkribiert aber keine Sprache |
+| **KI-Sprachfunktion für Diktat** | Sprache/Audio → strukturierte Formularfelder (Anamnese, Verträge, Futterpläne), als Add-on 7,90€/Monat | Nicht vorhanden — unsere KI (Groq/Gemini) fasst zusammen/empfiehlt, transkribiert aber keine Sprache |
 | **Automatische KI-Rechnungserstellung** | KI leitet Rechnungspositionen automatisch aus Terminen/Behandlungen/Notizen seit letzter Rechnung ab | Nicht vorhanden |
 | **Vollständiger Offline-Modus** | Befunderstellung ganz ohne Internet, automatische Sync bei Wiederverbindung — für alle Nutzer, nicht nur App | TheraPano: SQLite-Cache (14 Tage) nur in der Flutter-App, nicht in der Web-App — enger gefasst |
 | **SMS-Erinnerungen** | Ja (Terminerinnerungen, Online-Buchung) | Nur E-Mail/Portal-Erinnerungen, kein SMS-Versand verifiziert |

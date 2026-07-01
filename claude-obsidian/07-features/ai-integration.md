@@ -1,4 +1,4 @@
-# KI-Integration (Grok / Gemini)
+# KI-Integration (Groq / Gemini)
 
 ## Beschreibung
 Providerunabhängige KI-Textgenerierung, zentral im SaaS-Admin konfiguriert und an mehreren
@@ -6,12 +6,21 @@ sinnvollen Stellen in der Praxis-App genutzt. Ersetzt die vorherige reine Namens
 ("TherapyCare AI", "TrainingCare AI" ohne echtes KI-Backend) durch echte Funktionalität.
 
 ## Status
-**implemented** (2026-07-01)
+**implemented** (2026-07-01, Provider am 2026-07-01 von xAI Grok auf **Groq** umgestellt —
+siehe Korrektur unten)
+
+## Korrektur (2026-07-01, gleicher Tag): Grok → Groq
+Ursprünglich wurde xAI Grok (`api.x.ai`) als erster Provider verdrahtet. Auf Wunsch des
+Produktverantwortlichen — Referenz war die bessere/kostenlose Anbindung auf einer anderen
+Instanz — wurde auf **Groq** (`api.groq.com`, OpenAI-kompatible Chat-Completions-API, schnelles
+LPU-Hosting offener Modelle, großzügiges kostenloses Tier) umgestellt. Die API-Form ist nahezu
+identisch (Bearer-Token, `{model, messages, temperature}`-Payload), nur Endpoint und Modell-Namen
+haben sich geändert. Gemini bleibt unverändert der zweite Provider.
 
 ## Architektur
 
 ### Zentraler Service
-`app/Services/AiService.php` — providerunabhängige Klasse, unterstützt **xAI Grok** und
+`app/Services/AiService.php` — providerunabhängige Klasse, unterstützt **Groq** und
 **Google Gemini**. Design-Prinzip: wirft niemals eine Exception nach außen — jede Methode gibt
 bei Fehlern/fehlender Konfiguration `null` zurück. KI-Ausfälle (Netzwerk, falscher Key,
 Rate-Limit) dürfen die Praxissoftware nie blockieren oder crashen lassen.
@@ -20,17 +29,27 @@ Rate-Limit) dürfen die Praxissoftware nie blockieren oder crashen lassen.
 - `generateText(string $systemPrompt, string $userPrompt, ?string $provider = null): ?string`
   — nutzt den konfigurierten Standard-Provider, fällt automatisch auf den jeweils anderen
   Provider zurück, falls dieser nicht konfiguriert ist.
+- `AiService::GROQ_MODELS` — kuratierte Liste der in der SaaS-Admin-UI wählbaren Groq-Modelle
+  (Llama 3.3 70B Versatile als „Empfohlen" markiert, plus Llama 3.1 8B Instant, GPT-OSS 120B/20B,
+  Gemma 2 9B, DeepSeek R1 Distill Llama 70B). **Wichtig:** Diese Liste ist in
+  `saas-platform/app/Controllers/AiSettingsController.php::GROQ_MODELS` dupliziert, weil
+  Praxis-App (`App\`) und SaaS-Platform (`Saas\`) getrennte Composer-Projekte mit eigenem
+  Autoloading sind — kein direkter Klassenzugriff über die Grenze möglich. Bei Änderungen an der
+  Modell-Liste **beide Stellen synchron halten**.
 
 ### Konfigurationsverteilung (identisches Muster wie Google-Kalender-Integration)
-- SaaS-Admin (`Saas\Controllers\AiSettingsController`) speichert Grok-/Gemini-API-Keys +
+- SaaS-Admin (`Saas\Controllers\AiSettingsController`) speichert Groq-/Gemini-API-Keys +
   Modellnamen + Standard-Provider in `saas_settings` (Key-Value-Tabelle).
 - Beim Speichern wird zusätzlich `saas-platform/storage/config/ai.php` geschrieben.
 - `AiService` liest diese Datei zur Laufzeit (`dirname(__DIR__, 2) . '/saas-platform/storage/config/ai.php'`).
 - Kein neues Datenbankschema nötig — reines Zwei-Dateien-Muster wie bei `google.php`.
 
 ### SaaS-Admin-UI
-- Route: `/admin/ai-settings` (Nav: „System" → „KI-Integration (Grok/Gemini)")
-- `GET /admin/ai-settings/test-grok` / `GET /admin/ai-settings/test-gemini` — Verbindungstests
+- Route: `/admin/ai-settings` (Nav: „System" → „KI-Integration (Groq/Gemini)")
+- Groq-Modell wird als Radio-Button-Auswahl (nicht Freitext) angeboten — Server validiert bei
+  `update()`, dass nur ein Key aus `GROQ_MODELS` akzeptiert wird (verhindert ungültige Modell-Slugs
+  durch manipulierte POST-Daten).
+- `GET /admin/ai-settings/test-groq` / `GET /admin/ai-settings/test-gemini` — Verbindungstests
   analog zu `PaymentSettingsController::testStripe()`/`testPayPal()`.
 
 ### Feature-Gate
