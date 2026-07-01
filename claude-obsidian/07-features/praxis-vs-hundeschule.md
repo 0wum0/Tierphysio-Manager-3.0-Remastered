@@ -17,13 +17,18 @@ Client/Web/Portal → Route/Controller/Plugin → Repository/Service → UI/Resp
 ## Wichtige Regeln
 - API-Verträge dürfen nicht breaking geändert werden.
 - Tenant-Isolation bleibt erhalten.
-- Status: **implemented basis + ongoing harmonization**.
+- Status: **implemented** (verifiziert 2026-07-01).
+
+## Audit-Befund (2026-07-01, gegen echten Code verifiziert)
+`flutter_app/lib/core/terminology.dart` implementiert dynamisches, laufzeitabhängiges
+Terminology-Switching basierend auf `isTrainer`: `patientSingular` ("Hund" vs. "Patient"),
+`ownerSingular` ("Halter" vs. "Tierhalter"), `patientRecord` ("Hundeakte" vs. "Patientenakte") u.a.
+Keine hardcodierte Einstellung — echtes kontextabhängiges Switching.
 
 ## Risiken
-- Teilimplementierungen können zu falschen Erwartungen führen.
+- Neue UI-Texte müssen konsequent über `terminology.dart` laufen, sonst driftet Web/App wieder auseinander.
 
 ## TODOs
-- Fachlichen Soll-/Ist-Vergleich ergänzen.
 - E2E-Flow dokumentieren.
 
 ## Verlinkungen

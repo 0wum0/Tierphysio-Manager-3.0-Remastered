@@ -18,13 +18,20 @@ Client/Web/Portal → Route/Controller/Plugin → Repository/Service → UI/Resp
 ## Wichtige Regeln
 - API-Verträge dürfen nicht breaking geändert werden.
 - Tenant-Isolation bleibt erhalten.
-- Status: **implemented**.
+- Status: **implemented** (verifiziert 2026-07-01).
+
+## Audit-Befund (2026-07-01, gegen echten Code verifiziert)
+`CourseController.php`, `LeadController.php`, `PackageController.php` existieren mit vollständigem
+CRUD (index/show/create/update). `PackageController::expireOutdated()` verwaltet Paket-Guthaben
+automatisch. Kurs-Enrollment (`enrollmentsForCourse()`) ist vorhanden. **Einschränkung:** Die
+Buchung läuft intern/B2B über die Praxis-Oberfläche — keine öffentliche Endkunden-Webshop-Buchung
+ohne Login gefunden.
 
 ## Risiken
 - Teilimplementierungen können zu falschen Erwartungen führen.
 
 ## TODOs
-- Fachlichen Soll-/Ist-Vergleich ergänzen.
+- Öffentliche Online-Buchung für Endkunden (ohne Login) prüfen/planen, falls gewünscht.
 - E2E-Flow dokumentieren.
 
 ## Verlinkungen

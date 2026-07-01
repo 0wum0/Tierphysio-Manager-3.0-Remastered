@@ -1,7 +1,77 @@
 # Open Items Audit
 
-**Zuletzt aktualisiert:** 2026-05-12  
+**Zuletzt aktualisiert:** 2026-07-01  
 **Quelle:** Abgleich `claude-obsidian/**` gegen Repo-Dateien per `rg`, punktueller Code-Review und Fix-Durchlauf.
+
+## Vollaudit 2026-07-01 — Doku-Korrekturen (Status war veraltet/zu optimistisch)
+
+Anlass: `claude-obsidian/07-features/*.md` wies mehrere Features als "implemented"/"partial" aus,
+obwohl der Code das nicht hergab (Auslöser: Wettbewerbsvergleich TheraPano vs. externem Anbieter,
+bei dem auffiel, dass die Doku nicht mehr aktuell ist). Zwei Sub-Agenten haben je 5 Features gegen
+den echten Code verifiziert. Ergebnis — Status korrigiert in den jeweiligen Detailseiten und in
+[[07-features/README]]:
+
+| Feature | Alter Status | Neuer Status |
+|---|---|---|
+| TherapyCare AI | partial/verify AI scope | **not_found (AI)** — Basissystem ohne KI ist implementiert |
+| TrainingCare AI | planned/unknown | **implemented (Trainingsplan-System)**, AI-Anteil not_found |
+| Gamification | unknown/planned | **partial** — nur Score-Badges, keine echte Gamification |
+| Video Feedback | implemented, verify UX | **partial** — Upload/Anzeige ja, kein Feedback-/Annotations-Modul |
+| Finanz-Autopilot | partial indicators | **partial** — nur manuelle Mahnungen, keine Cron-Eskalation |
+| Marketing Automation | partial/verify | **not_found** — nur Reporting-Dashboard, kein Backend |
+| Zahlung im Portal | partial/verify | **partial** — nur Rechnungsliste, keine Online-Zahlfunktion |
+| Kurs-System Hundeschulen | implemented | implemented (bestätigt), Endkunden-Webshop-Buchung offen |
+| Praxis vs. Hundeschule | implemented basis | **implemented** — Terminology-Switching bestätigt |
+
+Details je Feature stehen in den jeweiligen `07-features/*.md`-Dateien unter "Audit-Befund (2026-07-01)".
+Neue Roadmap-Punkte dazu in [[12-roadmap/roadmap]] (P1/P2).
+
+## Vollaudit 2026-07-01 Teil 2 — Kritischer Fund + 11 komplett fehlende Feature-Docs
+
+Der Produktverantwortliche wies darauf hin, dass die Doku "nicht alles" abbildet — konkretes
+Beispiel: ein 3D-Schmerzanalyse-Tab im Patient-Modal mit echten 3D-Modellen (Hund/Katze/Pferd,
+Three.js) war im Code voll produktiv, aber in [[07-features/veterinary-anatomy-engine]] als
+"blockiert bis 3D-Modelle vorhanden" dokumentiert — **die Modelle existieren bereits** unter
+`public/assets/3D/*.glb`. Das ist die gravierendste bisher gefundene Doku-Code-Abweichung
+(P0-Korrektur, siehe Status-Hinweis oben in der Datei).
+
+Ein zweiter, breiterer Code-Sweep (alle Controller, Plugins, große JS-Module, Patient-Modal-Tabs)
+fand 11 weitere Features ganz ohne Doku-Entsprechung — jetzt neu angelegt:
+[[07-features/gobd-audit-log]], [[07-features/tax-export-pro]], [[07-features/mailbox-plugin]],
+[[07-features/bulk-mail]], [[07-features/theme-manager]], [[07-features/patient-invite]],
+[[07-features/patient-intake]], [[07-features/consent-management]], [[07-features/online-booking]],
+[[07-features/ui-settings-notifications]], [[07-features/media-compressor]],
+[[07-features/portal-checkliste]] (Detailumfang bei letzterem noch offen).
+
+**Wichtige Lehre:** Dieser zweite Sweep war noch keine vollständige Abdeckung von `app/Controllers/`
+und `plugins/*` — nur eine gezielte Suche nach den auffälligsten Lücken. Ein systematischer
+1:1-Abgleich aller Controller/Plugins gegen `07-features/*.md` steht noch aus (siehe Roadmap P2).
+
+## Vollaudit 2026-07-01 Teil 3 — systematischer 1:1-Abgleich aller Controller/Plugins
+
+Auf Wunsch des Produktverantwortlichen ("wir haben extrem viel, schau ins kleinste Detail") wurde
+jetzt (fast) jeder Controller in `app/Controllers/` (34 Dateien), jedes Plugin (14 Ordner) und
+`saas-platform/app/Controllers/` (22 Dateien) einzeln gegen die Doku geprüft. Ergebnis: **weitere
+13 Features** waren komplett undokumentiert, darunter zwei besonders vertriebsrelevante:
+
+- **Rechnungsdesign** ([[07-features/invoice-branding]]): Logo-Upload, Farbwahl, Schriftart,
+  individuelle Bilder je Dokumenttyp (Rechnung/Mahnung/Quittung/…) — genau das, was der
+  Produktverantwortliche als Beispiel nannte.
+- **Steuerexport** ([[07-features/tax-export-pro]]) ist deutlich umfangreicher als in Teil 1
+  dokumentiert: DATEV-Buchungsstapel-Format, SKR03-Kontenrahmen, ZIP mit allen Rechnungs-PDFs +
+  allen Ausgaben-Belegen + SHA-256-Manifest — geeignet zur direkten Übergabe an Steuerberater
+  oder zum Import in Steuersoftware (DATEV Unternehmen Online, Lexware, BuchhaltungsButler).
+
+Weitere neu dokumentierte Funde: [[07-features/expense-management]] (OCR-Belegerkennung),
+[[07-features/cron-pixel-system]] (Cron ohne Server-Zugriff), [[07-features/hundeschule-erweiterte-funktionen]]
+(Anwesenheit, Trainer, Reports, Rechnungen, eigener Kalender), [[07-features/patient-timeline]],
+[[07-features/flutter-offline-mode]], [[07-features/data-migration-import]] (Wechsel-Assistent von
+Konkurrenzsoftware — starkes Vertriebsargument), [[06-saas/saas-admin-erweiterte-funktionen]]
+(Revenue-Analytics, Feature-Gating, GoBD-SaaS-Rechnungen, Stripe+PayPal, Lizenz-API).
+
+**Bewusst nicht mehr einzeln vertieft** (geprüft, aber als simples CRUD ohne Marketing-Relevanz
+eingestuft): `EventController.php` (reiner View-Filter auf bestehende Kursdaten), `DemoController.php`
+(nur Landingpage-Stub, kein automatisiertes Demo-Provisioning).
 
 ## Zweck
 Zentrale Sicht auf offene, nicht abgearbeitete Punkte aus dem Brain. Diese Datei ersetzt nicht die

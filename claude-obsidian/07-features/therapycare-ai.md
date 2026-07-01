@@ -18,14 +18,21 @@ Client/Web/Portal → Route/Controller/Plugin → Repository/Service → UI/Resp
 ## Wichtige Regeln
 - API-Verträge dürfen nicht breaking geändert werden.
 - Tenant-Isolation bleibt erhalten.
-- Status: **partial naming present; verify AI scope**.
+- Status: **not_found (AI-Anteil)** — Basissystem ohne KI ist implementiert, siehe [[07-features/fortschrittssystem]].
+
+## Audit-Befund (2026-07-01, gegen echten Code verifiziert)
+`TherapyCareReportService.php` und die Controller (`TherapyCareController.php`, `TherapyCarePortalController.php`)
+enthalten **keinen einzigen LLM-/KI-Aufruf** (kein OpenAI/Anthropic/GPT-Pattern im gesamten
+`plugins/therapy-care-pro/`-Verzeichnis). Der Service generiert PDF-Reports rein über TCPDF aus
+strukturierten Formulardaten. "AI" im Namen ist **Branding ohne technische KI-Funktionalität**.
+Das nicht-KI-Basissystem (Fortschritts-Tracking, PDF-Reports) ist vollständig implementiert.
 
 ## Risiken
-- Teilimplementierungen können zu falschen Erwartungen führen.
+- Marketing/Vertrieb darf "TherapyCare AI" nicht als KI-Feature bewerben, solange kein KI-Backend existiert.
 
 ## TODOs
-- Fachlichen Soll-/Ist-Vergleich ergänzen.
-- E2E-Flow dokumentieren.
+- Entweder echte KI-Funktionalität bauen (z.B. Trend-Analyse/Textgenerierung aus Progress-Daten)
+  oder Feature-Namen intern/extern auf den tatsächlichen Funktionsumfang korrigieren.
 
 ## Verlinkungen
 - [[02-api/mobile-api]]

@@ -17,13 +17,19 @@ Client/Web/Portal → Route/Controller/Plugin → Repository/Service → UI/Resp
 ## Wichtige Regeln
 - API-Verträge dürfen nicht breaking geändert werden.
 - Tenant-Isolation bleibt erhalten.
-- Status: **implemented via TherapyCarePro**.
+- Status: **implemented** (via TherapyCarePro, verifiziert 2026-07-01).
+
+## Audit-Befund (2026-07-01, gegen echten Code verifiziert)
+`migrations/001_therapy_care_pro.sql` definiert 6 automatisch angelegte Fortschritts-Kategorien
+(je 1–10 Skala): Gangbild, Beweglichkeit, Schmerzreaktion, Muskelspannung, Belastbarkeit,
+Allgemeinzustand. `TherapyCareRepository::createProgressEntry()` speichert Score+Notes pro
+Datum, `getProgressEntriesForPatient()` lädt den Verlauf, `TherapyCareController::buildChartData()`
+baut die Chart-Daten. Vollständig und produktiv nutzbar.
 
 ## Risiken
 - Teilimplementierungen können zu falschen Erwartungen führen.
 
 ## TODOs
-- Fachlichen Soll-/Ist-Vergleich ergänzen.
 - E2E-Flow dokumentieren.
 
 ## Verlinkungen

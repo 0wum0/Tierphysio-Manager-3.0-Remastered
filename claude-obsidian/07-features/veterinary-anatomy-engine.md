@@ -1,5 +1,28 @@
 # TheraPano Veterinary Anatomy Engine
 
+> **STATUS-KORREKTUR (2026-07-01, Vollaudit gegen echten Code):**
+> Diese Datei beschrieb Phase 2 (Three.js/3D) bisher fälschlich als "blockiert bis 3D-Modelle vorhanden".
+> **Das ist falsch — Phase 2 ist bereits produktiv implementiert.** Es existiert ein eigenständiges,
+> voll funktionsfähiges **3D-Schmerzanalyse-Feature** (separater Tab im Patient-Modal, nicht Teil des
+> 2D-SVG-Befundbogens):
+> - Echte GLB-3D-Modelle: `public/assets/3D/Hund.glb`, `katze.glb`, `Pferd.glb` (Three.js r160, GLTFLoader/DRACOLoader)
+> - Viewer: `public/assets/js/anatomy-3d-viewer.js` (987 Zeilen) mit OrbitControls (Rotation/Zoom/Pan),
+>   Raycasting auf klickbare Muskelregionen: **27 Regionen Hund, 24 Katze, 34 Pferd**, je mit
+>   anatomischer Bezeichnung (z.B. „M. longissimus dorsi"), Seite (links/rechts/mittig/beidseitig)
+> - Klick auf Region öffnet Schmerzformular: NRS 0–10, Schmerzart (10 Typen: Druckschmerz,
+>   Bewegungsschmerz, Ruheschmerz, Verspannung, Verhärtung, Triggerpunkt, Schwellung, Wärme,
+>   Schonhaltung, Unklar), Notizfeld
+> - Backend: `app/Controllers/PainPoint3dController.php` + `PainPoint3dRepository.php`,
+>   Tabelle `patient_3d_pain_points` (Migration `063_3d_pain_points.sql`), UPSERT je
+>   `(patient_id, animal_type, muscle_group_id, side)`, CSRF-geschützt
+> - Tab-Einbindung: `templates/partials/patient-modal-global.twig` Zeile 531 ff. (Tab "3D Schmerzanalyse"),
+>   lazy-init beim Tab-Wechsel (Zeile 1295, 3733–3804)
+> - **Einschränkung:** reines Web-Feature, keine Flutter-Spiegelung; läuft unabhängig/parallel zum
+>   2D-SVG-Befundbogen ([[07-features/3d-befundmodell-schmerzskala]]) — keine Datensynchronisation zwischen beiden.
+>
+> Der Rest dieser Datei (ursprünglicher Phasenplan) bleibt als historischer Kontext stehen, ist aber
+> für Phase 2 überholt — die Umsetzung ist bereits erfolgt, nicht mehr "geplant".
+
 ## Vision
 Professionelles, layerbasiertes, veterinärmedizinisches Befundsystem für Hund, Katze und Pferd.
 Ziel: Klinische Qualität vergleichbar mit easyVet, Provet Cloud, VisionVet — nicht Spielzeuggrafik.
@@ -39,7 +62,7 @@ Bis Phase 1.5 abgeschlossen ist: Phase-1-SVG-Layer-System als Platzhalter mit
 klar segmentierten Körperzonen und professionellem UI.
 
 ### Phase 2 — Three.js 3D Engine (erfordert GLTF/GLB Assets)
-**Status: Blockiert bis 3D-Modelle vorhanden**
+**Status: ✅ IMPLEMENTIERT UND PRODUKTIV** (siehe Status-Korrektur oben, verifiziert 2026-07-01)
 
 **Realitäts-Check Three.js:**
 - Three.js selbst: Open Source, CDN/NPM, kein Hindernis ✅
