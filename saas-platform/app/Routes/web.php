@@ -16,6 +16,7 @@ use Saas\Controllers\DataMigrationController;
 use Saas\Controllers\FeedbackController;
 use Saas\Controllers\PaymentSettingsController;
 use Saas\Controllers\GoogleSettingsController;
+use Saas\Controllers\AiSettingsController;
 use Saas\Controllers\PraxisCronController;
 use Saas\Controllers\RevenueController;
 use Saas\Controllers\RegistrationController;
@@ -170,6 +171,12 @@ $router->post('/admin/payment-settings/cron/run',    [PaymentSettingsController:
 $router->get('/admin/google-settings',               [GoogleSettingsController::class, 'index']);
 $router->post('/admin/google-settings/update',       [GoogleSettingsController::class, 'update']);
 $router->get('/admin/google-settings/test',          [GoogleSettingsController::class, 'testConnection']);
+
+// ── KI-Einstellungen / Grok+Gemini (Admin) ──────────────────────────────────────────
+$router->get('/admin/ai-settings',                   [AiSettingsController::class, 'index']);
+$router->post('/admin/ai-settings/update',           [AiSettingsController::class, 'update']);
+$router->get('/admin/ai-settings/test-grok',         [AiSettingsController::class, 'testGrok']);
+$router->get('/admin/ai-settings/test-gemini',       [AiSettingsController::class, 'testGemini']);
 
 // ── Praxis Cronjobs (Admin) ───────────────────────────────────────────────────────────────
 $router->get('/admin/praxis-cron',                   [PraxisCronController::class, 'index']);

@@ -105,5 +105,10 @@ wollen, die genauso ernsthaft arbeitet wie sie selbst.
 
 ## Hinweise für die Produktion
 - Jede Aussage im Skript ist gegen den echten Code verifiziert (siehe `claude-obsidian/13-marketing/staerken-dokumentation.md` für die Belege).
-- Bewusst NICHT erwähnt, weil (noch) nicht verifiziert/nicht vorhanden: KI-Funktionen (TherapyCare/TrainingCare "AI" existieren aktuell nur als Name, nicht als echte KI), automatisches Cron-Mahnwesen (aktuell nutzergesteuert), iOS/macOS-Apps (geplant, nicht live).
+- **Update 2026-07-01:** TherapyCare/TrainingCare "AI" sind seit diesem Datum ECHTE KI-Funktionen
+  (Grok/Gemini, siehe [[07-features/ai-integration]]) — die vorherige Einschränkung "nur Name, keine
+  echte KI" gilt nicht mehr. Ein neues Kapitel dazu kann ergänzt werden: KI-Zusammenfassungen im
+  Therapiefortschritt, KI-Entwurf für Tierarztberichte, KI-Trainingsempfehlungen.
+- Weiterhin bewusst NICHT erwähnt: automatisches Cron-Mahnwesen (aktuell nutzergesteuert),
+  iOS/macOS-Apps (geplant, nicht live).
 - Bei Bedarf pro Zielgruppe (Therapeut / Heilpraktiker / Trainer / Hundeschule) eigene Kurzversion aus den jeweiligen Kapiteln zusammenstellen.

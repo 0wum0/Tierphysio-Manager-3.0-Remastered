@@ -27,6 +27,21 @@
     </div>
 </div>
 
+{% if (features.ki_assistance ?? false) and progress|length > 0 %}
+<div class="card mb-3" id="tp-ai-reco-card">
+    <div class="card-header px-4 py-3 d-flex align-items-center gap-2">
+        <i class="bi bi-cpu"></i>
+        <span class="fw-semibold">KI-Trainingsempfehlung</span>
+        <button type="button" class="btn btn-sm btn-outline-primary ms-auto" id="tp-ai-reco-btn">Empfehlung erstellen</button>
+    </div>
+    <div class="card-body">
+        <div id="tp-ai-reco-result" class="text-muted" style="white-space:pre-line;">
+            Klicke auf „Empfehlung erstellen", um aus dem Übungsfortschritt eine kurze KI-Einschätzung zu erhalten.
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {# ── Fortschritt je Übung ── #}
 <div class="card mb-3">
     <div class="card-header px-4 py-3"><span class="fw-semibold">Curriculum-Fortschritt</span></div>
@@ -152,4 +167,44 @@
         </form>
     </div></div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('tp-ai-reco-btn')?.addEventListener('click', function() {
+    var btn    = this;
+    var result = document.getElementById('tp-ai-reco-result');
+    var origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Erstelle…';
+
+    var fd = new FormData();
+    fd.append('_csrf_token', '{{ csrf_token }}');
+
+    fetch('/trainingsplaene/zuweisung/{{ assignment.id }}/ki-empfehlung', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: fd
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            result.textContent = data.recommendation;
+        } else if (data.error === 'ai_not_configured') {
+            result.textContent = 'KI ist noch nicht eingerichtet (SaaS-Admin → KI-Integration).';
+        } else if (data.error === 'no_data') {
+            result.textContent = 'Noch keine Fortschrittsdaten für eine Empfehlung vorhanden.';
+        } else {
+            result.textContent = 'Empfehlung derzeit nicht verfügbar.';
+        }
+    })
+    .catch(function() {
+        result.textContent = 'Netzwerkfehler — Empfehlung konnte nicht geladen werden.';
+    })
+    .finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+    });
+});
+</script>
 {% endblock %}

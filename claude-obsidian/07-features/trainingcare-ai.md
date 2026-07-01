@@ -17,22 +17,27 @@ Client/Web/Portal → Route/Controller/Plugin → Repository/Service → UI/Resp
 ## Wichtige Regeln
 - API-Verträge dürfen nicht breaking geändert werden.
 - Tenant-Isolation bleibt erhalten.
-- Status: **implemented (Trainingsplan-System), AI-Anteil: not_found**.
+- Status: **implemented (Trainingsplan-System + echte KI seit 2026-07-01)** — siehe [[07-features/ai-integration]].
 
-## Audit-Befund (2026-07-01, gegen echten Code verifiziert)
+## Update (2026-07-01, Teil 5): Echte KI-Funktionalität ergänzt
+`TrainingPlanController::aiRecommendations()` nutzt den neuen [[07-features/ai-integration|zentralen
+AiService]] (Grok/Gemini), um aus Mastery-Level und Erfolgsquote je Übung eine echte
+KI-Trainingsempfehlung zu generieren — sichtbar als Karte "KI-Trainingsempfehlung" auf der
+Zuweisungs-Detailseite, gated durch `ki_assistance` UND `dogschool_training_plans`.
+
+## Historischer Audit-Befund (2026-07-01, vor der KI-Ergänzung)
 `TrainingPlanController.php` (431 Zeilen) implementiert ein vollständiges CRUD-System für
 Trainingspläne, Übungs-Katalog, Plan-Zuweisungen an Hunde, Fortschritts-Erfassung und
 Hausaufgaben (Feature-Gates: `dogschool_training_plans`, `dogschool_exercises`,
-`dogschool_progress`, `dogschool_homework`). Das ist real und produktiv.
-Eine **KI-Komponente existiert nicht** — keine Trainingsempfehlungen, kein LLM-Call, keine
-automatische Plan-Generierung. "AI" im Namen ist Branding ohne technisches Gegenstück.
+`dogschool_progress`, `dogschool_homework`). Das war real und produktiv, aber ohne KI-Komponente
+("AI" im Namen war reines Branding).
 
 ## Risiken
-- Marketing/Vertrieb darf "TrainingCare AI" nicht als KI-Feature bewerben, solange kein KI-Backend existiert.
+- Ohne konfigurierten Grok-/Gemini-Provider im SaaS-Admin bleibt der Button funktionslos
+  (klare Fehlermeldung `ai_not_configured`, kein Crash).
 
 ## TODOs
-- Entweder echte KI-Funktionalität bauen (z.B. automatische Trainingsempfehlungen aus Fortschrittsdaten)
-  oder Feature-Namen auf den tatsächlichen Funktionsumfang ("Trainingsplan-System") korrigieren.
+- Siehe offene Punkte in [[07-features/ai-integration]] (Rate-Limiting, Caching, Audit-Log).
 
 ## Verlinkungen
 - [[02-api/mobile-api]]

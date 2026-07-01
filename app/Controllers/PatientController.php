@@ -20,6 +20,7 @@ use App\Repositories\HomeworkRepository;
 use App\Core\Database;
 use App\Core\PerformanceLogger;
 use App\Services\TimelineMediaService;
+use App\Services\AiService;
 
 class PatientController extends Controller
 {
@@ -37,7 +38,8 @@ class PatientController extends Controller
         private readonly MailService $mailService,
         private readonly HomeworkRepository $homeworkRepository,
         private readonly Database $db,
-        private readonly TimelineMediaService $timelineMedia
+        private readonly TimelineMediaService $timelineMedia,
+        private readonly AiService $aiService
     ) {
         parent::__construct($view, $session, $config, $translator);
     }
@@ -817,6 +819,69 @@ class PatientController extends Controller
         header('Content-Type: application/json');
         echo json_encode(['ok' => true, 'timeline' => $timeline]);
         exit;
+    }
+
+    /**
+     * Generiert eine kurze KI-Zusammenfassung der letzten Timeline-Einträge
+     * (Behandlungen/Notizen). Additiv & ausfallsicher — siehe AiService.
+     */
+    public function timelineAiInsight(array $params = []): void
+    {
+        $this->validateCsrf();
+        $this->requireFeature('ki_assistance');
+
+        $patientId = (int)$params['id'];
+        $patient   = $this->patientService->findById($patientId);
+        if (!$patient) {
+            $this->json(['ok' => false, 'error' => 'not_found'], 404);
+            return;
+        }
+
+        if (!$this->aiService->isConfigured()) {
+            $this->json(['ok' => false, 'error' => 'ai_not_configured']);
+            return;
+        }
+
+        $timeline = $this->patientService->getTimeline($patientId, 20);
+        $relevant = array_values(array_filter(
+            $timeline,
+            static fn(array $e) => in_array($e['type'] ?? '', ['treatment', 'note'], true)
+        ));
+
+        if (empty($relevant)) {
+            $this->json(['ok' => false, 'error' => 'no_data']);
+            return;
+        }
+
+        $lines = [];
+        foreach ($relevant as $e) {
+            $lines[] = sprintf(
+                '%s | %s: %s',
+                substr((string)($e['entry_date'] ?? ''), 0, 10),
+                (string)($e['type'] ?? 'Eintrag'),
+                trim((string)($e['title'] ?? '') . ' ' . strip_tags((string)($e['content'] ?? '')))
+            );
+        }
+
+        $systemPrompt = 'Du bist eine fachliche Assistenz für Tierphysiotherapeuten/Tiertrainer. '
+            . 'Fasse die letzten Timeline-Einträge eines Patienten in 1-2 kurzen, sachlichen Sätzen '
+            . 'auf Deutsch zusammen (roter Faden, erkennbare Entwicklung). Nutze NUR die gegebenen '
+            . 'Fakten, erfinde nichts. Keine Diagnose, keine Behandlungsempfehlung.';
+
+        $userPrompt = sprintf(
+            "Patient: %s\n\nLetzte Einträge (Datum | Typ: Inhalt):\n%s",
+            (string)($patient['name'] ?? 'Patient'),
+            implode("\n", $lines)
+        );
+
+        $insight = $this->aiService->generateText($systemPrompt, $userPrompt);
+
+        if ($insight === null) {
+            $this->json(['ok' => false, 'error' => 'ai_unavailable']);
+            return;
+        }
+
+        $this->json(['ok' => true, 'insight' => $insight]);
     }
 
     public function wizard(array $params = []): void

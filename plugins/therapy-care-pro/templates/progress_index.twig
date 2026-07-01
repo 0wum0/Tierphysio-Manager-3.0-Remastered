@@ -73,6 +73,24 @@
                 </div>
             </div>
 
+            {# KI-Fortschritts-Zusammenfassung — additiv, nur sichtbar wenn Feature aktiv #}
+            {% if (features.ki_assistance ?? false) and entries is not empty %}
+            <div class="card shadow-sm mb-3" id="tcp-ai-summary-card">
+                <div class="card-header d-flex align-items-center gap-2">
+                    <i class="bi bi-cpu"></i>
+                    <span class="fw-700">KI-Zusammenfassung</span>
+                    <button type="button" class="btn btn-sm btn-outline-primary ms-auto" id="tcp-ai-summary-btn">
+                        Zusammenfassung erstellen
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="tcp-ai-summary-result" class="text-muted fs-sm">
+                        Klicke auf „Zusammenfassung erstellen", um aus den Verlaufsdaten eine kurze KI-Einschätzung zu erhalten.
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             {# Entry list #}
             {% if entries is not empty %}
             <div class="card shadow-sm">
@@ -386,5 +404,42 @@
         }
     });
 })();
+
+document.getElementById('tcp-ai-summary-btn')?.addEventListener('click', function() {
+    var btn    = this;
+    var result = document.getElementById('tcp-ai-summary-result');
+    var origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Erstelle…';
+    result.innerHTML = '';
+
+    var fd = new FormData();
+    fd.append('_csrf_token', '{{ csrf_token }}');
+
+    fetch('/api/tcp/patienten/{{ patient.id }}/fortschritt/ki-zusammenfassung', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: fd
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            result.innerHTML = '<div style="white-space:pre-line;">' + data.summary.replace(/</g, '&lt;') + '</div>';
+        } else if (data.error === 'ai_not_configured') {
+            result.innerHTML = '<span class="text-muted">KI ist noch nicht eingerichtet. Bitte im SaaS-Admin unter „KI-Integration" einen API-Key hinterlegen.</span>';
+        } else if (data.error === 'no_data') {
+            result.innerHTML = '<span class="text-muted">Noch keine Verlaufsdaten für eine Zusammenfassung vorhanden.</span>';
+        } else {
+            result.innerHTML = '<span class="text-danger">Zusammenfassung derzeit nicht verfügbar. Bitte später erneut versuchen.</span>';
+        }
+    })
+    .catch(function() {
+        result.innerHTML = '<span class="text-danger">Netzwerkfehler — Zusammenfassung konnte nicht geladen werden.</span>';
+    })
+    .finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+    });
+});
 </script>
 {% endblock %}

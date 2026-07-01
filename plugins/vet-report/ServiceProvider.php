@@ -58,6 +58,7 @@ class ServiceProvider
     {
         $router->get(   '/patienten/{id}/tierarztbericht',                          [VetReportController::class, 'generate'], ['auth']);
         $router->post(  '/patienten/{id}/tierarztbericht/custom',                   [VetReportController::class, 'createCustom'], ['auth']);
+        $router->post(  '/patienten/{id}/tierarztbericht/ki-entwurf',               [VetReportController::class, 'aiDraft'],       ['auth']);
         $router->get(   '/patienten/{id}/tierarztbericht/verlauf',                  [VetReportController::class, 'history'],      ['auth']);
         $router->get(   '/patienten/{id}/tierarztbericht/{reportId}/load',          [VetReportController::class, 'loadReport'],   ['auth']);
         $router->get(   '/patienten/{id}/tierarztbericht/{reportId}/download',      [VetReportController::class, 'download'],     ['auth']);

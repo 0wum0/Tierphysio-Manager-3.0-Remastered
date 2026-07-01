@@ -388,6 +388,12 @@
                         <span class="nav-link-text">Google Kalender API</span>
                     </a>
                 </li>
+                <li{% if active_nav == 'ai_settings' %} class="active"{% endif %}>
+                    <a href="/admin/ai-settings">
+                        <svg class="sa-icon"><use href="/sa/icons/sprite.svg#cpu"></use></svg>
+                        <span class="nav-link-text">KI-Integration (Grok/Gemini)</span>
+                    </a>
+                </li>
                 <li>
                     <a href="/admin/praxis-cron">
                         <svg class="sa-icon"><use href="/sa/icons/sprite.svg#clock"></use></svg>

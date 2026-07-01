@@ -484,6 +484,19 @@
                                 </div>
                             </div>
 
+                            {% if features.ki_assistance ?? false %}
+                            <div id="pd-timeline-ai-card" style="border:1px solid var(--bs-border-color);border-radius:8px;padding:0.75rem;margin-bottom:0.9rem;">
+                                <div style="display:flex;align-items:center;gap:0.5rem;">
+                                    <i class="bi bi-cpu"></i>
+                                    <strong style="font-size:0.82rem;">KI-Zusammenfassung</strong>
+                                    <button type="button" class="btn btn-sm btn-outline-primary ms-auto" id="pd-timeline-ai-btn" style="font-size:0.72rem;padding:0.2rem 0.6rem;">
+                                        Erstellen
+                                    </button>
+                                </div>
+                                <div id="pd-timeline-ai-result" class="text-muted" style="font-size:0.8rem;margin-top:0.5rem;"></div>
+                            </div>
+                            {% endif %}
+
                             {# Timeline — Verlauf ist für beide Modi semantisch korrekt #}
                             <div class="pd-section-label">{% if is_trainer ?? false %}Trainings-Verlauf{% else %}Verlauf{% endif %}</div>
                             <div id="pd-timeline" class="timeline"></div>
@@ -788,6 +801,11 @@
                                 <button type="button" class="btn btn-outline-secondary btn-sm cvr-tpl-btn" data-tpl="rueckueberweisung" style="font-size:0.75rem;padding:0.2rem 0.6rem;border-radius:20px;">Rücküberweisung</button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm cvr-tpl-btn" data-tpl="verlauf" style="font-size:0.75rem;padding:0.2rem 0.6rem;border-radius:20px;">Verlaufsbericht</button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm cvr-tpl-btn" data-tpl="hundeschule" style="font-size:0.75rem;padding:0.2rem 0.6rem;border-radius:20px;">Hundetraining</button>
+                                {% if features.ki_assistance ?? false %}
+                                <button type="button" class="btn btn-outline-primary btn-sm" id="cvr-ai-draft-btn" style="font-size:0.75rem;padding:0.2rem 0.6rem;border-radius:20px;">
+                                    <i class="bi bi-cpu"></i> KI-Entwurf
+                                </button>
+                                {% endif %}
                             </div>
                             {# ── Quill Rich-Text Editor ── #}
                             <div id="cvr-quill-editor" style="min-height:340px;font-size:0.93rem;line-height:1.7;background:var(--bs-body-bg, #fff);"></div>
@@ -1359,6 +1377,49 @@ function resetModal() {
 }
 
 var _befundeLoaded = false, _vrLoaded = false, _tcpLoaded = false, _portalLoaded = false, _hwLoaded = false, _3dViewerLoaded = false;
+
+/* ═══════════════════════════════════════════════════════
+   TIMELINE — KI-Zusammenfassung
+═══════════════════════════════════════════════════════ */
+document.getElementById('pd-timeline-ai-btn')?.addEventListener('click', function() {
+    var pid = currentPatientData && currentPatientData.patient ? currentPatientData.patient.id : (window.pdAktPatientId || null);
+    if (!pid) return;
+
+    var btn    = this;
+    var result = document.getElementById('pd-timeline-ai-result');
+    var origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    result.innerHTML = '';
+
+    var fd = new FormData();
+    fd.append('_csrf_token', '{{ csrf_token }}');
+
+    fetch('/patienten/' + pid + '/timeline/ki-zusammenfassung', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: fd
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            result.innerHTML = '<div style="white-space:pre-line;">' + data.insight.replace(/</g, '&lt;') + '</div>';
+        } else if (data.error === 'ai_not_configured') {
+            result.innerHTML = 'KI ist noch nicht eingerichtet (SaaS-Admin → KI-Integration).';
+        } else if (data.error === 'no_data') {
+            result.innerHTML = 'Noch keine Timeline-Einträge für eine Zusammenfassung vorhanden.';
+        } else {
+            result.innerHTML = 'Zusammenfassung derzeit nicht verfügbar.';
+        }
+    })
+    .catch(function() {
+        result.innerHTML = 'Netzwerkfehler — Zusammenfassung konnte nicht geladen werden.';
+    })
+    .finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+    });
+});
 
 /* ═══════════════════════════════════════════════════════
    TIMELINE RENDER
@@ -3258,6 +3319,48 @@ document.addEventListener('click', function(ev) {
     if (!isEmpty && !confirm('Aktuellen Inhalt mit Vorlage überschreiben?')) return;
     window.cvrQuill.clipboard.dangerouslyPasteHTML(_cvrTemplates[tpl]);
     setTimeout(function(){ window.cvrQuill.focus(); }, 50);
+});
+
+document.getElementById('cvr-ai-draft-btn')?.addEventListener('click', function() {
+    var pid = window._vrChoicePatientId || window.pdAktPatientId || (typeof patientId !== 'undefined' ? patientId : null);
+    if (!pid || !window.cvrQuill) return;
+
+    var isEmpty = window.cvrQuill.getText().trim() === '';
+    if (!isEmpty && !confirm('Aktuellen Inhalt mit KI-Entwurf überschreiben?')) return;
+
+    var btn = this;
+    var origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Erstelle…';
+
+    var fd = new FormData();
+    fd.append('_csrf_token', '{{ csrf_token }}');
+
+    fetch('/patienten/' + pid + '/tierarztbericht/ki-entwurf', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: fd
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            window.cvrQuill.clipboard.dangerouslyPasteHTML(data.content);
+            setTimeout(function(){ window.cvrQuill.focus(); }, 50);
+        } else if (data.error === 'ai_not_configured') {
+            alert('KI ist noch nicht eingerichtet. Bitte im SaaS-Admin unter „KI-Integration" einen API-Key hinterlegen.');
+        } else if (data.error === 'no_data') {
+            alert('Für diesen Patienten liegen noch keine Behandlungsdaten für einen KI-Entwurf vor.');
+        } else {
+            alert('KI-Entwurf derzeit nicht verfügbar. Bitte später erneut versuchen.');
+        }
+    })
+    .catch(function() {
+        alert('Netzwerkfehler — KI-Entwurf konnte nicht erstellt werden.');
+    })
+    .finally(function() {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+    });
 });
 
 /* ═══════════════════════════════════════════════════════

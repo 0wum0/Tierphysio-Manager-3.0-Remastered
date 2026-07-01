@@ -7,6 +7,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Repositories\TrainingPlanRepository;
 use App\Repositories\PatientRepository;
+use App\Services\AiService;
 
 /**
  * TrainingPlanController (TCP).
@@ -24,6 +25,7 @@ class TrainingPlanController extends Controller
 {
     private TrainingPlanRepository $plans;
     private PatientRepository $patients;
+    private AiService $aiService;
 
     public function __construct(
         \App\Core\View $view,
@@ -32,10 +34,12 @@ class TrainingPlanController extends Controller
         \App\Core\Translator $translator,
         TrainingPlanRepository $plans,
         PatientRepository $patients,
+        AiService $aiService,
     ) {
         parent::__construct($view, $session, $config, $translator);
-        $this->plans    = $plans;
-        $this->patients = $patients;
+        $this->plans     = $plans;
+        $this->patients  = $patients;
+        $this->aiService = $aiService;
     }
 
     /* ═════════════════════════ Plan-Vorlagen ═════════════════════════ */
@@ -332,6 +336,93 @@ class TrainingPlanController extends Controller
         $this->plans->updateAssignmentStatus($id, $status);
         $this->flash('success', 'Status aktualisiert.');
         $this->redirect('/trainingsplaene/zuweisung/' . $id);
+    }
+
+    /**
+     * Generiert eine KI-Trainingsempfehlung aus Fortschritts-/Mastery-Daten
+     * je Übung. Additiv & ausfallsicher — siehe AiService.
+     */
+    public function aiRecommendations(array $params = []): void
+    {
+        $this->requireFeature('dogschool_training_plans');
+        $this->requireFeature('ki_assistance');
+        $this->validateCsrf();
+
+        $id = (int)($params['id'] ?? 0);
+        $a  = $this->plans->findAssignment($id);
+        if (!$a) {
+            $this->json(['ok' => false, 'error' => 'not_found'], 404);
+            return;
+        }
+
+        if (!$this->aiService->isConfigured()) {
+            $this->json(['ok' => false, 'error' => 'ai_not_configured']);
+            return;
+        }
+
+        $progress = $this->plans->progressForAssignment($id);
+        $mastery  = $this->plans->latestMasteryByExercise($id);
+
+        if (empty($progress)) {
+            $this->json(['ok' => false, 'error' => 'no_data']);
+            return;
+        }
+
+        $masteryLevels = $this->plans->masteryLevels();
+
+        // Pro Übung aktueller Mastery-Stand + Erfolgsquote/Wiederholungen aggregieren.
+        $byExercise = [];
+        foreach ($progress as $p) {
+            $exId = (int)($p['exercise_id'] ?? 0);
+            if (!isset($byExercise[$exId])) {
+                $byExercise[$exId] = [
+                    'name'          => (string)($p['exercise_name'] ?? 'Übung'),
+                    'category'      => (string)($p['category'] ?? ''),
+                    'success_rates' => [],
+                ];
+            }
+            if (isset($p['success_rate_pct']) && $p['success_rate_pct'] !== null) {
+                $byExercise[$exId]['success_rates'][] = (float)$p['success_rate_pct'];
+            }
+        }
+
+        $lines = [];
+        foreach ($byExercise as $exId => $info) {
+            $level    = $mastery[$exId]['mastery_level'] ?? 0;
+            $levelLbl = $masteryLevels[$level]['label'] ?? (string)$level;
+            $avgRate  = !empty($info['success_rates'])
+                ? round(array_sum($info['success_rates']) / count($info['success_rates']), 1)
+                : null;
+            $lines[] = sprintf(
+                '%s (%s): Mastery-Level "%s"%s',
+                $info['name'],
+                $info['category'] ?: 'ohne Kategorie',
+                $levelLbl,
+                $avgRate !== null ? ", durchschn. Erfolgsquote {$avgRate}%" : ''
+            );
+        }
+
+        $systemPrompt = 'Du bist eine fachliche Assistenz für Hundetrainer. Gib aus dem '
+            . 'Trainingsfortschritt eines Hundes je Übung eine kurze, konkrete Empfehlung auf '
+            . 'Deutsch (2-4 Sätze): welche Übungen als nächstes vertieft oder gesteigert werden '
+            . 'sollten, welche als gemeistert gelten. Nutze NUR die gegebenen Daten, erfinde '
+            . 'nichts hinzu. Keine medizinischen Aussagen.';
+
+        $userPrompt = sprintf(
+            "Hund: %s (%s)\n\nÜbungsfortschritt:\n%s",
+            (string)($a['patient_name'] ?? 'Hund'),
+            (string)($a['patient_breed'] ?? ''),
+            implode("\n", $lines)
+        );
+
+        $recommendation = $this->aiService->generateText($systemPrompt, $userPrompt);
+
+        if ($recommendation === null) {
+            $this->json(['ok' => false, 'error' => 'ai_unavailable']);
+            return;
+        }
+
+        $this->json(['ok' => true, 'recommendation' => $recommendation]);
     }
 
     /* ═════════════════════════ Fortschritt ═════════════════════════ */

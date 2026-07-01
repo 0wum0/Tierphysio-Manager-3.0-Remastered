@@ -127,6 +127,7 @@ class ServiceProvider
         $router->get( '/api/tcp/patienten/{id}/fortschritt',                  [TherapyCareController::class, 'apiProgressData'],     ['auth']);
         $router->get( '/api/tcp/patienten/{id}/portal-visibility',            [TherapyCareController::class, 'apiPortalVisibility'], ['auth']);
         $router->get( '/api/tcp/patienten/{id}/modal-data',                   [TherapyCareController::class, 'apiModalData'],        ['auth']);
+        $router->post('/api/tcp/patienten/{id}/fortschritt/ki-zusammenfassung', [TherapyCareController::class, 'aiProgressSummary'], ['auth']);
 
         /* ── OWNER PORTAL EXTENSIONS ── */
         /* Aggregierte Fortschritts-Übersicht — nav-zugängliche Einstiegsseite.

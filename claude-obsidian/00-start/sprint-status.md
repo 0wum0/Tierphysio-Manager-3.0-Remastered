@@ -46,3 +46,27 @@ Siehe `claude-obsidian/bugs/dispatcher-mysql-1103.md`
 - ✅ Nutzerhinweis "Mahnwesen ist auch pro Tenant nutzbar" verifiziert und `finanz-autopilot.md` korrigiert (war fälschlich als reine SaaS-interne Funktion unterbewertet)
 - ✅ Landingpage (`saas-platform/templates/landing/index.twig`) mit vollständigem, verifiziertem Funktionsumfang überarbeitet: 3D-Schmerzanalyse, Rechnungsdesign, Steuerexport, Hundeschule, Besitzerportal neu ergänzt; App-Plattform-Angaben korrigiert (kein falsches macOS/iOS-Beta-Versprechen mehr)
 - ✅ Drei Vertriebs-/Marketing-Dokumente erstellt: `13-marketing/staerken-dokumentation.md`, `13-marketing/video-skript.md`, `13-marketing/vergleich-therapano-vs-theratap.md`
+
+## Nachtrag — 2026-07-01, Teil 5: Echte KI-Integration (Grok/Gemini)
+
+**Branch:** `main` (direktes Commiten, siehe geänderte `git-pr-rules.md`)
+
+### Fertig
+- ✅ `app/Services/AiService.php` — providerunabhängiger KI-Service (xAI Grok + Google Gemini), niemals werfend, immer `null` bei Fehlern
+- ✅ SaaS-Admin: `AiSettingsController` + Template + Route + Nav-Eintrag „KI-Integration (Grok/Gemini)" unter „System" — Muster 1:1 von `GoogleSettingsController` übernommen
+- ✅ Config-Verteilung via `saas-platform/storage/config/ai.php` (identisches Muster wie `google.php`)
+- ✅ Feature-Gate: bestehendes `ki_assistance`-Feature genutzt (kein neues Feature nötig)
+- ✅ TherapyCare: `aiProgressSummary()` — KI-Zusammenfassung des Therapiefortschritts
+- ✅ Tierarztbericht: `aiDraft()` — KI-Entwurf-Button im Quill-Editor (serverseitig HTML-escaped)
+- ✅ Patienten-Timeline: `timelineAiInsight()` — KI-Zusammenfassung der letzten Einträge
+- ✅ TrainingCare: `aiRecommendations()` — KI-Trainingsempfehlung aus Mastery-/Erfolgsquoten-Daten
+- ✅ Alle 4 Integrationen additiv, ausfallsicher (kein Provider/Feature aktiv → Button ausgeblendet bzw. klare Fehlermeldung, nie ein Crash)
+- ✅ `therapycare-ai.md` / `trainingcare-ai.md` korrigiert: "AI" ist jetzt echte KI, nicht mehr nur Branding
+- ✅ Neue Feature-Seite `07-features/ai-integration.md` mit vollständiger Architektur-Doku
+- ✅ Alle geänderten PHP-Dateien mit `php -l` geprüft, alle Twig-Dateien auf Tag-Balance geprüft
+
+### Offen
+- Rate-Limiting/Kostenkontrolle pro Tenant für KI-Aufrufe
+- Caching von KI-Antworten
+- Audit-Log für KI-Nutzung
+- Weitere Integrationspunkte (Marketing-Automation, Feedback-Kategorisierung) sind denkbar, aber bewusst nicht in dieser Runde umgesetzt

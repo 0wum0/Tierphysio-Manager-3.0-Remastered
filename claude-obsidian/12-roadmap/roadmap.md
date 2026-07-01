@@ -39,7 +39,9 @@ Produktidee → Entscheidung → Implementierung → Brain-Update.
 | P2 | Finanz-Autopilot: Cron-Erinnerung an Mitarbeiter bei unbearbeiteten überfälligen Rechnungen (Mahnwesen selbst ist bereits vollstaendig, siehe Korrektur Teil 4) | open, optionale Ergaenzung | [[07-features/finanz-autopilot]] |
 | P1 | Zahlung im Portal: Online-Zahlfunktion fuer Tierbesitzer im Owner-Portal bauen (aktuell nur Rechnungsliste) | open, aus Vollaudit 2026-07-01 | [[07-features/zahlung-im-portal]] |
 | P1 | Video-Feedback: Annotations-/Kommentar-Modul ergaenzen oder Feature-Namen korrigieren | open, aus Vollaudit 2026-07-01 | [[07-features/video-feedback]] |
-| P2 | TherapyCare AI / TrainingCare AI: echte KI-Funktionalitaet bauen oder Namen auf tatsaechlichen Funktionsumfang korrigieren | open, aus Vollaudit 2026-07-01 | [[07-features/therapycare-ai]] · [[07-features/trainingcare-ai]] |
+| P0 | TherapyCare AI / TrainingCare AI: echte KI-Funktionalitaet (Grok/Gemini) gebaut | **released 2026-07-01** | [[07-features/ai-integration]] |
+| P2 | KI-Integration: Rate-Limiting/Kostenkontrolle, Caching, Audit-Log pro Tenant ergaenzen | open | [[07-features/ai-integration]] |
+| P2 | KI-Integration auf weitere Bereiche ausweiten (z.B. Marketing-Automation-Texte, Feedback-Kategorisierung) | open | [[07-features/ai-integration]] |
 | P2 | Marketing Automation: Kampagnen-/Automations-Backend bauen (aktuell nur Reporting-Dashboard) | open, aus Vollaudit 2026-07-01 | [[07-features/marketing-automation]] |
 | P2 | Gamification: Punkte/Streaks/Achievements bauen oder Feature auf "Fortschritts-Badges" umbenennen | open, aus Vollaudit 2026-07-01 | [[07-features/gamification]] |
 | P0 | Veterinary Anatomy Engine: Status-Korrektur "blocked" → "implemented", Marketing/Vertrieb informieren | released 2026-07-01 (Doku-Fix) | [[07-features/veterinary-anatomy-engine]] |

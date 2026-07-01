@@ -31,6 +31,7 @@ in dieser Form am Markt nicht auffindbaren 3D-Schmerzanalyse-System.
 | **Feedback-/Support-System** | Eingebaut, direkt aus der App | Nicht erwähnt |
 | **Terminologie-Anpassung** | Automatisches Wechseln zwischen Praxis- und Hundeschul-Sprache | Nicht erwähnt |
 | **SaaS-Architektur** | Multi-Tenant mit eigenem Betreiber-Admin, Plan-/Lizenzsystem | Einzelplatz-Software, kein Betreiber-Layer erkennbar |
+| **Echte KI-Funktionen** (seit 2026-07-01) | Grok/Gemini-Integration: KI-Zusammenfassung im Therapiefortschritt, KI-Entwurf für Tierarztberichte, KI-Trainingsempfehlungen | Nicht erwähnt (außer Anamnese-Sprachtranskription, siehe unten) |
 
 ---
 
@@ -47,7 +48,7 @@ aktuell nicht verifiziert bzw. nicht vorhanden:
 | **SMS-Erinnerungen** | Ja | TheraPano erinnert per E-Mail/Portal, keine SMS verifiziert |
 | **Lexware-Office-Live-Integration** | Direkte Anbindung | TheraPano exportiert DATEV-/CSV-Dateien, die in Lexware & Co. importiert werden können — aber keine Live-API-Anbindung |
 | **Stempelkarten (Kundenbindungssystem)** | Ja | Nicht vorhanden (Kurspakete/Mehrfachkarten decken das nur für Hundeschulen ab) |
-| **KI-Sprachtranskription für Anamnese** | Beworben | TheraPano hat aktuell keine echte KI-Funktion — Namen wie „TherapyCare AI" sind reines Branding ohne KI-Backend (siehe interne Roadmap) |
+| **KI-Sprachtranskription für Anamnese** | Beworben | TheraPano hat keine Sprachtranskription, aber seit 2026-07-01 echte KI (Grok/Gemini) für Fortschritts-Zusammenfassungen, Tierarztbericht-Entwürfe und Trainingsempfehlungen (siehe [[07-features/ai-integration]]) — andere Anwendungsfälle, kein 1:1-Vergleich |
 
 ---
 

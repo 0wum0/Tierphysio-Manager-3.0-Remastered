@@ -12,12 +12,14 @@ use App\Core\View;
 use App\Core\Database;
 use App\Repositories\SettingsRepository;
 use App\Services\CustomVetReportPdfService;
+use App\Services\AiService;
 
 class VetReportController extends Controller
 {
     private VetReportService $service;
     private Database $db;
     private SettingsRepository $settingsRepository;
+    private AiService $aiService;
 
     public function __construct(
         View $view,
@@ -25,12 +27,14 @@ class VetReportController extends Controller
         Config $config,
         Translator $translator,
         Database $db,
-        SettingsRepository $settingsRepository
+        SettingsRepository $settingsRepository,
+        AiService $aiService
     ) {
         parent::__construct($view, $session, $config, $translator);
         $this->db      = $db;
         $this->settingsRepository = $settingsRepository;
         $this->service = new VetReportService($settingsRepository);
+        $this->aiService = $aiService;
     }
 
     private function t(string $table): string
@@ -392,6 +396,88 @@ class VetReportController extends Controller
         } catch (\Throwable $e) {
             $this->json(['ok' => false, 'error' => $e->getMessage()], 500);
         }
+    }
+
+    /* ── POST /patienten/{id}/tierarztbericht/ki-entwurf ── */
+    /**
+     * Erstellt einen KI-Entwurf für den manuellen Tierarztbericht aus
+     * Timeline (Behandlungen/Notizen) + Patientendaten. Befüllt NICHT
+     * automatisch die DB — liefert nur Text, den der Nutzer im
+     * Quill-Editor sieht, prüft und selbst speichert (wie eine Vorlage).
+     *
+     * Additiv & ausfallsicher: kein Provider konfiguriert oder KI-Aufruf
+     * schlägt fehl → sauberes ok:false, nie ein Fatal Error.
+     */
+    public function aiDraft(array $params = []): void
+    {
+        $this->validateCsrf();
+        $this->requireFeature('ki_assistance');
+
+        $patientId = (int)($params['id'] ?? 0);
+        $patient   = $this->loadPatient($patientId);
+        if (!$patient) {
+            $this->json(['ok' => false, 'error' => 'not_found'], 404);
+            return;
+        }
+
+        if (!$this->aiService->isConfigured()) {
+            $this->json(['ok' => false, 'error' => 'ai_not_configured']);
+            return;
+        }
+
+        $timeline = $this->loadTimeline($patientId);
+        if (empty($timeline) && empty($patient['notes'])) {
+            $this->json(['ok' => false, 'error' => 'no_data']);
+            return;
+        }
+
+        // Nur die letzten 25 Timeline-Einträge in den Prompt geben.
+        $recent = array_slice($timeline, 0, 25);
+        $lines  = [];
+        foreach ($recent as $e) {
+            $lines[] = sprintf(
+                '%s | %s: %s',
+                substr((string)($e['entry_date'] ?? ''), 0, 10),
+                (string)($e['type'] ?? 'Eintrag'),
+                trim((string)($e['title'] ?? '') . ' ' . strip_tags((string)($e['content'] ?? '')))
+            );
+        }
+
+        $systemPrompt = 'Du bist eine fachliche Schreibassistenz für Tierphysiotherapeuten. '
+            . 'Verfasse aus den gegebenen Behandlungsdaten einen strukturierten Entwurf für einen '
+            . 'Tierarztbericht auf Deutsch. Gliedere in Abschnitte: Anamnese, Behandlungsverlauf, '
+            . 'aktueller Befund, Empfehlung. Nutze NUR die gegebenen Fakten, erfinde nichts hinzu. '
+            . 'Formuliere sachlich-professionell wie ein kollegiales Schreiben. '
+            . 'Gib NUR Fließtext zurück, ohne HTML- oder Markdown-Formatierung, Absätze durch Leerzeilen getrennt.';
+
+        $userPrompt = sprintf(
+            "Patient: %s (%s%s)\nAnamnese-Notiz: %s\n\nBehandlungsverlauf (Datum | Typ: Inhalt):\n%s",
+            (string)($patient['name'] ?? 'Patient'),
+            (string)($patient['species'] ?? 'Tier'),
+            !empty($patient['breed']) ? ', ' . $patient['breed'] : '',
+            strip_tags((string)($patient['notes'] ?? '')) ?: '—',
+            implode("\n", $lines) ?: '—'
+        );
+
+        $draft = $this->aiService->generateText($systemPrompt, $userPrompt);
+
+        if ($draft === null) {
+            $this->json(['ok' => false, 'error' => 'ai_unavailable']);
+            return;
+        }
+
+        // Server-seitig sicheres HTML aus dem Klartext bauen (Absätze → <p>,
+        // vollständig escaped) — verhindert jede Möglichkeit von HTML-Injection
+        // durch KI-Output, ohne dass das Frontend rohes Modell-HTML einfügen muss.
+        $paragraphs = preg_split('/\n\s*\n/', trim($draft)) ?: [$draft];
+        $html = '';
+        foreach ($paragraphs as $p) {
+            $p = trim($p);
+            if ($p === '') { continue; }
+            $html .= '<p>' . nl2br(htmlspecialchars($p, ENT_QUOTES, 'UTF-8')) . '</p>';
+        }
+
+        $this->json(['ok' => true, 'content' => $html]);
     }
 
     /* ── Private helpers ─────────────────────────────────────────────── */

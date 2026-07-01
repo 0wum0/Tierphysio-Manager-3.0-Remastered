@@ -429,6 +429,7 @@ $router->post('/patienten/{id}/attachment-upload', [PatientController::class, 'u
 $router->post('/patienten/{id}/timeline/{entryId}/loeschen', [PatientController::class, 'deleteTimelineEntry'], ['auth']);
 $router->post('/patienten/{id}/timeline/{entryId}/update-json', [PatientController::class, 'updateTimelineEntryJson'], ['auth']);
 $router->post('/patienten/{id}/timeline/{entryId}/delete-json', [PatientController::class, 'deleteTimelineEntryJson'], ['auth']);
+$router->post('/patienten/{id}/timeline/ki-zusammenfassung', [PatientController::class, 'timelineAiInsight'], ['auth']);
 $router->get('/patienten/{id}/pdf', [PatientController::class, 'downloadPatientPdf'], ['auth']);
 $router->get('/patienten/{id}/hausaufgaben/pdf', [PatientController::class, 'downloadHomeworkPdf'], ['auth']);
 $router->post('/patienten/{id}/hausaufgaben/email', [PatientController::class, 'sendHomeworkEmail'], ['auth']);
@@ -731,6 +732,7 @@ $router->post('/trainingsplaene/{id}/zuweisen',                      [TrainingPl
 // Plan-Zuweisungen (individuelle Hunde)
 $router->get('/trainingsplaene/zuweisung/{id}',                      [TrainingPlanController::class, 'assignmentShow'],   ['auth', 'feature:dogschool_training_plans']);
 $router->post('/trainingsplaene/zuweisung/{id}/status',              [TrainingPlanController::class, 'assignmentStatus'], ['auth', 'feature:dogschool_training_plans']);
+$router->post('/trainingsplaene/zuweisung/{id}/ki-empfehlung',       [TrainingPlanController::class, 'aiRecommendations'], ['auth', 'feature:dogschool_training_plans']);
 $router->post('/trainingsplaene/zuweisung/{id}/fortschritt',         [TrainingPlanController::class, 'recordProgress'],   ['auth', 'feature:dogschool_training_plans']);
 $router->post('/trainingsplaene/zuweisung/{id}/hausaufgabe',         [TrainingPlanController::class, 'createHomework'],   ['auth', 'feature:dogschool_training_plans']);
 $router->post('/trainingsplaene/zuweisung/{id}/hausaufgabe/{homework_id}', [TrainingPlanController::class, 'updateHomework'], ['auth', 'feature:dogschool_training_plans']);

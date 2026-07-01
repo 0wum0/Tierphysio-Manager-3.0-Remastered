@@ -1,0 +1,157 @@
+{% extends 'layouts/base.twig' %}
+{% block title %}KI-Integration (Grok / Gemini){% endblock %}
+{% block content %}
+
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        {% if is_configured %}
+        <div class="alert d-flex align-items-start gap-3" style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);color:#4ade80;border-radius:.5rem;padding:1rem;">
+            <span style="font-size:1.5rem;">✓</span>
+            <div>
+                <strong>KI-Integration konfiguriert – Tenants mit Feature "KI-Unterstützung" können KI-Funktionen nutzen</strong>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert d-flex align-items-start gap-3" style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);color:#fbbf24;border-radius:.5rem;padding:1rem;">
+            <span style="font-size:1.5rem;">⚠</span>
+            <div>
+                <strong>Kein Provider konfiguriert – KI-Funktionen bleiben in der Praxis-App ausgeblendet, bis mindestens ein API-Key hinterlegt ist</strong>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-info-circle"></i>
+                <strong>Wie funktioniert die KI-Integration?</strong>
+            </div>
+            <div class="card-body">
+                <ol class="mb-0" style="line-height:1.8;">
+                    <li class="mb-3">
+                        <strong>Zwei Provider zur Wahl</strong><br>
+                        <span class="text-muted">xAI Grok oder Google Gemini. Du kannst beide gleichzeitig hinterlegen — der "Standard-Provider" wird verwendet, fällt aber automatisch auf den jeweils anderen zurück, falls dieser nicht erreichbar ist.</span>
+                    </li>
+                    <li class="mb-3">
+                        <strong>Feature-Gate</strong><br>
+                        <span class="text-muted">KI-Funktionen sind an das Feature <code>ki_assistance</code> gekoppelt (Tarif-Verwaltung unter <a href="/admin/features">Features</a>). Nur Tenants mit aktivem Feature sehen KI-Buttons in der Praxis-App.</span>
+                    </li>
+                    <li class="mb-3">
+                        <strong>Wo wird KI genutzt?</strong><br>
+                        <span class="text-muted">TherapyCare-Fortschritts-Zusammenfassung, Tierarztbericht-Entwurf, Patienten-Timeline-Zusammenfassung, Trainingsplan-Empfehlungen (TrainingCare). Details in <code>claude-obsidian/07-features/ai-integration.md</code>.</span>
+                    </li>
+                    <li>
+                        <strong>Ausfallsicher</strong><br>
+                        <span class="text-muted">Ist kein Provider konfiguriert oder ein API-Aufruf schlägt fehl, bleiben die betroffenen Buttons in der Praxis-App einfach ausgeblendet bzw. zeigen einen Hinweis — nichts in der bestehenden Software wird dadurch beeinträchtigt.</span>
+                    </li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-12 col-lg-6">
+        <div class="card">
+            <div class="card-header d-flex align-items-center gap-2">
+                <i class="bi bi-key"></i>
+                <strong>API-Zugangsdaten</strong>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="/admin/ai-settings/update">
+                    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+
+                    <div class="mb-3">
+                        <label class="form-label">Standard-Provider</label>
+                        <select name="ai_default_provider" class="form-select">
+                            <option value="gemini" {% if (settings.ai_default_provider ?? 'gemini') == 'gemini' %}selected{% endif %}>Google Gemini</option>
+                            <option value="grok" {% if (settings.ai_default_provider ?? '') == 'grok' %}selected{% endif %}>xAI Grok</option>
+                        </select>
+                        <div class="form-text text-muted">Wird bevorzugt genutzt; bei Nichtverfügbarkeit automatischer Fallback auf den anderen konfigurierten Provider.</div>
+                    </div>
+
+                    <hr class="my-4">
+                    <h6 class="fw-bold mb-3">xAI Grok</h6>
+                    <div class="mb-3">
+                        <label class="form-label">Grok API-Key</label>
+                        <input type="password" name="ai_grok_api_key" class="form-control"
+                               value="{{ settings.ai_grok_api_key ?? '' }}"
+                               placeholder="xai-...">
+                        <div class="form-text text-muted">Aus der xAI-Konsole (console.x.ai).</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Grok Modell</label>
+                        <input type="text" name="ai_grok_model" class="form-control"
+                               value="{{ settings.ai_grok_model ?? 'grok-4' }}"
+                               placeholder="grok-4">
+                    </div>
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-test-grok">
+                            <i class="bi bi-plug me-2"></i>Grok-Verbindung testen
+                        </button>
+                        <div id="test-result-grok" class="mt-2"></div>
+                    </div>
+
+                    <hr class="my-4">
+                    <h6 class="fw-bold mb-3">Google Gemini</h6>
+                    <div class="mb-3">
+                        <label class="form-label">Gemini API-Key</label>
+                        <input type="password" name="ai_gemini_api_key" class="form-control"
+                               value="{{ settings.ai_gemini_api_key ?? '' }}"
+                               placeholder="AIza...">
+                        <div class="form-text text-muted">Aus Google AI Studio (aistudio.google.com/apikey).</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Gemini Modell</label>
+                        <input type="text" name="ai_gemini_model" class="form-control"
+                               value="{{ settings.ai_gemini_model ?? 'gemini-2.0-flash' }}"
+                               placeholder="gemini-2.0-flash">
+                    </div>
+                    <div class="mb-4">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-test-gemini">
+                            <i class="bi bi-plug me-2"></i>Gemini-Verbindung testen
+                        </button>
+                        <div id="test-result-gemini" class="mt-2"></div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save me-2"></i>Einstellungen speichern
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function testAiProvider(url, resultId, btn) {
+    const resultDiv = document.getElementById(resultId);
+    const origHtml = btn.innerHTML;
+    btn.disabled = true;
+    resultDiv.innerHTML = '<div class="alert alert-info py-2 px-3 mb-0"><i class="bi bi-hourglass-split me-2"></i>Verbindung wird getestet...</div>';
+
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                resultDiv.innerHTML = '<div class="alert alert-success py-2 px-3 mb-0"><i class="bi bi-check-circle me-2"></i>' + data.message + '</div>';
+            } else {
+                resultDiv.innerHTML = '<div class="alert alert-danger py-2 px-3 mb-0"><i class="bi bi-exclamation-triangle me-2"></i>' + data.message + '</div>';
+            }
+        })
+        .catch(e => {
+            resultDiv.innerHTML = '<div class="alert alert-danger py-2 px-3 mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Fehler: ' + e.message + '</div>';
+        })
+        .finally(() => { btn.disabled = false; btn.innerHTML = origHtml; });
+}
+
+document.getElementById('btn-test-grok').addEventListener('click', function() {
+    testAiProvider('/admin/ai-settings/test-grok', 'test-result-grok', this);
+});
+document.getElementById('btn-test-gemini').addEventListener('click', function() {
+    testAiProvider('/admin/ai-settings/test-gemini', 'test-result-gemini', this);
+});
+</script>
+
+{% endblock %}

@@ -46,8 +46,9 @@ vollständig implementiert — daraufhin wurde ein zweiter Sweep über den gesam
 | [[07-features/marketing-automation]] | **not_found** | Nur Dashboard-Reporting, kein Kampagnen-/Automations-Backend |
 | [[07-features/zahlung-im-portal]] | **partial** | Nur Rechnungsliste/PDF, keine Online-Zahlfunktion fuer Tierbesitzer |
 | [[07-features/praxis-vs-hundeschule]] | implemented | Terminology-Switching in `terminology.dart` bestaetigt |
-| [[07-features/therapycare-ai]] | **not_found (AI)** | Basissystem ohne KI implementiert; "AI" ist Branding ohne Backend |
-| [[07-features/trainingcare-ai]] | **implemented (Trainingsplan-System), AI: not_found** | Trainingsplaene real umgesetzt, KI-Anteil existiert nicht |
+| [[07-features/therapycare-ai]] | **implemented (echte KI seit 2026-07-01)** | Siehe [[07-features/ai-integration]] |
+| [[07-features/trainingcare-ai]] | **implemented (echte KI seit 2026-07-01)** | Siehe [[07-features/ai-integration]] |
+| [[07-features/ai-integration]] | **implemented** | Grok/Gemini, SaaS-Admin-Einstellungen, 4 Integrationspunkte (TCP, Vet-Report, Timeline, TrainingCare) |
 | [[07-features/gamification]] | **partial** | Nur Score-Badges/Fortschrittsbalken, keine Punkte/Streaks/Achievements |
 
 ### Neu gefunden im Vollaudit 2026-07-01 (waren komplett undokumentiert)

@@ -12,11 +12,13 @@ use App\Core\View;
 use App\Core\Database;
 use App\Repositories\SettingsRepository;
 use App\Services\MailService;
+use App\Services\AiService;
 
 class TherapyCareController extends Controller
 {
     private TherapyCareRepository $repo;
     private SettingsRepository $settingsRepo;
+    private AiService $aiService;
 
     public function __construct(
         View $view,
@@ -24,11 +26,13 @@ class TherapyCareController extends Controller
         Config $config,
         Translator $translator,
         Database $db,
-        SettingsRepository $settingsRepo
+        SettingsRepository $settingsRepo,
+        AiService $aiService
     ) {
         parent::__construct($view, $session, $config, $translator);
         $this->repo         = new TherapyCareRepository($db);
         $this->settingsRepo = $settingsRepo;
+        $this->aiService    = $aiService;
     }
 
     /**
@@ -1348,6 +1352,78 @@ class TherapyCareController extends Controller
         $patientId  = (int)$params['id'];
         $visibility = $this->repo->getPortalVisibility($patientId);
         $this->json($visibility);
+    }
+
+    /**
+     * Generiert eine KI-Kurzzusammenfassung des Therapiefortschritts.
+     *
+     * Additiv & ausfallsicher: Ist das Feature deaktiviert, kein Provider
+     * konfiguriert oder der KI-Aufruf schlägt fehl, wird ein sauberes
+     * `ok:false` mit Grund zurückgegeben — nie ein Fatal Error, nie ein
+     * Einfluss auf die bestehende Fortschritts-Anzeige.
+     */
+    public function aiProgressSummary(array $params = []): void
+    {
+        $this->validateCsrf();
+        $this->requireFeature('ki_assistance');
+
+        $patientId = (int)$params['id'];
+        $patient   = $this->repo->getPatientWithOwner($patientId);
+        if (!$patient) {
+            $this->json(['ok' => false, 'error' => 'not_found'], 404);
+            return;
+        }
+
+        if (!$this->aiService->isConfigured()) {
+            $this->json(['ok' => false, 'error' => 'ai_not_configured']);
+            return;
+        }
+
+        $entries = $this->repo->getProgressEntriesForPatient($patientId);
+        $latest  = $this->repo->getLatestProgressForPatient($patientId);
+
+        if (empty($entries)) {
+            $this->json(['ok' => false, 'error' => 'no_data']);
+            return;
+        }
+
+        // Nur die letzten 40 Einträge in den Prompt geben — genug für einen
+        // aussagekräftigen Verlauf, ohne unnötig große Prompts zu erzeugen.
+        $recent = array_slice($entries, -40);
+        $lines  = [];
+        foreach ($recent as $e) {
+            $lines[] = sprintf(
+                '%s | %s: %d/%d%s',
+                substr((string)($e['entry_date'] ?? ''), 0, 10),
+                (string)($e['category_name'] ?? 'Kategorie'),
+                (int)($e['score'] ?? 0),
+                (int)($e['scale_max'] ?? 10),
+                !empty($e['notes']) ? ' — ' . $e['notes'] : ''
+            );
+        }
+
+        $systemPrompt = 'Du bist eine fachliche Assistenz für Tierphysiotherapeuten. '
+            . 'Fasse Verlaufsdaten aus einem Therapiefortschritts-Tracking in 2-3 kurzen, '
+            . 'sachlichen Sätzen auf Deutsch zusammen. Nenne erkennbare Trends (Verbesserung/'
+            . 'Verschlechterung/stabil) je Kategorie. Erfinde keine Werte, nutze nur die '
+            . 'gegebenen Daten. Kein Diagnosevorschlag, keine Behandlungsempfehlung — nur '
+            . 'eine neutrale Verlaufszusammenfassung.';
+
+        $userPrompt = sprintf(
+            "Patient: %s (%s)\n\nVerlaufseinträge (Datum | Kategorie: Wert/Max — Notiz):\n%s",
+            (string)($patient['name'] ?? 'Patient'),
+            (string)($patient['species'] ?? 'Tier'),
+            implode("\n", $lines)
+        );
+
+        $summary = $this->aiService->generateText($systemPrompt, $userPrompt);
+
+        if ($summary === null) {
+            $this->json(['ok' => false, 'error' => 'ai_unavailable']);
+            return;
+        }
+
+        $this->json(['ok' => true, 'summary' => $summary]);
     }
 
     /* ══════════════════════════════════════════════════════════
