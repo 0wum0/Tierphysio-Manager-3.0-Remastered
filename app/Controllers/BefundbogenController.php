@@ -412,7 +412,13 @@ class BefundbogenController extends Controller
     /** GET /portal/befunde — owner sees own befunde */
     public function portalIndex(array $params = []): void
     {
-        $base    = $this->requirePortalAuth();
+        $base = $this->requirePortalAuth();
+        /* Trainer-/Hundeschul-Tenants haben keine Befundbögen — kein Logout,
+         * sondern sauberer Redirect aufs Portal-Dashboard. */
+        if ($base['is_trainer_tenant']) {
+            $this->redirect('/portal/dashboard');
+            return;
+        }
         $ownerId = (int)$base['portal_user']['owner_id'];
         $befunde = $this->repo->findByOwner($ownerId);
 
@@ -426,7 +432,11 @@ class BefundbogenController extends Controller
     /** GET /portal/befunde/{id} — owner reads single befund */
     public function portalShow(array $params = []): void
     {
-        $base        = $this->requirePortalAuth();
+        $base = $this->requirePortalAuth();
+        if ($base['is_trainer_tenant']) {
+            $this->redirect('/portal/dashboard');
+            return;
+        }
         $ownerId     = (int)$base['portal_user']['owner_id'];
         $befundbogen = $this->repo->findWithFelder((int)$params['id']);
 
@@ -448,7 +458,11 @@ class BefundbogenController extends Controller
     /** GET /portal/befunde/{id}/pdf */
     public function portalPdf(array $params = []): void
     {
-        $base        = $this->requirePortalAuth();
+        $base = $this->requirePortalAuth();
+        if ($base['is_trainer_tenant']) {
+            $this->redirect('/portal/dashboard');
+            return;
+        }
         $ownerId     = (int)$base['portal_user']['owner_id'];
         $befundbogen = $this->repo->findWithFelder((int)$params['id']);
 
@@ -559,10 +573,16 @@ class BefundbogenController extends Controller
             exit;
         }
 
+        $db = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+
         try {
-            $db       = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            /* Tenant-prefixed table names — ohne Prefix schlägt die Query bei
+             * Multi-Tenant-DBs fehl und der Nutzer würde fälschlich ausgeloggt. */
             $userStmt = $db->query(
-                'SELECT u.*, o.first_name, o.last_name FROM owner_portal_users u JOIN owners o ON o.id = u.owner_id WHERE u.id = ? LIMIT 1',
+                'SELECT u.*, o.first_name, o.last_name
+                   FROM `' . $db->prefix('owner_portal_users') . '` u
+                   JOIN `' . $db->prefix('owners') . '` o ON o.id = u.owner_id
+                  WHERE u.id = ? LIMIT 1',
                 [(int)$userId]
             );
             $user = $userStmt->fetch(\PDO::FETCH_ASSOC) ?: null;
@@ -577,12 +597,13 @@ class BefundbogenController extends Controller
             exit;
         }
 
-        /* Unread message count */
+        /* Unread message count (tenant-prefixed, korrekte Spalte sender_type; non-fatal) */
         $unread = 0;
         try {
-            $db2   = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
-            $uStmt = $db2->query(
-                "SELECT COUNT(*) FROM portal_messages WHERE thread_id IN (SELECT id FROM portal_threads WHERE owner_id = ?) AND sender = 'admin' AND is_read = 0",
+            $uStmt = $db->query(
+                "SELECT COUNT(*) FROM `" . $db->prefix('portal_messages') . "`
+                  WHERE thread_id IN (SELECT id FROM `" . $db->prefix('portal_threads') . "` WHERE owner_id = ?)
+                    AND sender_type = 'admin' AND is_read = 0",
                 [(int)$user['owner_id']]
             );
             $unread = (int)($uStmt->fetchColumn() ?: 0);
@@ -593,7 +614,20 @@ class BefundbogenController extends Controller
             'portal_unread_count' => $unread,
             'csrf_token'          => $this->session->generateCsrfToken(),
             'show_homework_nav'   => true,
+            /* Trainer-/Hundeschul-Tenant-Flag für das Portal-Layout (Nav-Gating). */
+            'is_trainer_tenant'   => $this->isTrainerTenant(),
         ];
+    }
+
+    /**
+     * True wenn der aktuelle Tenant eine Hundeschule/Trainer ist.
+     * Befundbögen sind tiertherapeutische Inhalte und werden für Trainer
+     * ausgeblendet bzw. serverseitig blockiert. Spiegelt die Logik aus
+     * OwnerPortalController::isTrainerTenant().
+     */
+    private function isTrainerTenant(): bool
+    {
+        return strtolower(trim((string)$this->settings->get('practice_type', 'therapeut'))) === 'trainer';
     }
 
     /* ══════════════════════════════════════════════════════

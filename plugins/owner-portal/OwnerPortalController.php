@@ -332,20 +332,24 @@ class OwnerPortalController extends Controller
             $checksByPlan[$pid] = $this->repo->getChecksForPlan($pid, $ownerId);
         }
 
-        /* ── Befundbögen for this pet (non-draft) ── */
+        /* ── Befundbögen for this pet (non-draft) ──
+         * Tiertherapeutische Inhalte — bei Trainer-/Hundeschul-Tenants gar nicht
+         * laden, damit der Befundbögen-Tab im Portal nicht erscheint. */
         $befunde = [];
-        try {
-            $db = \App\Core\Application::getInstance()->getContainer()->get(Database::class);
-            $stmt = $db->query(
-                "SELECT b.*, u.name AS ersteller_name
-                 FROM `{$this->t('befundboegen')}` b
-                 LEFT JOIN `{$this->t('users')}` u ON u.id = b.created_by
-                 WHERE b.patient_id = ? AND b.status != 'entwurf'
-                 ORDER BY b.datum DESC",
-                [$petId]
-            );
-            $befunde = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-        } catch (\Throwable) {}
+        if (!$this->isTrainerTenant()) {
+            try {
+                $db = \App\Core\Application::getInstance()->getContainer()->get(Database::class);
+                $stmt = $db->query(
+                    "SELECT b.*, u.name AS ersteller_name
+                     FROM `{$this->t('befundboegen')}` b
+                     LEFT JOIN `{$this->t('users')}` u ON u.id = b.created_by
+                     WHERE b.patient_id = ? AND b.status != 'entwurf'
+                     ORDER BY b.datum DESC",
+                    [$petId]
+                );
+                $befunde = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            } catch (\Throwable) {}
+        }
 
         $this->render('@owner-portal/owner_pet_detail.twig', array_merge($this->portalBase($user), [
             'page_title'     => $pet['name'],

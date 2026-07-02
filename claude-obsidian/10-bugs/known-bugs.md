@@ -925,6 +925,53 @@ keine Breaking Changes an gespeicherten Schmerzpunkten.
 
 ---
 
+## Bug: Portal — Trainer/Hundeschulen sehen Befundbögen + Logout beim Klick (Juli 2026)
+**Status:** `fixed`
+**Dateien:**
+- `app/Controllers/BefundbogenController.php` (`requirePortalAuth`, `portalIndex/Show/Pdf`)
+- `plugins/owner-portal/templates/portal_layout.twig` (Nav-Gating)
+- `plugins/owner-portal/OwnerPortalController.php` (`petDetail` — Befunde nicht laden)
+
+### Symptom
+Im Besitzerportal von Trainer-/Hundeschul-Tenants wurden tiertherapeutische Inhalte
+(„Befundbögen") weiterhin angezeigt. Klick auf den Befundbögen-Link loggte den Nutzer aus
+(Redirect auf `/portal/login`).
+
+### Ursache (2 unabhängige Bugs)
+**Bug 1 — Logout (betraf alle Tenants):**
+`BefundbogenController::requirePortalAuth()` fragte `owner_portal_users` und `owners` **ohne
+Tenant-Prefix** ab (`FROM owner_portal_users u JOIN owners o ...`). Die echten Tabellen heißen
+`t_{tenant}_owner_portal_users` etc. (siehe `OwnerPortalRepository`, das `$db->prefix()` nutzt).
+`Database::query()` prefixt NICHT automatisch → Query trifft nicht existierende Tabelle →
+PDOException → `catch` → `$user = null` → Session gelöscht → Redirect `/portal/login` = Logout.
+Der Prefix ist für `/portal/*`-Requests korrekt gesetzt (`app/Core/Application.php` aus
+`portal_tenant_prefix`), wurde aber im rohen SQL ignoriert. Zusätzlich nutzte die Unread-Query
+die falsche Spalte `sender` statt `sender_type` und ebenfalls unprefixte Tabellen.
+
+**Bug 2 — Sichtbarkeit:**
+Der „Befundbögen"-Nav-Link in `portal_layout.twig` war nicht per `is_trainer_tenant` gated
+(anders als „Kurse"). `BefundbogenController` lieferte zudem kein `is_trainer_tenant` an das
+Layout. Der Pet-Detail-Tab „Befundbögen" erschien für Trainer, weil `OwnerPortalController::petDetail`
+Befunde unabhängig vom Tenant-Typ lud.
+
+### Fix
+1. `requirePortalAuth()`: Tabellen mit `$db->prefix(...)` (owner_portal_users, owners,
+   portal_messages, portal_threads), Unread-Query auf `sender_type = 'admin'` korrigiert,
+   `is_trainer_tenant` (aus `settings.practice_type`) im Base-Array ergänzt. Neuer Helper
+   `isTrainerTenant()` (spiegelt `OwnerPortalController::isTrainerTenant()`).
+2. `portalIndex/portalShow/portalPdf`: bei Trainer-Tenant sauberer Redirect auf
+   `/portal/dashboard` statt Logout/Anzeige (Server-seitiger Guard, auch bei Direkt-URL).
+3. `portal_layout.twig`: Befundbögen-Nav nur `{% if not (is_trainer_tenant ?? false) %}`.
+4. `OwnerPortalController::petDetail`: Befunde bei Trainer-Tenants gar nicht laden →
+   Befundbögen-Tab verschwindet.
+
+### Verifikation
+- Therapeut-Tenant: `/portal/befunde` lädt jetzt korrekt (vorher Logout).
+- Trainer-Tenant: kein Befundbögen-Nav, kein Befund-Tab; Direktaufruf `/portal/befunde`
+  → Redirect Dashboard (kein Logout).
+
+---
+
 ## Verlinkungen
 - [[15-agent-rules/update-brain]]
 - [[11-decisions/decision-log]]
