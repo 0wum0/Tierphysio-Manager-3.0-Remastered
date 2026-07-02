@@ -1020,6 +1020,23 @@ nutzen — nie `issue_date` allein für „paid"-Umsätze.
 Rollierendes Mo–So-Fenster (ISO-Woche) — überlappt Monatsgrenzen. Eine am 01.07.
 gebuchte Zahlung erscheint in der Woche 29.06.–05.07. UND im Juli-Monatsumsatz.
 
+### Nachtrag 2026-07-02 (Screenshot-Review /rechnungen): weitere Inkonsistenzen behoben
+1. **Wochen-KPI-Untertitel log:** Kachel zeigte „letzte 7 Tage", Code rechnet aber
+   „seit Montag" (ISO-Woche). Untertitel jetzt: „seit Montag (TT.MM.)" — erklärt auch,
+   warum die Woche (Mo 29.06.–) mehr zeigen kann als der laufende Monat (ab 01.07.).
+2. **Alle Charts auf Zahlungsdatum umgestellt** (`revenueDateExpr()`, Bezahlt-Serie):
+   - `getMonthlyChartData()` — 12-Monats-Chart auf /rechnungen
+   - `getChartDataByStatus()` — Dashboard-Charts (monatlich + wöchentlich)
+   - `getChartData()` — Dashboard-API `/api/dashboard/chart`
+   - `getRevenueForForecast()` — Finanz-Analyse Forecast
+   - `getOwnerMonthlyRevenue()` — Top-Tierhalter-Monatsverlauf
+   Offen/Überfällig/Entwurf-Serien bleiben bei `issue_date` (kein Zahlungsdatum vorhanden).
+3. **Bezahlt-Split-Kacheln („Rechnung bezahlt" + „Barzahlung") summierten nicht auf
+   den Gesamtumsatz** (Screenshot: 4.349,50 + 2.010 = 6.359,50 ≠ 6.641): Rechnungen mit
+   `payment_method` NULL/'' fielen in keinen Bucket. Regel jetzt: bar = explizit 'bar',
+   Rechnung = alles andere (`payment_method IS NULL OR <> 'bar'`).
+4. `revenueDateExpr()` mit Request-Memo-Cache (ein Spalten-Probe-Query pro Request).
+
 ---
 
 ## Verlinkungen

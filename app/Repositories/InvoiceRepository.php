@@ -23,14 +23,20 @@ class InvoiceRepository extends Repository
      * Steuerexport nutzen dieselbe Basis, sonst widersprechen sich die Zahlen.
      * Fallback auf issue_date, wenn die paid_at-Spalte (Migration 006) fehlt.
      */
+    private ?string $revenueDateExprCache = null;
+
     private function revenueDateExpr(): string
     {
+        if ($this->revenueDateExprCache !== null) {
+            return $this->revenueDateExprCache;
+        }
         try {
             $this->db->fetchColumn("SELECT `paid_at` FROM `{$this->t('invoices')}` LIMIT 0");
-            return "DATE(COALESCE(paid_at, issue_date))";
+            $this->revenueDateExprCache = "DATE(COALESCE(paid_at, issue_date))";
         } catch (\Throwable) {
-            return "issue_date";
+            $this->revenueDateExprCache = "issue_date";
         }
+        return $this->revenueDateExprCache;
     }
 
     /**
@@ -331,11 +337,15 @@ class InvoiceRepository extends Repository
         $cashAmount        = 0.0;
         $cashCount         = 0;
         try {
+            /* Alt-Rechnungen mit payment_method NULL oder '' (vor Migration 006 bzw.
+             * ungültiger ENUM-Wert) zählen als 'rechnung' — sonst summieren die
+             * beiden Kacheln nicht auf den Gesamtumsatz ("Bilanz stimmt nicht").
+             * Regel: bar = explizit 'bar', Rechnung = alles andere. */
             $paidInvoiceAmount = (float)$this->db->fetchColumn(
-                "SELECT {$sumGross} FROM `{$inv}` i WHERE i.status = 'paid' AND i.payment_method = 'rechnung'"
+                "SELECT {$sumGross} FROM `{$inv}` i WHERE i.status = 'paid' AND (i.payment_method IS NULL OR i.payment_method <> 'bar')"
             );
             $paidInvoiceCount = (int)$this->db->fetchColumn(
-                "SELECT COUNT(*) FROM `{$inv}` WHERE status = 'paid' AND payment_method = 'rechnung'"
+                "SELECT COUNT(*) FROM `{$inv}` WHERE status = 'paid' AND (payment_method IS NULL OR payment_method <> 'bar')"
             );
             $cashAmount = (float)$this->db->fetchColumn(
                 "SELECT {$sumGross} FROM `{$inv}` i WHERE i.status = 'paid' AND i.payment_method = 'bar'"
@@ -412,25 +422,27 @@ class InvoiceRepository extends Repository
         $inv = $this->t('invoices');
         $ip  = $this->t('invoice_positions');
         /* Gleicher Brutto-Fallback wie in getStats() — Konsistenz zwischen
-         * Dashboard-KPI-Zahlen und Revenue-Chart. */
+         * Dashboard-KPI-Zahlen und Revenue-Chart. Umsatz nach Zahlungsdatum
+         * (revenueDateExpr) — gleiche Basis wie KPIs und Steuerexport. */
         $gross = "COALESCE(NULLIF(i.total_gross, 0), "
                . "(SELECT SUM(ip.total) FROM `{$ip}` ip WHERE ip.invoice_id = i.id), 0)";
+        $revDate = $this->revenueDateExpr();
 
         if ($type === 'monthly') {
             $rows = $this->db->fetchAll(
-                "SELECT DATE_FORMAT(i.issue_date, '%Y-%m') AS period,
+                "SELECT DATE_FORMAT({$revDate}, '%Y-%m') AS period,
                         COALESCE(SUM({$gross}), 0) AS revenue
                  FROM `{$inv}` i
-                 WHERE i.status = 'paid' AND i.issue_date >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+                 WHERE i.status = 'paid' AND {$revDate} >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
                  GROUP BY period
                  ORDER BY period ASC"
             );
         } else {
             $rows = $this->db->fetchAll(
-                "SELECT DATE_FORMAT(i.issue_date, '%Y-%u') AS period,
+                "SELECT DATE_FORMAT({$revDate}, '%Y-%u') AS period,
                         COALESCE(SUM({$gross}), 0) AS revenue
                  FROM `{$inv}` i
-                 WHERE i.status = 'paid' AND i.issue_date >= DATE_SUB(NOW(), INTERVAL 12 WEEK)
+                 WHERE i.status = 'paid' AND {$revDate} >= DATE_SUB(NOW(), INTERVAL 12 WEEK)
                  GROUP BY period
                  ORDER BY period ASC"
             );
@@ -450,18 +462,24 @@ class InvoiceRepository extends Repository
         $gross = "COALESCE(NULLIF(i.total_gross, 0), "
                . "(SELECT SUM(ip.total) FROM `{$ip}` ip WHERE ip.invoice_id = i.id), 0)";
 
+        /* Bezahlt-Serie nach Zahlungsdatum — gleiche Basis wie KPI-Kacheln
+         * (getStats) und Steuerexport. Offen/Überfällig/Entwurf haben kein
+         * Zahlungsdatum und bleiben beim Rechnungsdatum. */
+        $revDate  = $this->revenueDateExpr();
+        $dateExpr = "CASE WHEN i.status = 'paid' THEN {$revDate} ELSE i.issue_date END";
+
         if ($type === 'monthly') {
             $periods = [];
             for ($i = 11; $i >= 0; $i--) {
                 $periods[] = date('Y-m', strtotime("-{$i} months"));
             }
             $rows = $this->db->fetchAll(
-                "SELECT DATE_FORMAT(i.issue_date, '%Y-%m') AS period,
+                "SELECT DATE_FORMAT({$dateExpr}, '%Y-%m') AS period,
                         i.status,
                         COALESCE(SUM({$gross}), 0) AS amount
                  FROM `{$inv}` i
                  WHERE i.status IN ('paid','open','overdue','draft')
-                   AND i.issue_date >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+                   AND ({$dateExpr}) >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
                  GROUP BY period, i.status
                  ORDER BY period ASC"
             );
@@ -476,12 +494,12 @@ class InvoiceRepository extends Repository
                 $periods[] = date('o-W', strtotime("-{$i} weeks"));
             }
             $rows = $this->db->fetchAll(
-                "SELECT DATE_FORMAT(i.issue_date, '%x-%v') AS period,
+                "SELECT DATE_FORMAT({$dateExpr}, '%x-%v') AS period,
                         i.status,
                         COALESCE(SUM({$gross}), 0) AS amount
                  FROM `{$inv}` i
                  WHERE i.status IN ('paid','open','overdue','draft')
-                   AND i.issue_date >= DATE_SUB(NOW(), INTERVAL 12 WEEK)
+                   AND ({$dateExpr}) >= DATE_SUB(NOW(), INTERVAL 12 WEEK)
                  GROUP BY period, i.status
                  ORDER BY period ASC"
             );
@@ -527,12 +545,19 @@ class InvoiceRepository extends Repository
         $gross = "COALESCE(NULLIF(i.total_gross, 0), "
                . "(SELECT SUM(ip.total) FROM `{$ip}` ip WHERE ip.invoice_id = i.id), 0)";
 
+        /* Bezahlt-Serie nach Zahlungsdatum (gleiche Basis wie KPI-Kacheln und
+         * Steuerexport, siehe revenueDateExpr()) — sonst zeigt der Chart eine
+         * Juni-Zahlung im Juni, die KPI aber im Juli. Offen/Überfällig haben
+         * kein Zahlungsdatum und bleiben beim Rechnungsdatum. */
+        $revDate   = $this->revenueDateExpr();
+        $monthExpr = "DATE_FORMAT(CASE WHEN i.status = 'paid' THEN {$revDate} ELSE i.issue_date END, '%Y-%m')";
+
         $rows = $this->db->fetchAll(
-            "SELECT DATE_FORMAT(i.issue_date, '%Y-%m') AS month,
+            "SELECT {$monthExpr} AS month,
                     COALESCE(SUM(CASE WHEN i.status = 'paid' THEN {$gross} ELSE 0 END), 0) AS paid,
                     COALESCE(SUM(CASE WHEN i.status IN ('open','overdue') THEN {$gross} ELSE 0 END), 0) AS open
              FROM `{$inv}` i
-             WHERE i.issue_date >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+             WHERE (CASE WHEN i.status = 'paid' THEN {$revDate} ELSE i.issue_date END) >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
              GROUP BY month
              ORDER BY month ASC"
         );
@@ -797,11 +822,12 @@ class InvoiceRepository extends Repository
     /** Last 6 months paid revenue for linear regression forecast */
     public function getRevenueForForecast(int $months = 18): array
     {
+        $revDate = $this->revenueDateExpr();
         $rows = $this->db->fetchAll(
-            "SELECT DATE_FORMAT(issue_date,'%Y-%m') AS month, SUM(total_gross) AS revenue
+            "SELECT DATE_FORMAT({$revDate},'%Y-%m') AS month, SUM(total_gross) AS revenue
              FROM `{$this->t('invoices')}`
              WHERE status = 'paid'
-               AND issue_date >= DATE_SUB(CURDATE(), INTERVAL ? MONTH)
+               AND {$revDate} >= DATE_SUB(CURDATE(), INTERVAL ? MONTH)
              GROUP BY month
              ORDER BY month ASC",
             [$months]
@@ -854,13 +880,14 @@ class InvoiceRepository extends Repository
         );
         if (!$topOwners) return [];
 
+        $revDate = $this->revenueDateExpr();
         $result = [];
         foreach ($topOwners as $owner) {
             $rows = $this->db->fetchAll(
-                "SELECT DATE_FORMAT(issue_date,'%Y-%m') AS month, SUM(total_gross) AS revenue
+                "SELECT DATE_FORMAT({$revDate},'%Y-%m') AS month, SUM(total_gross) AS revenue
                  FROM `{$this->t('invoices')}`
                  WHERE status = 'paid' AND owner_id = ?
-                   AND issue_date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+                   AND {$revDate} >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
                  GROUP BY month ORDER BY month ASC",
                 [$owner['id']]
             );
