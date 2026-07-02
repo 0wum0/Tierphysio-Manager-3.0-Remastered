@@ -391,19 +391,21 @@ class InvoiceController extends Controller
             return;
         }
 
-        $paidAt = ($status === 'paid') ? date('Y-m-d H:i:s') : null;
-        
+        $paidAt = ($status === 'paid')
+            ? $this->resolvePaidAt((string)$this->post('paid_at', ''))
+            : null;
+
         $this->invoiceService->updateStatus((int)$params['id'], $status, $paidAt);
 
         /* ── Automatischer Timeline-Eintrag bei Bezahlung ── */
         if ($status === 'paid' && $invoice['patient_id']) {
-            $paidAtFormatted = date('d.m.Y \u\m H:i \U\h\r');
+            $paidAtFormatted = date('d.m.Y', strtotime($paidAt));
             try {
                 $this->patientService->addTimelineEntry([
                     'patient_id'   => (int)$invoice['patient_id'],
                     'type'         => 'payment',
                     'title'        => 'Rechnung ' . ($invoice['invoice_number'] ?? '') . ' bezahlt',
-                    'content'      => 'Rechnung am ' . $paidAtFormatted . ' als bezahlt markiert.',
+                    'content'      => 'Zahlungseingang am ' . $paidAtFormatted . '.',
                     'status_badge' => 'bezahlt',
                     'entry_date'   => date('Y-m-d H:i:s'),
                     'user_id'      => (int)$this->session->get('user_id'),
@@ -441,8 +443,10 @@ class InvoiceController extends Controller
             $this->json(['ok' => false, 'error' => 'Ungültiger Status. Für Storno bitte /stornieren verwenden.'], 422);
         }
 
-        $paidAt = ($status === 'paid') ? date('Y-m-d H:i:s') : null;
-        
+        $paidAt = ($status === 'paid')
+            ? $this->resolvePaidAt((string)$this->post('paid_at', ''))
+            : null;
+
         $this->invoiceService->updateStatus((int)$params['id'], $status, $paidAt);
 
         if ($status === 'paid' && $invoice['patient_id']) {
@@ -451,7 +455,7 @@ class InvoiceController extends Controller
                     'patient_id'   => (int)$invoice['patient_id'],
                     'type'         => 'payment',
                     'title'        => 'Rechnung ' . ($invoice['invoice_number'] ?? '') . ' bezahlt',
-                    'content'      => 'Rechnung als bezahlt markiert.',
+                    'content'      => 'Zahlungseingang am ' . date('d.m.Y', strtotime($paidAt)) . '.',
                     'status_badge' => 'bezahlt',
                     'entry_date'   => date('Y-m-d H:i:s'),
                     'user_id'      => (int)$this->session->get('user_id'),
@@ -460,6 +464,24 @@ class InvoiceController extends Controller
         }
 
         $this->json(['ok' => true, 'status' => $status]);
+    }
+
+    /**
+     * Zahlungsdatum aus dem Formular auflösen (Ist-Besteuerung: Umsatz zählt
+     * zum Monat des Zahlungseingangs). Erlaubt Rückdatierung auf den echten
+     * Zahlungseingang (z.B. Juni-Zahlung erst im Juli ausgebucht), aber kein
+     * Datum in der Zukunft. Leer/ungültig → jetzt.
+     */
+    private function resolvePaidAt(string $input): string
+    {
+        $input = trim($input);
+        if ($input !== '' && preg_match('/^\d{4}-\d{2}-\d{2}$/', $input)) {
+            $ts = strtotime($input . ' 12:00:00');
+            if ($ts !== false && $input <= date('Y-m-d')) {
+                return date('Y-m-d 12:00:00', $ts);
+            }
+        }
+        return date('Y-m-d H:i:s');
     }
 
     public function positionsJson(array $params = []): void

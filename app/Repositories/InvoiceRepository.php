@@ -17,6 +17,23 @@ class InvoiceRepository extends Repository
     }
 
     /**
+     * SQL-Ausdruck für das Umsatz-Zuordnungsdatum (Ist-Besteuerung):
+     * Zahlungsdatum (paid_at), Fallback Rechnungsdatum (issue_date).
+     * Muss überall identisch sein — KPIs (getStats), Analyse-Charts und
+     * Steuerexport nutzen dieselbe Basis, sonst widersprechen sich die Zahlen.
+     * Fallback auf issue_date, wenn die paid_at-Spalte (Migration 006) fehlt.
+     */
+    private function revenueDateExpr(): string
+    {
+        try {
+            $this->db->fetchColumn("SELECT `paid_at` FROM `{$this->t('invoices')}` LIMIT 0");
+            return "DATE(COALESCE(paid_at, issue_date))";
+        } catch (\Throwable) {
+            return "issue_date";
+        }
+    }
+
+    /**
      * Automatically adds payment_method + paid_at columns if they don't exist yet.
      * Safe to call multiple times — uses IF NOT EXISTS.
      */
@@ -611,13 +628,14 @@ class InvoiceRepository extends Repository
     /** Monthly revenue for the last N months (paid invoices only) */
     public function getRevenueByMonth(int $months = 24): array
     {
+        $revDate = $this->revenueDateExpr();
         $rows = $this->db->fetchAll(
-            "SELECT DATE_FORMAT(issue_date,'%Y-%m') AS month,
+            "SELECT DATE_FORMAT({$revDate},'%Y-%m') AS month,
                     SUM(total_gross) AS revenue,
                     COUNT(*) AS count
              FROM `{$this->t('invoices')}`
              WHERE status = 'paid'
-               AND issue_date >= DATE_SUB(CURDATE(), INTERVAL ? MONTH)
+               AND {$revDate} >= DATE_SUB(CURDATE(), INTERVAL ? MONTH)
              GROUP BY month
              ORDER BY month ASC",
             [$months]
@@ -637,12 +655,13 @@ class InvoiceRepository extends Repository
     /** Revenue by quarter for the last N years */
     public function getRevenueByQuarter(int $years = 3): array
     {
+        $revDate = $this->revenueDateExpr();
         $rows = $this->db->fetchAll(
-            "SELECT YEAR(issue_date) AS yr, QUARTER(issue_date) AS qtr,
+            "SELECT YEAR({$revDate}) AS yr, QUARTER({$revDate}) AS qtr,
                     SUM(total_gross) AS revenue, COUNT(*) AS count
              FROM `{$this->t('invoices')}`
              WHERE status = 'paid'
-               AND issue_date >= DATE_SUB(CURDATE(), INTERVAL ? YEAR)
+               AND {$revDate} >= DATE_SUB(CURDATE(), INTERVAL ? YEAR)
              GROUP BY yr, qtr
              ORDER BY yr ASC, qtr ASC",
             [$years]
@@ -658,8 +677,9 @@ class InvoiceRepository extends Repository
     /** Revenue by year */
     public function getRevenueByYear(): array
     {
+        $revDate = $this->revenueDateExpr();
         $rows = $this->db->fetchAll(
-            "SELECT YEAR(issue_date) AS yr, SUM(total_gross) AS revenue, COUNT(*) AS count
+            "SELECT YEAR({$revDate}) AS yr, SUM(total_gross) AS revenue, COUNT(*) AS count
              FROM `{$this->t('invoices')}` WHERE status = 'paid'
              GROUP BY yr ORDER BY yr ASC"
         );

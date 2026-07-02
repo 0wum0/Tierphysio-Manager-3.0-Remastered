@@ -450,6 +450,12 @@
                             Bar
                         </span>
                         {% endif %}
+                        {# Zahlungsdatum = Umsatz-/Steuermonat (Ist-Besteuerung) #}
+                        {% if invoice.status == 'paid' and invoice.paid_at %}
+                        <div class="text-muted" style="font-size:.68rem;margin-top:2px;" title="Zahlungseingang — bestimmt den Umsatzmonat">
+                            💶 {{ invoice.paid_at|date('d.m.Y') }}
+                        </div>
+                        {% endif %}
                     </td>
                     <td>
                         <div class="flex gap-2" style="justify-content:flex-end;">

@@ -972,6 +972,56 @@ Befunde unabhängig vom Tenant-Typ lud.
 
 ---
 
+## Bug: Bilanz — Juni-Rechnungen erscheinen als Juli-Umsatz + Analyse widerspricht KPIs (Juli 2026)
+**Status:** `fixed`
+**Dateien:**
+- `app/Controllers/InvoiceController.php` (`updateStatus`, `updateStatusInline`, neu: `resolvePaidAt()`)
+- `app/Repositories/InvoiceRepository.php` (`getRevenueByMonth/Quarter/Year`, neu: `revenueDateExpr()`)
+- `templates/invoices/show.twig` (Zahlungsdatum-Feld + Anzeige)
+- `templates/invoices/index.twig` (Zahlungsdatum in Liste)
+
+### Symptom (User-Report 2026-07-02)
+Juni-Rechnungen wurden am 1. Juli ausgebucht und erschienen unter „Umsatz diese Woche"
+bzw. als Juli-Umsatz. Frage: „Ist das trotzdem in den Juni gebucht?" — Nein, war es nicht.
+
+### Analyse
+**Umsatz-Zuordnung ist Zahlungsdatum-basiert (Ist-Besteuerung, korrekt):**
+`getStats()` nutzt `DATE(COALESCE(paid_at, issue_date))`. Der Steuerexport
+(`DatevExportService`, Zeile 338) ebenfalls. ABER:
+
+**Problem 1 — Zahlungsdatum nicht setzbar (Web):** `updateStatus`/`updateStatusInline`
+setzten `paid_at` hart auf `date('now')`. Wer eine Juni-Zahlung erst im Juli ausbucht,
+bekam zwangsweise Juli als Umsatz-/Steuermonat. (Mobile-API akzeptierte `paid_at` bereits.)
+
+**Problem 2 — Zahlungsdatum unsichtbar:** `paid_at` wurde nur bei Barzahlung angezeigt.
+Niemand konnte sehen, welchem Monat eine Zahlung zugeordnet ist.
+
+**Problem 3 — Inkonsistente Datumsbasis:** Analyse-Charts (`getRevenueByMonth/Quarter/Year`)
+gruppierten nach `issue_date`, die KPI-Kacheln nach `paid_at` → „Bilanz stimmt nicht":
+dieselbe Rechnung zählte im Chart zum Juni, in der KPI zum Juli.
+
+### Fix
+1. `resolvePaidAt()`: Status-Formulare akzeptieren optionales `paid_at` (YYYY-MM-DD).
+   Rückdatierung erlaubt, Zukunft blockiert, ungültig → jetzt. Gespeichert als `12:00:00`.
+2. `show.twig`: Datumsfeld „Zahlungseingang am" im Status-Panel (sichtbar bei Status
+   „Bezahlt", default heute, `max=heute`); Anzeige „Bezahlt am X — Umsatz zählt zu MM/YYYY".
+   Nachträgliche Korrektur: Status „Bezahlt" erneut speichern mit korrigiertem Datum.
+3. `index.twig`: Zahlungsdatum (💶 TT.MM.JJJJ) unter dem Status-Dropdown bei bezahlten.
+4. `revenueDateExpr()`: Analyse-Charts nutzen jetzt dieselbe Basis
+   `DATE(COALESCE(paid_at, issue_date))` wie KPIs und Steuerexport (mit issue_date-Fallback
+   wenn Migration 006 fehlt).
+
+### Merkregel (dauerhaft)
+**Umsatz-/Steuermonat = Zahlungsdatum (`paid_at`), nicht Rechnungsdatum.**
+Jede neue Umsatz-Auswertung MUSS `revenueDateExpr()` bzw. `COALESCE(paid_at, issue_date)`
+nutzen — nie `issue_date` allein für „paid"-Umsätze.
+
+### Hinweis „Umsatz diese Woche"
+Rollierendes Mo–So-Fenster (ISO-Woche) — überlappt Monatsgrenzen. Eine am 01.07.
+gebuchte Zahlung erscheint in der Woche 29.06.–05.07. UND im Juli-Monatsumsatz.
+
+---
+
 ## Verlinkungen
 - [[15-agent-rules/update-brain]]
 - [[11-decisions/decision-log]]

@@ -236,14 +236,32 @@
             <h3 class="font-semibold" style="font-size:0.9rem;">{{ t('invoices.status') }}</h3>
             <form action="/rechnungen/{{ invoice.id }}/status" method="POST" style="margin:0;">
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-                <select name="status" class="form-control mb-2">
+                <select name="status" class="form-control mb-2" id="invoice-status-select"
+                        onchange="document.getElementById('paid-at-wrap').style.display = this.value === 'paid' ? 'block' : 'none';">
                     <option value="draft"   {{ invoice.status == 'draft'   ? 'selected' : '' }}>{{ t('invoices.status_draft') }}</option>
                     <option value="open"    {{ invoice.status == 'open'    ? 'selected' : '' }}>{{ t('invoices.status_open') }}</option>
                     <option value="paid"    {{ invoice.status == 'paid'    ? 'selected' : '' }}>{{ t('invoices.status_paid') }}</option>
                     <option value="overdue" {{ invoice.status == 'overdue' ? 'selected' : '' }}>{{ t('invoices.status_overdue') }}</option>
                 </select>
+                {# Zahlungsdatum — steuert die Umsatz-/Steuermonat-Zuordnung (Ist-Besteuerung).
+                   Rückdatierung erlaubt (echter Zahlungseingang), Zukunft serverseitig blockiert. #}
+                <div id="paid-at-wrap" class="mb-2" style="display:{{ invoice.status == 'paid' ? 'block' : 'none' }};">
+                    <label class="text-sm" style="display:block;margin-bottom:0.25rem;color:var(--bs-secondary-color);">Zahlungseingang am</label>
+                    <input type="date" name="paid_at" class="form-control"
+                           value="{{ invoice.paid_at ? invoice.paid_at|date('Y-m-d') : 'now'|date('Y-m-d') }}"
+                           max="{{ 'now'|date('Y-m-d') }}">
+                    <div class="text-sm" style="color:var(--bs-secondary-color);margin-top:0.25rem;font-size:0.72rem;">
+                        Bestimmt, welchem Monat der Umsatz zugeordnet wird (steuerrelevant).
+                    </div>
+                </div>
                 <button type="submit" class="btn btn-primary btn-sm w-full">{{ t('common.save') }}</button>
             </form>
+            {% if invoice.status == 'paid' and invoice.paid_at %}
+            <div class="text-sm" style="color:var(--bs-secondary-color);">
+                ✅ Bezahlt am <strong>{{ invoice.paid_at|date('d.m.Y') }}</strong>
+                — Umsatz zählt zu {{ invoice.paid_at|date('m/Y') }}
+            </div>
+            {% endif %}
             <div class="divider"></div>
         </div>
         {% endif %}
