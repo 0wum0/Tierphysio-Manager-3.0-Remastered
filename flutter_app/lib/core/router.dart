@@ -48,6 +48,11 @@ import '../screens/owner_portal/owner_portal_messages_screen.dart';
 import '../screens/owner_portal/owner_portal_befunde_screen.dart';
 import '../screens/owner_portal/owner_portal_homework_screen.dart';
 import '../screens/owner_portal/owner_portal_thread_screen.dart';
+import '../screens/dogschool/kurse_screen.dart';
+import '../screens/dogschool/anwesenheit_screen.dart';
+import '../screens/dogschool/pakete_screen.dart';
+import '../screens/dogschool/interessenten_screen.dart';
+import '../screens/dogschool/trainingsplaene_screen.dart';
 
 class AppRouter {
   final AuthService authService;
@@ -147,6 +152,13 @@ class AppRouter {
           GoRoute(path: '/tcp',              builder: (_, __) => const TcpScreen()),
           GoRoute(path: '/steuerexport',     builder: (_, __) => const TaxExportScreen()),
           GoRoute(path: '/mailbox',          builder: (_, __) => const MailboxScreen()),
+
+          // ── Hundeschule / Hundetrainer-Modul (Phase 2) ──
+          GoRoute(path: '/kurse',            builder: (_, __) => const KurseScreen()),
+          GoRoute(path: '/anwesenheit',      builder: (_, __) => const AnwesenheitScreen()),
+          GoRoute(path: '/pakete',           builder: (_, __) => const PaketeScreen()),
+          GoRoute(path: '/interessenten',    builder: (_, __) => const InteressentenScreen()),
+          GoRoute(path: '/trainingsplaene',  builder: (_, __) => const TrainingsplaeneScreen()),
 
           GoRoute(
             path: '/owner-portal/login',
