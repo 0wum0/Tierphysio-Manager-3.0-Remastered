@@ -713,6 +713,45 @@
         }
     });
 
+    // ── Stacked-modal guard ──────────────────────────────────────────
+    // Bootstrap does not reliably support opening a modal on top of another
+    // one. The Erinnerung/Mahnung mini-modals are triggered from inside the
+    // (already open) invoice detail modal, so we first close any open modal
+    // and only then show the mini-modal. Otherwise a leftover backdrop stays
+    // on screen and freezes the whole page.
+    function showMahnwesenModal(modalId, invoiceId) {
+        var target = document.getElementById(modalId);
+        if (!target) return;
+        var openModal = document.querySelector('.modal.show');
+        if (openModal && openModal !== target) {
+            openModal.addEventListener('hidden.bs.modal', function handler() {
+                openModal.removeEventListener('hidden.bs.modal', handler);
+                bootstrap.Modal.getOrCreateInstance(target).show();
+            });
+            bootstrap.Modal.getOrCreateInstance(openModal).hide();
+        } else {
+            bootstrap.Modal.getOrCreateInstance(target).show();
+        }
+        if (invoiceId) loadMahnwesenHistory(invoiceId);
+    }
+
+    // ── Safety net: drop orphaned backdrops once no modal is open ─────
+    function cleanupModalBackdrops() {
+        if (document.querySelector('.modal.show')) return;
+        document.querySelectorAll('.modal-backdrop').forEach(function (b) { b.remove(); });
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+    }
+    ['modal-reminder', 'modal-dunning', 'modal-overdue-alert'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('hidden.bs.modal', function () {
+                setTimeout(cleanupModalBackdrops, 60);
+            });
+        }
+    });
+
     // ── Mahnwesen: open Erinnerung mini-modal ────────────────────────
     window.openReminderModal = function (invoiceId, invoiceNumber) {
         var form = document.getElementById('form-reminder');
@@ -723,8 +762,7 @@
         d.setDate(d.getDate() + 7);
         document.getElementById('reminder-due-date').value = d.toISOString().split('T')[0];
         document.getElementById('reminder-notes').value = '';
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-reminder')).show();
-        loadMahnwesenHistory(invoiceId);
+        showMahnwesenModal('modal-reminder', invoiceId);
     };
 
     // ── Mahnwesen: open Mahnung mini-modal ───────────────────────────
@@ -738,8 +776,7 @@
         document.getElementById('dunning-due-date').value = d.toISOString().split('T')[0];
         document.getElementById('dunning-fee').value = '5.00';
         document.getElementById('dunning-notes').value = '';
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-dunning')).show();
-        loadMahnwesenHistory(invoiceId);
+        showMahnwesenModal('modal-dunning', invoiceId);
     };
 
     // ── Load reminder/dunning history into invoice modal ─────────────
@@ -1049,6 +1086,9 @@
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
                     if (!data.ok || !data.invoices || data.invoices.length === 0) return;
+                    // Never stack the auto-popup on top of a modal the user
+                    // already opened — that would freeze the page.
+                    if (document.querySelector('.modal.show')) return;
                     renderAlertModal(data.invoices);
                     bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-overdue-alert')).show();
                 })
@@ -1164,15 +1204,12 @@
         /* Bind send-dunning buttons */
         list.querySelectorAll('.alert-send-dunning').forEach(function (btn) {
             btn.addEventListener('click', function () {
-                /* Close alert modal and open the proper dunning modal */
-                bootstrap.Modal.getInstance(document.getElementById('modal-overdue-alert')).hide();
-                var invoiceId     = btn.dataset.invoiceId;
-                var invoiceNumber = btn.dataset.invoiceNumber;
-                setTimeout(function () {
-                    if (typeof openDunningModal === 'function') {
-                        openDunningModal(invoiceId, invoiceNumber);
-                    }
-                }, 350);
+                /* Swap the alert modal for the proper dunning modal.
+                   showMahnwesenModal() closes the alert first, so the two
+                   never stack. */
+                if (typeof openDunningModal === 'function') {
+                    openDunningModal(btn.dataset.invoiceId, btn.dataset.invoiceNumber);
+                }
             });
         });
     }
