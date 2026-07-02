@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>3D Schmerzanalyse</title>
+  <style>
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #0a0f1a; overflow: hidden; }
+    #a3d { position: absolute; inset: 0; }
+    #a3d-fallback {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+      color: #cbd5e1; font-family: -apple-system, Segoe UI, Roboto, sans-serif; font-size: 15px;
+      text-align: center; padding: 24px; box-sizing: border-box;
+    }
+  </style>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./vendor/three/three.module.min.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="a3d"></div>
+  <div id="a3d-fallback">3D-Ansicht konnte nicht geladen werden.</div>
+  <script type="module">
+    import './anatomy-3d-viewer.js';
+
+    function boot(tries) {
+      const cfg = (window.__A3D_CONFIG__ || {});
+      if (window.Anatomy3D && cfg.patientId) {
+        try {
+          window.Anatomy3D.init('a3d', cfg.patientId, cfg.animalType || 'dog', cfg.token || '');
+        } catch (e) {
+          console.error('[Anatomy3D] init error:', e);
+          document.getElementById('a3d-fallback').style.display = 'flex';
+        }
+        return;
+      }
+      if ((tries || 0) > 100) {
+        document.getElementById('a3d-fallback').style.display = 'flex';
+        return;
+      }
+      setTimeout(() => boot((tries || 0) + 1), 60);
+    }
+    boot(0);
+
+    // Erlaubt der App, die Tierart nachträglich umzuschalten.
+    window.__a3dSetSpecies = function (species) {
+      try {
+        if (window.Anatomy3D) window.Anatomy3D.switchAnimal(species);
+      } catch (e) { console.error('[Anatomy3D] switch error:', e); }
+    };
+  </script>
+</body>
+</html>

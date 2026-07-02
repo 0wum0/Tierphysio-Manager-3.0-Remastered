@@ -80,6 +80,9 @@ dependencies:
   flutter_local_notifications: ^18.0.0
   timezone: ^0.10.0
 
+  # Offline 3D pain-analysis viewer (bundled Three.js + GLB models in a WebView)
+  flutter_inappwebview: ^6.1.5
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -113,3 +116,7 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    # 3D Schmerzanalyse – offline gebündelter Viewer + Modelle
+    - assets/3d/
+    - assets/3d/vendor/three/
+    - assets/3d/models/

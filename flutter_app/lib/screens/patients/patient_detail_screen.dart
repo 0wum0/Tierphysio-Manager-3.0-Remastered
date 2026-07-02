@@ -15,6 +15,7 @@ import '../../widgets/html_editor.dart';
 import '../../widgets/paw_avatar.dart';
 import '../../widgets/shimmer_list.dart';
 import '../../widgets/media_viewer.dart';
+import 'schmerzanalyse_3d_view.dart';
 
 class PatientDetailScreen extends StatefulWidget {
   final int id;
@@ -70,7 +71,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: 8, vsync: this);
+    _tabCtrl = TabController(length: 9, vsync: this);
     _tabCtrl.addListener(_onTabChanged);
     _load();
   }
@@ -526,6 +527,9 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                     icon: Icon(Icons.description_rounded, size: 16)),
                 Tab(text: 'Portal', icon: Icon(Icons.forum_rounded, size: 16)),
                 Tab(
+                    text: 'Schmerz',
+                    icon: Icon(Icons.view_in_ar_rounded, size: 16)),
+                Tab(
                     text: 'Daten',
                     icon: Icon(Icons.info_outline_rounded, size: 16)),
               ],
@@ -556,6 +560,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                 _buildTcpTab(),
                 _buildReportsTab(),
                 _buildPortalTab(),
+                _build3dPainTab(p),
                 _buildInfo(p),
               ],
             ),
@@ -1022,6 +1027,15 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                 );
               },
             ),
+    );
+  }
+
+  // ── 3D Schmerzanalyse Tab ─────────────────────────────────
+
+  Widget _build3dPainTab(Map<String, dynamic> p) {
+    return Schmerzanalyse3dView(
+      patientId: widget.id,
+      species: (p['species'] ?? p['animal_type'] ?? '').toString(),
     );
   }
 
