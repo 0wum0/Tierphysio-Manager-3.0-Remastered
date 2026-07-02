@@ -196,7 +196,7 @@ List<NavSection> buildNavSections({
         color: AppTheme.tertiary,
       ),
     ]),
-    // Trainer-only module — screens land in Phase 2, shown as "coming soon".
+    // Trainer-only module (Hundeschule) — implemented in Phase 2.
     if (isTrainer)
       const NavSection('Hundeschule', [
         NavItem(
@@ -205,7 +205,6 @@ List<NavSection> buildNavSections({
           selectedIcon: Icons.school_rounded,
           label: 'Kurse',
           color: AppTheme.tertiary,
-          comingSoon: true,
         ),
         NavItem(
           route: '/anwesenheit',
@@ -213,7 +212,6 @@ List<NavSection> buildNavSections({
           selectedIcon: Icons.checklist_rounded,
           label: 'Anwesenheit',
           color: AppTheme.tertiary,
-          comingSoon: true,
         ),
         NavItem(
           route: '/pakete',
@@ -221,15 +219,13 @@ List<NavSection> buildNavSections({
           selectedIcon: Icons.confirmation_number_rounded,
           label: 'Pakete',
           color: AppTheme.tertiary,
-          comingSoon: true,
         ),
         NavItem(
-          route: '/leads',
+          route: '/interessenten',
           icon: Icons.person_add_alt_outlined,
           selectedIcon: Icons.person_add_alt_1_rounded,
           label: 'Interessenten',
           color: AppTheme.tertiary,
-          comingSoon: true,
         ),
         NavItem(
           route: '/trainingsplaene',
@@ -237,7 +233,6 @@ List<NavSection> buildNavSections({
           selectedIcon: Icons.fitness_center_rounded,
           label: 'Trainingspläne',
           color: AppTheme.tertiary,
-          comingSoon: true,
         ),
       ]),
     const NavSection('Konto', [

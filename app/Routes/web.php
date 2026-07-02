@@ -270,6 +270,43 @@ $router->post('/api/mobile/google-kalender/sync',                        [Mobile
 $router->get('/api/mobile/system/status',                                [MobileApiController::class, 'systemStatus']);
 $router->get('/api/mobile/system/cronjobs',                              [MobileApiController::class, 'systemCronJobs']);
 
+// ── Hundeschule / Hundetrainer-Modul (Phase 2) ───────────────────────
+$router->get('/api/mobile/dogschool/dashboard',                          [MobileApiController::class, 'dogschoolDashboard']);
+
+// Kurse
+$router->get('/api/mobile/dogschool/courses',                            [MobileApiController::class, 'dogschoolCoursesList']);
+$router->post('/api/mobile/dogschool/courses',                           [MobileApiController::class, 'dogschoolCourseCreate']);
+$router->get('/api/mobile/dogschool/courses/{id}',                       [MobileApiController::class, 'dogschoolCourseShow']);
+$router->post('/api/mobile/dogschool/courses/{id}',                      [MobileApiController::class, 'dogschoolCourseUpdate']);
+$router->post('/api/mobile/dogschool/courses/{id}/enroll',              [MobileApiController::class, 'dogschoolCourseEnroll']);
+$router->post('/api/mobile/dogschool/enrollments/{enrollment_id}/status',[MobileApiController::class, 'dogschoolEnrollmentStatus']);
+
+// Anwesenheit
+$router->get('/api/mobile/dogschool/sessions',                           [MobileApiController::class, 'dogschoolSessionsList']);
+$router->get('/api/mobile/dogschool/attendance/{session_id}',           [MobileApiController::class, 'dogschoolAttendanceMatrix']);
+$router->post('/api/mobile/dogschool/attendance/{session_id}',          [MobileApiController::class, 'dogschoolAttendanceSave']);
+
+// Pakete / Mehrfachkarten
+$router->get('/api/mobile/dogschool/packages',                           [MobileApiController::class, 'dogschoolPackagesList']);
+$router->post('/api/mobile/dogschool/packages',                          [MobileApiController::class, 'dogschoolPackageCreate']);
+$router->get('/api/mobile/dogschool/package-balances',                   [MobileApiController::class, 'dogschoolPackageBalances']);
+$router->post('/api/mobile/dogschool/packages/sell',                     [MobileApiController::class, 'dogschoolPackageSell']);
+$router->post('/api/mobile/dogschool/package-balances/{balance_id}/redeem', [MobileApiController::class, 'dogschoolPackageRedeem']);
+
+// Interessenten / Leads
+$router->get('/api/mobile/dogschool/leads',                              [MobileApiController::class, 'dogschoolLeadsList']);
+$router->post('/api/mobile/dogschool/leads',                             [MobileApiController::class, 'dogschoolLeadCreate']);
+$router->get('/api/mobile/dogschool/leads/{id}',                         [MobileApiController::class, 'dogschoolLeadShow']);
+$router->post('/api/mobile/dogschool/leads/{id}',                        [MobileApiController::class, 'dogschoolLeadUpdate']);
+$router->post('/api/mobile/dogschool/leads/{id}/convert',               [MobileApiController::class, 'dogschoolLeadConvert']);
+
+// Trainingspläne / Übungen
+$router->get('/api/mobile/dogschool/training-plans',                     [MobileApiController::class, 'dogschoolTrainingPlansList']);
+$router->post('/api/mobile/dogschool/training-plans',                    [MobileApiController::class, 'dogschoolTrainingPlanCreate']);
+$router->get('/api/mobile/dogschool/training-plans/{id}',               [MobileApiController::class, 'dogschoolTrainingPlanShow']);
+$router->post('/api/mobile/dogschool/training-plans/{id}/assign',       [MobileApiController::class, 'dogschoolPlanAssign']);
+$router->get('/api/mobile/dogschool/exercises',                         [MobileApiController::class, 'dogschoolExercisesList']);
+
 // ── Owner Portal — Auth (Besitzerportal) ─────────────────────────────
 $router->post('/api/mobile/portal/login',                                [MobileApiController::class, 'portalLogin']);
 $router->post('/api/mobile/portal/logout',                               [MobileApiController::class, 'portalLogout']);

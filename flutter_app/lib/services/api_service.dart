@@ -1152,6 +1152,133 @@ class ApiService {
       return false;
     }
   }
+
+  /* ══════════════════════════════════════════════════════
+     Hundeschule / Hundetrainer-Modul (Phase 2)
+  ══════════════════════════════════════════════════════ */
+
+  Future<Map<String, dynamic>> dogschoolDashboard() async =>
+      Map<String, dynamic>.from(await get('/dogschool/dashboard'));
+
+  // ── Kurse ──
+  Future<Map<String, dynamic>> dogschoolCourses({
+    String status = '',
+    String type = '',
+    String search = '',
+    int page = 1,
+    int perPage = 50,
+  }) async =>
+      Map<String, dynamic>.from(await get('/dogschool/courses', query: {
+        'page': page,
+        'per_page': perPage,
+        if (status.isNotEmpty) 'status': status,
+        if (type.isNotEmpty) 'type': type,
+        if (search.isNotEmpty) 'search': search,
+      }));
+
+  Future<Map<String, dynamic>> dogschoolCourse(int id) async =>
+      Map<String, dynamic>.from(await get('/dogschool/courses/$id'));
+
+  Future<Map<String, dynamic>> dogschoolCourseCreate(
+          Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/dogschool/courses', data));
+
+  Future<Map<String, dynamic>> dogschoolCourseUpdate(
+          int id, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/dogschool/courses/$id', data));
+
+  Future<Map<String, dynamic>> dogschoolCourseEnroll(
+          int courseId, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(
+          await post('/dogschool/courses/$courseId/enroll', data));
+
+  Future<Map<String, dynamic>> dogschoolEnrollmentStatus(
+          int enrollmentId, String status) async =>
+      Map<String, dynamic>.from(await post(
+          '/dogschool/enrollments/$enrollmentId/status', {'status': status}));
+
+  // ── Anwesenheit ──
+  Future<Map<String, dynamic>> dogschoolSessions() async =>
+      Map<String, dynamic>.from(await get('/dogschool/sessions'));
+
+  Future<Map<String, dynamic>> dogschoolAttendanceMatrix(int sessionId) async =>
+      Map<String, dynamic>.from(await get('/dogschool/attendance/$sessionId'));
+
+  Future<Map<String, dynamic>> dogschoolAttendanceSave(
+          int sessionId, List<Map<String, dynamic>> entries) async =>
+      Map<String, dynamic>.from(await post(
+          '/dogschool/attendance/$sessionId', {'entries': entries}));
+
+  // ── Pakete ──
+  Future<Map<String, dynamic>> dogschoolPackages() async =>
+      Map<String, dynamic>.from(await get('/dogschool/packages'));
+
+  Future<Map<String, dynamic>> dogschoolPackageCreate(
+          Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/dogschool/packages', data));
+
+  Future<Map<String, dynamic>> dogschoolPackageBalances(
+          {String status = ''}) async =>
+      Map<String, dynamic>.from(await get('/dogschool/package-balances', query: {
+        if (status.isNotEmpty) 'status': status,
+      }));
+
+  Future<Map<String, dynamic>> dogschoolPackageSell(
+          Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/dogschool/packages/sell', data));
+
+  Future<Map<String, dynamic>> dogschoolPackageRedeem(
+          int balanceId, int units) async =>
+      Map<String, dynamic>.from(await post(
+          '/dogschool/package-balances/$balanceId/redeem', {'units': units}));
+
+  // ── Interessenten / Leads ──
+  Future<Map<String, dynamic>> dogschoolLeads(
+          {String status = '', String search = ''}) async =>
+      Map<String, dynamic>.from(await get('/dogschool/leads', query: {
+        if (status.isNotEmpty) 'status': status,
+        if (search.isNotEmpty) 'search': search,
+      }));
+
+  Future<Map<String, dynamic>> dogschoolLead(int id) async =>
+      Map<String, dynamic>.from(await get('/dogschool/leads/$id'));
+
+  Future<Map<String, dynamic>> dogschoolLeadCreate(
+          Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/dogschool/leads', data));
+
+  Future<Map<String, dynamic>> dogschoolLeadUpdate(
+          int id, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/dogschool/leads/$id', data));
+
+  Future<Map<String, dynamic>> dogschoolLeadConvert(int id) async =>
+      Map<String, dynamic>.from(await post('/dogschool/leads/$id/convert', {}));
+
+  // ── Trainingspläne / Übungen ──
+  Future<Map<String, dynamic>> dogschoolTrainingPlans(
+          {String search = ''}) async =>
+      Map<String, dynamic>.from(await get('/dogschool/training-plans', query: {
+        if (search.isNotEmpty) 'search': search,
+      }));
+
+  Future<Map<String, dynamic>> dogschoolTrainingPlan(int id) async =>
+      Map<String, dynamic>.from(await get('/dogschool/training-plans/$id'));
+
+  Future<Map<String, dynamic>> dogschoolTrainingPlanCreate(
+          Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/dogschool/training-plans', data));
+
+  Future<Map<String, dynamic>> dogschoolPlanAssign(
+          int planId, Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(
+          await post('/dogschool/training-plans/$planId/assign', data));
+
+  Future<Map<String, dynamic>> dogschoolExercises(
+          {String category = '', String search = ''}) async =>
+      Map<String, dynamic>.from(await get('/dogschool/exercises', query: {
+        if (category.isNotEmpty) 'category': category,
+        if (search.isNotEmpty) 'search': search,
+      }));
 }
 
 class ApiException implements Exception {

@@ -24,6 +24,8 @@ use Plugins\TherapyCarePro\TherapyCareRepository;
  */
 class MobileApiController
 {
+    use MobileDogschoolApiTrait;
+
     private Database                 $db;
     private UserRepository           $users;
     private PatientRepository        $patients;
