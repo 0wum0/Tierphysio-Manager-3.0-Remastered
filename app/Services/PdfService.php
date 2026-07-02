@@ -46,6 +46,7 @@ class PdfService
         $showIban      = ($settings['pdf_show_iban']        ?? '1') === '1';
         $showTaxNum    = ($settings['pdf_show_tax_number']  ?? '1') === '1';
         $showWebsite   = ($settings['pdf_show_website']     ?? '0') === '1';
+        $showQr        = ($settings['pdf_show_qr']          ?? '1') === '1';
         $watermark        = trim($settings['pdf_watermark']    ?? '');
         $closingText      = trim($settings['pdf_closing_text'] ?? '');
         $kleinunternehmer = ($settings['kleinunternehmer']   ?? '0') === '1';
@@ -506,13 +507,43 @@ class PdfService
             $pdf->Cell(48, 4, $taxNumber, 0, 1);
         }
 
-        // Contact line bottom-right of footer
+        // ── GIROCODE / EPC-QR — SEPA-Überweisung zum Scannen im Online-Banking ──
+        // Kunde scannt den Code in seiner Banking-App → Empfänger, IBAN, Betrag
+        // und Verwendungszweck werden automatisch übernommen. Gilt identisch für
+        // Praxis- und Hundeschul-Rechnungen (gleicher PdfService).
+        $qrRendered = false;
+        $qrX        = $rightEdge;
+        if ($showQr && ($invoice['status'] ?? '') !== 'cancelled') {
+            $payload = $this->buildGiroCodePayload(
+                $companyName !== '' ? $companyName : $bankName,
+                $bankIban,
+                $bankBic,
+                (float)($invoice['total_gross'] ?? 0),
+                'Rechnung ' . ($invoice['invoice_number'] ?? '')
+            );
+            if ($payload !== null) {
+                $qrSize = 22;
+                $qrX    = $rightEdge - $qrSize;
+                $qrY    = $footerTopY + 1;
+                $this->renderGiroCode($pdf, $payload, $qrX, $qrY, $qrSize);
+
+                $pdf->SetFont($font, '', max(4.5, $fontSize - 3.5));
+                $pdf->SetTextColor(...$colorFooter);
+                $pdf->SetXY($qrX - 8, $qrY + $qrSize + 0.3);
+                $pdf->Cell($qrSize + 8, 3, 'Zum Bezahlen scannen', 0, 0, 'C');
+                $qrRendered = true;
+            }
+        }
+
+        // Contact line bottom-right of footer (shortened when QR present)
         $contactParts = array_filter([$companyEmail, ($showWebsite ? $companyWebsite : '')]);
         if ($contactParts) {
+            $contactStartX = $contentX + 70;
+            $contactEndX   = $qrRendered ? ($qrX - 3) : $rightEdge;
             $pdf->SetFont($font, '', $fontSize - 1.5);
             $pdf->SetTextColor(...$colorFooter);
-            $pdf->SetXY($contentX + 70, $footerTopY + 10);
-            $pdf->Cell($contentW - 70, 4, implode('   ', $contactParts), 0, 1, 'R');
+            $pdf->SetXY($contactStartX, $footerTopY + 10);
+            $pdf->Cell(max(20, $contactEndX - $contactStartX), 4, implode('   ', $contactParts), 0, 1, 'R');
         }
 
         // §19 UStG notice for Kleinunternehmer
@@ -2688,6 +2719,77 @@ class PdfService
     public function getSettings(): array
     {
         return $this->settingsRepository->all();
+    }
+
+    /**
+     * Baut den EPC-QR-Code-Payload (GiroCode, EPC069-12 Version 002) für eine
+     * SEPA-Überweisung. Der Kunde scannt den QR-Code im Online-Banking; Empfänger,
+     * IBAN, Betrag und Verwendungszweck werden dann automatisch vorausgefüllt.
+     *
+     * Gibt null zurück, wenn Pflichtdaten fehlen (keine/ungültige IBAN, kein Name,
+     * kein zulässiger Betrag) — dann wird kein QR-Code gezeichnet.
+     */
+    private function buildGiroCodePayload(
+        string $name,
+        string $iban,
+        string $bic,
+        float $amount,
+        string $remittance
+    ): ?string {
+        $iban = strtoupper(preg_replace('/\s+/', '', $iban));
+        if ($iban === '' || !preg_match('/^[A-Z]{2}[0-9]{2}[A-Z0-9]{10,30}$/', $iban)) {
+            return null;
+        }
+        if ($amount < 0.01 || $amount > 999999999.99) {
+            return null;
+        }
+
+        $name = trim((string)preg_replace('/\s+/', ' ', $name));
+        if ($name === '') {
+            return null;
+        }
+        $name = mb_substr($name, 0, 70);
+
+        $bic = strtoupper((string)preg_replace('/\s+/', '', $bic));
+        if ($bic !== '' && !preg_match('/^[A-Z0-9]{8}([A-Z0-9]{3})?$/', $bic)) {
+            $bic = ''; // ungültige BIC verwerfen — in Version 002 optional
+        }
+
+        $remittance = mb_substr(trim((string)preg_replace('/\s+/', ' ', $remittance)), 0, 140);
+
+        $lines = [
+            'BCD',                                       // Service Tag
+            '002',                                       // Version (BIC optional)
+            '1',                                         // Zeichensatz: UTF-8
+            'SCT',                                       // SEPA Credit Transfer
+            $bic,                                        // BIC des Empfängers (optional)
+            $name,                                       // Name des Empfängers
+            $iban,                                       // IBAN des Empfängers
+            'EUR' . number_format($amount, 2, '.', ''),  // Betrag
+            '',                                          // Zweck-Code (optional)
+            '',                                          // Strukturierte Referenz (ungenutzt)
+            $remittance,                                 // Verwendungszweck (unstrukturiert)
+            '',                                          // Info Empfänger→Auftraggeber
+        ];
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * Zeichnet einen GiroCode/EPC-QR-Code (Fehlerkorrektur M gemäß EPC-Empfehlung)
+     * an die angegebene Position ins PDF.
+     */
+    private function renderGiroCode(TCPDF $pdf, string $payload, float $x, float $y, float $size): void
+    {
+        $style = [
+            'border'        => false,
+            'padding'       => 0,
+            'fgcolor'       => [0, 0, 0],
+            'bgcolor'       => [255, 255, 255],
+            'module_width'  => 1,
+            'module_height' => 1,
+        ];
+        $pdf->write2DBarcode($payload, 'QRCODE,M', $x, $y, $size, $size, $style, 'N');
     }
 
     private function resolveAssetImg(string $filename): string

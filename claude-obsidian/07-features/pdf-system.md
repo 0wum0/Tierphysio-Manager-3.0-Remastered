@@ -30,6 +30,7 @@ pageH     = 297 mm  (A4)
 | `pdf_font` | string | helvetica/times/courier/dejavusans |
 | `pdf_font_size` | float | 6–16pt, default 9 |
 | `pdf_show_website` | bool | Website im Header anzeigen |
+| `pdf_show_qr` | bool | GiroCode/EPC-QR-Code auf Rechnung (default '1') |
 | `company_logo` | path | Logo-Datei in uploads/ |
 | `company_name` | string | Praxisname |
 | `company_street` | string | |
@@ -79,6 +80,39 @@ $drawSidebar(); // erste Seite
 // Bei manuellem AddPage() immer $drawSidebar() aufrufen!
 // Bei writeHTML() Auto-Breaks: Sidebar wird NICHT automatisch gezeichnet
 ```
+
+## GiroCode / EPC-QR-Code auf Rechnungen (seit Juli 2026)
+
+Rechnungs-PDFs (`PdfService::generateInvoicePdf`) enthalten im Fußbereich rechts einen
+**GiroCode** (EPC-QR-Code, EPC069-12 Version 002). Der Kunde scannt ihn in seiner
+Online-Banking-App → Empfänger, IBAN, Betrag und Verwendungszweck werden automatisch
+übernommen.
+
+- **Gilt für Praxis UND Hundeschule** — beide teilen sich `invoices`-Tabelle und die Route
+  `/rechnungen/{id}/pdf` (InvoiceController::downloadPdf), also denselben PdfService. Ein
+  einziger Eingriff deckt beide ab.
+- Nur auf der **Rechnung** (nicht auf Quittung/Storno — Quittung ist bereits bar bezahlt,
+  Storno hat keinen zu zahlenden Betrag).
+- Rendering via TCPDF `write2DBarcode($payload, 'QRCODE,M', ...)` (Fehlerkorrektur M).
+
+### Payload-Aufbau (`buildGiroCodePayload`)
+12 LF-getrennte Felder:
+```
+BCD            Service Tag
+002            Version (BIC optional)
+1              Zeichensatz UTF-8
+SCT            SEPA Credit Transfer
+<BIC>          bank_bic (optional, ungültige werden verworfen)
+<Name>         company_name (Empfänger/Kontoinhaber), max 70
+<IBAN>         bank_iban (Leerzeichen entfernt, formatvalidiert)
+EUR123.45      total_gross (Punkt als Dezimaltrenner)
+               Zweck-Code (leer)
+               Strukturierte Referenz (leer)
+Rechnung RENR  Verwendungszweck (unstrukturiert), max 140
+               Info Empfänger→Auftraggeber (leer)
+```
+Gibt `null` zurück (→ kein QR-Code) wenn IBAN fehlt/ungültig, Betrag < 0,01 € oder
+Name leer ist. Abschaltbar per Setting `pdf_show_qr = 0`.
 
 ## Sicherheit
 

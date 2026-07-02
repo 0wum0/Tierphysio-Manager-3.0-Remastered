@@ -642,6 +642,11 @@ document.getElementById('btn-test-smtp')?.addEventListener('click', async functi
                             <input type="checkbox" name="pdf_show_website" value="1" {{ (settings.pdf_show_website ?? '0') == '1' ? 'checked' : '' }} style="width:16px;height:16px;accent-color:var(--accent);">
                             <span class="text-sm">Website im Kopf anzeigen</span>
                         </label>
+                        <label class="flex items-center gap-2" style="cursor:pointer;">
+                            <input type="hidden" name="pdf_show_qr" value="0">
+                            <input type="checkbox" name="pdf_show_qr" value="1" {{ (settings.pdf_show_qr ?? '1') == '1' ? 'checked' : '' }} style="width:16px;height:16px;accent-color:var(--accent);">
+                            <span class="text-sm">QR-Code (GiroCode) zum Bezahlen anzeigen</span>
+                        </label>
                     </div>
                 </div>
 
