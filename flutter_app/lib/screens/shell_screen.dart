@@ -12,9 +12,10 @@ import '../services/notification_service.dart';
 import '../services/theme_service.dart';
 import '../core/theme.dart';
 import '../core/terminology.dart';
+import '../core/navigation.dart';
 
-const double _kSidebarCollapsed = 72.0;
-const double _kSidebarExpanded = 240.0;
+const double _kSidebarCollapsed = 76.0;
+const double _kSidebarExpanded = 248.0;
 
 class ShellScreen extends StatefulWidget {
   final Widget child;
@@ -42,36 +43,10 @@ class _ShellScreenState extends State<ShellScreen>
   late Animation<double> _bellAnim;
   int _lastBellCount = 0;
 
-  // Sidebar animation
+  // Sidebar expand/collapse
   bool _sidebarExpanded = true;
   late AnimationController _sidebarCtrl;
   late Animation<double> _sidebarAnim;
-
-  // Primary bottom-nav routes (phone)
-  static const _primaryRoutes = [
-    '/dashboard',
-    '/patienten',
-    '/rechnungen',
-    '/kalender',
-    '/nachrichten',
-  ];
-
-  // All rail routes (tablet/wide)
-  static const _railRoutes = [
-    '/dashboard',
-    '/patienten',
-    '/tierhalter',
-    '/rechnungen',
-    '/kalender',
-    '/nachrichten',
-    '/warteliste',
-    '/mahnungen',
-    '/anmeldungen',
-    '/einladungen',
-    '/behandlungsarten',
-    '/befunde',
-    '/portal-admin',
-  ];
 
   @override
   void initState() {
@@ -127,24 +102,18 @@ class _ShellScreenState extends State<ShellScreen>
     super.dispose();
   }
 
+  // ── Background polling / connectivity ──────────────────────────────────────
+
   Future<void> _checkConnectivity() async {
     try {
       final result = await InternetAddress.lookup('google.com')
           .timeout(const Duration(seconds: 4));
-      if (mounted)
+      if (mounted) {
         setState(() =>
             _isOffline = result.isEmpty || result.first.rawAddress.isEmpty);
+      }
     } catch (_) {
       if (mounted) setState(() => _isOffline = true);
-    }
-  }
-
-  void _toggleSidebar() {
-    setState(() => _sidebarExpanded = !_sidebarExpanded);
-    if (_sidebarExpanded) {
-      _sidebarCtrl.forward();
-    } else {
-      _sidebarCtrl.reverse();
     }
   }
 
@@ -156,20 +125,15 @@ class _ShellScreenState extends State<ShellScreen>
       return;
     }
     try {
-      // Prüfe ob Sync überhaupt aktiv ist
       final status = await _api.googleSyncStatus();
       final connected = status['connected'] as bool? ?? false;
       final enabled = status['sync_enabled'] as bool? ?? false;
       if (!connected || !enabled) return;
-
-      // Push (TheraPano → Google) + Pull (Google → TheraPano) parallel
       await Future.wait([
         _api.googleSyncPush().catchError((_) => <String, dynamic>{}),
         _api.googleSyncPull().catchError((_) => <String, dynamic>{}),
       ]);
     } catch (_) {}
-
-    // Alle 30 Minuten wiederholen solange App offen ist
     Future.delayed(const Duration(minutes: 30), () {
       if (mounted) _autoGoogleSync();
     });
@@ -181,8 +145,8 @@ class _ShellScreenState extends State<ShellScreen>
         _api.dashboard(),
         _api.intakeInbox().catchError((_) => <String, dynamic>{}),
       ]);
-      final d = results[0] as Map<String, dynamic>;
-      final intakeData = results[1] as Map<String, dynamic>;
+      final d = results[0];
+      final intakeData = results[1];
       final allIntakes = (intakeData['items'] as List? ?? []);
       final pending = allIntakes
           .where((e) {
@@ -230,36 +194,44 @@ class _ShellScreenState extends State<ShellScreen>
     } catch (_) {}
   }
 
-  void _onPrimarySelected(int idx) {
-    context.go(_primaryRoutes[idx]);
-    if (idx == 4) {
-      Future.delayed(const Duration(milliseconds: 800), () {
-        if (mounted) _pollUnread();
-      });
-    }
-  }
+  // ── Navigation model ───────────────────────────────────────────────────────
 
-  void _onRailSelected(int idx) {
-    context.go(_railRoutes[idx]);
-  }
-
-  Widget _msgBadge({bool selected = false, bool rail = false}) {
-    final icon = Icon(
-      selected ? Icons.chat_rounded : Icons.chat_outlined,
-      size: rail ? 24 : 22,
-    );
-    if (_unreadMessages == 0) return icon;
-    return Badge(
-      label: Text('$_unreadMessages',
-          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700)),
-      backgroundColor: AppTheme.danger,
-      child: icon,
-    );
-  }
-
-  final _narrowScaffoldKey = GlobalKey<ScaffoldState>();
   Terminology _term() =>
       Terminology(isTrainer: context.read<AuthService>().isTrainer);
+
+  List<NavSection> _sections() => buildNavSections(
+        term: _term(),
+        isTrainer: context.read<AuthService>().isTrainer,
+        badges: NavBadges(
+          unreadMessages: _unreadMessages,
+          overdueInvoices: _overdueCount,
+          newIntakes: _newIntakes,
+        ),
+      );
+
+  static bool _isActive(String route, String loc) =>
+      loc == route || loc.startsWith('$route/');
+
+  void _openItem(NavItem item) {
+    if (item.comingSoon) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text('„${item.label}" kommt in Kürze (Hundeschul-Modul).'),
+        ));
+      return;
+    }
+    context.go(item.route);
+  }
+
+  void _toggleSidebar() {
+    setState(() => _sidebarExpanded = !_sidebarExpanded);
+    if (_sidebarExpanded) {
+      _sidebarCtrl.forward();
+    } else {
+      _sidebarCtrl.reverse();
+    }
+  }
 
   Widget _animatedContent(String location) {
     return AnimatedSwitcher(
@@ -283,203 +255,29 @@ class _ShellScreenState extends State<ShellScreen>
     );
   }
 
-  void _openMoreDrawer() {
-    final t = _term();
-    final cs = Theme.of(context).colorScheme;
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: cs.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        final items = [
-          _GridItem(Icons.person_rounded, t.ownerPlural, AppTheme.secondary,
-              '/tierhalter'),
-          _GridItem(Icons.people_alt_rounded, 'Warteliste', AppTheme.warning,
-              '/warteliste'),
-          _GridItem(Icons.warning_amber_rounded, 'Mahnungen', AppTheme.danger,
-              '/mahnungen',
-              badge: _overdueCount),
-          _GridItem(Icons.assignment_ind_rounded, 'Anmeldungen',
-              AppTheme.primary, '/anmeldungen',
-              badge: _newIntakes),
-          _GridItem(Icons.send_rounded, 'Einladungen', AppTheme.secondary,
-              '/einladungen'),
-          _GridItem(Icons.category_rounded, 'Behandlungs\narten',
-              AppTheme.tertiary, '/behandlungsarten'),
-          _GridItem(Icons.assignment_rounded, 'Hausaufgaben', AppTheme.primary,
-              '/hausaufgaben'),
-          _GridItem(Icons.description_rounded, 'Befundbögen',
-              AppTheme.secondary, '/befunde'),
-          _GridItem(Icons.home_work_rounded, 'Portal Admin', AppTheme.tertiary,
-              '/portal-admin'),
-          _GridItem(
-              Icons.healing_rounded, 'Therapy Care', AppTheme.primary, '/tcp'),
-          _GridItem(Icons.account_balance_rounded, 'Steuerexport',
-              AppTheme.secondary, '/steuerexport'),
-          _GridItem(
-              Icons.mail_rounded, 'Mailbox', AppTheme.tertiary, '/mailbox'),
-          _GridItem(Icons.search_rounded, 'Suche', AppTheme.primary, '/suche'),
-          _GridItem(Icons.person_outline_rounded, 'Mein Profil',
-              AppTheme.primary, '/profil'),
-          _GridItem(Icons.settings_rounded, 'Einstellungen', AppTheme.tertiary,
-              '/einstellungen'),
-        ];
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: cs.outlineVariant,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                GridView.count(
-                  shrinkWrap: true,
-                  crossAxisCount: 4,
-                  mainAxisSpacing: 8,
-                  crossAxisSpacing: 8,
-                  childAspectRatio: 0.82,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: items.map((item) {
-                    final isDark = Theme.of(ctx).brightness == Brightness.dark;
-                    return GestureDetector(
-                      onTap: () {
-                        Navigator.pop(ctx);
-                        context.go(item.route);
-                      },
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              Container(
-                                width: 56,
-                                height: 56,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      item.color,
-                                      item.color.withValues(alpha: 0.72)
-                                    ],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  borderRadius: BorderRadius.circular(16),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: item.color.withValues(
-                                          alpha: isDark ? 0.25 : 0.32),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Icon(item.icon,
-                                    color: Colors.white, size: 26),
-                              ),
-                              if ((item.badge ?? 0) > 0)
-                                Positioned(
-                                  top: -5,
-                                  right: -5,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 5, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.danger,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                          color: isDark
-                                              ? const Color(0xFF1A1D27)
-                                              : Colors.white,
-                                          width: 1.5),
-                                    ),
-                                    child: Text('${item.badge}',
-                                        style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w800)),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 7),
-                          Text(
-                            item.label,
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w600,
-                              color: cs.onSurface,
-                              height: 1.2,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     context.watch<AuthService>();
-    final isWide = MediaQuery.of(context).size.width >= 600;
-
-    if (isWide) {
-      return _buildWideLayout(context);
+    final width = MediaQuery.of(context).size.width;
+    // Auto-collapse the sidebar on medium widths for more content space.
+    if (width < 1000 && _sidebarExpanded) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _sidebarExpanded && MediaQuery.of(context).size.width < 1000) {
+          setState(() => _sidebarExpanded = false);
+          _sidebarCtrl.reverse();
+        }
+      });
     }
+    if (width >= 600) return _buildWideLayout(context);
     return _buildNarrowLayout(context);
   }
 
-  Widget _buildWideLayout(BuildContext context) {
-    final t = _term();
-    final location = GoRouterState.of(context).matchedLocation;
-    final railIdx = _railRoutes.indexWhere((r) => location.startsWith(r));
-    final selected = railIdx >= 0 ? railIdx : 0;
-    final cs = Theme.of(context).colorScheme;
+  // ── Wide layout (tablet / desktop) ─────────────────────────────────────────
 
-    final destinations = [
-      _SidebarDest(
-          Icons.dashboard_outlined, Icons.dashboard_rounded, 'Dashboard'),
-      _SidebarDest(Icons.pets_outlined, Icons.pets_rounded, t.patientPlural),
-      _SidebarDest(
-          Icons.person_outline_rounded, Icons.person_rounded, t.ownerPlural),
-      _SidebarDest(Icons.receipt_long_outlined, Icons.receipt_long_rounded,
-          'Rechnungen'),
-      _SidebarDest(Icons.calendar_month_outlined, Icons.calendar_month_rounded,
-          'Kalender'),
-      _SidebarDest(Icons.chat_outlined, Icons.chat_rounded, 'Nachrichten',
-          badge: _unreadMessages),
-      _SidebarDest(
-          Icons.people_alt_outlined, Icons.people_alt_rounded, 'Warteliste'),
-      _SidebarDest(Icons.warning_amber_outlined, Icons.warning_amber_rounded,
-          'Mahnungen',
-          badge: _overdueCount),
-      _SidebarDest(Icons.assignment_ind_outlined, Icons.assignment_ind_rounded,
-          'Anmeldungen',
-          badge: _newIntakes),
-      _SidebarDest(Icons.send_outlined, Icons.send_rounded, 'Einladungen'),
-      _SidebarDest(
-          Icons.category_outlined, Icons.category_rounded, 'Behandlungsarten'),
-      _SidebarDest(
-          Icons.home_work_outlined, Icons.home_work_rounded, 'Portal Admin'),
-    ];
+  Widget _buildWideLayout(BuildContext context) {
+    final location = GoRouterState.of(context).matchedLocation;
+    final cs = Theme.of(context).colorScheme;
+    final sections = _sections();
 
     return Scaffold(
       floatingActionButton: const FeedbackFab(),
@@ -495,168 +293,41 @@ class _ShellScreenState extends State<ShellScreen>
               color: cs.surface,
               child: Column(
                 children: [
-                  // ── Header ──
-                  SizedBox(
-                    height: 64,
-                    child: Row(
+                  _sidebarHeader(context, showLabels),
+                  Divider(height: 1, color: cs.outlineVariant),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 8),
                       children: [
-                        const SizedBox(width: 14),
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: AppTheme.primary.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Center(
-                            child: SvgPicture.asset(
-                              'assets/icons/paw.svg',
-                              width: 20,
-                              height: 20,
-                              colorFilter: ColorFilter.mode(
-                                  AppTheme.primary, BlendMode.srcIn),
+                        for (final section in sections) ...[
+                          _sectionHeader(context, section.title, showLabels),
+                          for (final item in section.items)
+                            _SidebarNavTile(
+                              item: item,
+                              isSelected: _isActive(item.route, location),
+                              showLabel: showLabels,
+                              onTap: () => _openItem(item),
                             ),
-                          ),
-                        ),
-                        if (showLabels) ...[
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: RichText(
-                              overflow: TextOverflow.clip,
-                              text: TextSpan(
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.4,
-                                  decoration: TextDecoration.none,
-                                ),
-                                children: [
-                                  TextSpan(
-                                      text: 'Thera',
-                                      style: TextStyle(
-                                          color: cs.onSurface,
-                                          decoration: TextDecoration.none)),
-                                  TextSpan(
-                                      text: 'Pano',
-                                      style: TextStyle(
-                                        decoration: TextDecoration.none,
-                                        foreground: Paint()
-                                          ..shader = LinearGradient(
-                                            colors: [
-                                              AppTheme.primary,
-                                              AppTheme.secondary
-                                            ],
-                                          ).createShader(const Rect.fromLTWH(
-                                              0, 0, 50, 18)),
-                                      )),
-                                ],
-                              ),
-                            ),
-                          ),
+                          const SizedBox(height: 6),
                         ],
-                        // Toggle button
-                        SizedBox(
-                          width: 36,
-                          child: IconButton(
-                            padding: EdgeInsets.zero,
-                            icon: AnimatedRotation(
-                              turns: _sidebarExpanded ? 0.5 : 0,
-                              duration: const Duration(milliseconds: 280),
-                              child: const Icon(Icons.chevron_right_rounded,
-                                  size: 20),
-                            ),
-                            tooltip:
-                                _sidebarExpanded ? 'Einklappen' : 'Ausklappen',
-                            onPressed: _toggleSidebar,
-                          ),
-                        ),
                       ],
                     ),
                   ),
                   Divider(height: 1, color: cs.outlineVariant),
-                  // ── Search ──
-                  Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                    child: showLabels
-                        ? InkWell(
-                            borderRadius: BorderRadius.circular(10),
-                            onTap: () => context.push('/suche'),
-                            child: Container(
-                              height: 36,
-                              decoration: BoxDecoration(
-                                color: cs.surfaceContainerHighest
-                                    .withValues(alpha: 0.5),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 10),
-                              child: Row(children: [
-                                Icon(Icons.search_rounded,
-                                    size: 16, color: cs.onSurfaceVariant),
-                                const SizedBox(width: 8),
-                                Text('Suche',
-                                    style: TextStyle(
-                                        fontSize: 13,
-                                        color: cs.onSurfaceVariant)),
-                              ]),
-                            ),
-                          )
-                        : IconButton(
-                            icon: const Icon(Icons.search_rounded, size: 20),
-                            tooltip: 'Suche',
-                            onPressed: () => context.push('/suche'),
-                          ),
-                  ),
-                  // ── Nav items ──
-                  Expanded(
-                    child: ListView.builder(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      itemCount: destinations.length,
-                      itemBuilder: (ctx, i) {
-                        final dest = destinations[i];
-                        final isSelected = i == selected;
-                        return _SidebarTile(
-                          dest: dest,
-                          isSelected: isSelected,
-                          showLabel: showLabels,
-                          onTap: () => _onRailSelected(i),
-                        );
-                      },
+                  _SidebarNavTile(
+                    item: const NavItem(
+                      route: '__logout__',
+                      icon: Icons.logout_rounded,
+                      selectedIcon: Icons.logout_rounded,
+                      label: 'Abmelden',
+                      color: AppTheme.danger,
                     ),
+                    isSelected: false,
+                    showLabel: showLabels,
+                    onTap: () => _confirmLogout(context),
                   ),
-                  Divider(height: 1, color: cs.outlineVariant),
-                  // ── Footer ──
-                  Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-                    child: Column(mainAxisSize: MainAxisSize.min, children: [
-                      _SidebarTile(
-                        dest: _SidebarDest(Icons.person_outline_rounded,
-                            Icons.person_rounded, 'Profil'),
-                        isSelected: false,
-                        showLabel: showLabels,
-                        onTap: () => context.push('/profil'),
-                      ),
-                      _SidebarTile(
-                        dest: _SidebarDest(Icons.settings_outlined,
-                            Icons.settings_rounded, 'Einstellungen',
-                            color: AppTheme.tertiary),
-                        isSelected: location.startsWith('/einstellungen'),
-                        showLabel: showLabels,
-                        onTap: () => context.push('/einstellungen'),
-                      ),
-                      _SidebarTile(
-                        dest: _SidebarDest(Icons.logout_rounded,
-                            Icons.logout_rounded, 'Abmelden',
-                            color: AppTheme.danger),
-                        isSelected: false,
-                        showLabel: showLabels,
-                        onTap: () => _confirmLogout(context),
-                      ),
-                    ]),
-                  ),
+                  const SizedBox(height: 8),
                 ],
               ),
             );
@@ -667,23 +338,7 @@ class _ShellScreenState extends State<ShellScreen>
           child: Column(
             children: [
               _buildTopBar(context),
-              if (_isOffline)
-                Material(
-                  color: Colors.orange.shade700,
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    child: Row(children: [
-                      Icon(Icons.wifi_off_rounded,
-                          color: Colors.white, size: 16),
-                      SizedBox(width: 8),
-                      Text('Keine Internetverbindung',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600)),
-                    ]),
-                  ),
-                ),
+              if (_isOffline) _offlineBanner(),
               Expanded(child: _animatedContent(location)),
             ],
           ),
@@ -692,18 +347,158 @@ class _ShellScreenState extends State<ShellScreen>
     );
   }
 
+  Widget _sidebarHeader(BuildContext context, bool showLabels) {
+    return SizedBox(
+      height: 64,
+      child: Row(
+        children: [
+          const SizedBox(width: 16),
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Center(
+              child: SvgPicture.asset(
+                'assets/icons/paw.svg',
+                width: 21,
+                height: 21,
+                colorFilter:
+                    const ColorFilter.mode(AppTheme.primary, BlendMode.srcIn),
+              ),
+            ),
+          ),
+          if (showLabels) ...[
+            const SizedBox(width: 10),
+            Expanded(child: _wordmark(context, 16)),
+          ],
+          SizedBox(
+            width: 40,
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              icon: AnimatedRotation(
+                turns: _sidebarExpanded ? 0.5 : 0,
+                duration: const Duration(milliseconds: 280),
+                child: const Icon(Icons.chevron_right_rounded, size: 20),
+              ),
+              tooltip: _sidebarExpanded ? 'Einklappen' : 'Ausklappen',
+              onPressed: _toggleSidebar,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionHeader(BuildContext context, String title, bool showLabels) {
+    final cs = Theme.of(context).colorScheme;
+    if (!showLabels) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 4),
+        child: Divider(height: 8, indent: 14, endIndent: 14),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.6,
+          color: cs.onSurfaceVariant.withValues(alpha: 0.75),
+        ),
+      ),
+    );
+  }
+
+  Widget _wordmark(BuildContext context, double size) {
+    final cs = Theme.of(context).colorScheme;
+    return RichText(
+      text: TextSpan(
+        style: TextStyle(
+          fontSize: size,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.4,
+          decoration: TextDecoration.none,
+        ),
+        children: [
+          TextSpan(
+            text: 'Thera',
+            style: TextStyle(
+                color: cs.onSurface, decoration: TextDecoration.none),
+          ),
+          TextSpan(
+            text: 'Pano',
+            style: TextStyle(
+              decoration: TextDecoration.none,
+              foreground: Paint()
+                ..shader = const LinearGradient(
+                  colors: [AppTheme.primary, AppTheme.secondary],
+                ).createShader(Rect.fromLTWH(0, 0, size * 3, size)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _offlineBanner() {
+    return Material(
+      color: Colors.orange.shade700,
+      child: const SafeArea(
+        top: false,
+        bottom: false,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          child: Row(children: [
+            Icon(Icons.wifi_off_rounded, color: Colors.white, size: 16),
+            SizedBox(width: 8),
+            Text('Keine Internetverbindung',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600)),
+          ]),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTopBar(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final timeStr = DateFormat('HH:mm', 'de_DE').format(_now);
-    final totalBadge = _newIntakes + _birthdayCount;
     return Container(
       height: 56,
       decoration: BoxDecoration(
         color: cs.surface,
-        border: Border(bottom: BorderSide(color: cs.outlineVariant, width: 1)),
+        border: Border(bottom: BorderSide(color: cs.outlineVariant)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => context.push('/suche'),
+          child: Container(
+            height: 38,
+            width: 240,
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Row(children: [
+              Icon(Icons.search_rounded, size: 18, color: cs.onSurfaceVariant),
+              const SizedBox(width: 8),
+              Text(_term().searchHint(),
+                  style:
+                      TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+            ]),
+          ),
+        ),
+        const Spacer(),
         Text(timeStr,
             style: TextStyle(
               fontSize: 15,
@@ -711,80 +506,91 @@ class _ShellScreenState extends State<ShellScreen>
               color: cs.onSurfaceVariant,
               fontFeatures: const [FontFeature.tabularFigures()],
             )),
-        const Spacer(),
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              tooltip: 'Benachrichtigungen',
-              onPressed: () => _showNotificationPanel(context),
-            ),
-            if (totalBadge > 0)
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: const BoxDecoration(
-                      color: Colors.red, shape: BoxShape.circle),
-                  constraints:
-                      const BoxConstraints(minWidth: 16, minHeight: 16),
-                  child: Text('$totalBadge',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700),
-                      textAlign: TextAlign.center),
-                ),
-              ),
-          ],
-        ),
+        const SizedBox(width: 4),
+        _themeToggle(),
+        _bell(context),
       ]),
+    );
+  }
+
+  // ── Narrow layout (phone) ──────────────────────────────────────────────────
+
+  Widget _buildNarrowLayout(BuildContext context) {
+    final location = GoRouterState.of(context).matchedLocation;
+    final sections = _sections();
+    final primary = primaryNavItems(sections);
+    final primaryIdx =
+        primary.indexWhere((i) => _isActive(i.route, location));
+    final navIdx = primaryIdx >= 0 ? primaryIdx : primary.length;
+
+    return Scaffold(
+      appBar: _buildAppBar(context),
+      floatingActionButton: const FeedbackFab(),
+      body: Column(children: [
+        if (_isOffline) _offlineBanner(),
+        Expanded(child: _animatedContent(location)),
+      ]),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: navIdx,
+        onDestinationSelected: (idx) {
+          if (idx == primary.length) {
+            _openMoreSheet(sections);
+          } else {
+            _openItem(primary[idx]);
+            if (primary[idx].route == '/nachrichten') {
+              Future.delayed(const Duration(milliseconds: 800), () {
+                if (mounted) _pollUnread();
+              });
+            }
+          }
+        },
+        destinations: [
+          for (final item in primary)
+            NavigationDestination(
+              icon: _navIcon(item, selected: false),
+              selectedIcon: _navIcon(item, selected: true),
+              label: item.label,
+            ),
+          NavigationDestination(
+            icon: Badge(
+              isLabelVisible: _overdueCount > 0,
+              label:
+                  Text('$_overdueCount', style: const TextStyle(fontSize: 9)),
+              backgroundColor: AppTheme.danger,
+              child: const Icon(Icons.grid_view_outlined),
+            ),
+            selectedIcon: const Icon(Icons.grid_view_rounded),
+            label: 'Mehr',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _navIcon(NavItem item, {required bool selected}) {
+    final base = Icon(selected ? item.selectedIcon : item.icon);
+    if (item.badge <= 0) return base;
+    return Badge(
+      label: Text('${item.badge}',
+          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700)),
+      backgroundColor: AppTheme.danger,
+      child: base,
     );
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     final timeStr = DateFormat('HH:mm', 'de_DE').format(_now);
-    final totalBadge = _newIntakes + _birthdayCount;
     return AppBar(
       automaticallyImplyLeading: false,
       titleSpacing: 16,
       title: Row(
         children: [
-          // Logo + TeraPano
           SvgPicture.asset('assets/icons/paw.svg',
               width: 22,
               height: 22,
-              colorFilter: ColorFilter.mode(AppTheme.primary, BlendMode.srcIn)),
+              colorFilter: const ColorFilter.mode(AppTheme.primary, BlendMode.srcIn)),
           const SizedBox(width: 8),
-          RichText(
-              text: TextSpan(
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
-              decoration: TextDecoration.none,
-            ),
-            children: [
-              TextSpan(
-                  text: 'Thera',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    decoration: TextDecoration.none,
-                  )),
-              TextSpan(
-                  text: 'Pano',
-                  style: TextStyle(
-                    decoration: TextDecoration.none,
-                    foreground: Paint()
-                      ..shader = LinearGradient(
-                        colors: [AppTheme.primary, AppTheme.secondary],
-                      ).createShader(const Rect.fromLTWH(0, 0, 56, 20)),
-                  )),
-            ],
-          )),
-          // Live clock — centered
+          _wordmark(context, 18),
           Expanded(
             child: Center(
               child: Text(timeStr,
@@ -799,75 +605,83 @@ class _ShellScreenState extends State<ShellScreen>
         ],
       ),
       actions: [
-        // Theme toggle
-        Consumer<ThemeService>(
-          builder: (_, ts, __) => IconButton(
-            icon: Icon(switch (ts.mode) {
-              ThemeMode.light => Icons.light_mode_rounded,
-              ThemeMode.dark => Icons.dark_mode_rounded,
-              ThemeMode.system => Icons.brightness_auto_rounded,
-            }),
-            tooltip: 'Theme wechseln',
-            onPressed: () {
-              final next = switch (ts.mode) {
-                ThemeMode.system => ThemeMode.light,
-                ThemeMode.light => ThemeMode.dark,
-                ThemeMode.dark => ThemeMode.system,
-              };
-              ts.setMode(next);
-            },
-          ),
+        IconButton(
+          icon: const Icon(Icons.search_rounded),
+          tooltip: 'Suche',
+          onPressed: () => context.push('/suche'),
         ),
-        // Notification bell with shake animation
-        AnimatedBuilder(
-          animation: _bellAnim,
-          builder: (context, child) => Transform.rotate(
-            angle: _bellAnim.value,
-            child: child,
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                icon: Icon(
-                  totalBadge > 0
-                      ? Icons.notifications_rounded
-                      : Icons.notifications_outlined,
-                ),
-                tooltip: 'Benachrichtigungen',
-                onPressed: () => _showNotificationPanel(context),
-              ),
-              if (totalBadge > 0)
-                Positioned(
-                  top: 6,
-                  right: 6,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.elasticOut,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppTheme.danger,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                          color: Theme.of(context).colorScheme.surface,
-                          width: 1.5),
-                    ),
-                    constraints:
-                        const BoxConstraints(minWidth: 16, minHeight: 16),
-                    child: Text('$totalBadge',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800),
-                        textAlign: TextAlign.center),
-                  ),
-                ),
-            ],
-          ),
-        ),
+        _themeToggle(),
+        _bell(context),
         const SizedBox(width: 4),
       ],
+    );
+  }
+
+  Widget _themeToggle() {
+    return Consumer<ThemeService>(
+      builder: (_, ts, __) => IconButton(
+        icon: Icon(switch (ts.mode) {
+          ThemeMode.light => Icons.light_mode_rounded,
+          ThemeMode.dark => Icons.dark_mode_rounded,
+          ThemeMode.system => Icons.brightness_auto_rounded,
+        }),
+        tooltip: 'Theme wechseln',
+        onPressed: () {
+          final next = switch (ts.mode) {
+            ThemeMode.system => ThemeMode.light,
+            ThemeMode.light => ThemeMode.dark,
+            ThemeMode.dark => ThemeMode.system,
+          };
+          ts.setMode(next);
+        },
+      ),
+    );
+  }
+
+  Widget _bell(BuildContext context) {
+    final totalBadge = _newIntakes + _birthdayCount;
+    return AnimatedBuilder(
+      animation: _bellAnim,
+      builder: (context, child) => Transform.rotate(
+        angle: _bellAnim.value,
+        child: child,
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          IconButton(
+            icon: Icon(totalBadge > 0
+                ? Icons.notifications_rounded
+                : Icons.notifications_outlined),
+            tooltip: 'Benachrichtigungen',
+            onPressed: () => _showNotificationPanel(context),
+          ),
+          if (totalBadge > 0)
+            Positioned(
+              top: 6,
+              right: 6,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppTheme.danger,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                      color: Theme.of(context).colorScheme.surface,
+                      width: 1.5),
+                ),
+                constraints:
+                    const BoxConstraints(minWidth: 16, minHeight: 16),
+                child: Text('$totalBadge',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800),
+                    textAlign: TextAlign.center),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
@@ -891,96 +705,74 @@ class _ShellScreenState extends State<ShellScreen>
     );
   }
 
-  Widget _buildNarrowLayout(BuildContext context) {
-    final t = _term();
-    final location = GoRouterState.of(context).matchedLocation;
-    final primaryIdx = _primaryRoutes.indexWhere((r) => location.startsWith(r));
-    final navIdx = primaryIdx >= 0 ? primaryIdx : 0;
+  // ── Phone "Mehr" sheet — grouped, not a cramped grid ───────────────────────
 
-    return Scaffold(
-      key: _narrowScaffoldKey,
-      appBar: _buildAppBar(context),
-      floatingActionButton: const FeedbackFab(),
-      body: Column(children: [
-        if (_isOffline)
-          Material(
-            color: Colors.orange.shade700,
-            child: const SafeArea(
-              top: false,
-              bottom: false,
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                child: Row(children: [
-                  Icon(Icons.wifi_off_rounded, color: Colors.white, size: 16),
-                  SizedBox(width: 8),
-                  Text('Keine Internetverbindung',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600)),
-                ]),
+  void _openMoreSheet(List<NavSection> sections) {
+    final cs = Theme.of(context).colorScheme;
+    // Only sections/items that aren't already reachable via the bottom bar.
+    final groups = [
+      for (final s in sections)
+        NavSection(s.title, [for (final i in s.items) if (!i.primary) i]),
+    ].where((s) => s.items.isNotEmpty).toList();
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cs.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+            ),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final section in groups) ...[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
+                      child: Text(
+                        section.title.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.6,
+                          color: cs.onSurfaceVariant.withValues(alpha: 0.75),
+                        ),
+                      ),
+                    ),
+                    GridView.count(
+                      shrinkWrap: true,
+                      crossAxisCount: 4,
+                      mainAxisSpacing: 8,
+                      crossAxisSpacing: 8,
+                      childAspectRatio: 0.82,
+                      physics: const NeverScrollableScrollPhysics(),
+                      children: [
+                        for (final item in section.items)
+                          _MoreGridTile(
+                            item: item,
+                            onTap: () {
+                              Navigator.pop(ctx);
+                              _openItem(item);
+                            },
+                          ),
+                      ],
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
-        Expanded(child: _animatedContent(location)),
-      ]),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: navIdx,
-        onDestinationSelected: (idx) {
-          if (idx == 5) {
-            _openMoreDrawer();
-          } else {
-            _onPrimarySelected(idx);
-          }
-        },
-        destinations: [
-          const NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard_rounded),
-            label: 'Dashboard',
-          ),
-          NavigationDestination(
-            icon: SvgPicture.asset('assets/icons/paw.svg',
-                width: 22,
-                height: 22,
-                colorFilter: ColorFilter.mode(
-                    Theme.of(context).colorScheme.onSurfaceVariant,
-                    BlendMode.srcIn)),
-            selectedIcon: SvgPicture.asset('assets/icons/paw.svg',
-                width: 22,
-                height: 22,
-                colorFilter:
-                    ColorFilter.mode(AppTheme.primary, BlendMode.srcIn)),
-            label: t.patientPlural,
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long_rounded),
-            label: 'Rechnungen',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.calendar_month_outlined),
-            selectedIcon: Icon(Icons.calendar_month_rounded),
-            label: 'Kalender',
-          ),
-          NavigationDestination(
-            icon: _msgBadge(),
-            selectedIcon: _msgBadge(selected: true),
-            label: 'Nachrichten',
-          ),
-          NavigationDestination(
-            icon: Badge(
-              isLabelVisible: _overdueCount > 0,
-              label:
-                  Text('$_overdueCount', style: const TextStyle(fontSize: 9)),
-              backgroundColor: AppTheme.danger,
-              child: const Icon(Icons.grid_view_outlined),
-            ),
-            selectedIcon: const Icon(Icons.grid_view_rounded),
-            label: 'Mehr',
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -1006,26 +798,16 @@ class _ShellScreenState extends State<ShellScreen>
   }
 }
 
-// ── Sidebar helpers ────────────────────────────────────────────────────────────
+// ── Sidebar tile ─────────────────────────────────────────────────────────────
 
-class _SidebarDest {
-  final IconData icon;
-  final IconData selectedIcon;
-  final String label;
-  final int badge;
-  final Color? color;
-  const _SidebarDest(this.icon, this.selectedIcon, this.label,
-      {this.badge = 0, this.color});
-}
-
-class _SidebarTile extends StatelessWidget {
-  final _SidebarDest dest;
+class _SidebarNavTile extends StatelessWidget {
+  final NavItem item;
   final bool isSelected;
   final bool showLabel;
   final VoidCallback onTap;
 
-  const _SidebarTile({
-    required this.dest,
+  const _SidebarNavTile({
+    required this.item,
     required this.isSelected,
     required this.showLabel,
     required this.onTap,
@@ -1034,13 +816,16 @@ class _SidebarTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final accent = dest.color ?? AppTheme.primary;
-    final fg = isSelected ? accent : cs.onSurfaceVariant;
+    final accent = item.color;
+    final disabled = item.comingSoon;
+    final fg = disabled
+        ? cs.onSurfaceVariant.withValues(alpha: 0.5)
+        : (isSelected ? accent : cs.onSurfaceVariant);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
       child: Tooltip(
-        message: showLabel ? '' : dest.label,
+        message: showLabel ? '' : item.label,
         preferBelow: false,
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
@@ -1054,8 +839,8 @@ class _SidebarTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
             ),
             padding: EdgeInsets.symmetric(
-              horizontal: showLabel ? 10 : 0,
-              vertical: 10,
+              horizontal: showLabel ? 12 : 0,
+              vertical: 11,
             ),
             child: Row(
               mainAxisAlignment: showLabel
@@ -1063,13 +848,13 @@ class _SidebarTile extends StatelessWidget {
                   : MainAxisAlignment.center,
               children: [
                 Badge(
-                  isLabelVisible: dest.badge > 0,
-                  label: Text('${dest.badge}',
+                  isLabelVisible: item.badge > 0,
+                  label: Text('${item.badge}',
                       style: const TextStyle(
                           fontSize: 9, fontWeight: FontWeight.w700)),
                   backgroundColor: AppTheme.danger,
                   child: Icon(
-                    isSelected ? dest.selectedIcon : dest.icon,
+                    isSelected ? item.selectedIcon : item.icon,
                     color: fg,
                     size: 22,
                   ),
@@ -1078,16 +863,20 @@ class _SidebarTile extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      dest.label,
+                      item.label,
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 13.5,
                         fontWeight:
                             isSelected ? FontWeight.w700 : FontWeight.w500,
-                        color: isSelected ? accent : cs.onSurface,
+                        color: disabled
+                            ? cs.onSurfaceVariant.withValues(alpha: 0.5)
+                            : (isSelected ? accent : cs.onSurface),
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  if (disabled)
+                    _soonChip(cs),
                 ],
               ],
             ),
@@ -1096,17 +885,108 @@ class _SidebarTile extends StatelessWidget {
       ),
     );
   }
+
+  Widget _soonChip(ColorScheme cs) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text('bald',
+            style: TextStyle(
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                color: cs.onSurfaceVariant)),
+      );
 }
 
-// ── Drawer item model ──────────────────────────────────────────────────────────
+// ── Phone "Mehr" grid tile ───────────────────────────────────────────────────
 
-class _GridItem {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final String route;
-  final int? badge;
-  const _GridItem(this.icon, this.label, this.color, this.route, {this.badge});
+class _MoreGridTile extends StatelessWidget {
+  final NavItem item;
+  final VoidCallback onTap;
+  const _MoreGridTile({required this.item, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final disabled = item.comingSoon;
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Opacity(
+                opacity: disabled ? 0.5 : 1,
+                child: Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [item.color, item.color.withValues(alpha: 0.72)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color:
+                            item.color.withValues(alpha: isDark ? 0.25 : 0.32),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Icon(item.selectedIcon, color: Colors.white, size: 26),
+                ),
+              ),
+              if (item.badge > 0)
+                Positioned(
+                  top: -5,
+                  right: -5,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.danger,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color:
+                              isDark ? const Color(0xFF1A1D27) : Colors.white,
+                          width: 1.5),
+                    ),
+                    child: Text('${item.badge}',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800)),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 7),
+          Text(
+            item.label,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              color: disabled
+                  ? cs.onSurfaceVariant.withValues(alpha: 0.6)
+                  : cs.onSurface,
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ── Notification bottom sheet ──────────────────────────────────────────────────
@@ -1193,7 +1073,7 @@ class _NotificationSheetState extends State<_NotificationSheet>
                           ),
                           child: Text(
                               '${widget.newIntakes + widget.birthdayCount} neu',
-                              style: TextStyle(
+                              style: const TextStyle(
                                   color: AppTheme.danger,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w700)),
@@ -1219,7 +1099,6 @@ class _NotificationSheetState extends State<_NotificationSheet>
                                       .onSurfaceVariant)),
                     ]),
                   ),
-                // Individual pending intakes
                 ...widget.pendingIntakes.map((intake) {
                   final ownerFirst =
                       intake['owner_first_name'] as String? ?? '';
