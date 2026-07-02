@@ -53,6 +53,11 @@ $router->post('/api/mobile/patients/{id}/timeline',         [MobileApiController
 $router->post('/api/mobile/patients/{id}/timeline/upload',  [MobileApiController::class, 'patientTimelineUpload']);
 $router->post('/api/mobile/patients/{id}/timeline/{eid}/delete', [MobileApiController::class, 'patientTimelineDelete']);
 
+// ── 3D Schmerzanalyse (Phase 4) ──────────────────────────────────────────
+$router->get ('/api/mobile/patients/{id}/schmerzpunkte',                [MobileApiController::class, 'patientSchmerzpunkteList']);
+$router->post('/api/mobile/patients/{id}/schmerzpunkte',                [MobileApiController::class, 'patientSchmerzpunkteSave']);
+$router->post('/api/mobile/patients/{id}/schmerzpunkte/{pid}/loeschen', [MobileApiController::class, 'patientSchmerzpunkteDelete']);
+
 $router->get('/api/mobile/owners',        [MobileApiController::class, 'ownersList']);
 $router->post('/api/mobile/owners',       [MobileApiController::class, 'ownerCreate']);
 $router->get('/api/mobile/owners/{id}',   [MobileApiController::class, 'ownerShow']);
