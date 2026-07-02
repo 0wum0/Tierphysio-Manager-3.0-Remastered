@@ -54,8 +54,22 @@ class ReminderService
                 error_log('[ReminderService] SEND ' . $apptLabel . ' → ' . $a['owner_email']);
             }
 
+            /* Claim-before-Send: Erinnerung ATOMAR beanspruchen, BEVOR gesendet
+             * wird. Erinnerungen laufen über mehrere, teils gleichzeitige Auslöser
+             * (Dispatcher, Praxis-Cron, Cron-Pixel). Das alte Muster
+             * (senden → danach markieren) hat bei parallelen Läufen und bei
+             * Prozessabbruch während des SMTP-Versands Doppel-Mails erzeugt. */
+            if (!$this->appointmentRepository->claimReminder((int)$a['id'])) {
+                error_log('[ReminderService] SKIP ' . $apptLabel . ' — bereits von parallelem Lauf beansprucht');
+                $skipped++;
+                continue;
+            }
+
             $ownerSent = $this->mailService->sendReminder($a);
             if (!$ownerSent) {
+                /* Claim freigeben → nächster Lauf versucht es erneut,
+                 * solange das Erinnerungsfenster (start_at > NOW()) offen ist. */
+                $this->appointmentRepository->releaseReminder((int)$a['id']);
                 $failed++;
                 $lastError = $this->mailService->getLastError();
                 error_log('[ReminderService] FAILED ' . $apptLabel . ' — ' . $lastError);
@@ -68,9 +82,6 @@ class ReminderService
                 $success = $this->mailService->sendPatientReminder($a);
                 $success ? $sent++ : $failed++;
             }
-
-            /* Erst nach erfolgreichem Besitzer-Versand als gesendet markieren */
-            $this->appointmentRepository->markReminderSent((int)$a['id']);
         }
 
         return [

@@ -130,13 +130,21 @@ class AppointmentRepository
 
     public function update(int $id, array $data): void
     {
+        /* Bei Terminverschiebung (start_at ändert sich) die Erinnerung neu
+         * scharfschalten: sonst bekommt der Kunde nach einer Verschiebung
+         * entweder gar keine Erinnerung (alte bereits versendet) oder nur
+         * eine mit der alten Uhrzeit. reminder_sent=... MUSS in der SET-Liste
+         * VOR start_at=? stehen — MySQL wertet SET links-nach-rechts aus,
+         * so vergleicht IF() noch gegen den alten start_at-Wert. */
         $this->db->query(
             "UPDATE `{$this->t('appointments')}` SET
+             reminder_sent = IF(start_at <=> ?, reminder_sent, 0),
              title=?, description=?, start_at=?, end_at=?, all_day=?, status=?, color=?,
              patient_id=?, owner_id=?, treatment_type_id=?, user_id=?,
              recurrence_rule=?, notes=?, reminder_minutes=?
              WHERE id=?",
             [
+                $data['start_at'],
                 $data['title'],
                 $data['description'] ?? null,
                 $data['start_at'],
@@ -159,6 +167,29 @@ class AppointmentRepository
     public function markReminderSent(int $id): void
     {
         $this->db->query("UPDATE `{$this->t('appointments')}` SET reminder_sent=1 WHERE id=?", [$id]);
+    }
+
+    /**
+     * Erinnerung atomar beanspruchen (Claim-before-Send).
+     * Kalender-Erinnerungen werden von mehreren Auslösern verarbeitet
+     * (SaaS-Dispatcher, Praxis-Cron, Cron-Pixel bei Seitenaufrufen) — die
+     * laufen auch gleichzeitig. Ohne atomaren Claim lesen zwei Prozesse
+     * dieselben offenen Erinnerungen und versenden doppelt.
+     * true = dieser Prozess darf senden; false = ein anderer war schneller.
+     */
+    public function claimReminder(int $id): bool
+    {
+        $stmt = $this->db->query(
+            "UPDATE `{$this->t('appointments')}` SET reminder_sent=1 WHERE id=? AND reminder_sent=0",
+            [$id]
+        );
+        return $stmt->rowCount() === 1;
+    }
+
+    /** Claim nach fehlgeschlagenem Versand freigeben — nächster Cron-Lauf versucht es erneut. */
+    public function releaseReminder(int $id): void
+    {
+        $this->db->query("UPDATE `{$this->t('appointments')}` SET reminder_sent=0 WHERE id=?", [$id]);
     }
 
     public function linkInvoice(int $id, int $invoiceId): void

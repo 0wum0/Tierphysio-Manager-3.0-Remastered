@@ -1039,6 +1039,69 @@ gebuchte Zahlung erscheint in der Woche 29.06.–05.07. UND im Juli-Monatsumsatz
 
 ---
 
+## Bug: Termin-Erinnerungen inkonsistent — keine / doppelt / falsche Uhrzeit (Juli 2026)
+**Status:** `fixed`
+**Dateien:**
+- `plugins/calendar/AppointmentRepository.php` (`update()`, neu: `claimReminder()`, `releaseReminder()`)
+- `plugins/calendar/ReminderService.php` (`processPending()` — Claim-before-Send)
+- `plugins/google-calendar-sync/GoogleSyncService.php` (Pull-Update: reminder_sent-Reset)
+
+### Symptom (Support-Ticket 2026-07-02)
+Drei Termine, drei Verhaltensweisen: Termin A erhielt KEINE 24h-Erinnerung, Termin B
+funktionierte, Termin C erhielt ZWEI Erinnerungen mit unterschiedlichen Uhrzeiten
+(15:30 und 17:00 — echter Termin 17:00, vermutlich verschoben).
+
+### Ursachen (3 strukturelle Bugs)
+
+**Bug 1 — Mark-after-Send + parallele Auslöser → Doppelversand:**
+Kalender-Erinnerungen werden von DREI Auslösern verarbeitet, die sich überlappen können:
+1. SaaS-Dispatcher → `/kalender/cron/erinnerungen`
+2. PraxisCron (SaaS) → gleicher Endpoint
+3. **CronPixelController** — 1x1-GIF bei JEDEM Seitenaufruf, Drosselung 15min via
+   `cron_job_log`-Lookup, der NICHT atomar ist (zwei gleichzeitige Seitenaufrufe
+   passieren beide den `isDue()`-Check)
+
+`ReminderService` markierte `reminder_sent=1` erst NACH dem (sekundenlangen) SMTP-Versand.
+Parallele Läufe lasen dieselben offenen Erinnerungen → Doppel-Mails. Zusätzlich: Bricht
+der Prozess nach SMTP-Versand aber vor dem Markieren ab (Timeout), wird beim nächsten
+Lauf erneut versendet — hat sich der Termin zwischenzeitlich verschoben, zeigen die
+beiden Mails unterschiedliche Uhrzeiten (exakt Symptom C).
+
+**Bug 2 — Terminverschiebung setzte reminder_sent nie zurück:**
+`AppointmentRepository::update()` (genutzt von apiUpdate UND apiReschedule/Drag&Drop)
+schrieb `reminder_sent` nicht. Folgen:
+- Erinnerung bereits raus, Termin danach verschoben → KEINE Erinnerung für die neue
+  Zeit (Symptom A) bzw. Kunde kennt nur die alte Uhrzeit
+- Erinnerung noch nicht raus → sie kommt später mit der neuen Zeit (Zufall, ob korrekt)
+
+**Bug 3 — Google-Sync-Pull dito:** Verschiebung in Google Calendar → Pull schrieb
+`start_at` neu, `reminder_sent` blieb 1 → keine korrigierte Erinnerung.
+
+### Fix
+1. **Claim-before-Send (atomar):** `claimReminder()` = `UPDATE ... SET reminder_sent=1
+   WHERE id=? AND reminder_sent=0` → nur der Prozess mit rowCount=1 sendet. Bei
+   Versandfehler `releaseReminder()` → Retry im nächsten Lauf solange Fenster offen.
+   Prozessabbruch nach Claim = maximal EINE verlorene statt doppelter Mails.
+2. **Reset bei Zeitänderung:** `update()` setzt `reminder_sent = IF(start_at <=> ?,
+   reminder_sent, 0)` — steht in der SET-Liste VOR `start_at=?` (MySQL wertet SET
+   links-nach-rechts aus, IF vergleicht also gegen den ALTEN Wert). Verschobene
+   Termine bekommen automatisch eine neue Erinnerung mit korrekter Uhrzeit.
+3. **Google-Sync-Pull:** gleicher IF-Reset im UPDATE.
+
+### SQL-Pattern (merken!)
+```sql
+UPDATE appointments SET
+  reminder_sent = IF(start_at <=> :neu, reminder_sent, 0),  -- MUSS vor start_at stehen!
+  start_at = :neu, ...
+```
+
+### Verbleibende bekannte Lücke (by design)
+Schlägt der Versand bis zum Terminbeginn dauerhaft fehl (`start_at > NOW()`-Filter),
+gibt es keine Erinnerung — nach Terminbeginn wäre sie sinnlos. Fehler stehen im
+error_log (`[ReminderService] FAILED ...`) und im Cron-Log.
+
+---
+
 ## Verlinkungen
 - [[15-agent-rules/update-brain]]
 - [[11-decisions/decision-log]]

@@ -476,10 +476,15 @@ class GoogleSyncService
             }
 
             if ($existing) {
-                /* Update existing — preserve patient_id/owner_id if already set */
+                /* Update existing — preserve patient_id/owner_id if already set.
+                 * reminder_sent-Reset bei Zeitänderung: steht in der SET-Liste VOR
+                 * start_at (MySQL wertet SET links-nach-rechts aus) — nach einer
+                 * Verschiebung in Google bekommt der Kunde so eine Erinnerung
+                 * mit der neuen Uhrzeit statt keiner/einer veralteten. */
                 $this->db->execute(
                     "UPDATE `{$this->t('appointments')}`
-                     SET title       = ?,
+                     SET reminder_sent = IF(start_at <=> ?, reminder_sent, 0),
+                         title       = ?,
                          description = ?,
                          start_at    = ?,
                          end_at      = ?,
@@ -487,6 +492,7 @@ class GoogleSyncService
                          updated_at  = NOW()
                      WHERE google_event_id = ?",
                     [
+                        $startDt->format('Y-m-d H:i:s'),
                         $title,
                         $desc,
                         $startDt->format('Y-m-d H:i:s'),
