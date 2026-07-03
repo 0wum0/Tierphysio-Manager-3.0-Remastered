@@ -316,7 +316,11 @@ function dispatchTenants(PDO $pdo): void
         // ── Self Healing ──
         try {
             // 1. Check for missing columns in appointments
-            $pdo->exec("ALTER TABLE `{$prefix}appointments` ADD COLUMN IF NOT EXISTS `reminder_minutes` SMALLINT UNSIGNED NULL DEFAULT 60 AFTER `notes`") ;
+            /* Default 1440 (24h) — muss mit AppointmentRepository::create() und
+             * Migration 002_update_default_reminder.sql übereinstimmen. War
+             * vorher 60 (1h): Termine, deren Spalte erst hier neu angelegt
+             * wurde, bekamen dadurch nur eine 1h- statt 24h-Erinnerung. */
+            $pdo->exec("ALTER TABLE `{$prefix}appointments` ADD COLUMN IF NOT EXISTS `reminder_minutes` SMALLINT UNSIGNED NULL DEFAULT 1440 AFTER `notes`") ;
             $pdo->exec("ALTER TABLE `{$prefix}appointments` ADD COLUMN IF NOT EXISTS `reminder_sent` TINYINT(1) NOT NULL DEFAULT 0 AFTER `reminder_minutes`") ;
             $pdo->exec("ALTER TABLE `{$prefix}appointments` ADD COLUMN IF NOT EXISTS `patient_reminder_sent` TINYINT(1) NOT NULL DEFAULT 0 AFTER `reminder_sent`") ;
 

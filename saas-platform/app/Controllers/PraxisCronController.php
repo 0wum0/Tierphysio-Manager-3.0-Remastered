@@ -289,10 +289,18 @@ class PraxisCronController extends Controller
         exit;
     }
 
-    /* ── GET /admin/cron-monitoring ─────────────────────────────────── */
+    /* ── GET /admin/cron-monitoring[?tid=...] ─────────────────────────
+     * Ohne ?tid=: globaler Überblick (letzter Lauf über ALLE Tenants je Job).
+     * Bei vielen Tenants sagt "letzter Lauf" dann nichts über einen konkreten
+     * Tenant aus — z.B. wenn Tenant A's Google-Sync übersprungen wird
+     * (no_connection), aber man wissen will, ob Tenant A's
+     * Kalender-Erinnerungen liefen. Mit ?tid= wird strikt auf diesen
+     * Tenant gefiltert, damit das prüfbar ist. ────────────────────────── */
     public function monitoring(array $params = []): void
     {
         $this->requireAuth();
+
+        $tidFilter = trim((string)$this->get('tid', ''));
 
         $jobKeys = [
             'birthday', 'calendar_reminders', 'google_sync',
@@ -302,18 +310,33 @@ class PraxisCronController extends Controller
         $jobStats = [];
         foreach ($jobKeys as $key) {
             try {
-                $last = $this->db->fetch(
-                    "SELECT job_key, status, message, duration_ms, created_at
-                     FROM cron_dispatcher_log
-                     WHERE job_key = ?
-                     ORDER BY created_at DESC LIMIT 1",
-                    [$key]
-                );
-                $errorCount = (int)$this->db->fetchColumn(
-                    "SELECT COUNT(*) FROM cron_dispatcher_log
-                     WHERE job_key = ? AND status = 'error' AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)",
-                    [$key]
-                );
+                if ($tidFilter !== '') {
+                    $last = $this->db->fetch(
+                        "SELECT job_key, status, message, duration_ms, created_at
+                         FROM cron_dispatcher_log
+                         WHERE job_key = ? AND tid = ?
+                         ORDER BY created_at DESC LIMIT 1",
+                        [$key, $tidFilter]
+                    );
+                    $errorCount = (int)$this->db->fetchColumn(
+                        "SELECT COUNT(*) FROM cron_dispatcher_log
+                         WHERE job_key = ? AND tid = ? AND status = 'error' AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)",
+                        [$key, $tidFilter]
+                    );
+                } else {
+                    $last = $this->db->fetch(
+                        "SELECT job_key, status, message, duration_ms, created_at
+                         FROM cron_dispatcher_log
+                         WHERE job_key = ?
+                         ORDER BY created_at DESC LIMIT 1",
+                        [$key]
+                    );
+                    $errorCount = (int)$this->db->fetchColumn(
+                        "SELECT COUNT(*) FROM cron_dispatcher_log
+                         WHERE job_key = ? AND status = 'error' AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)",
+                        [$key]
+                    );
+                }
                 $jobStats[$key] = [
                     'last_run'    => $last ?: null,
                     'errors_24h'  => $errorCount,
@@ -323,12 +346,19 @@ class PraxisCronController extends Controller
             }
         }
 
-        /* Last 50 dispatcher log entries */
+        /* Last 50 dispatcher log entries (optional tid-Filter) */
         $recentLogs = [];
         try {
-            $recentLogs = $this->db->fetchAll(
-                "SELECT * FROM cron_dispatcher_log ORDER BY created_at DESC LIMIT 50"
-            );
+            if ($tidFilter !== '') {
+                $recentLogs = $this->db->fetchAll(
+                    "SELECT * FROM cron_dispatcher_log WHERE tid = ? ORDER BY created_at DESC LIMIT 50",
+                    [$tidFilter]
+                );
+            } else {
+                $recentLogs = $this->db->fetchAll(
+                    "SELECT * FROM cron_dispatcher_log ORDER BY created_at DESC LIMIT 50"
+                );
+            }
         } catch (\Throwable) {}
 
         $this->render('admin/cron-monitoring.twig', [
@@ -336,6 +366,7 @@ class PraxisCronController extends Controller
             'active_nav'  => 'praxis_cron',
             'job_stats'   => $jobStats,
             'recent_logs' => $recentLogs,
+            'tid_filter'  => $tidFilter,
         ]);
     }
 }

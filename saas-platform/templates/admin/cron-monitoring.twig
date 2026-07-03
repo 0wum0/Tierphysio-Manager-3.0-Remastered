@@ -7,12 +7,28 @@
             <svg class="sa-icon me-2" style="color:var(--bs-primary)"><use href="/sa/icons/sprite.svg#clock"></use></svg>
             Cronjob-Monitoring
         </h4>
-        <p class="text-muted fs-sm mb-0">Letzter Lauf, Fehlerstatus und Logs aller registrierten Jobs.</p>
+        <p class="text-muted fs-sm mb-0">
+            {% if tid_filter %}
+                Gefiltert auf Tenant <strong>{{ tid_filter }}</strong> — letzter Lauf und Logs NUR für diesen Tenant.
+            {% else %}
+                Letzter Lauf über ALLE Tenants je Job. Zum Prüfen eines einzelnen Tenants (z.B. "lief die
+                Kalender-Erinnerung für Tenant X wirklich?") unten die Tenant-ID eingeben.
+            {% endif %}
+        </p>
     </div>
     <a href="/admin/praxis-cron" class="btn btn-sm btn-outline-secondary">
         <svg class="sa-icon sa-icon-sm me-1"><use href="/sa/icons/sprite.svg#settings"></use></svg>Cronjob-Setup
     </a>
 </div>
+
+<form method="GET" action="/admin/cron-monitoring" class="d-flex align-items-center gap-2 mb-3">
+    <input type="text" name="tid" value="{{ tid_filter }}" placeholder="Tenant-ID (z.B. nella-delago-171164)"
+           class="form-control form-control-sm" style="max-width:320px;">
+    <button type="submit" class="btn btn-sm btn-primary">Filtern</button>
+    {% if tid_filter %}
+    <a href="/admin/cron-monitoring" class="btn btn-sm btn-outline-secondary">Filter zurücksetzen</a>
+    {% endif %}
+</form>
 
 {# Job Status Cards #}
 {% set jobLabels = {
@@ -76,7 +92,7 @@
 {# Recent Logs Table #}
 <div class="card">
     <div class="card-header d-flex align-items-center justify-content-between py-2">
-        <span class="fw-600 fs-sm">Letzte 50 Cron-Einträge</span>
+        <span class="fw-600 fs-sm">Letzte 50 Cron-Einträge{% if tid_filter %} — Tenant {{ tid_filter }}{% endif %}</span>
         <span class="text-muted fs-xs">cron_dispatcher_log</span>
     </div>
     <div class="table-responsive">
@@ -85,6 +101,7 @@
                 <tr>
                     <th style="width:155px;">Zeitpunkt</th>
                     <th style="width:180px;">Job</th>
+                    <th style="width:140px;">Tenant</th>
                     <th style="width:90px;">Status</th>
                     <th>Meldung</th>
                     <th style="width:80px;">Dauer</th>
@@ -95,6 +112,11 @@
                 <tr>
                     <td class="text-muted fs-xs text-nowrap">{{ entry.created_at|date('d.m.Y H:i:s') }}</td>
                     <td class="fs-xs fw-600">{{ jobLabels[entry.job_key].icon ?? '⚙' }} {{ jobLabels[entry.job_key].label ?? entry.job_key }}</td>
+                    <td class="text-muted fs-xs">
+                        {% if entry.tid %}
+                            <a href="/admin/cron-monitoring?tid={{ entry.tid|url_encode }}">{{ entry.tid }}</a>
+                        {% else %}–{% endif %}
+                    </td>
                     <td>
                         {% if entry.status == 'success' %}
                         <span class="badge bg-success-lt text-success fs-xxs">OK</span>
@@ -111,9 +133,9 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="5" class="text-center py-5 text-muted">
+                    <td colspan="6" class="text-center py-5 text-muted">
                         <svg class="sa-icon sa-icon-3x d-block mx-auto mb-2 opacity-25"><use href="/sa/icons/sprite.svg#clock"></use></svg>
-                        Noch keine Cron-Logs vorhanden.
+                        {% if tid_filter %}Keine Cron-Logs für diesen Tenant.{% else %}Noch keine Cron-Logs vorhanden.{% endif %}
                     </td>
                 </tr>
                 {% endfor %}

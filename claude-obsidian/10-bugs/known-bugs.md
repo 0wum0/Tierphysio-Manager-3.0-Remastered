@@ -26,6 +26,64 @@ Bug gefunden → in Datei dokumentieren → Fix referenzieren → Status aktuali
 
 ---
 
+## Bug: Termin-Erinnerungen ohne Google-Sync — Flutter/Mobile-Termine falscher Default + kein Reset bei Verschiebung (Juli 2026)
+**Status:** `fixed`
+**Auslöser:** Support-Ticket zeigte Cron-Log-Zeile "Google Kalender Sync … skipped … reason=no_connection"
+für Tenant `nella-delago-171164`; Nutzer wollte sichergestellt haben, dass normale (nicht
+google-synchronisierte) Kalendertermine trotzdem korrekt und pünktlich erinnert werden.
+**Dateien:**
+- `app/Controllers/MobileApiController.php` (`appointmentCreate`, `waitlistSchedule`, `appointmentUpdate`)
+- `saas-platform/cron/cron_runner.php` (Self-Heal-ALTER für `reminder_minutes`)
+- `saas-platform/app/Controllers/PraxisCronController.php` + `saas-platform/templates/admin/cron-monitoring.twig`
+
+### Architektur-Check (kein Bug)
+`google_sync` und `calendar_reminders` sind vollständig unabhängige Cron-Jobs
+(`CronController::dispatcher()`, Zeile ~292): jeder läuft in eigenem try/catch, mit eigenem
+`isDue()`-Check pro `job_key` UND `tid`. `status=skipped/reason=no_connection` bei Google-Sync
+ist für Tenants ohne Google-Verbindung erwartetes Verhalten (siehe bestehender Bug-Eintrag
+"Google Sync no_connection als SUCCESS") und blockiert `calendar_reminders` NICHT.
+
+### Gefundene echte Bugs (3)
+
+**Bug 1 — Mobile-API/Flutter: falscher Erinnerungs-Default (60 statt 1440 Minuten).**
+`MobileApiController::appointmentCreate()` und `::waitlistSchedule()` (INSERT) nutzten
+`(int)($data['reminder_minutes'] ?? 60)` — 1 Stunde vorher. Der Web-Kalender
+(`AppointmentRepository::create()`) nutzt `?? 1440` — 24 Stunden vorher, ebenso Migration
+`002_update_default_reminder.sql`. Ein per Flutter-App/Mobile-API angelegter Termin ohne
+explizit gesetztes `reminder_minutes` bekam dadurch nur 1h statt 24h Vorlauf — Verstoß gegen
+die CRITICAL-RULES Flutter/Web-Paritätsregel. Erklärt plausibel frühere „keine 24h-Erinnerung"-
+Fälle, wenn der Termin über die App angelegt wurde.
+Fix: Default auf `1440` vereinheitlicht.
+
+**Bug 2 — Mobile-API: `appointmentUpdate()` setzte `reminder_sent` bei Verschiebung nie zurück.**
+Gleiches Muster wie der bereits gefixte Web-Kalender-Bug (siehe „Termin-Erinnerungen inkonsistent"
+weiter unten), hier aber im Mobile-API-Pfad übersehen. Ein per App verschobener Termin, dessen
+Erinnerung schon raus war, bekam keine neue Erinnerung für die neue Zeit.
+Fix: `reminder_sent = IF(? IS NULL OR start_at <=> ?, reminder_sent, 0)` in der SET-Liste VOR
+`start_at = COALESCE(...)` (MySQL wertet SET links-nach-rechts aus).
+
+**Bug 3 — SaaS Self-Heal-Migration mit falschem Default.**
+`saas-platform/cron/cron_runner.php` legte die Spalte `reminder_minutes` bei fehlender Spalte
+mit `DEFAULT 60` an (Widerspruch zu Migration 002 / SaaS-Migration `UpdateCalendarAppointments.php`,
+beide `1440`). Betrifft nur Tenant-DBs, bei denen dieser Self-Heal-Pfad die Spalte zuerst anlegt.
+Fix: Default auf `1440` korrigiert.
+
+### Zusätzlich: Monitoring-Dashboard konnte Tenant-Frage nicht beantworten
+`/admin/cron-monitoring` zeigte "letzter Lauf je Job" GLOBAL über alle Tenants — bei vielen
+Tenants sagt das nichts darüber aus, ob `calendar_reminders` für einen SPEZIFISCHEN Tenant
+(z.B. `nella-delago-171164`) tatsächlich lief. Exakt die Situation aus dem Support-Ticket:
+sichtbar war nur der globale Google-Sync-Eintrag, keine tenant-scoped Aussage zu Erinnerungen.
+Fix: `?tid=`-Filter ergänzt (Controller + Formular im Template), `tid`-Spalte in der Log-Tabelle,
+Klick auf Tenant-ID filtert direkt. Admins können jetzt gezielt prüfen: „lief
+`calendar_reminders` für Tenant X, wann, mit welchem Ergebnis?"
+
+### Verifikation
+- PHP-Lint sauber auf allen geänderten Dateien.
+- Dispatcher-Unabhängigkeit im Code verifiziert (separate try/catch + tid-gefilterter isDue-Check).
+- `/admin/cron-monitoring?tid=nella-delago-171164` zeigt jetzt ausschließlich Logs dieses Tenants.
+
+---
+
 ## Bug: Feedback-FAB überdeckte Chat-Send-Button — FIXED (Mai 2026)
 
 ### Symptom

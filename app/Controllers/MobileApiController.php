@@ -1727,7 +1727,9 @@ class MobileApiController
                     $data['color']  ?? '#4f7cff',
                     trim($data['description'] ?? ''),
                     trim($data['notes']       ?? ''),
-                    (int)($data['reminder_minutes'] ?? 60),
+                    /* 1440 = 24h, gleicher Default wie Web-Kalender
+                     * (AppointmentRepository::create) — Flutter/Web-Parität. */
+                    (int)($data['reminder_minutes'] ?? 1440),
                 ]
             );
             $this->googleSyncAppointment((int)$id, 'create');
@@ -1746,8 +1748,15 @@ class MobileApiController
         $data = $this->body();
 
         try {
+            /* reminder_sent-Reset bei Zeitänderung: steht in der SET-Liste VOR
+             * start_at (MySQL wertet SET links-nach-rechts aus, IF vergleicht
+             * also gegen den ALTEN start_at). Ohne diesen Reset bekommt ein per
+             * Flutter/App verschobener Termin keine Erinnerung für die neue
+             * Zeit — gleiches Problem wie beim Web-Kalender (siehe
+             * AppointmentRepository::update()), hier für den Mobile-API-Pfad. */
             $this->db->execute(
                 "UPDATE `{$this->t('appointments')}` SET
+                    reminder_sent = IF(? IS NULL OR start_at <=> ?, reminder_sent, 0),
                     title = COALESCE(?, title),
                     start_at = COALESCE(?, start_at),
                     end_at = COALESCE(?, end_at),
@@ -1760,6 +1769,8 @@ class MobileApiController
                     notes = COALESCE(?, notes)
                  WHERE id = ?",
                 [
+                    $data['start_at'] ?? null,
+                    $data['start_at'] ?? null,
                     $data['title']    ?? null,
                     $data['start_at'] ?? null,
                     $data['end_at']   ?? null,
@@ -2847,7 +2858,8 @@ class MobileApiController
                     $entry['treatment_type_id'],
                     trim($data['description'] ?? ''),
                     trim($data['notes'] ?? $entry['notes'] ?? ''),
-                    (int)($data['reminder_minutes'] ?? 60),
+                    /* 1440 = 24h, gleicher Default wie Web-Kalender — Flutter/Web-Parität. */
+                    (int)($data['reminder_minutes'] ?? 1440),
                 ]
             );
             $this->db->execute("DELETE FROM `{$this->t('appointment_waitlist')}` WHERE id = ?", [$waitId]);
