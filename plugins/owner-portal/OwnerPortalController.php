@@ -477,6 +477,59 @@ class OwnerPortalController extends Controller
         exit;
     }
 
+    /* ── GET /portal/tiere/{id}/anhang/{file} ──
+     * Liefert Timeline-Anhänge (Dokumente + Fotos) aus, die per
+     * PatientController::uploadAttachment() unter patients/{id}/timeline/
+     * gespeichert wurden. owner_pet_detail.twig verlinkte diese bisher direkt
+     * auf /uploads/{filename} — ein öffentlicher Webroot-Pfad, unter dem die
+     * Dateien nie lagen (sie liegen im tenant-isolierten Storage) → immer 404.
+     * Diese Route serviert sie analog zu petPhoto(): Portal-Auth + Ownership-
+     * Check, dann kandidatenbasierte Pfadauflösung im Tenant-Storage. */
+    public function petAttachment(array $params = []): void
+    {
+        $user    = $this->requireOwnerAuth();
+        $ownerId = (int)$user['owner_id'];
+        $petId   = (int)($params['id'] ?? 0);
+
+        /* Security: verify this pet belongs to this owner */
+        $pet = $this->repo->getPetByIdAndOwner($petId, $ownerId);
+        if (!$pet) { $this->abort(403); return; }
+
+        $file = basename($params['file'] ?? '');
+        if (!$file) { $this->abort(404); return; }
+
+        /* Primary location: timeline/ (uploadAttachment()). Legacy fallbacks
+         * spiegeln PatientController::downloadDocument(). */
+        $candidates = [
+            tenant_storage_path('patients/' . $petId . '/timeline/' . $file),
+            tenant_storage_path('patients/' . $petId . '/docs/' . $file),
+            tenant_storage_path('patients/' . $petId . '/' . $file),
+        ];
+
+        $path = null;
+        foreach ($candidates as $candidate) {
+            if (file_exists($candidate) && is_file($candidate)) {
+                $path = $candidate;
+                break;
+            }
+        }
+
+        if ($path === null) { $this->abort(404); return; }
+
+        $finfo    = new \finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($path);
+        $isInline = str_starts_with($mimeType, 'image/')
+            || str_starts_with($mimeType, 'video/')
+            || $mimeType === 'application/pdf';
+
+        header('Content-Type: ' . $mimeType);
+        header('Content-Disposition: ' . ($isInline ? 'inline' : 'attachment') . '; filename="' . $file . '"');
+        header('Content-Length: ' . filesize($path));
+        header('Cache-Control: private, max-age=3600');
+        readfile($path);
+        exit;
+    }
+
     /* ── GET /portal/tiere/{id}/bearbeiten ── */
     public function petEdit(array $params = []): void
     {

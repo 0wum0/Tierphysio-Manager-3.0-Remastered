@@ -26,6 +26,53 @@ Bug gefunden → in Datei dokumentieren → Fix referenzieren → Status aktuali
 
 ---
 
+## Bug: Besitzerportal — Dokumente/Fotos in Tierdetailansicht liefern 404 (Juli 2026)
+**Status:** `fixed`
+**Dateien:**
+- `plugins/owner-portal/templates/owner_pet_detail.twig` (Dokumente-Tab + Fotos-Tab)
+- `plugins/owner-portal/OwnerPortalController.php` (neu: `petAttachment()`)
+- `plugins/owner-portal/ServiceProvider.php` (neue Route)
+
+### Symptom
+Im Besitzerportal (`/portal/tiere/{id}`) lieferte das Öffnen eines Dokuments oder Fotos im
+"Dokumente"/"Fotos"-Tab HTTP 404.
+
+### Ursache
+`owner_pet_detail.twig` verlinkte Timeline-Anhänge direkt auf `/uploads/{{ entry.attachment }}`
+— einen öffentlichen Webroot-Pfad. Die Dateien liegen dort aber nie: Uploads laufen über
+`PatientController::uploadAttachment()` und werden tenant-isoliert unter
+`tenant_storage_path('patients/{id}/timeline/{filename}')` gespeichert (siehe
+`storage/tenants/{prefix}/patients/{id}/timeline/`), nicht unter `public/uploads/`.
+Der Link war daher strukturell nie erreichbar — kein Pfad-Tippfehler, sondern zwei
+grundverschiedene Speicherorte, die nie verbunden wurden.
+
+Die Praxis-Ansicht (`templates/patients/show.twig`) hat für dieselben Anhänge bereits eine
+korrekte, authentifizierte Route: `/patienten/{id}/dokumente/{file}` →
+`PatientController::downloadDocument()`. Diese Route verlangt aber Staff-Login
+(`['auth']`-Middleware, `user_id`-Session) — für Besitzerportal-Nutzer (eigene
+`owner_portal_user_id`-Session) nicht nutzbar, hätte nur Login-Redirect statt 404 ergeben.
+
+### Fix
+Neue Portal-eigene Route `GET /portal/tiere/{id}/anhang/{file}` →
+`OwnerPortalController::petAttachment()`, nach demselben bereits etablierten Muster wie
+`petPhoto()` (Profilbild-Auslieferung):
+1. `requireOwnerAuth()` — Portal-Session-Pflicht.
+2. `getPetByIdAndOwner()` — Ownership-Check: das Tier muss dem eingeloggten Besitzer gehören
+   (verhindert, dass Besitzer A Anhänge von Besitzer B's Tier erraten/laden kann).
+3. `basename($file)` — Path-Traversal-Schutz.
+4. Kandidatenpfade `timeline/` → `docs/` → `patients/{id}/` (spiegelt
+   `PatientController::downloadDocument()`-Fallback-Kette für Alt-Uploads).
+5. Inline-Anzeige für Bild/Video/PDF, sonst Download — gleiche Logik wie `downloadDocument()`.
+
+Templates auf die neue Route umgestellt (Dokumente-Download-Link, Fotos-Grid `<a>` + `<img src>`).
+
+### Verifikation
+- PHP-Lint sauber auf beiden geänderten PHP-Dateien.
+- Routen- und Methodennamen konsistent mit bestehendem `petPhoto()`-Muster geprüft.
+- Kein Zugriff auf fremde Tiere möglich (403 bei Ownership-Mismatch, wie bei `petPhoto()`).
+
+---
+
 ## Bug: Toast-Benachrichtigung "Termin in Kürze" für bereits vergangene Termine (Juli 2026)
 **Status:** `fixed`
 **Auslöser:** Nutzer meldete: direkt nach Login erscheinen Toast-Benachrichtigungen für Termine,

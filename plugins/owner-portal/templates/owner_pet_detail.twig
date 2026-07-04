@@ -99,7 +99,7 @@
                     <div>
                         <div class="timeline-title">{{ entry.title }}</div>
                         {% if entry.attachment %}
-                            <a href="/uploads/{{ entry.attachment }}" target="_blank"
+                            <a href="/portal/tiere/{{ pet.id }}/anhang/{{ entry.attachment }}" target="_blank"
                                class="small text-primary">Herunterladen →</a>
                         {% endif %}
                     </div>
@@ -123,8 +123,8 @@
             {% for entry in photos %}
                 {% if entry.attachment %}
                 <div>
-                    <a href="/uploads/{{ entry.attachment }}" target="_blank">
-                        <img src="/uploads/{{ entry.attachment }}" alt="{{ entry.title }}"
+                    <a href="/portal/tiere/{{ pet.id }}/anhang/{{ entry.attachment }}" target="_blank">
+                        <img src="/portal/tiere/{{ pet.id }}/anhang/{{ entry.attachment }}" alt="{{ entry.title }}"
                              style="width:100%;height:110px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,0.08);">
                     </a>
                     <div class="small text-secondary text-center mt-1">{{ entry.entry_date|date('d.m.Y') }}</div>

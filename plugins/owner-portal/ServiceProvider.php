@@ -75,6 +75,7 @@ class ServiceProvider
         $router->get('/portal/tiere',                    [OwnerPortalController::class,      'petList'],        []);
         $router->get('/portal/tiere/{id}',               [OwnerPortalController::class,      'petDetail'],      []);
         $router->get('/portal/tiere/{id}/foto/{file}',     [OwnerPortalController::class,      'petPhoto'],       []);
+        $router->get('/portal/tiere/{id}/anhang/{file}',   [OwnerPortalController::class,      'petAttachment'],  []);
         $router->get('/portal/tiere/{id}/bearbeiten',     [OwnerPortalController::class,      'petEdit'],        []);
         $router->post('/portal/tiere/{id}/bearbeiten',    [OwnerPortalController::class,      'petEditSave'],    []);
         $router->get('/portal/tiere/{id}/uebungen',       [OwnerPortalController::class,      'exercises'],      []);
