@@ -228,6 +228,7 @@ $router->get('/admin/feedback',                    [FeedbackController::class, '
 $router->get('/admin/feedback/broadcast',          [FeedbackController::class, 'broadcast']);
 $router->post('/admin/feedback/broadcast',         [FeedbackController::class, 'broadcast']);
 $router->get('/admin/feedback/{id}',               [FeedbackController::class, 'show']);
+$router->get('/admin/feedback/{id}/anhang',        [FeedbackController::class, 'attachment']);
 $router->post('/admin/feedback/{id}/reply',        [FeedbackController::class, 'reply']);
 $router->post('/admin/feedback/{id}/status',       [FeedbackController::class, 'updateStatus']);
 $router->post('/admin/feedback/{id}/delete',       [FeedbackController::class, 'delete']);

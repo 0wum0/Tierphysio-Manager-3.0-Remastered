@@ -97,7 +97,9 @@
                         <span class="badge bg-{{ sColors[st] ?? 'secondary' }} bg-opacity-75 fs-nano">{{ sLabels[st] ?? st }}</span>
                     </td>
                     <td style="max-width:280px;">
-                        <div class="text-muted fs-sm text-truncate">{{ item.message }}</div>
+                        <div class="text-muted fs-sm text-truncate">
+                            {% if item.attachment_path %}<span title="Mit Anhang">📎</span> {% endif %}{{ item.message }}
+                        </div>
                     </td>
                     <td>
                         <span class="badge bg-secondary bg-opacity-50 fs-nano">{{ item.platform ?? 'web' }}</span>

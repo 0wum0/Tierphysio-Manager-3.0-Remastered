@@ -119,6 +119,61 @@ class FeedbackController extends Controller
         ]);
     }
 
+    /**
+     * GET /admin/feedback/{id}/anhang
+     *
+     * Liefert den Feedback-Anhang direkt aus dem SaaS-Admin aus, ohne dass der
+     * Admin in der Praxis-App (app.therapano.de) als Mitarbeiter des jeweiligen
+     * Tenants eingeloggt sein muss. Vorher verlinkte show.twig direkt auf
+     * https://app.therapano.de/{attachment_path} — diese Route dort verlangt
+     * ['auth'] (Praxis-Mitarbeiter-Session), die ein SaaS-Admin i.d.R. nicht hat.
+     * saas-platform liegt auf demselben Server als Sibling-Ordner des Haupt-Repos
+     * und kann daher direkt (Dateisystem, kein HTTP) auf storage/feedback/
+     * zugreifen — analog zum Muster in TenantHealthService::checkStorage().
+     */
+    public function attachment(array $params = []): void
+    {
+        $this->requireAuth();
+
+        $id   = (int)($params['id'] ?? 0);
+        $item = $this->db->fetch("SELECT attachment_path FROM feedback WHERE id = ?", [$id]);
+
+        if (!$item || empty($item['attachment_path'])) {
+            http_response_code(404);
+            echo 'Kein Anhang vorhanden.';
+            return;
+        }
+
+        /* attachment_path ist serverseitig erzeugt (FeedbackController::handleAttachment()
+         * im Hauptrepo, Format 'storage/feedback/feedback_<hex>.<ext>') — trotzdem defensiv
+         * per basename() + Containment-Check behandeln, nie dem gespeicherten Pfad blind
+         * vertrauen. */
+        $file = basename((string)$item['attachment_path']);
+        if ($file === '') {
+            http_response_code(404);
+            echo 'Kein Anhang vorhanden.';
+            return;
+        }
+
+        $base = defined('STORAGE_PATH') ? STORAGE_PATH : dirname(__DIR__, 3) . '/storage';
+        $dir  = $base . '/feedback';
+        $path = realpath($dir . '/' . $file);
+
+        if ($path === false || !str_starts_with($path, realpath($dir) . DIRECTORY_SEPARATOR)) {
+            http_response_code(404);
+            echo 'Datei nicht gefunden.';
+            return;
+        }
+
+        $mime = mime_content_type($path) ?: 'application/octet-stream';
+        header('Content-Type: ' . $mime);
+        header('Content-Disposition: inline; filename="' . $file . '"');
+        header('Content-Length: ' . filesize($path));
+        header('Cache-Control: private, max-age=3600');
+        readfile($path);
+        exit;
+    }
+
     public function reply(array $params = []): void
     {
         $this->requireAuth();

@@ -26,6 +26,57 @@ Bug gefunden → in Datei dokumentieren → Fix referenzieren → Status aktuali
 
 ---
 
+## Bug: SaaS-Admin Feedback/Support — Bild-Anhang öffnet in neuem Tab + erfordert Praxis-Login (Juli 2026)
+**Status:** `fixed`
+**Auslöser:** Nutzer meldete: Öffnet man im SaaS-Admin einen Support-Vorgang (egal ob von
+Tiertherapeut oder Hundetrainer/Hundeschule eingereicht) mit Bildanhang, öffnet sich das Bild
+in einem neuen Tab UND verlangt einen Login als genau der Praxis/Hundeschule, die den Vorgang
+eingereicht hat — der SaaS-Admin hat aber gar keine Session in der Praxis-App.
+**Dateien:**
+- `saas-platform/app/Controllers/FeedbackController.php` (neu: `attachment()`)
+- `saas-platform/app/Routes/web.php` (neue Route)
+- `saas-platform/templates/admin/feedback/show.twig` (Modal statt neuer Tab)
+- `saas-platform/templates/admin/feedback/index.twig` (📎-Indikator in der Liste)
+
+### Ursache
+`show.twig` verlinkte den Anhang direkt auf
+`https://app.therapano.de/{{ item.attachment_path }}` mit `target="_blank"`.
+`attachment_path` hat die Form `storage/feedback/{filename}` — die Route dafür in der
+**Praxis-App** (`app/Routes/web.php`, `/storage/feedback/{file}`) ist mit `['auth']`
+geschützt, also Praxis-**Mitarbeiter**-Login (`user_id`-Session der Praxis-App) erforderlich.
+`saas-platform` ist eine komplett separate Anwendung mit eigener Session (`Saas\Core\Session`,
+eigener Login) — ein SaaS-Admin hat dort naturgemäß nie eine aktive Sitzung. Deshalb landete
+der Klick auf der Login-Seite der Praxis-App, und der Admin musste sich tatsächlich mit den
+Zugangsdaten genau des Tenants anmelden, der den Vorgang eingereicht hatte, um das Bild zu sehen.
+
+### Fix
+Neue authentifizierte Route direkt im SaaS-Admin: `GET /admin/feedback/{id}/anhang` →
+`FeedbackController::attachment()`. `saas-platform` liegt als Sibling-Ordner im selben Repo/Server
+wie die Praxis-App und kann daher **direkt über das Dateisystem** auf `storage/feedback/`
+zugreifen — exakt das bereits etablierte Muster aus `TenantHealthService::checkStorage()`
+(`dirname(__DIR__, 3) . '/storage'`). Kein HTTP-Sprung zur Praxis-App mehr nötig, keine
+fremde Session-Anforderung. Datei wird mit `basename()` + `realpath()`-Containment-Check
+sicher aufgelöst (Pfad-Traversal-Schutz, isoliert getestet: gültige Datei → 200,
+`../secret/config.php` → 404, leerer Dateiname → 404).
+
+`show.twig`: Anhang öffnet jetzt in einem Bootstrap-Modal direkt auf der Seite (Bild als
+Thumbnail zum Vergrößern anklickbar, PDF im `<iframe>`) statt in einem neuen Tab. „In neuem
+Tab öffnen" bleibt als optionaler Zusatz-Button im Modal-Footer erhalten (funktioniert jetzt
+korrekt, weil same-origin + authentifiziert).
+
+`index.twig`: 📎-Symbol vor der Nachricht in der Liste, wenn ein Anhang vorhanden ist —
+Admin sieht auf einen Blick, welche Vorgänge ein Bild enthalten.
+
+### Verifikation
+- PHP-Lint sauber auf allen geänderten PHP-Dateien.
+- Twig-Parse-Check (echte Twig-Engine aus vendor/) für beide Templates erfolgreich.
+- Pfadauflösung + Containment-Logik isoliert mit echten Testdateien geprüft (gültige Datei,
+  Traversal-Versuch, fehlende Datei, leerer Dateiname — alle korrekt behandelt).
+- `split('.')|last|lower`-Ausdruck zur Bild/PDF-Unterscheidung mit echten Twig-Filtern
+  gegen reale `attachment_path`-Werte getestet (.jpg/.PDF/.pdf → korrekt erkannt).
+
+---
+
 ## Bug: Besitzerportal — Dokumente/Fotos in Tierdetailansicht liefern 404 (Juli 2026)
 **Status:** `fixed`
 **Dateien:**
