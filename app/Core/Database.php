@@ -96,9 +96,33 @@ class Database
             if (!defined('PDO::MYSQL_ATTR_INIT_COMMAND')) {
                 $this->pdo->exec("SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
             }
+            /* MySQL NOW() muss dieselbe Zeitzone wie PHP (Europe/Berlin, siehe
+             * Application::run()) verwenden. Termin-Zeiten (start_at) werden als
+             * naive Berlin-Wandzeit gespeichert; ohne diese Angleichung läuft
+             * MySQLs NOW() auf vielen Hosting-Umgebungen in UTC/Server-Default,
+             * wodurch jeder NOW()-Vergleich (Termin-Erinnerungen, "Termin in
+             * Kürze"-Benachrichtigungen) um 1-2h driftet — abhängig von
+             * Sommer-/Winterzeit. Sichtbares Symptom: bereits vergangene
+             * Termine werden nach Login noch als "in Kürze" angezeigt. */
+            $this->pdo->exec("SET time_zone = '" . self::mysqlTimezoneOffset() . "'");
         } catch (PDOException $e) {
             throw new RuntimeException('Database connection failed: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Aktueller UTC-Offset von Europe/Berlin als '+02:00' / '+01:00', DST-sicher
+     * berechnet. Named Timezones ('Europe/Berlin' direkt in SET time_zone) setzen
+     * geladene MySQL-Zonentabellen voraus, die auf Shared-Hosting oft fehlen —
+     * der numerische Offset funktioniert immer, ohne Server-Konfiguration.
+     */
+    private static function mysqlTimezoneOffset(): string
+    {
+        $tz     = new \DateTimeZone('Europe/Berlin');
+        $offset = $tz->getOffset(new \DateTime('now', new \DateTimeZone('UTC')));
+        $sign   = $offset >= 0 ? '+' : '-';
+        $offset = abs($offset);
+        return sprintf('%s%02d:%02d', $sign, intdiv($offset, 3600), intdiv($offset % 3600, 60));
     }
 
     public static function createFromCredentials(string $host, int $port, string $database, string $username, string $password): PDO

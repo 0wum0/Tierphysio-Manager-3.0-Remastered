@@ -26,6 +26,60 @@ Bug gefunden → in Datei dokumentieren → Fix referenzieren → Status aktuali
 
 ---
 
+## Bug: Toast-Benachrichtigung "Termin in Kürze" für bereits vergangene Termine (Juli 2026)
+**Status:** `fixed`
+**Auslöser:** Nutzer meldete: direkt nach Login erscheinen Toast-Benachrichtigungen für Termine,
+die bereits in der Vergangenheit liegen. Es dürfen nur aktuelle/anstehende Termine angezeigt werden.
+**Datei:** `app/Core/Database.php` (`connect()`, neu: `mysqlTimezoneOffset()`)
+
+### Symptom
+`NotificationController::index()` zeigt Termine der nächsten 60 Minuten als Toast
+(`WHERE a.start_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 60 MINUTE)`). Diese Abfrage
+ist auf den ersten Blick korrekt — trotzdem erschienen Toasts für Termine, die de facto
+schon vorbei waren.
+
+### Root Cause
+PHP setzt global `date_default_timezone_set('Europe/Berlin')` (`app/Core/Application.php`).
+Termin-`start_at`-Werte werden als naive Berlin-Wandzeit gespeichert (z.B. "14:00" meint
+14:00 Uhr Berlin, ohne Zeitzonen-Info in der Spalte). Die PDO-Verbindung
+(`Database::connect()`) setzte aber **nie** die MySQL-Session-Zeitzone — MySQLs `NOW()`
+lief daher mit der Server-/Instanz-Standardzone (auf Shared-Hosting häufig UTC).
+
+Ist die DB-Zeitzone gegenüber Berlin versetzt (UTC = −1h/−2h je nach Sommer-/Winterzeit),
+driftet **jeder** `NOW()`-Vergleich gegen `start_at`. Konkret: MySQLs `NOW()` liegt der
+echten Berliner Uhrzeit hinterher → das Fenster `[NOW(), NOW()+60min]` besteht aus
+"zu alten" Werten → ein Termin, der real schon vor 1-2 Stunden stattfand, fällt noch in
+dieses verzögerte Fenster und wird fälschlich als "in Kürze" angezeigt.
+
+**Dieselbe Ursache betraf vermutlich auch die Termin-Erinnerungs-Inkonsistenzen aus dem
+vorherigen Ticket** (`AppointmentRepository::findPendingReminders()` nutzt ebenfalls
+`NOW()`-Vergleiche gegen `start_at`) — zusätzlich zu den dort bereits behobenen
+Doppelversand-/Reset-Bugs.
+
+### Fix
+`Database::connect()` setzt nach jedem Verbindungsaufbau explizit
+`SET time_zone = '+02:00'` (bzw. `+01:00` im Winter) — berechnet DST-sicher aus
+`DateTimeZone('Europe/Berlin')->getOffset()` zum aktuellen Zeitpunkt. Numerischer Offset
+statt benanntem `'Europe/Berlin'`, weil benannte Zeitzonen in MySQL geladene
+`mysql.time_zone_name`-Tabellen voraussetzen, die auf Shared-Hosting oft fehlen.
+
+**Root-Cause-Fix statt Symptom-Patch:** Da `Database` als Singleton pro Request injiziert
+wird, korrigiert diese EINE Änderung automatisch ALLE `NOW()`-Vergleiche der gesamten
+Anwendung — `NotificationController`, `AppointmentRepository::findPendingReminders()`,
+`InvoiceRepository`-Fälligkeitsprüfungen, `CURRENT_TIMESTAMP`-Spalten (`created_at` etc.)
+— ohne jede einzelne Stelle einzeln patchen zu müssen.
+
+### Verifikation
+- DST-Berechnung isoliert getestet: Winter (15.01.) → `+01:00`, Sommer (02.07.) → `+02:00`,
+  Umstellungstag (29.03., 00:30 vs. 02:30) → korrekter Sprung `+01:00`→`+02:00`.
+- PHP-Lint sauber.
+- Kein lokaler MySQL-Server verfügbar für Live-Integrationstest — `SET time_zone` ist ein
+  Standard-Session-Variable-Befehl ohne besondere Privilegien-Anforderung, sollte in
+  Produktion vor dem nächsten Login-Test geprüft werden (Toast sollte für einen Termin,
+  der vor >5 Minuten begann, nicht mehr erscheinen).
+
+---
+
 ## Bug: Termin-Erinnerungen ohne Google-Sync — Flutter/Mobile-Termine falscher Default + kein Reset bei Verschiebung (Juli 2026)
 **Status:** `fixed`
 **Auslöser:** Support-Ticket zeigte Cron-Log-Zeile "Google Kalender Sync … skipped … reason=no_connection"
