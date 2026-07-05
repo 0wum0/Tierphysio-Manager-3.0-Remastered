@@ -26,6 +26,68 @@ Bug gefunden → in Datei dokumentieren → Fix referenzieren → Status aktuali
 
 ---
 
+## Bug: Besitzerportal — Dokumente erneut 404 (Multi-Anhang-JSON) + Hausaufgaben-Nav 403 (Juli 2026)
+**Status:** `fixed`
+**Auslöser:** Nutzer meldete nach dem vorherigen Dokumente-404-Fix erneut 404 bei Dokumenten
+im Portal, zusätzlich 403 beim Klick auf "Hausaufgaben" im Header.
+**Dateien:**
+- `plugins/owner-portal/OwnerPortalController.php` (`petDetail()`, neu: `TimelineMediaService`)
+- `plugins/owner-portal/templates/owner_pet_detail.twig` (Dokumente/Fotos-Tab)
+- `plugins/owner-portal/templates/portal_layout.twig` (Hausaufgaben-Nav-Gating)
+- `app/Controllers/BefundbogenController.php` (`requirePortalAuth()`)
+
+### Bug A — Dokumente 404 (Regression zum vorherigen Fix, andere Ursache)
+Der vorherige Fix (`petAttachment()`-Route, siehe Eintrag weiter unten) löste den 404 für
+Timeline-Einträge mit GENAU EINEM Anhang. Einträge mit MEHREREN Anhängen speichern
+`attachment` aber als **JSON-Array-String** (`PatientController::addTimelineEntry()`,
+`attachment[]`-Mehrfach-Upload → `json_encode($savedFilenames)`), z.B.
+`["feedback_a.jpg","feedback_b.pdf"]` — kein einzelner Dateiname. `owner_pet_detail.twig`
+gab diesen String unverändert in den Anhang-Link, `petAttachment()` bekam per `basename()`
+den kompletten JSON-String als "Dateinamen" → existiert nie auf der Platte → 404.
+
+Die Praxis-Ansicht (`templates/patients/show.twig`) hat dieses Problem nie, weil sie
+`entry.media` nutzt — eine bereits vorhandene, aber vom Portal nie genutzte Normalisierung
+(`App\Services\TimelineMediaService::normalizeAttachmentToMedia()`), die sowohl
+Einzeldatei-Strings als auch JSON-Arrays korrekt in eine Liste einzelner Dateinamen auflöst.
+
+**Fix:** `TimelineMediaService` in `OwnerPortalController` eingebunden. `petDetail()`
+reichert jeden `documents`/`photos`-Timeline-Eintrag um `files` an (normalisierte Liste via
+`normalizeAttachmentToMedia($entry['attachment'], $petId)`). Templates iterieren jetzt über
+`entry.files` (ein `<a>`/`<img>` pro Datei, mit Zähler `(1/2)` bei mehreren) und verlinken
+`file.filename` — NICHT `entry.attachment` direkt und NICHT `file.web_url` (letzteres ist die
+staff-authentifizierte `/patient-timeline/...`-Route der Praxis-App, für Portal-Besitzer
+genauso ungeeignet wie der ursprüngliche `/uploads/`-Pfad).
+Isoliert getestet: Einzeldatei-String, JSON-Array mit 2 Dateien, `null`/leer — alle korrekt
+aufgelöst bzw. leere Liste ohne Fehler.
+
+### Bug B — Hausaufgaben-Nav-Link liefert 403
+`OwnerPortalController::homeworkOverview()` bricht mit `abort(403)` ab, wenn
+`settings.portal_show_homework = '0'` (Feature vom Praxis-Admin deaktiviert). Der
+Nav-Link "Hausaufgaben" in `portal_layout.twig` war aber **immer** sichtbar, unabhängig vom
+Setting — anders als z.B. "Kurse" oder "Befundbögen", die korrekt gegen ein Flag gegated sind.
+Das Flag `show_homework_nav` wurde zwar von mehreren Controllern korrekt berechnet
+(`isHomeworkEnabled()`) und ans Template übergeben, aber im Layout nie tatsächlich
+ausgewertet — reines Wiring-Versehen.
+
+Zusätzlich: `BefundbogenController::requirePortalAuth()` (Befundbögen-Seiten) lieferte
+`'show_homework_nav' => true` **hart codiert**, unabhängig vom echten Setting — hätte den
+Link auf Befundbogen-Seiten immer gezeigt, selbst wenn deaktiviert.
+
+**Fix:** `portal_layout.twig`: Nav-Link jetzt `{% if show_homework_nav ?? true %}`
+(Fallback `true` für Seiten, die die Variable nicht setzen — ändert dort nichts am
+bisherigen, immer-sichtbaren Verhalten). `BefundbogenController`: hartes `true` durch
+echten Read aus `settings.portal_show_homework` ersetzt (identisches Muster wie
+`OwnerPortalController::isHomeworkEnabled()`).
+
+### Verifikation
+- PHP-Lint sauber auf beiden geänderten PHP-Dateien.
+- Twig-Parse-Check (echte Twig-Engine) für `owner_pet_detail.twig` + `portal_layout.twig`
+  erfolgreich.
+- `TimelineMediaService::normalizeAttachmentToMedia()` isoliert mit Einzeldatei/JSON-Array/
+  leer getestet — durchweg korrektes Ergebnis.
+
+---
+
 ## Bug: SaaS-Admin Feedback/Support — Bild-Anhang öffnet in neuem Tab + erfordert Praxis-Login (Juli 2026)
 **Status:** `fixed`
 **Auslöser:** Nutzer meldete: Öffnet man im SaaS-Admin einen Support-Vorgang (egal ob von

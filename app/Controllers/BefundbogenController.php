@@ -613,7 +613,11 @@ class BefundbogenController extends Controller
             'portal_user'         => $user,
             'portal_unread_count' => $unread,
             'csrf_token'          => $this->session->generateCsrfToken(),
-            'show_homework_nav'   => true,
+            /* War zuvor hart auf true gesetzt — zeigte den Hausaufgaben-Nav-Link
+             * auch dann, wenn das Feature per Einstellung deaktiviert ist, und
+             * homeworkOverview() dort mit 403 abbricht. Jetzt wie überall sonst
+             * im Portal aus settings.portal_show_homework gelesen. */
+            'show_homework_nav'   => ($this->settings->get('portal_show_homework', '1') === '1'),
             /* Trainer-/Hundeschul-Tenant-Flag für das Portal-Layout (Nav-Gating). */
             'is_trainer_tenant'   => $this->isTrainerTenant(),
         ];

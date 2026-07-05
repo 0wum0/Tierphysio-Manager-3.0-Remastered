@@ -11,6 +11,7 @@ use App\Core\Translator;
 use App\Core\View;
 use App\Core\Database;
 use App\Services\PdfService;
+use App\Services\TimelineMediaService;
 use App\Repositories\SettingsRepository;
 
 class OwnerPortalController extends Controller
@@ -18,6 +19,7 @@ class OwnerPortalController extends Controller
     private OwnerPortalRepository $repo;
     private MessagingRepository    $msgRepo;
     private PdfService $pdfService;
+    private TimelineMediaService $mediaService;
     private SettingsRepository $settingsRepository;
     private Database $db;
 
@@ -35,6 +37,7 @@ class OwnerPortalController extends Controller
         $this->repo               = new OwnerPortalRepository($db);
         $this->msgRepo            = new MessagingRepository($db);
         $this->pdfService         = $pdfService;
+        $this->mediaService       = new TimelineMediaService();
         $this->settingsRepository = $settingsRepository;
     }
 
@@ -296,6 +299,16 @@ class OwnerPortalController extends Controller
         $notes      = array_filter($timeline, fn($e) => $e['type'] === 'note');
         $photos     = array_filter($timeline, fn($e) => $e['type'] === 'photo');
         $documents  = array_filter($timeline, fn($e) => $e['type'] === 'document');
+
+        /* Timeline-Einträge mit MEHREREN Anhängen speichern `attachment` als
+         * JSON-Array-String (siehe PatientController::addTimelineEntry), nicht
+         * als einzelnen Dateinamen. Ohne diese Normalisierung landete der
+         * JSON-String unverändert im Anhang-Link → petAttachment() bekam einen
+         * unbrauchbaren "Dateinamen" wie ["a.jpg","b.pdf"] → 404. `files` liefert
+         * pro Eintrag eine saubere Liste einzelner Dateinamen (deckt auch den
+         * Legacy-Einzeldatei-String ab). */
+        $photos    = array_map(fn($e) => $e + ['files' => $this->mediaService->normalizeAttachmentToMedia($e['attachment'] ?? null, $petId)], $photos);
+        $documents = array_map(fn($e) => $e + ['files' => $this->mediaService->normalizeAttachmentToMedia($e['attachment'] ?? null, $petId)], $documents);
 
         /* ── TherapyCare Pro data (loaded only if plugin is active) ── */
         $tcpProgress = null;

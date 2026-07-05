@@ -98,10 +98,12 @@
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24" style="opacity:.5;flex-shrink:0;"><path stroke="currentColor" stroke-width="2" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline stroke="currentColor" stroke-width="2" points="14 2 14 8 20 8"/></svg>
                     <div>
                         <div class="timeline-title">{{ entry.title }}</div>
-                        {% if entry.attachment %}
-                            <a href="/portal/tiere/{{ pet.id }}/anhang/{{ entry.attachment }}" target="_blank"
-                               class="small text-primary">Herunterladen →</a>
-                        {% endif %}
+                        {# entry.files ist eine normalisierte Liste einzelner Dateinamen —
+                           ein Eintrag kann mehrere Anhänge haben (JSON-Array in der DB). #}
+                        {% for file in (entry.files ?? []) %}
+                            <a href="/portal/tiere/{{ pet.id }}/anhang/{{ file.filename }}" target="_blank"
+                               class="small text-primary d-block">Herunterladen{% if (entry.files|length) > 1 %} ({{ loop.index }}/{{ entry.files|length }}){% endif %} →</a>
+                        {% endfor %}
                     </div>
                 </div>
             </div>
@@ -121,15 +123,15 @@
         {% if photos %}
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:0.5rem;">
             {% for entry in photos %}
-                {% if entry.attachment %}
+                {% for file in (entry.files ?? []) %}
                 <div>
-                    <a href="/portal/tiere/{{ pet.id }}/anhang/{{ entry.attachment }}" target="_blank">
-                        <img src="/portal/tiere/{{ pet.id }}/anhang/{{ entry.attachment }}" alt="{{ entry.title }}"
+                    <a href="/portal/tiere/{{ pet.id }}/anhang/{{ file.filename }}" target="_blank">
+                        <img src="/portal/tiere/{{ pet.id }}/anhang/{{ file.filename }}" alt="{{ entry.title }}"
                              style="width:100%;height:110px;object-fit:cover;border-radius:8px;border:1px solid rgba(255,255,255,0.08);">
                     </a>
                     <div class="small text-secondary text-center mt-1">{{ entry.entry_date|date('d.m.Y') }}</div>
                 </div>
-                {% endif %}
+                {% endfor %}
             {% endfor %}
             </div>
         {% else %}
