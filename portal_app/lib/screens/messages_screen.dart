@@ -24,7 +24,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final auth = context.read<PortalAuthService>();
-      final data = await PortalApiService(token: auth.token).get('/api/mobile/portal/nachrichten');
+      final data = await PortalApiService(token: auth.token).get('/api/portal/mobile/nachrichten');
       final raw  = data is List ? data : (data['threads'] ?? []);
       if (mounted) setState(() { _threads = List<dynamic>.from(raw); _loading = false; });
     } catch (e) {

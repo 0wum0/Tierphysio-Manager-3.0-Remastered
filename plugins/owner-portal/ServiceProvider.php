@@ -173,6 +173,7 @@ class ServiceProvider
         $router->post('/api/portal/mobile/nachrichten/neu',                          [OwnerPortalMobileController::class,   'threadNew'],         []);
         $router->get('/api/portal/mobile/nachrichten/ungelesen',                     [OwnerPortalMobileController::class,   'unread'],            []);
         $router->get('/api/portal/mobile/profil',                                    [OwnerPortalMobileController::class,   'profile'],           []);
+        $router->post('/api/portal/mobile/profil/passwort',                          [OwnerPortalMobileController::class,   'changePassword'],    []);
     }
 
     public function dashboardWidget(array $context): array

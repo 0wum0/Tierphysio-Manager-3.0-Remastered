@@ -23,7 +23,7 @@ class _HomeworkScreenState extends State<HomeworkScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final auth = context.read<PortalAuthService>();
-      final data = await PortalApiService(token: auth.token).get('/api/mobile/portal/hausaufgaben');
+      final data = await PortalApiService(token: auth.token).get('/api/portal/mobile/hausaufgaben');
       final raw  = data is List ? data : (data['plans'] ?? []);
       if (mounted) setState(() { _items = List<dynamic>.from(raw); _loading = false; });
     } catch (e) {
@@ -79,7 +79,7 @@ class _HomeworkTile extends StatelessWidget {
       leading: Container(width: 44, height: 44,
         decoration: BoxDecoration(color: AppTheme.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
         child: const Icon(Icons.assignment_rounded, color: AppTheme.success, size: 22)),
-      title: Text(plan['name'] as String? ?? 'Übungsplan', style: const TextStyle(fontWeight: FontWeight.w700)),
+      title: Text(plan['title'] as String? ?? plan['name'] as String? ?? 'Übungsplan', style: const TextStyle(fontWeight: FontWeight.w700)),
       subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         if (plan['patient_name'] != null) ...[
           const SizedBox(height: 2),
@@ -92,7 +92,7 @@ class _HomeworkTile extends StatelessWidget {
       ]),
       trailing: const Icon(Icons.chevron_right_rounded),
       onTap: () => Navigator.push(context, MaterialPageRoute(
-        builder: (_) => HomeworkDetailScreen(planId: plan['id'] as int, planName: plan['name'] as String? ?? 'Übungsplan'))),
+        builder: (_) => HomeworkDetailScreen(plan: plan))),
     ));
   }
 }

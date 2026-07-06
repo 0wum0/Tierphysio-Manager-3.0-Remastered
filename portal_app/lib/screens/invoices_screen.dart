@@ -23,7 +23,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final auth = context.read<PortalAuthService>();
-      final data = await PortalApiService(token: auth.token).get('/api/mobile/portal/rechnungen');
+      final data = await PortalApiService(token: auth.token).get('/api/portal/mobile/rechnungen');
       final raw  = data is List ? data : (data['invoices'] ?? []);
       if (mounted) setState(() { _items = List<dynamic>.from(raw); _loading = false; });
     } catch (e) {

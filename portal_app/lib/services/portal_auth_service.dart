@@ -39,7 +39,7 @@ class PortalAuthService extends ChangeNotifier {
   Future<LoginResult> login(String email, String password) async {
     try {
       final api  = PortalApiService();
-      final data = await api.postPublic('/api/mobile/portal/login', {
+      final data = await api.postPublic('/api/portal/mobile-login', {
         'email': email.trim(),
         'password': password,
       });
@@ -78,7 +78,7 @@ class PortalAuthService extends ChangeNotifier {
     try {
       final token = _prefs?.getString(_keyToken);
       if (token != null) {
-        await PortalApiService(token: token).post('/api/mobile/portal/logout', {});
+        await PortalApiService(token: token).post('/api/portal/mobile-logout', {});
       }
     } catch (_) {}
     await _prefs?.remove(_keyToken);

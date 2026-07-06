@@ -23,7 +23,7 @@ class _BefundeScreenState extends State<BefundeScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final auth = context.read<PortalAuthService>();
-      final data = await PortalApiService(token: auth.token).get('/api/mobile/portal/befunde');
+      final data = await PortalApiService(token: auth.token).get('/api/portal/mobile/befunde');
       final raw  = data is List ? data : (data['befunde'] ?? []);
       if (mounted) setState(() { _items = List<dynamic>.from(raw); _loading = false; });
     } catch (e) {

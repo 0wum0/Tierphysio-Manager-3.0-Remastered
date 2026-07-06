@@ -23,7 +23,7 @@ class _PetsScreenState extends State<PetsScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final auth = context.read<PortalAuthService>();
-      final data = await PortalApiService(token: auth.token).get('/api/mobile/portal/tiere');
+      final data = await PortalApiService(token: auth.token).get('/api/portal/mobile/tiere');
       final raw  = data is List ? data : (data['pets'] ?? []);
       if (mounted) setState(() { _pets = List<dynamic>.from(raw); _loading = false; });
     } catch (e) {

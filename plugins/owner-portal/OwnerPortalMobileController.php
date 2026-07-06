@@ -167,7 +167,7 @@ class OwnerPortalMobileController extends Controller
         try {
             $pdo  = $this->db->getPdo();
             $stmt = $pdo->prepare(
-                "SELECT a.id, a.title, a.start_at AS appointment_date, a.end_at,
+                "SELECT a.id, a.title, a.start_at, a.end_at,
                         a.status, a.notes, p.name AS patient_name
                    FROM `{$prefix}appointments` a
                    LEFT JOIN `{$prefix}patients` p ON p.id = a.patient_id
@@ -449,11 +449,51 @@ class OwnerPortalMobileController extends Controller
             'id'           => (int)$user['id'],
             'owner_id'     => (int)$user['owner_id'],
             'email'        => $user['email'],
+            'name'         => trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? '')),
             'first_name'   => $user['first_name'] ?? '',
             'last_name'    => $user['last_name']  ?? '',
             'phone'        => $user['phone']       ?? '',
             'practice_type'=> $practiceType,
             'is_trainer'   => in_array($practiceType, ['trainer', 'dogschool'], true),
         ]);
+    }
+
+    /* ──────────────────────────────────────────
+     *  POST /api/portal/mobile/profil/passwort
+     * ────────────────────────────────────────── */
+    public function changePassword(array $params = []): void
+    {
+        [$user] = $this->guard();
+
+        $body    = json_decode(file_get_contents('php://input') ?: '{}', true) ?? [];
+        $current = (string)($body['current_password'] ?? '');
+        $new     = (string)($body['password'] ?? $body['new_password'] ?? '');
+        $confirm = (string)($body['confirm_password'] ?? $body['password_confirmation'] ?? '');
+
+        if (strlen($new) < 8) { $this->json(['error' => 'Passwort muss mindestens 8 Zeichen lang sein.'], 400); return; }
+        if ($new !== $confirm) { $this->json(['error' => 'Passwörter stimmen nicht überein.'], 400); return; }
+
+        try {
+            $pdo   = $this->db->getPdo();
+            $table = $this->db->prefix('owner_portal_users');
+            $stmt  = $pdo->prepare("SELECT password_hash FROM `{$table}` WHERE id = ? LIMIT 1");
+            $stmt->execute([(int)$user['id']]);
+            $row   = $stmt->fetch(\PDO::FETCH_ASSOC);
+        } catch (\Throwable) { $row = null; }
+
+        if (!$row || !password_verify($current, (string)($row['password_hash'] ?? ''))) {
+            $this->json(['error' => 'Aktuelles Passwort ist falsch.'], 403); return;
+        }
+
+        try {
+            $pdo   = $this->db->getPdo();
+            $table = $this->db->prefix('owner_portal_users');
+            $stmt  = $pdo->prepare("UPDATE `{$table}` SET password_hash = ? WHERE id = ?");
+            $stmt->execute([password_hash($new, PASSWORD_BCRYPT, ['cost' => 12]), (int)$user['id']]);
+        } catch (\Throwable) {
+            $this->json(['error' => 'Datenbankfehler.'], 500); return;
+        }
+
+        $this->json(['success' => true]);
     }
 }

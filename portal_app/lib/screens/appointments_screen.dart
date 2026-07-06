@@ -23,7 +23,7 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     setState(() { _loading = true; _error = null; });
     try {
       final auth = context.read<PortalAuthService>();
-      final data = await PortalApiService(token: auth.token).get('/api/mobile/portal/termine');
+      final data = await PortalApiService(token: auth.token).get('/api/portal/mobile/termine');
       final raw  = data is List ? data : (data['appointments'] ?? []);
       if (mounted) setState(() { _items = List<dynamic>.from(raw); _loading = false; });
     } catch (e) {

@@ -65,80 +65,84 @@ class PortalApiService {
     throw PortalApiException(res.statusCode, msg.toString());
   }
 
-  // ── Auth ──────────────────────────────────────────────────────────────────
+  // ── Dashboard ─────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> getDashboard() async =>
-      Map<String, dynamic>.from(await get('/api/mobile/portal/dashboard'));
+      Map<String, dynamic>.from(await get('/api/portal/mobile/dashboard'));
 
   // ── Tiere ─────────────────────────────────────────────────────────────────
 
-  Future<List<dynamic>> getPets() async =>
-      List<dynamic>.from((await get('/api/mobile/portal/tiere'))['pets'] ?? await get('/api/mobile/portal/tiere'));
+  Future<List<dynamic>> getPets() async {
+    final data = await get('/api/portal/mobile/tiere');
+    return List<dynamic>.from(data is List ? data : (data['pets'] ?? []));
+  }
 
   Future<Map<String, dynamic>> getPetDetail(int id) async =>
-      Map<String, dynamic>.from(await get('/api/mobile/portal/tiere/$id'));
+      Map<String, dynamic>.from(await get('/api/portal/mobile/tiere/$id'));
 
   // ── Termine ───────────────────────────────────────────────────────────────
 
-  Future<List<dynamic>> getAppointments() async =>
-      List<dynamic>.from((await get('/api/mobile/portal/termine'))['appointments'] ??
-          await get('/api/mobile/portal/termine'));
+  Future<List<dynamic>> getAppointments() async {
+    final data = await get('/api/portal/mobile/termine');
+    return List<dynamic>.from(data is List ? data : (data['appointments'] ?? []));
+  }
 
   // ── Rechnungen ────────────────────────────────────────────────────────────
 
-  Future<List<dynamic>> getInvoices() async =>
-      List<dynamic>.from((await get('/api/mobile/portal/rechnungen'))['invoices'] ??
-          await get('/api/mobile/portal/rechnungen'));
+  Future<List<dynamic>> getInvoices() async {
+    final data = await get('/api/portal/mobile/rechnungen');
+    return List<dynamic>.from(data is List ? data : (data['invoices'] ?? []));
+  }
 
   Future<String> getInvoicePdfUrl(int id) async {
-    final data = await get('/api/mobile/portal/rechnungen/$id/pdf-url');
+    final data = await get('/api/portal/mobile/rechnungen/$id/pdf');
     return data['url'] as String? ?? '';
   }
 
   // ── Nachrichten ───────────────────────────────────────────────────────────
 
-  Future<List<dynamic>> getThreads() async =>
-      List<dynamic>.from((await get('/api/mobile/portal/nachrichten'))['threads'] ??
-          await get('/api/mobile/portal/nachrichten'));
+  Future<List<dynamic>> getThreads() async {
+    final data = await get('/api/portal/mobile/nachrichten');
+    return List<dynamic>.from(data is List ? data : (data['threads'] ?? []));
+  }
 
   Future<Map<String, dynamic>> getThread(int id) async =>
-      Map<String, dynamic>.from(await get('/api/mobile/portal/nachrichten/$id'));
+      Map<String, dynamic>.from(await get('/api/portal/mobile/nachrichten/$id'));
 
   Future<void> replyThread(int id, String body) async =>
-      await post('/api/mobile/portal/nachrichten/$id/antworten', {'body': body});
+      await post('/api/portal/mobile/nachrichten/$id/antworten', {'message': body});
 
   Future<void> newThread(String subject, String body) async =>
-      await post('/api/mobile/portal/nachrichten/neu', {'subject': subject, 'body': body});
+      await post('/api/portal/mobile/nachrichten/neu', {'subject': subject, 'message': body});
 
   // ── Befundbögen ───────────────────────────────────────────────────────────
 
-  Future<List<dynamic>> getBefunde() async =>
-      List<dynamic>.from((await get('/api/mobile/portal/befunde'))['befunde'] ??
-          await get('/api/mobile/portal/befunde'));
+  Future<List<dynamic>> getBefunde() async {
+    final data = await get('/api/portal/mobile/befunde');
+    return List<dynamic>.from(data is List ? data : (data['befunde'] ?? []));
+  }
 
   Future<String> getBefundPdfUrl(int id) async {
-    final data = await get('/api/mobile/portal/befunde/$id/pdf-url');
+    final data = await get('/api/portal/mobile/befunde/$id/pdf');
     return data['url'] as String? ?? '';
   }
 
   // ── Hausaufgaben ──────────────────────────────────────────────────────────
 
-  Future<List<dynamic>> getHomework() async =>
-      List<dynamic>.from((await get('/api/mobile/portal/hausaufgaben'))['plans'] ??
-          await get('/api/mobile/portal/hausaufgaben'));
-
-  Future<Map<String, dynamic>> getHomeworkDetail(int id) async =>
-      Map<String, dynamic>.from(await get('/api/mobile/portal/hausaufgaben/$id'));
+  Future<List<dynamic>> getHomework() async {
+    final data = await get('/api/portal/mobile/hausaufgaben');
+    return List<dynamic>.from(data is List ? data : (data['plans'] ?? []));
+  }
 
   // ── Profil ────────────────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> getProfile() async =>
-      Map<String, dynamic>.from(await get('/api/mobile/portal/profil'));
+      Map<String, dynamic>.from(await get('/api/portal/mobile/profil'));
 
   Future<void> changePassword(String current, String newPw, String newPwConfirm) async =>
-      await post('/api/mobile/portal/profil/passwort', {
+      await post('/api/portal/mobile/profil/passwort', {
         'current_password': current,
         'password': newPw,
-        'password_confirmation': newPwConfirm,
+        'confirm_password': newPwConfirm,
       });
 }

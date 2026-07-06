@@ -1,76 +1,41 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../core/theme.dart';
-import '../services/portal_auth_service.dart';
-import '../services/portal_api_service.dart';
 
-class HomeworkDetailScreen extends StatefulWidget {
-  final int planId;
-  final String planName;
-  const HomeworkDetailScreen({super.key, required this.planId, required this.planName});
-  @override
-  State<HomeworkDetailScreen> createState() => _HomeworkDetailScreenState();
-}
-
-class _HomeworkDetailScreenState extends State<HomeworkDetailScreen> {
-  Map<String, dynamic>? _data;
-  bool _loading = true;
-  String? _error;
-
-  @override
-  void initState() { super.initState(); _load(); }
-
-  Future<void> _load() async {
-    setState(() { _loading = true; _error = null; });
-    try {
-      final auth = context.read<PortalAuthService>();
-      final data = await PortalApiService(token: auth.token).getHomeworkDetail(widget.planId);
-      if (mounted) setState(() { _data = data; _loading = false; });
-    } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _loading = false; });
-    }
-  }
+class HomeworkDetailScreen extends StatelessWidget {
+  final Map<String, dynamic> plan;
+  const HomeworkDetailScreen({super.key, required this.plan});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.planName)),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(child: Text(_error!))
-              : RefreshIndicator(onRefresh: _load, child: _buildBody()),
-    );
-  }
-
-  Widget _buildBody() {
-    final plan      = _data?['plan'] as Map<String, dynamic>? ?? _data ?? {};
-    final exercises = List<dynamic>.from(_data?['exercises'] ?? plan['exercises'] ?? []);
+    final name      = plan['title'] as String? ?? plan['name'] as String? ?? 'Übungsplan';
+    final exercises = List<dynamic>.from(plan['exercises'] ?? []);
     final cs        = Theme.of(context).colorScheme;
 
-    return ListView(padding: const EdgeInsets.only(bottom: 32), children: [
-      // Plan header
-      Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        if (plan['description'] != null && (plan['description'] as String).isNotEmpty) ...[
-          Text(plan['description'] as String, style: TextStyle(color: cs.onSurfaceVariant)),
-          const SizedBox(height: 12),
-        ],
-        if (plan['patient_name'] != null) Row(children: [
-          const Icon(Icons.pets_rounded, size: 16, color: AppTheme.primary),
-          const SizedBox(width: 6),
-          Text('Für: ${plan['patient_name']}', style: TextStyle(color: cs.onSurfaceVariant)),
-        ]),
-      ])),
+    return Scaffold(
+      appBar: AppBar(title: Text(name)),
+      body: ListView(padding: const EdgeInsets.only(bottom: 32), children: [
+        Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          if ((plan['description'] as String? ?? '').isNotEmpty) ...[
+            Text(plan['description'] as String, style: TextStyle(color: cs.onSurfaceVariant)),
+            const SizedBox(height: 12),
+          ],
+          if (plan['patient_name'] != null) Row(children: [
+            const Icon(Icons.pets_rounded, size: 16, color: AppTheme.primary),
+            const SizedBox(width: 6),
+            Text('Für: ${plan['patient_name']}', style: TextStyle(color: cs.onSurfaceVariant)),
+          ]),
+        ])),
 
-      if (exercises.isEmpty)
-        Padding(padding: const EdgeInsets.all(24), child: Text('Keine Übungen vorhanden.',
-            style: TextStyle(color: cs.onSurfaceVariant)))
-      else ...[
-        Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 8), child:
-          Text('Übungen (${exercises.length})', style: Theme.of(context).textTheme.titleMedium)),
-        ...exercises.asMap().entries.map((e) => _ExerciseCard(index: e.key + 1, exercise: e.value as Map<String, dynamic>)),
-      ],
-    ]);
+        if (exercises.isEmpty)
+          Padding(padding: const EdgeInsets.all(24), child: Text('Keine Übungen vorhanden.',
+              style: TextStyle(color: cs.onSurfaceVariant)))
+        else ...[
+          Padding(padding: const EdgeInsets.fromLTRB(16, 0, 16, 8), child:
+            Text('Übungen (${exercises.length})', style: Theme.of(context).textTheme.titleMedium)),
+          ...exercises.asMap().entries.map((e) => _ExerciseCard(index: e.key + 1, exercise: e.value as Map<String, dynamic>)),
+        ],
+      ]),
+    );
   }
 }
 
@@ -89,7 +54,7 @@ class _ExerciseCardState extends State<_ExerciseCard> {
   Widget build(BuildContext context) {
     final ex = widget.exercise;
     final cs = Theme.of(context).colorScheme;
-    final hasDesc = (ex['description'] as String? ?? '').isNotEmpty;
+    final hasDesc  = (ex['description'] as String? ?? '').isNotEmpty;
     final hasVideo = ex['video_url'] != null && (ex['video_url'] as String).isNotEmpty;
 
     return Card(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -116,7 +81,7 @@ class _ExerciseCardState extends State<_ExerciseCard> {
         child: Row(children: [
           const Icon(Icons.play_circle_outline_rounded, color: AppTheme.tertiary, size: 18),
           const SizedBox(width: 6),
-          Text('Video verfügbar', style: const TextStyle(color: AppTheme.tertiary, fontWeight: FontWeight.w600)),
+          const Text('Video verfügbar', style: TextStyle(color: AppTheme.tertiary, fontWeight: FontWeight.w600)),
         ]),
       ),
     ]));

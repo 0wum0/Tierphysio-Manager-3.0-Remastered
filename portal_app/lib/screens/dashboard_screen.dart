@@ -13,7 +13,9 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  Map<String, dynamic>? _data;
+  Map<String, dynamic>? _stats;
+  List<dynamic> _pets = [];
+  List<dynamic> _appointments = [];
   bool _loading = true;
   String? _error;
 
@@ -28,8 +30,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final auth = context.read<PortalAuthService>();
       final api  = PortalApiService(token: auth.token);
-      final data = await api.getDashboard();
-      if (mounted) setState(() { _data = data; _loading = false; });
+      final results = await Future.wait([
+        api.getDashboard(),
+        api.getPets(),
+        api.getAppointments(),
+      ]);
+      if (mounted) setState(() {
+        _stats        = results[0] as Map<String, dynamic>;
+        _pets         = results[1] as List<dynamic>;
+        _appointments = (results[2] as List<dynamic>)
+            .where((a) {
+              final raw = a['start_at'] as String? ?? '';
+              try {
+                return DateTime.parse(raw).isAfter(DateTime.now());
+              } catch (_) { return false; }
+            })
+            .toList();
+        _loading = false;
+      });
     } catch (e) {
       if (mounted) setState(() { _error = e.toString(); _loading = false; });
     }
@@ -69,15 +87,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   ])));
 
   Widget _buildContent() {
-    final pets          = List<dynamic>.from(_data?['pets'] ?? []);
-    final appointments  = List<dynamic>.from(_data?['upcoming_appointments'] ?? []);
-    final openInvoices  = _data?['open_invoices'] as int? ?? 0;
-    final unreadMessages = _data?['unread_messages'] as int? ?? 0;
+    final openInvoices   = _stats?['open_invoices']   as int? ?? 0;
+    final unreadMessages = _stats?['unread_messages']  as int? ?? 0;
 
     return ListView(padding: const EdgeInsets.only(bottom: 24), children: [
       // Stats row
       Padding(padding: const EdgeInsets.fromLTRB(16, 16, 16, 8), child: Row(children: [
-        _StatCard(icon: Icons.pets_rounded, color: AppTheme.primary,    label: 'Tiere',       value: pets.length.toString()),
+        _StatCard(icon: Icons.pets_rounded, color: AppTheme.primary,    label: 'Tiere',       value: _pets.length.toString()),
         const SizedBox(width: 12),
         _StatCard(icon: Icons.receipt_long_rounded, color: AppTheme.warning, label: 'Offene Rechnungen', value: openInvoices.toString()),
         const SizedBox(width: 12),
@@ -86,39 +102,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ])),
 
       // My pets
-      if (pets.isNotEmpty) ...[
+      if (_pets.isNotEmpty) ...[
         _SectionHeader(title: 'Meine Tiere'),
         SizedBox(height: 120, child: ListView.builder(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: pets.length,
-          itemBuilder: (_, i) => _PetCard(pet: pets[i]),
+          itemCount: _pets.length,
+          itemBuilder: (_, i) => _PetCard(pet: _pets[i]),
         )),
       ],
 
       // Upcoming appointments
-      _SectionHeader(title: 'Nächste Termine', action: appointments.isEmpty ? null : 'Alle'),
-      if (appointments.isEmpty)
+      _SectionHeader(title: 'Nächste Termine'),
+      if (_appointments.isEmpty)
         Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), child:
           Text('Keine bevorstehenden Termine.', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)))
       else
-        ...appointments.take(3).map((a) => _AppointmentTile(appt: a)),
+        ..._appointments.take(3).map((a) => _AppointmentTile(appt: a)),
     ]);
   }
 }
 
 class _SectionHeader extends StatelessWidget {
   final String title;
-  final String? action;
-  const _SectionHeader({required this.title, this.action});
+  const _SectionHeader({required this.title});
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-    child: Row(children: [
-      Text(title, style: Theme.of(context).textTheme.titleMedium),
-      const Spacer(),
-      if (action != null) TextButton(onPressed: () {}, child: Text(action!)),
-    ]),
+    child: Text(title, style: Theme.of(context).textTheme.titleMedium),
   );
 }
 
@@ -180,7 +191,7 @@ class _AppointmentTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs   = Theme.of(context).colorScheme;
-    final raw  = appt['start_at'] as String? ?? appt['start'] as String? ?? '';
+    final raw  = appt['start_at'] as String? ?? appt['appointment_date'] as String? ?? '';
     DateTime? dt;
     try { dt = DateTime.parse(raw).toLocal(); } catch (_) {}
     final dateStr = dt != null ? DateFormat('dd.MM.yyyy', 'de').format(dt) : raw;
