@@ -162,7 +162,27 @@ class OwnerAuthController extends Controller
                 'mobile_token_expires' => $expires,
             ]);
         } catch (\Throwable $e) {
-            error_log('[OwnerPortal] mobile_token update failed: ' . $e->getMessage());
+            /* Columns may not exist yet — self-heal then retry */
+            try {
+                $db  = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+                $pdo = $db->getPdo();
+                $tbl = $db->prefix('owner_portal_users');
+                $pdo->exec("ALTER TABLE `{$tbl}` ADD COLUMN `mobile_token` VARCHAR(64) NULL DEFAULT NULL");
+            } catch (\Throwable) {}
+            try {
+                $db  = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+                $pdo = $db->getPdo();
+                $tbl = $db->prefix('owner_portal_users');
+                $pdo->exec("ALTER TABLE `{$tbl}` ADD COLUMN `mobile_token_expires` DATETIME NULL DEFAULT NULL");
+            } catch (\Throwable) {}
+            try {
+                $this->repo->updateUser((int)$user['id'], [
+                    'mobile_token'         => $token,
+                    'mobile_token_expires' => $expires,
+                ]);
+            } catch (\Throwable $e2) {
+                error_log('[OwnerPortal] mobile_token update failed after self-heal: ' . $e2->getMessage());
+            }
         }
 
         $this->repo->updateLastLogin((int)$user['id']);
@@ -234,17 +254,28 @@ class OwnerAuthController extends Controller
             $tables = $stmt->fetchAll(\PDO::FETCH_COLUMN);
             foreach ($tables as $table) {
                 $prefix = substr($table, 0, -strlen('owner_portal_users'));
-                $s = $pdo->prepare(
-                    "SELECT u.*, o.first_name, o.last_name, o.phone
-                       FROM `{$table}` u
-                       JOIN `{$prefix}owners` o ON o.id = u.owner_id
-                      WHERE u.mobile_token = ?
-                        AND u.mobile_token_expires > NOW()
-                        AND u.is_active = 1
-                      LIMIT 1"
-                );
-                $s->execute([$token]);
-                $row = $s->fetch(\PDO::FETCH_ASSOC);
+                try {
+                    $s = $pdo->prepare(
+                        "SELECT u.*, o.first_name, o.last_name, o.phone
+                           FROM `{$table}` u
+                           JOIN `{$prefix}owners` o ON o.id = u.owner_id
+                          WHERE u.mobile_token = ?
+                            AND u.mobile_token_expires > NOW()
+                            AND u.is_active = 1
+                          LIMIT 1"
+                    );
+                    $s->execute([$token]);
+                    $row = $s->fetch(\PDO::FETCH_ASSOC);
+                } catch (\Throwable $qe) {
+                    /* Column missing (1054) — add it and skip this request */
+                    $errno = ($qe instanceof \PDOException && isset($qe->errorInfo[1]))
+                        ? (int)$qe->errorInfo[1] : 0;
+                    if ($errno === 1054) {
+                        try { $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `mobile_token` VARCHAR(64) NULL DEFAULT NULL"); } catch (\Throwable) {}
+                        try { $pdo->exec("ALTER TABLE `{$table}` ADD COLUMN `mobile_token_expires` DATETIME NULL DEFAULT NULL"); } catch (\Throwable) {}
+                    }
+                    $row = false;
+                }
                 if ($row) {
                     $db->setPrefix($prefix);
                     return [$row, $prefix];
@@ -333,7 +364,17 @@ class OwnerAuthController extends Controller
                 /* Derive prefix: strip trailing "owner_portal_users" */
                 $prefix = substr($table, 0, -strlen('owner_portal_users'));
 
-                $s = $pdo->prepare("SELECT * FROM `{$table}` WHERE email = ? LIMIT 1");
+                $ownersTable = $prefix . 'owners';
+                try {
+                    $s = $pdo->prepare(
+                        "SELECT u.*, o.first_name, o.last_name, o.phone
+                           FROM `{$table}` u
+                           LEFT JOIN `{$ownersTable}` o ON o.id = u.owner_id
+                          WHERE u.email = ? LIMIT 1"
+                    );
+                } catch (\Throwable) {
+                    $s = $pdo->prepare("SELECT * FROM `{$table}` WHERE email = ? LIMIT 1");
+                }
                 $s->execute([$email]);
                 $row = $s->fetch(\PDO::FETCH_ASSOC);
 

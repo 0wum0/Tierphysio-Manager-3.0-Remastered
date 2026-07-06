@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS `{PREFIX}owner_portal_users` (
     `invite_expires`  DATETIME NULL,
     `invite_used_at`  DATETIME NULL,
     `last_login`      DATETIME NULL,
+    `mobile_token`    VARCHAR(64) NULL DEFAULT NULL,
+    `mobile_token_expires` DATETIME NULL DEFAULT NULL,
     `created_at`      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at`      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
