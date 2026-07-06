@@ -7,15 +7,15 @@ on:
       - 'v*'
     branches:
       - main
-    paths:
-      - 'flutter_app/pubspec.yaml'
-      - '.github/workflows/android-release.yml'
   workflow_dispatch:
     inputs:
       version_name:
         description: 'Version Name (z.B. 1.2.1)'
         required: false
         default: ''
+
+permissions:
+  contents: write
 
 jobs:
   build-android:
