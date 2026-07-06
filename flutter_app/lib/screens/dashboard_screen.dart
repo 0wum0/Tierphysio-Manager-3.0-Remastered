@@ -1095,6 +1095,12 @@ class _UpdateBanner extends StatelessWidget {
       builder: (context, info, _) {
         if (info == null) return const SizedBox.shrink();
 
+        final isAndroid = info.isAndroid;
+        final installLabel = isAndroid ? 'Herunterladen' : 'Jetzt installieren';
+        final progressText = isAndroid
+            ? 'Browser öffnet sich zum Herunterladen der APK …'
+            : 'Herunterladen... Die App wird nach dem Download neu gestartet.';
+
         return AnimatedContainer(
           duration: const Duration(milliseconds: 500),
           width: double.infinity,
@@ -1115,7 +1121,7 @@ class _UpdateBanner extends StatelessWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Update verfügbar: v${info.version} - Neue Funktionen & Stabilität',
+                          'Update verfügbar: v${info.version} – Neue Funktionen & Stabilität',
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
                         ),
                       ),
@@ -1130,41 +1136,42 @@ class _UpdateBanner extends StatelessWidget {
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(horizontal: 12),
                             ),
-                            child: const Text('Jetzt installieren', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                            child: Text(installLabel, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                           );
                         },
                       ),
                     ],
                   ),
-                  ValueListenableBuilder<bool>(
-                    valueListenable: UpdateService.isDownloading,
-                    builder: (context, downloading, _) {
-                      if (!downloading) return const SizedBox.shrink();
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 10),
-                        child: Column(
-                          children: [
-                            ValueListenableBuilder<double>(
-                              valueListenable: UpdateService.downloadProgress,
-                              builder: (context, progress, _) {
-                                return LinearProgressIndicator(
-                                  value: progress > 0 ? progress : null,
-                                  backgroundColor: Colors.white.withValues(alpha: 0.2),
-                                  valueColor: const AlwaysStoppedAnimation(Colors.white),
-                                  borderRadius: BorderRadius.circular(4),
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Herunterladen... Die App wird nach dem Download neu gestartet.',
-                              style: TextStyle(color: Colors.white70, fontSize: 11),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                  if (!isAndroid)
+                    ValueListenableBuilder<bool>(
+                      valueListenable: UpdateService.isDownloading,
+                      builder: (context, downloading, _) {
+                        if (!downloading) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: Column(
+                            children: [
+                              ValueListenableBuilder<double>(
+                                valueListenable: UpdateService.downloadProgress,
+                                builder: (context, progress, _) {
+                                  return LinearProgressIndicator(
+                                    value: progress > 0 ? progress : null,
+                                    backgroundColor: Colors.white.withValues(alpha: 0.2),
+                                    valueColor: const AlwaysStoppedAnimation(Colors.white),
+                                    borderRadius: BorderRadius.circular(4),
+                                  );
+                                },
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                progressText,
+                                style: const TextStyle(color: Colors.white70, fontSize: 11),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                 ],
               ),
             ),
