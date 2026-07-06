@@ -1,3 +1,4 @@
+# Builds and publishes TheraPano Android APK as a GitHub Release
 name: Android Release
 
 on:
