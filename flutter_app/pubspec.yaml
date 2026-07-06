@@ -1,7 +1,7 @@
 name: therapano
 description: TheraPano – Mehr Zeit fürs Tier, weniger Zeit am Schreibtisch.
 publish_to: 'none'
-version: 1.2.4+18
+version: 1.2.5+19
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -115,7 +115,7 @@ msix_config:
   publisher_display_name: TheraPano
   publisher: CN=TheraPano, O=TheraPano, L=Paderborn, S=NRW, C=DE
   identity_name: de.therapano.app
-  msix_version: 1.2.4.0
+  msix_version: 1.2.5.0
   logo_path: assets/icons/app_icon.png
   install_certificate: true
 

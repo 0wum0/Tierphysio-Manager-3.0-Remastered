@@ -138,11 +138,11 @@ List<NavSection> buildNavSections({
           selectedIcon: Icons.assignment_rounded,
           label: 'Hausaufgaben',
         ),
-      const NavItem(
+      NavItem(
         route: '/behandlungsarten',
         icon: Icons.category_outlined,
         selectedIcon: Icons.category_rounded,
-        label: 'Behandlungsarten',
+        label: isTrainer ? 'Trainingsarten' : 'Behandlungsarten',
         color: AppTheme.tertiary,
       ),
       if (!isTrainer)

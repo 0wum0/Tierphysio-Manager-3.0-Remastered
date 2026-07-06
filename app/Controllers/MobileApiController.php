@@ -12,6 +12,7 @@ use App\Repositories\InvoiceRepository;
 use App\Repositories\SettingsRepository;
 use App\Repositories\ReminderDunningRepository;
 use App\Repositories\TreatmentTypeRepository;
+use App\Services\AiService;
 use App\Services\MailService;
 use App\Services\TimelineMediaService;
 use App\Services\InvoiceCancellationService;
@@ -6546,6 +6547,57 @@ class MobileApiController
         } catch (\Throwable $e) {
             $this->json(['success' => false, 'message' => $e->getMessage()]);
         }
+    }
+
+    /* ══════════════════════════════════════════════════════
+       KI — AI generation (mobile)
+    ══════════════════════════════════════════════════════ */
+
+    public function aiGenerate(array $params = []): void
+    {
+        $this->cors();
+        $this->requireAuth();
+
+        $type   = trim((string)($this->input('type', '')));
+        $prompt = trim((string)($this->input('prompt', '')));
+
+        if ($type === '' || $prompt === '') {
+            $this->error('type und prompt sind erforderlich.', 422);
+        }
+
+        $systemPrompts = [
+            'homework_plan' => 'Du bist ein Experte für Tierphysiotherapie. Erstelle einen Hausaufgaben-Plan. Antworte NUR mit einem JSON-Objekt: {"name":"...", "description":"..."}. Kein Markdown, kein Text außerhalb des JSON.',
+            'befundbogen'   => 'Du bist Tierphysiotherapeut. Erstelle einen Befundbogen-Eintrag. Antworte NUR mit einem JSON-Objekt: {"title":"...", "anamnese":"..."}. Kein Markdown, kein Text außerhalb des JSON.',
+            'training_plan' => 'Du bist Hundetrainer. Erstelle einen Trainingsplan. Antworte NUR mit einem JSON-Objekt: {"name":"...", "audience":"welpen|junghunde|adult|senior|problem", "weeks":8, "perWeek":2, "difficulty":"easy|medium|hard|expert"}. Kein Markdown, kein Text außerhalb des JSON.',
+            'kurs'          => 'Du bist Hundetrainer. Erstelle einen Kurs. Antworte NUR mit einem JSON-Objekt: {"name":"...", "location":"...", "type":"grundkurs|aufbaukurs|spezial|welpen|agility", "maxParticipants":8, "numSessions":6, "price_cents":9900}. Kein Markdown, kein Text außerhalb des JSON.',
+            'paket'         => 'Du bist Hundetrainer. Erstelle ein Stundenpakete-Angebot. Antworte NUR mit einem JSON-Objekt: {"name":"...", "type":"single|multi|subscription|unlimited", "units":10, "validDays":365, "price":99.00}. Kein Markdown, kein Text außerhalb des JSON.',
+        ];
+
+        if (!array_key_exists($type, $systemPrompts)) {
+            $this->error('Unbekannter Typ: ' . $type, 422);
+        }
+
+        $ai = new AiService();
+        if (!$ai->isConfigured()) {
+            $this->error('KI-Service ist nicht konfiguriert. Bitte API-Key im Admin hinterlegen.', 503);
+        }
+
+        $raw = $ai->generateText($systemPrompts[$type], $prompt);
+        if ($raw === null) {
+            $this->error('KI-Anfrage fehlgeschlagen. Bitte erneut versuchen.', 503);
+        }
+
+        // Extract JSON object from response (handles markdown code fences too)
+        $jsonStr = $raw;
+        if (preg_match('/\{[\s\S]*\}/', $raw, $m)) {
+            $jsonStr = $m[0];
+        }
+        $result = json_decode($jsonStr, true);
+        if (!is_array($result)) {
+            $this->error('KI hat kein gültiges JSON zurückgegeben.', 503);
+        }
+
+        $this->json($result);
     }
 
     /* ── Private helpers ─────────────────────────────────────────── */

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
 import '../../core/theme.dart';
 
 class BehandlungsartenScreen extends StatefulWidget {
@@ -24,10 +26,12 @@ class _BehandlungsartenScreenState extends State<BehandlungsartenScreen> {
     } catch (e) { setState(() => _loading = false); _showSnack(e.toString(), error: true); }
   }
 
-  Future<void> _delete(int id) async {
+  Future<void> _delete(int id, String name) async {
+    final isTrainer = context.read<AuthService>().isTrainer;
+    final label = isTrainer ? 'Trainingsart' : 'Behandlungsart';
     final ok = await showDialog<bool>(context: context, builder: (_) => AlertDialog(
-      title: const Text('Behandlungsart löschen'),
-      content: const Text('Diese Behandlungsart wirklich löschen?'),
+      title: Text('$label löschen'),
+      content: Text('"$name" wirklich löschen?'),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Abbrechen')),
         FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Löschen'),
@@ -35,11 +39,12 @@ class _BehandlungsartenScreenState extends State<BehandlungsartenScreen> {
       ],
     ));
     if (ok != true) return;
-    try { await _api.treatmentTypeDelete(id); _load(); }
+    try { await _api.treatmentTypeDelete(id); _showSnack('Gelöscht ✓'); _load(); }
     catch (e) { _showSnack(e.toString(), error: true); }
   }
 
-  void _showForm({Map<String, dynamic>? existing}) {
+  void _showForm({Map<String, dynamic>? existing, bool isTrainer = false}) {
+    final typeLabel = isTrainer ? 'Trainingsart' : 'Behandlungsart';
     final nameCtrl  = TextEditingController(text: existing?['name'] as String? ?? '');
     final priceCtrl = TextEditingController(text: existing?['price']?.toString() ?? '');
     final descCtrl  = TextEditingController(text: existing?['description'] as String? ?? '');
@@ -59,7 +64,7 @@ class _BehandlungsartenScreenState extends State<BehandlungsartenScreen> {
         child: Padding(padding: const EdgeInsets.fromLTRB(16, 8, 16, 0), child: Column(mainAxisSize: MainAxisSize.min, children: [
           Container(width: 40, height: 4, margin: const EdgeInsets.only(bottom: 16),
             decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(2))),
-          Text(existing == null ? 'Neue Behandlungsart' : 'Bearbeiten',
+          Text(existing == null ? 'Neue $typeLabel' : '$typeLabel bearbeiten',
             style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Name *', prefixIcon: Icon(Icons.label_rounded))),
@@ -129,13 +134,15 @@ class _BehandlungsartenScreenState extends State<BehandlungsartenScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isTrainer = context.watch<AuthService>().isTrainer;
+    final screenTitle = isTrainer ? 'Trainingsarten' : 'Behandlungsarten';
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Behandlungsarten'),
+        title: Text(screenTitle),
         actions: [IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _load)],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showForm(),
+        onPressed: () => _showForm(isTrainer: isTrainer),
         icon: const Icon(Icons.add_rounded),
         label: const Text('Neue Art'),
       ),
@@ -145,7 +152,7 @@ class _BehandlungsartenScreenState extends State<BehandlungsartenScreen> {
               ? Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
                   Icon(Icons.category_outlined, size: 72, color: Colors.grey.shade300),
                   const SizedBox(height: 16),
-                  Text('Keine Behandlungsarten', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
+                  Text('Keine $screenTitle', style: TextStyle(color: Colors.grey.shade500, fontSize: 16)),
                 ]))
               : ReorderableListView.builder(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
@@ -186,9 +193,17 @@ class _BehandlungsartenScreenState extends State<BehandlungsartenScreen> {
                             Text('${item['price']} €', style: TextStyle(fontSize: 12, color: color, fontWeight: FontWeight.w600)),
                         ]),
                         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                          IconButton(icon: const Icon(Icons.edit_rounded, size: 20), onPressed: () => _showForm(existing: item)),
-                          IconButton(icon: Icon(Icons.delete_outline_rounded, size: 20, color: AppTheme.danger),
-                            onPressed: () => _delete(item['id'] as int)),
+                          PopupMenuButton<String>(
+                            icon: const Icon(Icons.more_vert_rounded, size: 20),
+                            onSelected: (v) {
+                              if (v == 'edit') _showForm(existing: item, isTrainer: isTrainer);
+                              if (v == 'delete') _delete(item['id'] as int, item['name'] as String? ?? '');
+                            },
+                            itemBuilder: (_) => [
+                              const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit_rounded, size: 18), SizedBox(width: 8), Text('Bearbeiten')])),
+                              const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_outline_rounded, size: 18, color: AppTheme.danger), SizedBox(width: 8), Text('Löschen', style: TextStyle(color: AppTheme.danger))])),
+                            ],
+                          ),
                           const Icon(Icons.drag_handle_rounded, color: Colors.grey, size: 20),
                         ]),
                       ),

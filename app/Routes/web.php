@@ -149,6 +149,9 @@ $router->post('/api/mobile/behandlungsarten',                 [MobileApiControll
 $router->post('/api/mobile/behandlungsarten/{id}/update',     [MobileApiController::class, 'treatmentTypeUpdate']);
 $router->post('/api/mobile/behandlungsarten/{id}/loeschen',   [MobileApiController::class, 'treatmentTypeDelete']);
 
+// KI-Generierung (mobile — Bearer auth)
+$router->post('/api/mobile/ai/generate',                      [MobileApiController::class, 'aiGenerate']);
+
 // Users (admin only)
 $router->get('/api/mobile/benutzer',                          [MobileApiController::class, 'usersList']);
 $router->get('/api/mobile/benutzer/{id}',                     [MobileApiController::class, 'userShow']);
@@ -485,6 +488,9 @@ $router->post('/api/befund/textbausteine',       [BefundbogenController::class, 
 $router->get ('/api/befund/vorlagen',            [BefundbogenController::class, 'apiVorlagen'],           ['auth']);
 $router->get ('/api/befund/vorlagen/{id}',       [BefundbogenController::class, 'apiVorlagenShow'],       ['auth']);
 $router->post('/api/befund/ki/strukturieren',    [BefundbogenController::class, 'apiKiStrukturieren'],    ['auth']);
+
+// KI-Generierung (web — session auth, alle Formulartypen)
+$router->post('/api/ki/generieren',              [BefundbogenController::class, 'apiKiGenerieren'],       ['auth']);
 
 // ── Befundbögen — per Patient ─────────────────────────────────────────
 $router->get('/api/patienten/{patient_id}/befunde',                        [BefundbogenController::class, 'apiByPatient'], ['auth']);

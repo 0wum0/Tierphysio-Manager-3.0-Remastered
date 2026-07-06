@@ -9,6 +9,23 @@
     </div>
 </div>
 
+{% if is_new %}
+<div class="card mb-3" style="max-width:720px;border-color:rgba(99,102,241,.3);background:rgba(99,102,241,.04);">
+    <div class="card-body px-4 py-3">
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <span style="font-size:1.2rem;">🤖</span>
+            <span class="fw-semibold">KI-Assistent</span>
+            <span class="badge" style="background:rgba(99,102,241,.15);color:#6366f1;font-size:.7rem;">Beta</span>
+        </div>
+        <div class="d-flex gap-2">
+            <input type="text" id="ki-prompt" class="form-control" placeholder="z.B. 8-Wochen-Plan für Junghunde mit Grundkommandos, 2x pro Woche, mittelschwer">
+            <button type="button" id="ki-btn" class="btn btn-outline-primary" onclick="kiGenerieren('training_plan')">Ausfüllen</button>
+        </div>
+        <div id="ki-error" class="text-danger mt-2" style="display:none;font-size:.875rem;"></div>
+    </div>
+</div>
+{% endif %}
+
 <form method="POST" action="{% if is_new %}/trainingsplaene{% else %}/trainingsplaene/{{ plan.id }}{% endif %}" style="max-width:720px;">
     <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
     <div class="card mb-3"><div class="card-body px-4 py-3">
@@ -50,4 +67,32 @@
         <button type="submit" class="btn btn-primary">Speichern</button>
     </div>
 </form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function kiGenerieren(type) {
+    const prompt = document.getElementById('ki-prompt')?.value?.trim();
+    if (!prompt) return;
+    const btn = document.getElementById('ki-btn');
+    const errEl = document.getElementById('ki-error');
+    btn.disabled = true; btn.textContent = 'Generiere…'; errEl.style.display = 'none';
+    try {
+        const res = await fetch('/api/ki/generieren', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({type, prompt, _csrf_token: document.querySelector('input[name=_csrf_token]')?.value ?? ''})
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error ?? 'KI-Fehler');
+        if (data.name) document.querySelector('[name=name]').value = data.name;
+        if (data.description) document.querySelector('[name=description]').value = data.description;
+        if (data.target_audience) { const s = document.querySelector('[name=target_audience]'); if(s) s.value = data.target_audience; }
+        if (data.duration_weeks) document.querySelector('[name=duration_weeks]').value = data.duration_weeks;
+        if (data.sessions_per_week) document.querySelector('[name=sessions_per_week]').value = data.sessions_per_week;
+        if (data.difficulty) { const s = document.querySelector('[name=difficulty]'); if(s) s.value = data.difficulty; }
+    } catch(e) { errEl.textContent = e.message; errEl.style.display = ''; }
+    finally { btn.disabled = false; btn.textContent = 'Ausfüllen'; }
+}
+</script>
 {% endblock %}

@@ -13,6 +13,7 @@ use App\Core\View;
 use App\Repositories\BefundbogenRepository;
 use App\Repositories\BefundTemplateRepository;
 use App\Repositories\SettingsRepository;
+use App\Services\AiService;
 use App\Services\BefundbogenPdfService;
 use App\Services\MailService;
 
@@ -927,6 +928,72 @@ class BefundbogenController extends Controller
             error_log('[Befund apiKiStrukturieren] ' . $e->getMessage());
             http_response_code(500);
             echo json_encode(['ok' => false, 'error' => 'ki_unavailable']);
+        }
+        exit;
+    }
+
+    /**
+     * Generischer KI-Assistent für Web-Formulare.
+     * POST /api/ki/generieren  {type, prompt}
+     * Gibt ein JSON-Objekt mit den generierten Feldern zurück.
+     */
+    public function apiKiGenerieren(array $params = []): void
+    {
+        header('Content-Type: application/json');
+        try {
+            $type   = trim((string)$this->post('type', ''));
+            $prompt = trim((string)$this->post('prompt', ''));
+
+            if ($type === '' || $prompt === '') {
+                http_response_code(422);
+                echo json_encode(['ok' => false, 'error' => 'type und prompt sind erforderlich.']);
+                exit;
+            }
+
+            $systemPrompts = [
+                'befundbogen'   => 'Du bist Tierphysiotherapeut. Erstelle einen Befundbogen. Antworte NUR mit einem JSON-Objekt: {"hauptbeschwerde":"Kurze Beschreibung der Hauptbeschwerde", "seit_wann":"z.B. seit 2 Wochen", "vorerkrankungen":"z.B. keine bekannt", "gangbild":"z.B. lahmend links vorne", "medikamente":"z.B. keine"}. Kein Markdown, kein Text außerhalb des JSON.',
+                'training_plan' => 'Du bist Hundetrainer. Erstelle einen Trainingsplan. Antworte NUR mit einem JSON-Objekt: {"name":"...", "target_audience":"welpen|junghunde|adult|senior|problem", "duration_weeks":8, "sessions_per_week":2, "difficulty":"easy|medium|hard|expert", "description":"..."}. Kein Markdown, kein Text außerhalb des JSON.',
+                'kurs'          => 'Du bist Hundetrainer. Erstelle einen Hundeschul-Kurs. Antworte NUR mit einem JSON-Objekt: {"name":"...", "location":"...", "type":"grundkurs|aufbaukurs|spezial|welpen|agility", "max_participants":8, "num_sessions":6, "price_eur":99.00, "description":"..."}. Kein Markdown, kein Text außerhalb des JSON.',
+                'paket'         => 'Du bist Hundetrainer. Erstelle ein Stundenpaket. Antworte NUR mit einem JSON-Objekt: {"name":"...", "type":"single|multi|subscription|unlimited", "total_units":10, "valid_days":365, "price_eur":99.00, "description":"..."}. Kein Markdown, kein Text außerhalb des JSON.',
+                'homework_plan' => 'Du bist Tierphysiotherapeut. Erstelle einen Hausaufgaben-Plan. Antworte NUR mit einem JSON-Objekt: {"name":"...", "description":"..."}. Kein Markdown, kein Text außerhalb des JSON.',
+            ];
+
+            if (!array_key_exists($type, $systemPrompts)) {
+                http_response_code(422);
+                echo json_encode(['ok' => false, 'error' => 'Unbekannter Typ: ' . $type]);
+                exit;
+            }
+
+            $ai = new AiService();
+            if (!$ai->isConfigured()) {
+                http_response_code(503);
+                echo json_encode(['ok' => false, 'error' => 'KI-Service ist nicht konfiguriert.']);
+                exit;
+            }
+
+            $raw = $ai->generateText($systemPrompts[$type], $prompt);
+            if ($raw === null) {
+                http_response_code(503);
+                echo json_encode(['ok' => false, 'error' => 'KI-Anfrage fehlgeschlagen.']);
+                exit;
+            }
+
+            $jsonStr = $raw;
+            if (preg_match('/\{[\s\S]*\}/', $raw, $m)) {
+                $jsonStr = $m[0];
+            }
+            $result = json_decode($jsonStr, true);
+            if (!is_array($result)) {
+                http_response_code(503);
+                echo json_encode(['ok' => false, 'error' => 'KI hat kein gültiges JSON zurückgegeben.']);
+                exit;
+            }
+
+            echo json_encode(['ok' => true] + $result);
+        } catch (\Throwable $e) {
+            error_log('[apiKiGenerieren] ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['ok' => false, 'error' => 'Interner Fehler.']);
         }
         exit;
     }
