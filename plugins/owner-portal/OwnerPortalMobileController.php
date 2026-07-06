@@ -114,10 +114,10 @@ class OwnerPortalMobileController extends Controller
             $pdo  = $this->db->getPdo();
             $stmt = $pdo->prepare(
                 "SELECT p.id, p.name, p.species, p.breed, p.gender,
-                        p.date_of_birth, p.weight, p.color, p.chip_number,
-                        p.foto_url AS photo_url
+                        p.birth_date, p.weight, p.color, p.chip_number,
+                        p.photo AS photo_url
                    FROM `{$prefix}patients` p
-                  WHERE p.owner_id = ? AND p.deceased_at IS NULL
+                  WHERE p.owner_id = ? AND p.deceased_date IS NULL
                   ORDER BY p.name ASC"
             );
             $stmt->execute([$ownerId]);
@@ -141,8 +141,8 @@ class OwnerPortalMobileController extends Controller
             $pdo  = $this->db->getPdo();
             $stmt = $pdo->prepare(
                 "SELECT p.id, p.name, p.species, p.breed, p.gender,
-                        p.date_of_birth, p.weight, p.color, p.chip_number,
-                        p.foto_url AS photo_url, p.notes,
+                        p.birth_date, p.weight, p.color, p.chip_number,
+                        p.photo AS photo_url, p.notes,
                         p.created_at
                    FROM `{$prefix}patients` p
                   WHERE p.id = ? AND p.owner_id = ? LIMIT 1"
@@ -194,11 +194,11 @@ class OwnerPortalMobileController extends Controller
         try {
             $pdo  = $this->db->getPdo();
             $stmt = $pdo->prepare(
-                "SELECT i.id, i.invoice_number, i.invoice_date AS date,
-                        i.total_gross AS total, i.status
+                "SELECT i.id, i.invoice_number, i.issue_date AS date,
+                        i.total_gross AS total_eur, i.status
                    FROM `{$prefix}invoices` i
                   WHERE i.owner_id = ?
-                  ORDER BY i.invoice_date DESC
+                  ORDER BY i.issue_date DESC
                   LIMIT 50"
             );
             $stmt->execute([$ownerId]);
@@ -241,7 +241,10 @@ class OwnerPortalMobileController extends Controller
         try {
             $pdo  = $this->db->getPdo();
             $stmt = $pdo->prepare(
-                "SELECT b.id, b.title, b.created_at,
+                "SELECT b.id,
+                        CONCAT('Befundbogen ', b.datum) AS title,
+                        b.datum AS date,
+                        b.created_at,
                         p.name AS patient_name
                    FROM `{$prefix}befundboegen` b
                    LEFT JOIN `{$prefix}patients` p ON p.id = b.patient_id
@@ -293,11 +296,14 @@ class OwnerPortalMobileController extends Controller
         try {
             $pdo  = $this->db->getPdo();
             $stmt = $pdo->prepare(
-                "SELECT hp.id, hp.title, hp.description, hp.created_at,
+                "SELECT hp.id,
+                        CONCAT('Übungsplan ', hp.plan_date) AS title,
+                        hp.general_notes AS description,
+                        hp.plan_date, hp.created_at,
                         p.name AS patient_name
-                   FROM `{$prefix}homework_plans` hp
+                   FROM `{$prefix}portal_homework_plans` hp
                    LEFT JOIN `{$prefix}patients` p ON p.id = hp.patient_id
-                  WHERE p.owner_id = ?
+                  WHERE hp.owner_id = ? AND hp.status = 'active'
                   ORDER BY hp.created_at DESC
                   LIMIT 30"
             );
@@ -307,9 +313,9 @@ class OwnerPortalMobileController extends Controller
             foreach ($plans as &$plan) {
                 try {
                     $s = $pdo->prepare(
-                        "SELECT id, name, repetitions, sets, duration
-                           FROM `{$prefix}homework_exercises`
-                          WHERE homework_plan_id = ?
+                        "SELECT id, title AS name, description, frequency, duration
+                           FROM `{$prefix}portal_homework_plan_tasks`
+                          WHERE plan_id = ?
                           ORDER BY sort_order ASC"
                     );
                     $s->execute([$plan['id']]);
