@@ -99,13 +99,14 @@ List<NavSection> buildNavSections({
         label: term.ownerPlural,
         color: AppTheme.secondary,
       ),
-      NavItem(
-        route: '/anmeldungen',
-        icon: Icons.assignment_ind_outlined,
-        selectedIcon: Icons.assignment_ind_rounded,
-        label: 'Anmeldungen',
-        badge: badges.newIntakes,
-      ),
+      if (!isTrainer)
+        NavItem(
+          route: '/anmeldungen',
+          icon: Icons.assignment_ind_outlined,
+          selectedIcon: Icons.assignment_ind_rounded,
+          label: 'Anmeldungen',
+          badge: badges.newIntakes,
+        ),
       const NavItem(
         route: '/warteliste',
         icon: Icons.people_alt_outlined,
@@ -121,33 +122,36 @@ List<NavSection> buildNavSections({
         color: AppTheme.secondary,
       ),
     ]),
-    const NavSection('Behandlung', [
-      NavItem(
-        route: '/befunde',
-        icon: Icons.description_outlined,
-        selectedIcon: Icons.description_rounded,
-        label: 'Befundbögen',
-        color: AppTheme.secondary,
-      ),
-      NavItem(
-        route: '/hausaufgaben',
-        icon: Icons.assignment_outlined,
-        selectedIcon: Icons.assignment_rounded,
-        label: 'Hausaufgaben',
-      ),
-      NavItem(
+    NavSection('Behandlung', [
+      if (!isTrainer)
+        const NavItem(
+          route: '/befunde',
+          icon: Icons.description_outlined,
+          selectedIcon: Icons.description_rounded,
+          label: 'Befundbögen',
+          color: AppTheme.secondary,
+        ),
+      if (!isTrainer)
+        const NavItem(
+          route: '/hausaufgaben',
+          icon: Icons.assignment_outlined,
+          selectedIcon: Icons.assignment_rounded,
+          label: 'Hausaufgaben',
+        ),
+      const NavItem(
         route: '/behandlungsarten',
         icon: Icons.category_outlined,
         selectedIcon: Icons.category_rounded,
         label: 'Behandlungsarten',
         color: AppTheme.tertiary,
       ),
-      NavItem(
-        route: '/tcp',
-        icon: Icons.healing_outlined,
-        selectedIcon: Icons.healing_rounded,
-        label: 'Therapy Care',
-      ),
+      if (!isTrainer)
+        const NavItem(
+          route: '/tcp',
+          icon: Icons.healing_outlined,
+          selectedIcon: Icons.healing_rounded,
+          label: 'Therapy Care',
+        ),
     ]),
     NavSection('Finanzen', [
       const NavItem(

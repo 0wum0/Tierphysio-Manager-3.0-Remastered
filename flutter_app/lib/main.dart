@@ -69,7 +69,7 @@ class _TheraPanoAppState extends State<TheraPanoApp> {
             // This avoids a black frame from widget tree swap.
             return _SplashOverlay(
               authService: _authService,
-              child: child ?? const SizedBox.shrink(),
+              child: child ?? Container(color: Theme.of(context).scaffoldBackgroundColor),
             );
           },
           localizationsDelegates: const [
