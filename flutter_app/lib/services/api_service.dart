@@ -824,6 +824,10 @@ class ApiService {
   Future<List<dynamic>> befundeByPatient(int patientId) async =>
       List<dynamic>.from(await get('/befunde/patient/$patientId') as List);
 
+  Future<Map<String, dynamic>> befundeCreate(
+          Map<String, dynamic> data) async =>
+      Map<String, dynamic>.from(await post('/befunde', data));
+
   Future<Map<String, dynamic>> befundeShow(int id) async =>
       Map<String, dynamic>.from(await get('/befunde/$id'));
 
@@ -1279,6 +1283,17 @@ class ApiService {
         if (category.isNotEmpty) 'category': category,
         if (search.isNotEmpty) 'search': search,
       }));
+
+  /* ── KI-Assistent ──────────────────────────────────────────────── */
+
+  /// Sends a natural-language [prompt] to the backend KI endpoint.
+  /// [type] tells the backend which content type to generate,
+  /// e.g. 'training_plan', 'homework_plan', 'kurs', 'packet'.
+  /// Returns a flat map of suggested field values.
+  Future<Map<String, dynamic>> aiGenerate(
+          String type, String prompt) async =>
+      Map<String, dynamic>.from(
+          await post('/ai/generate', {'type': type, 'prompt': prompt}));
 }
 
 class ApiException implements Exception {

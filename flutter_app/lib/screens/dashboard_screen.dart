@@ -33,7 +33,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _load();
     // Check for updates after a short delay so the UI settles first
     Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) UpdateService.checkForUpdate(context);
+      if (mounted) UpdateService.checkForUpdate();
     });
   }
 
@@ -1088,6 +1088,18 @@ class _ErrorView extends StatelessWidget {
 }
 
 class _UpdateBanner extends StatelessWidget {
+  void _openUpdateSheet(BuildContext context, UpdateInfo info) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => _UpdateSheet(info: info),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<UpdateInfo?>(
@@ -1095,89 +1107,166 @@ class _UpdateBanner extends StatelessWidget {
       builder: (context, info, _) {
         if (info == null) return const SizedBox.shrink();
 
-        final isAndroid = info.isAndroid;
-        final installLabel = isAndroid ? 'Herunterladen' : 'Jetzt installieren';
-        final progressText = isAndroid
-            ? 'Browser öffnet sich zum Herunterladen der APK …'
-            : 'Herunterladen... Die App wird nach dem Download neu gestartet.';
-
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 500),
-          width: double.infinity,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [AppTheme.primary, AppTheme.secondary],
+        return GestureDetector(
+          onTap: () => _openUpdateSheet(context, info),
+          child: Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppTheme.primary, AppTheme.secondary],
+              ),
             ),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Column(
-                children: [
-                  Row(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _openUpdateSheet(context, info),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
                     children: [
                       const Icon(Icons.system_update_rounded, color: Colors.white, size: 20),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Update verfügbar: v${info.version} – Neue Funktionen & Stabilität',
+                          'Update v${info.version} verfügbar – Tippen für Details',
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
                         ),
                       ),
-                      ValueListenableBuilder<bool>(
-                        valueListenable: UpdateService.isDownloading,
-                        builder: (context, downloading, _) {
-                          if (downloading) return const SizedBox.shrink();
-                          return TextButton(
-                            onPressed: () => UpdateService.downloadAndInstall(),
-                            style: TextButton.styleFrom(
-                              backgroundColor: Colors.white.withValues(alpha: 0.2),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                            ),
-                            child: Text(installLabel, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                          );
-                        },
-                      ),
+                      const Icon(Icons.chevron_right_rounded, color: Colors.white70, size: 20),
                     ],
                   ),
-                  if (!isAndroid)
-                    ValueListenableBuilder<bool>(
-                      valueListenable: UpdateService.isDownloading,
-                      builder: (context, downloading, _) {
-                        if (!downloading) return const SizedBox.shrink();
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 10),
-                          child: Column(
-                            children: [
-                              ValueListenableBuilder<double>(
-                                valueListenable: UpdateService.downloadProgress,
-                                builder: (context, progress, _) {
-                                  return LinearProgressIndicator(
-                                    value: progress > 0 ? progress : null,
-                                    backgroundColor: Colors.white.withValues(alpha: 0.2),
-                                    valueColor: const AlwaysStoppedAnimation(Colors.white),
-                                    borderRadius: BorderRadius.circular(4),
-                                  );
-                                },
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                progressText,
-                                style: const TextStyle(color: Colors.white70, fontSize: 11),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                ],
+                ),
               ),
             ),
           ),
         );
       },
+    );
+  }
+}
+
+class _UpdateSheet extends StatefulWidget {
+  final UpdateInfo info;
+  const _UpdateSheet({required this.info});
+
+  @override
+  State<_UpdateSheet> createState() => _UpdateSheetState();
+}
+
+class _UpdateSheetState extends State<_UpdateSheet> {
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SafeArea(
+      top: false,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: cs.outlineVariant,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Row(children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [AppTheme.primary, AppTheme.secondary]),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.system_update_rounded, color: Colors.white, size: 26),
+                ),
+                const SizedBox(width: 14),
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Update verfügbar', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  Text('Version ${widget.info.version}', style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
+                ]),
+              ]),
+              if (widget.info.notes.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                Text('Was ist neu?', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: cs.onSurface)),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    widget.info.notes,
+                    style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant, height: 1.5),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 24),
+              ValueListenableBuilder<bool>(
+                valueListenable: UpdateService.isDownloading,
+                builder: (context, downloading, _) {
+                  if (downloading) {
+                    return Column(children: [
+                      ValueListenableBuilder<double>(
+                        valueListenable: UpdateService.downloadProgress,
+                        builder: (context, progress, _) {
+                          final pct = (progress * 100).toStringAsFixed(0);
+                          return Column(children: [
+                            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                              const Text('Herunterladen...', style: TextStyle(fontWeight: FontWeight.w600)),
+                              Text('$pct%', style: const TextStyle(fontWeight: FontWeight.w600)),
+                            ]),
+                            const SizedBox(height: 8),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: LinearProgressIndicator(
+                                value: progress > 0 ? progress : null,
+                                minHeight: 8,
+                                backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
+                                valueColor: const AlwaysStoppedAnimation(AppTheme.primary),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Bitte warten – die Installation startet automatisch.',
+                              style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant),
+                              textAlign: TextAlign.center,
+                            ),
+                          ]);
+                        },
+                      ),
+                    ]);
+                  }
+                  return SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () {
+                        UpdateService.downloadAndInstall();
+                      },
+                      icon: const Icon(Icons.download_rounded),
+                      label: const Text('Jetzt herunterladen & installieren'),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

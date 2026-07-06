@@ -340,8 +340,11 @@ class _PlanFormSheetState extends State<_PlanFormSheet> {
   final _audience = TextEditingController();
   final _weeks = TextEditingController(text: '8');
   final _perWeek = TextEditingController(text: '1');
+  final _promptCtrl = TextEditingController();
   String _difficulty = 'easy';
   bool _saving = false;
+  bool _aiMode = false;
+  bool _aiLoading = false;
 
   @override
   void dispose() {
@@ -349,7 +352,29 @@ class _PlanFormSheetState extends State<_PlanFormSheet> {
     _audience.dispose();
     _weeks.dispose();
     _perWeek.dispose();
+    _promptCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _aiGenerate() async {
+    if (_promptCtrl.text.trim().isEmpty) return;
+    setState(() => _aiLoading = true);
+    try {
+      final result =
+          await _api.aiGenerate('training_plan', _promptCtrl.text.trim());
+      setState(() {
+        _aiLoading = false;
+        _aiMode = false;
+        _name.text = result['name']?.toString() ?? '';
+        _audience.text = result['target_audience']?.toString() ?? '';
+        _weeks.text = result['duration_weeks']?.toString() ?? '8';
+        _perWeek.text = result['sessions_per_week']?.toString() ?? '1';
+        _difficulty = result['difficulty']?.toString() ?? 'easy';
+      });
+    } catch (e) {
+      setState(() => _aiLoading = false);
+      if (mounted) showDsSnack(context, e.toString(), error: true);
+    }
   }
 
   Future<void> _save() async {
@@ -390,74 +415,118 @@ class _PlanFormSheetState extends State<_PlanFormSheet> {
                   color: Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(2)),
             ),
-            Text('Neuer Trainingsplan',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _name,
-              decoration: const InputDecoration(
-                  labelText: 'Name *', prefixIcon: Icon(Icons.title_rounded)),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _audience,
-              decoration: const InputDecoration(
-                  labelText: 'Zielgruppe (z.B. Welpen)',
-                  prefixIcon: Icon(Icons.groups_rounded)),
-            ),
-            const SizedBox(height: 10),
-            Row(children: [
-              Expanded(
-                child: TextField(
-                  controller: _weeks,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                      labelText: 'Wochen',
-                      prefixIcon: Icon(Icons.calendar_month_rounded)),
+            Row(
+              children: [
+                Expanded(
+                  child: Text('Neuer Trainingsplan',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700)),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: _perWeek,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Einheiten/Woche'),
+                TextButton.icon(
+                  icon: Icon(
+                      _aiMode
+                          ? Icons.edit_rounded
+                          : Icons.auto_awesome_rounded,
+                      size: 16),
+                  label: Text(_aiMode ? 'Manuell' : 'Mit KI'),
+                  onPressed: () => setState(() => _aiMode = !_aiMode),
                 ),
-              ),
-            ]),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<String>(
-              initialValue: _difficulty,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                  labelText: 'Schwierigkeit',
-                  prefixIcon: Icon(Icons.trending_up_rounded)),
-              items: const [
-                DropdownMenuItem(value: 'easy', child: Text('Leicht')),
-                DropdownMenuItem(value: 'medium', child: Text('Mittel')),
-                DropdownMenuItem(value: 'hard', child: Text('Schwer')),
-                DropdownMenuItem(value: 'expert', child: Text('Experte')),
               ],
-              onChanged: (v) => setState(() => _difficulty = v ?? 'easy'),
             ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                icon: _saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : const Icon(Icons.check_rounded),
-                label: Text(_saving ? 'Speichern…' : 'Speichern'),
-                onPressed: _saving ? null : _save,
+            const SizedBox(height: 16),
+            if (_aiMode) ...[
+              TextField(
+                controller: _promptCtrl,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'KI-Prompt *',
+                  hintText: 'z.B. "8-Wochen-Plan für Welpen, Grundgehorsamkeit, 2x täglich"',
+                  prefixIcon: Icon(Icons.auto_awesome_rounded),
+                ),
               ),
-            ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  icon: _aiLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.auto_awesome_rounded),
+                  label: Text(_aiLoading ? 'KI generiert…' : 'Mit KI ausfüllen'),
+                  onPressed: _aiLoading ? null : _aiGenerate,
+                ),
+              ),
+            ] else ...[
+              TextField(
+                controller: _name,
+                decoration: const InputDecoration(
+                    labelText: 'Name *',
+                    prefixIcon: Icon(Icons.title_rounded)),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _audience,
+                decoration: const InputDecoration(
+                    labelText: 'Zielgruppe (z.B. Welpen)',
+                    prefixIcon: Icon(Icons.groups_rounded)),
+              ),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(
+                  child: TextField(
+                    controller: _weeks,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                        labelText: 'Wochen',
+                        prefixIcon: Icon(Icons.calendar_month_rounded)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _perWeek,
+                    keyboardType: TextInputType.number,
+                    decoration:
+                        const InputDecoration(labelText: 'Einheiten/Woche'),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                initialValue: _difficulty,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                    labelText: 'Schwierigkeit',
+                    prefixIcon: Icon(Icons.trending_up_rounded)),
+                items: const [
+                  DropdownMenuItem(value: 'easy', child: Text('Leicht')),
+                  DropdownMenuItem(value: 'medium', child: Text('Mittel')),
+                  DropdownMenuItem(value: 'hard', child: Text('Schwer')),
+                  DropdownMenuItem(value: 'expert', child: Text('Experte')),
+                ],
+                onChanged: (v) => setState(() => _difficulty = v ?? 'easy'),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  icon: _saving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.check_rounded),
+                  label: Text(_saving ? 'Speichern…' : 'Speichern'),
+                  onPressed: _saving ? null : _save,
+                ),
+              ),
+            ],
           ],
         ),
       ),

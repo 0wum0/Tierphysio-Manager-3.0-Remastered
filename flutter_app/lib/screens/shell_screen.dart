@@ -281,6 +281,7 @@ class _ShellScreenState extends State<ShellScreen>
 
     return Scaffold(
       floatingActionButton: const FeedbackFab(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       body: Row(children: [
         AnimatedBuilder(
           animation: _sidebarAnim,
@@ -526,6 +527,7 @@ class _ShellScreenState extends State<ShellScreen>
     return Scaffold(
       appBar: _buildAppBar(context),
       floatingActionButton: const FeedbackFab(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
       body: Column(children: [
         if (_isOffline) _offlineBanner(),
         Expanded(child: _animatedContent(location)),
@@ -794,6 +796,7 @@ class _ShellScreenState extends State<ShellScreen>
     );
     if (ok == true && context.mounted) {
       await context.read<AuthService>().logout();
+      if (context.mounted) context.go('/login');
     }
   }
 }

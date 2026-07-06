@@ -144,7 +144,10 @@ class _CreatePlanSheetState extends State<_CreatePlanSheet> {
   String _patientSearch = '';
   String? _planDate;
   bool _saving = false;
+  bool _aiMode = false;
+  bool _aiLoading = false;
   final _searchCtrl = TextEditingController();
+  final _promptCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -155,7 +158,36 @@ class _CreatePlanSheetState extends State<_CreatePlanSheet> {
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _promptCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _aiGenerate() async {
+    if (_promptCtrl.text.trim().isEmpty) return;
+    setState(() => _aiLoading = true);
+    try {
+      await widget.api.aiGenerate('homework_plan', _promptCtrl.text.trim());
+      setState(() {
+        _aiLoading = false;
+        _aiMode = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('KI-Plan generiert ✓'),
+          backgroundColor: AppTheme.success,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } catch (e) {
+      setState(() => _aiLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e.toString()),
+          backgroundColor: AppTheme.danger,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    }
   }
 
   Future<void> _loadPatients() async {
@@ -274,6 +306,13 @@ class _CreatePlanSheetState extends State<_CreatePlanSheet> {
               const SizedBox(width: 12),
               const Expanded(child: Text('Neuer Hausaufgabenplan',
                 style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700))),
+              TextButton.icon(
+                icon: Icon(
+                    _aiMode ? Icons.edit_rounded : Icons.auto_awesome_rounded,
+                    size: 16),
+                label: Text(_aiMode ? 'Manuell' : 'Mit KI'),
+                onPressed: () => setState(() => _aiMode = !_aiMode),
+              ),
               IconButton(
                 icon: const Icon(Icons.close_rounded),
                 onPressed: () => Navigator.pop(context),
@@ -286,6 +325,34 @@ class _CreatePlanSheetState extends State<_CreatePlanSheet> {
             controller: scrollCtrl,
             padding: const EdgeInsets.all(20),
             children: [
+              /* AI Prompt */
+              if (_aiMode) ...[
+                TextField(
+                  controller: _promptCtrl,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: 'z.B. "Übungsplan für Labrador mit Hüftproblemen, 3x/Woche, 4 Wochen"',
+                    labelText: 'KI-Prompt *',
+                    prefixIcon: const Icon(Icons.auto_awesome_rounded),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    icon: _aiLoading
+                        ? const SizedBox(width: 16, height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.auto_awesome_rounded),
+                    label: Text(_aiLoading ? 'KI generiert…' : 'Mit KI ausfüllen'),
+                    onPressed: _aiLoading ? null : _aiGenerate,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 16),
+              ],
               /* Plan date */
               Text('Plandatum', style: TextStyle(
                 fontSize: 12, fontWeight: FontWeight.w600,
