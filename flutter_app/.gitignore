@@ -22,4 +22,4 @@ ios/Flutter/Flutter.podspec
 # Generated
 *.g.dart
 *.freezed.dart
-pubspec.lock
+# pubspec.lock is intentionally tracked for reproducible CI builds
