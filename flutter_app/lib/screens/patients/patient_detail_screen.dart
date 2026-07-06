@@ -33,6 +33,8 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   bool _uploading = false;
   String? _error;
   late TabController _tabCtrl;
+  bool _cachedIsTrainer = false;
+  bool _tabsReady = false;
 
   // Exercises (Übungen)
   List<Map<String, dynamic>> _exercises = [];
@@ -71,19 +73,43 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
   @override
   void initState() {
     super.initState();
-    _tabCtrl = TabController(length: 9, vsync: this);
-    _tabCtrl.addListener(_onTabChanged);
     _load();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final isTrainer = context.read<AuthService>().isTrainer;
+    if (!_tabsReady || _cachedIsTrainer != isTrainer) {
+      _cachedIsTrainer = isTrainer;
+      final newLength = isTrainer ? 6 : 9;
+      if (_tabsReady) {
+        _tabCtrl.removeListener(_onTabChanged);
+        _tabCtrl.dispose();
+      }
+      _tabCtrl = TabController(length: newLength, vsync: this);
+      _tabCtrl.addListener(_onTabChanged);
+      _tabsReady = true;
+    }
+  }
+
+  // Trainer tabs:  0=Akte  1=Übungen  2=Aufgaben  3=Berichte  4=Portal  5=Daten
+  // Physio tabs:   0=Akte  1=Übungen  2=Hausaufgaben  3=Befunde  4=TCP  5=Berichte  6=Portal  7=Schmerz  8=Daten
   void _onTabChanged() {
     if (_tabCtrl.indexIsChanging) return;
-    if (_tabCtrl.index == 1 && !_exercisesLoaded) _loadExercises();
-    if (_tabCtrl.index == 2 && !_homeworkLoaded) _loadHomework();
-    if (_tabCtrl.index == 3 && !_befundeLoaded) _loadBefunde();
-    if (_tabCtrl.index == 4 && !_tcpLoaded) _loadTcp();
-    if (_tabCtrl.index == 5 && !_reportsLoaded) _loadReports();
-    if (_tabCtrl.index == 6 && !_threadsLoaded) _loadThreads();
+    if (_cachedIsTrainer) {
+      if (_tabCtrl.index == 1 && !_exercisesLoaded) _loadExercises();
+      if (_tabCtrl.index == 2 && !_homeworkLoaded) _loadHomework();
+      if (_tabCtrl.index == 3 && !_reportsLoaded) _loadReports();
+      if (_tabCtrl.index == 4 && !_threadsLoaded) _loadThreads();
+    } else {
+      if (_tabCtrl.index == 1 && !_exercisesLoaded) _loadExercises();
+      if (_tabCtrl.index == 2 && !_homeworkLoaded) _loadHomework();
+      if (_tabCtrl.index == 3 && !_befundeLoaded) _loadBefunde();
+      if (_tabCtrl.index == 4 && !_tcpLoaded) _loadTcp();
+      if (_tabCtrl.index == 5 && !_reportsLoaded) _loadReports();
+      if (_tabCtrl.index == 6 && !_threadsLoaded) _loadThreads();
+    }
   }
 
   Future<void> _loadTcp() async {
@@ -193,8 +219,10 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
 
   @override
   void dispose() {
-    _tabCtrl.removeListener(_onTabChanged);
-    _tabCtrl.dispose();
+    if (_tabsReady) {
+      _tabCtrl.removeListener(_onTabChanged);
+      _tabCtrl.dispose();
+    }
     super.dispose();
   }
 
@@ -240,6 +268,7 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (!_tabsReady) return const Scaffold(body: Center(child: CircularProgressIndicator()));
     final p = _patient;
     return Scaffold(
       body: _loading
@@ -508,33 +537,26 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
               indicatorColor: Colors.white,
               indicatorWeight: 3,
               dividerColor: Colors.transparent,
-              tabs: const [
-                Tab(
-                    text: 'Akte',
-                    icon: Icon(Icons.folder_open_rounded, size: 16)),
-                Tab(
-                    text: 'Übungen',
-                    icon: Icon(Icons.fitness_center_rounded, size: 16)),
-                Tab(
-                    text: 'Hausaufgaben',
-                    icon: Icon(Icons.assignment_rounded, size: 16)),
-                Tab(
-                    text: 'Befunde',
-                    icon: Icon(Icons.medical_information_rounded, size: 16)),
-                Tab(
-                    text: 'TCP',
-                    icon: Icon(Icons.show_chart_rounded, size: 16)),
-                Tab(
-                    text: 'Berichte',
-                    icon: Icon(Icons.description_rounded, size: 16)),
-                Tab(text: 'Portal', icon: Icon(Icons.forum_rounded, size: 16)),
-                Tab(
-                    text: 'Schmerz',
-                    icon: Icon(Icons.view_in_ar_rounded, size: 16)),
-                Tab(
-                    text: 'Daten',
-                    icon: Icon(Icons.info_outline_rounded, size: 16)),
-              ],
+              tabs: _cachedIsTrainer
+                  ? const [
+                      Tab(text: 'Akte', icon: Icon(Icons.folder_open_rounded, size: 16)),
+                      Tab(text: 'Übungen', icon: Icon(Icons.fitness_center_rounded, size: 16)),
+                      Tab(text: 'Aufgaben', icon: Icon(Icons.assignment_rounded, size: 16)),
+                      Tab(text: 'Berichte', icon: Icon(Icons.description_rounded, size: 16)),
+                      Tab(text: 'Portal', icon: Icon(Icons.forum_rounded, size: 16)),
+                      Tab(text: 'Daten', icon: Icon(Icons.info_outline_rounded, size: 16)),
+                    ]
+                  : const [
+                      Tab(text: 'Akte', icon: Icon(Icons.folder_open_rounded, size: 16)),
+                      Tab(text: 'Übungen', icon: Icon(Icons.fitness_center_rounded, size: 16)),
+                      Tab(text: 'Hausaufgaben', icon: Icon(Icons.assignment_rounded, size: 16)),
+                      Tab(text: 'Befunde', icon: Icon(Icons.medical_information_rounded, size: 16)),
+                      Tab(text: 'TCP', icon: Icon(Icons.show_chart_rounded, size: 16)),
+                      Tab(text: 'Berichte', icon: Icon(Icons.description_rounded, size: 16)),
+                      Tab(text: 'Portal', icon: Icon(Icons.forum_rounded, size: 16)),
+                      Tab(text: 'Schmerz', icon: Icon(Icons.view_in_ar_rounded, size: 16)),
+                      Tab(text: 'Daten', icon: Icon(Icons.info_outline_rounded, size: 16)),
+                    ],
             ),
           ),
 
@@ -554,17 +576,26 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
           SliverFillRemaining(
             child: TabBarView(
               controller: _tabCtrl,
-              children: [
-                _buildTimeline(timeline),
-                _buildExercisesTab(),
-                _buildHomeworkTab(),
-                _buildBefundeTab(),
-                _buildTcpTab(),
-                _buildReportsTab(),
-                _buildPortalTab(),
-                _build3dPainTab(p),
-                _buildInfo(p),
-              ],
+              children: _cachedIsTrainer
+                  ? [
+                      _buildTimeline(timeline),
+                      _buildExercisesTab(),
+                      _buildHomeworkTab(),
+                      _buildReportsTab(),
+                      _buildPortalTab(),
+                      _buildInfo(p),
+                    ]
+                  : [
+                      _buildTimeline(timeline),
+                      _buildExercisesTab(),
+                      _buildHomeworkTab(),
+                      _buildBefundeTab(),
+                      _buildTcpTab(),
+                      _buildReportsTab(),
+                      _buildPortalTab(),
+                      _build3dPainTab(p),
+                      _buildInfo(p),
+                    ],
             ),
           ),
         ],
@@ -780,30 +811,202 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
         _homeworkLoaded = false;
         await _loadHomework();
       },
-      child: _homework.isEmpty
-          ? ListView(padding: const EdgeInsets.all(32), children: [
-              Center(
-                  child: Column(children: [
-                const SizedBox(height: 40),
-                Icon(Icons.assignment_outlined,
-                    size: 72, color: Colors.grey.shade300),
-                const SizedBox(height: 16),
-                Text('Keine Hausaufgaben',
-                    style:
-                        TextStyle(color: Colors.grey.shade500, fontSize: 16)),
-                const SizedBox(height: 8),
-                Text('Hausaufgaben werden über das Portal Admin zugewiesen.',
-                    textAlign: TextAlign.center,
-                    style:
-                        TextStyle(color: Colors.grey.shade400, fontSize: 12)),
-              ])),
-            ])
-          : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-              itemCount: _homework.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (_, i) => _HomeworkCard(homework: _homework[i]),
+      child: Stack(children: [
+        _homework.isEmpty
+            ? ListView(padding: const EdgeInsets.all(32), children: [
+                Center(
+                    child: Column(children: [
+                  const SizedBox(height: 40),
+                  Icon(Icons.assignment_outlined,
+                      size: 72, color: Colors.grey.shade300),
+                  const SizedBox(height: 16),
+                  Text('Keine Hausaufgaben',
+                      style: TextStyle(
+                          color: Colors.grey.shade500, fontSize: 16)),
+                  const SizedBox(height: 8),
+                  FilledButton.icon(
+                    onPressed: _showCreateHomeworkSheet,
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('Hausaufgaben erstellen'),
+                  ),
+                ])),
+              ])
+            : ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                itemCount: _homework.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (_, i) => _HomeworkCard(homework: _homework[i]),
+              ),
+        if (_homework.isNotEmpty)
+          Positioned(
+            bottom: 16,
+            right: 16,
+            child: FloatingActionButton.small(
+              heroTag: 'add_homework',
+              onPressed: _showCreateHomeworkSheet,
+              child: const Icon(Icons.add_rounded),
             ),
+          ),
+      ]),
+    );
+  }
+
+  void _showCreateHomeworkSheet() {
+    final nameCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
+    final promptCtrl = TextEditingController();
+    bool aiMode = false;
+    bool loading = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, ss) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 28),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(
+                width: 42,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                    color: Theme.of(ctx).colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(2)),
+              ),
+              Row(children: [
+                _ModalIcon(
+                    icon: Icons.assignment_rounded, color: AppTheme.primary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text('Hausaufgaben erstellen',
+                      style: Theme.of(ctx)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w800)),
+                ),
+                TextButton.icon(
+                  icon: Icon(
+                      aiMode ? Icons.edit_rounded : Icons.auto_awesome_rounded,
+                      size: 16),
+                  label: Text(aiMode ? 'Manuell' : 'Mit KI'),
+                  onPressed: () => ss(() => aiMode = !aiMode),
+                ),
+              ]),
+              const SizedBox(height: 16),
+              if (aiMode) ...[
+                TextField(
+                  controller: promptCtrl,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'KI-Prompt *',
+                    hintText: 'z.B. "Übungen für Hund mit Hüftdysplasie, 3x pro Woche, 15 Min."',
+                    prefixIcon: Icon(Icons.auto_awesome_rounded),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    icon: loading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.auto_awesome_rounded),
+                    label: Text(loading ? 'KI generiert...' : 'Mit KI ausfüllen'),
+                    onPressed: loading
+                        ? null
+                        : () async {
+                            if (promptCtrl.text.trim().isEmpty) return;
+                            ss(() => loading = true);
+                            try {
+                              final result = await _api.aiGenerate(
+                                  'homework_plan', promptCtrl.text.trim());
+                              ss(() {
+                                loading = false;
+                                aiMode = false;
+                                nameCtrl.text =
+                                    result['name']?.toString() ?? '';
+                                descCtrl.text =
+                                    result['description']?.toString() ?? '';
+                              });
+                            } catch (e) {
+                              ss(() => loading = false);
+                              if (ctx.mounted)
+                                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                                    content: Text(e.toString()),
+                                    backgroundColor: Colors.red));
+                            }
+                          },
+                  ),
+                ),
+              ] else ...[
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Name *',
+                    prefixIcon: Icon(Icons.assignment_rounded),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: descCtrl,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'Beschreibung',
+                    prefixIcon: Icon(Icons.notes_rounded),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    icon: loading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.save_rounded),
+                    label: Text(loading ? 'Speichern...' : 'Speichern'),
+                    onPressed: loading
+                        ? null
+                        : () async {
+                            if (nameCtrl.text.trim().isEmpty) return;
+                            ss(() => loading = true);
+                            try {
+                              await _api.homeworkPlanCreate({
+                                'name': nameCtrl.text.trim(),
+                                'description': descCtrl.text.trim(),
+                                'patient_id': widget.id,
+                              });
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              _homeworkLoaded = false;
+                              await _loadHomework();
+                              if (mounted)
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content: Text('✓ Hausaufgaben erstellt'),
+                                        backgroundColor: Colors.green));
+                            } catch (e) {
+                              ss(() => loading = false);
+                              if (ctx.mounted)
+                                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                                    content: Text(e.toString()),
+                                    backgroundColor: Colors.red));
+                            }
+                          },
+                  ),
+                ),
+              ],
+            ]),
+          ),
+        ),
+      ),
     );
   }
 
@@ -817,30 +1020,204 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
         _befundeLoaded = false;
         await _loadBefunde();
       },
-      child: _befunde.isEmpty
-          ? ListView(padding: const EdgeInsets.all(32), children: [
-              Center(
-                  child: Column(children: [
-                const SizedBox(height: 40),
-                Icon(Icons.medical_information_rounded,
-                    size: 72, color: Colors.grey.shade300),
-                const SizedBox(height: 16),
-                Text('Keine Befundbögen',
-                    style:
-                        TextStyle(color: Colors.grey.shade500, fontSize: 16)),
-                const SizedBox(height: 8),
-                Text('Befundbögen werden in der Patientenakte erstellt.',
-                    textAlign: TextAlign.center,
-                    style:
-                        TextStyle(color: Colors.grey.shade400, fontSize: 12)),
-              ])),
-            ])
-          : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-              itemCount: _befunde.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (_, i) => _BefundCard(befund: _befunde[i]),
+      child: Stack(children: [
+        _befunde.isEmpty
+            ? ListView(padding: const EdgeInsets.all(32), children: [
+                Center(
+                    child: Column(children: [
+                  const SizedBox(height: 40),
+                  Icon(Icons.medical_information_rounded,
+                      size: 72, color: Colors.grey.shade300),
+                  const SizedBox(height: 16),
+                  Text('Keine Befundbögen',
+                      style: TextStyle(
+                          color: Colors.grey.shade500, fontSize: 16)),
+                  const SizedBox(height: 8),
+                  FilledButton.icon(
+                    onPressed: _showCreateBefundSheet,
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text('Befundbogen erstellen'),
+                  ),
+                ])),
+              ])
+            : ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                itemCount: _befunde.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (_, i) => _BefundCard(befund: _befunde[i]),
+              ),
+        if (_befunde.isNotEmpty)
+          Positioned(
+            bottom: 16,
+            right: 16,
+            child: FloatingActionButton.small(
+              heroTag: 'add_befund',
+              onPressed: _showCreateBefundSheet,
+              child: const Icon(Icons.add_rounded),
             ),
+          ),
+      ]),
+    );
+  }
+
+  void _showCreateBefundSheet() {
+    final titleCtrl = TextEditingController();
+    final anamneseCtrl = TextEditingController();
+    final promptCtrl = TextEditingController();
+    bool aiMode = false;
+    bool loading = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, ss) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 28),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(
+                width: 42,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                    color: Theme.of(ctx).colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(2)),
+              ),
+              Row(children: [
+                _ModalIcon(
+                    icon: Icons.medical_information_rounded,
+                    color: AppTheme.danger),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text('Befundbogen erstellen',
+                      style: Theme.of(ctx)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w800)),
+                ),
+                TextButton.icon(
+                  icon: Icon(
+                      aiMode ? Icons.edit_rounded : Icons.auto_awesome_rounded,
+                      size: 16),
+                  label: Text(aiMode ? 'Manuell' : 'Mit KI'),
+                  onPressed: () => ss(() => aiMode = !aiMode),
+                ),
+              ]),
+              const SizedBox(height: 16),
+              if (aiMode) ...[
+                TextField(
+                  controller: promptCtrl,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    labelText: 'KI-Prompt *',
+                    hintText: 'z.B. "Befundbogen für Labrador mit Lahmheit, Orthopädie"',
+                    prefixIcon: Icon(Icons.auto_awesome_rounded),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    icon: loading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.auto_awesome_rounded),
+                    label: Text(loading ? 'KI generiert...' : 'Mit KI ausfüllen'),
+                    onPressed: loading
+                        ? null
+                        : () async {
+                            if (promptCtrl.text.trim().isEmpty) return;
+                            ss(() => loading = true);
+                            try {
+                              final result = await _api.aiGenerate(
+                                  'befundbogen', promptCtrl.text.trim());
+                              ss(() {
+                                loading = false;
+                                aiMode = false;
+                                titleCtrl.text =
+                                    result['title']?.toString() ?? '';
+                                anamneseCtrl.text =
+                                    result['anamnese']?.toString() ?? '';
+                              });
+                            } catch (e) {
+                              ss(() => loading = false);
+                              if (ctx.mounted)
+                                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                                    content: Text(e.toString()),
+                                    backgroundColor: Colors.red));
+                            }
+                          },
+                  ),
+                ),
+              ] else ...[
+                TextField(
+                  controller: titleCtrl,
+                  decoration: const InputDecoration(
+                    labelText: 'Titel *',
+                    prefixIcon: Icon(Icons.medical_information_rounded),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: anamneseCtrl,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    labelText: 'Anamnese',
+                    prefixIcon: Icon(Icons.notes_rounded),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    icon: loading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.save_rounded),
+                    label: Text(loading ? 'Speichern...' : 'Speichern'),
+                    onPressed: loading
+                        ? null
+                        : () async {
+                            if (titleCtrl.text.trim().isEmpty) return;
+                            ss(() => loading = true);
+                            try {
+                              await _api.befundeCreate({
+                                'title': titleCtrl.text.trim(),
+                                'anamnese': anamneseCtrl.text.trim(),
+                                'patient_id': widget.id,
+                                'status': 'entwurf',
+                              });
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              _befundeLoaded = false;
+                              await _loadBefunde();
+                              if (mounted)
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content: Text('✓ Befundbogen erstellt'),
+                                        backgroundColor: Colors.green));
+                            } catch (e) {
+                              ss(() => loading = false);
+                              if (ctx.mounted)
+                                ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
+                                    content: Text(e.toString()),
+                                    backgroundColor: Colors.red));
+                            }
+                          },
+                  ),
+                ),
+              ],
+            ]),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1592,13 +1969,14 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
                 _tabCtrl.animateTo(2);
                 if (!_homeworkLoaded) _loadHomework();
               }),
-              _ActionHubTile(
-                  Icons.medical_information_rounded, 'Befund', AppTheme.danger,
-                  () {
-                Navigator.pop(ctx);
-                _tabCtrl.animateTo(3);
-                if (!_befundeLoaded) _loadBefunde();
-              }),
+              if (!_cachedIsTrainer)
+                _ActionHubTile(
+                    Icons.medical_information_rounded, 'Befund', AppTheme.danger,
+                    () {
+                  Navigator.pop(ctx);
+                  _tabCtrl.animateTo(3);
+                  if (!_befundeLoaded) _loadBefunde();
+                }),
               _ActionHubTile(
                   Icons.fitness_center_rounded, 'Übung', AppTheme.tertiary, () {
                 Navigator.pop(ctx);

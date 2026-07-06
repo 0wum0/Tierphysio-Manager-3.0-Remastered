@@ -258,9 +258,12 @@ class _CourseFormSheetState extends State<_CourseFormSheet> {
   late final TextEditingController _price;
   late final TextEditingController _maxParticipants;
   late final TextEditingController _numSessions;
+  final _promptCtrl = TextEditingController();
   String _type = 'group';
   String _status = 'draft';
   bool _saving = false;
+  bool _aiMode = false;
+  bool _aiLoading = false;
 
   @override
   void initState() {
@@ -285,7 +288,32 @@ class _CourseFormSheetState extends State<_CourseFormSheet> {
     _price.dispose();
     _maxParticipants.dispose();
     _numSessions.dispose();
+    _promptCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _aiGenerate() async {
+    if (_promptCtrl.text.trim().isEmpty) return;
+    setState(() => _aiLoading = true);
+    try {
+      final result = await _api.aiGenerate('kurs', _promptCtrl.text.trim());
+      setState(() {
+        _aiLoading = false;
+        _aiMode = false;
+        _name.text = result['name']?.toString() ?? '';
+        _location.text = result['location']?.toString() ?? '';
+        _type = result['type']?.toString() ?? 'group';
+        _maxParticipants.text = result['max_participants']?.toString() ?? '8';
+        _numSessions.text = result['num_sessions']?.toString() ?? '1';
+        if (result['price_cents'] != null) {
+          final cents = int.tryParse(result['price_cents'].toString()) ?? 0;
+          _price.text = (cents / 100).toStringAsFixed(2);
+        }
+      });
+    } catch (e) {
+      setState(() => _aiLoading = false);
+      if (mounted) showDsSnack(context, e.toString(), error: true);
+    }
   }
 
   Future<void> _save() async {
@@ -335,90 +363,144 @@ class _CourseFormSheetState extends State<_CourseFormSheet> {
                   color: Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(2)),
             ),
-            Text(widget.existing != null ? 'Kurs bearbeiten' : 'Neuer Kurs',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _name,
-              decoration: const InputDecoration(
-                  labelText: 'Kursname *', prefixIcon: Icon(Icons.title_rounded)),
-            ),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<String>(
-              initialValue: _type,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                  labelText: 'Kurstyp', prefixIcon: Icon(Icons.category_rounded)),
-              items: [
-                for (final k in courseTypeKeys)
-                  DropdownMenuItem(value: k, child: Text(courseTypeLabel(k))),
-              ],
-              onChanged: (v) => setState(() => _type = v ?? 'group'),
-            ),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<String>(
-              initialValue: _status,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                  labelText: 'Status', prefixIcon: Icon(Icons.flag_rounded)),
-              items: [
-                for (final k in ['draft', 'active', 'full', 'paused', 'completed', 'cancelled'])
-                  DropdownMenuItem(value: k, child: Text(courseStatusLabel(k))),
-              ],
-              onChanged: (v) => setState(() => _status = v ?? 'draft'),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _location,
-              decoration: const InputDecoration(
-                  labelText: 'Ort', prefixIcon: Icon(Icons.place_rounded)),
-            ),
-            const SizedBox(height: 10),
             Row(children: [
               Expanded(
-                child: TextField(
-                  controller: _maxParticipants,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                      labelText: 'Max. Teilnehmer',
-                      prefixIcon: Icon(Icons.group_rounded)),
-                ),
+                child: Text(
+                    widget.existing != null ? 'Kurs bearbeiten' : 'Neuer Kurs',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700)),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextField(
-                  controller: _numSessions,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                      labelText: 'Einheiten',
-                      prefixIcon: Icon(Icons.repeat_rounded)),
+              if (widget.existing == null)
+                TextButton.icon(
+                  icon: Icon(
+                      _aiMode ? Icons.edit_rounded : Icons.auto_awesome_rounded,
+                      size: 16),
+                  label: Text(_aiMode ? 'Manuell' : 'Mit KI'),
+                  onPressed: () => setState(() => _aiMode = !_aiMode),
                 ),
-              ),
             ]),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _price,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                  labelText: 'Preis (€)', prefixIcon: Icon(Icons.euro_rounded)),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                icon: _saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Icon(Icons.check_rounded),
-                label: Text(_saving ? 'Speichern…' : 'Speichern'),
-                onPressed: _saving ? null : _save,
+            const SizedBox(height: 16),
+            if (_aiMode) ...[
+              TextField(
+                controller: _promptCtrl,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'KI-Prompt *',
+                  hintText: 'z.B. "Welpenkurs, 6 Einheiten, max. 8 Teilnehmer, 89€"',
+                  prefixIcon: Icon(Icons.auto_awesome_rounded),
+                ),
               ),
-            ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  icon: _aiLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.auto_awesome_rounded),
+                  label: Text(_aiLoading ? 'KI generiert…' : 'Mit KI ausfüllen'),
+                  onPressed: _aiLoading ? null : _aiGenerate,
+                ),
+              ),
+            ] else ...[
+              TextField(
+                controller: _name,
+                decoration: const InputDecoration(
+                    labelText: 'Kursname *',
+                    prefixIcon: Icon(Icons.title_rounded)),
+              ),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                initialValue: _type,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                    labelText: 'Kurstyp',
+                    prefixIcon: Icon(Icons.category_rounded)),
+                items: [
+                  for (final k in courseTypeKeys)
+                    DropdownMenuItem(value: k, child: Text(courseTypeLabel(k))),
+                ],
+                onChanged: (v) => setState(() => _type = v ?? 'group'),
+              ),
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                initialValue: _status,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                    labelText: 'Status',
+                    prefixIcon: Icon(Icons.flag_rounded)),
+                items: [
+                  for (final k in [
+                    'draft',
+                    'active',
+                    'full',
+                    'paused',
+                    'completed',
+                    'cancelled'
+                  ])
+                    DropdownMenuItem(value: k, child: Text(courseStatusLabel(k))),
+                ],
+                onChanged: (v) => setState(() => _status = v ?? 'draft'),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _location,
+                decoration: const InputDecoration(
+                    labelText: 'Ort',
+                    prefixIcon: Icon(Icons.place_rounded)),
+              ),
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(
+                  child: TextField(
+                    controller: _maxParticipants,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                        labelText: 'Max. Teilnehmer',
+                        prefixIcon: Icon(Icons.group_rounded)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: _numSessions,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                        labelText: 'Einheiten',
+                        prefixIcon: Icon(Icons.repeat_rounded)),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _price,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(
+                    labelText: 'Preis (€)',
+                    prefixIcon: Icon(Icons.euro_rounded)),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  icon: _saving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.check_rounded),
+                  label: Text(_saving ? 'Speichern…' : 'Speichern'),
+                  onPressed: _saving ? null : _save,
+                ),
+              ),
+            ],
           ],
         ),
       ),
