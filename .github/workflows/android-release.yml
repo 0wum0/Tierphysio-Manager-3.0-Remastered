@@ -1,0 +1,119 @@
+name: Android Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'Version Name (z.B. 1.2.1)'
+        required: false
+        default: ''
+
+jobs:
+  build-android:
+    name: Build & Release Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.32.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Flutter Version Info
+        run: flutter --version
+
+      - name: Get Dependencies
+        working-directory: flutter_app
+        run: flutter pub get
+
+      - name: Extract Version from pubspec.yaml
+        id: version
+        working-directory: flutter_app
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ' | cut -d'+' -f1)
+          BUILD=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d ' ' | cut -d'+' -f2)
+          echo "version_name=$VERSION" >> $GITHUB_OUTPUT
+          echo "build_number=$BUILD" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION+$BUILD"
+
+      - name: Determine Release Version
+        id: release_version
+        run: |
+          if [ "${{ github.event_name }}" = "push" ] && [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG="${{ github.ref_name }}"
+            echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          elif [ -n "${{ github.event.inputs.version_name }}" ]; then
+            TAG="v${{ github.event.inputs.version_name }}"
+            echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          else
+            TAG="v${{ steps.version.outputs.version_name }}"
+            echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          fi
+          echo "Release Tag: $TAG"
+
+      - name: Build Release APK
+        working-directory: flutter_app
+        run: flutter build apk --release --no-tree-shake-icons
+
+      - name: Rename APK
+        run: |
+          VERSION="${{ steps.version.outputs.version_name }}"
+          BUILD="${{ steps.version.outputs.build_number }}"
+          mkdir -p dist
+          cp flutter_app/build/app/outputs/flutter-apk/app-release.apk \
+             dist/TheraPano-${VERSION}+${BUILD}-android.apk
+
+      - name: Generate Release Notes
+        id: notes
+        run: |
+          VERSION="${{ steps.version.outputs.version_name }}"
+          BUILD="${{ steps.version.outputs.build_number }}"
+          cat <<EOF > dist/release_notes.md
+          ## TheraPano Android ${VERSION} (Build ${BUILD})
+
+          ### Installation
+          1. APK-Datei auf dein Android-Gerät laden
+          2. In den Einstellungen **"Unbekannte Quellen"** erlauben
+          3. APK öffnen und installieren
+
+          ### Systemanforderungen
+          - Android 5.0 (API 21) oder höher
+          - ca. 50 MB freier Speicherplatz
+
+          ### Enthaltene Funktionen
+          - Dashboard mit Tagesübersicht
+          - Kalender & Terminverwaltung
+          - Patientenverwaltung (Befunde, Behandlungen)
+          - Rechnungen & Mahnungen
+          - Nachrichten & Postfach
+          - Besitzerportal
+          - Offline-3D-Schmerzanalyse
+          - Hausaufgaben für Tierbesitzer
+          - Push-Benachrichtigungen
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_version.outputs.tag }}
+          name: "TheraPano Android ${{ steps.version.outputs.version_name }}"
+          body_path: dist/release_notes.md
+          draft: false
+          prerelease: false
+          files: |
+            dist/TheraPano-${{ steps.version.outputs.version_name }}+${{ steps.version.outputs.build_number }}-android.apk
+          token: ${{ secrets.GITHUB_TOKEN }}
