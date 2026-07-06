@@ -74,5 +74,7 @@ flutter_app/releases/*.aab
 
 # SSL certs / signing keys
 flutter_app/therapano_cert.pfx
+flutter_app/android/app/*.jks
+flutter_app/android/app/*.keystore
 
 flutter_app/android/app/therapano-release.jks
