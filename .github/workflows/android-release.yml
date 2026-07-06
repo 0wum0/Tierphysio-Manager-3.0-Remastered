@@ -4,6 +4,11 @@ on:
   push:
     tags:
       - 'v*'
+    branches:
+      - main
+    paths:
+      - 'flutter_app/pubspec.yaml'
+      - '.github/workflows/android-release.yml'
   workflow_dispatch:
     inputs:
       version_name:
