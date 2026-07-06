@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../core/theme.dart';
 import '../services/portal_auth_service.dart';
 import '../services/portal_api_service.dart';
+import '../widgets/auth_image.dart';
 import 'pet_detail_screen.dart';
 
 class PetsScreen extends StatefulWidget {
@@ -76,11 +77,11 @@ class _PetTile extends StatelessWidget {
     return Card(
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
+        leading: AuthAvatar(
+          url: pet['photo_url'] as String?,
           radius: 26,
-          backgroundColor: AppTheme.primary.withValues(alpha: 0.12),
-          backgroundImage: pet['photo_url'] != null ? NetworkImage(pet['photo_url'] as String) : null,
-          child: pet['photo_url'] == null ? const Icon(Icons.pets_rounded, color: AppTheme.primary) : null,
+          bgColor: AppTheme.primary.withValues(alpha: 0.12),
+          iconColor: AppTheme.primary,
         ),
         title: Text(pet['name'] as String? ?? '–', style: const TextStyle(fontWeight: FontWeight.w700)),
         subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

@@ -161,12 +161,15 @@ class ServiceProvider
         $router->get('/api/portal/mobile/dashboard',                                 [OwnerPortalMobileController::class,   'dashboard'],         []);
         $router->get('/api/portal/mobile/tiere',                                     [OwnerPortalMobileController::class,   'pets'],              []);
         $router->get('/api/portal/mobile/tiere/{id}',                                [OwnerPortalMobileController::class,   'petDetail'],         []);
+        $router->get('/api/portal/mobile/tiere/{id}/foto/{file}',                    [OwnerPortalMobileController::class,   'petPhotoMobile'],    []);
+        $router->get('/api/portal/mobile/tiere/{id}/media/{file}',                   [OwnerPortalMobileController::class,   'petMedia'],          []);
         $router->get('/api/portal/mobile/termine',                                   [OwnerPortalMobileController::class,   'appointments'],      []);
         $router->get('/api/portal/mobile/rechnungen',                                [OwnerPortalMobileController::class,   'invoices'],          []);
         $router->get('/api/portal/mobile/rechnungen/{id}/pdf',                       [OwnerPortalMobileController::class,   'invoicePdf'],        []);
         $router->get('/api/portal/mobile/befunde',                                   [OwnerPortalMobileController::class,   'befunde'],           []);
         $router->get('/api/portal/mobile/befunde/{id}/pdf',                          [OwnerPortalMobileController::class,   'befundPdf'],         []);
         $router->get('/api/portal/mobile/hausaufgaben',                              [OwnerPortalMobileController::class,   'homework'],          []);
+        $router->post('/api/portal/mobile/hausaufgaben/{plan_id}/aufgabe/{task_id}/abhaken', [OwnerPortalMobileController::class, 'homeworkTaskToggle'], []);
         $router->get('/api/portal/mobile/nachrichten',                               [OwnerPortalMobileController::class,   'threads'],           []);
         $router->get('/api/portal/mobile/nachrichten/{id}',                          [OwnerPortalMobileController::class,   'threadShow'],        []);
         $router->post('/api/portal/mobile/nachrichten/{id}/antworten',               [OwnerPortalMobileController::class,   'threadReply'],       []);

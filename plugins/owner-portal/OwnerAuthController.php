@@ -295,7 +295,9 @@ class OwnerAuthController extends Controller
         if (str_starts_with($header, 'Bearer ')) {
             return trim(substr($header, 7));
         }
-        return '';
+        // Also accept ?token= query param (needed for image src URLs in Flutter)
+        $qp = trim((string)($_GET['token'] ?? $_GET['access_token'] ?? ''));
+        return $qp;
     }
 
     /**

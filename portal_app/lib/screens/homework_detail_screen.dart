@@ -50,6 +50,16 @@ class _ExerciseCard extends StatefulWidget {
 class _ExerciseCardState extends State<_ExerciseCard> {
   bool _expanded = false;
 
+  Widget? _buildSubtitle(Map<String, dynamic> ex, ColorScheme cs) {
+    final parts = <String>[];
+    if (ex['frequency'] != null && (ex['frequency'] as String).isNotEmpty) parts.add(ex['frequency'] as String);
+    if (ex['duration'] != null && (ex['duration'] as String).isNotEmpty) parts.add(ex['duration'] as String);
+    if (ex['repetitions'] != null) parts.add('${ex['repetitions']}× Wdh.');
+    if (ex['sets'] != null) parts.add('${ex['sets']} Sätze');
+    if (parts.isEmpty) return null;
+    return Text(parts.join(' · '), style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13));
+  }
+
   @override
   Widget build(BuildContext context) {
     final ex = widget.exercise;
@@ -63,10 +73,7 @@ class _ExerciseCardState extends State<_ExerciseCard> {
           backgroundColor: AppTheme.success.withValues(alpha: 0.12),
           child: Text('${widget.index}', style: const TextStyle(color: AppTheme.success, fontWeight: FontWeight.w800))),
         title: Text(ex['name'] as String? ?? '–', style: const TextStyle(fontWeight: FontWeight.w700)),
-        subtitle: ex['repetitions'] != null
-            ? Text('${ex['repetitions']}× Wiederholungen${ex['sets'] != null ? ' · ${ex['sets']} Sätze' : ''}',
-                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13))
-            : null,
+        subtitle: _buildSubtitle(ex, cs),
         trailing: (hasDesc || hasVideo) ? IconButton(
           icon: Icon(_expanded ? Icons.expand_less_rounded : Icons.expand_more_rounded),
           onPressed: () => setState(() => _expanded = !_expanded),

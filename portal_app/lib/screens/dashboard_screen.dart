@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../core/theme.dart';
 import '../services/portal_auth_service.dart';
 import '../services/portal_api_service.dart';
+import '../widgets/auth_image.dart';
 import 'pet_detail_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -171,9 +172,12 @@ class _PetCard extends StatelessWidget {
         border: Border.all(color: AppTheme.primary.withValues(alpha: 0.15)),
       ),
       child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        CircleAvatar(radius: 30, backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
-          backgroundImage: pet['photo_url'] != null ? NetworkImage(pet['photo_url'] as String) : null,
-          child: pet['photo_url'] == null ? const Icon(Icons.pets_rounded, color: AppTheme.primary, size: 28) : null),
+        AuthAvatar(
+          url: pet['photo_url'] as String?,
+          radius: 30,
+          bgColor: AppTheme.primary.withValues(alpha: 0.1),
+          iconColor: AppTheme.primary,
+        ),
         const SizedBox(height: 8),
         Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: Text(
           pet['name'] as String? ?? '–',

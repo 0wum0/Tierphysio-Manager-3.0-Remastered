@@ -55,15 +55,22 @@ class PortalApiService {
     if (res.statusCode == 204) return {};
     final body = utf8.decode(res.bodyBytes);
     dynamic data;
-    try {
-      data = jsonDecode(body);
-    } catch (_) {
-      data = body;
-    }
+    try { data = jsonDecode(body); } catch (_) { data = body; }
     if (res.statusCode >= 200 && res.statusCode < 300) return data;
     final msg = data is Map ? (data['message'] ?? data['error'] ?? body) : body;
     throw PortalApiException(res.statusCode, msg.toString());
   }
+
+  // ── URL builders ──────────────────────────────────────────────────────────
+
+  static String petPhotoUrl(int petId, String filename) =>
+      '$_baseUrl/api/portal/mobile/tiere/$petId/foto/${Uri.encodeComponent(filename)}';
+
+  static String petMediaUrl(int petId, String filename) =>
+      '$_baseUrl/api/portal/mobile/tiere/$petId/media/${Uri.encodeComponent(filename)}';
+
+  Map<String, String> get authHeaders =>
+      token != null ? {'Authorization': 'Bearer $token'} : {};
 
   // ── Dashboard ─────────────────────────────────────────────────────────────
 
@@ -133,6 +140,10 @@ class PortalApiService {
     final data = await get('/api/portal/mobile/hausaufgaben');
     return List<dynamic>.from(data is List ? data : (data['plans'] ?? []));
   }
+
+  Future<void> toggleHomeworkTask(int planId, int taskId, {required bool checked}) async =>
+      await post('/api/portal/mobile/hausaufgaben/$planId/aufgabe/$taskId/abhaken',
+          {'checked': checked});
 
   // ── Profil ────────────────────────────────────────────────────────────────
 

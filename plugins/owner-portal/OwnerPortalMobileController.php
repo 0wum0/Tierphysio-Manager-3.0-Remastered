@@ -53,6 +53,44 @@ class OwnerPortalMobileController extends Controller
         return new SettingsRepository($this->db);
     }
 
+    private function appUrl(): string
+    {
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host   = rtrim((string)($_SERVER['HTTP_HOST'] ?? 'app.therapano.de'), '/');
+        return "{$scheme}://{$host}";
+    }
+
+    /** Serve a file from tenant storage, verifying ownership. */
+    private function serveTenantFile(int $petId, int $ownerId, string $prefix, array $candidates, bool $imagesOnly = false): void
+    {
+        try {
+            $pdo  = $this->db->getPdo();
+            $stmt = $pdo->prepare("SELECT id FROM `{$prefix}patients` WHERE id = ? AND owner_id = ? LIMIT 1");
+            $stmt->execute([$petId, $ownerId]);
+            if (!$stmt->fetch()) { $this->json(['error' => 'Forbidden'], 403); exit; }
+        } catch (\Throwable) { $this->json(['error' => 'Fehler'], 500); exit; }
+
+        $path = null;
+        foreach ($candidates as $candidate) {
+            if ($candidate !== '' && file_exists($candidate) && is_file($candidate)) {
+                $path = $candidate; break;
+            }
+        }
+        if ($path === null) { $this->json(['error' => 'Nicht gefunden'], 404); exit; }
+
+        $finfo    = new \finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->file($path);
+        if ($imagesOnly && !str_starts_with($mimeType, 'image/')) { $this->json(['error' => 'Forbidden'], 403); exit; }
+
+        $isInline = str_starts_with($mimeType, 'image/') || str_starts_with($mimeType, 'video/') || $mimeType === 'application/pdf';
+        header('Content-Type: ' . $mimeType);
+        header('Content-Disposition: ' . ($isInline ? 'inline' : 'attachment') . '; filename="' . basename($path) . '"');
+        header('Content-Length: ' . filesize($path));
+        header('Cache-Control: private, max-age=3600');
+        readfile($path);
+        exit;
+    }
+
     /* ──────────────────────────────────────────
      *  GET /api/portal/mobile/dashboard
      * ────────────────────────────────────────── */
@@ -139,20 +177,163 @@ class OwnerPortalMobileController extends Controller
 
         try {
             $pdo  = $this->db->getPdo();
-            $stmt = $pdo->prepare(
-                "SELECT p.id, p.name, p.species, p.breed, p.gender,
-                        p.birth_date, p.weight, p.color, p.chip_number,
-                        p.photo AS photo_url, p.notes,
-                        p.created_at
-                   FROM `{$prefix}patients` p
-                  WHERE p.id = ? AND p.owner_id = ? LIMIT 1"
-            );
+            $stmt = $pdo->prepare("SELECT * FROM `{$prefix}patients` WHERE id = ? AND owner_id = ? LIMIT 1");
             $stmt->execute([$id, $ownerId]);
-            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
-            if (!$row) { $this->json(['error' => 'Nicht gefunden'], 404); return; }
-            $this->json($row);
-        } catch (\Throwable) {
-            $this->json(['error' => 'Fehler'], 500);
+            $pet = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if (!$pet) { $this->json(['error' => 'Nicht gefunden'], 404); return; }
+        } catch (\Throwable) { $this->json(['error' => 'Fehler'], 500); return; }
+
+        $appUrl = $this->appUrl();
+
+        // Build photo URL (photo column stores filename)
+        if (!empty($pet['photo'])) {
+            $pet['photo_url'] = "{$appUrl}/api/portal/mobile/tiere/{$id}/foto/" . rawurlencode(basename((string)$pet['photo']));
+        } else {
+            $pet['photo_url'] = null;
+        }
+
+        // Timeline with media
+        $timeline = [];
+        try {
+            $mediaService = new \App\Services\TimelineMediaService();
+            $rawTimeline  = $this->repo->getPetTimeline($id);
+            foreach ($rawTimeline as $entry) {
+                $media = $mediaService->normalizeAttachmentToMedia($entry['attachment'] ?? null, $id);
+                $media = array_values(array_map(function($m) use ($id, $appUrl) {
+                    $m['url']           = "{$appUrl}/api/portal/mobile/tiere/{$id}/media/" . rawurlencode($m['filename']);
+                    $m['thumbnail_url'] = $m['kind'] === 'image' ? $m['url'] : null;
+                    return $m;
+                }, $media));
+                unset($entry['attachment']);
+                $entry['media'] = $media;
+                $timeline[]     = $entry;
+            }
+        } catch (\Throwable) {}
+
+        // Exercises (pet_exercises table)
+        $exercises = $this->repo->getExercisesByPatient($id);
+
+        // Homework plans with tasks
+        $homeworkPlans = [];
+        try {
+            $plans = $this->repo->getHomeworkPlansByPatient($id);
+            foreach ($plans as $plan) {
+                $planId          = (int)$plan['id'];
+                $plan['tasks']   = $this->repo->getTasksByPlan($planId);
+                $plan['checks']  = $this->repo->getChecksForPlan($planId, $ownerId);
+                $homeworkPlans[] = $plan;
+            }
+        } catch (\Throwable) {}
+
+        // Befundbögen for this pet
+        $befunde = [];
+        try {
+            $pdo  = $this->db->getPdo();
+            $stmt = $pdo->prepare(
+                "SELECT id, datum, status FROM `{$prefix}befundboegen`
+                  WHERE patient_id = ? AND status != 'entwurf'
+                  ORDER BY datum DESC"
+            );
+            $stmt->execute([$id]);
+            foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $b) {
+                $b['title']   = 'Befundbogen ' . $b['datum'];
+                $b['pdf_url'] = "{$appUrl}/api/portal/mobile/befunde/{$b['id']}/pdf";
+                $befunde[]    = $b;
+            }
+        } catch (\Throwable) {}
+
+        $this->json(array_merge($pet, [
+            'timeline'       => $timeline,
+            'exercises'      => $exercises,
+            'homework_plans' => $homeworkPlans,
+            'befunde'        => $befunde,
+        ]));
+    }
+
+    /* ──────────────────────────────────────────
+     *  GET /api/portal/mobile/tiere/{id}/foto/{file}
+     *  Serves the pet's profile photo via Bearer token auth
+     * ────────────────────────────────────────── */
+    public function petPhotoMobile(array $params = []): void
+    {
+        [$user, $prefix] = $this->guard();
+        $ownerId = (int)$user['owner_id'];
+        $petId   = (int)($params['id'] ?? 0);
+        $file    = basename($params['file'] ?? '');
+        if (!$file) { $this->json(['error' => 'Nicht gefunden'], 404); return; }
+
+        $this->serveTenantFile($petId, $ownerId, $prefix, [
+            tenant_storage_path('patients/' . $petId . '/' . $file),
+            tenant_storage_path('patients/' . $file),
+        ], imagesOnly: true);
+    }
+
+    /* ──────────────────────────────────────────
+     *  GET /api/portal/mobile/tiere/{id}/media/{file}
+     *  Serves timeline attachments (photos, documents) via Bearer token auth
+     * ────────────────────────────────────────── */
+    public function petMedia(array $params = []): void
+    {
+        [$user, $prefix] = $this->guard();
+        $ownerId = (int)$user['owner_id'];
+        $petId   = (int)($params['id'] ?? 0);
+        $file    = basename($params['file'] ?? '');
+        if (!$file) { $this->json(['error' => 'Nicht gefunden'], 404); return; }
+
+        $this->serveTenantFile($petId, $ownerId, $prefix, [
+            tenant_storage_path('patients/' . $petId . '/timeline/' . $file),
+            tenant_storage_path('patients/' . $petId . '/docs/' . $file),
+            tenant_storage_path('patients/' . $petId . '/' . $file),
+        ]);
+    }
+
+    /* ──────────────────────────────────────────
+     *  POST /api/portal/mobile/hausaufgaben/{plan_id}/aufgabe/{task_id}/abhaken
+     * ────────────────────────────────────────── */
+    public function homeworkTaskToggle(array $params = []): void
+    {
+        [$user, $prefix] = $this->guard();
+        $ownerId = (int)$user['owner_id'];
+        $planId  = (int)($params['plan_id'] ?? 0);
+        $taskId  = (int)($params['task_id'] ?? 0);
+
+        $body    = json_decode(file_get_contents('php://input') ?: '{}', true) ?? [];
+        $checked = (bool)($body['checked'] ?? true);
+
+        try {
+            // Verify this plan belongs to this owner
+            $pdo  = $this->db->getPdo();
+            $stmt = $pdo->prepare("SELECT id FROM `{$prefix}portal_homework_plans` WHERE id = ? AND owner_id = ? LIMIT 1");
+            $stmt->execute([$planId, $ownerId]);
+            if (!$stmt->fetch()) { $this->json(['error' => 'Nicht gefunden'], 404); return; }
+
+            $this->repo->setTaskCheck($taskId, $planId, $ownerId, $checked);
+
+            // Log check notification
+            try {
+                $plan = $this->repo->getHomeworkPlanById($planId);
+                $taskStmt = $pdo->prepare("SELECT title FROM `{$prefix}portal_homework_plan_tasks` WHERE id = ? LIMIT 1");
+                $taskStmt->execute([$taskId]);
+                $taskTitle = (string)($taskStmt->fetchColumn() ?: 'Aufgabe');
+                $petName   = $plan ? $this->repo->getPatientNameById((int)($plan['patient_id'] ?? 0)) : '';
+                $ownerName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+
+                $this->repo->createCheckNotification([
+                    'owner_id'   => $ownerId,
+                    'patient_id' => (int)($plan['patient_id'] ?? 0),
+                    'task_id'    => $taskId,
+                    'plan_id'    => $planId,
+                    'task_title' => $taskTitle,
+                    'owner_name' => $ownerName,
+                    'pet_name'   => $petName,
+                    'type'       => 'homework',
+                    'checked'    => $checked,
+                ]);
+            } catch (\Throwable) {}
+
+            $this->json(['ok' => true, 'checked' => $checked]);
+        } catch (\Throwable $e) {
+            $this->json(['error' => 'Fehler: ' . $e->getMessage()], 500);
         }
     }
 
