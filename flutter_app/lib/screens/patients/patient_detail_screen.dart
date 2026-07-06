@@ -501,6 +501,8 @@ class _PatientDetailScreenState extends State<PatientDetailScreen>
             ),
             bottom: TabBar(
               controller: _tabCtrl,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
               labelColor: Colors.white,
               unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
               indicatorColor: Colors.white,
