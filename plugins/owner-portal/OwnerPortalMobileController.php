@@ -11,6 +11,7 @@ use App\Core\Translator;
 use App\Core\View;
 use App\Core\Database;
 use App\Repositories\SettingsRepository;
+use App\Services\PdfService;
 
 /**
  * Mobile API data endpoints for the Flutter owner-portal app.
@@ -22,18 +23,21 @@ class OwnerPortalMobileController extends Controller
     private OwnerPortalRepository $repo;
     private OwnerAuthController   $auth;
     private Database              $db;
+    private PdfService            $pdfService;
 
     public function __construct(
         View       $view,
         Session    $session,
         Config     $config,
         Translator $translator,
-        Database   $db
+        Database   $db,
+        PdfService $pdfService
     ) {
         parent::__construct($view, $session, $config, $translator);
-        $this->db   = $db;
-        $this->repo = new OwnerPortalRepository($db);
-        $this->auth = new OwnerAuthController($view, $session, $config, $translator, $db);
+        $this->db         = $db;
+        $this->pdfService = $pdfService;
+        $this->repo       = new OwnerPortalRepository($db);
+        $this->auth       = new OwnerAuthController($view, $session, $config, $translator, $db);
     }
 
     /* ──────────────────────────────────────────
@@ -230,7 +234,7 @@ class OwnerPortalMobileController extends Controller
             foreach ($plans as $plan) {
                 $planId          = (int)$plan['id'];
                 $plan['tasks']   = $this->repo->getTasksByPlan($planId);
-                $plan['checks']  = $this->repo->getChecksForPlan($planId, $ownerId);
+                $plan['checks']  = (object)$this->repo->getChecksForPlan($planId, $ownerId);
                 $homeworkPlans[] = $plan;
             }
         } catch (\Throwable) {}
@@ -448,6 +452,7 @@ class OwnerPortalMobileController extends Controller
 
     /* ──────────────────────────────────────────
      *  GET /api/portal/mobile/rechnungen/{id}/pdf
+     *  Streams the invoice PDF directly (Bearer or ?token= auth).
      * ────────────────────────────────────────── */
     public function invoicePdf(array $params = []): void
     {
@@ -456,15 +461,78 @@ class OwnerPortalMobileController extends Controller
         $id      = (int)($params['id'] ?? 0);
 
         try {
-            $pdo  = $this->db->getPdo();
-            $stmt = $pdo->prepare("SELECT id FROM `{$prefix}invoices` WHERE id = ? AND owner_id = ? LIMIT 1");
+            $pdo = $this->db->getPdo();
+
+            $stmt = $pdo->prepare("SELECT * FROM `{$prefix}invoices` WHERE id = ? AND owner_id = ? LIMIT 1");
             $stmt->execute([$id, $ownerId]);
-            if (!$stmt->fetch()) { $this->json(['error' => 'Nicht gefunden'], 404); return; }
+            $invoice = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if (!$invoice) { $this->json(['error' => 'Nicht gefunden'], 404); return; }
+
+            $stmt = $pdo->prepare("SELECT * FROM `{$prefix}invoice_positions` WHERE invoice_id = ? ORDER BY sort_order ASC");
+            $stmt->execute([$id]);
+            $positions = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            $stmt = $pdo->prepare("SELECT * FROM `{$prefix}owners` WHERE id = ? LIMIT 1");
+            $stmt->execute([$ownerId]);
+            $owner = $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+
+            $patient = null;
+            if (!empty($invoice['patient_id'])) {
+                $stmt = $pdo->prepare("SELECT * FROM `{$prefix}patients` WHERE id = ? LIMIT 1");
+                $stmt->execute([(int)$invoice['patient_id']]);
+                $patient = $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+            }
+        } catch (\Throwable $e) {
+            $this->json(['error' => 'Fehler: ' . $e->getMessage()], 500); return;
+        }
+
+        $pdf      = $this->pdfService->generateInvoicePdf($invoice, $positions, $owner, $patient);
+        $filename = 'Rechnung-' . htmlspecialchars((string)($invoice['invoice_number'] ?? $id), ENT_QUOTES) . '.pdf';
+
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: inline; filename="' . $filename . '"');
+        header('Content-Length: ' . strlen($pdf));
+        header('Cache-Control: private, no-store');
+        echo $pdf;
+        exit;
+    }
+
+    /* ──────────────────────────────────────────
+     *  GET /api/portal/mobile/rechnungen/{id}/zahlen
+     *  Returns bank payment details for an open invoice.
+     * ────────────────────────────────────────── */
+    public function invoicePaymentInfo(array $params = []): void
+    {
+        [$user, $prefix] = $this->guard();
+        $ownerId = (int)$user['owner_id'];
+        $id      = (int)($params['id'] ?? 0);
+
+        try {
+            $pdo  = $this->db->getPdo();
+            $stmt = $pdo->prepare(
+                "SELECT id, invoice_number, total_gross, status FROM `{$prefix}invoices`
+                  WHERE id = ? AND owner_id = ? LIMIT 1"
+            );
+            $stmt->execute([$id, $ownerId]);
+            $invoice = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if (!$invoice) { $this->json(['error' => 'Nicht gefunden'], 404); return; }
         } catch (\Throwable) { $this->json(['error' => 'Fehler'], 500); return; }
 
-        $baseUrl = rtrim((string)$_SERVER['HTTP_HOST'], '/');
-        $scheme  = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-        $this->json(['url' => "{$scheme}://{$baseUrl}/rechnungen/{$id}/pdf"]);
+        $s         = $this->settings();
+        $iban      = preg_replace('/\s+/', '', (string)$s->get('bank_iban', ''));
+        $bic       = (string)$s->get('bank_bic', '');
+        $recipient = (string)$s->get('company_name', '');
+        $amount    = round((float)($invoice['total_gross'] ?? 0), 2);
+        $reference = 'Rechnung ' . ($invoice['invoice_number'] ?? '');
+
+        $this->json([
+            'iban'      => $iban,
+            'bic'       => $bic,
+            'recipient' => $recipient,
+            'amount'    => $amount,
+            'reference' => $reference,
+            'status'    => $invoice['status'] ?? '',
+        ]);
     }
 
     /* ──────────────────────────────────────────
@@ -582,6 +650,53 @@ class OwnerPortalMobileController extends Controller
         } catch (\Throwable) {
             $this->json(['error' => 'Fehler'], 500);
         }
+    }
+
+    /* ──────────────────────────────────────────
+     *  GET /api/portal/mobile/hausaufgaben/{id}/pdf
+     *  Streams the homework plan PDF directly (Bearer or ?token= auth).
+     * ────────────────────────────────────────── */
+    public function homeworkPdf(array $params = []): void
+    {
+        [$user, $prefix] = $this->guard();
+        $ownerId = (int)$user['owner_id'];
+        $planId  = (int)($params['id'] ?? 0);
+
+        try {
+            $pdo  = $this->db->getPdo();
+
+            $stmt = $pdo->prepare("SELECT * FROM `{$prefix}portal_homework_plans` WHERE id = ? AND owner_id = ? LIMIT 1");
+            $stmt->execute([$planId, $ownerId]);
+            $plan = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if (!$plan) { $this->json(['error' => 'Nicht gefunden'], 404); return; }
+
+            $tasks = $this->repo->getTasksByPlan($planId);
+
+            $stmt = $pdo->prepare("SELECT * FROM `{$prefix}owners` WHERE id = ? LIMIT 1");
+            $stmt->execute([$ownerId]);
+            $owner = $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+
+            $patient = null;
+            if (!empty($plan['patient_id'])) {
+                $stmt = $pdo->prepare("SELECT * FROM `{$prefix}patients` WHERE id = ? LIMIT 1");
+                $stmt->execute([(int)$plan['patient_id']]);
+                $patient = $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+            }
+        } catch (\Throwable $e) {
+            $this->json(['error' => 'Fehler: ' . $e->getMessage()], 500); return;
+        }
+
+        $pdfContent = $this->pdfService->generateHomeworkPdf($plan, $tasks, $owner, $patient);
+        $petName    = (string)($patient['name'] ?? 'Plan');
+        $planDate   = date('Y-m-d', strtotime((string)($plan['plan_date'] ?? 'now')));
+        $filename   = 'Hausaufgaben-' . preg_replace('/[^A-Za-z0-9_\-]/', '_', $petName) . '-' . $planDate . '.pdf';
+
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: inline; filename="' . $filename . '"');
+        header('Content-Length: ' . strlen($pdfContent));
+        header('Cache-Control: private, no-store');
+        echo $pdfContent;
+        exit;
     }
 
     /* ──────────────────────────────────────────

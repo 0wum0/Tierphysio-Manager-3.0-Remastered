@@ -167,9 +167,11 @@ class ServiceProvider
         $router->post('/api/portal/mobile/termine/{id}/stornieren',                  [OwnerPortalMobileController::class,   'appointmentCancel'], []);
         $router->get('/api/portal/mobile/rechnungen',                                [OwnerPortalMobileController::class,   'invoices'],          []);
         $router->get('/api/portal/mobile/rechnungen/{id}/pdf',                       [OwnerPortalMobileController::class,   'invoicePdf'],        []);
+        $router->get('/api/portal/mobile/rechnungen/{id}/zahlen',                    [OwnerPortalMobileController::class,   'invoicePaymentInfo'],[]);
         $router->get('/api/portal/mobile/befunde',                                   [OwnerPortalMobileController::class,   'befunde'],           []);
         $router->get('/api/portal/mobile/befunde/{id}/pdf',                          [OwnerPortalMobileController::class,   'befundPdf'],         []);
         $router->get('/api/portal/mobile/hausaufgaben',                              [OwnerPortalMobileController::class,   'homework'],          []);
+        $router->get('/api/portal/mobile/hausaufgaben/{id}/pdf',                     [OwnerPortalMobileController::class,   'homeworkPdf'],       []);
         $router->post('/api/portal/mobile/hausaufgaben/{plan_id}/aufgabe/{task_id}/abhaken', [OwnerPortalMobileController::class, 'homeworkTaskToggle'], []);
         $router->get('/api/portal/mobile/nachrichten',                               [OwnerPortalMobileController::class,   'threads'],           []);
         $router->get('/api/portal/mobile/nachrichten/{id}',                          [OwnerPortalMobileController::class,   'threadShow'],        []);

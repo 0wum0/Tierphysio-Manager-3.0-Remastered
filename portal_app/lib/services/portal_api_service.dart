@@ -104,10 +104,12 @@ class PortalApiService {
     return List<dynamic>.from(data is List ? data : (data['invoices'] ?? []));
   }
 
-  Future<String> getInvoicePdfUrl(int id) async {
-    final data = await get('/api/portal/mobile/rechnungen/$id/pdf');
-    return data['url'] as String? ?? '';
-  }
+  /// Returns a URL that streams the invoice PDF directly (auth via ?token=).
+  static String invoicePdfUrl(int id, String token) =>
+      '$_baseUrl/api/portal/mobile/rechnungen/$id/pdf?token=${Uri.encodeQueryComponent(token)}';
+
+  Future<Map<String, dynamic>> getInvoicePaymentInfo(int id) async =>
+      Map<String, dynamic>.from(await get('/api/portal/mobile/rechnungen/$id/zahlen'));
 
   // ── Nachrichten ───────────────────────────────────────────────────────────
 
@@ -143,6 +145,10 @@ class PortalApiService {
     final data = await get('/api/portal/mobile/hausaufgaben');
     return List<dynamic>.from(data is List ? data : (data['plans'] ?? []));
   }
+
+  /// Returns a URL that streams the homework PDF directly (auth via ?token=).
+  static String homeworkPdfUrl(int planId, String token) =>
+      '$_baseUrl/api/portal/mobile/hausaufgaben/$planId/pdf?token=${Uri.encodeQueryComponent(token)}';
 
   Future<void> toggleHomeworkTask(int planId, int taskId, {required bool checked}) async =>
       await post('/api/portal/mobile/hausaufgaben/$planId/aufgabe/$taskId/abhaken',

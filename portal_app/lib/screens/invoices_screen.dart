@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../core/theme.dart';
 import '../services/portal_auth_service.dart';
 import '../services/portal_api_service.dart';
+import '../widgets/branded_loading.dart';
 
 class InvoicesScreen extends StatefulWidget {
   const InvoicesScreen({super.key});
@@ -32,15 +34,40 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   }
 
   Future<void> _openPdf(int id) async {
+    final auth = context.read<PortalAuthService>();
+    final url  = PortalApiService.invoicePdfUrl(id, auth.token ?? '');
     try {
-      final auth = context.read<PortalAuthService>();
-      final url  = await PortalApiService(token: auth.token).getInvoicePdfUrl(id);
-      if (url.isNotEmpty && mounted) {
-        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-      }
+      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Fehler: $e')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('PDF konnte nicht geöffnet werden: $e'), behavior: SnackBarBehavior.floating));
     }
+  }
+
+  Future<void> _showPaymentSheet(int id) async {
+    final auth = context.read<PortalAuthService>();
+    Map<String, dynamic>? info;
+    bool loading = true;
+    String? err;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          if (loading) {
+            PortalApiService(token: auth.token).getInvoicePaymentInfo(id).then((data) {
+              if (ctx.mounted) setSheetState(() { info = data; loading = false; });
+            }).catchError((e) {
+              if (ctx.mounted) setSheetState(() { err = e.toString(); loading = false; });
+            });
+            loading = false; // prevent re-trigger on rebuild
+          }
+          return _PaymentSheet(info: info, error: err);
+        },
+      ),
+    );
   }
 
   @override
@@ -48,7 +75,7 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Rechnungen')),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const BrandedLoading()
           : _error != null
               ? _buildError()
               : RefreshIndicator(onRefresh: _load, child: _items.isEmpty
@@ -56,10 +83,18 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                   : ListView.builder(
                       padding: const EdgeInsets.only(bottom: 24),
                       itemCount: _items.length,
-                      itemBuilder: (_, i) => _InvoiceTile(
-        invoice: _items[i] as Map<String, dynamic>,
-        onPdf: () => _openPdf(int.tryParse(_items[i]['id'].toString()) ?? 0),
-      ),
+                      itemBuilder: (_, i) {
+                        final inv    = _items[i] as Map<String, dynamic>;
+                        final id     = int.tryParse(inv['id'].toString()) ?? 0;
+                        final status = inv['status'] as String?;
+                        final isOpen = status == 'open' || status == 'offen' ||
+                                       status == 'overdue' || status == 'überfällig';
+                        return _InvoiceTile(
+                          invoice: inv,
+                          onPdf: () => _openPdf(id),
+                          onPay: isOpen ? () => _showPaymentSheet(id) : null,
+                        );
+                      },
                     )),
     );
   }
@@ -81,25 +116,143 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
   ])));
 }
 
+// ── Payment info bottom sheet ─────────────────────────────────────────────────
+
+class _PaymentSheet extends StatelessWidget {
+  final Map<String, dynamic>? info;
+  final String? error;
+  const _PaymentSheet({this.info, this.error});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(width: 40, height: 40,
+            decoration: BoxDecoration(color: AppTheme.success.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+            child: const Icon(Icons.account_balance_rounded, color: AppTheme.success, size: 20)),
+          const SizedBox(width: 12),
+          const Text('Jetzt bezahlen', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+        ]),
+        const SizedBox(height: 4),
+        Text('Überweisungsdaten für Ihre Banking-App', style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
+        const SizedBox(height: 20),
+
+        if (error != null) ...[
+          Icon(Icons.error_outline_rounded, color: AppTheme.danger, size: 40),
+          const SizedBox(height: 8),
+          Text('Daten konnten nicht geladen werden', style: TextStyle(color: cs.onSurfaceVariant)),
+        ] else if (info == null) ...[
+          const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator())),
+        ] else ...[
+          _PayRow(label: 'Empfänger',        value: info!['recipient'] as String? ?? '–'),
+          const Divider(height: 24),
+          _PayRow(label: 'IBAN',             value: _formatIban(info!['iban'] as String? ?? '–')),
+          const Divider(height: 24),
+          if ((info!['bic'] as String? ?? '').isNotEmpty) ...[
+            _PayRow(label: 'BIC',            value: info!['bic'] as String),
+            const Divider(height: 24),
+          ],
+          _PayRow(label: 'Betrag',           value: '€ ${(info!['amount'] as num? ?? 0).toStringAsFixed(2)}'),
+          const Divider(height: 24),
+          _PayRow(label: 'Verwendungszweck', value: info!['reference'] as String? ?? '–'),
+          const SizedBox(height: 24),
+          SizedBox(width: double.infinity, child: FilledButton.icon(
+            onPressed: () => _copyAll(context),
+            icon: const Icon(Icons.copy_rounded),
+            label: const Text('Alle Daten kopieren'),
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.success),
+          )),
+          const SizedBox(height: 8),
+          SizedBox(width: double.infinity, child: OutlinedButton.icon(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.close_rounded),
+            label: const Text('Schließen'),
+          )),
+        ],
+      ]),
+    );
+  }
+
+  static String _formatIban(String raw) {
+    final clean = raw.replaceAll(' ', '');
+    final buf   = StringBuffer();
+    for (var i = 0; i < clean.length; i++) {
+      if (i > 0 && i % 4 == 0) buf.write(' ');
+      buf.write(clean[i]);
+    }
+    return buf.toString();
+  }
+
+  void _copyAll(BuildContext context) {
+    if (info == null) return;
+    final text = [
+      'Empfänger: ${info!['recipient'] ?? ''}',
+      'IBAN: ${_formatIban(info!['iban'] as String? ?? '')}',
+      if ((info!['bic'] as String? ?? '').isNotEmpty) 'BIC: ${info!['bic']}',
+      'Betrag: € ${(info!['amount'] as num? ?? 0).toStringAsFixed(2)}',
+      'Verwendungszweck: ${info!['reference'] ?? ''}',
+    ].join('\n');
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Überweisungsdaten kopiert'), behavior: SnackBarBehavior.floating));
+  }
+}
+
+class _PayRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _PayRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      SizedBox(width: 120, child: Text(label, style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13))),
+      Expanded(child: Row(children: [
+        Expanded(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14))),
+        IconButton(
+          icon: Icon(Icons.copy_rounded, size: 16, color: cs.onSurfaceVariant),
+          onPressed: () {
+            Clipboard.setData(ClipboardData(text: value));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('$label kopiert'), behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 1)));
+          },
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(),
+          visualDensity: VisualDensity.compact,
+          tooltip: 'Kopieren',
+        ),
+      ])),
+    ]);
+  }
+}
+
+// ── Invoice tile ──────────────────────────────────────────────────────────────
+
 class _InvoiceTile extends StatelessWidget {
   final Map<String, dynamic> invoice;
   final VoidCallback onPdf;
-  const _InvoiceTile({required this.invoice, required this.onPdf});
+  final VoidCallback? onPay;
+  const _InvoiceTile({required this.invoice, required this.onPdf, this.onPay});
 
   Color _statusColor(String? status) {
     switch (status) {
-      case 'paid': return AppTheme.success;
-      case 'overdue': return AppTheme.danger;
-      case 'open': return AppTheme.warning;
+      case 'paid': case 'bezahlt': return AppTheme.success;
+      case 'overdue': case 'überfällig': return AppTheme.danger;
+      case 'open': case 'offen': return AppTheme.warning;
       default: return AppTheme.tertiary;
     }
   }
 
   String _statusLabel(String? status) {
     switch (status) {
-      case 'paid': return 'Bezahlt';
-      case 'overdue': return 'Überfällig';
-      case 'open': return 'Offen';
+      case 'paid': case 'bezahlt': return 'Bezahlt';
+      case 'overdue': case 'überfällig': return 'Überfällig';
+      case 'open': case 'offen': return 'Offen';
       default: return status ?? '–';
     }
   }
@@ -113,29 +266,63 @@ class _InvoiceTile extends StatelessWidget {
     final total = rawTotal is num
         ? rawTotal.toDouble()
         : double.tryParse(rawTotal?.toString() ?? '')
-          ?? ((invoice['total_cents'] is int ? invoice['total_cents'] as int : int.tryParse(invoice['total_cents']?.toString() ?? '') ?? 0) / 100);
+          ?? ((invoice['total_cents'] is int ? invoice['total_cents'] as int
+               : int.tryParse(invoice['total_cents']?.toString() ?? '') ?? 0) / 100);
     final number = invoice['invoice_number'] as String? ?? invoice['number'] as String? ?? '–';
 
-    return Card(child: ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      leading: Container(width: 44, height: 44,
-        decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
-        child: Icon(Icons.receipt_long_rounded, color: color, size: 22)),
-      title: Text('Rechnung $number', style: const TextStyle(fontWeight: FontWeight.w700)),
-      subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const SizedBox(height: 2),
+    return Card(child: Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
-            child: Text(_statusLabel(status), style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700))),
-          const SizedBox(width: 8),
-          Text(invoice['date'] as String? ?? '', style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
+          Container(width: 44, height: 44,
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
+            child: Icon(Icons.receipt_long_rounded, color: color, size: 22)),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Rechnung $number', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+            const SizedBox(height: 4),
+            Row(children: [
+              Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
+                child: Text(_statusLabel(status), style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700))),
+              const SizedBox(width: 8),
+              Text(invoice['date'] as String? ?? '', style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
+            ]),
+          ])),
+          Text('€ ${total.toStringAsFixed(2)}',
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
         ]),
-      ]),
-      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-        Text('€ ${total.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-        const SizedBox(width: 4),
-        IconButton(icon: const Icon(Icons.picture_as_pdf_rounded, color: AppTheme.danger), onPressed: onPdf, tooltip: 'PDF öffnen'),
+        const SizedBox(height: 10),
+        Row(children: [
+          OutlinedButton.icon(
+            onPressed: onPdf,
+            icon: const Icon(Icons.picture_as_pdf_rounded, size: 16),
+            label: const Text('PDF öffnen'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.danger,
+              side: BorderSide(color: AppTheme.danger.withValues(alpha: 0.6)),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ),
+          if (onPay != null) ...[
+            const SizedBox(width: 8),
+            FilledButton.icon(
+              onPressed: onPay,
+              icon: const Icon(Icons.account_balance_rounded, size: 16),
+              label: const Text('Jetzt bezahlen'),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.success,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ]),
       ]),
     ));
   }

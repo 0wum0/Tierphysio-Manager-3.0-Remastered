@@ -6,6 +6,7 @@ import '../core/theme.dart';
 import '../services/portal_auth_service.dart';
 import '../services/portal_api_service.dart';
 import '../widgets/auth_image.dart';
+import '../widgets/branded_loading.dart';
 import 'media_viewer_screen.dart';
 
 class PetDetailScreen extends StatefulWidget {
@@ -48,7 +49,7 @@ class _PetDetailScreenState extends State<PetDetailScreen>
     final name = _data?['name'] as String? ?? 'Tierprofil';
     return Scaffold(
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const BrandedLoading()
           : _error != null
               ? _buildError()
               : _buildBody(name),
@@ -467,11 +468,13 @@ class _HomeworkTabState extends State<_HomeworkTab> {
     if (_plans.isEmpty) {
       return _EmptyState(icon: Icons.assignment_rounded, label: 'Keine Hausaufgaben vorhanden.');
     }
+    final auth = context.watch<PortalAuthService>();
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
       itemCount: _plans.length,
       itemBuilder: (_, i) => _HomeworkPlanCard(
         plan: _plans[i],
+        token: auth.token ?? '',
         onCheckChanged: (planId, taskId, checked) => _toggle(planId, taskId, checked),
       ),
     );
@@ -481,7 +484,6 @@ class _HomeworkTabState extends State<_HomeworkTab> {
     try {
       final auth = context.read<PortalAuthService>();
       await PortalApiService(token: auth.token).toggleHomeworkTask(planId, taskId, checked: checked);
-      // Update local state
       setState(() {
         for (final plan in _plans) {
           if ((int.tryParse(plan['id'].toString()) ?? 0) == planId) {
@@ -500,8 +502,9 @@ class _HomeworkTabState extends State<_HomeworkTab> {
 
 class _HomeworkPlanCard extends StatefulWidget {
   final Map<String, dynamic> plan;
+  final String token;
   final void Function(int planId, int taskId, bool checked) onCheckChanged;
-  const _HomeworkPlanCard({required this.plan, required this.onCheckChanged});
+  const _HomeworkPlanCard({required this.plan, required this.token, required this.onCheckChanged});
   @override
   State<_HomeworkPlanCard> createState() => _HomeworkPlanCardState();
 }
@@ -581,6 +584,28 @@ class _HomeworkPlanCardState extends State<_HomeworkPlanCard> {
           }),
           const SizedBox(height: 8),
         ],
+        // PDF download button
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: OutlinedButton.icon(
+            onPressed: () async {
+              final url = PortalApiService.homeworkPdfUrl(planId, widget.token);
+              try {
+                await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+              } catch (_) {}
+            },
+            icon: const Icon(Icons.picture_as_pdf_rounded, size: 16),
+            label: const Text('Als PDF herunterladen'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.tertiary,
+              side: BorderSide(color: AppTheme.tertiary.withValues(alpha: 0.6)),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ),
       ],
     ));
   }
