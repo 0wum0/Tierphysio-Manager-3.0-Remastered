@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../core/theme.dart';
 import '../services/portal_auth_service.dart';
 import '../services/portal_api_service.dart';
+import '../widgets/branded_loading.dart';
 
 class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key});
@@ -31,12 +32,44 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     }
   }
 
+  Future<void> _cancel(int id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Termin stornieren'),
+        content: const Text('Möchten Sie diesen Termin wirklich stornieren?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Abbrechen')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.danger),
+            child: const Text('Stornieren'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final auth = context.read<PortalAuthService>();
+      await PortalApiService(token: auth.token).cancelAppointment(id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Termin storniert.'), behavior: SnackBarBehavior.floating));
+        _load();
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Fehler: $e'), behavior: SnackBarBehavior.floating));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Termine')),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const BrandedLoading()
           : _error != null
               ? _buildError()
               : RefreshIndicator(onRefresh: _load, child: _items.isEmpty
@@ -44,7 +77,12 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                   : ListView.builder(
                       padding: const EdgeInsets.only(bottom: 24),
                       itemCount: _items.length,
-                      itemBuilder: (_, i) => _ApptCard(appt: _items[i] as Map<String, dynamic>),
+                      itemBuilder: (_, i) => _ApptCard(
+                        appt: _items[i] as Map<String, dynamic>,
+                        onCancel: (_items[i]['can_cancel'] == true)
+                            ? () => _cancel(int.tryParse(_items[i]['id'].toString()) ?? 0)
+                            : null,
+                      ),
                     )),
     );
   }
@@ -68,59 +106,116 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
 
 class _ApptCard extends StatelessWidget {
   final Map<String, dynamic> appt;
-  const _ApptCard({required this.appt});
+  final VoidCallback? onCancel;
+  const _ApptCard({required this.appt, this.onCancel});
+
+  static Color _statusColor(String? s) {
+    switch (s) {
+      case 'cancelled': case 'storniert': return AppTheme.danger;
+      case 'completed': case 'abgeschlossen': return AppTheme.success;
+      default: return AppTheme.tertiary;
+    }
+  }
+
+  static String _statusLabel(String? s) {
+    switch (s) {
+      case 'cancelled': case 'storniert': return 'Storniert';
+      case 'completed': case 'abgeschlossen': return 'Abgeschlossen';
+      case 'confirmed': case 'bestätigt': return 'Bestätigt';
+      default: return 'Geplant';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final cs  = Theme.of(context).colorScheme;
-    final raw = appt['start_at'] as String? ?? appt['start'] as String? ?? '';
+    final cs     = Theme.of(context).colorScheme;
+    final raw    = appt['start_at'] as String? ?? appt['start'] as String? ?? '';
     DateTime? dt;
     try { dt = DateTime.parse(raw).toLocal(); } catch (_) {}
 
-    final timeStr   = dt != null ? DateFormat('HH:mm', 'de').format(dt) : '';
-    final duration  = appt['duration_minutes'] as int?;
+    final timeStr  = dt != null ? DateFormat('HH:mm', 'de').format(dt) : '';
+    final duration = appt['duration_minutes'] as int?;
+    final status   = appt['status'] as String?;
+    final statusColor = _statusColor(status);
+    final isCancelled = status == 'cancelled' || status == 'storniert';
 
-    return Card(child: Padding(padding: const EdgeInsets.all(16), child: Row(children: [
-      // Date block
-      if (dt != null) Container(
-        width: 52, height: 58,
-        decoration: BoxDecoration(
-          color: AppTheme.tertiary.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text(DateFormat('dd', 'de').format(dt), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppTheme.tertiary)),
-          Text(DateFormat('MMM', 'de').format(dt).toUpperCase(), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppTheme.tertiary)),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(children: [
+          // Date block
+          if (dt != null) Container(
+            width: 52, height: 58,
+            decoration: BoxDecoration(
+              color: isCancelled
+                  ? AppTheme.danger.withValues(alpha: 0.08)
+                  : AppTheme.tertiary.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              Text(DateFormat('dd', 'de').format(dt),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800,
+                  color: isCancelled ? AppTheme.danger : AppTheme.tertiary)),
+              Text(DateFormat('MMM', 'de').format(dt).toUpperCase(),
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
+                  color: isCancelled ? AppTheme.danger : AppTheme.tertiary)),
+            ]),
+          ) else const Icon(Icons.calendar_month_rounded, color: AppTheme.tertiary, size: 36),
+          const SizedBox(width: 16),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Expanded(child: Text(
+                appt['title'] as String? ?? appt['type'] as String? ?? 'Termin',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: isCancelled ? cs.onSurfaceVariant : null,
+                  decoration: isCancelled ? TextDecoration.lineThrough : null,
+                ),
+              )),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(_statusLabel(status),
+                  style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.w700)),
+              ),
+            ]),
+            const SizedBox(height: 4),
+            if (timeStr.isNotEmpty) Row(children: [
+              const Icon(Icons.schedule_rounded, size: 13, color: AppTheme.tertiary),
+              const SizedBox(width: 4),
+              Text('$timeStr Uhr${duration != null ? ' · $duration Min' : ''}',
+                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
+            ]),
+            if (appt['patient_name'] != null) ...[
+              const SizedBox(height: 2),
+              Row(children: [
+                const Icon(Icons.pets_rounded, size: 13, color: AppTheme.primary),
+                const SizedBox(width: 4),
+                Text(appt['patient_name'] as String, style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
+              ]),
+            ],
+            if (onCancel != null) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: onCancel,
+                icon: const Icon(Icons.cancel_outlined, size: 16),
+                label: const Text('Stornieren', style: TextStyle(fontSize: 13)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.danger,
+                  side: const BorderSide(color: AppTheme.danger),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ],
+          ])),
         ]),
-      ) else const Icon(Icons.calendar_month_rounded, color: AppTheme.tertiary, size: 36),
-      const SizedBox(width: 16),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(appt['title'] as String? ?? appt['type'] as String? ?? 'Termin',
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-        const SizedBox(height: 4),
-        if (timeStr.isNotEmpty) Row(children: [
-          const Icon(Icons.schedule_rounded, size: 14, color: AppTheme.tertiary),
-          const SizedBox(width: 4),
-          Text('$timeStr Uhr${duration != null ? ' · $duration Min' : ''}',
-              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
-        ]),
-        if (appt['patient_name'] != null) ...[
-          const SizedBox(height: 2),
-          Row(children: [
-            const Icon(Icons.pets_rounded, size: 14, color: AppTheme.primary),
-            const SizedBox(width: 4),
-            Text(appt['patient_name'] as String, style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
-          ]),
-        ],
-        if (appt['location'] != null && (appt['location'] as String).isNotEmpty) ...[
-          const SizedBox(height: 2),
-          Row(children: [
-            const Icon(Icons.place_outlined, size: 14, color: AppTheme.warning),
-            const SizedBox(width: 4),
-            Text(appt['location'] as String, style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
-          ]),
-        ],
-      ])),
-    ])));
+      ),
+    );
   }
 }

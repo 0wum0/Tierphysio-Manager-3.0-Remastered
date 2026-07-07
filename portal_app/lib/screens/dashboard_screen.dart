@@ -5,6 +5,7 @@ import '../core/theme.dart';
 import '../services/portal_auth_service.dart';
 import '../services/portal_api_service.dart';
 import '../widgets/auth_image.dart';
+import '../widgets/branded_loading.dart';
 import 'pet_detail_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -49,6 +50,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             .toList();
         _loading = false;
       });
+      // Save practice info so all screens can use it
+      final practiceNameRaw = (_stats?['practice_name'] as String? ?? '');
+      final practiceTypeRaw = (_stats?['practice_type'] as String? ?? 'therapeut');
+      if (practiceNameRaw.isNotEmpty) {
+        auth.savePracticeInfo(practiceNameRaw, practiceTypeRaw);
+      }
     } catch (e) {
       if (mounted) setState(() { _error = e.toString(); _loading = false; });
     }
@@ -70,7 +77,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const BrandedLoading()
           : _error != null
               ? _buildError()
               : RefreshIndicator(onRefresh: _load, child: _buildContent()),

@@ -164,6 +164,7 @@ class ServiceProvider
         $router->get('/api/portal/mobile/tiere/{id}/foto/{file}',                    [OwnerPortalMobileController::class,   'petPhotoMobile'],    []);
         $router->get('/api/portal/mobile/tiere/{id}/media/{file}',                   [OwnerPortalMobileController::class,   'petMedia'],          []);
         $router->get('/api/portal/mobile/termine',                                   [OwnerPortalMobileController::class,   'appointments'],      []);
+        $router->post('/api/portal/mobile/termine/{id}/stornieren',                  [OwnerPortalMobileController::class,   'appointmentCancel'], []);
         $router->get('/api/portal/mobile/rechnungen',                                [OwnerPortalMobileController::class,   'invoices'],          []);
         $router->get('/api/portal/mobile/rechnungen/{id}/pdf',                       [OwnerPortalMobileController::class,   'invoicePdf'],        []);
         $router->get('/api/portal/mobile/befunde',                                   [OwnerPortalMobileController::class,   'befunde'],           []);

@@ -4,6 +4,7 @@ import '../core/theme.dart';
 import '../services/portal_auth_service.dart';
 import '../services/portal_api_service.dart';
 import '../widgets/auth_image.dart';
+import '../widgets/branded_loading.dart';
 import 'pet_detail_screen.dart';
 
 class PetsScreen extends StatefulWidget {
@@ -37,7 +38,7 @@ class _PetsScreenState extends State<PetsScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Meine Tiere')),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const BrandedLoading()
           : _error != null
               ? _buildError()
               : RefreshIndicator(onRefresh: _load, child: _pets.isEmpty

@@ -94,6 +94,9 @@ class PortalApiService {
     return List<dynamic>.from(data is List ? data : (data['appointments'] ?? []));
   }
 
+  Future<void> cancelAppointment(int id) async =>
+      await post('/api/portal/mobile/termine/$id/stornieren', {});
+
   // ── Rechnungen ────────────────────────────────────────────────────────────
 
   Future<List<dynamic>> getInvoices() async {

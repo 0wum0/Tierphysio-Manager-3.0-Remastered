@@ -56,7 +56,10 @@ class _InvoicesScreenState extends State<InvoicesScreen> {
                   : ListView.builder(
                       padding: const EdgeInsets.only(bottom: 24),
                       itemCount: _items.length,
-                      itemBuilder: (_, i) => _InvoiceTile(invoice: _items[i] as Map<String, dynamic>, onPdf: () => _openPdf(_items[i]['id'] as int)),
+                      itemBuilder: (_, i) => _InvoiceTile(
+        invoice: _items[i] as Map<String, dynamic>,
+        onPdf: () => _openPdf(int.tryParse(_items[i]['id'].toString()) ?? 0),
+      ),
                     )),
     );
   }
@@ -106,7 +109,11 @@ class _InvoiceTile extends StatelessWidget {
     final cs     = Theme.of(context).colorScheme;
     final status = invoice['status'] as String?;
     final color  = _statusColor(status);
-    final total  = invoice['total_eur'] as num? ?? ((invoice['total_cents'] as int? ?? 0) / 100);
+    final rawTotal = invoice['total_eur'];
+    final total = rawTotal is num
+        ? rawTotal.toDouble()
+        : double.tryParse(rawTotal?.toString() ?? '')
+          ?? ((invoice['total_cents'] is int ? invoice['total_cents'] as int : int.tryParse(invoice['total_cents']?.toString() ?? '') ?? 0) / 100);
     final number = invoice['invoice_number'] as String? ?? invoice['number'] as String? ?? '–';
 
     return Card(child: ListTile(

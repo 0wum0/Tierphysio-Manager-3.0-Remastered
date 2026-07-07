@@ -69,7 +69,14 @@ class _PetDetailScreenState extends State<PetDetailScreen>
   Widget _buildBody(String name) {
     final pet        = _data!;
     final photoUrl   = pet['photo_url'] as String?;
-    final timeline   = List<dynamic>.from(pet['timeline'] ?? []);
+    final allTimeline = List<dynamic>.from(pet['timeline'] ?? []);
+    // Verlauf: only entries that have media (documents/photos) or are type 'document'/'photo'
+    final timeline = allTimeline.where((e) {
+      final entry = e as Map;
+      final type  = entry['type'] as String? ?? '';
+      final media = List<dynamic>.from(entry['media'] ?? []);
+      return type == 'document' || type == 'photo' || media.isNotEmpty;
+    }).toList();
     final exercises  = List<dynamic>.from(pet['exercises'] ?? []);
     final homework   = List<dynamic>.from(pet['homework_plans'] ?? []);
     final befunde    = List<dynamic>.from(pet['befunde'] ?? []);
@@ -243,6 +250,10 @@ class _TimelineCard extends StatelessWidget {
     'other':     ('Sonstiges',  Colors.grey, Icons.circle_outlined),
   };
 
+  static String _stripHtml(String html) =>
+      html.replaceAll(RegExp(r'<[^>]+>'), '').replaceAll('&amp;', '&')
+          .replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&nbsp;', ' ').trim();
+
   @override
   Widget build(BuildContext context) {
     final type   = entry['type'] as String? ?? 'other';
@@ -290,7 +301,9 @@ class _TimelineCard extends StatelessWidget {
         if ((entry['content'] as String? ?? '').isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-            child: Text(entry['content'] as String, style: TextStyle(color: cs.onSurfaceVariant, height: 1.5, fontSize: 13)),
+            child: Text(
+              _stripHtml(entry['content'] as String),
+              style: TextStyle(color: cs.onSurfaceVariant, height: 1.5, fontSize: 13)),
           ),
         if (media.isNotEmpty) _MediaStrip(media: media),
         if (media.isNotEmpty) const SizedBox(height: 8),
@@ -500,7 +513,10 @@ class _HomeworkPlanCardState extends State<_HomeworkPlanCard> {
   Widget build(BuildContext context) {
     final plan    = widget.plan;
     final tasks   = List<dynamic>.from(plan['tasks'] ?? []);
-    final checks  = Map<String, dynamic>.from(plan['checks'] as Map? ?? {});
+    final rawChecks = plan['checks'];
+    final checks  = (rawChecks is Map)
+        ? Map<String, dynamic>.from(rawChecks)
+        : <String, dynamic>{};
     final planId  = int.tryParse(plan['id'].toString()) ?? 0;
     final done    = tasks.where((t) => checks[t['id'].toString()] == true).length;
     final cs      = Theme.of(context).colorScheme;

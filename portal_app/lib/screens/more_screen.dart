@@ -18,6 +18,25 @@ class MoreScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Mehr')),
       body: ListView(padding: const EdgeInsets.only(bottom: 32), children: [
+        // Practice banner
+        if (auth.practiceName.isNotEmpty)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.primary.withValues(alpha: 0.2)),
+            ),
+            child: Row(children: [
+              const Icon(Icons.business_rounded, color: AppTheme.primary, size: 18),
+              const SizedBox(width: 8),
+              Text(auth.practiceName,
+                style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.primary, fontSize: 14)),
+            ]),
+          ),
+
         // Profile header
         Padding(padding: const EdgeInsets.all(20), child: Row(children: [
           CircleAvatar(radius: 32, backgroundColor: AppTheme.primary.withValues(alpha: 0.12),
@@ -45,13 +64,15 @@ class MoreScreen extends StatelessWidget {
           subtitle: 'Übungen für Ihr Tier',
           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HomeworkScreen())),
         ),
-        _MenuTile(
-          icon: Icons.description_rounded,
-          color: AppTheme.tertiary,
-          title: 'Befundbögen',
-          subtitle: 'Befundberichte einsehen',
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BefundeScreen())),
-        ),
+        // Befundbögen only for therapeut-type practices
+        if (!auth.isTrainer)
+          _MenuTile(
+            icon: Icons.description_rounded,
+            color: AppTheme.tertiary,
+            title: 'Befundbögen',
+            subtitle: 'Befundberichte einsehen',
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const BefundeScreen())),
+          ),
 
         const Divider(),
 

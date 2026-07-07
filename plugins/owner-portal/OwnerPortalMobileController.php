@@ -160,6 +160,16 @@ class OwnerPortalMobileController extends Controller
             );
             $stmt->execute([$ownerId]);
             $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            $appUrl = $this->appUrl();
+            foreach ($rows as &$row) {
+                if (!empty($row['photo_url'])) {
+                    $row['photo_url'] = "{$appUrl}/api/portal/mobile/tiere/{$row['id']}/foto/"
+                        . rawurlencode(basename((string)$row['photo_url']));
+                } else {
+                    $row['photo_url'] = null;
+                }
+            }
+            unset($row);
             $this->json($rows);
         } catch (\Throwable $e) {
             $this->json(['error' => 'Fehler beim Laden'], 500);
@@ -225,9 +235,10 @@ class OwnerPortalMobileController extends Controller
             }
         } catch (\Throwable) {}
 
-        // Befundbögen for this pet
+        // Befundbögen for this pet (only for therapeut-type practices)
         $befunde = [];
-        try {
+        $practiceTypeForPet = $this->settings()->get('practice_type', 'therapeut');
+        if (!in_array($practiceTypeForPet, ['trainer', 'dogschool', 'hundeschule'], true)) try {
             $pdo  = $this->db->getPdo();
             $stmt = $pdo->prepare(
                 "SELECT id, datum, status FROM `{$prefix}befundboegen`
@@ -358,7 +369,52 @@ class OwnerPortalMobileController extends Controller
             );
             $stmt->execute([$ownerId]);
             $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            $now = time();
+            foreach ($rows as &$row) {
+                $diff = 0;
+                try { $diff = (new \DateTime($row['start_at'] ?? ''))->getTimestamp() - $now; }
+                catch (\Throwable) {}
+                $row['can_cancel'] = $diff > 86400
+                    && !in_array($row['status'] ?? '', ['cancelled','storniert','completed','abgeschlossen'], true);
+            }
+            unset($row);
+
             $this->json($rows);
+        } catch (\Throwable) {
+            $this->json(['error' => 'Fehler'], 500);
+        }
+    }
+
+    /* ──────────────────────────────────────────
+     *  POST /api/portal/mobile/termine/{id}/stornieren
+     * ────────────────────────────────────────── */
+    public function appointmentCancel(array $params = []): void
+    {
+        [$user, $prefix] = $this->guard();
+        $ownerId = (int)$user['owner_id'];
+        $id      = (int)($params['id'] ?? 0);
+
+        try {
+            $pdo  = $this->db->getPdo();
+            $stmt = $pdo->prepare("SELECT id, start_at, status FROM `{$prefix}appointments` WHERE id = ? AND owner_id = ? LIMIT 1");
+            $stmt->execute([$id, $ownerId]);
+            $appt = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if (!$appt) { $this->json(['error' => 'Nicht gefunden'], 404); return; }
+
+            if (in_array($appt['status'] ?? '', ['cancelled','storniert'], true)) {
+                $this->json(['error' => 'Termin ist bereits storniert.'], 409); return;
+            }
+
+            try { $diff = (new \DateTime($appt['start_at']))->getTimestamp() - time(); }
+            catch (\Throwable) { $this->json(['error' => 'Ungültiges Datum'], 400); return; }
+
+            if ($diff <= 86400) {
+                $this->json(['error' => 'Eine Stornierung ist nur bis 24 Stunden vor dem Termin möglich.'], 422); return;
+            }
+
+            $pdo->prepare("UPDATE `{$prefix}appointments` SET status = 'cancelled' WHERE id = ? AND owner_id = ?")->execute([$id, $ownerId]);
+            $this->json(['ok' => true]);
         } catch (\Throwable) {
             $this->json(['error' => 'Fehler'], 500);
         }
@@ -418,6 +474,12 @@ class OwnerPortalMobileController extends Controller
     {
         [$user, $prefix] = $this->guard();
         $ownerId = (int)$user['owner_id'];
+
+        // Only therapeut-type practices have Befundbögen
+        $practiceType = $this->settings()->get('practice_type', 'therapeut');
+        if (in_array($practiceType, ['trainer', 'dogschool', 'hundeschule'], true)) {
+            $this->json([]); return;
+        }
 
         try {
             $pdo  = $this->db->getPdo();
@@ -492,17 +554,27 @@ class OwnerPortalMobileController extends Controller
             $plans = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
             foreach ($plans as &$plan) {
+                $planId = (int)$plan['id'];
                 try {
                     $s = $pdo->prepare(
-                        "SELECT id, title AS name, description, frequency, duration
+                        "SELECT id, title AS name, title, description, frequency, duration
                            FROM `{$prefix}portal_homework_plan_tasks`
                           WHERE plan_id = ?
                           ORDER BY sort_order ASC"
                     );
-                    $s->execute([$plan['id']]);
-                    $plan['exercises'] = $s->fetchAll(\PDO::FETCH_ASSOC);
+                    $s->execute([$planId]);
+                    $tasks = $s->fetchAll(\PDO::FETCH_ASSOC);
+                    $plan['exercises'] = $tasks; // legacy compat
+                    $plan['tasks']     = $tasks;
                 } catch (\Throwable) {
                     $plan['exercises'] = [];
+                    $plan['tasks']     = [];
+                }
+                // Load owner's check state for this plan
+                try {
+                    $plan['checks'] = $this->repo->getChecksForPlan($planId, $ownerId);
+                } catch (\Throwable) {
+                    $plan['checks'] = (object)[]; // empty JSON object not array
                 }
             }
 
