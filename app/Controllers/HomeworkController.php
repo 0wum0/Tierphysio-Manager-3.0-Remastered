@@ -10,6 +10,7 @@ use App\Repositories\HomeworkRepository;
 use App\Repositories\PatientRepository;
 use App\Repositories\OwnerRepository;
 use App\Services\MailService;
+use App\Services\PushNotificationService;
 
 class HomeworkController
 {
@@ -18,19 +19,22 @@ class HomeworkController
     private Database $db;
     private OwnerRepository $ownerRepository;
     private MailService $mailService;
+    private PushNotificationService $push;
 
     public function __construct(
         HomeworkRepository $homeworkRepository,
         PatientRepository $patientRepository,
         Database $db,
         OwnerRepository $ownerRepository,
-        MailService $mailService
+        MailService $mailService,
+        PushNotificationService $push
     ) {
         $this->homeworkRepository = $homeworkRepository;
         $this->patientRepository  = $patientRepository;
         $this->db                 = $db;
         $this->ownerRepository    = $ownerRepository;
         $this->mailService        = $mailService;
+        $this->push               = $push;
     }
 
     private function t(string $table): string
@@ -178,6 +182,22 @@ class HomeworkController
                     $this->mailService->sendHomeworkNotification($patient, $owner, $title, $portalUrl);
                 }
             }
+
+            // Push-Notification: Besitzer über neue Hausaufgabe informieren
+            try {
+                $tenantId = (int)($this->db->getPrefix() ? preg_replace('/^t_(\d+)_$/', '$1', $this->db->getPrefix()) : 0);
+                if ($tenantId > 0 && !empty($patient['owner_id'])) {
+                    $ownerUserId = $this->push->resolveOwnerUserId($tenantId, (int)$patient['owner_id']);
+                    if ($ownerUserId) {
+                        $this->push->notifyOwner(
+                            $tenantId, $ownerUserId, 'new_homework',
+                            'Eine neue Hausaufgabe wurde für Sie erstellt.',
+                            ['screen' => 'homework_detail', 'homework_id' => (int)$homeworkId],
+                            'homework', (int)$homeworkId
+                        );
+                    }
+                }
+            } catch (\Throwable) {}
 
             header('Content-Type: application/json');
             echo json_encode(['success' => true, 'homework_id' => $homeworkId]);

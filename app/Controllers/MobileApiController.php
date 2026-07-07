@@ -1734,6 +1734,32 @@ class MobileApiController
                 ]
             );
             $this->googleSyncAppointment((int)$id, 'create');
+
+            // Push-Notification: Therapeuten + Besitzer über neuen Termin informieren
+            try {
+                $tenantId = (int)preg_replace('/^t_(\d+)_$/', '$1', $this->db->getPrefix());
+                $push = new \App\Services\PushNotificationService(\App\Core\Application::getInstance()->getContainer()->get(\App\Core\Config::class), $this->db);
+                if ($tenantId > 0) {
+                    $push->notifyAllTherapists(
+                        $tenantId, 'appointment_booked_staff',
+                        'Ein neuer Termin wurde über die App erstellt.',
+                        ['screen' => 'appointment_detail', 'appointment_id' => (int)$id],
+                        'appointment', (int)$id
+                    );
+                    if (!empty($data['owner_id'])) {
+                        $ownerUserId = $push->resolveOwnerUserId($tenantId, (int)$data['owner_id']);
+                        if ($ownerUserId) {
+                            $push->notifyOwner(
+                                $tenantId, $ownerUserId, 'appointment_booked',
+                                'Ein neuer Termin wurde für Sie erstellt.',
+                                ['screen' => 'appointment_detail', 'appointment_id' => (int)$id],
+                                'appointment', (int)$id
+                            );
+                        }
+                    }
+                }
+            } catch (\Throwable) {}
+
             $this->json(['id' => $id, 'success' => true], 201);
         } catch (\Throwable $e) {
             $this->error('Fehler: ' . $e->getMessage(), 500);
@@ -1786,6 +1812,27 @@ class MobileApiController
                 ]
             );
             $this->googleSyncAppointment($id, 'update');
+
+            // Push-Notification: Termin geändert
+            try {
+                $tenantId = (int)preg_replace('/^t_(\d+)_$/', '$1', $this->db->getPrefix());
+                if ($tenantId > 0) {
+                    $push = new \App\Services\PushNotificationService(\App\Core\Application::getInstance()->getContainer()->get(\App\Core\Config::class), $this->db);
+                    $ownerIdForUpdate = isset($data['owner_id']) ? (int)$data['owner_id'] : null;
+                    if ($ownerIdForUpdate) {
+                        $ownerUserId = $push->resolveOwnerUserId($tenantId, $ownerIdForUpdate);
+                        if ($ownerUserId) {
+                            $push->notifyOwner(
+                                $tenantId, $ownerUserId, 'appointment_changed',
+                                'Ihr Termin wurde aktualisiert.',
+                                ['screen' => 'appointment_detail', 'appointment_id' => $id],
+                                'appointment', $id
+                            );
+                        }
+                    }
+                }
+            } catch (\Throwable) {}
+
             $this->json(['success' => true]);
         } catch (\Throwable $e) {
             $this->error('Fehler: ' . $e->getMessage(), 500);
@@ -1799,6 +1846,34 @@ class MobileApiController
 
         $id = (int)($params['id'] ?? 0);
         try {
+            // Push-Notification: Termin storniert — vor dem Delete, damit owner_id noch verfügbar
+            try {
+                $tenantId = (int)preg_replace('/^t_(\d+)_$/', '$1', $this->db->getPrefix());
+                if ($tenantId > 0 && $id > 0) {
+                    $appt = $this->db->fetchOne(
+                        "SELECT owner_id FROM `{$this->t('appointments')}` WHERE id = ?", [$id]
+                    );
+                    $push = new \App\Services\PushNotificationService(\App\Core\Application::getInstance()->getContainer()->get(\App\Core\Config::class), $this->db);
+                    if ($appt && $appt['owner_id']) {
+                        $ownerUserId = $push->resolveOwnerUserId($tenantId, (int)$appt['owner_id']);
+                        if ($ownerUserId) {
+                            $push->notifyOwner(
+                                $tenantId, $ownerUserId, 'appointment_cancelled',
+                                'Ein Termin wurde abgesagt.',
+                                ['screen' => 'appointment_detail', 'appointment_id' => $id],
+                                'appointment', $id
+                            );
+                        }
+                    }
+                    $push->notifyAllTherapists(
+                        $tenantId, 'appointment_cancelled_staff',
+                        'Ein Termin wurde storniert.',
+                        ['screen' => 'appointment_detail', 'appointment_id' => $id],
+                        'appointment', $id
+                    );
+                }
+            } catch (\Throwable) {}
+
             $this->googleSyncAppointment($id, 'delete');
             $this->db->execute("DELETE FROM `{$this->t('appointments')}` WHERE id = ?", [$id]);
             $this->json(['success' => true]);

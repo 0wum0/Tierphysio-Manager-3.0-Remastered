@@ -68,6 +68,10 @@ class Config
             'license' => [
                 'secret' => $_ENV['LICENSE_SECRET'] ?? '',
             ],
+            'push' => [
+                'server_url'      => $_ENV['PUSH_SERVER_URL']      ?? '',
+                'internal_secret' => $_ENV['PUSH_INTERNAL_SECRET'] ?? '',
+            ],
         ];
     }
 

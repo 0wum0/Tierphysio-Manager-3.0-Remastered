@@ -14,6 +14,7 @@ use App\Services\OwnerService;
 use App\Services\InvoiceService;
 use App\Services\PdfService;
 use App\Services\MailService;
+use App\Services\PushNotificationService;
 use App\Repositories\TreatmentTypeRepository;
 use App\Repositories\SettingsRepository;
 use App\Repositories\HomeworkRepository;
@@ -39,7 +40,8 @@ class PatientController extends Controller
         private readonly HomeworkRepository $homeworkRepository,
         private readonly Database $db,
         private readonly TimelineMediaService $timelineMedia,
-        private readonly AiService $aiService
+        private readonly AiService $aiService,
+        private readonly PushNotificationService $push
     ) {
         parent::__construct($view, $session, $config, $translator);
     }
@@ -276,6 +278,19 @@ class PatientController extends Controller
         PerformanceLogger::startTimer('db_save');
         $id = $this->patientService->create($data);
         PerformanceLogger::stopTimer('db_save');
+
+        // Push-Notification: Therapeuten über neuen Patienten informieren
+        try {
+            $tenantId = (int)$this->session->get('tenant_id');
+            if ($tenantId > 0) {
+                $this->push->notifyAllTherapists(
+                    $tenantId, 'new_patient',
+                    'Ein neuer Patient wurde angelegt: ' . $data['name'],
+                    ['screen' => 'patient_detail', 'patient_id' => (int)$id],
+                    'patient', (int)$id
+                );
+            }
+        } catch (\Throwable) {}
 
         $this->session->flash('success', $this->translator->trans('patients.created'));
         PerformanceLogger::finish();

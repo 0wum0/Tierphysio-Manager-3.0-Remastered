@@ -21,6 +21,7 @@ use Saas\Services\FeatureFlagService;
 use Saas\Services\SubscriptionService;
 use Saas\Services\MigrationService;
 use Saas\Services\TenantFeatureCacheInvalidator;
+use Saas\Services\PushAdminNotificationService;
 use Saas\Repositories\ActivityLogRepository;
 
 class TenantController extends Controller
@@ -40,6 +41,7 @@ class TenantController extends Controller
         private LicenseService         $licenseService,
         private SubscriptionService    $subscriptionService,
         private TenantFeatureCacheInvalidator $cacheInvalidator,
+        private PushAdminNotificationService $pushAdmin,
     ) {
         parent::__construct($view, $session);
         $this->auditLog = new ActivityLogRepository($this->db);
@@ -157,6 +159,17 @@ class TenantController extends Controller
 
         try {
             $result = $this->provisioningService->provision($data);
+
+            // Push-Notification: SaaS-Admins über neue Praxis informieren
+            try {
+                $this->pushAdmin->notifyAdmins(
+                    'saas_new_practice',
+                    "Neue Praxis registriert: {$data['practice_name']} ({$data['email']})",
+                    ['screen' => 'tenant_detail', 'tenant_id' => $result['tenant_id']],
+                    'normal'
+                );
+            } catch (\Throwable) {}
+
             $this->session->flash('success',
                 "Praxis '{$data['practice_name']}' erfolgreich erstellt! " .
                 "Admin-Passwort: {$result['admin_password']} (wurde per E-Mail gesendet)"

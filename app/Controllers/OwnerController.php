@@ -11,6 +11,7 @@ use App\Core\Translator;
 use App\Core\View;
 use App\Services\OwnerService;
 use App\Services\PatientService;
+use App\Services\PushNotificationService;
 
 class OwnerController extends Controller
 {
@@ -20,7 +21,8 @@ class OwnerController extends Controller
         Config $config,
         Translator $translator,
         private readonly OwnerService $ownerService,
-        private readonly PatientService $patientService
+        private readonly PatientService $patientService,
+        private readonly PushNotificationService $push
     ) {
         parent::__construct($view, $session, $config, $translator);
     }
@@ -78,6 +80,20 @@ class OwnerController extends Controller
         }
 
         $ownerId = $this->ownerService->create($data);
+
+        // Push-Notification: Therapeuten über neuen Besitzer informieren
+        try {
+            $tenantId = (int)$this->session->get('tenant_id');
+            if ($tenantId > 0) {
+                $ownerName = trim($data['first_name'] . ' ' . $data['last_name']);
+                $this->push->notifyAllTherapists(
+                    $tenantId, 'new_owner_registered',
+                    'Ein neuer Besitzer wurde angelegt: ' . $ownerName,
+                    ['screen' => 'owner_detail', 'owner_id' => (int)$ownerId],
+                    'owner', (int)$ownerId
+                );
+            }
+        } catch (\Throwable) {}
 
         if ($this->post('create_animal') === '1') {
             $animalData = [
