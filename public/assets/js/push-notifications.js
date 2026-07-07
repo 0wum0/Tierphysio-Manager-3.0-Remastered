@@ -271,7 +271,8 @@
     function getIcon(type) {
         const icons = {
             new_invoice: '🧾', invoice_paid: '✅', invoice_paid_staff: '✅',
-            invoice_status_changed: '📄', new_homework: '📋', homework_updated: '📋',
+            invoice_overdue: '⚠️', invoice_status_changed: '📄',
+            new_homework: '📋', homework_updated: '📋',
             homework_completed: '✅', new_message: '💬', new_message_staff: '💬',
             appointment_booked: '📅', appointment_booked_staff: '📅',
             appointment_changed: '🔄', appointment_changed_staff: '🔄',
@@ -279,6 +280,7 @@
             appointment_reminder_24h: '⏰', appointment_reminder_2h: '⏰',
             appointment_reminder_30min: '🔔', document_available: '📎',
             new_owner_registered: '👤', new_patient: '🐾', owner_upload: '📁',
+            birthday_today: '🎂',
             system_warning: '⚠️', saas_new_practice: '🏥',
             saas_subscription_changed: '📦', saas_trial_expiring: '⌛',
             saas_payment_failed: '💳', saas_system_error: '🚨',
@@ -288,6 +290,20 @@
 
     function resolveUrl(dataJson) {
         if (!dataJson) return null;
+        // Short screen names used by PHP push dispatch
+        const shortMap = {
+            calendar: '/kalender',
+            invoices: '/rechnungen',
+            patient:  '/patienten/',
+            owners:   '/tierhalter',
+        };
+        if (dataJson.screen && shortMap[dataJson.screen]) {
+            const base = shortMap[dataJson.screen];
+            if (dataJson.screen === 'patient' && dataJson.patient_id) return base + dataJson.patient_id;
+            if (dataJson.screen === 'invoices' && dataJson.invoice_id) return base + '/' + dataJson.invoice_id;
+            return base;
+        }
+        // Legacy detail-screen names
         const map = {
             invoice_detail: '/rechnungen/', appointment_detail: '/kalender',
             homework_detail: '/hausaufgaben/', message_detail: '/nachrichten',

@@ -54,6 +54,10 @@ class PushNotificationService
         'saas_payment_failed'          => 'Zahlung fehlgeschlagen',
         'saas_system_error'            => 'Systemfehler',
         'saas_migration_error'         => 'Migration fehlgeschlagen',
+        // Geburtstage
+        'birthday_today'               => 'Geburtstag heute',
+        // Überfällige Rechnungen (Besitzerseite)
+        'invoice_overdue'              => 'Rechnung überfällig',
     ];
 
     public function __construct(
@@ -119,18 +123,21 @@ class PushNotificationService
         string $body,
         array $dataJson = [],
         string $sourceType = '',
-        ?int $sourceId = null
+        ?int $sourceId = null,
+        string $priority = 'normal'
     ): void {
         $this->dispatch($tenantId, $event, $sourceType, $sourceId, [[
             'userId'   => $ownerUserId,
             'role'     => 'owner',
             'body'     => $body,
             'dataJson' => $dataJson,
+            'priority' => $priority,
         ]]);
     }
 
     /**
      * Convenience: notify all therapist/trainer users for a tenant.
+     * tenantId param is kept for backward compat; internally the DB prefix is used.
      */
     public function notifyAllTherapists(
         int $tenantId,
@@ -138,9 +145,11 @@ class PushNotificationService
         string $body,
         array $dataJson = [],
         string $sourceType = '',
-        ?int $sourceId = null
+        ?int $sourceId = null,
+        string $priority = 'normal'
     ): void {
-        $users = $this->loadTherapistUsers($tenantId);
+        $realTenantId = $this->currentTenantId();
+        $users = $this->loadTherapistUsers();
         if (empty($users)) {
             return;
         }
@@ -150,9 +159,19 @@ class PushNotificationService
             'role'     => 'therapeut',
             'body'     => $body,
             'dataJson' => $dataJson,
+            'priority' => $priority,
         ], $users);
 
-        $this->dispatch($tenantId, $event, $sourceType, $sourceId, $recipients);
+        $this->dispatch($realTenantId, $event, $sourceType, $sourceId, $recipients, $priority);
+    }
+
+    /**
+     * Returns the tenant ID derived from the current DB prefix.
+     * Consistent with what Application.php generates for push JWTs.
+     */
+    public function currentTenantId(): int
+    {
+        return abs(crc32($this->db->getPrefix()));
     }
 
     /**
@@ -229,12 +248,11 @@ class PushNotificationService
     /**
      * Load all active therapist/trainer users for a tenant.
      */
-    private function loadTherapistUsers(int $tenantId): array
+    private function loadTherapistUsers(): array
     {
-        $prefix = "t_{$tenantId}_";
         try {
             return $this->db->fetchAll(
-                "SELECT id FROM `{$prefix}users`
+                "SELECT id FROM `{$this->db->prefix('users')}`
                  WHERE is_active = 1
                  ORDER BY id ASC
                  LIMIT 100"

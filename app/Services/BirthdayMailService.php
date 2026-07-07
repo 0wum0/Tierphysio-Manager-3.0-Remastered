@@ -11,9 +11,10 @@ use PHPMailer\PHPMailer\PHPMailer;
 class BirthdayMailService
 {
     public function __construct(
-        private readonly Database            $db,
-        private readonly SettingsRepository  $settings,
-        private readonly MailService         $mailService
+        private readonly Database                  $db,
+        private readonly SettingsRepository        $settings,
+        private readonly MailService               $mailService,
+        private readonly PushNotificationService   $push
     ) {}
 
     private function t(string $table): string
@@ -73,6 +74,15 @@ class BirthdayMailService
             if ($ok) {
                 $this->markSent((int)$p['patient_id'], $year);
                 $log['sent']++;
+
+                try {
+                    $this->push->notifyAllTherapists(
+                        0, 'birthday_today',
+                        "Geburtstag: {$p['patient_name']} wird {$age} Jahre alt ({$p['first_name']} {$p['last_name']})",
+                        ['screen' => 'patient', 'patient_id' => (int)$p['patient_id']],
+                        'patient', (int)$p['patient_id']
+                    );
+                } catch (\Throwable) {}
             } else {
                 $log['errors'][] = "Fehler bei {$p['patient_name']} → {$p['email']}: " . $this->mailService->getLastError();
             }

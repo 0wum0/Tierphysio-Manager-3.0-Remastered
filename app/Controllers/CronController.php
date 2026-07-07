@@ -10,6 +10,7 @@ use App\Core\Session;
 use App\Core\Translator;
 use App\Core\View;
 use App\Services\BirthdayMailService;
+use App\Services\AppointmentPushReminderService;
 use App\Repositories\SettingsRepository;
 use App\Core\Database;
 
@@ -28,9 +29,10 @@ class CronController extends Controller
         Session $session,
         Config $config,
         Translator $translator,
-        private readonly BirthdayMailService $birthdayMailService,
-        private readonly SettingsRepository  $settings,
-        private readonly Database            $db
+        private readonly BirthdayMailService             $birthdayMailService,
+        private readonly AppointmentPushReminderService  $appointmentReminderService,
+        private readonly SettingsRepository              $settings,
+        private readonly Database                        $db
     ) {
         parent::__construct($view, $session, $config, $translator);
     }
@@ -101,6 +103,7 @@ class CronController extends Controller
             'tcp_cron_token',
             'cron_secret',
             'portal_smart_reminder_token',
+            'appointment_push_cron_token',
         ];
 
         foreach ($keys as $key) {
@@ -284,7 +287,12 @@ class CronController extends Controller
                     'schedule' => '0 9 * * *', // Täglich um 09:00
                     'interval_seconds' => 86400,
                     'endpoint' => '/portal/cron/smart-erinnerungen'
-                ]
+                ],
+                'appointment_push_reminders' => [
+                    'schedule' => '*/10 * * * *', // Alle 10 Minuten
+                    'interval_seconds' => 600,
+                    'endpoint' => '/kalender/cron/push-erinnerungen'
+                ],
             ];
 
             $results = [];
@@ -369,6 +377,60 @@ class CronController extends Controller
         }
     }
 
+    /* ─────────────────────────────────────────────────────────
+       GET /kalender/cron/push-erinnerungen
+       Versendet Push-Erinnerungen für Termine (1h + 24h vorher).
+       Token-gesichert über settings.appointment_push_cron_token.
+    ───────────────────────────────────────────────────────── */
+    public function appointmentReminders(): void
+    {
+        $start = hrtime(true);
+
+        try {
+            $tid = (string)($_GET['tid'] ?? '');
+            if ($tid !== '') {
+                $prefix = $this->prefixFromTid($tid);
+                $this->db->setPrefix($prefix);
+            }
+
+            $expectedToken = $this->ensureCronToken('appointment_push_cron_token');
+
+            $providedToken = '';
+            $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+            if (str_starts_with($authHeader, 'Bearer ')) {
+                $providedToken = substr($authHeader, 7);
+            }
+            if ($providedToken === '') {
+                $providedToken = (string)($_GET['token'] ?? '');
+            }
+
+            if (!isset($this->newlyCreatedTokens['appointment_push_cron_token']) && !hash_equals($expectedToken, $providedToken)) {
+                http_response_code(401);
+                $this->jsonCron(['error' => 'Ungültiger Token.']);
+                return;
+            }
+
+            $result = $this->appointmentReminderService->sendPendingReminders();
+
+            $msg = "24h={$result['24h']}, 1h={$result['1h']}, errors=" . count($result['errors']);
+            $this->cronLog("SUCCESS appointmentReminders: {$msg}");
+            $this->dbLog('appointment_push_reminders', 'success', $msg, $start);
+
+            $this->jsonCron([
+                'ok'     => true,
+                'date'   => date('Y-m-d H:i:s'),
+                '24h'    => $result['24h'],
+                '1h'     => $result['1h'],
+                'errors' => $result['errors'],
+            ]);
+        } catch (\Throwable $e) {
+            $this->cronLog("EXCEPTION appointmentReminders: " . $e->getMessage());
+            $this->dbLog('appointment_push_reminders', 'error', $e->getMessage(), $start);
+            http_response_code(200);
+            $this->jsonCron(['ok' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
     private function executeJob(string $jobKey, string $endpoint, string $tid = ''): array
     {
         $start = hrtime(true);
@@ -377,12 +439,13 @@ class CronController extends Controller
 
         // Token für den spezifischen Job – self-healing: auto-create if missing
         $tokenKeys = [
-            'birthday' => 'birthday_cron_token',
-            'calendar_reminders' => 'calendar_cron_secret',
-            'google_sync' => 'google_sync_cron_secret',
-            'tcp_reminders' => 'tcp_cron_token',
-            'holiday_greetings' => 'cron_secret',
-            'smart_reminders'   => 'portal_smart_reminder_token'
+            'birthday'                    => 'birthday_cron_token',
+            'calendar_reminders'          => 'calendar_cron_secret',
+            'google_sync'                 => 'google_sync_cron_secret',
+            'tcp_reminders'               => 'tcp_cron_token',
+            'holiday_greetings'           => 'cron_secret',
+            'smart_reminders'             => 'portal_smart_reminder_token',
+            'appointment_push_reminders'  => 'appointment_push_cron_token',
         ];
 
         $tokenKey = $tokenKeys[$jobKey] ?? '';

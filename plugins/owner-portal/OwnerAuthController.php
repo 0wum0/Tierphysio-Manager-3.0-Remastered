@@ -12,6 +12,7 @@ use App\Core\View;
 use App\Core\Database;
 use App\Repositories\SettingsRepository;
 use App\Services\MailService;
+use App\Services\PushNotificationService;
 
 class OwnerAuthController extends Controller
 {
@@ -22,7 +23,8 @@ class OwnerAuthController extends Controller
         Session $session,
         Config $config,
         Translator $translator,
-        Database $db
+        Database $db,
+        private readonly PushNotificationService $push
     ) {
         parent::__construct($view, $session, $config, $translator);
         $this->repo = new OwnerPortalRepository($db);
@@ -496,6 +498,16 @@ class OwnerAuthController extends Controller
             'invite_token'   => null,
             'is_active'      => 1,
         ]);
+
+        try {
+            $ownerName = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+            $this->push->notifyAllTherapists(
+                0, 'new_owner_registered',
+                "Neuer Besitzer registriert: {$ownerName}",
+                ['screen' => 'owners'],
+                'owner', (int)($user['owner_id'] ?? 0)
+            );
+        } catch (\Throwable) {}
 
         $this->session->flash('success', 'Passwort wurde gesetzt. Du kannst dich jetzt einloggen.');
         $this->redirect('/portal/login' . ($tid !== '' ? ('?tid=' . urlencode($tid)) : ''));

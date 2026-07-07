@@ -444,6 +444,35 @@
                 </div>
                 {% endif %}
 
+                {# ── Push Benachrichtigungs-Glocke ──
+                   Nur sichtbar wenn push_config vorhanden.
+                   Badge + Liste werden durch push-notifications.js verwaltet. #}
+                {% if push_config is defined and push_config.server_url is defined and push_config.server_url %}
+                <div class="dropdown" id="push-dropdown-wrap">
+                    <button class="header-btn push-bell-btn" data-dropdown="push-menu" aria-label="Push-Benachrichtigungen"
+                            style="position:relative;" data-push-open-center>
+                        <svg width="17" height="17" fill="none" viewBox="0 0 24 24">
+                            <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                  d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                            <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                  d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                        </svg>
+                        <span class="push-badge" style="display:none;"></span>
+                    </button>
+                    <div class="dropdown-menu notif-menu" id="push-menu" style="width:340px;right:0;left:auto;max-height:480px;overflow:hidden;display:flex;flex-direction:column;">
+                        <div style="padding:0.75rem 1rem 0.5rem;border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+                            <span style="font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Benachrichtigungen</span>
+                            <button data-push-mark-all-read style="background:none;border:none;color:var(--accent);font-size:0.75rem;font-weight:600;cursor:pointer;padding:0;">Alle gelesen</button>
+                        </div>
+                        <div id="push-notification-list" style="overflow-y:auto;flex:1;">
+                            <div class="push-center__empty" style="padding:1.25rem 1rem;text-align:center;font-size:0.85rem;color:var(--text-muted);">
+                                Keine Benachrichtigungen
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
                 <button class="header-btn" id="theme-toggle" title="Design wechseln" aria-label="Design wechseln">
                     <svg width="16" height="16" fill="none" viewBox="0 0 24 24">
                         <path stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"

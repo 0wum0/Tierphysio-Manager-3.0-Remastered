@@ -723,7 +723,8 @@ $router->get('/warteliste',                           [CourseController::class, 
  * Aufruf z.B. stündlich:
  *   GET /kurse/cron/erinnerungen?token=XYZ
  */
-$router->get('/kurse/cron/erinnerungen',              [CourseController::class, 'cronSendReminders'], []);
+$router->get('/kurse/cron/erinnerungen',              [CourseController::class, 'cronSendReminders'],     []);
+$router->get('/kalender/cron/push-erinnerungen',      [CronController::class,   'appointmentReminders'],  []);
 
 // Anwesenheit
 $router->get('/anwesenheit',                          [AttendanceController::class, 'index'],     ['auth', 'feature:dogschool_attendance']);

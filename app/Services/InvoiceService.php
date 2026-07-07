@@ -10,8 +10,9 @@ use App\Repositories\SettingsRepository;
 class InvoiceService
 {
     public function __construct(
-        private readonly InvoiceRepository $invoiceRepository,
-        private readonly SettingsRepository $settingsRepository
+        private readonly InvoiceRepository       $invoiceRepository,
+        private readonly SettingsRepository      $settingsRepository,
+        private readonly PushNotificationService $push
     ) {}
 
     public function findById(int $id): array|false
@@ -165,7 +166,42 @@ class InvoiceService
 
     public function markOverdueAutomatic(): void
     {
-        $this->invoiceRepository->markOverdueAutomatic();
+        $newlyOverdue = $this->invoiceRepository->markOverdueAutomatic();
+
+        if (!$this->push->isEnabled() || empty($newlyOverdue)) {
+            return;
+        }
+
+        $tenantId = $this->push->currentTenantId();
+
+        foreach ($newlyOverdue as $inv) {
+            $amount    = number_format((float)($inv['total_gross'] ?? 0), 2, ',', '.') . ' €';
+            $ownerName = trim((string)($inv['owner_name'] ?? 'Besitzer'));
+            $invId     = (int)$inv['id'];
+
+            try {
+                $this->push->notifyAllTherapists(
+                    $tenantId, 'invoice_paid_staff',
+                    "Überfällige Rechnung: {$ownerName} · {$amount}",
+                    ['screen' => 'invoices', 'invoice_id' => $invId],
+                    'invoice', $invId, 'high'
+                );
+            } catch (\Throwable) {}
+
+            if (!empty($inv['mobile_user_id'])) {
+                try {
+                    $this->push->notifyOwner(
+                        $tenantId, (int)$inv['mobile_user_id'],
+                        'invoice_overdue',
+                        "Ihre Rechnung über {$amount} ist überfällig. Bitte begleichen Sie den Betrag.",
+                        ['screen' => 'invoices', 'invoice_id' => $invId],
+                        'invoice', $invId, 'high'
+                    );
+                } catch (\Throwable) {}
+            }
+
+            $this->invoiceRepository->markPushOverdueSent($invId);
+        }
     }
 
     public function getRevenueByMonth(int $months = 24): array  { return $this->invoiceRepository->getRevenueByMonth($months); }

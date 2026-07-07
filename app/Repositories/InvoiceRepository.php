@@ -612,8 +612,31 @@ class InvoiceRepository extends Repository
         );
     }
 
-    public function markOverdueAutomatic(): void
+    public function markOverdueAutomatic(): array
     {
+        // Fetch invoices that will newly become overdue (push not yet sent)
+        $newlyOverdue = [];
+        try {
+            $this->db->execute(
+                "ALTER TABLE `{$this->t('invoices')}`
+                 ADD COLUMN IF NOT EXISTS `push_overdue_sent` TINYINT(1) NOT NULL DEFAULT 0"
+            );
+        } catch (\Throwable) {}
+
+        try {
+            $newlyOverdue = $this->db->fetchAll(
+                "SELECT i.id, i.total_gross, i.owner_id,
+                        CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
+                        o.mobile_user_id
+                 FROM `{$this->t('invoices')}` i
+                 LEFT JOIN `{$this->t('owners')}` o ON o.id = i.owner_id
+                 WHERE i.status = 'open'
+                   AND i.due_date IS NOT NULL
+                   AND i.due_date < CURDATE()
+                   AND i.push_overdue_sent = 0"
+            );
+        } catch (\Throwable) {}
+
         $this->db->execute(
             "UPDATE `{$this->t('invoices')}`
              SET status = 'overdue'
@@ -621,6 +644,18 @@ class InvoiceRepository extends Repository
                AND due_date IS NOT NULL
                AND due_date < CURDATE()"
         );
+
+        return $newlyOverdue;
+    }
+
+    public function markPushOverdueSent(int $id): void
+    {
+        try {
+            $this->db->execute(
+                "UPDATE `{$this->t('invoices')}` SET push_overdue_sent = 1 WHERE id = ?",
+                [$id]
+            );
+        } catch (\Throwable) {}
     }
 
     public function updateStatus(int $id, string $status, ?string $paidAt = null, ?string $cancellationReason = null): void
