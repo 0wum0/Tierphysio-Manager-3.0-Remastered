@@ -57,6 +57,21 @@ class View
         $this->twig->addGlobal('current_user', $this->session->getUser());
         $this->twig->addGlobal('csrf_token', $this->session->generateCsrfToken());
         $this->twig->addGlobal('theme', $this->session->get('theme', 'dark'));
+
+        // Push notification config — available in all templates when user is logged in
+        $pushServerUrl = $this->config->get('push.server_url', '');
+        if ($pushServerUrl !== '' && $this->session->get('user_id')) {
+            $this->twig->addGlobal('push_config', [
+                'server_url'       => $pushServerUrl,
+                'token'            => $this->session->get('mobile_token', ''),
+                'vapid_public_key' => $_ENV['VAPID_PUBLIC_KEY'] ?? '',
+                'user_id'          => (int)$this->session->get('user_id'),
+                'tenant_id'        => (int)$this->session->get('tenant_id', 0),
+                'role'             => $this->session->get('role', 'therapeut'),
+                'app_type'         => 'therapist_trainer',
+                'enable_web_push'  => filter_var($_ENV['ENABLE_WEB_PUSH'] ?? false, FILTER_VALIDATE_BOOLEAN),
+            ]);
+        }
     }
 
     private function registerFunctions(): void

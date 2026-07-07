@@ -21,6 +21,7 @@
 
     {# Design tokens — additive, loaded AFTER theme so DB-themes keep priority. #}
     <link rel="stylesheet" href="/assets/css/design-tokens.css?v=1">
+    <link rel="stylesheet" href="/assets/css/push-notifications.css?v=1">
 
     {% block head %}{% endblock %}
 </head>
@@ -503,6 +504,24 @@
 <script src="/assets/js/media-compressor.js?v={{ 'now'|date('YmdHi') }}" defer></script>
 
 {% block scripts %}{% endblock %}
+
+{# Push Notification Client — only when logged in and push server is configured #}
+{% if push_config is defined and push_config.server_url %}
+<script>
+window.PUSH_CONFIG = {
+    serverUrl: {{ push_config.server_url|json_encode|raw }},
+    token: {{ push_config.token|json_encode|raw }},
+    vapidPublicKey: {{ (push_config.vapid_public_key ?? '')|json_encode|raw }},
+    userId: {{ push_config.user_id|default(0) }},
+    tenantId: {{ push_config.tenant_id|default(0) }},
+    role: {{ push_config.role|default('therapeut')|json_encode|raw }},
+    appType: {{ push_config.app_type|default('therapist_trainer')|json_encode|raw }},
+    enableWebPush: {{ push_config.enable_web_push|default(false) ? 'true' : 'false' }},
+};
+</script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
+<script src="/assets/js/push-notifications.js?v={{ 'now'|date('YmdHi') }}" defer></script>
+{% endif %}
 
 {% if intake_unread_count is defined %}
 <style>

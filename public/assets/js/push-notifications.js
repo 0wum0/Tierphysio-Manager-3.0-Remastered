@@ -1,0 +1,346 @@
+/**
+ * TheraPano Push Notification Client
+ * Handles: Socket.io live notifications + Web Push subscription + Notification Center UI
+ *
+ * Include after the main app.js.
+ * Requires: window.PUSH_CONFIG = { serverUrl, token, vapidPublicKey, userId, tenantId, role }
+ */
+
+(function () {
+    'use strict';
+
+    const cfg = window.PUSH_CONFIG || {};
+    if (!cfg.serverUrl || !cfg.token) return;
+
+    // ─── Socket.io Live Connection ────────────────────────────────────────────
+
+    let socket = null;
+    let unreadCount = 0;
+
+    function initSocket() {
+        // Socket.io must be loaded (CDN or bundled)
+        if (typeof io === 'undefined') {
+            console.warn('[push] Socket.io not loaded');
+            return;
+        }
+
+        socket = io(cfg.serverUrl, {
+            auth: { token: cfg.token },
+            transports: ['websocket', 'polling'],
+            reconnectionAttempts: 5,
+            reconnectionDelay: 2000,
+        });
+
+        socket.on('connect', () => {
+            console.info('[push] Connected to notification server');
+        });
+
+        socket.on('notification', (notif) => {
+            unreadCount++;
+            updateBadge(unreadCount);
+            showToast(notif);
+            prependToCenter(notif);
+        });
+
+        socket.on('unread_count', ({ count }) => {
+            unreadCount = count;
+            updateBadge(count);
+        });
+
+        socket.on('unread_count_update', ({ increment }) => {
+            unreadCount += increment;
+            updateBadge(unreadCount);
+        });
+
+        socket.on('connect_error', (err) => {
+            console.warn('[push] Connection error:', err.message);
+        });
+    }
+
+    // ─── Badge ────────────────────────────────────────────────────────────────
+
+    function updateBadge(count) {
+        const badges = document.querySelectorAll('.push-badge');
+        badges.forEach(badge => {
+            badge.textContent = count > 99 ? '99+' : count || '';
+            badge.style.display = count > 0 ? 'inline-flex' : 'none';
+        });
+    }
+
+    // ─── Toast Notification ───────────────────────────────────────────────────
+
+    function showToast(notif) {
+        const container = getOrCreateToastContainer();
+
+        const toast = document.createElement('div');
+        toast.className = 'push-toast push-toast--in';
+        toast.innerHTML = `
+            <div class="push-toast__icon">${getIcon(notif.notificationType)}</div>
+            <div class="push-toast__body">
+                <div class="push-toast__title">${escHtml(notif.title)}</div>
+                <div class="push-toast__text">${escHtml(notif.body)}</div>
+            </div>
+            <button class="push-toast__close" aria-label="Schließen">&times;</button>
+        `;
+
+        const url = resolveUrl(notif.dataJson);
+        if (url) {
+            toast.style.cursor = 'pointer';
+            toast.addEventListener('click', (e) => {
+                if (!e.target.closest('.push-toast__close')) {
+                    markRead(notif.id);
+                    window.location.href = url;
+                }
+            });
+        }
+
+        toast.querySelector('.push-toast__close').addEventListener('click', () => {
+            dismissToast(toast);
+        });
+
+        container.appendChild(toast);
+
+        // Auto-dismiss after 6s
+        setTimeout(() => dismissToast(toast), 6000);
+    }
+
+    function dismissToast(toast) {
+        toast.classList.remove('push-toast--in');
+        toast.classList.add('push-toast--out');
+        setTimeout(() => toast.remove(), 300);
+    }
+
+    function getOrCreateToastContainer() {
+        let c = document.getElementById('push-toast-container');
+        if (!c) {
+            c = document.createElement('div');
+            c.id = 'push-toast-container';
+            c.setAttribute('aria-live', 'polite');
+            document.body.appendChild(c);
+        }
+        return c;
+    }
+
+    // ─── Notification Center ──────────────────────────────────────────────────
+
+    function prependToCenter(notif) {
+        const list = document.getElementById('push-notification-list');
+        if (!list) return;
+
+        const empty = list.querySelector('.push-center__empty');
+        if (empty) empty.remove();
+
+        const item = buildNotifItem(notif);
+        list.insertBefore(item, list.firstChild);
+    }
+
+    function buildNotifItem(notif) {
+        const url = resolveUrl(notif.dataJson);
+        const time = formatTime(notif.createdAt || new Date().toISOString());
+        const isRead = !!notif.readAt;
+
+        const div = document.createElement('div');
+        div.className = `push-notif-item${isRead ? '' : ' push-notif-item--unread'}`;
+        div.dataset.id = notif.id;
+        div.innerHTML = `
+            <div class="push-notif-item__icon">${getIcon(notif.notificationType)}</div>
+            <div class="push-notif-item__body">
+                <div class="push-notif-item__title">${escHtml(notif.title)}</div>
+                <div class="push-notif-item__text">${escHtml(notif.body)}</div>
+                <div class="push-notif-item__time">${time}</div>
+            </div>
+        `;
+
+        div.addEventListener('click', () => {
+            markRead(notif.id);
+            div.classList.remove('push-notif-item--unread');
+            if (url) window.location.href = url;
+        });
+
+        return div;
+    }
+
+    async function loadNotifications(page = 1, unreadOnly = false) {
+        const list = document.getElementById('push-notification-list');
+        if (!list) return;
+
+        try {
+            const params = new URLSearchParams({ page, per_page: 20 });
+            if (unreadOnly) params.append('unread', '1');
+
+            const res = await fetch(`${cfg.serverUrl}/api/push/notifications?${params}`, {
+                headers: { 'Authorization': `Bearer ${cfg.token}` },
+            });
+            const data = await res.json();
+
+            if (page === 1) list.innerHTML = '';
+
+            if (!data.items || data.items.length === 0) {
+                if (page === 1) {
+                    list.innerHTML = '<div class="push-center__empty">Keine Benachrichtigungen</div>';
+                }
+                return;
+            }
+
+            data.items.forEach(notif => {
+                list.appendChild(buildNotifItem(notif));
+            });
+
+            unreadCount = data.unread_count || 0;
+            updateBadge(unreadCount);
+        } catch (err) {
+            console.error('[push] loadNotifications error:', err);
+        }
+    }
+
+    async function markRead(notifId) {
+        if (!notifId) return;
+        try {
+            await fetch(`${cfg.serverUrl}/api/push/notifications/${notifId}/read`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${cfg.token}` },
+            });
+            if (socket) socket.emit('mark_read', { id: notifId });
+        } catch { /* ignore */ }
+    }
+
+    async function markAllRead() {
+        try {
+            await fetch(`${cfg.serverUrl}/api/push/notifications/read-all`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${cfg.token}` },
+            });
+            if (socket) socket.emit('mark_all_read');
+
+            document.querySelectorAll('.push-notif-item--unread').forEach(el => {
+                el.classList.remove('push-notif-item--unread');
+            });
+            updateBadge(0);
+        } catch { /* ignore */ }
+    }
+
+    // ─── Web Push Subscription ────────────────────────────────────────────────
+
+    async function initWebPush() {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        if (!cfg.vapidPublicKey) return;
+
+        try {
+            const reg = await navigator.serviceWorker.register('/sw-push.js');
+            await navigator.serviceWorker.ready;
+
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') return;
+
+            let subscription = await reg.pushManager.getSubscription();
+            if (!subscription) {
+                subscription = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(cfg.vapidPublicKey),
+                });
+            }
+
+            // Register with push server
+            await fetch(`${cfg.serverUrl}/api/push/devices/register`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${cfg.token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    token: JSON.stringify(subscription),
+                    platform: 'web',
+                    app_type: cfg.appType || 'therapist_trainer',
+                    push_provider: 'webpush',
+                }),
+            });
+        } catch (err) {
+            console.warn('[push] Web Push init error:', err.message);
+        }
+    }
+
+    function urlBase64ToUint8Array(base64String) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = atob(base64);
+        return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
+    }
+
+    // ─── Helpers ──────────────────────────────────────────────────────────────
+
+    function getIcon(type) {
+        const icons = {
+            new_invoice: '🧾', invoice_paid: '✅', invoice_paid_staff: '✅',
+            invoice_status_changed: '📄', new_homework: '📋', homework_updated: '📋',
+            homework_completed: '✅', new_message: '💬', new_message_staff: '💬',
+            appointment_booked: '📅', appointment_booked_staff: '📅',
+            appointment_changed: '🔄', appointment_changed_staff: '🔄',
+            appointment_cancelled: '❌', appointment_cancelled_staff: '❌',
+            appointment_reminder_24h: '⏰', appointment_reminder_2h: '⏰',
+            appointment_reminder_30min: '🔔', document_available: '📎',
+            new_owner_registered: '👤', new_patient: '🐾', owner_upload: '📁',
+            system_warning: '⚠️', saas_new_practice: '🏥',
+            saas_subscription_changed: '📦', saas_trial_expiring: '⌛',
+            saas_payment_failed: '💳', saas_system_error: '🚨',
+        };
+        return icons[type] || '🔔';
+    }
+
+    function resolveUrl(dataJson) {
+        if (!dataJson) return null;
+        const map = {
+            invoice_detail: '/rechnungen/', appointment_detail: '/kalender',
+            homework_detail: '/hausaufgaben/', message_detail: '/nachrichten',
+            patient_detail: '/patienten/', owner_detail: '/tierhalter/',
+        };
+        const base = map[dataJson.screen];
+        if (!base) return null;
+        if (dataJson.screen === 'invoice_detail' && dataJson.invoice_id) return base + dataJson.invoice_id;
+        if (dataJson.screen === 'homework_detail' && dataJson.homework_id) return base + dataJson.homework_id;
+        if (dataJson.screen === 'patient_detail' && dataJson.patient_id) return base + dataJson.patient_id;
+        if (dataJson.screen === 'owner_detail' && dataJson.owner_id) return base + dataJson.owner_id;
+        return base;
+    }
+
+    function formatTime(isoString) {
+        const d = new Date(isoString);
+        const now = new Date();
+        const diff = Math.floor((now - d) / 60000);
+        if (diff < 1) return 'Gerade eben';
+        if (diff < 60) return `vor ${diff} Min.`;
+        if (diff < 1440) return `vor ${Math.floor(diff / 60)} Std.`;
+        return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+    }
+
+    function escHtml(str) {
+        const d = document.createElement('div');
+        d.textContent = str || '';
+        return d.innerHTML;
+    }
+
+    // ─── Init ─────────────────────────────────────────────────────────────────
+
+    document.addEventListener('DOMContentLoaded', () => {
+        initSocket();
+        loadNotifications();
+
+        // Mark all read button
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('[data-push-mark-all-read]')) {
+                markAllRead();
+            }
+            if (e.target.closest('[data-push-open-center]')) {
+                loadNotifications();
+            }
+        });
+
+        // Web Push init (only for staff with explicit opt-in button or auto for supported browsers)
+        if (cfg.enableWebPush) {
+            initWebPush();
+        }
+    });
+
+    // Expose for external use
+    window.PushNotifications = { markRead, markAllRead, loadNotifications };
+
+})();

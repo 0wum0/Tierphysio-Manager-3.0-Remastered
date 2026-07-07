@@ -15,6 +15,7 @@ use App\Services\PatientService;
 use App\Services\OwnerService;
 use App\Services\PdfService;
 use App\Services\MailService;
+use App\Services\PushNotificationService;
 use App\Repositories\TreatmentTypeRepository;
 use App\Repositories\SettingsRepository;
 use App\Core\PerformanceLogger;
@@ -33,7 +34,8 @@ class InvoiceController extends Controller
         private readonly MailService $mailService,
         private readonly TreatmentTypeRepository $treatmentTypeRepository,
         private readonly SettingsRepository $settingsRepository,
-        private readonly InvoiceCancellationService $cancellationService
+        private readonly InvoiceCancellationService $cancellationService,
+        private readonly PushNotificationService $push
     ) {
         parent::__construct($view, $session, $config, $translator);
     }
@@ -149,6 +151,25 @@ class InvoiceController extends Controller
         PerformanceLogger::startTimer('db_save');
         $id = $this->invoiceService->create($data, $positions);
         PerformanceLogger::stopTimer('db_save');
+
+        /* ── Push-Notification: Besitzer über neue Rechnung informieren ── */
+        try {
+            $tenantId = (int)$this->session->get('tenant_id');
+            $ownerId  = (int)$data['owner_id'];
+            $ownerUserId = $this->push->resolveOwnerUserId($tenantId, $ownerId);
+            if ($ownerUserId) {
+                $event = $isCash ? 'invoice_paid' : 'new_invoice';
+                $this->push->notifyOwner(
+                    $tenantId,
+                    $ownerUserId,
+                    $event,
+                    $isCash ? 'Eine Rechnung wurde erstellt und als bezahlt verbucht.' : 'Eine neue Rechnung wurde erstellt.',
+                    ['screen' => 'invoice_detail', 'invoice_id' => (int)$id],
+                    'invoice',
+                    (int)$id
+                );
+            }
+        } catch (\Throwable) {}
 
         /* ── Automatischer Timeline-Eintrag bei Barzahlung (schnell, nur 1 INSERT) ── */
         if ($isCash && !empty($data['patient_id'])) {
@@ -396,6 +417,33 @@ class InvoiceController extends Controller
             : null;
 
         $this->invoiceService->updateStatus((int)$params['id'], $status, $paidAt);
+
+        /* ── Push-Notification: Besitzer bei Statusänderung / Bezahlung ── */
+        try {
+            $tenantId = (int)$this->session->get('tenant_id');
+            $ownerId  = (int)$invoice['owner_id'];
+            $ownerUserId = $this->push->resolveOwnerUserId($tenantId, $ownerId);
+            if ($ownerUserId) {
+                $event = $status === 'paid' ? 'invoice_paid' : 'invoice_status_changed';
+                $body  = $status === 'paid'
+                    ? 'Ihre Rechnung wurde als bezahlt verbucht.'
+                    : 'Der Status Ihrer Rechnung hat sich geändert.';
+                $this->push->notifyOwner(
+                    $tenantId, $ownerUserId, $event, $body,
+                    ['screen' => 'invoice_detail', 'invoice_id' => (int)$params['id']],
+                    'invoice', (int)$params['id']
+                );
+            }
+            // Therapeuten über Zahlungseingang informieren
+            if ($status === 'paid') {
+                $this->push->notifyAllTherapists(
+                    $tenantId, 'invoice_paid_staff',
+                    'Eine Rechnung wurde als bezahlt markiert.',
+                    ['screen' => 'invoice_detail', 'invoice_id' => (int)$params['id']],
+                    'invoice', (int)$params['id']
+                );
+            }
+        } catch (\Throwable) {}
 
         /* ── Automatischer Timeline-Eintrag bei Bezahlung ── */
         if ($status === 'paid' && $invoice['patient_id']) {

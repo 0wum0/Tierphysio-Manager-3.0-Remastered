@@ -61,6 +61,10 @@ class Config
                 'path'     => $this->rootPath . '/storage',
                 'max_size' => (int)($_ENV['UPLOAD_MAX_SIZE'] ?? 10485760),
             ],
+            'push' => [
+                'server_url'      => $_ENV['PUSH_SERVER_URL']      ?? '',
+                'internal_secret' => $_ENV['PUSH_INTERNAL_SECRET'] ?? '',
+            ],
         ];
     }
 
