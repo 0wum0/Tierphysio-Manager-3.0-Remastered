@@ -106,6 +106,15 @@ class PushIntegrationController extends Controller
 
         $existing = $this->getExistingIntegration();
 
+        // DB credentials — push-thera uses the same database
+        $dbConfig = $this->config->get('db');
+
+        // CORS origins — derive from platform URLs
+        $appUrl      = rtrim($this->config->get('platform.app_url') ?? $this->config->get('app.url') ?? '', '/');
+        $platformUrl = rtrim($this->config->get('platform.url') ?? '', '/');
+        $corsOrigins = implode(',', array_filter(array_unique([$appUrl, $platformUrl])))
+            ?: 'https://app.therapano.de,https://portal.therapano.de';
+
         $this->json([
             'saas_url'            => 'https://' . $saasUrl,
             'saas_name'           => 'TheraPano SaaS',
@@ -115,7 +124,16 @@ class PushIntegrationController extends Controller
             'existing_client_id'  => $existing['client_id'] ?? null,
             'admin_email'         => $admin['admin_email'],
             'admin_role'          => $admin['admin_role'],
+            'cors_origins'        => $corsOrigins,
             'discovery_at'        => date('c'),
+            // DB credentials for push-thera bootstrap (HTTPS + integration token protected)
+            'db' => [
+                'host'     => $dbConfig['host']     ?? 'localhost',
+                'port'     => (int)($dbConfig['port'] ?? 3306),
+                'database' => $dbConfig['database'] ?? '',
+                'username' => $dbConfig['username'] ?? '',
+                'password' => $dbConfig['password'] ?? '',
+            ],
         ]);
     }
 
