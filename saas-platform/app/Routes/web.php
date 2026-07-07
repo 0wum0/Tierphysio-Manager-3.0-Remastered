@@ -23,11 +23,18 @@ use Saas\Controllers\RegistrationController;
 use Saas\Controllers\FeaturesController;
 use Saas\Controllers\TenantAuthController;
 use Saas\Controllers\TenantAccountController;
+use Saas\Controllers\PushIntegrationController;
 
 // ── License API (called by Praxissoftware) ─────────────────────────────────
 $router->post('/api/license/verify',  [LicenseApiController::class, 'verify']);
 $router->get('/api/license/check',    [LicenseApiController::class, 'check']);
 $router->post('/api/license/token',   [LicenseApiController::class, 'token']);
+
+// ── Push Integration API (called by push-thera during pairing) ─────────────
+$router->post('/api/push/connect',              [PushIntegrationController::class, 'connect']);
+$router->get('/api/push/discovery',             [PushIntegrationController::class, 'discovery']);
+$router->post('/api/push/register-integration', [PushIntegrationController::class, 'registerIntegration']);
+$router->get('/api/push/status',                [PushIntegrationController::class, 'status']);
 
 // ── Landing Page ────────────────────────────────────────────────────────────
 $router->get('/', [TenantAuthController::class, 'landing']);
