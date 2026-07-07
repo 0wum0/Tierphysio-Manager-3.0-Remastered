@@ -196,6 +196,88 @@ class Application
             } else {
                 $view->addGlobal('server_ui_settings', 'null');
             }
+
+            // ── Push notification config ──────────────────────────────────────
+            // Reads push-thera connection data from saas_settings (written during
+            // the SaaS→push-thera pairing wizard) and generates a short-lived JWT
+            // so the browser can authenticate directly against push-thera.
+            if ($db !== null) {
+                try {
+                    $pushRows = $db->fetchAll(
+                        "SELECT `key`, `value` FROM saas_settings WHERE `key` LIKE 'push_%'"
+                    );
+                    $ps = [];
+                    foreach ($pushRows as $row) { $ps[$row['key']] = $row['value']; }
+
+                    $pushUrl    = $ps['push_server_url']            ?? '';
+                    $pushSecret = $ps['push_internal_secret_plain'] ?? '';
+                    $vapidKey   = $ps['push_vapid_public_key']      ?? '';
+                    $pushOn     = ($ps['push_enabled'] ?? '0') === '1';
+
+                    if ($pushOn && $pushUrl !== '' && $pushSecret !== '') {
+                        $b64url = static fn(string $s): string
+                            => rtrim(strtr(base64_encode($s), '+/', '-_'), '=');
+                        $now = time();
+                        $hdr = $b64url(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
+
+                        // Staff user — app.therapano.de
+                        $userId = (int)($session->get('user_id') ?? 0);
+                        if ($userId && $db->getPrefix() !== '') {
+                            $tenantId = abs(crc32($db->getPrefix()));
+                            $role     = $session->get('user_role', 'therapeut');
+                            $pay = $b64url(json_encode([
+                                'tenant_id' => $tenantId,
+                                'user_id'   => $userId,
+                                'role'      => $role,
+                                'app_type'  => 'therapist_trainer',
+                                'iat'       => $now,
+                                'exp'       => $now + 86400,
+                                'iss'       => 'therapano',
+                            ]));
+                            $sig = $b64url(hash_hmac('sha256', "$hdr.$pay", $pushSecret, true));
+                            $view->addGlobal('push_config', [
+                                'server_url'       => $pushUrl,
+                                'token'            => "$hdr.$pay.$sig",
+                                'vapid_public_key' => $vapidKey,
+                                'user_id'          => $userId,
+                                'tenant_id'        => $tenantId,
+                                'role'             => $role,
+                                'app_type'         => 'therapist_trainer',
+                                'enable_web_push'  => $vapidKey !== '',
+                            ]);
+                        }
+
+                        // Portal owner — portal.therapano.de
+                        $portalUserId = (int)($session->get('owner_portal_user_id') ?? 0);
+                        if ($portalUserId) {
+                            $pfx      = $session->get('portal_tenant_prefix', '') ?: $db->getPrefix();
+                            $tenantId = $pfx !== '' ? abs(crc32($pfx)) : 0;
+                            $pay = $b64url(json_encode([
+                                'tenant_id' => $tenantId,
+                                'user_id'   => $portalUserId,
+                                'role'      => 'owner',
+                                'app_type'  => 'owner',
+                                'iat'       => $now,
+                                'exp'       => $now + 86400,
+                                'iss'       => 'therapano',
+                            ]));
+                            $sig = $b64url(hash_hmac('sha256', "$hdr.$pay", $pushSecret, true));
+                            $view->addGlobal('push_config', [
+                                'server_url'       => $pushUrl,
+                                'token'            => "$hdr.$pay.$sig",
+                                'vapid_public_key' => $vapidKey,
+                                'user_id'          => $portalUserId,
+                                'tenant_id'        => $tenantId,
+                                'role'             => 'owner',
+                                'app_type'         => 'owner',
+                                'enable_web_push'  => $vapidKey !== '',
+                            ]);
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    error_log('[push bootstrap] ' . $e->getMessage());
+                }
+            }
         }
 
         $this->router = new Router($this->container);

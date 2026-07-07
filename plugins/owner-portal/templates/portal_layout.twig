@@ -403,6 +403,23 @@
 </script>
 {% endif %}
 
+{% if push_config is defined and push_config.server_url is defined and push_config.server_url and push_config.token is defined and push_config.token %}
+<script>
+window.PUSH_CONFIG = {
+    serverUrl:      {{ push_config.server_url|json_encode|raw }},
+    token:          {{ push_config.token|json_encode|raw }},
+    vapidPublicKey: {{ (push_config.vapid_public_key ?? '')|json_encode|raw }},
+    userId:         {{ push_config.user_id|default(0) }},
+    tenantId:       {{ push_config.tenant_id|default(0) }},
+    role:           {{ push_config.role|default('owner')|json_encode|raw }},
+    appType:        {{ push_config.app_type|default('owner')|json_encode|raw }},
+    enableWebPush:  {{ push_config.enable_web_push|default(false) ? 'true' : 'false' }},
+};
+</script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
+<script src="/assets/js/push-notifications.js?v={{ 'now'|date('YmdHi') }}" defer></script>
+{% endif %}
+
 {# ── Cron-Pixel: triggert automatisch faellige Jobs im Hintergrund ── #}
 <img src="/cron/pixel.gif" width="1" height="1" alt="" style="position:absolute;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none;" aria-hidden="true">
 

@@ -195,6 +195,9 @@ class PushIntegrationController extends Controller
             );
         }
 
+        // Write push settings to saas_settings so tenant app and portal can auto-discover
+        $this->savePushSettings($pushServerUrl, $vapidPublicKey, $internalSecret);
+
         // Invalidate the used token
         $this->invalidateToken($admin['token_hash']);
 
@@ -266,6 +269,31 @@ class PushIntegrationController extends Controller
             );
         } catch (\Throwable) {
             return false;
+        }
+    }
+
+    /**
+     * Write push configuration to saas_settings so the tenant app and owner portal
+     * can discover push-thera automatically without manual .env setup.
+     * The internal_secret is stored in plaintext here (server-side only) so PHP
+     * can sign short-lived JWTs for browser clients.
+     */
+    private function savePushSettings(string $url, string $vapid, string $secret): void
+    {
+        $rows = [
+            ['push_server_url',            rtrim($url, '/')],
+            ['push_vapid_public_key',      $vapid],
+            ['push_internal_secret_plain', $secret],
+            ['push_enabled',               '1'],
+        ];
+        foreach ($rows as [$key, $value]) {
+            if ($value === '') continue;
+            try {
+                $this->db->execute(
+                    "INSERT INTO saas_settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)",
+                    [$key, $value]
+                );
+            } catch (\Throwable) {}
         }
     }
 
