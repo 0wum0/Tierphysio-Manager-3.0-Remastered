@@ -52,6 +52,11 @@ class Router
         }
 
         http_response_code(404);
+        if (str_starts_with($uri, '/api/')) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['error' => 'Not found', 'path' => $uri]);
+            return;
+        }
         $view = $this->container->get(View::class);
         echo $view->render('errors/404.twig', ['message' => 'Seite nicht gefunden']);
     }
