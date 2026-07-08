@@ -624,12 +624,14 @@ class InvoiceRepository extends Repository
         } catch (\Throwable) {}
 
         try {
+            $pu = $this->t('owner_portal_users');
             $newlyOverdue = $this->db->fetchAll(
                 "SELECT i.id, i.total_gross, i.owner_id,
                         CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
-                        o.mobile_user_id
+                        pu.id AS portal_user_id
                  FROM `{$this->t('invoices')}` i
                  LEFT JOIN `{$this->t('owners')}` o ON o.id = i.owner_id
+                 LEFT JOIN `{$pu}` pu ON pu.owner_id = o.id AND pu.is_active = 1
                  WHERE i.status = 'open'
                    AND i.due_date IS NOT NULL
                    AND i.due_date < CURDATE()
