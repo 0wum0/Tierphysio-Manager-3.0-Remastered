@@ -36,16 +36,19 @@ class AppointmentPushReminderService
         $own  = $this->db->prefix('owners');
         $usrs = $this->db->prefix('users');
 
+        $pu = $this->db->prefix('owner_portal_users');
+
         // ── 24-hour reminder ─────────────────────────────────────────────────
         try {
             $rows24 = $this->db->fetchAll(
                 "SELECT a.id, a.start_at, a.owner_id,
                         COALESCE(a.title, p.name, 'Termin') AS label,
                         CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
-                        o.mobile_user_id
+                        pu.id AS portal_user_id
                  FROM `{$apt}` a
                  LEFT JOIN `{$pat}` p ON p.id = a.patient_id
                  LEFT JOIN `{$own}` o ON o.id = a.owner_id
+                 LEFT JOIN `{$pu}` pu ON pu.owner_id = o.id AND pu.is_active = 1
                  WHERE a.push_24h_sent = 0
                    AND a.status NOT IN ('cancelled','noshow')
                    AND a.start_at BETWEEN DATE_ADD(NOW(), INTERVAL 23 HOUR)
@@ -69,9 +72,9 @@ class AppointmentPushReminderService
                         'appointment', (int)$row['id']
                     );
 
-                    if (!empty($row['mobile_user_id'])) {
+                    if (!empty($row['portal_user_id'])) {
                         $this->push->notifyOwner(
-                            $tenantId, (int)$row['mobile_user_id'],
+                            $tenantId, (int)$row['portal_user_id'],
                             'appointment_booked',
                             "Ihr Termin ist morgen um {$time} Uhr: {$label}",
                             ['screen' => 'calendar', 'appointment_id' => (int)$row['id']],
@@ -98,10 +101,11 @@ class AppointmentPushReminderService
                 "SELECT a.id, a.start_at, a.owner_id,
                         COALESCE(a.title, p.name, 'Termin') AS label,
                         CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
-                        o.mobile_user_id
+                        pu.id AS portal_user_id
                  FROM `{$apt}` a
                  LEFT JOIN `{$pat}` p ON p.id = a.patient_id
                  LEFT JOIN `{$own}` o ON o.id = a.owner_id
+                 LEFT JOIN `{$pu}` pu ON pu.owner_id = o.id AND pu.is_active = 1
                  WHERE a.push_1h_sent = 0
                    AND a.status NOT IN ('cancelled','noshow')
                    AND a.start_at BETWEEN DATE_ADD(NOW(), INTERVAL 50 MINUTE)
@@ -124,9 +128,9 @@ class AppointmentPushReminderService
                         'high'
                     );
 
-                    if (!empty($row['mobile_user_id'])) {
+                    if (!empty($row['portal_user_id'])) {
                         $this->push->notifyOwner(
-                            $tenantId, (int)$row['mobile_user_id'],
+                            $tenantId, (int)$row['portal_user_id'],
                             'appointment_booked',
                             "Ihr Termin beginnt in 1 Stunde um {$time} Uhr: {$label}",
                             ['screen' => 'calendar', 'appointment_id' => (int)$row['id']],

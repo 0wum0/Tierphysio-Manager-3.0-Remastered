@@ -169,11 +169,11 @@ class MessagingAdminController extends Controller
         }
 
         /* Push notification to owner */
-        if (!empty($thread['owner_mobile_user_id'])) {
+        if (!empty($thread['owner_portal_user_id'])) {
             try {
                 $this->push->notifyOwner(
                     $this->push->currentTenantId(),
-                    (int)$thread['owner_mobile_user_id'],
+                    (int)$thread['owner_portal_user_id'],
                     'new_message',
                     'Neue Nachricht: ' . $thread['subject'],
                     ['screen' => 'message_detail'],
@@ -262,11 +262,11 @@ class MessagingAdminController extends Controller
             );
         } catch (\Throwable) {}
 
-        if (!empty($thread['owner_mobile_user_id'])) {
+        if (!empty($thread['owner_portal_user_id'])) {
             try {
                 $this->push->notifyOwner(
                     $this->push->currentTenantId(),
-                    (int)$thread['owner_mobile_user_id'],
+                    (int)$thread['owner_portal_user_id'],
                     'new_message',
                     'Neue Nachricht: ' . $thread['subject'],
                     ['screen' => 'message_detail'],
@@ -362,11 +362,11 @@ class MessagingAdminController extends Controller
                 );
             } catch (\Throwable) {}
 
-            if (!empty($thread['owner_mobile_user_id'])) {
+            if (!empty($thread['owner_portal_user_id'])) {
                 try {
                     $this->push->notifyOwner(
                         $this->push->currentTenantId(),
-                        (int)$thread['owner_mobile_user_id'],
+                        (int)$thread['owner_portal_user_id'],
                         'new_message',
                         'Neue Nachricht: ' . $subject,
                         ['screen' => 'message_detail'],

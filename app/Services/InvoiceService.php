@@ -188,10 +188,10 @@ class InvoiceService
                 );
             } catch (\Throwable) {}
 
-            if (!empty($inv['mobile_user_id'])) {
+            if (!empty($inv['portal_user_id'])) {
                 try {
                     $this->push->notifyOwner(
-                        $tenantId, (int)$inv['mobile_user_id'],
+                        $tenantId, (int)$inv['portal_user_id'],
                         'invoice_overdue',
                         "Ihre Rechnung über {$amount} ist überfällig. Bitte begleichen Sie den Betrag.",
                         ['screen' => 'invoices', 'invoice_id' => $invId],
