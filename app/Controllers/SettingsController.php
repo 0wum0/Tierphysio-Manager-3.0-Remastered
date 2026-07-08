@@ -165,7 +165,6 @@ class SettingsController extends Controller
             'pdf_header_style', 'pdf_logo_position', 'pdf_logo_width', 'pdf_margin',
             'pdf_show_logo', 'pdf_show_patient', 'pdf_show_chip',
             'pdf_show_page_numbers', 'pdf_show_iban', 'pdf_show_tax_number', 'pdf_show_website',
-            'pdf_show_qr',
             'pdf_zebra_rows', 'pdf_watermark',
             'pdf_footer_text', 'pdf_intro_text', 'pdf_closing_text',
             'calendar_cron_secret',
