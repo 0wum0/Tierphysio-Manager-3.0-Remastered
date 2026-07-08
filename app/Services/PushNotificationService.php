@@ -66,7 +66,32 @@ class PushNotificationService
     ) {
         $this->serverUrl      = rtrim((string)($config->get('push.server_url') ?? ''), '/');
         $this->internalSecret = (string)($config->get('push.internal_secret') ?? '');
-        $this->enabled        = $this->serverUrl !== '' && $this->internalSecret !== '';
+
+        // Fallback: wenn .env nicht gesetzt, aus saas_settings lesen (nach Pairing automatisch befüllt)
+        if ($this->serverUrl === '' || $this->internalSecret === '') {
+            try {
+                $rows = $db->fetchAll(
+                    "SELECT `key`, `value` FROM `saas_settings`
+                     WHERE `key` IN ('push_server_url','push_internal_secret_plain','push_enabled')"
+                );
+                $ps = [];
+                foreach ($rows as $row) {
+                    $ps[$row['key']] = $row['value'];
+                }
+                if (($ps['push_enabled'] ?? '0') === '1') {
+                    if ($this->serverUrl === '') {
+                        $this->serverUrl = rtrim((string)($ps['push_server_url'] ?? ''), '/');
+                    }
+                    if ($this->internalSecret === '') {
+                        $this->internalSecret = (string)($ps['push_internal_secret_plain'] ?? '');
+                    }
+                }
+            } catch (\Throwable) {
+                // saas_settings nicht verfügbar — ignorieren
+            }
+        }
+
+        $this->enabled = $this->serverUrl !== '' && $this->internalSecret !== '';
     }
 
     /**

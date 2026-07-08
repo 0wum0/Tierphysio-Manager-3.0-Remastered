@@ -13,13 +13,15 @@ use App\Core\Database;
 use App\Repositories\SettingsRepository;
 use App\Services\MailService;
 use App\Services\MediaOptimizerService;
+use App\Services\PushNotificationService;
 
 class MessagingOwnerController extends Controller
 {
-    private MessagingRepository  $repo;
-    private OwnerPortalRepository $portalRepo;
-    private MessagingMailService  $mailer;
-    private SettingsRepository    $settingsRepository;
+    private MessagingRepository    $repo;
+    private OwnerPortalRepository  $portalRepo;
+    private MessagingMailService   $mailer;
+    private SettingsRepository     $settingsRepository;
+    private PushNotificationService $push;
 
     private function isHomeworkEnabled(): bool
     {
@@ -33,13 +35,15 @@ class MessagingOwnerController extends Controller
         Translator $translator,
         Database $db,
         SettingsRepository $settingsRepository,
-        MailService $mailService
+        MailService $mailService,
+        PushNotificationService $push
     ) {
         parent::__construct($view, $session, $config, $translator);
         $this->repo               = new MessagingRepository($db);
         $this->portalRepo         = new OwnerPortalRepository($db);
         $this->mailer             = new MessagingMailService($settingsRepository, $mailService);
         $this->settingsRepository = $settingsRepository;
+        $this->push               = $push;
     }
 
     private const ALLOWED_MIME = [
@@ -194,6 +198,8 @@ class MessagingOwnerController extends Controller
             $this->repo->reopenThread($id);
         }
 
+        $ownerName = trim(($portalUser['first_name'] ?? '') . ' ' . ($portalUser['last_name'] ?? ''));
+
         /* Notify admin by e-mail */
         try {
             $adminEmail = $this->settingsRepository->get('mail_from', '');
@@ -201,7 +207,6 @@ class MessagingOwnerController extends Controller
                 $adminEmail = $this->settingsRepository->get('smtp_user', '');
             }
             if ($adminEmail !== '') {
-                $ownerName = trim(($portalUser['first_name'] ?? '') . ' ' . ($portalUser['last_name'] ?? ''));
                 $this->mailer->notifyAdminNewMessage(
                     $adminEmail,
                     $ownerName,
@@ -212,7 +217,17 @@ class MessagingOwnerController extends Controller
             }
         } catch (\Throwable) {}
 
-        $ownerName = trim(($portalUser['first_name'] ?? '') . ' ' . ($portalUser['last_name'] ?? ''));
+        /* Push notification to all therapists */
+        try {
+            $this->push->notifyAllTherapists(
+                $this->push->currentTenantId(),
+                'new_message_staff',
+                "Neue Nachricht von {$ownerName}: " . $thread['subject'],
+                ['screen' => 'message_detail'],
+                'message', $id
+            );
+        } catch (\Throwable) {}
+
         $this->json([
             'ok'          => true,
             'id'          => $msgId,
@@ -283,15 +298,25 @@ class MessagingOwnerController extends Controller
             $this->repo->reopenThread($id);
         }
 
+        $ownerName = trim(($portalUser['first_name'] ?? '') . ' ' . ($portalUser['last_name'] ?? ''));
+
         try {
             $adminEmail = $this->settingsRepository->get('mail_from', '') ?: $this->settingsRepository->get('smtp_user', '');
             if ($adminEmail !== '') {
-                $ownerName = trim(($portalUser['first_name'] ?? '') . ' ' . ($portalUser['last_name'] ?? ''));
                 $this->mailer->notifyAdminNewMessage($adminEmail, $ownerName, $id, $thread['subject'], $body ?: '[Dateianhang: ' . $attachName . ']');
             }
         } catch (\Throwable) {}
 
-        $ownerName = trim(($portalUser['first_name'] ?? '') . ' ' . ($portalUser['last_name'] ?? ''));
+        try {
+            $this->push->notifyAllTherapists(
+                $this->push->currentTenantId(),
+                'new_message_staff',
+                "Neue Nachricht von {$ownerName}: " . $thread['subject'],
+                ['screen' => 'message_detail'],
+                'message', $id
+            );
+        } catch (\Throwable) {}
+
         $this->json([
             'ok'              => true,
             'id'              => $msgId,
@@ -392,14 +417,15 @@ class MessagingOwnerController extends Controller
         $threadId = $this->repo->createThread($ownerId, $subject, 'owner');
         $this->repo->addMessage($threadId, 'owner', (int)$portalUser['id'], $body);
 
-        /* Notify admin */
+        $ownerName = trim(($portalUser['first_name'] ?? '') . ' ' . ($portalUser['last_name'] ?? ''));
+
+        /* Notify admin by e-mail */
         try {
             $adminEmail = $this->settingsRepository->get('mail_from', '');
             if ($adminEmail === '') {
                 $adminEmail = $this->settingsRepository->get('smtp_user', '');
             }
             if ($adminEmail !== '') {
-                $ownerName = trim(($portalUser['first_name'] ?? '') . ' ' . ($portalUser['last_name'] ?? ''));
                 $this->mailer->notifyAdminNewMessage(
                     $adminEmail,
                     $ownerName,
@@ -408,6 +434,17 @@ class MessagingOwnerController extends Controller
                     $body
                 );
             }
+        } catch (\Throwable) {}
+
+        /* Push notification to all therapists */
+        try {
+            $this->push->notifyAllTherapists(
+                $this->push->currentTenantId(),
+                'new_message_staff',
+                "Neue Nachricht von {$ownerName}: " . $subject,
+                ['screen' => 'message_detail'],
+                'message', $threadId
+            );
         } catch (\Throwable) {}
 
         $this->json(['ok' => true, 'thread_id' => $threadId]);

@@ -464,6 +464,12 @@
                             <span style="font-size:0.82rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-muted);">Benachrichtigungen</span>
                             <button data-push-mark-all-read style="background:none;border:none;color:var(--accent);font-size:0.75rem;font-weight:600;cursor:pointer;padding:0;">Alle gelesen</button>
                         </div>
+                        {% if push_config.enable_web_push ?? false %}
+                        <div id="push-permission-banner" style="display:none;align-items:center;gap:0.5rem;padding:0.6rem 1rem;background:var(--accent-alpha,rgba(99,102,241,.1));border-bottom:1px solid var(--glass-border);flex-shrink:0;">
+                            <span style="font-size:0.78rem;color:var(--text-secondary);flex:1;">🔔 Benachrichtigungen im Browser erlauben?</span>
+                            <button data-push-request-permission style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:0.25rem 0.65rem;font-size:0.75rem;font-weight:600;cursor:pointer;">Aktivieren</button>
+                        </div>
+                        {% endif %}
                         <div id="push-notification-list" style="overflow-y:auto;flex:1;">
                             <div class="push-center__empty" style="padding:1.25rem 1rem;text-align:center;font-size:0.85rem;color:var(--text-muted);">
                                 Keine Benachrichtigungen
