@@ -203,11 +203,9 @@ class Application
             // so the browser can authenticate directly against push-thera.
             if ($db !== null) {
                 try {
-                    $pushRows = $db->fetchAll(
-                        "SELECT `key`, `value` FROM saas_settings WHERE `key` LIKE 'push_%'"
-                    );
-                    $ps = [];
-                    foreach ($pushRows as $row) { $ps[$row['key']] = $row['value']; }
+                    // saas_settings liegt in der SaaS-DB — der Loader probiert erst die
+                    // App-DB (Shared-DB-Setup) und fällt sonst auf saas_db.* zurück
+                    $ps = \App\Services\PushNotificationService::loadPushSettings($config, $db);
 
                     $pushUrl    = $ps['push_server_url']            ?? '';
                     $pushSecret = $ps['push_internal_secret_plain'] ?? '';

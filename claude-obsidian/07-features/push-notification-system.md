@@ -36,6 +36,24 @@
 ### Neue Helfer
 - `PushNotificationService::notifyAllOwners()` — alle aktiven Portal-Besitzer eines Tenants.
 - `PushAdminNotificationService::notifyTenantUser()` — SaaS → einzelner Praxis-User via /internal/notify.
+- `PushNotificationService::loadPushSettings()` — zentraler Loader für push_* aus saas_settings.
+
+### Nachtrag 2026-07-08 (2. Runde): saas_settings liegt in der SaaS-DB!
+**Symptom:** Banner erschien im SaaS, aber NICHT in Web-App/Portal.
+**Ursache:** `saas_settings` existiert nur in der **SaaS-Datenbank** (config `saas_db.*` /
+`SAAS_DB_DATABASE`), nicht in der Tenant-DB der Praxis-App. Der Push-Bootstrap in
+`app/Core/Application.php` und der Fallback im `PushNotificationService` lasen aber über
+die App-DB-Verbindung → Query scheiterte still → kein `push_config` → kein Banner und
+keine ausgehenden Pushes aus der App.
+**Fix:** `PushNotificationService::loadPushSettings(Config, Database)` — probiert erst die
+App-DB (Shared-DB-Setup), fällt sonst auf ein `saas_db.*`-PDO zurück (gleiches Muster wie
+`Application::resolveTenantPrefix()` und `FeedbackController::getSaasDb()`). Request-weiter Cache.
+
+### Feedback-CSRF-Fix (gleiche Runde)
+„Ungültiger CSRF-Token" beim Support-Formular: Häufigste Ursache ist ein Anhang über
+`post_max_size` — PHP verwirft dann `$_POST` komplett, der Token fehlt. Jetzt: klare
+413-Meldung bei verworfenem POST, Header-Fallback `X-CSRF-Token` (JS sendet ihn mit),
+`?:` statt `??` (leeres Feld blockierte den Header-Fallback), CSRF-Mismatch wird geloggt.
 
 ## Architektur
 

@@ -71,6 +71,9 @@ class PushNotificationService
         'invoice_overdue'              => 'Rechnung überfällig',
     ];
 
+    /** @var array<string,string>|null Request-weiter Cache der push_* saas_settings */
+    private static ?array $settingsCache = null;
+
     public function __construct(
         private readonly \App\Core\Config $config,
         private readonly Database $db
@@ -80,29 +83,79 @@ class PushNotificationService
 
         // Fallback: wenn .env nicht gesetzt, aus saas_settings lesen (nach Pairing automatisch befüllt)
         if ($this->serverUrl === '' || $this->internalSecret === '') {
-            try {
-                $rows = $db->fetchAll(
-                    "SELECT `key`, `value` FROM `saas_settings`
-                     WHERE `key` IN ('push_server_url','push_internal_secret_plain','push_enabled')"
-                );
-                $ps = [];
-                foreach ($rows as $row) {
-                    $ps[$row['key']] = $row['value'];
+            $ps = self::loadPushSettings($config, $db);
+            if (($ps['push_enabled'] ?? '0') === '1') {
+                if ($this->serverUrl === '') {
+                    $this->serverUrl = rtrim((string)($ps['push_server_url'] ?? ''), '/');
                 }
-                if (($ps['push_enabled'] ?? '0') === '1') {
-                    if ($this->serverUrl === '') {
-                        $this->serverUrl = rtrim((string)($ps['push_server_url'] ?? ''), '/');
-                    }
-                    if ($this->internalSecret === '') {
-                        $this->internalSecret = (string)($ps['push_internal_secret_plain'] ?? '');
-                    }
+                if ($this->internalSecret === '') {
+                    $this->internalSecret = (string)($ps['push_internal_secret_plain'] ?? '');
                 }
-            } catch (\Throwable) {
-                // saas_settings nicht verfügbar — ignorieren
             }
         }
 
         $this->enabled = $this->serverUrl !== '' && $this->internalSecret !== '';
+    }
+
+    /**
+     * Lädt alle push_* Einträge aus saas_settings.
+     *
+     * WICHTIG: saas_settings liegt in der SaaS-Datenbank (config saas_db.*),
+     * NICHT zwingend in der Tenant-DB der Praxis-App. Bei getrennten
+     * Datenbanken schlägt die Abfrage über die App-Verbindung fehl — dann
+     * wird direkt die SaaS-DB angesprochen (gleiches Muster wie
+     * FeedbackController::getSaasDb()). Ergebnis wird pro Request gecacht.
+     *
+     * @return array<string,string>
+     */
+    public static function loadPushSettings(\App\Core\Config $config, Database $db): array
+    {
+        if (self::$settingsCache !== null) {
+            return self::$settingsCache;
+        }
+
+        $ps = [];
+
+        // 1) Shared-DB-Installation: saas_settings existiert in derselben DB
+        try {
+            $rows = $db->fetchAll(
+                "SELECT `key`, `value` FROM `saas_settings` WHERE `key` LIKE 'push_%'"
+            );
+            foreach ($rows as $row) {
+                $ps[$row['key']] = (string)$row['value'];
+            }
+        } catch (\Throwable) {
+            // Tabelle nicht in der App-DB — unten über die SaaS-DB versuchen
+        }
+
+        // 2) Getrennte Datenbanken: direkt die SaaS-DB abfragen
+        if ($ps === []) {
+            $saasDbName = (string)($config->get('saas_db.database') ?? '');
+            if ($saasDbName !== '') {
+                try {
+                    $dsn = sprintf(
+                        'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
+                        $config->get('saas_db.host', 'localhost'),
+                        (int)$config->get('saas_db.port', 3306),
+                        $saasDbName
+                    );
+                    $pdo = new \PDO($dsn, $config->get('saas_db.username'), $config->get('saas_db.password'), [
+                        \PDO::ATTR_ERRMODE            => \PDO::ERRMODE_EXCEPTION,
+                        \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+                        \PDO::ATTR_TIMEOUT            => 3,
+                    ]);
+                    $stmt = $pdo->query("SELECT `key`, `value` FROM `saas_settings` WHERE `key` LIKE 'push_%'");
+                    foreach ($stmt->fetchAll() as $row) {
+                        $ps[$row['key']] = (string)$row['value'];
+                    }
+                } catch (\Throwable $e) {
+                    error_log('[PushNotificationService] SaaS-DB saas_settings nicht erreichbar: ' . $e->getMessage());
+                }
+            }
+        }
+
+        self::$settingsCache = $ps;
+        return $ps;
     }
 
     /**

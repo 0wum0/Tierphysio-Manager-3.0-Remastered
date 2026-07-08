@@ -34,10 +34,26 @@ class FeedbackController
             return;
         }
 
-        $token = $this->post('_csrf_token') ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+        /* post_max_size überschritten → PHP verwirft $_POST komplett und der
+         * CSRF-Check würde irreführend fehlschlagen. Klar melden statt raten. */
+        if (empty($_POST) && empty($_FILES) && (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 0) {
+            http_response_code(413);
+            echo json_encode(['error' => 'Anhang zu groß — die Upload-Grenze des Servers wurde überschritten. Bitte kleinere Datei wählen.']);
+            return;
+        }
+
+        /* Token aus Formularfeld, sonst aus Header (?: statt ??, damit ein
+         * leeres Feld nicht den Header-Fallback blockiert). */
+        $token = (string)($this->post('_csrf_token') ?: ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? ''));
         if (!$this->session->validateCsrfToken($token)) {
+            error_log(sprintf(
+                '[FeedbackController] CSRF-Mismatch bei submit: token_leer=%d session_hat_token=%d user_id=%s',
+                $token === '' ? 1 : 0,
+                isset($_SESSION['_csrf_token']) ? 1 : 0,
+                (string)($user['id'] ?? '?')
+            ));
             http_response_code(403);
-            echo json_encode(['error' => 'Ungültiger CSRF-Token.']);
+            echo json_encode(['error' => 'Sitzung abgelaufen oder Token ungültig — bitte Seite neu laden und erneut senden.']);
             return;
         }
 
@@ -199,7 +215,7 @@ class FeedbackController
             return;
         }
 
-        $token = $this->post('_csrf_token') ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+        $token = (string)($this->post('_csrf_token') ?: ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? ''));
         if (!$this->session->validateCsrfToken($token)) {
             http_response_code(403);
             echo json_encode(['error' => 'CSRF invalid']);
@@ -246,7 +262,7 @@ class FeedbackController
             return;
         }
 
-        $token = $this->post('_csrf_token') ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+        $token = (string)($this->post('_csrf_token') ?: ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? ''));
         if (!$this->session->validateCsrfToken($token)) {
             http_response_code(403);
             echo json_encode(['error' => 'Ungültiger CSRF-Token.']);

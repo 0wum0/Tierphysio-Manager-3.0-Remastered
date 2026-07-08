@@ -1030,10 +1030,14 @@ body[data-chat-bar="1"] #feedback-fab { bottom: 5rem; }
         if (errBox) errBox.style.display = 'none';
 
         var fd = new FormData(form);
+        var csrfEl = document.getElementById('feedback-csrf');
 
         fetch('/feedback/submit', {
             method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-Token': csrfEl ? csrfEl.value : '',
+            },
             body: fd,
         })
         .then(function (r) { return r.json().then(function(d){ return { ok: r.ok, data: d }; }); })
