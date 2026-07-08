@@ -46,7 +46,7 @@ class PdfService
         $showIban      = ($settings['pdf_show_iban']        ?? '1') === '1';
         $showTaxNum    = ($settings['pdf_show_tax_number']  ?? '1') === '1';
         $showWebsite   = ($settings['pdf_show_website']     ?? '0') === '1';
-        $showQr        = ($settings['pdf_show_qr']          ?? '1') === '1';
+        $showQr        = true;
         $watermark        = trim($settings['pdf_watermark']    ?? '');
         $closingText      = trim($settings['pdf_closing_text'] ?? '');
         $kleinunternehmer = ($settings['kleinunternehmer']   ?? '0') === '1';
