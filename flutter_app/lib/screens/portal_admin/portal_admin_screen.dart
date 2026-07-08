@@ -175,10 +175,18 @@ class _PortalAdminScreenState extends State<PortalAdminScreen>
 
   // ── Homework Plan Actions ────────────────────────────────────────────────
 
-  void _showCreatePlan() {
-    final titleCtrl = TextEditingController();
-    final descCtrl  = TextEditingController();
-    String? selectedTemplate;
+  Future<void> _showCreatePlan() async {
+    List<dynamic> patients;
+    try {
+      final data = await _api.patients(perPage: 500);
+      patients = List<dynamic>.from(data['items'] as List? ?? []);
+    } catch (e) {
+      _showSnack('Patienten konnten nicht geladen werden.', error: true);
+      return;
+    }
+    if (!mounted) return;
+
+    int? selectedPatientId;
     showModalBottomSheet(
       context: context, isScrollControlled: true,
       builder: (ctx) => StatefulBuilder(builder: (ctx, ss) => Padding(
@@ -188,39 +196,32 @@ class _PortalAdminScreenState extends State<PortalAdminScreen>
           Text('Neuer Hausaufgabenplan',
             style: Theme.of(ctx).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
-          TextField(controller: titleCtrl,
-            decoration: const InputDecoration(labelText: 'Titel *', prefixIcon: Icon(Icons.assignment_rounded))),
-          const SizedBox(height: 10),
-          TextField(controller: descCtrl,
-            decoration: const InputDecoration(labelText: 'Beschreibung', prefixIcon: Icon(Icons.notes_rounded)),
-            maxLines: 2),
-          if (_templates.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            DropdownButtonFormField<String>(
-              initialValue: selectedTemplate,
-              decoration: const InputDecoration(labelText: 'Vorlage verwenden', prefixIcon: Icon(Icons.library_books_rounded)),
-              items: [
-                const DropdownMenuItem(value: null, child: Text('— Keine Vorlage —')),
-                ..._templates.map((t) => DropdownMenuItem(
-                  value: t['id'].toString(),
-                  child: Text(t['name'] as String? ?? '—'),
-                )),
-              ],
-              onChanged: (v) => ss(() => selectedTemplate = v),
-            ),
-          ],
+          DropdownButtonFormField<int>(
+            value: selectedPatientId,
+            decoration: const InputDecoration(labelText: 'Patient *', prefixIcon: Icon(Icons.pets_rounded)),
+            items: patients.map((p) => DropdownMenuItem<int>(
+              value: int.tryParse(p['id'].toString()),
+              child: Text('${p['name'] ?? '—'} (${p['owner_name'] ?? '?'})'),
+            )).toList(),
+            onChanged: (v) => ss(() => selectedPatientId = v),
+          ),
           const SizedBox(height: 20),
           SizedBox(width: double.infinity, child: FilledButton.icon(
             icon: const Icon(Icons.add_rounded),
             label: const Text('Plan erstellen'),
             onPressed: () async {
-              if (titleCtrl.text.trim().isEmpty) return;
+              if (selectedPatientId == null) return;
+              final pat = patients.firstWhere(
+                (p) => int.tryParse(p['id'].toString()) == selectedPatientId,
+                orElse: () => <String, dynamic>{},
+              );
+              final ownerId = pat['owner_id'];
               Navigator.pop(ctx);
               try {
                 await _api.homeworkPlanCreate({
-                  'title':       titleCtrl.text.trim(),
-                  'description': descCtrl.text.trim(),
-                  if (selectedTemplate != null) 'template_id': int.tryParse(selectedTemplate!),
+                  'patient_id': selectedPatientId,
+                  'owner_id':   ownerId,
+                  'plan_date':  DateTime.now().toIso8601String().substring(0, 10),
                 });
                 _showSnack('Plan erstellt ✓');
                 _loadPlans();

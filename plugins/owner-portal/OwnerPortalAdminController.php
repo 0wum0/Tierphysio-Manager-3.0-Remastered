@@ -386,22 +386,27 @@ class OwnerPortalAdminController extends Controller
             return;
         }
 
-        $planId = $this->repo->createHomeworkPlan([
-            'patient_id'        => $patientId,
-            'owner_id'          => $ownerId,
-            'plan_date'         => $this->post('plan_date', date('Y-m-d')),
-            'physio_principles' => $this->post('physio_principles', ''),
-            'short_term_goals'  => $this->post('short_term_goals', ''),
-            'long_term_goals'   => $this->post('long_term_goals', ''),
-            'therapy_means'     => $this->post('therapy_means', ''),
-            'general_notes'     => $this->post('general_notes', ''),
-            'next_appointment'  => $this->post('next_appointment', ''),
-            'therapist_name'    => $this->post('therapist_name', ''),
-            'status'            => 'active',
-            'created_by'        => $userId,
-        ]);
-
-        $this->repo->saveTasksForPlan($planId, $this->parseTasksFromPost());
+        try {
+            $planId = $this->repo->createHomeworkPlan([
+                'patient_id'        => $patientId,
+                'owner_id'          => $ownerId,
+                'plan_date'         => $this->post('plan_date', date('Y-m-d')),
+                'physio_principles' => $this->post('physio_principles', ''),
+                'short_term_goals'  => $this->post('short_term_goals', ''),
+                'long_term_goals'   => $this->post('long_term_goals', ''),
+                'therapy_means'     => $this->post('therapy_means', ''),
+                'general_notes'     => $this->post('general_notes', ''),
+                'next_appointment'  => $this->post('next_appointment', ''),
+                'therapist_name'    => $this->post('therapist_name', ''),
+                'status'            => 'active',
+                'created_by'        => $userId,
+            ]);
+            $this->repo->saveTasksForPlan($planId, $this->parseTasksFromPost());
+        } catch (\Throwable $e) {
+            $this->session->flash('error', 'Hausaufgabenplan konnte nicht gespeichert werden: ' . $e->getMessage());
+            $this->redirect('/portal-admin/tiere/' . $ownerId . '/hausaufgaben');
+            return;
+        }
 
         /* ── Email-Benachrichtigung an Besitzer ── */
         try {
