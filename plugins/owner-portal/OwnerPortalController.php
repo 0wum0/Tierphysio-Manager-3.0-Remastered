@@ -30,7 +30,8 @@ class OwnerPortalController extends Controller
         Translator $translator,
         Database $db,
         PdfService $pdfService,
-        SettingsRepository $settingsRepository
+        SettingsRepository $settingsRepository,
+        private readonly \App\Services\PushNotificationService $push
     ) {
         parent::__construct($view, $session, $config, $translator);
         $this->db                 = $db;
@@ -774,6 +775,23 @@ class OwnerPortalController extends Controller
                 'type'       => 'homework',
                 'checked'    => true,
             ]);
+
+            /* Push an alle Therapeuten/Trainer: Besitzer hat Aufgabe abgehakt */
+            try {
+                $this->push->notifyAllTherapists(
+                    0,
+                    'homework_completed',
+                    sprintf(
+                        '%s hat "%s" für %s erledigt',
+                        $ownerName,
+                        $taskTitle ?: 'eine Aufgabe',
+                        $petName ?: 'das Tier'
+                    ),
+                    ['screen' => 'patient', 'patient_id' => $patientId],
+                    'homework',
+                    $planId
+                );
+            } catch (\Throwable) {}
         }
 
         header('Content-Type: application/json');

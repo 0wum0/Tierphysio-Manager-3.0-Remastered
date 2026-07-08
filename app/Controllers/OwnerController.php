@@ -83,7 +83,7 @@ class OwnerController extends Controller
 
         // Push-Notification: Therapeuten über neuen Besitzer informieren
         try {
-            $tenantId = (int)$this->session->get('tenant_id');
+            $tenantId = $this->push->currentTenantId(); // crc32(prefix) — Session kennt kein 'tenant_id'
             if ($tenantId > 0) {
                 $ownerName = trim($data['first_name'] . ' ' . $data['last_name']);
                 $this->push->notifyAllTherapists(

@@ -16,7 +16,8 @@ class FeedbackController extends Controller
         View                       $view,
         Session                    $session,
         private Database           $db,
-        private NotificationRepository $notifRepo
+        private NotificationRepository $notifRepo,
+        private \Saas\Services\PushAdminNotificationService $pushAdmin
     ) {
         parent::__construct($view, $session);
     }
@@ -203,13 +204,34 @@ class FeedbackController extends Controller
 
         // Create SaaS notification
         try {
-            $fb = $this->db->fetch("SELECT tenant_name FROM feedback WHERE id = ?", [$id]);
+            $fb = $this->db->fetch("SELECT tenant_id, tenant_name, user_id, subject FROM feedback WHERE id = ?", [$id]);
             $this->notifRepo->create(
                 'feedback',
                 'Support-Antwort gesendet',
                 ($fb['tenant_name'] ?? 'Praxis') . ': Antwort auf Feedback #' . $id,
                 ['feedback_id' => $id]
             );
+
+            // Push an den Praxis-Nutzer, der das Feedback eingereicht hat
+            if (!empty($fb['tenant_id']) && !empty($fb['user_id'])) {
+                $tenant = $this->db->fetch(
+                    "SELECT db_name FROM tenants WHERE id = ?",
+                    [(int)$fb['tenant_id']]
+                );
+                if (!empty($tenant['db_name'])) {
+                    // Legacy-Zeilen speichern db_name ohne abschließenden Unterstrich —
+                    // normalisieren, sonst stimmt crc32(prefix) nicht mit dem Browser-JWT überein
+                    $prefix = rtrim((string)$tenant['db_name'], '_') . '_';
+                    $this->pushAdmin->notifyTenantUser(
+                        $prefix,
+                        (int)$fb['user_id'],
+                        'feedback_reply',
+                        'Antwort auf dein Feedback',
+                        'Support hat auf "' . mb_substr((string)($fb['subject'] ?: 'dein Feedback'), 0, 80) . '" geantwortet.',
+                        ['screen' => 'feedback', 'feedback_id' => $id]
+                    );
+                }
+            }
         } catch (\Throwable) {}
 
         $this->session->flash('success', 'Antwort gesendet.');

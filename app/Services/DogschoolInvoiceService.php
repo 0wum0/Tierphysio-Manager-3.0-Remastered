@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Core\Database;
 use App\Repositories\InvoiceRepository;
 use App\Repositories\SettingsRepository;
+use App\Services\PushNotificationService;
 
 /**
  * DogschoolInvoiceService
@@ -35,7 +36,25 @@ class DogschoolInvoiceService
         private readonly InvoiceService $invoiceService,
         private readonly SettingsRepository $settings,
         private readonly DogschoolSchemaService $schema,
+        private readonly PushNotificationService $push,
     ) {}
+
+    /** Push an den Besitzer: neue (automatische) Rechnung im Portal verfügbar. */
+    private function notifyOwnerNewInvoice(int $ownerId, int $invoiceId, string $context): void
+    {
+        try {
+            $tenantId    = $this->push->currentTenantId();
+            $ownerUserId = $this->push->resolveOwnerUserId($tenantId, $ownerId);
+            if ($ownerUserId) {
+                $this->push->notifyOwner(
+                    $tenantId, $ownerUserId, 'new_invoice',
+                    "Eine neue Rechnung wurde erstellt ({$context}).",
+                    ['screen' => 'invoice_detail', 'invoice_id' => $invoiceId],
+                    'invoice', $invoiceId
+                );
+            }
+        } catch (\Throwable) {}
+    }
 
     /**
      * Rechnung für eine Kurs-Einschreibung erstellen.
@@ -118,6 +137,8 @@ class DogschoolInvoiceService
             [$invoiceId, $enrollmentId]
         );
 
+        $this->notifyOwnerNewInvoice((int)$enrollment['owner_id'], $invoiceId, 'Kurs-Einschreibung');
+
         return $invoiceId;
     }
 
@@ -188,6 +209,8 @@ class DogschoolInvoiceService
               WHERE id = ?",
             [$invoiceId, $balanceId]
         );
+
+        $this->notifyOwnerNewInvoice((int)$balance['owner_id'], $invoiceId, 'Paket-Kauf');
 
         return $invoiceId;
     }

@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="/themes/smart-tierphysio/css/smartapp.min.css">
     <link rel="stylesheet" href="/themes/smart-tierphysio/webfonts/smartadmin/sa-icons.css">
     <link rel="stylesheet" href="/themes/smart-tierphysio/bridge.css?v=20260308f">
+    <link rel="stylesheet" href="/assets/css/push-notifications.css?v=1">
 
     <script src="/themes/smart-tierphysio/scripts/core/saveloadscript.js"></script>
 
@@ -392,10 +393,8 @@
             }).catch(function(){});
     }
 
-    /* Request notification permission once */
-    if('Notification' in window && Notification.permission === 'default'){
-        Notification.requestPermission();
-    }
+    /* Permission-Abfrage übernimmt push-notifications.js (User-Geste nötig —
+       ein automatischer requestPermission()-Aufruf wird vom Browser unterdrückt) */
 
     pollUnread();
     setInterval(pollUnread, 30000);

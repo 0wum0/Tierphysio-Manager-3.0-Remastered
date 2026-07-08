@@ -47,8 +47,19 @@ class PushNotificationService
         'homework_completed'           => 'Hausaufgabe erledigt',
         'owner_upload'                 => 'Datei hochgeladen',
         'system_warning'               => 'Systemwarnung',
+        // Besitzer (Hundeschule / Pakete / Trainings)
+        'new_package'                  => 'Neues Paket verfügbar',
+        'new_training'                 => 'Neues Training',
+        'training_updated'             => 'Training aktualisiert',
+        // Feedback (Praxis ↔ SaaS)
+        'new_feedback'                 => 'Neues Feedback',
+        'feedback_reply'               => 'Antwort auf dein Feedback',
         // SaaS Admin
         'saas_new_practice'            => 'Neue Praxis registriert',
+        'saas_new_registration'        => 'Neue Registrierung',
+        'saas_new_invoice'             => 'Neue Rechnung',
+        'saas_feedback'                => 'Neues Feedback',
+        'saas_update_available'        => 'Update verfügbar',
         'saas_subscription_changed'    => 'Abo geändert',
         'saas_trial_expiring'          => 'Trial läuft bald ab',
         'saas_payment_failed'          => 'Zahlung fehlgeschlagen',
@@ -191,6 +202,47 @@ class PushNotificationService
     }
 
     /**
+     * Convenience: notify all owners with an active portal account
+     * (e.g. neues kaufbares Paket, neue Trainings-Termine der Hundeschule).
+     */
+    public function notifyAllOwners(
+        string $event,
+        string $body,
+        array $dataJson = [],
+        string $sourceType = '',
+        ?int $sourceId = null,
+        string $priority = 'normal'
+    ): void {
+        if (!$this->enabled) {
+            return;
+        }
+
+        try {
+            $users = $this->db->fetchAll(
+                "SELECT id FROM `{$this->db->prefix('owner_portal_users')}`
+                 WHERE is_active = 1
+                 ORDER BY id ASC
+                 LIMIT 500"
+            );
+        } catch (\Throwable) {
+            return;
+        }
+        if (empty($users)) {
+            return;
+        }
+
+        $recipients = array_map(fn(array $u) => [
+            'userId'   => (int)$u['id'],
+            'role'     => 'owner',
+            'body'     => $body,
+            'dataJson' => $dataJson,
+            'priority' => $priority,
+        ], $users);
+
+        $this->dispatch($this->currentTenantId(), $event, $sourceType, $sourceId, $recipients, $priority);
+    }
+
+    /**
      * Returns the tenant ID derived from the current DB prefix.
      * Consistent with what Application.php generates for push JWTs.
      */
@@ -288,18 +340,23 @@ class PushNotificationService
     }
 
     /**
-     * Resolve the mobile_user_id for an owner (needed to send push to owner).
+     * Resolve the portal user id for an owner (needed to send push to owner).
+     *
+     * Der Portal-Browser-JWT trägt owner_portal_users.id als user_id — Push an
+     * Besitzer muss daher an genau diese ID adressiert werden. Der Tenant wird
+     * über den AKTUELLEN DB-Prefix aufgelöst (der Parameter $tenantId bleibt
+     * nur für Rückwärtskompatibilität der Signatur erhalten).
      */
     public function resolveOwnerUserId(int $tenantId, int $ownerId): ?int
     {
-        $prefix = "t_{$tenantId}_";
         try {
             $row = $this->db->fetchOne(
-                "SELECT mobile_user_id FROM `{$prefix}owners`
-                 WHERE id = ? AND mobile_user_id IS NOT NULL",
+                "SELECT id FROM `{$this->db->prefix('owner_portal_users')}`
+                 WHERE owner_id = ? AND is_active = 1
+                 ORDER BY id ASC LIMIT 1",
                 [$ownerId]
             );
-            return $row ? (int)$row['mobile_user_id'] : null;
+            return $row ? (int)$row['id'] : null;
         } catch (\Throwable) {
             return null;
         }

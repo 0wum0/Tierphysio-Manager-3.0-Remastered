@@ -224,7 +224,12 @@ class Application
                         $userId = (int)($session->get('user_id') ?? 0);
                         if ($userId && $db->getPrefix() !== '') {
                             $tenantId = abs(crc32($db->getPrefix()));
-                            $role     = $session->get('user_role', 'therapeut');
+                            // push-thera kennt nur diese Rollen (ENUM in push_device_tokens);
+                            // Session-Rollen wie 'admin'/'mitarbeiter' auf 'therapeut' normalisieren
+                            $role = $session->get('user_role', 'therapeut');
+                            if (!in_array($role, ['therapeut', 'trainer', 'owner', 'saas_admin'], true)) {
+                                $role = 'therapeut';
+                            }
                             $pay = $b64url(json_encode([
                                 'tenant_id' => $tenantId,
                                 'user_id'   => $userId,

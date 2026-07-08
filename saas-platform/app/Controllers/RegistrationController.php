@@ -22,7 +22,8 @@ class RegistrationController extends Controller
         private TenantRepository         $tenantRepo,
         private LegalRepository          $legalRepo,
         private TenantProvisioningService $provisioning,
-        private PaymentService            $paymentService
+        private PaymentService            $paymentService,
+        private \Saas\Services\PushAdminNotificationService $pushAdmin
     ) {
         parent::__construct($view, $session);
     }
@@ -131,6 +132,16 @@ class RegistrationController extends Controller
         try {
             $result = $this->provisioning->provision($data);
             $tenantId = $result['tenant_id'];
+
+            // Push an alle SaaS-Admins: neue Selbstregistrierung
+            try {
+                $this->pushAdmin->notifyAdmins(
+                    'saas_new_registration',
+                    "Neue Registrierung: {$data['practice_name']} ({$data['email']}, Plan: {$plan['name']})",
+                    ['screen' => 'tenant_detail', 'tenant_id' => $tenantId],
+                    'high'
+                );
+            } catch (\Throwable) {}
 
             // Record legal acceptances
             foreach ($legalDocs as $doc) {

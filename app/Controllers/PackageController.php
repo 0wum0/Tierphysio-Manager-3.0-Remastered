@@ -27,6 +27,7 @@ class PackageController extends Controller
         \App\Core\Translator $translator,
         PackageRepository $packages,
         OwnerRepository $owners,
+        private readonly \App\Services\PushNotificationService $push,
     ) {
         parent::__construct($view, $session, $config, $translator);
         $this->packages = $packages;
@@ -112,6 +113,21 @@ class PackageController extends Controller
             return;
         }
         $id = $this->packages->create($data);
+
+        /* Push an alle Portal-Besitzer: neues kaufbares Paket */
+        if (!empty($data['is_active'])) {
+            try {
+                $price = number_format($data['price_cents'] / 100, 2, ',', '.');
+                $this->push->notifyAllOwners(
+                    'new_package',
+                    "Neues Paket verfügbar: {$data['name']} ({$price} €)",
+                    ['screen' => 'portal_packages'],
+                    'package',
+                    $id
+                );
+            } catch (\Throwable) {}
+        }
+
         if ($this->isAjax()) {
             $this->json(['success' => true, 'id' => $id, 'redirect' => '/pakete']);
         }

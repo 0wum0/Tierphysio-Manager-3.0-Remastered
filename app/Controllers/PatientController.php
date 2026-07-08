@@ -281,7 +281,7 @@ class PatientController extends Controller
 
         // Push-Notification: Therapeuten über neuen Patienten informieren
         try {
-            $tenantId = (int)$this->session->get('tenant_id');
+            $tenantId = $this->push->currentTenantId(); // crc32(prefix) — Session kennt kein 'tenant_id'
             if ($tenantId > 0) {
                 $this->push->notifyAllTherapists(
                     $tenantId, 'new_patient',
@@ -664,6 +664,23 @@ class PatientController extends Controller
         }
 
         $this->patientService->addTimelineEntry($data);
+
+        /* Push an den Besitzer: neues Dokument/Foto im Portal verfügbar */
+        if (!empty($data['attachment']) && !empty($patient['owner_id'])) {
+            try {
+                $tenantId    = $this->push->currentTenantId();
+                $ownerUserId = $this->push->resolveOwnerUserId($tenantId, (int)$patient['owner_id']);
+                if ($ownerUserId) {
+                    $this->push->notifyOwner(
+                        $tenantId, $ownerUserId, 'document_available',
+                        sprintf('Neues Dokument für %s verfügbar.', $patient['name'] ?? 'Ihr Tier'),
+                        ['screen' => 'patient_detail', 'patient_id' => (int)$params['id']],
+                        'timeline', (int)$params['id']
+                    );
+                }
+            } catch (\Throwable) {}
+        }
+
         $timeline = $this->timelineMedia->normalizeTimeline($this->patientService->getTimeline((int)$params['id'], 100));
 
         header('Content-Type: application/json');

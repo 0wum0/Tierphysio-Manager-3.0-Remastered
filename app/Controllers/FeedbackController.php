@@ -20,6 +20,7 @@ class FeedbackController
     public function __construct(
         private readonly Config  $config,
         private readonly Session $session,
+        private readonly \App\Services\PushNotificationService $push,
     ) {}
 
     public function submit(array $params = []): void
@@ -106,6 +107,23 @@ class FeedbackController
                 $currentUrl ?: null,
                 $attachmentPath,
             ]);
+
+            // Push an alle SaaS-Admins: neues Feedback eingegangen
+            try {
+                $this->push->notifyAdmins(
+                    'saas_feedback',
+                    sprintf(
+                        '%s von %s: %s',
+                        ucfirst($type),
+                        $tenantInfo['tenant_name'] ?: 'Unbekannte Praxis',
+                        mb_substr($subject !== '' ? $subject : $message, 0, 120)
+                    ),
+                    ['screen' => 'feedback'],
+                    $priority === 'critical' || $priority === 'high' ? 'high' : 'normal'
+                );
+            } catch (\Throwable $e) {
+                error_log('[FeedbackController] push notify failed: ' . $e->getMessage());
+            }
 
             echo json_encode(['success' => true, 'message' => 'Dein Feedback wurde gesendet. Danke!']);
         } catch (\Throwable $e) {

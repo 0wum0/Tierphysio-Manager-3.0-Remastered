@@ -154,7 +154,7 @@ class InvoiceController extends Controller
 
         /* ── Push-Notification: Besitzer über neue Rechnung informieren ── */
         try {
-            $tenantId = (int)$this->session->get('tenant_id');
+            $tenantId = $this->push->currentTenantId(); // crc32(prefix) — identisch zum Browser-JWT
             $ownerId  = (int)$data['owner_id'];
             $ownerUserId = $this->push->resolveOwnerUserId($tenantId, $ownerId);
             if ($ownerUserId) {
@@ -420,7 +420,7 @@ class InvoiceController extends Controller
 
         /* ── Push-Notification: Besitzer bei Statusänderung / Bezahlung ── */
         try {
-            $tenantId = (int)$this->session->get('tenant_id');
+            $tenantId = $this->push->currentTenantId(); // crc32(prefix) — identisch zum Browser-JWT
             $ownerId  = (int)$invoice['owner_id'];
             $ownerUserId = $this->push->resolveOwnerUserId($tenantId, $ownerId);
             if ($ownerUserId) {

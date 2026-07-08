@@ -57,6 +57,60 @@ class Application
             // Expose tenant session data for app-domain views
             $view->addGlobal('tenant_name',  $session->get('platform_name'));
             $view->addGlobal('tenant_email', $session->get('platform_email'));
+
+            // ── Push notification config für eingeloggte SaaS-Admins ─────────
+            // Liest die push-thera Verbindungsdaten aus saas_settings (Pairing)
+            // bzw. .env und signiert ein kurzlebiges JWT für den Browser.
+            // SaaS-Admins laufen unter tenant_id 0 / role saas_admin.
+            try {
+                $adminId = (int)($session->get('saas_user_id') ?? 0);
+                if ($adminId > 0) {
+                    $pushUrl    = rtrim((string)($config->get('push.server_url') ?? ''), '/');
+                    $pushSecret = (string)($config->get('push.internal_secret') ?? '');
+
+                    $rows = $db->fetchAll(
+                        "SELECT `key`, `value` FROM saas_settings WHERE `key` LIKE 'push_%'"
+                    );
+                    $ps = [];
+                    foreach ($rows as $row) { $ps[$row['key']] = $row['value']; }
+
+                    if (($ps['push_enabled'] ?? '0') === '1') {
+                        if ($pushUrl === '')    { $pushUrl    = rtrim((string)($ps['push_server_url'] ?? ''), '/'); }
+                        if ($pushSecret === '') { $pushSecret = (string)($ps['push_internal_secret_plain'] ?? ''); }
+                    }
+                    $vapidKey = (string)($ps['push_vapid_public_key'] ?? '');
+
+                    if ($pushUrl !== '' && $pushSecret !== '') {
+                        $b64url = static fn(string $s): string
+                            => rtrim(strtr(base64_encode($s), '+/', '-_'), '=');
+                        $now = time();
+                        $hdr = $b64url(json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
+                        $pay = $b64url(json_encode([
+                            'tenant_id' => 0,
+                            'user_id'   => $adminId,
+                            'role'      => 'saas_admin',
+                            'app_type'  => 'saas_admin',
+                            'iat'       => $now,
+                            'exp'       => $now + 86400,
+                            'iss'       => 'therapano',
+                        ]));
+                        $sig = $b64url(hash_hmac('sha256', "$hdr.$pay", $pushSecret, true));
+
+                        $view->addGlobal('push_config', [
+                            'server_url'       => $pushUrl,
+                            'token'            => "$hdr.$pay.$sig",
+                            'vapid_public_key' => $vapidKey,
+                            'user_id'          => $adminId,
+                            'tenant_id'        => 0,
+                            'role'             => 'saas_admin',
+                            'app_type'         => 'saas_admin',
+                            'enable_web_push'  => $vapidKey !== '',
+                        ]);
+                    }
+                }
+            } catch (\Throwable $e) {
+                error_log('[saas push bootstrap] ' . $e->getMessage());
+            }
         }
 
         // Expose domain config to all views

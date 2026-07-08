@@ -1,6 +1,41 @@
 # Push Notification System
 
-## Status: Implementiert (Branch: claude/therapano-notification-system-l14zx1)
+## Status: Implementiert + Großes Bugfix/Ausbau-Update (2026-07-08)
+
+## Update 2026-07-08 — Push-System repariert & vervollständigt
+
+### Warum kam nie die Browser-Permission-Abfrage?
+1. **Web-App:** Der „Aktivieren"-Button lag unsichtbar im Glocken-Dropdown; kein automatisch sichtbarer Hinweis.
+2. **Portal:** `Notification.requestPermission()` wurde OHNE User-Geste aufgerufen → moderne Browser unterdrücken das stillschweigend; kein Banner/Button vorhanden.
+3. **SaaS-Admin:** hatte gar keinen Push-Client (kein PUSH_CONFIG, kein Service Worker).
+
+### Fixes (Frontend)
+- `public/assets/js/push-notifications.js`: **Floating-Permission-Prompt** — erscheint automatisch unten rechts, wenn `enableWebPush` && Permission `default` && nicht gesnoozed (localStorage `push_perm_snooze_until`, 3 Tage). Klick „Aktivieren" = User-Geste → echter Browser-Prompt → Subscribe + Geräteregistrierung. `cfg.serviceWorkerPath` optional.
+- Portal-Layout: gestenloser requestPermission-Aufruf entfernt, push-notifications.css eingebunden.
+- SaaS `base.twig`: PUSH_CONFIG + socket.io + Client eingebunden; Assets kopiert nach `saas-platform/public/{js,css,sw-push.js}`.
+
+### Fixes (Backend / kritische Bugs)
+- **Rolle 'admin' brach Geräteregistrierung**: `push_device_tokens.role` ist ENUM(therapeut,trainer,owner,saas_admin). PHP-JWT (app/Core/Application.php) normalisiert jetzt, push-thera Middleware ebenfalls (`normalizeRole`).
+- **tenant_id-Ableitungen falsch/inkonsistent**: `session('tenant_id')` existiert nie (OwnerController, PatientController, InvoiceController → Push war tot); Regex `t_(\d+)_` scheitert an nicht-numerischen Slugs (HomeworkController, MobileApiController). Überall auf `PushNotificationService::currentTenantId()` = `abs(crc32(prefix))` umgestellt — identisch zum Browser-JWT.
+- **resolveOwnerUserId** nutzt jetzt `owner_portal_users.id` (aktueller Prefix) statt `owners.mobile_user_id` mit falschem Prefix.
+- **push-thera**: JWT-Claim `tenant_id: 0` (SaaS-Admin) wurde als „incomplete" abgelehnt (falsy-Check) → gefixt; Internal-Secret-Präzedenz beim Pairing: env gewinnt (Server verifiziert mit env); Socket.io-CORS nutzt jetzt corsService (DB-Origins) statt nur env.
+- **SaaS**: `PushAdminNotificationService` liest jetzt auch `saas_settings` (Pairing-Fallback wie die App) + neue Methode `notifyTenantUser(prefix, userId, …)`; `saas-platform/app/Core/Application.php` baut `push_config`-Global (tenant_id 0, role saas_admin).
+
+### Neue Events
+| Event | Auslöser | Empfänger |
+|---|---|---|
+| `homework_completed` | Besitzer hakt Aufgabe im Portal ab | alle Therapeuten |
+| `document_available` | Timeline-Eintrag mit Anhang (PatientController) | Besitzer |
+| `new_package` | Paket angelegt (aktiv) / Paketkauf im Portal | alle Portal-Besitzer / Trainer |
+| `new_training` | Kurs-Einschreibung im Portal | alle Trainer |
+| `new_invoice` | Auto-Rechnung aus Kurs/Paket (DogschoolInvoiceService) | Besitzer |
+| `feedback_reply` | SaaS-Admin antwortet auf Feedback | einreichender Praxis-User |
+| `saas_feedback` | Praxis sendet Feedback | SaaS-Admins |
+| `saas_new_registration` | Selbstregistrierung neue Praxis | SaaS-Admins |
+
+### Neue Helfer
+- `PushNotificationService::notifyAllOwners()` — alle aktiven Portal-Besitzer eines Tenants.
+- `PushAdminNotificationService::notifyTenantUser()` — SaaS → einzelner Praxis-User via /internal/notify.
 
 ## Architektur
 

@@ -53,6 +53,7 @@ class OwnerPortalBookingController extends Controller
         private readonly PackageRepository $packages,
         private readonly SettingsRepository $settingsRepository,
         private readonly DogschoolInvoiceService $dogschoolInvoices,
+        private readonly \App\Services\PushNotificationService $push,
     ) {
         parent::__construct($view, $session, $config, $translator);
         $this->repo = new OwnerPortalRepository($db);
@@ -290,6 +291,18 @@ class OwnerPortalBookingController extends Controller
             error_log('[PortalBooking] auto-invoice failed: ' . $e->getMessage());
         }
 
+        /* Push an alle Trainer: neue Kurs-Einschreibung */
+        try {
+            $this->push->notifyAllTherapists(
+                0,
+                'new_training',
+                sprintf('%s wurde in "%s" eingeschrieben.', $patient['name'] ?? 'Ein Hund', $course['name'] ?? 'Kurs'),
+                ['screen' => 'patient', 'patient_id' => $patientId],
+                'course',
+                $courseId
+            );
+        } catch (\Throwable) {}
+
         $this->session->flash(
             'success',
             'Einschreibung erfolgreich! Die Rechnung findest du unter "Rechnungen" — bitte begleiche sie innerhalb von 14 Tagen.'
@@ -369,6 +382,18 @@ class OwnerPortalBookingController extends Controller
         } catch (\Throwable $e) {
             error_log('[PortalBooking] auto-invoice (package) failed: ' . $e->getMessage());
         }
+
+        /* Push an alle Trainer: Paket wurde über das Portal gekauft */
+        try {
+            $this->push->notifyAllTherapists(
+                0,
+                'new_package',
+                sprintf('Paket "%s" wurde über das Portal gekauft.', $pkg['name'] ?? 'Paket'),
+                ['screen' => 'owners'],
+                'package',
+                $packageId
+            );
+        } catch (\Throwable) {}
 
         $this->session->flash(
             'success',

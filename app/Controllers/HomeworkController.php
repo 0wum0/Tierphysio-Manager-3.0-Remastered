@@ -185,7 +185,9 @@ class HomeworkController
 
             // Push-Notification: Besitzer über neue Hausaufgabe informieren
             try {
-                $tenantId = (int)($this->db->getPrefix() ? preg_replace('/^t_(\d+)_$/', '$1', $this->db->getPrefix()) : 0);
+                // Tenant-ID muss crc32(prefix) sein — identisch zum Browser-JWT
+                // (die alte Regex-Ableitung lieferte 0 bei nicht-numerischen Slugs)
+                $tenantId = $this->push->currentTenantId();
                 if ($tenantId > 0 && !empty($patient['owner_id'])) {
                     $ownerUserId = $this->push->resolveOwnerUserId($tenantId, (int)$patient['owner_id']);
                     if ($ownerUserId) {

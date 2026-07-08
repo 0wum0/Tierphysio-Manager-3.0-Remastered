@@ -1737,8 +1737,8 @@ class MobileApiController
 
             // Push-Notification: Therapeuten + Besitzer über neuen Termin informieren
             try {
-                $tenantId = (int)preg_replace('/^t_(\d+)_$/', '$1', $this->db->getPrefix());
                 $push = new \App\Services\PushNotificationService(\App\Core\Application::getInstance()->getContainer()->get(\App\Core\Config::class), $this->db);
+                $tenantId = $push->currentTenantId(); // crc32(prefix) — identisch zum Browser-JWT
                 if ($tenantId > 0) {
                     $push->notifyAllTherapists(
                         $tenantId, 'appointment_booked_staff',
@@ -1815,9 +1815,9 @@ class MobileApiController
 
             // Push-Notification: Termin geändert
             try {
-                $tenantId = (int)preg_replace('/^t_(\d+)_$/', '$1', $this->db->getPrefix());
+                $push = new \App\Services\PushNotificationService(\App\Core\Application::getInstance()->getContainer()->get(\App\Core\Config::class), $this->db);
+                $tenantId = $push->currentTenantId(); // crc32(prefix) — identisch zum Browser-JWT
                 if ($tenantId > 0) {
-                    $push = new \App\Services\PushNotificationService(\App\Core\Application::getInstance()->getContainer()->get(\App\Core\Config::class), $this->db);
                     $ownerIdForUpdate = isset($data['owner_id']) ? (int)$data['owner_id'] : null;
                     if ($ownerIdForUpdate) {
                         $ownerUserId = $push->resolveOwnerUserId($tenantId, $ownerIdForUpdate);
@@ -1848,12 +1848,12 @@ class MobileApiController
         try {
             // Push-Notification: Termin storniert — vor dem Delete, damit owner_id noch verfügbar
             try {
-                $tenantId = (int)preg_replace('/^t_(\d+)_$/', '$1', $this->db->getPrefix());
+                $push = new \App\Services\PushNotificationService(\App\Core\Application::getInstance()->getContainer()->get(\App\Core\Config::class), $this->db);
+                $tenantId = $push->currentTenantId(); // crc32(prefix) — identisch zum Browser-JWT
                 if ($tenantId > 0 && $id > 0) {
                     $appt = $this->db->fetchOne(
                         "SELECT owner_id FROM `{$this->t('appointments')}` WHERE id = ?", [$id]
                     );
-                    $push = new \App\Services\PushNotificationService(\App\Core\Application::getInstance()->getContainer()->get(\App\Core\Config::class), $this->db);
                     if ($appt && $appt['owner_id']) {
                         $ownerUserId = $push->resolveOwnerUserId($tenantId, (int)$appt['owner_id']);
                         if ($ownerUserId) {
