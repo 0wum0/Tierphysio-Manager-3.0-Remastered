@@ -221,16 +221,13 @@
 
     // ─── Web Push Subscription ────────────────────────────────────────────────
 
-    async function initWebPush() {
+    async function subscribeWebPush() {
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
         if (!cfg.vapidPublicKey) return;
 
         try {
             const reg = await navigator.serviceWorker.register('/sw-push.js');
             await navigator.serviceWorker.ready;
-
-            const permission = await Notification.requestPermission();
-            if (permission !== 'granted') return;
 
             let subscription = await reg.pushManager.getSubscription();
             if (!subscription) {
@@ -240,7 +237,6 @@
                 });
             }
 
-            // Register with push server
             await fetch(`${cfg.serverUrl}/api/push/devices/register`, {
                 method: 'POST',
                 headers: {
@@ -255,8 +251,37 @@
                 }),
             });
         } catch (err) {
-            console.warn('[push] Web Push init error:', err.message);
+            console.warn('[push] Web Push subscribe error:', err.message);
         }
+    }
+
+    function updatePermissionBanner() {
+        if (!cfg.enableWebPush || !('Notification' in window)) return;
+        const banner = document.getElementById('push-permission-banner');
+        if (!banner) return;
+        // Show only when not yet decided; hide when granted or denied
+        banner.style.display = Notification.permission === 'default' ? 'flex' : 'none';
+    }
+
+    async function requestWebPushPermission() {
+        if (!('Notification' in window)) return;
+        const permission = await Notification.requestPermission();
+        updatePermissionBanner();
+        if (permission === 'granted') {
+            await subscribeWebPush();
+        }
+    }
+
+    async function initWebPush() {
+        if (!cfg.enableWebPush) return;
+        if (!('Notification' in window)) return;
+
+        if (Notification.permission === 'granted') {
+            // Already allowed — subscribe silently in the background
+            await subscribeWebPush();
+        }
+        // Show/hide the activation banner based on current permission state
+        updatePermissionBanner();
     }
 
     function urlBase64ToUint8Array(base64String) {
@@ -339,8 +364,8 @@
     document.addEventListener('DOMContentLoaded', () => {
         initSocket();
         loadNotifications();
+        initWebPush();
 
-        // Mark all read button
         document.addEventListener('click', (e) => {
             if (e.target.closest('[data-push-mark-all-read]')) {
                 markAllRead();
@@ -348,15 +373,13 @@
             if (e.target.closest('[data-push-open-center]')) {
                 loadNotifications();
             }
+            if (e.target.closest('[data-push-request-permission]')) {
+                requestWebPushPermission();
+            }
         });
-
-        // Web Push init (only for staff with explicit opt-in button or auto for supported browsers)
-        if (cfg.enableWebPush) {
-            initWebPush();
-        }
     });
 
     // Expose for external use
-    window.PushNotifications = { markRead, markAllRead, loadNotifications };
+    window.PushNotifications = { markRead, markAllRead, loadNotifications, requestWebPushPermission };
 
 })();

@@ -52,7 +52,8 @@ class MessagingRepository
         $stmt = $this->db->query(
             "SELECT t.*,
                     CONCAT(o.first_name, ' ', o.last_name) AS owner_name,
-                    o.email AS owner_email
+                    o.email AS owner_email,
+                    o.mobile_user_id AS owner_mobile_user_id
              FROM `{$this->t('portal_message_threads')}` t
              JOIN `{$this->t('owners')}` o ON o.id = t.owner_id
              WHERE t.id = ? LIMIT 1",

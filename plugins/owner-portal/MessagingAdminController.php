@@ -13,6 +13,7 @@ use App\Core\Database;
 use App\Repositories\SettingsRepository;
 use App\Services\MailService;
 use App\Services\MediaOptimizerService;
+use App\Services\PushNotificationService;
 
 class MessagingAdminController extends Controller
 {
@@ -20,6 +21,7 @@ class MessagingAdminController extends Controller
     private OwnerPortalRepository   $portalRepo;
     private MessagingMailService    $mailer;
     private SettingsRepository      $settingsRepository;
+    private PushNotificationService $push;
 
     private const ALLOWED_MIME = [
         'application/pdf',
@@ -65,13 +67,15 @@ class MessagingAdminController extends Controller
         Translator $translator,
         Database $db,
         SettingsRepository $settingsRepository,
-        MailService $mailService
+        MailService $mailService,
+        PushNotificationService $push
     ) {
         parent::__construct($view, $session, $config, $translator);
         $this->repo               = new MessagingRepository($db);
         $this->portalRepo         = new OwnerPortalRepository($db);
         $this->mailer             = new MessagingMailService($settingsRepository, $mailService);
         $this->settingsRepository = $settingsRepository;
+        $this->push               = $push;
     }
 
     /* ── GET /portal-admin/nachrichten ── */
@@ -164,6 +168,20 @@ class MessagingAdminController extends Controller
             /* Mail errors must not break the AJAX reply */
         }
 
+        /* Push notification to owner */
+        if (!empty($thread['owner_mobile_user_id'])) {
+            try {
+                $this->push->notifyOwner(
+                    $this->push->currentTenantId(),
+                    (int)$thread['owner_mobile_user_id'],
+                    'new_message',
+                    'Neue Nachricht: ' . $thread['subject'],
+                    ['screen' => 'message_detail'],
+                    'message', $id
+                );
+            } catch (\Throwable) {}
+        }
+
         $senderName = $user['name'] ?? 'Team';
         $this->json([
             'ok'          => true,
@@ -244,6 +262,19 @@ class MessagingAdminController extends Controller
             );
         } catch (\Throwable) {}
 
+        if (!empty($thread['owner_mobile_user_id'])) {
+            try {
+                $this->push->notifyOwner(
+                    $this->push->currentTenantId(),
+                    (int)$thread['owner_mobile_user_id'],
+                    'new_message',
+                    'Neue Nachricht: ' . $thread['subject'],
+                    ['screen' => 'message_detail'],
+                    'message', $id
+                );
+            } catch (\Throwable) {}
+        }
+
         $senderName = $user['name'] ?? 'Team';
         $this->json([
             'ok'              => true,
@@ -318,7 +349,7 @@ class MessagingAdminController extends Controller
         $userId = $user ? (int)$user['id'] : null;
         $this->repo->addMessage($threadId, 'admin', $userId, $body);
 
-        /* Fetch thread for mail */
+        /* Fetch thread for mail + push */
         $thread = $this->repo->getThreadById($threadId);
         if ($thread) {
             try {
@@ -330,6 +361,19 @@ class MessagingAdminController extends Controller
                     $body
                 );
             } catch (\Throwable) {}
+
+            if (!empty($thread['owner_mobile_user_id'])) {
+                try {
+                    $this->push->notifyOwner(
+                        $this->push->currentTenantId(),
+                        (int)$thread['owner_mobile_user_id'],
+                        'new_message',
+                        'Neue Nachricht: ' . $subject,
+                        ['screen' => 'message_detail'],
+                        'message', $threadId
+                    );
+                } catch (\Throwable) {}
+            }
         }
 
         $this->json(['ok' => true, 'thread_id' => $threadId]);
