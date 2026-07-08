@@ -130,6 +130,10 @@ Die bisherigen P1-Punkte wurden am 2026-05-12 umgesetzt:
 - Google-Kalender Timezone: Push nutzt `Europe/Berlin`; Pull normalisiert importierte DateTime-Werte nach `Europe/Berlin`.
 - Chat-Bildanhaenge, Video-Preview, Lightbox und serverseitige Bildoptimierung: implementiert.
 - Hausaufgaben-Plugin: Default aktiv fuer Basic/Pro/Ultra dokumentiert.
+- **2026-07-08 Bugfix-Session** (Branch `claude/homework-portal-403-404-nuxubr`):
+  - Besitzerportal Hausaufgaben 403: Migration 012 setzt `portal_show_homework = '1'`; Auth-Reihenfolge in Controller korrigiert
+  - Hausaufgabenplan-Erstellung 500: try-catch in `homeworkPlanStore()`; Flutter `_save()` übergibt jetzt `owner_id`; `portal_admin_screen.dart::_showCreatePlan()` lädt Patienten und übergibt korrekte IDs
+  - QR-Code fehlt: Migration 012 setzt auch `pdf_show_qr = '1'`
 
 ## Verlinkungen
 - [[00-start/sprint-status]]

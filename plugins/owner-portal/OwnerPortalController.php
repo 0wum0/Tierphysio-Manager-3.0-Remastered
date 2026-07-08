@@ -667,8 +667,8 @@ class OwnerPortalController extends Controller
     /* ── GET /portal/hausaufgaben ── */
     public function homeworkOverview(array $params = []): void
     {
-        if (!$this->isHomeworkEnabled()) { $this->abort(403); return; }
         $user    = $this->requireOwnerAuth();
+        if (!$this->isHomeworkEnabled()) { $this->abort(403); return; }
         $ownerId = (int)$user['owner_id'];
 
         $plans = $this->repo->getHomeworkPlansByOwner($ownerId);
@@ -693,8 +693,8 @@ class OwnerPortalController extends Controller
     /* ── GET /portal/tiere/{id}/hausaufgaben ── */
     public function homework(array $params = []): void
     {
-        if (!$this->isHomeworkEnabled()) { $this->abort(403); return; }
         $user    = $this->requireOwnerAuth();
+        if (!$this->isHomeworkEnabled()) { $this->abort(403); return; }
         $ownerId = (int)$user['owner_id'];
         $petId   = (int)($params['id'] ?? 0);
 

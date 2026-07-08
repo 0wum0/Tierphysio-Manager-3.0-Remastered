@@ -230,8 +230,14 @@ class _CreatePlanSheetState extends State<_CreatePlanSheet> {
     if (_patientId == null) return;
     setState(() => _saving = true);
     try {
+      final selectedPatient = _patients.firstWhere(
+        (p) => int.tryParse(p['id'].toString()) == _patientId,
+        orElse: () => <String, dynamic>{},
+      );
+      final ownerId = selectedPatient['owner_id'];
       await widget.api.homeworkPlanCreate({
         'patient_id': _patientId,
+        'owner_id': ownerId,
         'plan_date': _planDate ?? DateFormat('yyyy-MM-dd').format(DateTime.now()),
       });
       if (mounted) {
