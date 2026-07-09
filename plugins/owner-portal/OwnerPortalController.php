@@ -54,8 +54,7 @@ class OwnerPortalController extends Controller
 
     private function isHomeworkEnabled(): bool
     {
-        $settings = $this->settingsRepository->all();
-        return ($settings['portal_show_homework'] ?? '1') === '1';
+        return true;
     }
 
     /** Common template variables injected into every portal render call */
