@@ -66,103 +66,69 @@
 {# ── KPI-Reihe ───────────────────────────────────────────────────────────── #}
 <div class="row g-3 mb-3">
     <div class="col-6 col-md-4 col-xl-2">
-        <div class="card h-100">
-            <div class="card-body p-3">
-                <div class="d-flex align-items-start justify-content-between mb-2">
-                    <div>
-                        <div class="h3 fw-700 mb-0">{{ stats.total }}</div>
-                        <div class="text-muted fs-xs mt-1">Praxen gesamt</div>
-                    </div>
-                    <div class="rounded-3 p-2 bg-primary bg-opacity-10">
-                        <svg class="sa-icon sa-icon-2x sa-icon-primary"><use href="/sa/icons/sprite.svg#briefcase"></use></svg>
-                    </div>
-                </div>
-                <div class="fs-xs fw-500 text-info">+{{ stats.new_this_month }} diesen Monat</div>
+        <div class="tp-kpi">
+            <div class="tp-kpi__icon tp-kpi__icon--accent">
+                <svg class="sa-icon"><use href="/sa/icons/sprite.svg#briefcase"></use></svg>
+            </div>
+            <div class="tp-kpi__label">Praxen gesamt</div>
+            <div class="tp-kpi__value">{{ stats.total }}</div>
+            <div class="tp-kpi__sub"><span class="tp-kpi__sub-up">+{{ stats.new_this_month }} diesen Monat</span></div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="tp-kpi">
+            <div class="tp-kpi__icon tp-kpi__icon--green">
+                <svg class="sa-icon"><use href="/sa/icons/sprite.svg#users"></use></svg>
+            </div>
+            <div class="tp-kpi__label">Zahlende Kunden</div>
+            <div class="tp-kpi__value tp-kpi__value--green">{{ stats.active }}</div>
+            <div class="tp-kpi__sub">{{ stats.trial }} in Testphase</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="tp-kpi">
+            <div class="tp-kpi__icon tp-kpi__icon--green">
+                <svg class="sa-icon"><use href="/sa/icons/sprite.svg#dollar-sign"></use></svg>
+            </div>
+            <div class="tp-kpi__label">Bezahlter Umsatz (Monat)</div>
+            <div class="tp-kpi__value tp-kpi__value--green">{{ revenue_this_month|number_format(2,',','.') }} €</div>
+            <div class="tp-kpi__sub">Nur bezahlte Rechnungen</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="tp-kpi">
+            <div class="tp-kpi__icon tp-kpi__icon--yellow">
+                <svg class="sa-icon"><use href="/sa/icons/sprite.svg#trending-up"></use></svg>
+            </div>
+            <div class="tp-kpi__label">Mögl. Monatsumsatz</div>
+            <div class="tp-kpi__value tp-kpi__value--yellow">{{ stats.monthly_revenue|number_format(0,',','.') }} €</div>
+            <div class="tp-kpi__sub">Prognose – wenn alle zahlen</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="tp-kpi">
+            <div class="tp-kpi__icon tp-kpi__icon--yellow">
+                <svg class="sa-icon"><use href="/sa/icons/sprite.svg#clock"></use></svg>
+            </div>
+            <div class="tp-kpi__label">Trial endet (7 Tage)</div>
+            <div class="tp-kpi__value {% if stats.trial_expiring_soon > 0 %}tp-kpi__value--yellow{% endif %}">{{ stats.trial_expiring_soon }}</div>
+            <div class="tp-kpi__sub">
+                {% if stats.churn_this_month > 0 %}
+                <span class="tp-kpi__sub-down">{{ stats.churn_this_month }} Kündigungen diesen Monat</span>
+                {% else %}
+                <span class="tp-kpi__sub-up">{{ stats.churn_this_month }} Kündigungen diesen Monat</span>
+                {% endif %}
             </div>
         </div>
     </div>
     <div class="col-6 col-md-4 col-xl-2">
-        <div class="card h-100">
-            <div class="card-body p-3">
-                <div class="d-flex align-items-start justify-content-between mb-2">
-                    <div>
-                        <div class="h3 fw-700 mb-0 text-success">{{ stats.active }}</div>
-                        <div class="text-muted fs-xs mt-1">Zahlende Kunden</div>
-                    </div>
-                    <div class="rounded-3 p-2 bg-success bg-opacity-10">
-                        <svg class="sa-icon sa-icon-2x sa-icon-success"><use href="/sa/icons/sprite.svg#users"></use></svg>
-                    </div>
-                </div>
-                <div class="fs-xs text-muted">{{ stats.trial }} in Testphase</div>
+        <div class="tp-kpi">
+            <div class="tp-kpi__icon tp-kpi__icon--purple">
+                <svg class="sa-icon"><use href="/sa/icons/sprite.svg#message-square"></use></svg>
             </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-4 col-xl-2">
-        <div class="card h-100">
-            <div class="card-body p-3">
-                <div class="d-flex align-items-start justify-content-between mb-2">
-                    <div>
-                        <div class="h3 fw-700 mb-0 text-success">{{ revenue_this_month|number_format(2,',','.') }} €</div>
-                        <div class="text-muted fs-xs mt-1">Bezahlter Umsatz (Monat)</div>
-                    </div>
-                    <div class="rounded-3 p-2 bg-success bg-opacity-10">
-                        <svg class="sa-icon sa-icon-2x sa-icon-success"><use href="/sa/icons/sprite.svg#dollar-sign"></use></svg>
-                    </div>
-                </div>
-                <div class="fs-xs text-muted">Nur bezahlte Rechnungen</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-4 col-xl-2">
-        <div class="card h-100">
-            <div class="card-body p-3">
-                <div class="d-flex align-items-start justify-content-between mb-2">
-                    <div>
-                        <div class="h3 fw-700 mb-0 text-warning">{{ stats.monthly_revenue|number_format(0,',','.') }} €</div>
-                        <div class="text-muted fs-xs mt-1">Mögl. Monatsumsatz</div>
-                    </div>
-                    <div class="rounded-3 p-2 bg-warning bg-opacity-10">
-                        <svg class="sa-icon sa-icon-2x sa-icon-warning"><use href="/sa/icons/sprite.svg#trending-up"></use></svg>
-                    </div>
-                </div>
-                <div class="fs-xs text-muted">Prognose – wenn alle zahlen</div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-4 col-xl-2">
-        <div class="card h-100">
-            <div class="card-body p-3">
-                <div class="d-flex align-items-start justify-content-between mb-2">
-                    <div>
-                        <div class="h3 fw-700 mb-0 {% if stats.trial_expiring_soon > 0 %}text-warning{% else %}text-muted{% endif %}">
-                            {{ stats.trial_expiring_soon }}
-                        </div>
-                        <div class="text-muted fs-xs mt-1">Trial endet (7 Tage)</div>
-                    </div>
-                    <div class="rounded-3 p-2 bg-warning bg-opacity-10">
-                        <svg class="sa-icon sa-icon-2x sa-icon-warning"><use href="/sa/icons/sprite.svg#clock"></use></svg>
-                    </div>
-                </div>
-                <div class="fs-xs {% if stats.churn_this_month > 0 %}text-danger{% else %}text-success{% endif %} fw-500">
-                    {{ stats.churn_this_month }} Kündigungen diesen Monat
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-6 col-md-4 col-xl-2">
-        <div class="card h-100">
-            <div class="card-body p-3">
-                <div class="d-flex align-items-start justify-content-between mb-2">
-                    <div>
-                        <div class="h3 fw-700 mb-0" style="color:var(--bs-purple,#a78bfa);">{{ stats.unread_feedback }}</div>
-                        <div class="text-muted fs-xs mt-1">Neues Feedback</div>
-                    </div>
-                    <div class="rounded-3 p-2" style="background:rgba(167,139,250,.1);">
-                        <svg class="sa-icon sa-icon-2x" style="--sa-icon-color:var(--bs-purple,#a78bfa);"><use href="/sa/icons/sprite.svg#message-square"></use></svg>
-                    </div>
-                </div>
-                <div class="fs-xs text-muted">{{ stats.suspended }} Praxen gesperrt</div>
-            </div>
+            <div class="tp-kpi__label">Neues Feedback</div>
+            <div class="tp-kpi__value tp-kpi__value--purple">{{ stats.unread_feedback }}</div>
+            <div class="tp-kpi__sub">{{ stats.suspended }} Praxen gesperrt</div>
         </div>
     </div>
 </div>
