@@ -36,9 +36,12 @@ $router->post('/account/password', [TenantAccountController::class, 'changePassw
 $router->post('/account/plan',     [TenantAccountController::class, 'changePlan']);
 
 // ── Public Registration ──────────────────────────────────────────────────────
-$router->get('/register',        [RegistrationController::class, 'index']);
-$router->get('/register/{plan}', [RegistrationController::class, 'form']);
-$router->post('/register',       [RegistrationController::class, 'submit']);
+// WICHTIG: payment-success muss VOR {plan} stehen — sonst matcht der Wildcard
+// "payment-success" als Plan-Slug und löst "Ungültiger Tarif." aus.
+$router->get('/register/payment-success', [RegistrationController::class, 'paymentSuccess']);
+$router->get('/register',                 [RegistrationController::class, 'index']);
+$router->get('/register/{plan}',          [RegistrationController::class, 'form']);
+$router->post('/register',                [RegistrationController::class, 'submit']);
 
 // ── Legal / Impressum ────────────────────────────────────────────────────────
 $router->get('/legal/{slug}', [LegalController::class, 'view']);

@@ -235,6 +235,21 @@ class RegistrationController extends Controller
         }
     }
 
+    public function paymentSuccess(array $params = []): void
+    {
+        $sessionId = $_GET['session_id']      ?? null;
+        $tenantId  = (int)($_GET['tenant_id'] ?? 0);
+        $ppSubId   = $_GET['subscription_id'] ?? null;
+
+        if ($sessionId) {
+            $this->paymentService->handleStripeCheckoutSuccess($sessionId);
+        } elseif ($ppSubId && $tenantId) {
+            $this->paymentService->handlePayPalReturn($tenantId, $ppSubId);
+        }
+
+        $this->render('register/payment_success.twig', ['page_title' => 'Zahlung erfolgreich']);
+    }
+
     private function validate(array $data): array
     {
         $errors = [];
