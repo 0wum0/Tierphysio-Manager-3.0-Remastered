@@ -61,24 +61,32 @@ class PaymentSettingsController extends Controller
         $this->verifyCsrf();
 
         $secretKeys = ['stripe_secret_key', 'stripe_webhook_secret', 'paypal_client_secret'];
+        $errors = [];
         foreach ($this->paymentKeys as $key) {
             $val = $_POST[$key] ?? null;
             if ($val === null) {
-                $this->setSetting($key, '0');
+                if (!$this->setSetting($key, '0')) {
+                    $errors[] = $key;
+                }
             } else {
                 $trimmed = trim((string)$val);
-                // Secret-Keys nur überschreiben wenn tatsächlich ein neuer Wert eingegeben wurde
                 if (in_array($key, $secretKeys, true) && $trimmed === '') {
                     continue;
                 }
-                $this->setSetting($key, $trimmed);
+                if (!$this->setSetting($key, $trimmed)) {
+                    $errors[] = $key;
+                }
             }
         }
 
         $actor = $this->session->get('saas_user') ?? 'admin';
         $this->log->log('settings.payment.update', $actor, 'settings', null, 'Zahlungseinstellungen aktualisiert');
 
-        $this->session->flash('success', 'Zahlungseinstellungen gespeichert.');
+        if ($errors) {
+            $this->session->flash('error', 'Datenbankfehler beim Speichern: ' . implode(', ', $errors) . '. Bitte Serverlog prüfen.');
+        } else {
+            $this->session->flash('success', 'Zahlungseinstellungen gespeichert.');
+        }
         $this->redirect('/admin/payment-settings');
     }
 
@@ -196,7 +204,7 @@ class PaymentSettingsController extends Controller
         }
     }
 
-    private function setSetting(string $key, string $value): void
+    private function setSetting(string $key, string $value): bool
     {
         try {
             $this->db->execute(
@@ -204,7 +212,11 @@ class PaymentSettingsController extends Controller
                  ON DUPLICATE KEY UPDATE `value` = ?",
                 [$key, $value, $value]
             );
-        } catch (\Throwable) {}
+            return true;
+        } catch (\Throwable $e) {
+            error_log('[PaymentSettings] setSetting(' . $key . ') failed: ' . $e->getMessage());
+            return false;
+        }
     }
 
     private function getCronStatus(): array

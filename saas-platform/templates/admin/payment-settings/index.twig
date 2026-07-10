@@ -240,10 +240,17 @@
                 <div class="col-md-6">
                     <div class="mb-0">
                         <label class="form-label text-muted fs-xs fw-600" for="paypal_client_secret">Client Secret</label>
+                        {% if settings.paypal_client_secret ?? '' %}
+                        <div class="input-group mb-1">
+                            <input type="password" class="form-control font-monospace" id="paypal_client_secret" name="paypal_client_secret"
+                                   value="" placeholder="Neues Secret eingeben um zu ersetzen">
+                            <span class="input-group-text text-success fs-xs">✓ Secret hinterlegt</span>
+                        </div>
+                        {% else %}
                         <input type="password" class="form-control font-monospace" id="paypal_client_secret" name="paypal_client_secret"
-                               value="{{ settings.paypal_client_secret ?? '' }}"
-                               placeholder="••••••••••••">
-                        <div class="form-text text-muted fs-xs">Niemals öffentlich teilen!</div>
+                               value="" placeholder="••••••••••••">
+                        {% endif %}
+                        <div class="form-text text-muted fs-xs">Niemals öffentlich teilen! Leer lassen um das bestehende Secret zu behalten.</div>
                     </div>
                 </div>
             </div>
