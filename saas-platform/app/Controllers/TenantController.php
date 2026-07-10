@@ -314,13 +314,14 @@ class TenantController extends Controller
             $sub = $this->subRepo->findByTenant($id);
             if ($sub) {
                 $this->subRepo->update((int)$sub['id'], [
+                    'billing_cycle' => 'lifetime',
                     'ends_at'       => '2099-12-31 23:59:59',
-                    'next_billing'  => '2099-12-31 23:59:59',
+                    'next_billing'  => null,
                     'trial_ends_at' => '2099-12-31 23:59:59',
                     'status'        => 'active',
                 ]);
             }
-            $this->subscriptionService->logEvent($id, 'trial_started', [
+            $this->subscriptionService->logEvent($id, 'lifetime_granted', [
                 'type' => 'lifetime', 'ends_at' => '2099-12-31 23:59:59',
             ], $actor);
             $this->session->flash('success', 'Lifetime-Lizenz vergeben.');

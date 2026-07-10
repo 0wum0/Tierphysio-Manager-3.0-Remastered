@@ -55,11 +55,13 @@ echo "[" . date('Y-m-d H:i:s') . "] TheraPano Cron ({$mode}) gestartet\n";
 function checkTrialExpiry(PDO $pdo): void
 {
     // (a) Trials auf Tenant-Ebene abgelaufen → suspend
+    // Lifetime-Tenants (trial_ends_at >= 2099) niemals sperren
     $expired = $pdo->query(
         "SELECT id, practice_name, email FROM tenants
          WHERE status = 'trial'
            AND trial_ends_at IS NOT NULL
-           AND trial_ends_at < NOW()"
+           AND trial_ends_at < NOW()
+           AND trial_ends_at < '2099-01-01'"
     )->fetchAll();
 
     foreach ($expired as $t) {
@@ -84,13 +86,16 @@ function checkTrialExpiry(PDO $pdo): void
 
     // (b) Subscription-Ebene: trial_ends_at abgelaufen, Tenant aber noch nicht suspended
     //     Selbst-Heilung: Tenant-Status angleichen wenn Abo abgelaufen
+    //     Lifetime-Lizenzen (billing_cycle='lifetime' oder trial_ends_at >= 2099) NIEMALS sperren
     $subExpired = $pdo->query(
         "SELECT s.id AS sub_id, s.tenant_id, t.practice_name
          FROM subscriptions s
          JOIN tenants t ON t.id = s.tenant_id
          WHERE s.status = 'trial'
+           AND s.billing_cycle != 'lifetime'
            AND s.trial_ends_at IS NOT NULL
            AND s.trial_ends_at < NOW()
+           AND s.trial_ends_at < '2099-01-01'
            AND t.status NOT IN ('suspended','cancelled','expired')"
     )->fetchAll();
 
@@ -128,12 +133,15 @@ function checkTrialExpiry(PDO $pdo): void
 function checkOverduePayments(PDO $pdo): void
 {
     // Abos die überfällig sind (next_billing überschritten, noch aktiv)
+    // Lifetime-Lizenzen (billing_cycle='lifetime' oder ends_at >= 2099) werden IMMER ausgeschlossen
     $overdue = $pdo->query(
         "SELECT s.id, s.tenant_id, s.amount, s.billing_cycle, s.next_billing,
                 t.practice_name, t.payment_provider, t.stripe_customer_id
          FROM subscriptions s
          JOIN tenants t ON t.id = s.tenant_id
          WHERE s.status = 'active'
+           AND s.billing_cycle != 'lifetime'
+           AND (s.ends_at IS NULL OR s.ends_at < '2099-01-01')
            AND s.next_billing IS NOT NULL
            AND s.next_billing < DATE_SUB(NOW(), INTERVAL 3 DAY)"
     )->fetchAll();
@@ -227,7 +235,8 @@ function syncStripeSubscriptions(PDO $pdo): void
     $enabled = $pdo->query("SELECT value FROM saas_settings WHERE `key` = 'stripe_enabled'")->fetchColumn();
     if ($enabled !== '1') return;
 
-    // Get all active Stripe subscriptions
+    // Get all active Stripe subscriptions — Lifetime-Lizenzen werden NICHT mit Stripe synchronisiert,
+    // da sie kein laufendes Stripe-Abo haben und sonst als 'canceled' markiert würden
     $tenants = $pdo->query(
         "SELECT t.id, t.stripe_customer_id, s.stripe_sub_id, s.id AS sub_id
          FROM tenants t
@@ -235,6 +244,8 @@ function syncStripeSubscriptions(PDO $pdo): void
          WHERE t.stripe_customer_id IS NOT NULL
            AND s.stripe_sub_id IS NOT NULL
            AND s.status = 'active'
+           AND s.billing_cycle != 'lifetime'
+           AND (s.ends_at IS NULL OR s.ends_at < '2099-01-01')
          LIMIT 50"
     )->fetchAll();
 
