@@ -113,18 +113,32 @@
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label class="form-label text-muted fs-xs fw-600" for="stripe_secret_key">Geheimer Schlüssel (Secret Key)</label>
+                        {% if settings.stripe_secret_key ?? '' %}
+                        <div class="input-group mb-1">
+                            <input type="password" class="form-control font-monospace" id="stripe_secret_key" name="stripe_secret_key"
+                                   value="" placeholder="Neuen Key eingeben um zu ersetzen">
+                            <span class="input-group-text text-success fs-xs">✓ Key hinterlegt</span>
+                        </div>
+                        {% else %}
                         <input type="password" class="form-control font-monospace" id="stripe_secret_key" name="stripe_secret_key"
-                               value="{{ settings.stripe_secret_key ?? '' }}"
-                               placeholder="sk_live_... oder sk_test_...">
-                        <div class="form-text text-muted fs-xs">Niemals öffentlich teilen! Beginnt mit <code>sk_live_</code> oder <code>sk_test_</code></div>
+                               value="" placeholder="sk_live_... oder sk_test_...">
+                        {% endif %}
+                        <div class="form-text text-muted fs-xs">Niemals öffentlich teilen! Beginnt mit <code>sk_live_</code> oder <code>sk_test_</code>. Leer lassen um den bestehenden Key zu behalten.</div>
                     </div>
                 </div>
                 <div class="col-12">
                     <div class="mb-0">
                         <label class="form-label text-muted fs-xs fw-600" for="stripe_webhook_secret">Webhook Signing Secret</label>
+                        {% if settings.stripe_webhook_secret ?? '' %}
+                        <div class="input-group mb-1">
+                            <input type="password" class="form-control font-monospace" id="stripe_webhook_secret" name="stripe_webhook_secret"
+                                   value="" placeholder="Neues Secret eingeben um zu ersetzen">
+                            <span class="input-group-text text-success fs-xs">✓ Secret hinterlegt</span>
+                        </div>
+                        {% else %}
                         <input type="password" class="form-control font-monospace" id="stripe_webhook_secret" name="stripe_webhook_secret"
-                               value="{{ settings.stripe_webhook_secret ?? '' }}"
-                               placeholder="whsec_...">
+                                   value="" placeholder="whsec_...">
+                        {% endif %}
                         <div class="form-text text-muted fs-xs">
                             Webhook-Endpunkt: <code>https://therapano.de/webhooks/stripe</code> —
                             <a href="https://dashboard.stripe.com/webhooks" target="_blank">In Stripe Dashboard konfigurieren →</a>

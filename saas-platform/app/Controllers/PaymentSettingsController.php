@@ -60,12 +60,18 @@ class PaymentSettingsController extends Controller
         $this->requireAuth();
         $this->verifyCsrf();
 
+        $secretKeys = ['stripe_secret_key', 'stripe_webhook_secret', 'paypal_client_secret'];
         foreach ($this->paymentKeys as $key) {
             $val = $_POST[$key] ?? null;
             if ($val === null) {
                 $this->setSetting($key, '0');
             } else {
-                $this->setSetting($key, trim((string)$val));
+                $trimmed = trim((string)$val);
+                // Secret-Keys nur überschreiben wenn tatsächlich ein neuer Wert eingegeben wurde
+                if (in_array($key, $secretKeys, true) && $trimmed === '') {
+                    continue;
+                }
+                $this->setSetting($key, $trimmed);
             }
         }
 
