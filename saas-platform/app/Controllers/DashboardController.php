@@ -114,6 +114,7 @@ class DashboardController extends Controller
                     $sum = $this->db->fetchColumn(
                         "SELECT COALESCE(SUM(s.amount),0) FROM subscriptions s
                          WHERE s.status = 'active'
+                           AND s.billing_cycle != 'lifetime'
                            AND YEAR(s.started_at) <= ? AND MONTH(s.started_at) <= ?
                            AND (s.ends_at IS NULL OR (YEAR(s.ends_at) >= ? AND MONTH(s.ends_at) >= ?))",
                         [$year, $month, $year, $month]
@@ -326,8 +327,8 @@ class DashboardController extends Controller
     {
         try {
             return round((float)($this->db->fetchColumn(
-                "SELECT COALESCE(SUM(total_amount),0) FROM saas_invoices
-                 WHERE status='paid' AND paid_at >= DATE_FORMAT(NOW(),'%Y-%m-01')"
+                "SELECT COALESCE(SUM(total_gross),0) FROM saas_invoices
+                 WHERE status='paid' AND total_gross > 0 AND paid_at >= DATE_FORMAT(NOW(),'%Y-%m-01')"
             ) ?? 0), 2);
         } catch (\Throwable) {
             return 0.0;

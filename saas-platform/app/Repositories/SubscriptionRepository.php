@@ -83,8 +83,9 @@ class SubscriptionRepository
 
     public function countActive(): int
     {
+        /* Lifetime-Lizenzen zählen NICHT als zahlende Kunden */
         return (int)$this->db->fetchColumn(
-            "SELECT COUNT(*) FROM subscriptions WHERE status = 'active'"
+            "SELECT COUNT(*) FROM subscriptions WHERE status = 'active' AND billing_cycle != 'lifetime'"
         );
     }
 

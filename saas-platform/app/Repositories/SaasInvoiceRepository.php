@@ -168,14 +168,15 @@ class SaasInvoiceRepository
         $year  = date('Y-01-01');
 
         return [
+            /* Lifetime-Lizenzen (total_gross = 0) werden aus allen Umsatzzahlen ausgeschlossen */
             'revenue_month'  => (float)$this->db->fetchColumn(
-                "SELECT COALESCE(SUM(total_gross),0) FROM saas_invoices WHERE status='paid' AND issue_date >= ?", [$month]
+                "SELECT COALESCE(SUM(total_gross),0) FROM saas_invoices WHERE status='paid' AND total_gross > 0 AND issue_date >= ?", [$month]
             ),
             'revenue_year'   => (float)$this->db->fetchColumn(
-                "SELECT COALESCE(SUM(total_gross),0) FROM saas_invoices WHERE status='paid' AND issue_date >= ?", [$year]
+                "SELECT COALESCE(SUM(total_gross),0) FROM saas_invoices WHERE status='paid' AND total_gross > 0 AND issue_date >= ?", [$year]
             ),
             'revenue_total'  => (float)$this->db->fetchColumn(
-                "SELECT COALESCE(SUM(total_gross),0) FROM saas_invoices WHERE status='paid'"
+                "SELECT COALESCE(SUM(total_gross),0) FROM saas_invoices WHERE status='paid' AND total_gross > 0"
             ),
             'open_count'     => (int)$this->db->fetchColumn(
                 "SELECT COUNT(*) FROM saas_invoices WHERE status='open'"
@@ -207,8 +208,8 @@ class SaasInvoiceRepository
 
         $rows = $this->db->fetchAll(
             "SELECT DATE_FORMAT(issue_date,'%Y-%m') AS month,
-                    COALESCE(SUM(CASE WHEN status='paid' THEN total_gross ELSE 0 END),0) AS paid,
-                    COALESCE(SUM(CASE WHEN status IN ('open','overdue') THEN total_gross ELSE 0 END),0) AS open
+                    COALESCE(SUM(CASE WHEN status='paid' AND total_gross > 0 THEN total_gross ELSE 0 END),0) AS paid,
+                    COALESCE(SUM(CASE WHEN status IN ('open','overdue') AND total_gross > 0 THEN total_gross ELSE 0 END),0) AS open
              FROM saas_invoices
              WHERE issue_date >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
              GROUP BY month ORDER BY month ASC"
@@ -284,6 +285,7 @@ class SaasInvoiceRepository
              FROM saas_invoices i
              JOIN tenants t ON t.id = i.tenant_id
              WHERE i.issue_date BETWEEN ? AND ?
+               AND i.total_gross > 0
              ORDER BY i.issue_date ASC, i.invoice_number ASC",
             [$dateFrom, $dateTo]
         );
@@ -300,6 +302,7 @@ class SaasInvoiceRepository
              FROM saas_invoice_positions p
              JOIN saas_invoices i ON i.id = p.invoice_id
              WHERE i.status = 'paid'
+               AND i.total_gross > 0
                AND i.issue_date BETWEEN ? AND ?
              GROUP BY p.tax_rate
              ORDER BY p.tax_rate DESC",

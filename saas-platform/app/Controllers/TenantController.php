@@ -22,6 +22,7 @@ use Saas\Services\SubscriptionService;
 use Saas\Services\MigrationService;
 use Saas\Services\TenantFeatureCacheInvalidator;
 use Saas\Services\PushAdminNotificationService;
+use Saas\Services\SaasInvoiceBillingService;
 use Saas\Repositories\ActivityLogRepository;
 
 class TenantController extends Controller
@@ -42,6 +43,7 @@ class TenantController extends Controller
         private SubscriptionService    $subscriptionService,
         private TenantFeatureCacheInvalidator $cacheInvalidator,
         private PushAdminNotificationService $pushAdmin,
+        private SaasInvoiceBillingService $billingService,
     ) {
         parent::__construct($view, $session);
         $this->auditLog = new ActivityLogRepository($this->db);
@@ -324,6 +326,17 @@ class TenantController extends Controller
             $this->subscriptionService->logEvent($id, 'lifetime_granted', [
                 'type' => 'lifetime', 'ends_at' => '2099-12-31 23:59:59',
             ], $actor);
+
+            /* 0€-Rechnung für das Finanzamt — wird aus allen Umsatzberechnungen
+             * ausgeschlossen (total_gross = 0, invoice_type_label = 'Lifetime-Lizenz'). */
+            try {
+                $tenant   = $this->tenantRepo->find($id);
+                $planName = $tenant['plan_name'] ?? 'TheraPano';
+                $this->billingService->createLifetimeInvoice($tenant, $planName);
+            } catch (\Throwable $e) {
+                error_log('[TenantController] Lifetime-Rechnung konnte nicht erstellt werden: ' . $e->getMessage());
+            }
+
             $this->session->flash('success', 'Lifetime-Lizenz vergeben.');
         } else {
             $days   = max(1, min(3650, $days));

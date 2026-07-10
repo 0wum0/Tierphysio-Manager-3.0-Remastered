@@ -200,6 +200,54 @@ class SaasInvoiceBillingService
         return $invoiceId;
     }
 
+    // ── Lifetime-Lizenz Invoice ───────────────────────────────────────────
+
+    /**
+     * Erstellt automatisch eine 0€-Rechnung wenn eine Lifetime-Lizenz vergeben wird.
+     *
+     * Die Rechnung dient als GoBD-konformes Dokument (falls das Finanzamt fragt).
+     * Sie taucht in KEINER Umsatz- oder Steuerberechnung auf (total_gross = 0,
+     * invoice_type_label = 'Lifetime-Lizenz').
+     */
+    public function createLifetimeInvoice(array $tenant, string $planName): int
+    {
+        $invoiceNumber = $this->invoiceRepo->getNextInvoiceNumber(
+            $this->settings['saas_invoice_prefix'] ?? 'TP',
+            (int)($this->settings['saas_invoice_start_number'] ?? 1000)
+        );
+
+        $data = [
+            'tenant_id'          => (int)$tenant['id'],
+            'invoice_number'     => $invoiceNumber,
+            'status'             => 'paid',
+            'type'               => 'invoice',
+            'payment_method'     => 'lifetime',
+            'issue_date'         => date('Y-m-d'),
+            'due_date'           => null,
+            'total_net'          => 0.0,
+            'total_tax'          => 0.0,
+            'total_gross'        => 0.0,
+            'notes'              => 'Lifetime-Lizenz — kostenfrei, kein Zahlungsvorgang.',
+            'payment_terms'      => 'Lifetime-Lizenz — keine Zahlung erforderlich.',
+            'paid_at'            => date('Y-m-d H:i:s'),
+            'invoice_type_label' => 'Lifetime-Lizenz',
+            'created_at'         => date('Y-m-d H:i:s'),
+            'updated_at'         => date('Y-m-d H:i:s'),
+        ];
+
+        $invoiceId = (int)$this->invoiceRepo->create($data);
+
+        $this->invoiceRepo->addPosition($invoiceId, [
+            'description' => $planName . ' — Lifetime-Lizenz',
+            'quantity'    => 1.0,
+            'unit_price'  => 0.0,
+            'tax_rate'    => 0.0,
+            'total'       => 0.0,
+        ], 1);
+
+        return $invoiceId;
+    }
+
     // ── Storno / Gutschrift ───────────────────────────────────────────────
 
     /**
