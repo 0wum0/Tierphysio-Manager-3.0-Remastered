@@ -483,10 +483,6 @@
                                 {% if (plan.price_month is defined and plan.price_month) %}
                                     <span class="fw-bold" style="font-size:2.2rem;color:#f1f5f9;">{{ plan.price_month }}€</span>
                                     <span class="opacity-50 ms-1" style="font-size:.9rem;">/Monat</span>
-                                    {% if plan.price_year is defined and plan.price_year > 0 %}
-                                    {% set saved_months = ((plan.price_month * 12 - plan.price_year) / plan.price_month)|round %}
-                                    <div style="font-size:.78rem;color:#4ade80;margin-top:.25rem;"><i class="bi bi-tag me-1"></i>{{ plan.price_year }}€/Jahr – {{ saved_months }} Monate gespart</div>
-                                    {% endif %}
                                 {% else %}
                                     <span class="fw-bold" style="font-size:2.2rem;color:#f1f5f9;">Kostenlos</span>
                                 {% endif %}
