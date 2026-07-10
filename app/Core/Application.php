@@ -190,11 +190,18 @@ class Application
                     $userId    = (int)($session->get('user_id') ?? 0);
                     $uiRaw     = $userId ? $prefsRepo->get($userId, 'ui_layout_settings') : null;
                     $view->addGlobal('server_ui_settings', $uiRaw ?? 'null');
+
+                    $tourDone = $userId
+                        ? $prefsRepo->get($userId, 'onboarding_tour_completed')
+                        : '1';
+                    $view->addGlobal('show_onboarding_tour', $tourDone !== '1');
                 } catch (\Throwable) {
                     $view->addGlobal('server_ui_settings', 'null');
+                    $view->addGlobal('show_onboarding_tour', false);
                 }
             } else {
                 $view->addGlobal('server_ui_settings', 'null');
+                $view->addGlobal('show_onboarding_tour', false);
             }
 
             // ── Push notification config ──────────────────────────────────────

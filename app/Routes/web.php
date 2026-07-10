@@ -457,6 +457,21 @@ $router->get('/profil', [ProfileController::class, 'show'], ['auth']);
 $router->post('/profil', [ProfileController::class, 'update'], ['auth']);
 $router->post('/profil/password', [ProfileController::class, 'updatePassword'], ['auth']);
 
+$router->post('/api/onboarding/complete', function () use ($app) {
+    $session   = $app->getContainer()->get(\App\Core\Session::class);
+    $db        = $app->getContainer()->get(\App\Core\Database::class);
+    $userId    = (int)($session->get('user_id') ?? 0);
+    if ($userId && $db) {
+        try {
+            $repo = new \App\Repositories\UserPreferencesRepository($db);
+            $repo->set($userId, 'onboarding_tour_completed', '1');
+        } catch (\Throwable) { /* ignorieren */ }
+    }
+    header('Content-Type: application/json');
+    echo json_encode(['ok' => true]);
+    exit;
+}, ['auth']);
+
 $router->get('/patienten', [PatientController::class, 'index'], ['auth']);
 $router->get('/patienten/neu', [PatientController::class, 'wizard'], ['auth']);
 $router->post('/patienten/wizard', [PatientController::class, 'wizardStore'], ['auth']);

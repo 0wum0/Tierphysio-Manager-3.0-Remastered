@@ -1067,5 +1067,12 @@ body[data-chat-bar="1"] #feedback-fab { bottom: 5rem; }
 })();
 </script>
 {% endif %}
+
+{% if show_onboarding_tour ?? false %}
+<script src="/assets/js/onboarding-tour.js?v=1"></script>
+<script>
+    TheraPanoTour.start({{ (is_trainer ?? false) ? '"trainer"' : '"therapeut"' }});
+</script>
+{% endif %}
 </body>
 </html>
