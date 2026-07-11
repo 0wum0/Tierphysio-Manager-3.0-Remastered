@@ -27,14 +27,29 @@ class LifecycleMailService
     public function __construct(
         private readonly Database $db
     ) {
-        $this->smtpConfig = [
-            'host'       => (string)($_ENV['MAIL_HOST']     ?? 'localhost'),
-            'port'       => (int)($_ENV['MAIL_PORT']        ?? 587),
-            'username'   => (string)($_ENV['MAIL_USERNAME'] ?? ''),
-            'password'   => (string)($_ENV['MAIL_PASSWORD'] ?? ''),
-            'encryption' => (string)($_ENV['MAIL_ENCRYPTION'] ?? 'tls'),
-            'from_addr'  => (string)($_ENV['MAIL_FROM_ADDRESS'] ?? 'noreply@therapano.de'),
-            'from_name'  => (string)($_ENV['MAIL_FROM_NAME']    ?? 'TheraPano'),
+        $this->smtpConfig = $this->buildSmtpConfig();
+    }
+
+    private function buildSmtpConfig(): array
+    {
+        // Load DB settings (admin UI stores SMTP here as smtp_host, smtp_username, …)
+        $dbSettings = [];
+        try {
+            $rows = $this->db->fetchAll("SELECT `key`, `value` FROM saas_settings WHERE `key` IN ('smtp_host','smtp_port','smtp_username','smtp_password','smtp_encryption','mail_from_address','mail_from_name')");
+            foreach ($rows as $r) {
+                $dbSettings[$r['key']] = $r['value'];
+            }
+        } catch (\Throwable) {}
+
+        // DB settings take precedence over ENV; ENV is the fallback
+        return [
+            'host'       => (string)($dbSettings['smtp_host']        ?? $_ENV['MAIL_HOST']         ?? 'localhost'),
+            'port'       => (int)($dbSettings['smtp_port']            ?? $_ENV['MAIL_PORT']         ?? 587),
+            'username'   => (string)($dbSettings['smtp_username']     ?? $_ENV['MAIL_USERNAME']     ?? ''),
+            'password'   => (string)($dbSettings['smtp_password']     ?? $_ENV['MAIL_PASSWORD']     ?? ''),
+            'encryption' => (string)($dbSettings['smtp_encryption']   ?? $_ENV['MAIL_ENCRYPTION']   ?? 'tls'),
+            'from_addr'  => (string)($dbSettings['mail_from_address'] ?? $_ENV['MAIL_FROM_ADDRESS'] ?? 'noreply@therapano.de'),
+            'from_name'  => (string)($dbSettings['mail_from_name']    ?? $_ENV['MAIL_FROM_NAME']    ?? 'TheraPano'),
             'app_url'    => rtrim((string)($_ENV['APP_URL'] ?? 'https://app.therapano.de'), '/'),
         ];
     }
@@ -87,6 +102,7 @@ class LifecycleMailService
               AND NOT EXISTS (
                   SELECT 1 FROM tenant_lifecycle_emails le
                   WHERE le.tenant_id = t.id AND le.email_key = 'welcome'
+                    AND le.status = 'sent'
               )
             ORDER BY t.created_at ASC
         ");
@@ -110,6 +126,7 @@ class LifecycleMailService
               AND NOT EXISTS (
                   SELECT 1 FROM tenant_lifecycle_emails le
                   WHERE le.tenant_id = t.id AND le.email_key = 'trial_warning'
+                    AND le.status = 'sent'
               )
         ");
 
@@ -136,6 +153,7 @@ class LifecycleMailService
               AND NOT EXISTS (
                   SELECT 1 FROM tenant_lifecycle_emails le
                   WHERE le.tenant_id = t.id AND le.email_key = 'trial_expired'
+                    AND le.status = 'sent'
               )
         ");
 
@@ -154,6 +172,7 @@ class LifecycleMailService
               AND NOT EXISTS (
                   SELECT 1 FROM tenant_lifecycle_emails le
                   WHERE le.tenant_id = t.id AND le.email_key = 'activated'
+                    AND le.status = 'sent'
               )
         ");
 
@@ -196,13 +215,19 @@ class LifecycleMailService
         } catch (\Throwable $e) {
             $status = 'failed';
             $error  = $e->getMessage();
+            error_log("[LifecycleMailService] {$emailKey} → {$email} FAILED: {$error}");
         }
 
         try {
             $this->db->execute("
-                INSERT IGNORE INTO tenant_lifecycle_emails
+                INSERT INTO tenant_lifecycle_emails
                     (tenant_id, email_key, to_email, subject, status, error)
                 VALUES (?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE
+                    status   = IF(status = 'failed', VALUES(status), status),
+                    error    = IF(status = 'failed', VALUES(error), error),
+                    to_email = VALUES(to_email),
+                    sent_at  = IF(status = 'failed', NOW(), sent_at)
             ", [(int)$tenant['id'], $emailKey, $email, $subject, $status, $error]);
         } catch (\Throwable) {}
 

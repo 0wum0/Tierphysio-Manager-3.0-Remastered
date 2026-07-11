@@ -317,6 +317,22 @@ class DashboardController extends Controller
             foreach ($rows as $r) {
                 $map[$r['email_key']] = $r;
             }
+
+            // Add last error message per email_key for debugging
+            $errors = $this->db->fetchAll(
+                "SELECT email_key, error, to_email, sent_at
+                 FROM tenant_lifecycle_emails
+                 WHERE status = 'failed' AND error IS NOT NULL
+                 ORDER BY sent_at DESC"
+            );
+            foreach ($errors as $e) {
+                $key = $e['email_key'];
+                if (isset($map[$key]) && empty($map[$key]['last_error'])) {
+                    $map[$key]['last_error']       = $e['error'];
+                    $map[$key]['last_error_email']  = $e['to_email'];
+                }
+            }
+
             return $map;
         } catch (\Throwable) {
             return [];

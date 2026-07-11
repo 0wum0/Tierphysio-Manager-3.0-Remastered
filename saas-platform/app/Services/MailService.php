@@ -7,26 +7,42 @@ namespace Saas\Services;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 use Saas\Core\Config;
+use Saas\Core\Database;
 
 class MailService
 {
-    public function __construct(private Config $config) {}
+    private array $dbSettings = [];
+
+    public function __construct(private Config $config, private Database $db)
+    {
+        try {
+            $rows = $this->db->fetchAll("SELECT `key`, `value` FROM saas_settings WHERE `key` IN ('smtp_host','smtp_port','smtp_username','smtp_password','smtp_encryption','mail_from_address','mail_from_name')");
+            foreach ($rows as $r) {
+                $this->dbSettings[$r['key']] = $r['value'];
+            }
+        } catch (\Throwable) {}
+    }
 
     private function mailer(): PHPMailer
     {
+        $host       = (string)($this->dbSettings['smtp_host']        ?? $this->config->get('mail.host',            'localhost'));
+        $port       = (int)($this->dbSettings['smtp_port']            ?? $this->config->get('mail.port',            587));
+        $username   = (string)($this->dbSettings['smtp_username']     ?? $this->config->get('mail.username',        ''));
+        $password   = (string)($this->dbSettings['smtp_password']     ?? $this->config->get('mail.password',        ''));
+        $encryption = (string)($this->dbSettings['smtp_encryption']   ?? $this->config->get('mail.encryption',      'tls'));
+        $fromAddr   = (string)($this->dbSettings['mail_from_address'] ?? $this->config->get('mail.from.address',   'noreply@therapano.de'));
+        $fromName   = (string)($this->dbSettings['mail_from_name']    ?? $this->config->get('mail.from.name',      'TheraPano'));
+
         $mail = new PHPMailer(true);
         $mail->isSMTP();
-        $mail->Host       = $this->config->get('mail.host', 'localhost');
-        $mail->SMTPAuth   = !empty($this->config->get('mail.username'));
-        $mail->Username   = $this->config->get('mail.username', '');
-        $mail->Password   = $this->config->get('mail.password', '');
-        $mail->SMTPSecure = $this->config->get('mail.encryption', 'tls');
-        $mail->Port       = (int)$this->config->get('mail.port', 587);
+        $mail->Host       = $host;
+        $mail->SMTPAuth   = $username !== '';
+        $mail->Username   = $username;
+        $mail->Password   = $password;
+        $mail->SMTPSecure = $encryption;
+        $mail->Port       = $port;
         $mail->CharSet    = 'UTF-8';
-        $mail->setFrom(
-            $this->config->get('mail.from.address', 'noreply@therapano.de'),
-            $this->config->get('mail.from.name', 'TheraPano')
-        );
+        $mail->setFrom($fromAddr, $fromName);
         return $mail;
     }
 
