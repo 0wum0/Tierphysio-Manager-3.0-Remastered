@@ -487,6 +487,7 @@ $router->post('/patienten/{id}/timeline', [PatientController::class, 'addTimelin
 $router->post('/patienten/{id}/timeline-json', [PatientController::class, 'addTimelineEntryJson'], ['auth']);
 $router->post('/patienten/{id}/attachment-upload', [PatientController::class, 'uploadAttachment'], ['auth']);
 $router->post('/patienten/{id}/timeline/{entryId}/loeschen', [PatientController::class, 'deleteTimelineEntry'], ['auth']);
+$router->get('/patienten/{id}/timeline/{entryId}/entry-json', [PatientController::class, 'getTimelineEntryJson'], ['auth']);
 $router->post('/patienten/{id}/timeline/{entryId}/update-json', [PatientController::class, 'updateTimelineEntryJson'], ['auth']);
 $router->post('/patienten/{id}/timeline/{entryId}/delete-json', [PatientController::class, 'deleteTimelineEntryJson'], ['auth']);
 $router->post('/patienten/{id}/timeline/ki-zusammenfassung', [PatientController::class, 'timelineAiInsight'], ['auth']);

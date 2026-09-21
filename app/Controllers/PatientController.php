@@ -801,6 +801,22 @@ class PatientController extends Controller
         $this->redirect("/patienten/{$patientId}");
     }
 
+    public function getTimelineEntryJson(array $params = []): void
+    {
+        $patient = $this->patientService->findById((int)$params['id']);
+        if (!$patient) { http_response_code(404); header('Content-Type: application/json'); echo json_encode(['error' => 'not found']); exit; }
+        $entry = $this->patientService->getTimelineEntry((int)$params['entryId']);
+        if (!$entry || (int)($entry['patient_id'] ?? 0) !== (int)$params['id']) {
+            http_response_code(404);
+            header('Content-Type: application/json');
+            echo json_encode(['error' => 'not found']);
+            exit;
+        }
+        header('Content-Type: application/json');
+        echo json_encode(['ok' => true, 'entry' => $entry]);
+        exit;
+    }
+
     public function updateTimelineEntryJson(array $params = []): void
     {
         $this->validateCsrf();
@@ -822,6 +838,7 @@ class PatientController extends Controller
             'content'           => $this->post('content', ''),
             'status_badge'      => $this->sanitize($this->post('status_badge', '')),
             'entry_date'        => $this->post('entry_date') ?: date('Y-m-d H:i:s'),
+            'updated_by'        => (int)$this->session->get('user_id') ?: null,
         ];
 
         $this->patientService->updateTimelineEntry((int)$params['entryId'], $data);

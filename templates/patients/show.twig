@@ -586,6 +586,12 @@
                                                 <a href="/patienten/{{ patient.id }}/dokumente/{{ entry.attachment }}" class="btn btn-sm btn-outline-secondary" target="_blank">{{ entry.attachment }}</a>
                                             </div>
                                         {% endif %}
+                                        {% if entry.updated_at %}
+                                            <div class="timeline-edited-info" style="margin-top:0.4rem;font-size:0.7rem;color:var(--bs-secondary-color);display:flex;align-items:center;gap:0.3rem;">
+                                                <svg width="10" height="10" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path stroke="currentColor" stroke-width="2" d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                                <span>Bearbeitet am {{ entry.updated_at|date('d.m.Y') }} um {{ entry.updated_at|date('H:i') }} Uhr{% if entry.updated_by_name %} durch {{ entry.updated_by_name }}{% endif %}</span>
+                                            </div>
+                                        {% endif %}
                                     </div>
                                 </div>
                             {% endfor %}
@@ -603,6 +609,74 @@
         </div>{# end card #}
     </div>{# end right column #}
 </div>{# end patient-layout #}
+
+{# Timeline-Eintrag bearbeiten Modal #}
+<div class="modal fade" id="modal-edit-timeline-entry" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Akteneintrag bearbeiten</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Schließen"></button>
+            </div>
+            <form id="form-edit-timeline-entry">
+                <input type="hidden" id="edit-entry-id" name="entry_id" value="">
+                <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+                <div class="modal-body">
+                    <div class="form-grid form-grid-2" style="margin-bottom:0.75rem;">
+                        <div class="form-group">
+                            <label class="form-label">Eintragstyp</label>
+                            <select name="type" id="edit-entry-type" class="form-control">
+                                <option value="note">📝 Notiz</option>
+                                {% if is_trainer ?? false %}
+                                <option value="treatment">🎾 Training</option>
+                                {% else %}
+                                <option value="treatment">💊 Behandlung</option>
+                                {% endif %}
+                                <option value="photo">📷 Foto</option>
+                                <option value="document">📄 Dokument</option>
+                                <option value="other">📌 Sonstiges</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Datum / Uhrzeit</label>
+                            <input type="datetime-local" name="entry_date" id="edit-entry-date" class="form-control">
+                        </div>
+                    </div>
+                    {% if treatment_types is defined and treatment_types|length > 0 %}
+                    <div class="form-group mb-2" id="edit-treatment-type-row">
+                        <label class="form-label">Behandlungsart</label>
+                        <select name="treatment_type_id" id="edit-treatment-type-id" class="form-control">
+                            <option value="">— keine Zuordnung —</option>
+                            {% for tt in treatment_types %}
+                            <option value="{{ tt.id }}">{{ tt.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+                    <div class="form-group mb-2">
+                        <label class="form-label">Titel</label>
+                        <input type="text" name="title" id="edit-entry-title" class="form-control" placeholder="Kurzer Titel des Eintrags">
+                    </div>
+                    <div class="form-group mb-2">
+                        <label class="form-label">Inhalt / Notizen</label>
+                        <textarea name="content" id="edit-entry-content" class="form-control" rows="6" placeholder="Detaillierte Beschreibung…"></textarea>
+                    </div>
+                    <div class="form-group mb-0">
+                        <label class="form-label">Status-Label (optional)</label>
+                        <input type="text" name="status_badge" id="edit-entry-status-badge" class="form-control" placeholder="z.B. Abgeschlossen, In Behandlung…">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                    <button type="submit" class="btn btn-primary" id="btn-save-timeline-edit">
+                        <svg width="14" height="14" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="2" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline stroke="currentColor" stroke-width="2" points="17 21 17 13 7 13 7 21"/><polyline stroke="currentColor" stroke-width="2" points="7 3 7 8 15 8"/></svg>
+                        Änderungen speichern
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 {# Hausaufgaben Modal #}
 <div class="modal fade" id="modal-add-homework" tabindex="-1" aria-hidden="true">
@@ -1671,6 +1745,90 @@ document.addEventListener('DOMContentLoaded', function() {
         // Tab-Wechsel-Handler
         document.getElementById('hausaufgaben-tab')?.addEventListener('shown.bs.tab', function() {
             loadPatientHomework();
+        });
+    }
+})();
+
+/* ── Timeline-Eintrag bearbeiten ── */
+(function () {
+    var editModal   = document.getElementById('modal-edit-timeline-entry');
+    if (!editModal) return;
+    var bsModal     = null;
+    var csrfToken   = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+    // Edit-Button Klick → Modal öffnen und Daten laden
+    document.querySelectorAll('.timeline-edit-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var entryId = this.dataset.entryId;
+            if (!entryId) return;
+
+            // Entry-Daten per AJAX laden
+            fetch('/patienten/' + patientId + '/timeline/' + entryId + '/entry-json', {
+                headers: { 'X-CSRF-Token': csrfToken }
+            })
+            .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+            .then(function (data) {
+                if (!data || !data.entry) {
+                    _showTlToast('Eintrag konnte nicht geladen werden.', 'error');
+                    return;
+                }
+                var e = data.entry;
+                document.getElementById('edit-entry-id').value         = e.id || entryId;
+                document.getElementById('edit-entry-type').value       = e.type || 'note';
+                document.getElementById('edit-entry-title').value      = e.title || '';
+                document.getElementById('edit-entry-content').value    = e.content || '';
+                document.getElementById('edit-entry-status-badge').value = e.status_badge || '';
+
+                // entry_date für datetime-local (muss "YYYY-MM-DDTHH:mm" sein)
+                var dt = (e.entry_date || '').replace(' ', 'T').substring(0, 16);
+                document.getElementById('edit-entry-date').value = dt;
+
+                // Behandlungstyp (falls Feld vorhanden)
+                var ttSel = document.getElementById('edit-treatment-type-id');
+                if (ttSel) { ttSel.value = e.treatment_type_id || ''; }
+
+                if (!bsModal) { bsModal = new bootstrap.Modal(editModal); }
+                bsModal.show();
+            })
+            .catch(function () {
+                _showTlToast('Fehler beim Laden des Eintrags.', 'error');
+            });
+        });
+    });
+
+    // Formular absenden → Änderungen speichern
+    var form = document.getElementById('form-edit-timeline-entry');
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            var entryId = document.getElementById('edit-entry-id').value;
+            if (!entryId) return;
+
+            var saveBtn = document.getElementById('btn-save-timeline-edit');
+            var origHtml = saveBtn ? saveBtn.innerHTML : '';
+            if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<svg width="13" height="13" fill="none" viewBox="0 0 24 24" style="animation:spin 0.8s linear infinite"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" opacity="0.25"/><path stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M12 2a10 10 0 0 1 10 10"/></svg> Speichern…'; }
+
+            var fd = new FormData(form);
+            fetch('/patienten/' + patientId + '/timeline/' + entryId + '/update-json', {
+                method: 'POST',
+                body: fd
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.ok) {
+                    if (bsModal) { bsModal.hide(); }
+                    _showTlToast('✓ Eintrag gespeichert', 'success');
+                    // Seite neu laden um aktualisierte Timeline inkl. "bearbeitet"-Info zu zeigen
+                    setTimeout(function () { window.location.reload(); }, 600);
+                } else {
+                    _showTlToast('Fehler beim Speichern.', 'error');
+                    if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = origHtml; }
+                }
+            })
+            .catch(function () {
+                _showTlToast('Netzwerkfehler.', 'error');
+                if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = origHtml; }
+            });
         });
     }
 })();
