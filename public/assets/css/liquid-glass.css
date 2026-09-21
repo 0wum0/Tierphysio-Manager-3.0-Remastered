@@ -447,8 +447,12 @@
 
 /* ============================================================
    Override: Modals → Futuristic
+   Hinweis: .modal ist Bootstraps unsichtbarer, fixierter
+   Vollbild-Positionierungs-Container — NIEMALS hier stylen
+   (overflow/transform darauf macht das Modal unklickbar).
+   Die sichtbare Box ist .modal-content.
    ============================================================ */
-.modal {
+.modal-content {
   background: rgba(4,4,18,0.90) !important;
   backdrop-filter: blur(52px) saturate(160%) !important;
   -webkit-backdrop-filter: blur(52px) saturate(160%) !important;
@@ -463,7 +467,7 @@
 }
 
 /* Prismatic top edge Modal */
-.modal::before {
+.modal-content::before {
   content: '';
   position: absolute;
   top: 0; left: 12%; right: 12%;
