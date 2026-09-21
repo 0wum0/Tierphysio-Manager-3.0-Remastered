@@ -1138,7 +1138,7 @@ textarea.form-control { resize: vertical; min-height: 100px; }
   pointer-events: all;
 }
 
-.modal {
+.modal-overlay .modal {
   background: rgba(5,5,20,0.88);
   border: 1px solid rgba(79,124,255,0.15);
   border-radius: var(--radius-xl);
@@ -1155,7 +1155,7 @@ textarea.form-control { resize: vertical; min-height: 100px; }
 }
 
 /* Prismatic top edge on modal */
-.modal::before {
+.modal-overlay .modal::before {
   content: '';
   position: absolute;
   top: 0;
@@ -1169,15 +1169,15 @@ textarea.form-control { resize: vertical; min-height: 100px; }
 
 .modal-overlay.open .modal { transform: scale(1) translateY(0); }
 
-.modal-lg { max-width: 760px; }
-.modal-xl { max-width: 960px; }
+.modal-overlay .modal-lg { max-width: 760px; }
+.modal-overlay .modal-xl { max-width: 960px; }
 
-.modal {
+.modal-overlay .modal {
   display: flex;
   flex-direction: column;
 }
 
-.modal-header {
+.modal-overlay .modal-header {
   padding: 1.25rem 1.5rem;
   border-bottom: 1px solid rgba(255,255,255,0.05);
   display: flex;
@@ -1186,13 +1186,13 @@ textarea.form-control { resize: vertical; min-height: 100px; }
   flex-shrink: 0;
 }
 
-.modal-body {
+.modal-overlay .modal-body {
   padding: 1.5rem;
   overflow-y: auto;
   flex: 1;
 }
 
-.modal-title {
+.modal-overlay .modal-title {
   font-size: 1.1rem;
   font-weight: 700;
   color: var(--text-primary);
@@ -1215,8 +1215,8 @@ textarea.form-control { resize: vertical; min-height: 100px; }
 
 .modal-close:hover { background: rgba(79,124,255,0.1); color: var(--accent-light); border-color: rgba(79,124,255,0.3); }
 
-.modal-body { padding: 1.5rem; }
-.modal-footer {
+.modal-overlay .modal-body { padding: 1.5rem; }
+.modal-overlay .modal-footer {
   padding: 1rem 1.5rem;
   border-top: 1px solid rgba(255,255,255,0.05);
   display: flex;

@@ -611,7 +611,7 @@
 </div>{# end patient-layout #}
 
 {# Timeline-Eintrag bearbeiten Modal #}
-<div class="modal fade" id="modal-edit-timeline-entry" tabindex="-1" aria-hidden="true" style="z-index:1070;">
+<div class="modal fade" id="modal-edit-timeline-entry" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
@@ -1788,13 +1788,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 var ttSel = document.getElementById('edit-treatment-type-id');
                 if (ttSel) { ttSel.value = e.treatment_type_id || ''; }
 
-                if (!bsModal) { bsModal = new bootstrap.Modal(editModal, { backdrop: true, keyboard: true }); }
+                if (!bsModal) { bsModal = new bootstrap.Modal(editModal); }
                 bsModal.show();
-                // Backdrop über anderen Layern
-                setTimeout(function () {
-                    var bd = document.querySelector('.modal-backdrop:last-of-type');
-                    if (bd) { bd.style.zIndex = '1069'; }
-                }, 0);
             })
             .catch(function () {
                 _showTlToast('Fehler beim Laden des Eintrags.', 'error');
