@@ -108,9 +108,11 @@ class PatientRepository extends Repository
             $tt = $this->t('treatment_types');
             return $this->db->fetchAll(
                 "SELECT t.*, u.name AS user_name,
-                        tt.name AS treatment_type_name, tt.color AS treatment_type_color
+                        tt.name AS treatment_type_name, tt.color AS treatment_type_color,
+                        ub.name AS updated_by_name
                  FROM `{$tl}` t
-                 LEFT JOIN `{$u}` u ON t.user_id = u.id
+                 LEFT JOIN `{$u}` u  ON t.user_id    = u.id
+                 LEFT JOIN `{$u}` ub ON t.updated_by = ub.id
                  LEFT JOIN `{$tt}` tt ON t.treatment_type_id = tt.id
                  WHERE t.patient_id = ?
                  ORDER BY t.entry_date DESC" . $limitSql,
@@ -172,9 +174,12 @@ class PatientRepository extends Repository
         $u  = $this->t('users');
         $tt = $this->t('treatment_types');
         $row = $this->db->fetchAll(
-            "SELECT t.*, u.name AS user_name, tt.name AS treatment_type_name, tt.color AS treatment_type_color
+            "SELECT t.*, u.name AS user_name,
+                    tt.name AS treatment_type_name, tt.color AS treatment_type_color,
+                    ub.name AS updated_by_name
              FROM `{$tl}` t
-             LEFT JOIN `{$u}` u ON t.user_id = u.id
+             LEFT JOIN `{$u}` u  ON t.user_id    = u.id
+             LEFT JOIN `{$u}` ub ON t.updated_by = ub.id
              LEFT JOIN `{$tt}` tt ON t.treatment_type_id = tt.id
              WHERE t.id = ?",
             [$entryId]
@@ -185,7 +190,7 @@ class PatientRepository extends Repository
     public function updateTimelineEntry(int $entryId, array $data): void
     {
         $this->db->execute(
-            "UPDATE `{$this->t('patient_timeline')}` SET type=?, treatment_type_id=?, title=?, content=?, status_badge=?, entry_date=? WHERE id=?",
+            "UPDATE `{$this->t('patient_timeline')}` SET type=?, treatment_type_id=?, title=?, content=?, status_badge=?, entry_date=?, updated_at=NOW(), updated_by=? WHERE id=?",
             [
                 $data['type'],
                 $data['treatment_type_id'] ?: null,
@@ -193,6 +198,7 @@ class PatientRepository extends Repository
                 $data['content'],
                 $data['status_badge'],
                 $data['entry_date'],
+                $data['updated_by'] ?? null,
                 $entryId,
             ]
         );

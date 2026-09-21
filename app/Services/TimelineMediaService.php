@@ -144,6 +144,9 @@ class TimelineMediaService
         $entry['author'] = $entry['user_name'] ?? null;
         $entry['entry_type'] = $entry['type'] ?? 'note';
         $entry['created_at'] = $entry['created_at'] ?? ($entry['entry_date'] ?? null);
+        // Edit audit info
+        $entry['updated_by_name'] = $entry['updated_by_name'] ?? null;
+        $entry['updated_at']      = $entry['updated_at'] ?? null;
         if (!empty($media[0]['url'])) {
             $entry['file_url'] = $media[0]['url'];
         }
