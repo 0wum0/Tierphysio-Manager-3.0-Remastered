@@ -1751,6 +1751,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /* ── Timeline-Eintrag bearbeiten ── */
 (function () {
+    var patientId   = {{ patient.id }};
     var editModal   = document.getElementById('modal-edit-timeline-entry');
     if (!editModal) return;
     var bsModal     = null;
