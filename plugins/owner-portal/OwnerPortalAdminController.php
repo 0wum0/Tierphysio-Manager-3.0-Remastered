@@ -401,7 +401,7 @@ class OwnerPortalAdminController extends Controller
                 'status'            => 'active',
                 'created_by'        => $userId,
             ]);
-            $this->repo->saveTasksForPlan($planId, $this->parseTasksFromPost());
+            $this->repo->saveTasksForPlan($planId, $this->autoSaveNewTemplates($this->parseTasksFromPost()));
         } catch (\Throwable $e) {
             $this->session->flash('error', 'Hausaufgabenplan konnte nicht gespeichert werden: ' . $e->getMessage());
             $this->redirect('/portal-admin/tiere/' . $ownerId . '/hausaufgaben');
@@ -477,7 +477,7 @@ class OwnerPortalAdminController extends Controller
             'status'            => $this->post('status', 'active'),
         ]);
 
-        $this->repo->saveTasksForPlan($id, $this->parseTasksFromPost());
+        $this->repo->saveTasksForPlan($id, $this->autoSaveNewTemplates($this->parseTasksFromPost()));
 
         $this->session->flash('success', 'Hausaufgabenplan aktualisiert.');
         $this->redirect('/portal-admin/tiere/' . $plan['owner_id'] . '/hausaufgaben');
@@ -614,24 +614,50 @@ class OwnerPortalAdminController extends Controller
 
     private function parseTasksFromPost(): array
     {
-        $titles       = $_POST['task_title']       ?? [];
-        $descriptions = $_POST['task_description'] ?? [];
-        $frequencies  = $_POST['task_frequency']   ?? [];
-        $durations    = $_POST['task_duration']    ?? [];
-        $notes        = $_POST['task_notes']       ?? [];
-        $templateIds  = $_POST['task_template_id'] ?? [];
+        $titles        = $_POST['task_title']            ?? [];
+        $descriptions  = $_POST['task_description']       ?? [];
+        $frequencies   = $_POST['task_frequency']          ?? [];
+        $durations     = $_POST['task_duration']           ?? [];
+        $notes         = $_POST['task_notes']              ?? [];
+        $templateIds   = $_POST['task_template_id']        ?? [];
+        $saveAsTemplate = $_POST['task_save_as_template']  ?? [];
 
         $tasks = [];
         foreach ($titles as $i => $title) {
             $tasks[] = [
-                'title'           => htmlspecialchars(strip_tags(trim($title)), ENT_QUOTES, 'UTF-8'),
-                'description'     => $descriptions[$i] ?? '',
-                'frequency'       => htmlspecialchars(strip_tags(trim($frequencies[$i] ?? '')), ENT_QUOTES, 'UTF-8'),
-                'duration'        => htmlspecialchars(strip_tags(trim($durations[$i] ?? '')), ENT_QUOTES, 'UTF-8'),
-                'therapist_notes' => $notes[$i] ?? '',
-                'template_id'     => !empty($templateIds[$i]) ? (int)$templateIds[$i] : null,
+                'title'             => htmlspecialchars(strip_tags(trim($title)), ENT_QUOTES, 'UTF-8'),
+                'description'       => $descriptions[$i] ?? '',
+                'frequency'         => htmlspecialchars(strip_tags(trim($frequencies[$i] ?? '')), ENT_QUOTES, 'UTF-8'),
+                'duration'          => htmlspecialchars(strip_tags(trim($durations[$i] ?? '')), ENT_QUOTES, 'UTF-8'),
+                'therapist_notes'   => $notes[$i] ?? '',
+                'template_id'       => !empty($templateIds[$i]) ? (int)$templateIds[$i] : null,
+                'save_as_template'  => ($saveAsTemplate[$i] ?? '0') === '1',
             ];
         }
+        return $tasks;
+    }
+
+    /**
+     * Legt für frei getippte (nicht aus einer Vorlage stammende) Aufgaben,
+     * die der Nutzer per Checkbox markiert hat, automatisch eine
+     * wiederverwendbare Vorlage an — vorhandene Vorlage mit gleichem Titel
+     * wird wiederverwendet statt dupliziert.
+     *
+     * @param array $tasks von parseTasksFromPost()
+     * @return array dieselben Tasks, mit aufgefülltem template_id wo zutreffend
+     */
+    private function autoSaveNewTemplates(array $tasks): array
+    {
+        foreach ($tasks as &$task) {
+            if ($task['template_id'] || !$task['save_as_template'] || $task['title'] === '') {
+                continue;
+            }
+            $existing = $this->repo->findTemplateByTitle($task['title']);
+            $task['template_id'] = $existing
+                ? (int)$existing['id']
+                : $this->repo->createTemplateFromTask($task);
+        }
+        unset($task);
         return $tasks;
     }
 

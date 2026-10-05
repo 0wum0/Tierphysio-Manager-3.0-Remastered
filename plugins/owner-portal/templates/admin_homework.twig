@@ -369,37 +369,130 @@ function openCreatePlan(patientId, patientName) {
     taskCount = 0;
     updateTasksEmpty();
 
-    // Pre-fill Wiedervorstellung from next appointment
     var dateInput = document.getElementById('create-next-appointment');
     var badge     = document.getElementById('next-appt-badge');
     var hint      = document.getElementById('next-appt-hint');
-    var appt      = _nextApptByPatient[patientId];
-    dateInput.value = '';
-    badge.style.display = 'none';
-    hint.textContent = '';
-    if (appt && appt.start_at) {
-        var d = appt.start_at.substring(0, 10);
-        dateInput.value = d;
-        var fmt = new Date(d).toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit', year:'numeric'});
-        badge.textContent = 'Termin vorhanden';
-        badge.style.display = '';
-        hint.textContent = 'Nächster Termin: ' + fmt + (appt.title ? ' – ' + appt.title : '');
-    }
-
-    // Store current patient info for appointment creation
     dateInput.dataset.patientId   = patientId;
     dateInput.dataset.patientName = patientName;
 
+    var restored = restoreDraftIfPresent(patientId);
+
+    if (!restored) {
+        // Pre-fill Wiedervorstellung from next appointment
+        var appt = _nextApptByPatient[patientId];
+        dateInput.value = '';
+        badge.style.display = 'none';
+        hint.textContent = '';
+        if (appt && appt.start_at) {
+            var d = appt.start_at.substring(0, 10);
+            dateInput.value = d;
+            var fmt = new Date(d).toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit', year:'numeric'});
+            badge.textContent = 'Termin vorhanden';
+            badge.style.display = '';
+            hint.textContent = 'Nächster Termin: ' + fmt + (appt.title ? ' – ' + appt.title : '');
+        }
+    }
+
     bootstrap.Modal.getOrCreateInstance(document.getElementById('modal-create-plan')).show();
 }
+
+/* ── Entwurf-Sicherung (localStorage) — schützt gegen versehentliches
+ * Neuladen/Schließen der Seite, bevor der Plan gespeichert wurde. ── */
+var DRAFT_PREFIX = 'hwplan_draft_';
+var _draftSaveTimer = null;
+
+function draftKey(patientId) { return DRAFT_PREFIX + patientId; }
+
+function collectDraft() {
+    var form = document.getElementById('form-create-plan');
+    var simpleFields = ['plan_date', 'therapist_name', 'next_appointment',
+        'physio_principles', 'therapy_means', 'short_term_goals', 'long_term_goals', 'general_notes'];
+    var data = { savedAt: Date.now(), fields: {}, tasks: [] };
+    simpleFields.forEach(function (name) {
+        var el = form.querySelector('[name="' + name + '"]');
+        if (el) data.fields[name] = el.value;
+    });
+    document.querySelectorAll('.task-row').forEach(function (row) {
+        data.tasks.push({
+            id:               row.querySelector('[name="task_template_id[]"]').value,
+            title:            row.querySelector('[name="task_title[]"]').value,
+            frequency:        row.querySelector('[name="task_frequency[]"]').value,
+            duration:         row.querySelector('[name="task_duration[]"]').value,
+            description:      row.querySelector('[name="task_description[]"]').value,
+            therapist_notes:  row.querySelector('[name="task_notes[]"]').value,
+            save_as_template: row.querySelector('[name="task_save_as_template[]"]').value === '1',
+        });
+    });
+    return data;
+}
+
+function saveDraft() {
+    var patientId = document.getElementById('create-patient-id').value;
+    if (!patientId) return;
+    clearTimeout(_draftSaveTimer);
+    _draftSaveTimer = setTimeout(function () {
+        try {
+            var data = collectDraft();
+            var hasContent = data.tasks.length > 0 || Object.keys(data.fields).some(function (k) {
+                return k !== 'plan_date' && data.fields[k];
+            });
+            if (hasContent) {
+                localStorage.setItem(draftKey(patientId), JSON.stringify(data));
+            } else {
+                localStorage.removeItem(draftKey(patientId));
+            }
+        } catch (e) { /* localStorage voll/blockiert — kein Blocker für die Eingabe */ }
+    }, 400);
+}
+
+function clearDraft(patientId) {
+    try { localStorage.removeItem(draftKey(patientId)); } catch (e) {}
+}
+
+function restoreDraftIfPresent(patientId) {
+    try {
+        var raw = localStorage.getItem(draftKey(patientId));
+        if (!raw) return false;
+        var draft = JSON.parse(raw);
+        var when  = new Date(draft.savedAt).toLocaleString('de-DE');
+        if (!confirm('Für diesen Patienten gibt es einen nicht gespeicherten Entwurf vom ' + when + '.\n\nMöchtest du ihn wiederherstellen?')) {
+            clearDraft(patientId);
+            return false;
+        }
+        var form = document.getElementById('form-create-plan');
+        Object.keys(draft.fields || {}).forEach(function (name) {
+            var el = form.querySelector('[name="' + name + '"]');
+            if (el) el.value = draft.fields[name];
+        });
+        (draft.tasks || []).forEach(function (t) {
+            addTask({
+                id: t.id || '', title: t.title, frequency: t.frequency, duration: t.duration,
+                description: t.description, therapist_notes: t.therapist_notes,
+                save_as_template: t.save_as_template,
+            });
+        });
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+document.getElementById('form-create-plan').addEventListener('input', saveDraft);
+document.getElementById('form-create-plan').addEventListener('change', saveDraft);
+document.getElementById('form-create-plan').addEventListener('submit', function () {
+    clearDraft(document.getElementById('create-patient-id').value);
+});
 
 function addTask(prefill) {
     var container = document.getElementById('tasks-container');
     var i = taskCount++;
     var p = prefill || {};
+    var fromTemplate   = !!p.id;
+    var saveChecked    = (p.save_as_template === undefined) ? true : !!p.save_as_template;
     var html = `
     <div class="border rounded p-3 mb-2 task-row" id="task-row-${i}">
         <input type="hidden" name="task_template_id[]" value="${p.id || ''}">
+        <input type="hidden" name="task_save_as_template[]" id="task-tpl-hidden-${i}" value="${fromTemplate ? '0' : (saveChecked ? '1' : '0')}">
         <div class="d-flex gap-2 align-items-start">
             <div style="flex:1;">
                 <div class="row g-2 mb-2">
@@ -420,15 +513,24 @@ function addTask(prefill) {
                           placeholder="Beschreibung / Durchführung">${escHtml(p.description||'')}</textarea>
                 <textarea name="task_notes[]" class="form-control form-control-sm" rows="1"
                           placeholder="Therapeutenhinweise (optional)">${escHtml(p.therapist_notes||'')}</textarea>
+                ${fromTemplate ? '' : `
+                <div class="form-check mt-2">
+                    <input type="checkbox" class="form-check-input" id="task-tpl-cb-${i}" ${saveChecked ? 'checked' : ''}
+                           onchange="document.getElementById('task-tpl-hidden-${i}').value = this.checked ? '1' : '0';">
+                    <label class="form-check-label fs-nano text-muted" for="task-tpl-cb-${i}">
+                        <i class="fal fa-copy me-1"></i>Als Vorlage für zukünftige Pläne speichern
+                    </label>
+                </div>`}
             </div>
             <button type="button" class="btn btn-xs btn-outline-danger"
-                    onclick="document.getElementById('task-row-${i}').remove(); updateTasksEmpty();">
+                    onclick="document.getElementById('task-row-${i}').remove(); updateTasksEmpty(); saveDraft();">
                 <i class="fal fa-trash"></i>
             </button>
         </div>
     </div>`;
     container.insertAdjacentHTML('beforeend', html);
     updateTasksEmpty();
+    saveDraft();
 }
 
 function updateTasksEmpty() {

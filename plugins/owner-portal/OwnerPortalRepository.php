@@ -477,6 +477,77 @@ class OwnerPortalRepository
         }
     }
 
+    /**
+     * Findet eine aktive Vorlage mit exakt gleichem Titel (case-insensitiv),
+     * um beim automatischen Anlegen keine Duplikate zu erzeugen.
+     */
+    public function findTemplateByTitle(string $title): ?array
+    {
+        $stmt = $this->db->query(
+            "SELECT * FROM `{$this->t('homework_templates')}` WHERE LOWER(title) = LOWER(?) AND is_active = 1 LIMIT 1",
+            [$title]
+        );
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
+    }
+
+    /**
+     * Legt aus einer frei getippten Plan-Aufgabe eine wiederverwendbare
+     * Vorlage an. Häufigkeit/Dauer sind im Plan-Formular Freitext, die
+     * homework_templates-Tabelle verlangt aber ENUM-Werte — daher
+     * Best-Effort-Mapping mit sinnvollen Fallbacks.
+     */
+    public function createTemplateFromTask(array $task): int
+    {
+        $frequencyText = (string)($task['frequency'] ?? '');
+        $frequency = 'as_needed';
+        if (preg_match('/wöchentlich|woche\b/i', $frequencyText)) {
+            $frequency = 'weekly';
+        } elseif (preg_match('/3\s*x|dreimal/i', $frequencyText)) {
+            $frequency = 'three_times_daily';
+        } elseif (preg_match('/2\s*x|zweimal/i', $frequencyText)) {
+            $frequency = 'twice_daily';
+        } elseif (preg_match('/täglich|tgl\b/i', $frequencyText)) {
+            $frequency = 'daily';
+        } elseif (preg_match('/bedarf/i', $frequencyText)) {
+            $frequency = 'as_needed';
+        }
+
+        $durationText  = (string)($task['duration'] ?? '');
+        $durationValue = 1;
+        if (preg_match('/(\d+)/', $durationText, $m)) {
+            $durationValue = max(1, (int)$m[1]);
+        }
+        $durationUnit = 'minutes';
+        if (preg_match('/stunde/i', $durationText)) {
+            $durationUnit = 'hours';
+        } elseif (preg_match('/tag/i', $durationText)) {
+            $durationUnit = 'days';
+        } elseif (preg_match('/woche/i', $durationText)) {
+            $durationUnit = 'weeks';
+        }
+
+        $description = trim((string)($task['description'] ?? ''));
+        if ($description === '') {
+            $description = (string)($task['title'] ?? '');
+        }
+
+        $this->db->execute(
+            "INSERT INTO `{$this->t('homework_templates')}`
+             (title, description, category, category_emoji, frequency, duration_value, duration_unit, therapist_notes, is_active)
+             VALUES (?, ?, 'sonstiges', '📝', ?, ?, ?, ?, 1)",
+            [
+                (string)($task['title'] ?? ''),
+                $description,
+                $frequency,
+                $durationValue,
+                $durationUnit,
+                $task['therapist_notes'] ?? null,
+            ]
+        );
+        return (int)$this->db->lastInsertId();
+    }
+
     public function getAllHomeworkTemplates(): array
     {
         try {
