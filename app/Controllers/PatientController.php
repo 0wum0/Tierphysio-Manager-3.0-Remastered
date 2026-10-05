@@ -801,6 +801,43 @@ class PatientController extends Controller
         $this->redirect("/patienten/{$patientId}");
     }
 
+    /**
+     * GET /api/patienten/{id}/portal-checks — vom Besitzer im Portal
+     * abgehakte Hausaufgaben/Übungen für die Patienten-Akte (globales Modal).
+     */
+    public function portalChecksJson(array $params = []): void
+    {
+        header('Content-Type: application/json');
+        $patientId = (int)($params['id'] ?? 0);
+        $patient   = $this->patientService->findById($patientId);
+        if (!$patient) {
+            http_response_code(404);
+            echo json_encode(['error' => 'not found']);
+            exit;
+        }
+
+        $items = [];
+        try {
+            $db         = \App\Core\Application::getInstance()->getContainer()->get(\App\Core\Database::class);
+            $portalRepo = new \Plugins\OwnerPortal\OwnerPortalRepository($db);
+            $notifications = $portalRepo->getCheckNotificationsForPatient($patientId);
+            foreach ($notifications as $n) {
+                if (empty($n['checked'])) {
+                    continue;
+                }
+                $items[] = [
+                    'task_title' => $n['task_title']  ?? '',
+                    'owner_name' => trim(($n['first_name'] ?? '') . ' ' . ($n['last_name'] ?? '')),
+                    'type'       => $n['type']        ?? 'homework',
+                    'created_at' => $n['created_at']  ?? null,
+                ];
+            }
+        } catch (\Throwable) { /* Owner-Portal-Plugin evtl. inaktiv — leere Liste genügt */ }
+
+        echo json_encode(['items' => $items]);
+        exit;
+    }
+
     public function getTimelineEntryJson(array $params = []): void
     {
         $patient = $this->patientService->findById((int)$params['id']);

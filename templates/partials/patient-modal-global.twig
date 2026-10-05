@@ -513,6 +513,16 @@
                                     Neuer Plan
                                 </button>
                             </div>
+                            <div id="pd-hw-progress-wrap" style="display:none;align-items:center;gap:1.25rem;padding:0.85rem 1rem;border:1px solid var(--bs-border-color);border-radius:10px;background:var(--bs-secondary-bg);margin-bottom:1rem;flex-wrap:wrap;">
+                                <div style="width:84px;height:84px;position:relative;flex-shrink:0;">
+                                    <canvas id="pd-hw-progress-chart" width="84" height="84"></canvas>
+                                    <div id="pd-hw-progress-pct" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:0.95rem;font-weight:700;"></div>
+                                </div>
+                                <div style="flex:1;min-width:160px;">
+                                    <div style="font-size:0.85rem;font-weight:600;">Erledigungsfortschritt (alle Pläne)</div>
+                                    <div id="pd-hw-progress-detail" style="font-size:0.78rem;color:var(--bs-secondary-color);margin-top:0.2rem;"></div>
+                                </div>
+                            </div>
                             <div id="pd-hw-plans-list">
                                 <div style="text-align: center; padding: 2rem; color: var(--bs-secondary-color);">
                                     <div class="pd-spinner" style="margin: 0 auto 1rem;"></div>
@@ -1354,6 +1364,9 @@ function resetModal() {
     document.getElementById('pd-vr-list').innerHTML        = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);"><div class="pd-spinner" style="margin:0 auto 1rem;"></div>Lade…</div>';
     document.getElementById('pd-fortschritt-list').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">Keine Fortschrittsdaten vorhanden.</div>';
     document.getElementById('pd-portal-list').innerHTML    = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">Noch keine abgehakten Aufgaben.</div>';
+    var hwProgWrap = document.getElementById('pd-hw-progress-wrap');
+    if (hwProgWrap) hwProgWrap.style.display = 'none';
+    if (_hwProgressChart) { try { _hwProgressChart.destroy(); } catch(e) {} _hwProgressChart = null; }
     /* badge count reset */
     ['pd-befunde-count','pd-vr-count','pd-portal-count'].forEach(function(id) { var el=document.getElementById(id); if(el){el.style.display='none'; el.textContent='0';} });
     /* switch back to akte tab */
@@ -2156,6 +2169,49 @@ function loadPortalChecks(patientId) {
 
 /* --- Hausaufgabenpläne --- */
 var _hwTemplates = [];
+var _hwProgressChart = null;
+
+function renderHwProgressChart(plans) {
+    var wrap = document.getElementById('pd-hw-progress-wrap');
+    var pctEl = document.getElementById('pd-hw-progress-pct');
+    var detailEl = document.getElementById('pd-hw-progress-detail');
+    if (!wrap) return;
+
+    var totalTasks = 0, checkedTasks = 0;
+    (plans || []).forEach(function (plan) {
+        var p = plan.progress || {total: 0, checked: 0};
+        totalTasks   += p.total;
+        checkedTasks += p.checked;
+    });
+
+    if (totalTasks === 0) { wrap.style.display = 'none'; return; }
+
+    var percent = Math.round((checkedTasks / totalTasks) * 100);
+    wrap.style.display = 'flex';
+    if (pctEl)    pctEl.textContent = percent + '%';
+    if (detailEl) detailEl.textContent = checkedTasks + ' von ' + totalTasks + ' Aufgaben vom Besitzer abgehakt';
+
+    var canvas = document.getElementById('pd-hw-progress-chart');
+    if (!canvas || typeof Chart === 'undefined') return;
+    if (_hwProgressChart) { _hwProgressChart.destroy(); }
+    _hwProgressChart = new Chart(canvas.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Erledigt', 'Offen'],
+            datasets: [{
+                data: [checkedTasks, totalTasks - checkedTasks],
+                backgroundColor: ['#22c55e', 'rgba(148,163,184,0.25)'],
+                borderWidth: 0,
+            }]
+        },
+        options: {
+            cutout: '72%',
+            responsive: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: true } }
+        }
+    });
+}
+
 function loadHwPlans(patientId) {
     if (_hwLoaded) return;
     _hwLoaded = true;
@@ -2163,20 +2219,33 @@ function loadHwPlans(patientId) {
     fetch('/api/patients/'+patientId+'/plans', {headers:{'Accept':'application/json'}})
         .then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d};});})
         .then(function(res) {
-            if (!res.ok || !Array.isArray(res.d)) { container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">'+(res.ok?'Noch keine Hausaufgabenpläne vorhanden.<br><br><button class="btn btn-primary btn-sm" onclick="openCreatePlanModal()">Ersten Plan erstellen</button>':'Fehler beim Laden der Pläne.')+'</div>'; return; }
+            if (!res.ok || !Array.isArray(res.d)) {
+                var errMsg = (res.d && res.d.error) ? res.d.error : 'Unbekannter Fehler';
+                container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">Fehler beim Laden der Pläne: '+esc(errMsg)+'</div>';
+                return;
+            }
             var plans = res.d;
+            renderHwProgressChart(plans);
             if (!plans.length) { container.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--bs-secondary-color);font-size:0.85rem;">Noch keine Hausaufgabenpläne vorhanden.<br><br><button class="btn btn-primary btn-sm" onclick="openCreatePlanModal()">Ersten Plan erstellen</button></div>'; return; }
             var html = '';
             plans.forEach(function(plan) {
                 var badge = plan.status==='active' ? '<span class="badge text-bg-success ms-2" style="font-size:0.68rem;">Aktiv</span>' : '<span class="badge text-bg-secondary ms-2" style="font-size:0.68rem;">Archiviert</span>';
+                var prog  = plan.progress || {total:0, checked:0, percent:0};
                 var taskRows = (plan.tasks||[]).map(function(t) {
-                    return '<div style="font-size:0.78rem;padding:0.3rem 0.5rem;border-bottom:1px solid var(--bs-border-color);">📋 '+esc(t.title)+(t.frequency?' — '+esc(t.frequency):'')+(t.duration?' ('+esc(t.duration)+')':"")+'</div>';
+                    var mark = t.checked
+                        ? '<span style="color:#22c55e;font-weight:700;">✓</span>'
+                        : '<span style="color:var(--bs-secondary-color);">○</span>';
+                    return '<div style="font-size:0.78rem;padding:0.3rem 0.5rem;border-bottom:1px solid var(--bs-border-color);display:flex;align-items:center;gap:0.4rem;'+(t.checked?'opacity:0.75;':'')+'">'+mark+' <span style="'+(t.checked?'text-decoration:line-through;':'')+'">'+esc(t.title)+(t.frequency?' — '+esc(t.frequency):'')+(t.duration?' ('+esc(t.duration)+')':"")+'</span></div>';
                 }).join('');
+                var progressBar = prog.total > 0
+                    ? '<div style="padding:0.5rem 0.85rem 0.15rem;"><div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--bs-secondary-color);margin-bottom:0.25rem;"><span>Fortschritt</span><span>'+prog.checked+' / '+prog.total+' erledigt ('+prog.percent+'%)</span></div><div style="height:6px;border-radius:999px;background:var(--bs-border-color);overflow:hidden;"><div style="height:100%;width:'+prog.percent+'%;background:#22c55e;border-radius:999px;"></div></div></div>'
+                    : '';
                 html += '<div style="border:1px solid var(--bs-border-color);border-radius:10px;margin-bottom:0.75rem;overflow:hidden;">';
                 html += '<div style="padding:0.65rem 0.85rem;background:var(--bs-secondary-bg);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.35rem;">';
                 html += '<div><span class="fw-600" style="font-size:0.85rem;">📅 Plan vom '+(plan.plan_date ? new Date(plan.plan_date).toLocaleDateString('de-DE') : '—')+'</span>'+badge+(plan.therapist_name?'<span class="text-muted ms-2" style="font-size:0.75rem;">· '+esc(plan.therapist_name)+'</span>':'')+'</div>';
                 html += '<div class="d-flex gap-1"><a href="/portal-admin/hausaufgaben/'+plan.id+'/pdf" target="_blank" class="btn btn-sm btn-outline-secondary" style="font-size:0.72rem;">PDF</a><button class="btn btn-sm btn-outline-danger" style="font-size:0.72rem;" onclick="_deletePlan('+plan.id+')">Löschen</button></div>';
                 html += '</div>';
+                if (progressBar) html += progressBar;
                 if (taskRows) html += '<div>'+taskRows+'</div>';
                 if (plan.general_notes) html += '<div style="padding:0.4rem 0.85rem;font-size:0.78rem;color:var(--bs-secondary-color);">📝 '+esc(plan.general_notes)+'</div>';
                 html += '</div>';
@@ -2878,7 +2947,11 @@ function _loadPlans(patientId) {
         .then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});})
         .then(function(res){
             container=document.getElementById('hw-plans-list'); if(!container) return;
-            if(!res.ok||!Array.isArray(res.d)){container.innerHTML='<div class="alert alert-danger">API-Fehler</div>';return;}
+            if(!res.ok||!Array.isArray(res.d)){
+                var errMsg = (res.d && res.d.error) ? res.d.error : ('HTTP ' + (res.d && res.d.status || ''));
+                container.innerHTML='<div class="alert alert-danger">Hausaufgabenpläne konnten nicht geladen werden: '+_hwEsc(errMsg)+'</div>';
+                return;
+            }
             var plans=res.d;
             if(!plans.length){container.innerHTML='<div class="text-center py-5 text-muted">Noch keine Pläne vorhanden.<br><br><button class="btn btn-primary btn-sm" onclick="openCreatePlanModal()">Ersten Plan erstellen</button></div>';return;}
             container.innerHTML=plans.map(function(plan){

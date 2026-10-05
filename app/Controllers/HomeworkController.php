@@ -376,7 +376,31 @@ class HomeworkController
                     "SELECT * FROM `{$this->t('portal_homework_plan_tasks')}` WHERE plan_id = ? ORDER BY sort_order ASC, id ASC",
                     [(int)$plan['id']]
                 )->fetchAll(\PDO::FETCH_ASSOC);
+
+                $checkedTaskIds = [];
+                try {
+                    $checkedTaskIds = $this->db->query(
+                        "SELECT DISTINCT task_id FROM `{$this->t('portal_homework_task_checks')}`
+                         WHERE plan_id = ? AND checked = 1",
+                        [(int)$plan['id']]
+                    )->fetchAll(\PDO::FETCH_COLUMN);
+                } catch (\Throwable) { /* Checklist-Tabelle evtl. nicht vorhanden */ }
+                $checkedTaskIds = array_map('intval', $checkedTaskIds);
+
+                foreach ($plan['tasks'] as &$task) {
+                    $task['checked'] = in_array((int)$task['id'], $checkedTaskIds, true);
+                }
+                unset($task);
+
+                $total   = count($plan['tasks']);
+                $checked = count($checkedTaskIds);
+                $plan['progress'] = [
+                    'total'   => $total,
+                    'checked' => $checked,
+                    'percent' => $total > 0 ? (int)round($checked / $total * 100) : 0,
+                ];
             }
+            unset($plan);
             echo json_encode($plans);
         } catch (\Throwable $e) {
             http_response_code(500);

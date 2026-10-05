@@ -480,6 +480,7 @@ $router->get('/api/global-search', [PatientController::class, 'globalSearch'], [
 $router->post('/patienten', [PatientController::class, 'store'], ['auth']);
 $router->get('/patienten/{id}', [PatientController::class, 'show'], ['auth']);
 $router->get('/patienten/{id}/json', [PatientController::class, 'showJson'], ['auth']);
+$router->get('/api/patienten/{id}/portal-checks', [PatientController::class, 'portalChecksJson'], ['auth']);
 $router->post('/patienten/{id}', [PatientController::class, 'update'], ['auth']);
 $router->post('/patienten/{id}/loeschen', [PatientController::class, 'delete'], ['auth']);
 $router->post('/patienten/{id}/foto', [PatientController::class, 'uploadPhoto'], ['auth']);
