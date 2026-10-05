@@ -23,7 +23,8 @@ class ServiceProvider
             $container->get('App\Repositories\PatientRepository'),
             $container->get('App\Core\Database'),
             $container->get('App\Repositories\OwnerRepository'),
-            $container->get('App\Services\MailService')
+            $container->get('App\Services\MailService'),
+            $container->get('App\Services\PushNotificationService')
         ));
 
         // Template-Pfad hinzufügen
