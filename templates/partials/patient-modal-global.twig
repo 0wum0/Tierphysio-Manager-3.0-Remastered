@@ -228,8 +228,8 @@
 
 {# ── Patient Detail Modal ─────────────────────────────── #}
 <div class="modal fade" id="modal-patient-detail" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable" style="--bs-modal-height: 92vh;">
-        <div class="modal-content" style="display: flex; flex-direction: column; max-height: 92vh;">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable" style="--bs-modal-height: 92vh; --bs-modal-height: 92dvh;">
+        <div class="modal-content" style="display: flex; flex-direction: column; max-height: 92vh; max-height: 92dvh;">
 
             {# ── Header ─────────────────────────────────────────── #}
             <div id="pd-header" style="padding: 0.6rem 0.85rem; border-bottom: 1px solid var(--bs-border-color, rgba(255,255,255,0.12)); flex-shrink: 0; display: flex; align-items: center; gap: 0.55rem; position: relative;">
@@ -971,7 +971,7 @@
 
 {# ── Datei-Viewer ─────────────────────────────────────── #}
 <div id="fileviewer-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.88);align-items:center;justify-content:center;flex-direction:column;">
-    <div style="position:relative;width:96vw;max-width:960px;height:92vh;display:flex;flex-direction:column;background:var(--bs-body-bg,#1a1a2e);border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.7);">
+    <div style="position:relative;width:96vw;max-width:960px;height:92vh;height:92dvh;display:flex;flex-direction:column;background:var(--bs-body-bg,#1a1a2e);border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.7);">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0.85rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;gap:0.5rem;">
             <span id="fv-filename" style="font-size:0.82rem;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;"></span>
             <div style="display:flex;gap:0.4rem;align-items:center;flex-shrink:0;">
