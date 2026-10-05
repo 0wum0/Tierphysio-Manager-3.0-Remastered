@@ -236,6 +236,9 @@
 .badge-inaktiv, .badge-inactive, .badge-cancelled {
   background: rgba(100,116,139,0.15); color: #64748b;
 }
+.badge-verstorben, .badge-deceased {
+  background: rgba(71,85,105,0.18); color: #475569;
+}
 .badge-offen, .badge-open {
   background: rgba(59,130,246,0.15); color: #2563eb;
 }
@@ -254,7 +257,7 @@
 .badge-inaktiv, .badge-inactive, .badge-cancelled,
 .badge-offen, .badge-open, .badge-ueberfaellig, .badge-overdue,
 .badge-entwurf, .badge-draft, .badge-neu, .badge-admin,
-.badge-primary, .badge-warning {
+.badge-primary, .badge-warning, .badge-verstorben, .badge-deceased {
   border-radius: 100px; padding: 0.2rem 0.65rem;
   font-size: 0.7rem; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.04em;
@@ -275,6 +278,8 @@
 [data-bs-theme="dark"] .badge-primary { color: #818cf8; }
 [data-bs-theme="dark"] .badge-inaktiv,
 [data-bs-theme="dark"] .badge-inactive{ color: #94a3b8; }
+[data-bs-theme="dark"] .badge-verstorben,
+[data-bs-theme="dark"] .badge-deceased { color: #94a3b8; }
 
 /* ═══════════════════════════════════════════
    ALERTS

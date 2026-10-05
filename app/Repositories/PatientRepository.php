@@ -33,7 +33,7 @@ class PatientRepository extends Repository
     public function findByOwner(int $ownerId): array
     {
         $patients = $this->db->fetchAll(
-            "SELECT * FROM `{$this->t('patients')}` WHERE owner_id = ? ORDER BY name ASC",
+            "SELECT * FROM `{$this->t('patients')}` WHERE owner_id = ? ORDER BY (status = 'verstorben') ASC, name ASC",
             [$ownerId]
         );
         return $patients;
@@ -83,7 +83,7 @@ class PatientRepository extends Repository
              FROM `{$p}` p
              LEFT JOIN `{$o}` o ON p.owner_id = o.id
              {$where}
-             ORDER BY p.name ASC
+             ORDER BY (p.status = 'verstorben') ASC, p.name ASC
              LIMIT ? OFFSET ?",
             [...$params, $perPage, $offset]
         );
