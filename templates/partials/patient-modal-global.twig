@@ -2971,23 +2971,30 @@ window._deletePlan = function(planId) {
 };
 
 var _cpTaskIdx=0;
-window._cpAddTask=function(title,description,frequency,duration,notes){
+window._cpAddTask=function(title,description,frequency,duration,notes,templateId,saveAsTemplate){
     var idx=_cpTaskIdx++; var container=document.getElementById('cp-tasks-container'); if(!container)return;
+    var fromTemplate = !!templateId;
+    var checked = (saveAsTemplate === undefined) ? true : !!saveAsTemplate;
     var row=document.createElement('div'); row.className='card mb-2'; row.id='cp-task-'+idx;
     row.innerHTML='<div class="card-body py-2 px-3"><div class="d-flex gap-2 align-items-start"><div style="flex:1;">'
+        +'<input type="hidden" name="task_template_id[]" value="'+_hwEsc(templateId||'')+'">'
+        +'<input type="hidden" name="task_save_as_template[]" id="cp-tpl-hidden-'+idx+'" value="'+(fromTemplate?'0':(checked?'1':'0'))+'">'
         +'<div class="row g-2 mb-2"><div class="col-md-6"><input type="text" name="task_title[]" class="form-control form-control-sm" placeholder="Aufgabentitel *" value="'+_hwEsc(title||'')+'"></div>'
         +'<div class="col-md-3"><input type="text" name="task_frequency[]" class="form-control form-control-sm" placeholder="Häufigkeit" value="'+_hwEsc(frequency||'')+'"></div>'
         +'<div class="col-md-3"><input type="text" name="task_duration[]" class="form-control form-control-sm" placeholder="Dauer" value="'+_hwEsc(duration||'')+'"></div></div>'
         +'<div class="row g-2"><div class="col-md-8"><textarea name="task_description[]" class="form-control form-control-sm" rows="2" placeholder="Beschreibung…">'+_hwEsc(description||'')+'</textarea></div>'
-        +'<div class="col-md-4"><textarea name="task_notes[]" class="form-control form-control-sm" rows="2" placeholder="Interne Notiz">'+_hwEsc(notes||'')+'</textarea></div></div></div>'
-        +'<button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" onclick="document.getElementById(\'cp-task-'+idx+'\').remove()" style="margin-top:0.1rem;">✕</button>'
+        +'<div class="col-md-4"><textarea name="task_notes[]" class="form-control form-control-sm" rows="2" placeholder="Interne Notiz">'+_hwEsc(notes||'')+'</textarea></div></div>'
+        +(fromTemplate ? '' : '<div class="form-check mt-1"><input type="checkbox" class="form-check-input" id="cp-tpl-cb-'+idx+'" '+(checked?'checked':'')+' onchange="document.getElementById(\'cp-tpl-hidden-'+idx+'\').value=this.checked?\'1\':\'0\';saveCpDraft();"><label class="form-check-label fs-nano text-muted" for="cp-tpl-cb-'+idx+'">Als Vorlage für zukünftige Pläne speichern</label></div>')
+        +'</div>'
+        +'<button type="button" class="btn btn-sm btn-outline-danger flex-shrink-0" onclick="document.getElementById(\'cp-task-'+idx+'\').remove();saveCpDraft();" style="margin-top:0.1rem;">✕</button>'
         +'</div></div>';
     container.appendChild(row);
+    saveCpDraft();
 };
 
 window._cpAddSelectedTemplates=function(){
     document.querySelectorAll('#cp-template-checklist .cp-tpl-cb:checked').forEach(function(cb){
-        _cpAddTask(cb.dataset.title,cb.dataset.description,cb.dataset.frequency,cb.dataset.duration,cb.dataset.notes);
+        _cpAddTask(cb.dataset.title,cb.dataset.description,cb.dataset.frequency,cb.dataset.duration,cb.dataset.notes,cb.dataset.id);
         cb.checked=false;
     });
 };
@@ -3029,19 +3036,117 @@ window.openCreatePlanModal=function(){
     document.body.appendChild(modalEl);
     var modal=new bootstrap.Modal(modalEl); modal.show();
     _loadCpTemplates();
-    fetch('/api/patients/'+p.id+'/homework/plan-meta',{headers:{'Accept':'application/json'}}).then(function(r){return r.json();}).then(function(meta){var el=document.getElementById('cp-next-apt');if(el&&meta&&meta.wiedervorstellung_date)el.value=meta.wiedervorstellung_date;}).catch(function(){});
+
+    var restored = restoreCpDraftIfPresent(p.id);
+    if (!restored) {
+        fetch('/api/patients/'+p.id+'/homework/plan-meta',{headers:{'Accept':'application/json'}}).then(function(r){return r.json();}).then(function(meta){var el=document.getElementById('cp-next-apt');if(el&&meta&&meta.wiedervorstellung_date)el.value=meta.wiedervorstellung_date;}).catch(function(){});
+    }
+
+    modalEl.addEventListener('input', function(){ saveCpDraft(); });
+    modalEl.addEventListener('change', function(){ saveCpDraft(); });
+
     document.getElementById('cp-save-btn').addEventListener('click',function(){
         var btn=this; btn.disabled=true; btn.textContent='Speichert…';
         var fd=new FormData(document.getElementById('create-plan-form'));
         var container=document.getElementById('cp-tasks-container');
-        if(container){container.querySelectorAll('[name="task_title[]"]').forEach(function(el){fd.append('task_title[]',el.value);});container.querySelectorAll('[name="task_description[]"]').forEach(function(el){fd.append('task_description[]',el.value);});container.querySelectorAll('[name="task_frequency[]"]').forEach(function(el){fd.append('task_frequency[]',el.value);});container.querySelectorAll('[name="task_duration[]"]').forEach(function(el){fd.append('task_duration[]',el.value);});container.querySelectorAll('[name="task_notes[]"]').forEach(function(el){fd.append('task_notes[]',el.value);});}
+        if(container){
+            container.querySelectorAll('[name="task_title[]"]').forEach(function(el){fd.append('task_title[]',el.value);});
+            container.querySelectorAll('[name="task_description[]"]').forEach(function(el){fd.append('task_description[]',el.value);});
+            container.querySelectorAll('[name="task_frequency[]"]').forEach(function(el){fd.append('task_frequency[]',el.value);});
+            container.querySelectorAll('[name="task_duration[]"]').forEach(function(el){fd.append('task_duration[]',el.value);});
+            container.querySelectorAll('[name="task_notes[]"]').forEach(function(el){fd.append('task_notes[]',el.value);});
+            container.querySelectorAll('[name="task_template_id[]"]').forEach(function(el){fd.append('task_template_id[]',el.value);});
+            container.querySelectorAll('[name="task_save_as_template[]"]').forEach(function(el){fd.append('task_save_as_template[]',el.value);});
+        }
         fetch('/api/patients/'+p.id+'/plans',{method:'POST',body:fd,headers:{'Accept':'application/json'}})
             .then(function(r){return r.json().then(function(d){return{ok:r.ok,d:d};});})
-            .then(function(res){if(res.ok&&res.d.success){bootstrap.Modal.getInstance(modalEl).hide();_hwLoaded=false;loadHwPlans(p.id);}else{throw new Error(res.d.error||'Fehler');}})
+            .then(function(res){if(res.ok&&res.d.success){clearCpDraft(p.id);bootstrap.Modal.getInstance(modalEl).hide();_hwLoaded=false;loadHwPlans(p.id);}else{throw new Error(res.d.error||'Fehler');}})
             .catch(function(err){alert('Fehler: '+err.message);btn.disabled=false;btn.textContent='Plan speichern';});
     });
     modalEl.addEventListener('hidden.bs.modal',function(){this.remove();});
 };
+
+/* ── Entwurf-Sicherung (localStorage) — identisches Schema wie im
+ * Besitzerportal-Admin (hwplan_draft_<patientId>), damit ein Entwurf
+ * patientenübergreifend konsistent ist, egal über welche Oberfläche
+ * der Plan begonnen wurde. ── */
+var _cpDraftSaveTimer = null;
+
+function cpDraftKey(patientId) { return 'hwplan_draft_' + patientId; }
+
+function collectCpDraft() {
+    var form = document.getElementById('create-plan-form');
+    var simpleFields = ['plan_date', 'therapist_name', 'next_appointment',
+        'physio_principles', 'therapy_means', 'short_term_goals', 'long_term_goals', 'general_notes'];
+    var data = { savedAt: Date.now(), fields: {}, tasks: [] };
+    if (form) {
+        simpleFields.forEach(function (name) {
+            var el = form.querySelector('[name="' + name + '"]');
+            if (el) data.fields[name] = el.value;
+        });
+    }
+    document.querySelectorAll('#cp-tasks-container .card').forEach(function (row) {
+        data.tasks.push({
+            id:               row.querySelector('[name="task_template_id[]"]').value,
+            title:            row.querySelector('[name="task_title[]"]').value,
+            frequency:        row.querySelector('[name="task_frequency[]"]').value,
+            duration:         row.querySelector('[name="task_duration[]"]').value,
+            description:      row.querySelector('[name="task_description[]"]').value,
+            therapist_notes:  row.querySelector('[name="task_notes[]"]').value,
+            save_as_template: row.querySelector('[name="task_save_as_template[]"]').value === '1',
+        });
+    });
+    return data;
+}
+
+function saveCpDraft() {
+    if (!currentPatientData) return;
+    var patientId = currentPatientData.patient.id;
+    clearTimeout(_cpDraftSaveTimer);
+    _cpDraftSaveTimer = setTimeout(function () {
+        try {
+            var data = collectCpDraft();
+            var hasContent = data.tasks.length > 0 || Object.keys(data.fields).some(function (k) {
+                return k !== 'plan_date' && data.fields[k];
+            });
+            if (hasContent) {
+                localStorage.setItem(cpDraftKey(patientId), JSON.stringify(data));
+            } else {
+                localStorage.removeItem(cpDraftKey(patientId));
+            }
+        } catch (e) { /* localStorage voll/blockiert — kein Blocker für die Eingabe */ }
+    }, 400);
+}
+
+function clearCpDraft(patientId) {
+    try { localStorage.removeItem(cpDraftKey(patientId)); } catch (e) {}
+}
+
+function restoreCpDraftIfPresent(patientId) {
+    try {
+        var raw = localStorage.getItem(cpDraftKey(patientId));
+        if (!raw) return false;
+        var draft = JSON.parse(raw);
+        var when  = new Date(draft.savedAt).toLocaleString('de-DE');
+        if (!confirm('Für diesen Patienten gibt es einen nicht gespeicherten Entwurf vom ' + when + '.\n\nMöchtest du ihn wiederherstellen?')) {
+            clearCpDraft(patientId);
+            return false;
+        }
+        var form = document.getElementById('create-plan-form');
+        if (form) {
+            Object.keys(draft.fields || {}).forEach(function (name) {
+                var el = form.querySelector('[name="' + name + '"]');
+                if (el) el.value = draft.fields[name];
+            });
+        }
+        (draft.tasks || []).forEach(function (t) {
+            _cpAddTask(t.title, t.description, t.frequency, t.duration, t.therapist_notes, t.id || '', t.save_as_template);
+        });
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
 
 function _loadCpTemplates(){
     if(_hwTemplates.length){_fillCpTemplateChecklist();return;}
@@ -3050,7 +3155,7 @@ function _loadCpTemplates(){
 function _fillCpTemplateChecklist(){
     var cl=document.getElementById('cp-template-checklist'); if(!cl) return;
     if(!_hwTemplates.length){cl.innerHTML='<div class="text-muted" style="font-size:0.82rem;padding:0.5rem;">Keine Vorlagen verfügbar</div>';return;}
-    cl.innerHTML=_hwTemplates.map(function(t){var emoji=t.category_emoji||'📌';var dur=t.duration_value?(t.duration_value+' '+(t.duration_unit||'')):'';return'<label style="display:flex;align-items:center;gap:0.6rem;padding:0.35rem 0.5rem;border-radius:4px;cursor:pointer;font-size:0.83rem;"><input type="checkbox" class="cp-tpl-cb form-check-input" style="margin:0;" data-title="'+_hwEsc(t.title)+'" data-description="'+_hwEsc(t.description||'')+'" data-frequency="'+_hwEsc(t.frequency||'')+'" data-duration="'+_hwEsc(dur)+'" data-notes="'+_hwEsc(t.therapist_notes||'')+'">'+'<span>'+emoji+' <strong>'+_hwEsc(t.title)+'</strong>'+(t.frequency?' <span style="color:var(--bs-secondary-color);">· '+_hwEsc(t.frequency)+'</span>':'')+(dur?' <span style="color:var(--bs-secondary-color);">· '+_hwEsc(dur)+'</span>':'')+'</span></label>';}).join('');
+    cl.innerHTML=_hwTemplates.map(function(t){var emoji=t.category_emoji||'📌';var dur=t.duration_value?(t.duration_value+' '+(t.duration_unit||'')):'';return'<label style="display:flex;align-items:center;gap:0.6rem;padding:0.35rem 0.5rem;border-radius:4px;cursor:pointer;font-size:0.83rem;"><input type="checkbox" class="cp-tpl-cb form-check-input" style="margin:0;" data-id="'+_hwEsc(t.id)+'" data-title="'+_hwEsc(t.title)+'" data-description="'+_hwEsc(t.description||'')+'" data-frequency="'+_hwEsc(t.frequency||'')+'" data-duration="'+_hwEsc(dur)+'" data-notes="'+_hwEsc(t.therapist_notes||'')+'">'+'<span>'+emoji+' <strong>'+_hwEsc(t.title)+'</strong>'+(t.frequency?' <span style="color:var(--bs-secondary-color);">· '+_hwEsc(t.frequency)+'</span>':'')+(dur?' <span style="color:var(--bs-secondary-color);">· '+_hwEsc(dur)+'</span>':'')+'</span></label>';}).join('');
 }
 
 /* ═══════════════════════════════════════════════════════

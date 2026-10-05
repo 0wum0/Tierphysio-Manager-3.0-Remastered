@@ -460,21 +460,40 @@ class HomeworkController
         );
         $planId = (int)$this->db->lastInsertId();
 
-        $titles       = $_POST['task_title']       ?? [];
-        $descriptions = $_POST['task_description'] ?? [];
-        $frequencies  = $_POST['task_frequency']   ?? [];
-        $durations    = $_POST['task_duration']    ?? [];
-        $notes        = $_POST['task_notes']       ?? [];
+        $titles         = $_POST['task_title']            ?? [];
+        $descriptions   = $_POST['task_description']       ?? [];
+        $frequencies    = $_POST['task_frequency']         ?? [];
+        $durations      = $_POST['task_duration']          ?? [];
+        $notes          = $_POST['task_notes']             ?? [];
+        $templateIds    = $_POST['task_template_id']       ?? [];
+        $saveAsTemplate = $_POST['task_save_as_template']  ?? [];
+        $templateRepo   = new \Plugins\OwnerPortal\OwnerPortalRepository($this->db);
 
         foreach ($titles as $i => $title) {
-            if (empty(trim($title))) continue;
+            $title = trim($title);
+            if ($title === '') continue;
+
+            $templateId = !empty($templateIds[$i]) ? (int)$templateIds[$i] : null;
+            if (!$templateId && ($saveAsTemplate[$i] ?? '0') === '1') {
+                $task = [
+                    'title'           => $title,
+                    'description'     => $descriptions[$i]     ?? '',
+                    'frequency'       => $frequencies[$i]      ?? '',
+                    'duration'        => $durations[$i]        ?? '',
+                    'therapist_notes' => $notes[$i]             ?? '',
+                ];
+                $existing   = $templateRepo->findTemplateByTitle($title);
+                $templateId = $existing ? (int)$existing['id'] : $templateRepo->createTemplateFromTask($task);
+            }
+
             $this->db->query(
                 "INSERT INTO `{$this->t('portal_homework_plan_tasks')}`
-                 (plan_id, title, description, frequency, duration, therapist_notes, sort_order)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)",
+                 (plan_id, template_id, title, description, frequency, duration, therapist_notes, sort_order)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 [
                     $planId,
-                    trim($title),
+                    $templateId,
+                    $title,
                     $descriptions[$i] ?? null,
                     $frequencies[$i]  ?? null,
                     $durations[$i]    ?? null,
