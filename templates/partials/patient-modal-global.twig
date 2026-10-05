@@ -3071,6 +3071,7 @@ window.openCreatePlanModal=function(){
  * patientenübergreifend konsistent ist, egal über welche Oberfläche
  * der Plan begonnen wurde. ── */
 var _cpDraftSaveTimer = null;
+var CP_DRAFT_SCHEMA_VERSION = 2;
 
 function cpDraftKey(patientId) { return 'hwplan_draft_' + patientId; }
 
@@ -3078,7 +3079,7 @@ function collectCpDraft() {
     var form = document.getElementById('create-plan-form');
     var simpleFields = ['plan_date', 'therapist_name', 'next_appointment',
         'physio_principles', 'therapy_means', 'short_term_goals', 'long_term_goals', 'general_notes'];
-    var data = { savedAt: Date.now(), fields: {}, tasks: [] };
+    var data = { savedAt: Date.now(), schemaVersion: CP_DRAFT_SCHEMA_VERSION, fields: {}, tasks: [] };
     if (form) {
         simpleFields.forEach(function (name) {
             var el = form.querySelector('[name="' + name + '"]');
@@ -3127,6 +3128,12 @@ function restoreCpDraftIfPresent(patientId) {
         var raw = localStorage.getItem(cpDraftKey(patientId));
         if (!raw) return false;
         var draft = JSON.parse(raw);
+        if (draft.schemaVersion !== CP_DRAFT_SCHEMA_VERSION) {
+            /* Entwurf stammt aus einer älteren Code-Version — Format evtl.
+             * nicht mehr kompatibel, lieber verwerfen statt kaputt wiederherzustellen. */
+            clearCpDraft(patientId);
+            return false;
+        }
         var when  = new Date(draft.savedAt).toLocaleString('de-DE');
         if (!confirm('Für diesen Patienten gibt es einen nicht gespeicherten Entwurf vom ' + when + '.\n\nMöchtest du ihn wiederherstellen?')) {
             clearCpDraft(patientId);

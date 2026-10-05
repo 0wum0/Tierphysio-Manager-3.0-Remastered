@@ -399,6 +399,7 @@ function openCreatePlan(patientId, patientName) {
 /* ── Entwurf-Sicherung (localStorage) — schützt gegen versehentliches
  * Neuladen/Schließen der Seite, bevor der Plan gespeichert wurde. ── */
 var DRAFT_PREFIX = 'hwplan_draft_';
+var DRAFT_SCHEMA_VERSION = 2;
 var _draftSaveTimer = null;
 
 function draftKey(patientId) { return DRAFT_PREFIX + patientId; }
@@ -407,7 +408,7 @@ function collectDraft() {
     var form = document.getElementById('form-create-plan');
     var simpleFields = ['plan_date', 'therapist_name', 'next_appointment',
         'physio_principles', 'therapy_means', 'short_term_goals', 'long_term_goals', 'general_notes'];
-    var data = { savedAt: Date.now(), fields: {}, tasks: [] };
+    var data = { savedAt: Date.now(), schemaVersion: DRAFT_SCHEMA_VERSION, fields: {}, tasks: [] };
     simpleFields.forEach(function (name) {
         var el = form.querySelector('[name="' + name + '"]');
         if (el) data.fields[name] = el.value;
@@ -454,6 +455,12 @@ function restoreDraftIfPresent(patientId) {
         var raw = localStorage.getItem(draftKey(patientId));
         if (!raw) return false;
         var draft = JSON.parse(raw);
+        if (draft.schemaVersion !== DRAFT_SCHEMA_VERSION) {
+            /* Entwurf stammt aus einer älteren Code-Version — Format evtl.
+             * nicht mehr kompatibel, lieber verwerfen statt kaputt wiederherzustellen. */
+            clearDraft(patientId);
+            return false;
+        }
         var when  = new Date(draft.savedAt).toLocaleString('de-DE');
         if (!confirm('Für diesen Patienten gibt es einen nicht gespeicherten Entwurf vom ' + when + '.\n\nMöchtest du ihn wiederherstellen?')) {
             clearDraft(patientId);

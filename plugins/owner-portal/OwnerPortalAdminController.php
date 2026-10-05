@@ -652,10 +652,17 @@ class OwnerPortalAdminController extends Controller
             if ($task['template_id'] || !$task['save_as_template'] || $task['title'] === '') {
                 continue;
             }
-            $existing = $this->repo->findTemplateByTitle($task['title']);
-            $task['template_id'] = $existing
-                ? (int)$existing['id']
-                : $this->repo->createTemplateFromTask($task);
+            try {
+                $existing = $this->repo->findTemplateByTitle($task['title']);
+                $task['template_id'] = $existing
+                    ? (int)$existing['id']
+                    : $this->repo->createTemplateFromTask($task);
+            } catch (\Throwable $e) {
+                /* Vorlagen-Erstellung ist ein Komfort-Feature — ein Fehler
+                 * hier darf das Speichern des eigentlichen Plans nicht
+                 * verhindern. */
+                error_log('[OwnerPortalAdminController] Vorlagen-Autosave fehlgeschlagen für "' . $task['title'] . '": ' . $e->getMessage());
+            }
         }
         unset($task);
         return $tasks;

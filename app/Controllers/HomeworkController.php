@@ -475,15 +475,24 @@ class HomeworkController
 
             $templateId = !empty($templateIds[$i]) ? (int)$templateIds[$i] : null;
             if (!$templateId && ($saveAsTemplate[$i] ?? '0') === '1') {
-                $task = [
-                    'title'           => $title,
-                    'description'     => $descriptions[$i]     ?? '',
-                    'frequency'       => $frequencies[$i]      ?? '',
-                    'duration'        => $durations[$i]        ?? '',
-                    'therapist_notes' => $notes[$i]             ?? '',
-                ];
-                $existing   = $templateRepo->findTemplateByTitle($title);
-                $templateId = $existing ? (int)$existing['id'] : $templateRepo->createTemplateFromTask($task);
+                try {
+                    $task = [
+                        'title'           => $title,
+                        'description'     => $descriptions[$i]     ?? '',
+                        'frequency'       => $frequencies[$i]      ?? '',
+                        'duration'        => $durations[$i]        ?? '',
+                        'therapist_notes' => $notes[$i]             ?? '',
+                    ];
+                    $existing   = $templateRepo->findTemplateByTitle($title);
+                    $templateId = $existing ? (int)$existing['id'] : $templateRepo->createTemplateFromTask($task);
+                } catch (\Throwable $e) {
+                    /* Vorlagen-Erstellung ist ein Komfort-Feature — ein Fehler
+                     * hier darf das Speichern des eigentlichen Plans nicht
+                     * verhindern (z.B. Duplicate-Key bei gleichzeitig doppelt
+                     * übermittelten Aufgaben gleichen Titels). */
+                    error_log('[HomeworkController] Vorlagen-Autosave fehlgeschlagen für "' . $title . '": ' . $e->getMessage());
+                    $templateId = null;
+                }
             }
 
             $this->db->query(
