@@ -102,3 +102,20 @@ Twig-Versionsparameter und CSP. Die Webanwendung benötigt keine DB-Migration.
 Für die eingebettete Flutter-Ansicht ist ein neuer App-Build erforderlich.
 Die Tests hier prüfen WebView-Inhalte im Browser; kein physischer Android-/iOS-
 Gerätetest und kein produktiver Datenbanktest wurden dadurch ersetzt.
+
+## Zonen-Schalter und Erreichbarkeit
+
+Der Zonen-Schalter ist ein echtes, initial aktiviertes Kontrollkästchen. Sein
+Zustand und die Punktsichtbarkeit werden gemeinsam gesetzt. Ohne gespeicherten
+Befund verschwinden Punkte bei ausgeschaltetem Haken vollständig, einschließlich
+ihrer Trefferfläche. Mit Haken erscheinen sie deckend und behalten beim Zoomen
+ungefähr 10 CSS-Pixel Durchmesser (Touch: 12), statt auf Mobilgeräten zu winzigen,
+kaum sichtbaren Punkten zu schrumpfen.
+
+Die Auswahl „Alle … Regionen auswählen“ enthält sämtliche hinterlegten Punkte
+(47 Hund, 44 Katze, 52 Pferd), einschließlich verdeckter Punkte. Eine Auswahl
+aktiviert die Zonen und richtet die Kamera auf die entsprechende Körperseite.
+Die Oberfläche bleibt tiefengeprüft: rückseitige Punkte werden nicht durch den
+Körper hindurch als vermeintlich vordere Punkte angezeigt. Der Browser-Test
+schaltet den Haken aus/an, prüft die Touch-Punktgröße und öffnet jede hinterlegte
+Region in beiden Viewern.

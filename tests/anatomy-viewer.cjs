@@ -60,6 +60,20 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
                 const stats=await page.evaluate(()=>{const v=Anatomy3D._instance;let vertices=0;v.modelGroup.traverse(o=>{if(o.isMesh)vertices+=o.geometry.attributes.position.count});return{species:v.animalType,vertices,points:v.hotspots.length,size:v._modelBox.size.toArray()}});
                 assert.equal(stats.species,species);assert(stats.vertices<200000);assert(stats.points>=40);assert(Math.abs(Math.max(...stats.size)-2)<.001);
                 if(!bundle) results.push(stats);
+                assert.equal(await page.locator('#a3d-zones-visible').isChecked(), true);
+                assert.equal(await page.locator('#a3d-region-select option').count(), stats.points+1);
+                await page.locator('#a3d-zones-visible').uncheck();
+                assert(await page.evaluate(()=>!Anatomy3D._instance.debugMode && Anatomy3D._instance.hotspots.every(h=>h.marker.material.opacity===0)));
+                await page.locator('#a3d-zones-visible').check();
+                assert(await page.evaluate(()=>Anatomy3D._instance.debugMode && Anatomy3D._instance.hotspots.every(h=>h.marker.material.opacity>=.9)));
+                // Every configured region is reachable even on the occluded side.
+                const ids=await page.evaluate(()=>Anatomy3D._instance.hotspots.map(h=>h.def.id));
+                for(const id of ids) {
+                    await page.selectOption('#a3d-region-select',id);
+                    assert.equal(await page.evaluate(()=>Anatomy3D._instance.selectedKey?.split('::')[0]),id);
+                }
+                await page.locator('#a3d-form-close').click();
+
                 const sign=species==='dog'?1:-1;
                 // Check actual picking on both sides, including the reported rear paw/throat regression.
                 for(const [side,x] of [['l',sign*3.4],['r',-sign*3.4]]) {
@@ -105,6 +119,9 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
             assert(await page.evaluate(()=>{const v=Anatomy3D._instance;return v.renderer.getPixelRatio()<=1.5 && v.hotspots.every(h=>{const p=h.pos.clone().project(v.camera);return Math.abs(p.x)<1&&Math.abs(p.y)<1})}));
             const sign=species==='dog'?1:-1;
             await page.evaluate(sign=>{const v=Anatomy3D._instance;v.controls.enableDamping=false;const distance=v.camera.position.length();v.camera.position.set(sign*distance,.05,0);v.controls.target.set(0,0,0);v.controls.update()},sign);
+            await page.locator('#a3d-zones-visible').uncheck();
+            await page.locator('#a3d-zones-visible').check();
+            assert(await page.evaluate(()=>{const v=Anatomy3D._instance;v._sizeMarkers();return v.hotspots.every(({marker,pos})=>{const depth=-pos.clone().applyMatrix4(v.camera.matrixWorldInverse).z;const radius=.012*marker.scale.x/depth/(2*Math.tan(v.camera.fov*Math.PI/360))*v.renderer.domElement.clientHeight;return radius>=5.9})}));
             const id=species+'_shoulder_l';const p=await position(page,id);await page.touchscreen.tap(p.x,p.y);
             assert.equal(await page.evaluate(()=>Anatomy3D._instance.selectedKey?.split('::')[0]),id);
             if(process.env.ANATOMY_SCREENSHOTS)await page.screenshot({path:path.join(process.env.ANATOMY_SCREENSHOTS,`${species}-mobile.png`)});
@@ -116,6 +133,6 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
         // Closing while a model is parsing must leave no live renderer/model behind.
         await page.evaluate(()=>{const v=Anatomy3D._instance;v._switchAnimal('dog');v.destroy()});
         assert(await page.evaluate(()=>Anatomy3D._instance._disposed && Anatomy3D._instance.modelGroup===null));
-        console.log(JSON.stringify({passed:true,models:results,checks:'desktop both sides; mobile taps; CSP; web+Flutter bundle; save/reload/delete and errors; species races; resize; disposal'},null,2));
+        console.log(JSON.stringify({passed:true,models:results,checks:'zone checkbox off/on; all regions reachable; constant mobile point size; desktop both sides; mobile taps; CSP; web+Flutter bundle; save/reload/delete and errors; species races; resize; disposal'},null,2));
     } finally {await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1});

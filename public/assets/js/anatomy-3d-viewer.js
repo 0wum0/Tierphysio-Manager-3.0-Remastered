@@ -90,8 +90,14 @@ class Anatomy3DViewer {
             <button class="a3d-species-btn" data-sp="horse" style="padding:4px 10px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;font-weight:600;">🐎 Pferd</button>
             <div style="width:1px;height:18px;background:rgba(255,255,255,.15);margin:0 2px;"></div>
             <button id="a3d-reset-btn"  title="Ansicht zurücksetzen"  style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">↺ Reset</button>
-            <button id="a3d-debug-btn"  title="Zonen anzeigen"        style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">🔲 Zonen</button>
+            <label id="a3d-debug-btn" title="Muskelpunkte auf der sichtbaren Körperseite anzeigen" style="display:flex;align-items:center;gap:5px;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:.72rem;color:#e2e8f0;">
+              <input id="a3d-zones-visible" type="checkbox" checked style="margin:0;accent-color:#4f7cff;"> Zonen
+            </label>
             <button id="a3d-fs-btn"     title="Vollbild"              style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">⛶ Vollbild</button>
+            <select id="a3d-region-select" aria-label="Alle Muskelregionen" disabled style="flex-basis:100%;width:100%;min-width:0;padding:6px;border:1px solid #475569;border-radius:6px;background:#1e293b;color:#e2e8f0;font-size:.72rem;">
+              <option value="">Muskelregionen werden geladen…</option>
+            </select>
+            <span style="flex-basis:100%;font-size:.65rem;color:#94a3b8;">Andere Körperseite: Modell drehen oder Region auswählen.</span>
           </div>
 
           <!-- Loading overlay -->
@@ -211,7 +217,6 @@ class Anatomy3DViewer {
             #a3d-form .btn { border:1px solid #475569; border-radius:6px; padding:7px 10px; background:#1e293b; color:#e2e8f0; cursor:pointer; }
             #a3d-form #a3d-save-btn { background:#2563eb; border-color:#2563eb; }
             #a3d-form .btn:disabled { opacity:.6; cursor:wait; }
-            @media(max-width:600px) { #a3d-list-btn { top:94px !important; } }
             .a3d-species-btn { background:rgba(255,255,255,.06); color:#94a3b8; }
             .a3d-species-btn.active { background:#4f7cff; color:#fff; }
             .a3d-pt-btn.active { background:rgba(79,124,255,.25); border-color:#4f7cff; color:#e2e8f0; }
@@ -236,7 +241,15 @@ class Anatomy3DViewer {
         this._updateSpeciesBtn();
 
         c.querySelector('#a3d-reset-btn').addEventListener('click', () => this._resetCamera());
-        c.querySelector('#a3d-debug-btn').addEventListener('click', () => this._toggleDebug());
+        c.querySelector('#a3d-zones-visible').addEventListener('change', e => this._setZonesVisible(e.target.checked));
+        c.querySelector('#a3d-region-select').addEventListener('change', e => {
+            const entry = this.hotspots.find(h => h.def.id === e.target.value);
+            if (!entry) return;
+            this._setZonesVisible(true);
+            this._focusHotspot(entry.def);
+            this._openForm(entry.def);
+        });
+        this._syncZonesControl();
         c.querySelector('#a3d-fs-btn').addEventListener('click', () => this._toggleFullscreen());
 
         c.querySelector('#a3d-form-close').addEventListener('click', () => this._closeForm());
@@ -329,12 +342,16 @@ class Anatomy3DViewer {
         this.controls.addEventListener('change', () => { this._dirty = true; this._hoverDirty = true; });
         this._resizeObserver = new ResizeObserver(() => this._resize());
         this._resizeObserver.observe(this.container);
+        this._resizeObserver.observe(this.container.querySelector('#a3d-toolbar'));
 
         this._resize();
         this._animate();
     }
 
     _resize() {
+        const toolbarBottom = this.container.querySelector('#a3d-toolbar').offsetHeight + 20;
+        this.container.querySelector('#a3d-list-btn').style.top = `${toolbarBottom}px`;
+        this.container.querySelector('#a3d-list').style.top = `${toolbarBottom}px`;
         const w = Math.max(1, this.container.clientWidth);
         const h = this.container.clientHeight || 400;
         this.renderer.setSize(w, h, false);
@@ -350,7 +367,19 @@ class Anatomy3DViewer {
         this._animId = requestAnimationFrame(() => this._animate());
         this.controls.update();
         if (this._hoverDirty) { this._hoverDirty = false; this._updateHover(); }
-        if (this._dirty) { this.renderer.render(this.scene, this.camera); this._dirty = false; }
+        if (this._dirty) { this._sizeMarkers(); this.renderer.render(this.scene, this.camera); this._dirty = false; }
+    }
+
+    _sizeMarkers() {
+        // A constant CSS-pixel radius stays readable on a zoomed-out phone.
+        this.camera.updateMatrixWorld(true);
+        const pixelRadius = window.matchMedia('(pointer: coarse)').matches ? 6 : 5;
+        const factor = 2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov)/2)
+            / Math.max(1, this.renderer.domElement.clientHeight);
+        this.hotspots.forEach(({marker, pos}) => {
+            const depth = -pos.clone().applyMatrix4(this.camera.matrixWorldInverse).z;
+            marker.scale.setScalar(Math.max(0.001, depth) * factor * pixelRadius / 0.012 * (marker.userData.emphasis || 1));
+        });
     }
 
     _disposeObject(root) {
@@ -375,6 +404,9 @@ class Anatomy3DViewer {
         }
         this.hotspots.forEach(h => { this.scene.remove(h.marker); this._disposeObject(h.marker); });
         this.hotspots = [];
+        const regions = this.container.querySelector('#a3d-region-select');
+        regions.disabled = true;
+        regions.replaceChildren(new Option('Muskelregionen werden geladen…', ''));
         this._modelMeshes = [];
         this._modelBox = null;
         this._dirty = true;
@@ -461,9 +493,14 @@ class Anatomy3DViewer {
     _buildHotspots(species) {
         // Calibrated coordinates are already on the surface. No runtime ray
         // projection can move a leg landmark onto the chest or throat.
-        for (const def of MUSCLE_GROUPS[species] || []) {
+        const groups = MUSCLE_GROUPS[species] || [];
+        const select = this.container.querySelector('#a3d-region-select');
+        select.replaceChildren(new Option(`Alle ${groups.length} Regionen auswählen…`, ''));
+        groups.forEach(def => select.add(new Option(`${def.anatomical} – ${def.label}`, def.id)));
+        select.disabled = false;
+        for (const def of groups) {
             const marker = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6),
-                new THREE.MeshBasicMaterial({color:0x4f7cff, transparent:true, opacity:0.65, depthWrite:false}));
+                new THREE.MeshBasicMaterial({color:0x4f7cff, transparent:true, opacity:0.95, depthWrite:false}));
             marker.position.fromArray(def.pos);
             this.scene.add(marker);
             const mesh = new THREE.Object3D();
@@ -478,7 +515,7 @@ class Anatomy3DViewer {
         this.camera.updateMatrixWorld(true);
         const canvas = this.renderer.domElement;
         const radius = this._pointerType === 'touch' ? 18 : 12;
-        const candidates = this.hotspots.map(h => {
+        const candidates = this.hotspots.filter(h => h.marker.material.opacity > 0).map(h => {
             const p = h.pos.clone().project(this.camera);
             const distance = Math.hypot((p.x-this.pointer.x)*canvas.clientWidth/2, (p.y-this.pointer.y)*canvas.clientHeight/2);
             return {h,p,distance};
@@ -517,11 +554,11 @@ class Anatomy3DViewer {
                     const pain = this._painForDef(prevEntry.def);
                     const hasPain = pain?.painLevel > 0;
                     /* marker: show if pain, else hide (unless debug) */
-                    prevEntry.marker.material.opacity  = hasPain ? 0.9 : (this.debugMode ? 0.4 : 0);
+                    prevEntry.marker.material.opacity  = hasPain ? 0.9 : (this.debugMode ? 0.95 : 0);
                     prevEntry.marker.material.color.set(
                         hasPain ? painColor(pain.painLevel) : 0x4f7cff
                     );
-                    prevEntry.marker.scale.setScalar(1);
+                    prevEntry.marker.userData.emphasis = 1;
                 }
             }
             this.hoveredMesh = hitMesh;
@@ -531,7 +568,7 @@ class Anatomy3DViewer {
                     /* Scale up marker and make visible as hover indicator */
                     entry.marker.material.color.setHex(0xfbbf24);
                     entry.marker.material.opacity = 0.95;
-                    entry.marker.scale.setScalar(1.8);
+                    entry.marker.userData.emphasis = 1.8;
                     this._showTooltip(entry.def);
                 }
                 this.renderer.domElement.style.cursor = 'pointer';
@@ -559,6 +596,7 @@ class Anatomy3DViewer {
         const existing   = this.painData[this.selectedKey] || {};
 
         const c = this.container;
+        c.querySelector('#a3d-region-select').value = def.id;
         c.querySelector('#a3d-form-error').textContent = '';
         c.querySelector('#a3d-form-title').textContent = def.label;
         c.querySelector('#a3d-form-sub').textContent   =
@@ -591,6 +629,7 @@ class Anatomy3DViewer {
             this._applyPainToHotspots();
         }
         this.selectedKey = null;
+        this.container.querySelector('#a3d-region-select').value = '';
     }
 
     _previewPain(key, level) {
@@ -600,12 +639,12 @@ class Anatomy3DViewer {
         const mat = entry.marker.material;
         if (level === 0) {
             mat.color.setHex(0x4f7cff);
-            mat.opacity = this.debugMode ? 0.45 : 0;
-            entry.marker.scale.setScalar(1);
+            mat.opacity = this.debugMode ? 0.95 : 0;
+            entry.marker.userData.emphasis = 1;
         } else {
             mat.color.set(painColor(level));
             mat.opacity = 0.9;
-            entry.marker.scale.setScalar(1.4);
+            entry.marker.userData.emphasis = 1.4;
         }
     }
 
@@ -730,11 +769,11 @@ class Anatomy3DViewer {
             if (entry && entry.painLevel > 0) {
                 marker.material.color.set(painColor(entry.painLevel));
                 marker.material.opacity = 0.9;
-                marker.scale.setScalar(1.2);
+                marker.userData.emphasis = 1.2;
             } else {
                 marker.material.color.setHex(0x4f7cff);
-                marker.material.opacity = this.debugMode ? 0.45 : 0;
-                marker.scale.setScalar(1);
+                marker.material.opacity = this.debugMode ? 0.95 : 0;
+                marker.userData.emphasis = 1;
             }
         });
     }
@@ -778,11 +817,21 @@ class Anatomy3DViewer {
         /* Focus the calibrated point, including when opened from the saved list. */
         const entry = this.hotspots.find(h => h.def.id === def.id && h.def.side === def.side);
         const pos  = entry?.pos ? entry.pos.clone() : new THREE.Vector3(...def.pos);
-        const dist = 1.2;
-        const dir  = this.camera.position.clone().sub(pos).normalize().multiplyScalar(dist);
+        const dist = Math.max(1.5, 1.1 / Math.max(0.4, this.camera.aspect));
+        const left = this.animalType === 'dog' ? 1 : -1;
+        const dir = def.side === 'left' || def.side === 'right'
+            ? new THREE.Vector3(def.side === 'left' ? left : -left, 0.06, 0)
+            : pos.clone();
+        if (dir.lengthSq() < 0.01) dir.set(left, 0.2, 0);
+        dir.normalize().multiplyScalar(dist);
         this.camera.position.copy(pos.clone().add(dir));
         this.controls.target.copy(pos);
+        // Reset residual orbit damping before selecting the opposite body side.
+        const damping = this.controls.enableDamping;
+        this.controls.enableDamping = false;
         this.controls.update();
+        this.controls.enableDamping = damping;
+        this._dirty = true;
     }
 
     /* ── Tooltip ─────────────────────────────────────────── */
@@ -853,12 +902,21 @@ class Anatomy3DViewer {
         this._dirty = true;
     }
 
-    _toggleDebug() {
-        this.debugMode = !this.debugMode;
+    _syncZonesControl() {
+        this.container.querySelector('#a3d-zones-visible').checked = this.debugMode;
         this.container.querySelector('#a3d-debug-btn').style.background =
             this.debugMode ? 'rgba(79,124,255,.35)' : 'rgba(255,255,255,.08)';
+    }
+
+    _setZonesVisible(visible) {
+        this.debugMode = Boolean(visible);
+        this.hoveredMesh = null;
+        this._hideTooltip();
+        this._syncZonesControl();
         this._applyPainToHotspots();
     }
+
+    _toggleDebug() { this._setZonesVisible(!this.debugMode); }
 
     _toggleFullscreen() {
         if (!document.fullscreenElement) {
