@@ -371,7 +371,7 @@ class PatientController extends Controller
 
         $this->session->flash('success', $this->translator->trans('patients.updated'));
         PerformanceLogger::finish();
-        $this->redirect('/patienten');
+        $this->redirect('/patienten/' . (int)$params['id']);
     }
 
     public function delete(array $params = []): void
@@ -645,21 +645,45 @@ class PatientController extends Controller
             $data['attachment'] = $validFilenames[0];
         } elseif (count($validFilenames) > 1) {
             $data['attachment'] = json_encode($validFilenames, JSON_UNESCAPED_UNICODE);
-        } elseif (!empty($_FILES['attachment']['name']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
-            // Fallback: direkter Upload (kleine Dateien / Bilder)
+        } elseif (!empty($_FILES['attachment']['name'])) {
+            // Fallback: direkter Upload (kein Pre-Upload erfolgt) — attachment[]
+            // ist ein Multi-File-Feld, $_FILES['attachment']['error'] daher ein Array.
             $destination = tenant_storage_path('patients/' . $params['id'] . '/timeline');
             if (!is_dir($destination)) {
                 mkdir($destination, 0755, true);
             }
-            $file = $this->uploadFile('attachment', $destination, [
+            $allowedMimes = [
                 'image/jpeg', 'image/png', 'image/gif', 'image/webp',
                 'application/pdf', 'application/msword',
                 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                 'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
                 'video/x-msvideo', 'video/x-matroska', 'video/x-m4v',
-            ]);
-            if ($file) {
-                $data['attachment'] = $file;
+            ];
+            $rawFiles = $_FILES['attachment'];
+            $names    = is_array($rawFiles['name'])     ? $rawFiles['name']     : [$rawFiles['name']];
+            $tmpNames = is_array($rawFiles['tmp_name']) ? $rawFiles['tmp_name'] : [$rawFiles['tmp_name']];
+            $errors   = is_array($rawFiles['error'])    ? $rawFiles['error']    : [$rawFiles['error']];
+            $savedFilenames = [];
+            foreach ($names as $idx => $origName) {
+                if (empty($origName) || ($errors[$idx] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+                    continue;
+                }
+                $_FILES['_tmp_attach'] = [
+                    'name'     => $origName,
+                    'tmp_name' => $tmpNames[$idx],
+                    'error'    => $errors[$idx],
+                    'size'     => $rawFiles['size'][$idx] ?? 0,
+                    'type'     => $rawFiles['type'][$idx] ?? '',
+                ];
+                $saved = $this->uploadFile('_tmp_attach', $destination, $allowedMimes);
+                if ($saved) {
+                    $savedFilenames[] = $saved;
+                }
+            }
+            if (count($savedFilenames) === 1) {
+                $data['attachment'] = $savedFilenames[0];
+            } elseif (count($savedFilenames) > 1) {
+                $data['attachment'] = json_encode($savedFilenames, JSON_UNESCAPED_UNICODE);
             }
         }
 

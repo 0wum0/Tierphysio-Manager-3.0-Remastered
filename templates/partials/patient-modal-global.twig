@@ -779,7 +779,7 @@
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
                 <input type="hidden" id="cvr-edit-mode" name="cvr_edit_mode" value="">
                 <input type="hidden" id="cvr-edit-report-id" name="cvr_edit_report_id" value="">
-                <div class="modal-body" style="padding:0;overflow-y:auto;max-height:calc(100vh - 200px);">
+                <div class="modal-body" style="padding:0;overflow-y:auto;max-height:calc(100vh - 200px);max-height:calc(100dvh - 200px);">
                     <div id="cvr-doc-header" style="background:var(--bs-secondary-bg,#f8f9fa);border-bottom:1px solid var(--bs-border-color);padding:1.25rem 1.75rem 1.1rem;position:relative;">
                         <div style="position:absolute;top:0;left:0;bottom:0;width:4px;background:var(--bs-primary,#4f7cff);border-radius:0 2px 2px 0;"></div>
                         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
@@ -881,7 +881,7 @@
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body" style="overflow-y:auto;max-height:calc(100vh - 180px);padding:1.25rem 1.5rem;">
+            <div class="modal-body" style="overflow-y:auto;max-height:calc(100vh - 180px);max-height:calc(100dvh - 180px);padding:1.25rem 1.5rem;">
                 <ul class="nav nav-tabs mb-3" style="flex-wrap:nowrap;overflow-x:auto;gap:.25rem;">
                     <li class="nav-item"><button type="button" class="nav-link active" id="tcpfv-tab-progress" data-tcpfv-tab="progress">📈 Therapiefortschritt</button></li>
                     <li class="nav-item"><button type="button" class="nav-link" id="tcpfv-tab-natural" data-tcpfv-tab="natural">🌿 Naturheilkunde</button></li>
@@ -910,7 +910,7 @@
         </div>
         <form id="edit-patient-form" method="POST" enctype="multipart/form-data">
             <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
-            <div class="modal-body" style="overflow-y: auto; max-height: 72vh;">
+            <div class="modal-body" style="overflow-y: auto; max-height: 72vh; max-height: 72dvh;">
                 <div class="form-group mb-4">
                     <label class="form-label">Profilbild</label>
                     <div class="d-flex align-items-center gap-3">
@@ -1186,6 +1186,7 @@
 #cvr-quill-editor .ql-editor {
     min-height: 320px;
     max-height: 55vh;
+    max-height: 55dvh;
     overflow-y: auto;
     font-size: 0.93rem;
     line-height: 1.75;
@@ -1217,7 +1218,7 @@
 #modal-custom-vet-report .ql-toolbar.ql-snow .ql-formats { margin-right: 0.4rem; }
 @media (max-width: 600px) {
     #modal-custom-vet-report .ql-toolbar.ql-snow { overflow-x: auto; display: flex; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
-    #cvr-quill-editor .ql-editor { max-height: 45vh; }
+    #cvr-quill-editor .ql-editor { max-height: 45vh; max-height: 45dvh; }
 }
 /* Dark mode adjustments for CVR editor */
 [data-bs-theme="dark"] #cvr-quill-editor {
@@ -2696,15 +2697,6 @@ window.deletePatient = function() {
         .then(function(){window.location.href='/patienten';});
 };
 
-window.deleteVetReport = function(patientId, reportId, btn) {
-    if (!confirm('Diesen Bericht wirklich löschen?')) return;
-    if (btn) btn.disabled = true;
-    fetch('/patienten/'+patientId+'/tierarztbericht/'+reportId,{method:'DELETE'})
-        .then(function(r){return r.json();})
-        .then(function(data){ if(data.ok){ _vrLoaded=false; loadVetReports(patientId); } else { alert('Löschen fehlgeschlagen.'); if(btn) btn.disabled=false; } })
-        .catch(function(){alert('Netzwerkfehler.');if(btn)btn.disabled=false;});
-};
-
 /* ═══════════════════════════════════════════════════════
    PDF EXPORT
 ═══════════════════════════════════════════════════════ */
@@ -2926,6 +2918,11 @@ window.openHomeworkModal = function() {
     var old=document.getElementById('modal-patient-homework'); if(old){try{bootstrap.Modal.getInstance(old)?.dispose();}catch(e){}old.remove();}
     var modalEl=document.createElement('div');
     modalEl.className='modal fade'; modalEl.id='modal-patient-homework'; modalEl.tabIndex=-1; modalEl.setAttribute('aria-hidden','true');
+    /* Gestapeltes Modal (öffnet über modal-patient-detail) — eigener
+       Backdrop würde sonst über dem Detail-Modal liegen und es
+       ausgrauen/unklickbar machen (gleiches Muster wie bei
+       modal-vet-report-choice / modal-custom-vet-report). */
+    modalEl.style.zIndex = '1065';
     modalEl.innerHTML='<div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">'
         +'<div class="modal-header"><h3 class="modal-title">📋 Hausaufgabenpläne — '+_hwEsc(p.name)+'</h3><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>'
         +'<div class="modal-body">'
@@ -2936,7 +2933,7 @@ window.openHomeworkModal = function() {
         +'<div id="hw-plans-list"><div class="text-center py-5 text-muted"><div class="pd-spinner" style="margin:0 auto 1rem;"></div>Lade Pläne…</div></div>'
         +'</div></div></div>';
     document.body.appendChild(modalEl);
-    var modal=new bootstrap.Modal(modalEl); modal.show();
+    var modal=new bootstrap.Modal(modalEl, {backdrop: false}); modal.show();
     _loadPlans(p.id);
     modalEl.addEventListener('hidden.bs.modal',function(){this.remove();});
 };
@@ -3004,6 +3001,10 @@ window.openCreatePlanModal=function(){
     var p=currentPatientData.patient; var today=new Date().toISOString().split('T')[0];
     var old=document.getElementById('modal-create-plan'); if(old){try{bootstrap.Modal.getInstance(old)?.dispose();}catch(e){}old.remove();}
     var modalEl=document.createElement('div'); modalEl.className='modal fade'; modalEl.id='modal-create-plan'; modalEl.tabIndex=-1; modalEl.setAttribute('aria-hidden','true');
+    /* Kann über modal-patient-detail ODER über modal-patient-homework
+       geöffnet werden — eigener Backdrop + höherer z-index als beide
+       verhindert das "ausgegraut/unklickbar" Problem gestapelter Modals. */
+    modalEl.style.zIndex = '1075';
     modalEl.innerHTML='<div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">'
         +'<div class="modal-header"><h3 class="modal-title">Neuer Hausaufgabenplan — '+_hwEsc(p.name)+'</h3><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>'
         +'<div class="modal-body">'
@@ -3034,7 +3035,7 @@ window.openCreatePlanModal=function(){
         +'<div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button><button type="button" class="btn btn-primary" id="cp-save-btn">Plan speichern</button></div>'
         +'</div></div>';
     document.body.appendChild(modalEl);
-    var modal=new bootstrap.Modal(modalEl); modal.show();
+    var modal=new bootstrap.Modal(modalEl, {backdrop: false}); modal.show();
     _loadCpTemplates();
 
     var restored = restoreCpDraftIfPresent(p.id);
