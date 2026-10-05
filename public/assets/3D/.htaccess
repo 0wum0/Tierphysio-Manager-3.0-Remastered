@@ -1,0 +1,8 @@
+<IfModule mod_mime.c>
+    AddType model/gltf-binary .glb
+</IfModule>
+<IfModule mod_headers.c>
+    <FilesMatch "\.glb$">
+        Header set Cache-Control "public, max-age=2592000"
+    </FilesMatch>
+</IfModule>
