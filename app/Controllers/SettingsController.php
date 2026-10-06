@@ -609,18 +609,22 @@ class SettingsController extends Controller
             'beobachtung' => '👁️', 'sonstiges' => '📌',
         ];
 
-        $this->homeworkRepository->createTemplate([
-            'title'           => $title,
-            'description'     => $this->sanitize($this->post('description', '')),
-            'category'        => $category,
-            'category_emoji'  => $emojis[$category] ?? '📌',
-            'frequency'       => $this->post('frequency', 'daily'),
-            'duration_value'  => $this->post('duration_value', 10),
-            'duration_unit'   => $this->post('duration_unit', 'minutes'),
-            'therapist_notes' => $this->sanitize($this->post('therapist_notes', '')),
-        ]);
-
-        $this->session->flash('success', 'Hausaufgaben-Template erstellt.');
+        try {
+            $this->homeworkRepository->createTemplate([
+                'title'           => $title,
+                'description'     => $this->sanitize($this->post('description', '')),
+                'category'        => $category,
+                'category_emoji'  => $emojis[$category] ?? '📌',
+                'frequency'       => $this->post('frequency', 'daily'),
+                'duration_value'  => $this->post('duration_value', 10),
+                'duration_unit'   => $this->post('duration_unit', 'minutes'),
+                'therapist_notes' => $this->sanitize($this->post('therapist_notes', '')),
+            ]);
+            $this->session->flash('success', 'Hausaufgaben-Template erstellt.');
+        } catch (\Throwable $e) {
+            error_log('[SettingsController] createHomeworkTemplate fehlgeschlagen: ' . $e->getMessage());
+            $this->session->flash('error', 'Template konnte nicht gespeichert werden: ' . $e->getMessage());
+        }
         $this->redirect('/einstellungen?tab=hausaufgaben');
     }
 
@@ -643,27 +647,36 @@ class SettingsController extends Controller
             'beobachtung' => '👁️', 'sonstiges' => '📌',
         ];
 
-        $this->homeworkRepository->updateTemplate($id, [
-            'title'           => $title,
-            'description'     => $this->sanitize($this->post('description', '')),
-            'category'        => $category,
-            'category_emoji'  => $emojis[$category] ?? '📌',
-            'frequency'       => $this->post('frequency', 'daily'),
-            'duration_value'  => $this->post('duration_value', 10),
-            'duration_unit'   => $this->post('duration_unit', 'minutes'),
-            'therapist_notes' => $this->sanitize($this->post('therapist_notes', '')),
-            'is_active'       => $this->post('is_active', 0),
-        ]);
-
-        $this->session->flash('success', 'Hausaufgaben-Template aktualisiert.');
+        try {
+            $this->homeworkRepository->updateTemplate($id, [
+                'title'           => $title,
+                'description'     => $this->sanitize($this->post('description', '')),
+                'category'        => $category,
+                'category_emoji'  => $emojis[$category] ?? '📌',
+                'frequency'       => $this->post('frequency', 'daily'),
+                'duration_value'  => $this->post('duration_value', 10),
+                'duration_unit'   => $this->post('duration_unit', 'minutes'),
+                'therapist_notes' => $this->sanitize($this->post('therapist_notes', '')),
+                'is_active'       => $this->post('is_active', 0),
+            ]);
+            $this->session->flash('success', 'Hausaufgaben-Template aktualisiert.');
+        } catch (\Throwable $e) {
+            error_log('[SettingsController] updateHomeworkTemplate fehlgeschlagen: ' . $e->getMessage());
+            $this->session->flash('error', 'Template konnte nicht aktualisiert werden: ' . $e->getMessage());
+        }
         $this->redirect('/einstellungen?tab=hausaufgaben');
     }
 
     public function deleteHomeworkTemplate(array $params = []): void
     {
         $this->validateCsrf();
-        $this->homeworkRepository->deleteTemplate((int)$params['id']);
-        $this->session->flash('success', 'Hausaufgaben-Template gelöscht.');
+        try {
+            $this->homeworkRepository->deleteTemplate((int)$params['id']);
+            $this->session->flash('success', 'Hausaufgaben-Template gelöscht.');
+        } catch (\Throwable $e) {
+            error_log('[SettingsController] deleteHomeworkTemplate fehlgeschlagen: ' . $e->getMessage());
+            $this->session->flash('error', 'Template konnte nicht gelöscht werden: ' . $e->getMessage());
+        }
         $this->redirect('/einstellungen?tab=hausaufgaben');
     }
 }
