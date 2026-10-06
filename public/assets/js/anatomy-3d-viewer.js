@@ -6,10 +6,9 @@
  *
  * Architektur:
  *  - GLB-Modell laden via GLTFLoader
- *  - Mesh-Inspektion: falls Named Meshes brauchbar → direkt nutzen
- *  - Fallback: Hotspot-Zonen als unsichtbare BoxGeometry über dem Modell
- *  - Raycasting auf Hotspots + sichtbares Modell
- *  - Material-Cloning für Highlight (Originale werden NICHT mutiert)
+ *  - Kalibrierte Muskelregionen je Tierart, stabile IDs für vorhandene Befunde
+ *  - Punktgenaue Maus-/Touchauswahl mit Verdeckungsprüfung
+ *  - Meshopt-komprimierte Offline-Modelle und bedarfsgesteuertes Rendering
  *  - Schmerzformular als Overlay-Panel
  *  - AJAX POST/GET gegen /api/patienten/{id}/schmerzpunkte
  *  - Vollbild via Fullscreen API
@@ -19,128 +18,15 @@ import * as THREE from '/assets/js/vendor/three/three.module.min.js';
 import { OrbitControls } from '/assets/js/vendor/three/OrbitControls.js';
 import { GLTFLoader }    from '/assets/js/vendor/three/GLTFLoader.js';
 
-/* ═══════════════════════════════════════════════════════
-   MUSCLE GROUP DEFINITIONS
-   Manuelle Hotspot-Zonen in normalisiertem Modell-Raum.
-   position: Schwerpunkt der Region [x, y, z]
-   size:     halbe Box-Ausdehnung   [w, h, d]
-   (Koordinaten gelten nach Auto-Zentrierung/-Skalierung
-    des geladenen GLB auf eine 2-Einheiten-Boundingbox)
-═══════════════════════════════════════════════════════ */
+import { MeshoptDecoder } from '/assets/js/vendor/three/MeshoptDecoder.js';
+import { MUSCLE_GROUPS } from './anatomy-landmarks.js?v=20261005';
 
-/** @type {Record<string, MuscleGroupDef[]>} */
-const MUSCLE_GROUPS = {
-
-  /* ── HUND ─────────────────────────────────────────────────────────────────────
-   *  GLB-Bounds: X:±0.360(Seite), Y:±0.840(Höhe), Z:±1.000(Länge)
-   *  GEMESSEN: Kopf=RECHTS im Bild → Kopf=-Z, Schwanz=+Z (Kamera auf +Z schaut nach -Z)
-   *  X-Asymmetrie: +X:0.184, -X:-0.089 → sichtbare Seite (links im Bild) ist +X
-   *  Rücken Y≈+0.20..+0.28, Bauch Y≈-0.15, Pfoten Y≈-0.70
-   * ──────────────────────────────────────────────────────────────────────────── */
-  dog: [
-    { id:'dog_head',             label:'Kopfmuskulatur',              anatomical:'Musculi capitis',              region:'head',      side:'midline', pos:[ 0.00, 0.12,-0.78], size:[0.18,0.16,0.14] },
-    { id:'dog_jaw',              label:'Kaumuskulatur',               anatomical:'M. masseter / temporalis',     region:'head',      side:'midline', pos:[ 0.00,-0.10,-0.76], size:[0.15,0.12,0.12] },
-    { id:'dog_neck',             label:'Nackenmuskulatur',            anatomical:'Mm. nuchae',                   region:'neck',      side:'midline', pos:[ 0.00, 0.22,-0.58], size:[0.14,0.10,0.14] },
-    { id:'dog_neck_ventral',     label:'Halsmuskulatur ventral',      anatomical:'Mm. colli ventrales',          region:'neck',      side:'midline', pos:[ 0.00,-0.10,-0.55], size:[0.13,0.10,0.14] },
-    { id:'dog_shoulder_l',       label:'Schultermuskulatur links',    anatomical:'M. deltoideus / infraspinatus',region:'shoulder',  side:'left',   pos:[ 0.18, 0.16,-0.42], size:[0.10,0.14,0.12] },
-    { id:'dog_shoulder_r',       label:'Schultermuskulatur rechts',   anatomical:'M. deltoideus / infraspinatus',region:'shoulder',  side:'right',  pos:[-0.18, 0.16,-0.42], size:[0.10,0.14,0.12] },
-    { id:'dog_chest',            label:'Brustmuskulatur',             anatomical:'M. pectoralis',                region:'chest',     side:'midline', pos:[ 0.00,-0.18,-0.42], size:[0.20,0.12,0.14] },
-    { id:'dog_thoracic',         label:'Rückenmuskulatur (BWS)',      anatomical:'M. longissimus dorsi',         region:'back',      side:'midline', pos:[ 0.00, 0.24,-0.05], size:[0.12,0.10,0.30] },
-    { id:'dog_lumbar',           label:'Lendenmuskulatur',            anatomical:'M. iliopsoas / multifidus',    region:'lumbar',    side:'midline', pos:[ 0.00, 0.22, 0.28], size:[0.12,0.10,0.22] },
-    { id:'dog_belly',            label:'Bauchmuskulatur',             anatomical:'M. rectus abdominis',          region:'abdomen',   side:'midline', pos:[ 0.00,-0.16,-0.02], size:[0.16,0.10,0.38] },
-    { id:'dog_hip_l',            label:'Hüftmuskulatur links',        anatomical:'M. gluteus medius',            region:'hip',       side:'left',   pos:[ 0.18, 0.20, 0.44], size:[0.10,0.14,0.12] },
-    { id:'dog_hip_r',            label:'Hüftmuskulatur rechts',       anatomical:'M. gluteus medius',            region:'hip',       side:'right',  pos:[-0.18, 0.20, 0.44], size:[0.10,0.14,0.12] },
-    { id:'dog_glute_l',          label:'Glutealmuskulatur links',     anatomical:'M. gluteus superficialis',     region:'gluteal',   side:'left',   pos:[ 0.18, 0.08, 0.56], size:[0.10,0.14,0.12] },
-    { id:'dog_glute_r',          label:'Glutealmuskulatur rechts',    anatomical:'M. gluteus superficialis',     region:'gluteal',   side:'right',  pos:[-0.18, 0.08, 0.56], size:[0.10,0.14,0.12] },
-    { id:'dog_fore_l',           label:'Vorderbeinmuskulatur links',  anatomical:'M. triceps brachii',           region:'forelimb',  side:'left',   pos:[ 0.20,-0.28,-0.40], size:[0.08,0.22,0.09] },
-    { id:'dog_fore_r',           label:'Vorderbeinmuskulatur rechts', anatomical:'M. triceps brachii',           region:'forelimb',  side:'right',  pos:[-0.20,-0.28,-0.40], size:[0.08,0.22,0.09] },
-    { id:'dog_hind_l',           label:'Hinterbeinmuskulatur links',  anatomical:'M. biceps femoris',            region:'hindlimb',  side:'left',   pos:[ 0.18,-0.26, 0.55], size:[0.08,0.24,0.10] },
-    { id:'dog_hind_r',           label:'Hinterbeinmuskulatur rechts', anatomical:'M. biceps femoris',            region:'hindlimb',  side:'right',  pos:[-0.18,-0.26, 0.55], size:[0.08,0.24,0.10] },
-    { id:'dog_carpus_l',         label:'Karpalgelenk links',          anatomical:'Regio carpalis',               region:'carpus',    side:'left',   pos:[ 0.20,-0.52,-0.38], size:[0.07,0.07,0.07] },
-    { id:'dog_carpus_r',         label:'Karpalgelenk rechts',         anatomical:'Regio carpalis',               region:'carpus',    side:'right',  pos:[-0.20,-0.52,-0.38], size:[0.07,0.07,0.07] },
-    { id:'dog_tarsus_l',         label:'Sprunggelenk links',          anatomical:'Regio tarsi',                  region:'tarsus',    side:'left',   pos:[ 0.18,-0.50, 0.66], size:[0.07,0.07,0.07] },
-    { id:'dog_tarsus_r',         label:'Sprunggelenk rechts',         anatomical:'Regio tarsi',                  region:'tarsus',    side:'right',  pos:[-0.18,-0.50, 0.66], size:[0.07,0.07,0.07] },
-    { id:'dog_paw_fl',           label:'Pfote vorne links',           anatomical:'Regio manus',                  region:'paw',       side:'left',   pos:[ 0.20,-0.70,-0.38], size:[0.06,0.05,0.07] },
-    { id:'dog_paw_fr',           label:'Pfote vorne rechts',          anatomical:'Regio manus',                  region:'paw',       side:'right',  pos:[-0.20,-0.70,-0.38], size:[0.06,0.05,0.07] },
-    { id:'dog_paw_hl',           label:'Pfote hinten links',          anatomical:'Regio pedis',                  region:'paw',       side:'left',   pos:[ 0.18,-0.70, 0.74], size:[0.06,0.05,0.07] },
-    { id:'dog_paw_hr',           label:'Pfote hinten rechts',         anatomical:'Regio pedis',                  region:'paw',       side:'right',  pos:[-0.18,-0.70, 0.74], size:[0.06,0.05,0.07] },
-    { id:'dog_tail',             label:'Schwanzbasis',                anatomical:'Regio caudalis',               region:'tail',      side:'midline', pos:[ 0.00, 0.12, 0.86], size:[0.10,0.09,0.10] },
-  ],
-
-  /* ── KATZE ─────────────────────────────────────────────────── */
-  /* Bounds: X:±0.261(Seite), Y:±0.742(Höhe), Z:±1.000(Länge)
-   * GEMESSEN: Kopf=RECHTS im Bild → Kopf=-Z, Schwanz=+Z
-   * X symmetrisch: +X:0.027, -X:-0.027 → sichtbare Seite (links im Bild) = +X
-   * Rücken Y≈+0.18..+0.30, Bauch Y≈-0.10, Pfoten Y≈-0.60 */
-  cat: [
-    { id:'cat_head',             label:'Kopfmuskulatur',              anatomical:'Musculi capitis',              region:'head',      side:'midline', pos:[ 0.00, 0.18,-0.80], size:[0.14,0.14,0.12] },
-    { id:'cat_jaw',              label:'Kaumuskulatur',               anatomical:'M. masseter / temporalis',     region:'head',      side:'midline', pos:[ 0.00,-0.04,-0.78], size:[0.12,0.11,0.09] },
-    { id:'cat_neck',             label:'Nackenmuskulatur',            anatomical:'Mm. nuchae',                   region:'neck',      side:'midline', pos:[ 0.00, 0.24,-0.60], size:[0.12,0.10,0.12] },
-    { id:'cat_neck_ventral',     label:'Halsmuskulatur ventral',      anatomical:'Mm. colli ventrales',          region:'neck',      side:'midline', pos:[ 0.00,-0.06,-0.57], size:[0.11,0.10,0.12] },
-    { id:'cat_shoulder_l',       label:'Schultermuskulatur links',    anatomical:'M. deltoideus',                region:'shoulder',  side:'left',   pos:[ 0.16, 0.18,-0.44], size:[0.09,0.13,0.11] },
-    { id:'cat_shoulder_r',       label:'Schultermuskulatur rechts',   anatomical:'M. deltoideus',                region:'shoulder',  side:'right',  pos:[-0.16, 0.18,-0.44], size:[0.09,0.13,0.11] },
-    { id:'cat_chest',            label:'Brustmuskulatur',             anatomical:'M. pectoralis',                region:'chest',     side:'midline', pos:[ 0.00,-0.14,-0.44], size:[0.18,0.11,0.13] },
-    { id:'cat_thoracic',         label:'Rückenmuskulatur (BWS)',      anatomical:'M. longissimus dorsi',         region:'back',      side:'midline', pos:[ 0.00, 0.26,-0.10], size:[0.11,0.09,0.28] },
-    { id:'cat_lumbar',           label:'Lendenmuskulatur',            anatomical:'M. iliopsoas',                 region:'lumbar',    side:'midline', pos:[ 0.00, 0.24, 0.20], size:[0.11,0.09,0.20] },
-    { id:'cat_belly',            label:'Bauchmuskulatur',             anatomical:'M. rectus abdominis',          region:'abdomen',   side:'midline', pos:[ 0.00,-0.10, 0.00], size:[0.14,0.09,0.35] },
-    { id:'cat_hip_l',            label:'Hüftmuskulatur links',        anatomical:'M. gluteus medius',            region:'hip',       side:'left',   pos:[ 0.16, 0.20, 0.42], size:[0.09,0.13,0.11] },
-    { id:'cat_hip_r',            label:'Hüftmuskulatur rechts',       anatomical:'M. gluteus medius',            region:'hip',       side:'right',  pos:[-0.16, 0.20, 0.42], size:[0.09,0.13,0.11] },
-    { id:'cat_glute_l',          label:'Glutealmuskulatur links',     anatomical:'M. gluteus superficialis',     region:'gluteal',   side:'left',   pos:[ 0.16, 0.10, 0.52], size:[0.09,0.13,0.11] },
-    { id:'cat_glute_r',          label:'Glutealmuskulatur rechts',    anatomical:'M. gluteus superficialis',     region:'gluteal',   side:'right',  pos:[-0.16, 0.10, 0.52], size:[0.09,0.13,0.11] },
-    { id:'cat_fore_l',           label:'Vorderbeinmuskulatur links',  anatomical:'M. triceps brachii',           region:'forelimb',  side:'left',   pos:[ 0.18,-0.20,-0.42], size:[0.07,0.21,0.08] },
-    { id:'cat_fore_r',           label:'Vorderbeinmuskulatur rechts', anatomical:'M. triceps brachii',           region:'forelimb',  side:'right',  pos:[-0.18,-0.20,-0.42], size:[0.07,0.21,0.08] },
-    { id:'cat_hind_l',           label:'Hinterbeinmuskulatur links',  anatomical:'M. biceps femoris',            region:'hindlimb',  side:'left',   pos:[ 0.16,-0.16, 0.52], size:[0.07,0.23,0.09] },
-    { id:'cat_hind_r',           label:'Hinterbeinmuskulatur rechts', anatomical:'M. biceps femoris',            region:'hindlimb',  side:'right',  pos:[-0.16,-0.16, 0.52], size:[0.07,0.23,0.09] },
-    { id:'cat_paw_fl',           label:'Pfote vorne links',           anatomical:'Regio manus',                  region:'paw',       side:'left',   pos:[ 0.18,-0.60,-0.40], size:[0.06,0.05,0.06] },
-    { id:'cat_paw_fr',           label:'Pfote vorne rechts',          anatomical:'Regio manus',                  region:'paw',       side:'right',  pos:[-0.18,-0.60,-0.40], size:[0.06,0.05,0.06] },
-    { id:'cat_paw_hl',           label:'Pfote hinten links',          anatomical:'Regio pedis',                  region:'paw',       side:'left',   pos:[ 0.16,-0.60, 0.62], size:[0.06,0.05,0.06] },
-    { id:'cat_paw_hr',           label:'Pfote hinten rechts',         anatomical:'Regio pedis',                  region:'paw',       side:'right',  pos:[-0.16,-0.60, 0.62], size:[0.06,0.05,0.06] },
-    { id:'cat_tail_base',        label:'Schwanzbasis',                anatomical:'Regio caudalis',               region:'tail',      side:'midline', pos:[ 0.00, 0.16, 0.80], size:[0.09,0.08,0.09] },
-    { id:'cat_tail',             label:'Schwanzmuskulatur',           anatomical:'Mm. caudales',                 region:'tail',      side:'midline', pos:[ 0.00, 0.18, 0.92], size:[0.07,0.06,0.08] },
-  ],
-
-  /* ── PFERD ──────────────────────────────────────────────────── */
-  /* Bounds: X:±0.319(Seite), Y:±0.912(Höhe), Z:±1.000(Länge)
-   * GEMESSEN: Kopf=RECHTS im Bild → Kopf=-Z, Schwanz=+Z
-   * X-Asymmetrie: +X:0.197, -X:-0.264 → sichtbare Seite (links im Bild) = -X (breiter)
-   * Rücken Y≈+0.30..+0.45, Bauch Y≈-0.10, Hufe Y≈-0.82 */
-  horse: [
-    { id:'horse_head',           label:'Kopfmuskulatur',              anatomical:'Musculi capitis',              region:'head',      side:'midline', pos:[ 0.00, 0.06,-0.86], size:[0.14,0.18,0.12] },
-    { id:'horse_jaw',            label:'Kaumuskulatur',               anatomical:'M. masseter',                  region:'head',      side:'midline', pos:[ 0.00,-0.06,-0.82], size:[0.12,0.12,0.10] },
-    { id:'horse_neck',           label:'Halsmuskulatur',              anatomical:'Mm. colli',                    region:'neck',      side:'midline', pos:[ 0.00, 0.16,-0.64], size:[0.14,0.12,0.16] },
-    { id:'horse_neck_dorsal',    label:'Nackenmuskulatur',            anatomical:'Lig. nuchae / Mm. nuchae',     region:'neck',      side:'midline', pos:[ 0.00, 0.34,-0.58], size:[0.12,0.10,0.14] },
-    { id:'horse_shoulder_l',     label:'Schultermuskulatur links',    anatomical:'M. deltoideus / infraspinatus',region:'shoulder',  side:'left',   pos:[-0.22, 0.22,-0.44], size:[0.10,0.14,0.14] },
-    { id:'horse_shoulder_r',     label:'Schultermuskulatur rechts',   anatomical:'M. deltoideus / infraspinatus',region:'shoulder',  side:'right',  pos:[ 0.22, 0.22,-0.44], size:[0.10,0.14,0.14] },
-    { id:'horse_chest',          label:'Brustmuskulatur',             anatomical:'M. pectoralis profundus',      region:'chest',     side:'midline', pos:[ 0.00,-0.14,-0.50], size:[0.22,0.14,0.16] },
-    { id:'horse_withers',        label:'Widerristregion',             anatomical:'Processus spinosus T3-T9',     region:'withers',   side:'midline', pos:[ 0.00, 0.46,-0.30], size:[0.14,0.10,0.14] },
-    { id:'horse_thoracic',       label:'Rückenmuskulatur (Sattellage)',anatomical:'M. longissimus dorsi',        region:'back',      side:'midline', pos:[ 0.00, 0.42, 0.00], size:[0.14,0.10,0.28] },
-    { id:'horse_lumbar',         label:'Lendenmuskulatur',            anatomical:'M. iliopsoas / multifidus',    region:'lumbar',    side:'midline', pos:[ 0.00, 0.38, 0.26], size:[0.14,0.10,0.18] },
-    { id:'horse_belly',          label:'Bauchmuskulatur',             anatomical:'M. obliquus abdominis',        region:'abdomen',   side:'midline', pos:[ 0.00,-0.16, 0.00], size:[0.18,0.14,0.40] },
-    { id:'horse_hip_l',          label:'Hüftmuskulatur links',        anatomical:'M. tensor fasciae latae',      region:'hip',       side:'left',   pos:[-0.20, 0.32, 0.42], size:[0.10,0.14,0.14] },
-    { id:'horse_hip_r',          label:'Hüftmuskulatur rechts',       anatomical:'M. tensor fasciae latae',      region:'hip',       side:'right',  pos:[ 0.20, 0.32, 0.42], size:[0.10,0.14,0.14] },
-    { id:'horse_glute_l',        label:'Glutealmuskulatur links',     anatomical:'M. gluteus medius',            region:'gluteal',   side:'left',   pos:[-0.22, 0.20, 0.52], size:[0.10,0.14,0.12] },
-    { id:'horse_glute_r',        label:'Glutealmuskulatur rechts',    anatomical:'M. gluteus medius',            region:'gluteal',   side:'right',  pos:[ 0.22, 0.20, 0.52], size:[0.10,0.14,0.12] },
-    { id:'horse_thigh_l',        label:'Oberschenkelmuskulatur links', anatomical:'M. biceps femoris',           region:'hindlimb',  side:'left',   pos:[-0.24,-0.12, 0.52], size:[0.09,0.20,0.10] },
-    { id:'horse_thigh_r',        label:'Oberschenkelmuskulatur rechts',anatomical:'M. biceps femoris',          region:'hindlimb',  side:'right',  pos:[ 0.24,-0.12, 0.52], size:[0.09,0.20,0.10] },
-    { id:'horse_fore_l',         label:'Vorderbeinmuskulatur links',  anatomical:'M. triceps brachii',           region:'forelimb',  side:'left',   pos:[-0.26,-0.24,-0.46], size:[0.08,0.24,0.08] },
-    { id:'horse_fore_r',         label:'Vorderbeinmuskulatur rechts', anatomical:'M. triceps brachii',           region:'forelimb',  side:'right',  pos:[ 0.26,-0.24,-0.46], size:[0.08,0.24,0.08] },
-    { id:'horse_hind_l',         label:'Hinterbeinmuskulatur links',  anatomical:'M. gastrocnemius',             region:'hindlimb',  side:'left',   pos:[-0.26,-0.28, 0.60], size:[0.08,0.24,0.08] },
-    { id:'horse_hind_r',         label:'Hinterbeinmuskulatur rechts', anatomical:'M. gastrocnemius',             region:'hindlimb',  side:'right',  pos:[ 0.26,-0.28, 0.60], size:[0.08,0.24,0.08] },
-    { id:'horse_carpus_l',       label:'Karpalgelenkregion links',    anatomical:'Regio carpalis',               region:'carpus',    side:'left',   pos:[-0.28,-0.56,-0.44], size:[0.07,0.07,0.07] },
-    { id:'horse_carpus_r',       label:'Karpalgelenkregion rechts',   anatomical:'Regio carpalis',               region:'carpus',    side:'right',  pos:[ 0.28,-0.56,-0.44], size:[0.07,0.07,0.07] },
-    { id:'horse_tarsus_l',       label:'Sprunggelenkregion links',    anatomical:'Regio tarsi',                  region:'tarsus',    side:'left',   pos:[-0.28,-0.56, 0.64], size:[0.07,0.07,0.07] },
-    { id:'horse_tarsus_r',       label:'Sprunggelenkregion rechts',   anatomical:'Regio tarsi',                  region:'tarsus',    side:'right',  pos:[ 0.28,-0.56, 0.64], size:[0.07,0.07,0.07] },
-    { id:'horse_fetlock_fl',     label:'Fesselregion vorne links',    anatomical:'Regio metacarpalis distalis',  region:'fetlock',   side:'left',   pos:[-0.28,-0.70,-0.44], size:[0.05,0.06,0.05] },
-    { id:'horse_fetlock_fr',     label:'Fesselregion vorne rechts',   anatomical:'Regio metacarpalis distalis',  region:'fetlock',   side:'right',  pos:[ 0.28,-0.70,-0.44], size:[0.05,0.06,0.05] },
-    { id:'horse_fetlock_hl',     label:'Fesselregion hinten links',   anatomical:'Regio metatarsalis distalis',  region:'fetlock',   side:'left',   pos:[-0.28,-0.70, 0.70], size:[0.05,0.06,0.05] },
-    { id:'horse_fetlock_hr',     label:'Fesselregion hinten rechts',  anatomical:'Regio metatarsalis distalis',  region:'fetlock',   side:'right',  pos:[ 0.28,-0.70, 0.70], size:[0.05,0.06,0.05] },
-    { id:'horse_hoof_fl',        label:'Hufregion vorne links',       anatomical:'Regio ungulae',               region:'hoof',      side:'left',   pos:[-0.28,-0.82,-0.44], size:[0.05,0.05,0.05] },
-    { id:'horse_hoof_fr',        label:'Hufregion vorne rechts',      anatomical:'Regio ungulae',               region:'hoof',      side:'right',  pos:[ 0.28,-0.82,-0.44], size:[0.05,0.05,0.05] },
-    { id:'horse_hoof_hl',        label:'Hufregion hinten links',      anatomical:'Regio ungulae',               region:'hoof',      side:'left',   pos:[-0.28,-0.82, 0.76], size:[0.05,0.05,0.05] },
-    { id:'horse_hoof_hr',        label:'Hufregion hinten rechts',     anatomical:'Regio ungulae',               region:'hoof',      side:'right',  pos:[ 0.28,-0.82, 0.76], size:[0.05,0.05,0.05] },
-    { id:'horse_tail',           label:'Schweifansatz',               anatomical:'Regio caudae',                region:'tail',      side:'midline', pos:[ 0.00, 0.22, 0.88], size:[0.10,0.10,0.10] },
-  ],
-};
+// Only compressed model bytes are retained; GPU resources belong to one viewer.
+const MODEL_BYTES = new Map();
+const SIDE_LABELS = {left:'Links', right:'Rechts', midline:'Mittig', bilateral:'Beidseitig'};
+function escapeHTML(value) {
+    return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 
 /* NRS → Farbe */
 const NRS_COLOR = ['#22c55e','#65a30d','#a3e635','#facc15','#fb923c','#f97316','#ef4444','#dc2626','#b91c1c','#991b1b','#7f1d1d'];
@@ -154,7 +40,7 @@ class Anatomy3DViewer {
     constructor(container, patientId, animalType, csrfToken) {
         this.container   = container;
         this.patientId   = patientId;
-        this.animalType  = animalType || 'dog';
+        this.animalType  = MUSCLE_GROUPS[animalType] ? animalType : 'dog';
         this.csrfToken   = csrfToken;
 
         /* Three.js state */
@@ -162,20 +48,23 @@ class Anatomy3DViewer {
         this.camera      = null;
         this.renderer    = null;
         this.controls    = null;
-        this.loader      = new GLTFLoader();
-        this.raycaster   = new THREE.Raycaster();
+        this.loader      = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
         this.pointer     = new THREE.Vector2(-9999, -9999);
 
         /* Model state */
         this.modelGroup  = null;     /* loaded GLB root */
         this.hotspots    = [];       /* { mesh, def } */
-        this.origMats    = new Map();/* mesh → original material */
         this.painData    = {};       /* key → {painLevel, painType, notes, id} */
 
         /* UI state */
         this.selectedKey = null;
         this.hoveredMesh = null;
-        this.debugMode   = false;
+        this.debugMode   = true;
+        this._disposed = false;
+        this._loadVersion = 0;
+        this._dataVersion = 0;
+        this._dirty = true;
+        this._hoverDirty = false;
         this._animId     = null;
 
         this._buildUI();
@@ -186,7 +75,7 @@ class Anatomy3DViewer {
 
     /* ── Build HTML skeleton ──────────────────────────────── */
     _buildUI() {
-        this.container.style.cssText = 'position:relative;width:100%;height:100%;background:#0a0f1a;border-radius:12px;overflow:hidden;';
+        this.container.style.cssText = 'position:relative;width:100%;height:100%;background:#0a0f1a;border-radius:12px;overflow:hidden;-webkit-tap-highlight-color:transparent;';
         this.container.innerHTML = `
           <canvas id="a3d-canvas" style="display:block;width:100%;height:100%;touch-action:none;"></canvas>
 
@@ -201,8 +90,14 @@ class Anatomy3DViewer {
             <button class="a3d-species-btn" data-sp="horse" style="padding:4px 10px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;font-weight:600;">🐎 Pferd</button>
             <div style="width:1px;height:18px;background:rgba(255,255,255,.15);margin:0 2px;"></div>
             <button id="a3d-reset-btn"  title="Ansicht zurücksetzen"  style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">↺ Reset</button>
-            <button id="a3d-debug-btn"  title="Zonen anzeigen"        style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">🔲 Zonen</button>
+            <label id="a3d-debug-btn" title="Muskelpunkte auf der sichtbaren Körperseite anzeigen" style="display:flex;align-items:center;gap:5px;padding:4px 8px;border-radius:6px;cursor:pointer;font-size:.72rem;color:#e2e8f0;">
+              <input id="a3d-zones-visible" type="checkbox" checked style="margin:0;accent-color:#4f7cff;"> Zonen
+            </label>
             <button id="a3d-fs-btn"     title="Vollbild"              style="padding:4px 8px;border-radius:6px;border:none;cursor:pointer;font-size:.72rem;background:rgba(255,255,255,.08);color:#e2e8f0;">⛶ Vollbild</button>
+            <select id="a3d-region-select" aria-label="Alle Muskelregionen" disabled style="flex-basis:100%;width:100%;min-width:0;padding:6px;border:1px solid #475569;border-radius:6px;background:#1e293b;color:#e2e8f0;font-size:.72rem;">
+              <option value="">Muskelregionen werden geladen…</option>
+            </select>
+            <span style="flex-basis:100%;font-size:.65rem;color:#94a3b8;">Andere Körperseite: Modell drehen oder Region auswählen.</span>
           </div>
 
           <!-- Loading overlay -->
@@ -211,6 +106,7 @@ class Anatomy3DViewer {
             align-items:center;justify-content:center;z-index:30;
             background:rgba(10,15,26,.9);">
             <div style="width:36px;height:36px;border:3px solid rgba(255,255,255,.15);border-top-color:#4f7cff;border-radius:50%;animation:a3d-spin .8s linear infinite;"></div>
+            <button id="a3d-retry-btn" type="button" hidden style="padding:8px;margin:10px;">Erneut laden</button>
             <div id="a3d-load-text" style="margin-top:12px;font-size:.8rem;color:#94a3b8;">Lade Modell…</div>
           </div>
 
@@ -219,7 +115,7 @@ class Anatomy3DViewer {
             position:absolute;pointer-events:none;z-index:25;
             background:rgba(10,15,26,.92);border:1px solid rgba(255,255,255,.12);
             border-radius:7px;padding:5px 9px;font-size:.72rem;color:#e2e8f0;
-            display:none;white-space:nowrap;"></div>
+            display:none;max-width:calc(100% - 30px);white-space:normal;"></div>
 
           <!-- Pain marker legend -->
           <div id="a3d-legend" style="
@@ -227,7 +123,7 @@ class Anatomy3DViewer {
             background:rgba(10,15,26,.82);backdrop-filter:blur(6px);
             border:1px solid rgba(255,255,255,.1);border-radius:8px;
             padding:7px 10px;font-size:.68rem;color:#94a3b8;">
-            <div style="font-weight:700;margin-bottom:4px;color:#e2e8f0;">Schmerzskala</div>
+            <div style="font-weight:700;margin-bottom:4px;color:#e2e8f0;">Muskelregionen · Schmerzskala</div>
             <div style="display:flex;gap:2px;align-items:center;">
               ${NRS_COLOR.map((c,i)=>`<div title="${i}" style="width:16px;height:8px;background:${c};border-radius:2px;"></div>`).join('')}
             </div>
@@ -273,14 +169,14 @@ class Anatomy3DViewer {
                 <label style="font-size:.7rem;color:#64748b;display:block;margin-bottom:4px;">Schmerzstärke (0–10)</label>
                 <div style="display:flex;align-items:center;gap:8px;">
                   <input type="range" id="a3d-pain-slider" min="0" max="10" value="0"
-                    style="flex:1;accent-color:#4f7cff;">
+                    style="flex:1;min-width:0;width:100%;accent-color:#4f7cff;">
                   <span id="a3d-pain-val" style="font-size:.9rem;font-weight:700;color:#e2e8f0;min-width:20px;text-align:center;">0</span>
                 </div>
                 <div id="a3d-pain-bar" style="height:6px;border-radius:4px;background:#22c55e;margin-top:4px;transition:background .2s;"></div>
               </div>
               <div>
                 <label style="font-size:.7rem;color:#64748b;display:block;margin-bottom:4px;">Seite</label>
-                <select id="a3d-side-sel" class="form-select form-select-sm">
+                <select id="a3d-side-sel" class="form-select form-select-sm" style="max-width:100%;">
                   <option value="midline">Mittig</option>
                   <option value="left">Links</option>
                   <option value="right">Rechts</option>
@@ -303,9 +199,10 @@ class Anatomy3DViewer {
             <div style="margin-bottom:12px;">
               <label style="font-size:.7rem;color:#64748b;display:block;margin-bottom:4px;">Notiz</label>
               <textarea id="a3d-notes" rows="2" class="form-control form-control-sm"
-                placeholder="Freitext…" style="font-size:.78rem;resize:none;"></textarea>
+                placeholder="Freitext…" style="font-size:.78rem;resize:none;box-sizing:border-box;width:100%;"></textarea>
             </div>
 
+            <div id="a3d-form-error" role="alert" style="color:#fca5a5;margin-bottom:8px;"></div>
             <div style="display:flex;gap:8px;">
               <button id="a3d-save-btn"   class="btn btn-primary btn-sm" style="flex:1;">Speichern</button>
               <button id="a3d-remove-btn" class="btn btn-outline-danger btn-sm">Entfernen</button>
@@ -315,6 +212,11 @@ class Anatomy3DViewer {
 
           <style>
             @keyframes a3d-spin { to { transform:rotate(360deg); } }
+            #a3d-toolbar { max-width:calc(100% - 36px); width:max-content; justify-content:center; }
+            #a3d-form select, #a3d-form textarea { background:#1e293b; color:#e2e8f0; border:1px solid #475569; border-radius:6px; padding:6px; }
+            #a3d-form .btn { border:1px solid #475569; border-radius:6px; padding:7px 10px; background:#1e293b; color:#e2e8f0; cursor:pointer; }
+            #a3d-form #a3d-save-btn { background:#2563eb; border-color:#2563eb; }
+            #a3d-form .btn:disabled { opacity:.6; cursor:wait; }
             .a3d-species-btn { background:rgba(255,255,255,.06); color:#94a3b8; }
             .a3d-species-btn.active { background:#4f7cff; color:#fff; }
             .a3d-pt-btn.active { background:rgba(79,124,255,.25); border-color:#4f7cff; color:#e2e8f0; }
@@ -327,6 +229,8 @@ class Anatomy3DViewer {
     _bindUI() {
         const c = this.container;
 
+        c.querySelector('#a3d-retry-btn').addEventListener('click', () => this._loadModel(this.animalType));
+
         /* Species buttons */
         c.querySelectorAll('.a3d-species-btn').forEach(btn => {
             btn.addEventListener('click', () => {
@@ -337,7 +241,15 @@ class Anatomy3DViewer {
         this._updateSpeciesBtn();
 
         c.querySelector('#a3d-reset-btn').addEventListener('click', () => this._resetCamera());
-        c.querySelector('#a3d-debug-btn').addEventListener('click', () => this._toggleDebug());
+        c.querySelector('#a3d-zones-visible').addEventListener('change', e => this._setZonesVisible(e.target.checked));
+        c.querySelector('#a3d-region-select').addEventListener('change', e => {
+            const entry = this.hotspots.find(h => h.def.id === e.target.value);
+            if (!entry) return;
+            this._setZonesVisible(true);
+            this._focusHotspot(entry.def);
+            this._openForm(entry.def);
+        });
+        this._syncZonesControl();
         c.querySelector('#a3d-fs-btn').addEventListener('click', () => this._toggleFullscreen());
 
         c.querySelector('#a3d-form-close').addEventListener('click', () => this._closeForm());
@@ -375,9 +287,9 @@ class Anatomy3DViewer {
         const canvas = this.container.querySelector('#a3d-canvas');
 
         this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
         this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.enabled = false;
 
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x0a0f1a);
@@ -397,7 +309,7 @@ class Anatomy3DViewer {
         this.scene.add(amb);
         const key = new THREE.DirectionalLight(0xffffff, 1.4);
         key.position.set(2, 3, 2);
-        key.castShadow = true;
+        key.castShadow = false;
         this.scene.add(key);
         const fill = new THREE.DirectionalLight(0x8888ff, 0.5);
         fill.position.set(-2, 1, -1);
@@ -410,250 +322,213 @@ class Anatomy3DViewer {
         const grid = new THREE.GridHelper(6, 20, 0x1e293b, 0x1e293b);
         grid.position.y = -0.6;
         this.scene.add(grid);
+        this.grid = grid;
 
         /* Events */
         canvas.addEventListener('pointermove', e => this._onPointerMove(e));
-        canvas.addEventListener('pointerdown', e => this._onClick(e));
-        window.addEventListener('resize', () => this._resize());
+        canvas.addEventListener('pointerdown', e => {
+            this._pointerDown = {x:e.clientX, y:e.clientY, id:e.pointerId};
+        });
+        canvas.addEventListener('pointerup', e => {
+            const down = this._pointerDown;
+            this._pointerDown = null;
+            if (down && down.id === e.pointerId && Math.hypot(e.clientX-down.x, e.clientY-down.y) < 6) this._onClick(e);
+        });
+        canvas.addEventListener('pointercancel', () => { this._pointerDown = null; });
+        canvas.addEventListener('pointerleave', () => {
+            this.pointer.set(-9999, -9999);
+            this._hoverDirty = true;
+        });
+        this.controls.addEventListener('change', () => { this._dirty = true; this._hoverDirty = true; });
+        this._resizeObserver = new ResizeObserver(() => this._resize());
+        this._resizeObserver.observe(this.container);
+        this._resizeObserver.observe(this.container.querySelector('#a3d-toolbar'));
 
         this._resize();
         this._animate();
     }
 
     _resize() {
-        const w = this.container.clientWidth;
+        const toolbarBottom = this.container.querySelector('#a3d-toolbar').offsetHeight + 20;
+        this.container.querySelector('#a3d-list-btn').style.top = `${toolbarBottom}px`;
+        this.container.querySelector('#a3d-list').style.top = `${toolbarBottom}px`;
+        const w = Math.max(1, this.container.clientWidth);
         const h = this.container.clientHeight || 400;
         this.renderer.setSize(w, h, false);
         this.camera.aspect = w / h;
         this.camera.updateProjectionMatrix();
+        this._dirty = true;
+        if (this.modelGroup && this._lastAspect !== this.camera.aspect) this._resetCamera();
+        this._lastAspect = this.camera.aspect;
     }
 
     _animate() {
+        if (this._disposed) return;
         this._animId = requestAnimationFrame(() => this._animate());
         this.controls.update();
-        this._updateHover();
-        this.renderer.render(this.scene, this.camera);
+        if (this._hoverDirty) { this._hoverDirty = false; this._updateHover(); }
+        if (this._dirty) { this._sizeMarkers(); this.renderer.render(this.scene, this.camera); this._dirty = false; }
+    }
+
+    _sizeMarkers() {
+        // A constant CSS-pixel radius stays readable on a zoomed-out phone.
+        this.camera.updateMatrixWorld(true);
+        const pixelRadius = window.matchMedia('(pointer: coarse)').matches ? 6 : 5;
+        const factor = 2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov)/2)
+            / Math.max(1, this.renderer.domElement.clientHeight);
+        this.hotspots.forEach(({marker, pos}) => {
+            const depth = -pos.clone().applyMatrix4(this.camera.matrixWorldInverse).z;
+            marker.scale.setScalar(Math.max(0.001, depth) * factor * pixelRadius / 0.012 * (marker.userData.emphasis || 1));
+        });
+    }
+
+    _disposeObject(root) {
+        const geometries = new Set(), materials = new Set(), textures = new Set();
+        root.traverse(obj => {
+            if (obj.geometry) geometries.add(obj.geometry);
+            if (obj.material) (Array.isArray(obj.material) ? obj.material : [obj.material]).forEach(m => materials.add(m));
+        });
+        materials.forEach(m => Object.values(m).forEach(v => { if (v?.isTexture) textures.add(v); }));
+        geometries.forEach(g => g.dispose());
+        materials.forEach(m => m.dispose());
+        textures.forEach(t => { t.dispose(); t.source?.data?.close?.(); });
+    }
+
+    _clearModel() {
+        this.hoveredMesh = null;
+        this._hideTooltip();
+        if (this.modelGroup) {
+            this.scene.remove(this.modelGroup);
+            this._disposeObject(this.modelGroup);
+            this.modelGroup = null;
+        }
+        this.hotspots.forEach(h => { this.scene.remove(h.marker); this._disposeObject(h.marker); });
+        this.hotspots = [];
+        const regions = this.container.querySelector('#a3d-region-select');
+        regions.disabled = true;
+        regions.replaceChildren(new Option('Muskelregionen werden geladen…', ''));
+        this._modelMeshes = [];
+        this._modelBox = null;
+        this._dirty = true;
     }
 
     destroy() {
-        if (this._animId) cancelAnimationFrame(this._animId);
+        this._disposed = true;
+        ++this._loadVersion;
+        ++this._dataVersion;
+        this._fetchController?.abort();
+        cancelAnimationFrame(this._animId);
+        this._resizeObserver.disconnect();
+        this.controls.dispose();
+        this._clearModel();
+        this._disposeObject(this.scene);
         this.renderer.dispose();
     }
 
-    /* ── Model Loading ────────────────────────────────────── */
-    _loadModel(species) {
-        const paths = {
-            dog:   '/assets/3D/Hund.glb',
-            cat:   '/assets/3D/katze.glb',
-            horse: '/assets/3D/Pferd.glb',
-        };
-        const path = paths[species] || paths.dog;
-
-        this._showLoading(`Lade ${species === 'dog' ? 'Hund' : species === 'cat' ? 'Katze' : 'Pferd'}…`);
-
-        /* Remove old model + hotspots */
-        if (this.modelGroup) {
-            this.scene.remove(this.modelGroup);
-            this.modelGroup = null;
-        }
-        this.hotspots.forEach(h => {
-            if (h.mesh.parent)   h.mesh.parent.remove(h.mesh);
-            if (h.marker?.parent) h.marker.parent.remove(h.marker);
-        });
-        this.hotspots = [];
-        this._modelBox = null;
-
-        this.loader.load(
-            path,
-            gltf => this._onModelLoaded(gltf, species),
-            xhr  => {
-                if (xhr.total > 0) {
-                    const pct = Math.round(xhr.loaded / xhr.total * 100);
-                    this._showLoading(`Lade… ${pct}%`);
-                }
-            },
-            err  => {
-                console.error('[Anatomy3D] GLB load error:', err);
-                this._showLoading('Fehler beim Laden des Modells.');
+    /* Model requests can finish out of order when the animal or patient changes. */
+    async _loadModel(species) {
+        const paths = {dog:'/assets/3D/Hund.glb?v=20261005',cat:'/assets/3D/katze.glb?v=20261005',horse:'/assets/3D/Pferd.glb?v=20261005'};
+        const path = paths[species];
+        if (!path) return;
+        const version = ++this._loadVersion;
+        this._fetchController?.abort();
+        this._fetchController = new AbortController();
+        this._closeForm();
+        this._clearModel();
+        this.container.querySelector('#a3d-retry-btn').hidden = true;
+        this._showLoading('Lade ' + ({dog:'Hund',cat:'Katze',horse:'Pferd'}[species]) + '…');
+        this._updateSpeciesBtn();
+        let model = null;
+        try {
+            let bytes = MODEL_BYTES.get(path);
+            if (!bytes) {
+                const res = await fetch(path, {signal:this._fetchController.signal});
+                if (!res.ok) throw new Error(`Modell: HTTP ${res.status}`);
+                bytes = await res.arrayBuffer();
+                MODEL_BYTES.set(path, bytes);
             }
-        );
+            if (this._disposed || version !== this._loadVersion) return;
+            this._showLoading('Bereite 3D-Ansicht vor…');
+            // Yield once so the loading text can paint before mesh decoding.
+            await new Promise(resolve => requestAnimationFrame(resolve));
+            const gltf = await this.loader.parseAsync(bytes, path.slice(0, path.lastIndexOf('/')+1));
+            model = gltf.scene;
+            if (this._disposed || version !== this._loadVersion) { this._disposeObject(model); return; }
+            this._onModelLoaded(gltf, species);
+        } catch (err) {
+            if (this._disposed || version !== this._loadVersion || err.name === 'AbortError') return;
+            if (model && model !== this.modelGroup) this._disposeObject(model);
+            this._clearModel();
+            MODEL_BYTES.delete(path);
+            console.error('[Anatomy3D] GLB load error:', err);
+            this._showLoading('Modell konnte nicht geladen werden. Bitte erneut versuchen.');
+            this.container.querySelector('#a3d-retry-btn').hidden = false;
+        }
     }
 
     _onModelLoaded(gltf, species) {
-        const model = gltf.scene;
-
-        /* ── Inspect meshes */
-        const meshNames = [];
-        model.traverse(obj => {
-            if (obj.isMesh) meshNames.push(obj.name || '[unnamed]');
-        });
-        console.log(`[Anatomy3D] ${species} — ${meshNames.length} Meshes:`, meshNames);
-
-        /* ── Auto-scale + center */
+        // Normalize in a parent group. Overwriting the GLB root transform breaks
+        // quantized assets, which use node scale/translation to decode vertices.
+        const model = new THREE.Group();
+        model.add(gltf.scene);
         const box = new THREE.Box3().setFromObject(model);
-        const size = new THREE.Vector3();
-        box.getSize(size);
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scale  = 2.0 / maxDim;
-        model.scale.setScalar(scale);
-
-        /* Recompute box after scale, then center */
+        const size = box.getSize(new THREE.Vector3());
+        model.scale.setScalar(2 / Math.max(size.x,size.y,size.z));
         model.updateMatrixWorld(true);
-        const box2 = new THREE.Box3().setFromObject(model);
-        const center = new THREE.Vector3();
-        box2.getCenter(center);
-        model.position.sub(center);
-
-        /* Recompute final bounding box in world space after centering */
+        model.position.sub(new THREE.Box3().setFromObject(model).getCenter(new THREE.Vector3()));
         model.updateMatrixWorld(true);
         const finalBox = new THREE.Box3().setFromObject(model);
-        const finalSize = new THREE.Vector3();
-        finalBox.getSize(finalSize);
-        const finalMin = finalBox.min.clone();
-
-        /* Store final dimensions for hotspot placement */
-        this._modelBox = { box: finalBox, size: finalSize, min: finalMin };
-
-        const finalCenter = new THREE.Vector3();
-        finalBox.getCenter(finalCenter);
-        console.log(`[Anatomy3D] ${species} final bounds:`,
-            'min', finalBox.min.x.toFixed(3), finalBox.min.y.toFixed(3), finalBox.min.z.toFixed(3),
-            'max', finalBox.max.x.toFixed(3), finalBox.max.y.toFixed(3), finalBox.max.z.toFixed(3),
-            'size', finalSize.x.toFixed(3), finalSize.y.toFixed(3), finalSize.z.toFixed(3)
-        );
-        console.log(`[Anatomy3D] ${species} model.position after centering:`,
-            model.position.x.toFixed(4), model.position.y.toFixed(4), model.position.z.toFixed(4),
-            '| finalCenter:', finalCenter.x.toFixed(4), finalCenter.y.toFixed(4), finalCenter.z.toFixed(4)
-        );
-
-        /* ── Debug: log vertex extremes per axis to determine head/tail/floor direction */
-        {
-            let maxZ=-Infinity,minZ=Infinity,maxX=-Infinity,minX=Infinity,minY=Infinity;
-            const tmp = new THREE.Vector3();
-            model.updateMatrixWorld(true);
-            model.traverse(obj => {
-                if (!obj.isMesh) return;
-                const pos = obj.geometry?.attributes?.position;
-                if (!pos) return;
-                for (let i = 0; i < Math.min(pos.count, 3000); i++) {
-                    tmp.fromBufferAttribute(pos, i).applyMatrix4(obj.matrixWorld);
-                    if (tmp.z > maxZ) maxZ = tmp.z;
-                    if (tmp.z < minZ) minZ = tmp.z;
-                    if (tmp.x > maxX) maxX = tmp.x;
-                    if (tmp.x < minX) minX = tmp.x;
-                    if (tmp.y < minY) minY = tmp.y;
-                }
-            });
-            console.log(`[Anatomy3D] ${species} axis extremes — +Z:${maxZ.toFixed(3)} -Z:${minZ.toFixed(3)} +X:${maxX.toFixed(3)} -X:${minX.toFixed(3)} minY(floor):${minY.toFixed(3)}`);
-        }
-
-        /* Preserve original GLB materials — do NOT override textures */
-        model.traverse(obj => {
-            if (obj.isMesh) {
-                obj.castShadow    = true;
-                obj.receiveShadow = true;
-            }
-        });
-
+        this._modelBox = {box:finalBox, size:finalBox.getSize(new THREE.Vector3())};
         this.modelGroup = model;
+        this._modelMeshes = [];
+        model.traverse(o => { if (o.isMesh) this._modelMeshes.push(o); });
         this.scene.add(model);
-
-        /* ── Build hotspot markers in world space (pos[] are world coords
-         *    matching the final auto-scaled + centered bounding box). */
+        this.grid.position.y = finalBox.min.y - 0.015;
         this._buildHotspots(species);
-
-        /* ── Apply existing pain data */
         this._applyPainToHotspots();
-
+        this._resetCamera();
         this._hideLoading();
-        this._updateSpeciesBtn();
     }
 
     _buildHotspots(species) {
+        // Calibrated coordinates are already on the surface. No runtime ray
+        // projection can move a leg landmark onto the chest or throat.
         const groups = MUSCLE_GROUPS[species] || [];
-        const mb     = this._modelBox;
-        if (!mb) return;
-
-        /* Collect the real model meshes so hotspots can be projected onto the
-         * actual surface. The def.pos[] values are only approximate anchors in
-         * normalized model space; the true surface depends on each GLB's real
-         * proportions, so we snap every point onto the mesh at runtime. This
-         * prevents markers from floating in the air or sinking into the body. */
-        const modelMeshes = [];
-        this.modelGroup.traverse(o => { if (o.isMesh) modelMeshes.push(o); });
-
-        groups.forEach(def => {
-            /* Surface-projected world position for this muscle group */
-            const snapped = this._projectToSurface(def, mb, modelMeshes);
-
-            /* Invisible raycasting box — matches the zone size */
-            const geo  = new THREE.BoxGeometry(
-                def.size[0] * 2,
-                def.size[1] * 2,
-                def.size[2] * 2
-            );
-            const mat  = new THREE.MeshBasicMaterial({
-                color: 0x4f7cff,
-                transparent: true,
-                opacity: 0,
-                depthWrite: false,
-                depthTest: false,
-            });
-            const mesh = new THREE.Mesh(geo, mat);
-            mesh.position.copy(snapped);
-            mesh.renderOrder = 999;
-            mesh.visible = false; /* raycasting only — never rendered */
-            mesh.userData.hotspot = def;
-            this.scene.add(mesh);
-
-            /* Visible marker sphere — small dot on model surface */
-            const markerGeo = new THREE.SphereGeometry(0.022, 8, 8);
-            const markerMat = new THREE.MeshBasicMaterial({
-                color: 0x4f7cff,
-                transparent: true,
-                opacity: 0,
-                depthWrite: false,
-            });
-            const marker = new THREE.Mesh(markerGeo, markerMat);
-            marker.position.copy(snapped);
-            marker.renderOrder = 1000;
+        const select = this.container.querySelector('#a3d-region-select');
+        select.replaceChildren(new Option(`Alle ${groups.length} Regionen auswählen…`, ''));
+        groups.forEach(def => select.add(new Option(`${def.anatomical} – ${def.label}`, def.id)));
+        select.disabled = false;
+        for (const def of groups) {
+            const marker = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6),
+                new THREE.MeshBasicMaterial({color:0x4f7cff, transparent:true, opacity:0.95, depthWrite:false}));
+            marker.position.fromArray(def.pos);
             this.scene.add(marker);
-
-            this.hotspots.push({ mesh, marker, def, pos: snapped });
-        });
+            const mesh = new THREE.Object3D();
+            mesh.userData.hotspot = def;
+            this.hotspots.push({mesh, marker, def, pos:marker.position.clone()});
+        }
     }
 
-    /* ── Snap a muscle-group anchor onto the real model surface ──────────────
-     * The anchor (def.pos) is projected radially outward from the body's
-     * longitudinal axis (the spine, running along Z at x=0, y=vertical center).
-     * A ray is cast from far outside back toward that axis through the anchor;
-     * the first surface hit is the outer skin facing that direction. The marker
-     * is then placed just above the surface so it is always visible on the body
-     * regardless of the individual GLB's proportions. Falls back to the raw
-     * anchor if the ray misses the mesh entirely. */
-    _projectToSurface(def, mb, modelMeshes) {
-        const anchor = new THREE.Vector3(def.pos[0], def.pos[1], def.pos[2]);
-        if (!modelMeshes || !modelMeshes.length) return anchor;
-
-        const centerY = mb.box.min.y + mb.size.y / 2;
-        const axis    = new THREE.Vector3(0, centerY, def.pos[2]);
-
-        /* Outward direction: from the spine axis toward the anchor */
-        const outward = anchor.clone().sub(axis);
-        if (outward.lengthSq() < 1e-6) outward.set(0, 1, 0); /* dead-on axis → up */
-        outward.normalize();
-
-        /* Cast from outside the bounding sphere back toward the axis */
-        const reach = mb.size.length();
-        const start = axis.clone().add(outward.clone().multiplyScalar(reach));
-        const ray   = new THREE.Raycaster(start, outward.clone().negate(), 0, reach * 2.2);
-
-        const hits = ray.intersectObjects(modelMeshes, true);
-        if (hits.length) {
-            /* Lift marker slightly off the surface so it renders on top */
-            return hits[0].point.clone().add(outward.clone().multiplyScalar(0.015));
+    _pickHotspot() {
+        if (!this.modelGroup) return null;
+        this.scene.updateMatrixWorld(true);
+        this.camera.updateMatrixWorld(true);
+        const canvas = this.renderer.domElement;
+        const radius = this._pointerType === 'touch' ? 18 : 12;
+        const candidates = this.hotspots.filter(h => h.marker.material.opacity > 0).map(h => {
+            const p = h.pos.clone().project(this.camera);
+            const distance = Math.hypot((p.x-this.pointer.x)*canvas.clientWidth/2, (p.y-this.pointer.y)*canvas.clientHeight/2);
+            return {h,p,distance};
+        }).filter(c => c.p.z >= -1 && c.p.z <= 1 && c.distance <= radius)
+          .sort((a,b) => a.distance-b.distance);
+        for (const {h} of candidates) {
+            const direction = h.pos.clone().sub(this.camera.position);
+            const distance = direction.length();
+            const ray = new THREE.Raycaster(this.camera.position, direction.normalize(), 0, distance-0.018);
+            // Respect occlusion: a far-side marker must never win a front-side tap.
+            if (!ray.intersectObjects(this._modelMeshes, false).length) return h.mesh;
         }
-        return anchor;
+        return null;
     }
 
     /* ── Raycasting / Hover ───────────────────────────────── */
@@ -662,33 +537,28 @@ class Anatomy3DViewer {
         this.pointer.x =  ((e.clientX - rect.left)  / rect.width)  * 2 - 1;
         this.pointer.y = -((e.clientY - rect.top)   / rect.height) * 2 + 1;
         this._moveTooltip(e.clientX, e.clientY);
+        this._pointerType = e.pointerType;
+        this._hoverDirty = true;
     }
 
     _updateHover() {
         if (!this.hotspots.length) return;
-        this.raycaster.setFromCamera(this.pointer, this.camera);
-
-        /* Three.js skips invisible objects — temporarily enable for raycasting */
-        const targets = this.hotspots.map(h => h.mesh);
-        targets.forEach(m => { m.visible = true; });
-        const hits = this.raycaster.intersectObjects(targets, false);
-        targets.forEach(m => { m.visible = false; });
-
-        const hitMesh = hits.length ? hits[0].object : null;
+        const hitMesh = this._pickHotspot();
 
         if (hitMesh !== this.hoveredMesh) {
-            /* Restore previous hover — hide invisible raycast box, update marker */
+            this._dirty = true;
+            /* Restore the saved pain color after hover. */
             if (this.hoveredMesh) {
                 const prevEntry = this.hotspots.find(h => h.mesh === this.hoveredMesh);
                 if (prevEntry) {
-                    const key     = `${prevEntry.def.id}::${prevEntry.def.side}`;
-                    const hasPain = this.painData[key]?.painLevel > 0;
+                    const pain = this._painForDef(prevEntry.def);
+                    const hasPain = pain?.painLevel > 0;
                     /* marker: show if pain, else hide (unless debug) */
-                    prevEntry.marker.material.opacity  = hasPain ? 0.9 : (this.debugMode ? 0.4 : 0);
+                    prevEntry.marker.material.opacity  = hasPain ? 0.9 : (this.debugMode ? 0.95 : 0);
                     prevEntry.marker.material.color.set(
-                        hasPain ? painColor(this.painData[key].painLevel) : 0x4f7cff
+                        hasPain ? painColor(pain.painLevel) : 0x4f7cff
                     );
-                    prevEntry.marker.scale.setScalar(1);
+                    prevEntry.marker.userData.emphasis = 1;
                 }
             }
             this.hoveredMesh = hitMesh;
@@ -698,7 +568,7 @@ class Anatomy3DViewer {
                     /* Scale up marker and make visible as hover indicator */
                     entry.marker.material.color.setHex(0xfbbf24);
                     entry.marker.material.opacity = 0.95;
-                    entry.marker.scale.setScalar(1.8);
+                    entry.marker.userData.emphasis = 1.8;
                     this._showTooltip(entry.def);
                 }
                 this.renderer.domElement.style.cursor = 'pointer';
@@ -711,6 +581,8 @@ class Anatomy3DViewer {
 
     _onClick(e) {
         if (e.button !== 0) return;
+        this._onPointerMove(e);
+        this._updateHover();
         if (!this.hoveredMesh) return;
 
         const def = this.hoveredMesh.userData.hotspot;
@@ -718,14 +590,17 @@ class Anatomy3DViewer {
     }
 
     /* ── Pain form ────────────────────────────────────────── */
-    _openForm(def) {
-        this.selectedKey = `${def.id}::${def.side}`;
+    _openForm(def, storedKey = null) {
+        const savedKeys = Object.keys(this.painData).filter(key => key.split('::')[0] === def.id);
+        this.selectedKey = storedKey || (savedKeys.length === 1 ? savedKeys[0] : `${def.id}::${def.side}`);
         const existing   = this.painData[this.selectedKey] || {};
 
         const c = this.container;
+        c.querySelector('#a3d-region-select').value = def.id;
+        c.querySelector('#a3d-form-error').textContent = '';
         c.querySelector('#a3d-form-title').textContent = def.label;
         c.querySelector('#a3d-form-sub').textContent   =
-            `${def.anatomical} · ${def.region} · ${def.side}`;
+            `${def.anatomical} · ${SIDE_LABELS[this.selectedKey.split('::')[1]]} (aus Sicht des Tieres)`;
 
         const lvl = existing.painLevel ?? 0;
         const slider = c.querySelector('#a3d-pain-slider');
@@ -737,7 +612,10 @@ class Anatomy3DViewer {
             btn.classList.toggle('active', btn.dataset.pt === existing.painType);
         });
 
-        c.querySelector('#a3d-side-sel').value = def.side;
+        const sideSelect = c.querySelector('#a3d-side-sel');
+        const storedSide = this.selectedKey.split('::')[1];
+        sideSelect.value = storedSide;
+        sideSelect.disabled = Boolean(existing.id) || def.side !== 'midline';
         c.querySelector('#a3d-notes').value = existing.notes || '';
 
         c.querySelector('#a3d-remove-btn').style.display = existing.painLevel ? '' : 'none';
@@ -751,20 +629,22 @@ class Anatomy3DViewer {
             this._applyPainToHotspots();
         }
         this.selectedKey = null;
+        this.container.querySelector('#a3d-region-select').value = '';
     }
 
     _previewPain(key, level) {
-        const entry = this.hotspots.find(h => `${h.def.id}::${h.def.side}` === key);
+        this._dirty = true;
+        const entry = this.hotspots.find(h => h.def.id === key.split('::')[0]);
         if (!entry) return;
         const mat = entry.marker.material;
         if (level === 0) {
             mat.color.setHex(0x4f7cff);
-            mat.opacity = this.debugMode ? 0.45 : 0;
-            entry.marker.scale.setScalar(1);
+            mat.opacity = this.debugMode ? 0.95 : 0;
+            entry.marker.userData.emphasis = 1;
         } else {
             mat.color.set(painColor(level));
             mat.opacity = 0.9;
-            entry.marker.scale.setScalar(1.4);
+            entry.marker.userData.emphasis = 1.4;
         }
     }
 
@@ -779,6 +659,10 @@ class Anatomy3DViewer {
         const painType = ptBtn ? ptBtn.dataset.pt : '';
         const notes    = c.querySelector('#a3d-notes').value.trim();
         const side     = c.querySelector('#a3d-side-sel').value;
+        const species = this.animalType;
+        const originalKey = this.selectedKey;
+        const saveKey = `${def.id}::${side}`;
+        const dataVersion = this._dataVersion;
 
         const btn = c.querySelector('#a3d-save-btn');
         btn.disabled = true;
@@ -787,9 +671,9 @@ class Anatomy3DViewer {
         try {
             const body = new URLSearchParams({
                 _csrf_token:        this.csrfToken,
-                animal_type:        this.animalType,
+                animal_type:        species,
                 muscle_group_id:    def.id,
-                muscle_group_label: def.label,
+                muscle_group_label: `${def.label} – ${def.anatomical}`,
                 region:             def.region,
                 side,
                 pain_level:         lvl,
@@ -802,15 +686,18 @@ class Anatomy3DViewer {
                 body: body.toString(),
             });
             const json = await res.json();
+            if (!res.ok || !json.success) throw new Error(json.error || 'Speichern fehlgeschlagen');
+            if (this._disposed || dataVersion !== this._dataVersion) return;
 
             if (json.success) {
-                this.painData[this.selectedKey] = { painLevel: lvl, painType, notes, id: json.id };
+                this.painData[saveKey] = { painLevel: lvl, painType, notes, id: json.id };
                 this._applyPainToHotspots();
                 this._renderList();
-                this._closeForm();
+                if (this.selectedKey === originalKey) this._closeForm();
             }
         } catch (err) {
             console.error('[Anatomy3D] save error:', err);
+            if (!this._disposed && dataVersion === this._dataVersion) this.container.querySelector('#a3d-form-error').textContent = 'Speichern fehlgeschlagen. Bitte erneut versuchen.';
         } finally {
             btn.disabled = false;
             btn.textContent = 'Speichern';
@@ -819,32 +706,41 @@ class Anatomy3DViewer {
 
     async _removePain() {
         if (!this.selectedKey) return;
-        const entry = this.painData[this.selectedKey];
+        const removeKey = this.selectedKey;
+        const dataVersion = this._dataVersion;
+        const entry = this.painData[removeKey];
         if (!entry?.id) { this._closeForm(); return; }
 
         try {
-            await fetch(`/api/patienten/${this.patientId}/schmerzpunkte/${entry.id}/loeschen`, {
+            const res = await fetch(`/api/patienten/${this.patientId}/schmerzpunkte/${entry.id}/loeschen`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest' },
                 body: new URLSearchParams({ _csrf_token: this.csrfToken }).toString(),
             });
-            delete this.painData[this.selectedKey];
+            const json = await res.json();
+            if (!res.ok || !json.success) throw new Error(json.error || 'Löschen fehlgeschlagen');
+            if (this._disposed || dataVersion !== this._dataVersion) return;
+            delete this.painData[removeKey];
             this._applyPainToHotspots();
             this._renderList();
-            this._closeForm();
+            if (this.selectedKey === removeKey) this._closeForm();
         } catch (err) {
             console.error('[Anatomy3D] remove error:', err);
+            if (!this._disposed && dataVersion === this._dataVersion) this.container.querySelector('#a3d-form-error').textContent = 'Entfernen fehlgeschlagen. Bitte erneut versuchen.';
         }
     }
 
     /* ── Load existing pain data from API ─────────────────── */
     async _loadPainData() {
+        const version = ++this._dataVersion;
+        this.painData = {};
+        this._renderList();
         try {
             const res  = await fetch(`/api/patienten/${this.patientId}/schmerzpunkte?animal_type=${this.animalType}`, {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
             const json = await res.json();
-            if (!json.success) return;
+            if (!json.success || this._disposed || version !== this._dataVersion) return;
 
             this.painData = {};
             (json.points || []).forEach(p => {
@@ -865,19 +761,19 @@ class Anatomy3DViewer {
 
     /* ── Apply pain colors to hotspot markers ─────────────── */
     _applyPainToHotspots() {
+        this._dirty = true;
         this.hotspots.forEach(({ mesh, marker, def }) => {
-            const key   = `${def.id}::${def.side}`;
-            const entry = this.painData[key];
-            mesh.visible = false; /* raycasting box never visible */
+            const entry = this._painForDef(def);
+            mesh.visible = false; /* identity object is not rendered */
 
             if (entry && entry.painLevel > 0) {
                 marker.material.color.set(painColor(entry.painLevel));
                 marker.material.opacity = 0.9;
-                marker.scale.setScalar(1.2);
+                marker.userData.emphasis = 1.2;
             } else {
                 marker.material.color.setHex(0x4f7cff);
-                marker.material.opacity = this.debugMode ? 0.45 : 0;
-                marker.scale.setScalar(1);
+                marker.material.opacity = this.debugMode ? 0.95 : 0;
+                marker.userData.emphasis = 1;
             }
         });
     }
@@ -895,13 +791,13 @@ class Anatomy3DViewer {
         body.innerHTML = entries.map(([key, v]) => {
             const def = this._defFromKey(key);
             const col = painColor(v.painLevel);
-            return `<div class="a3d-list-item" data-key="${key}"
+            return `<div class="a3d-list-item" data-key="${escapeHTML(key)}"
                 style="display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:6px;
                 cursor:pointer;margin-bottom:3px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);">
                 <div style="width:10px;height:10px;border-radius:50%;background:${col};flex-shrink:0;"></div>
                 <div style="min-width:0;">
-                  <div style="font-weight:600;color:#e2e8f0;font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${def?.label || key}</div>
-                  <div style="color:#64748b;font-size:.65rem;">NRS ${v.painLevel} · ${v.painType || '–'}</div>
+                  <div style="font-weight:600;color:#e2e8f0;font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(def?.label || key)} · ${escapeHTML(SIDE_LABELS[key.split('::')[1]] || '')}</div>
+                  <div style="color:#64748b;font-size:.65rem;">${escapeHTML(def?.anatomical || '')}<br>NRS ${escapeHTML(v.painLevel)} · ${escapeHTML(v.painType || '–')}</div>
                 </div>
               </div>`;
         }).join('');
@@ -911,30 +807,38 @@ class Anatomy3DViewer {
                 const def = this._defFromKey(el.dataset.key);
                 if (def) {
                     this._focusHotspot(def);
-                    this._openForm(def);
+                    this._openForm(def, el.dataset.key);
                 }
             });
         });
     }
 
     _focusHotspot(def) {
-        /* Prefer the surface-projected position of the built hotspot; fall back
-         * to the raw anchor if the hotspot was not built (e.g. model reloading). */
+        /* Focus the calibrated point, including when opened from the saved list. */
         const entry = this.hotspots.find(h => h.def.id === def.id && h.def.side === def.side);
         const pos  = entry?.pos ? entry.pos.clone() : new THREE.Vector3(...def.pos);
-        const dist = 1.2;
-        const dir  = this.camera.position.clone().sub(pos).normalize().multiplyScalar(dist);
+        const dist = Math.max(1.5, 1.1 / Math.max(0.4, this.camera.aspect));
+        const left = this.animalType === 'dog' ? 1 : -1;
+        const dir = def.side === 'left' || def.side === 'right'
+            ? new THREE.Vector3(def.side === 'left' ? left : -left, 0.06, 0)
+            : pos.clone();
+        if (dir.lengthSq() < 0.01) dir.set(left, 0.2, 0);
+        dir.normalize().multiplyScalar(dist);
         this.camera.position.copy(pos.clone().add(dir));
         this.controls.target.copy(pos);
+        // Reset residual orbit damping before selecting the opposite body side.
+        const damping = this.controls.enableDamping;
+        this.controls.enableDamping = false;
         this.controls.update();
+        this.controls.enableDamping = damping;
+        this._dirty = true;
     }
 
     /* ── Tooltip ─────────────────────────────────────────── */
     _showTooltip(def) {
         const tt  = this.container.querySelector('#a3d-tooltip');
-        const key = `${def.id}::${def.side}`;
-        const p   = this.painData[key];
-        tt.innerHTML = `<strong style="color:#e2e8f0;">${def.label}</strong>` +
+        const p = this._painForDef(def);
+        tt.innerHTML = `<strong style="color:#e2e8f0;">${def.anatomical}</strong><br>${def.label}` +
             (p?.painLevel > 0 ? `<br><span style="color:${painColor(p.painLevel)}">▲ NRS ${p.painLevel}</span>` : '');
         tt.style.display = 'block';
     }
@@ -944,15 +848,22 @@ class Anatomy3DViewer {
     _moveTooltip(cx, cy) {
         const rect = this.container.getBoundingClientRect();
         const tt   = this.container.querySelector('#a3d-tooltip');
-        tt.style.left = `${cx - rect.left + 14}px`;
+        tt.style.left = `${Math.max(4, Math.min(cx - rect.left + 14, rect.width - tt.offsetWidth - 4))}px`;
         tt.style.top  = `${cy - rect.top  - 10}px`;
     }
 
     /* ── Helpers ─────────────────────────────────────────── */
+    _painForDef(def) {
+        return Object.entries(this.painData)
+            .filter(([key]) => key.split('::')[0] === def.id)
+            .map(([,value]) => value)
+            .sort((a,b) => b.painLevel-a.painLevel)[0];
+    }
+
     _defFromKey(key) {
         const groups = MUSCLE_GROUPS[this.animalType] || [];
-        const [id, side] = key.split('::');
-        return groups.find(d => d.id === id && d.side === side) || null;
+        const [id] = key.split('::');
+        return groups.find(d => d.id === id) || null;
     }
 
     _showLoading(msg = 'Lade…') {
@@ -971,24 +882,41 @@ class Anatomy3DViewer {
     }
 
     _switchAnimal(species) {
-        if (species === this.animalType) return;
+        if (!MUSCLE_GROUPS[species] || species === this.animalType) return;
         this.animalType = species;
         this._loadModel(species);
         this._loadPainData();
     }
 
     _resetCamera() {
-        this.camera.position.set(0, 0.5, 3.2);
-        this.controls.target.set(0, 0, 0);
+        const sphere = this._modelBox?.box.getBoundingSphere(new THREE.Sphere());
+        const radius = sphere?.radius || 1.3;
+        const vfov = THREE.MathUtils.degToRad(this.camera.fov);
+        const hfov = 2 * Math.atan(Math.tan(vfov/2)*this.camera.aspect);
+        const distance = radius / Math.sin(Math.min(vfov,hfov)/2) * 1.08;
+        const sign = this.animalType === 'dog' ? 1 : -1;
+        this.camera.position.copy(new THREE.Vector3(sign*3,0.8,sign*1.6).normalize().multiplyScalar(distance));
+        this.controls.maxDistance = Math.max(8,distance*2);
+        this.controls.target.set(0,0,0);
         this.controls.update();
+        this._dirty = true;
     }
 
-    _toggleDebug() {
-        this.debugMode = !this.debugMode;
+    _syncZonesControl() {
+        this.container.querySelector('#a3d-zones-visible').checked = this.debugMode;
         this.container.querySelector('#a3d-debug-btn').style.background =
             this.debugMode ? 'rgba(79,124,255,.35)' : 'rgba(255,255,255,.08)';
+    }
+
+    _setZonesVisible(visible) {
+        this.debugMode = Boolean(visible);
+        this.hoveredMesh = null;
+        this._hideTooltip();
+        this._syncZonesControl();
         this._applyPainToHotspots();
     }
+
+    _toggleDebug() { this._setZonesVisible(!this.debugMode); }
 
     _toggleFullscreen() {
         if (!document.fullscreenElement) {
