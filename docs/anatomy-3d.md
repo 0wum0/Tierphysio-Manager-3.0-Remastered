@@ -2,7 +2,7 @@
 
 ## Ursache und Korrektur
 
-Die GLBs sind jeweils **ein einziges texturiertes Mesh**, keine benannten oder
+Die ursprünglichen Regions-GLBs sind jeweils **ein einziges texturiertes Mesh**, keine benannten oder
 segmentierten Einzelmuskeln. Der Hund schaut nach +Z; Katze und Pferd nach -Z.
 Die vorherigen Hundekoordinaten verwendeten die falsche Längsrichtung. Dazu
 projizierte der Viewer Punkte radial vom Körpermittelpunkt auf irgendeinen
@@ -65,10 +65,10 @@ Wichtig: Quantisierte GLBs tragen Dekodierungstransformationen an ihren Nodes.
 Der Viewer normalisiert deshalb eine **übergeordnete Gruppe**, statt die
 GLB-Transformationen zu überschreiben. Beibehalten, auch bei künftigen Assets.
 
-Der Viewer hält nur die drei kleinen komprimierten Dateien im Byte-Cache.
+Der Viewer hält geladene komprimierte Modelldateien im Byte-Cache.
 Beim Wechsel werden GPU-Geometrien, Texturen und ImageBitmaps freigegeben.
 Veraltete Requests können keine neue Tierart/Patientenansicht überschreiben.
-Pixelratio ist auf 1,5 begrenzt; Schattenpässe entfallen. Nur Änderungen lösen
+Pixelratio ist auf 1,5 begrenzt; bei den Regionsmodellen entfallen Schattenpässe. Nur Änderungen lösen
 Rendering und Hover-Auswertung aus. ResizeObserver deckt Modal/Vollbild ab.
 
 ## Reproduktion und Tests
@@ -146,18 +146,22 @@ Reproduktion (Python-Standardbibliothek und glTF Transform CLI 4.5.1):
 ```sh
 python scripts/convert-canine-muscles.py /path/to/MusculoskeletalDog
 npx --yes @gltf-transform/cli@4.5.1 meshopt public/assets/3D/Hund-Muskeln.glb /tmp/Hund-Muskeln.glb
-cp /tmp/Hund-Muskeln.glb public/assets/3D/Hund-Muskeln.glb
-cp public/assets/3D/Hund-Muskeln.glb flutter_app/assets/3d/models/Hund-Muskeln.glb
+npx --yes @gltf-transform/cli@4.5.1 simplify public/assets/3D/Hund-Skelett.glb /tmp/skeleton.glb --ratio 0.4 --error 0.001
+npx --yes @gltf-transform/cli@4.5.1 meshopt /tmp/skeleton.glb /tmp/Hund-Skelett.glb
+npx --yes @gltf-transform/cli@4.5.1 meshopt public/assets/3D/Hund-Haut.glb /tmp/Hund-Haut.glb
+cp /tmp/Hund-Muskeln.glb /tmp/Hund-Skelett.glb /tmp/Hund-Haut.glb public/assets/3D/
+cp public/assets/3D/Hund-Muskeln.glb public/assets/3D/Hund-Skelett.glb public/assets/3D/Hund-Haut.glb flutter_app/assets/3d/models/
 cp public/assets/js/anatomy-dog-muscles.js flutter_app/assets/3d/anatomy-dog-muscles.js
 ```
 
 Keine `join`-/`flatten`-Optimierung verwenden: benannte Oberflächen und die
 `muscleId`-Metadaten müssen getrennt erhalten bleiben. Das komprimierte zusätzliche
-Hundemodell misst rund 1,28 MB und benötigt keine Texturdownloads. Materialien
+Muskelmodell misst mit den ergänzten Faser-UVs rund 2,04 MB. Die kleine
+Fasertextur wird lokal erzeugt und benötigt keinen Download. Materialien
 werden pro Muskeloberfläche geklont, damit ein Befund nicht alle Muskeln färbt.
 Schmerzfarben verwenden dieselbe Skala wie das Formular, mit konstanter leichter
 Eigenleuchtwirkung ohne zusätzlichen Bloom-Renderpass. Unbefundete Muskeln sind
-grau; ein expliziter NRS-0-Befund ist grün und bleibt löschbar.
+in natürlichem Rot dargestellt; ein expliziter NRS-0-Befund ist grün und bleibt löschbar.
 
 Direkte Auswahl erfolgt über den ersten sichtbaren Oberflächentreffer. Die
 Auswahlliste enthält auch verdeckte Muskeln und stellt die ausgewählte Struktur
@@ -221,3 +225,62 @@ Nächster sachlicher Schritt ist daher die Bereitstellung der Katzen-Quelldatei,
 danach die Prüfung/Zuordnung und Integration; entsprechend anschließend beim
 Pferd. Kein deformiertes Hundemodell und keine erfundenen zusätzlichen Punkte
 werden als Katzen-/Pferdeanatomie freigeschaltet.
+
+
+## Hund: Gewebeschichten und Materialien
+
+Das Forschungsmodell enthält nun zusätzlich das zugehörige Skelett und die
+äußere Haut. Alle Schichten stammen aus demselben oben gepinnten MIT-Quellstand.
+Die 160 verwendeten Skelett-Geometrien (ohne doppelte Augen) werden für einen
+Renderaufruf zusammengeführt. Das ist keine Zählung anatomischer Knochen.
+STL-Punkte werden über die lokale Geom-Position und die Body-Bind-Pose aus
+`dog_skin.skn` ausgerichtet. Die XML-Ausgangspose der Simulation ist leicht
+abweichend und wird deshalb nicht als Bind-Pose verwendet. Der Konverter prüft
+die erwarteten Einheitsrotationen und unveränderte Mesh-Skalierung ausdrücklich.
+
+| Datei | Übertragung | Ladezeitpunkt |
+|---|---:|---|
+| Hund-Muskeln.glb | 2,04 MB | Öffnen der Einzelmuskelansicht |
+| Hund-Skelett.glb | 0,51 MB | Anschließend, standardmäßig sichtbar |
+| Hund-Haut.glb | 1,02 MB | Erst beim Einschalten der Haut |
+
+Zusätzliche Schichten werden unter denselben normalisierten Modellknoten
+gehängt. Keine eigene Skalierung/Zentrierung, keine Änderung der 225 Befund-IDs
+oder Fokuskoordinaten. Der Kameraausschnitt berücksichtigt zusätzliche
+Ausdehnungen. Haut verwendet die Original-UVs und den eingebetteten 1024-px-Atlas.
+Die Hautansicht blendet tiefere Geometrien aus, um Überschneidungen zu vermeiden;
+nach dem Ausschalten werden die gewählten Schichten wieder sichtbar. Die
+Freistellung eines Muskels hat Vorrang und wird beim Schließen zurückgenommen.
+
+Unter **Gewebeschichten** lassen sich Haut, vorhandene Faszien, Muskeln,
+Sehnen/Bänder und Skelett schalten. Die Faszien-Deckkraft ist einstellbar.
+Gemeint sind ausschließlich die vorhandenen thorakolumbalen, aponeurotischen
+und faszienassoziierten Quellflächen; kein vollständiges Fasziennetz wurde
+hinzuerfunden. Auch der Schalter beschreibt diese Einschränkung.
+
+`anatomy-materials.js` ergänzt rotbraune Muskeln, helles Bindegewebe und Knochen,
+feine Farb-/Rauheits-/Reliefstruktur sowie dunkle Augen/Nase. Die kleinen
+prozeduralen Texturen sind deterministisch. Ihre Ausrichtung folgt einer
+Hauptachsenprojektion je Mesh: **optische Textur, keine anatomisch vermessenen
+Faserverläufe**. Schmerzfarben ersetzen den Grundfarbton, erhalten aber Relief,
+Textur und Beleuchtung. Die Eigenleuchtwirkung ist reduziert. Neutral bedeutet
+Naturfarbe, während ein gespeicherter NRS 0 weiterhin grün ist.
+
+Hemisphärenlicht, warmes Hauptlicht und ein einzelner 1024-px-Schattenpass geben
+räumliche Orientierung. Rendering bleibt bedarfsgesteuert; kein Bloom und kein
+zusätzlicher Netzwerkdienst. Ein Ladefehler einer Zusatzschicht lässt die
+Muskelansicht benutzbar und erlaubt erneutes Einschalten. Modellwechsel und
+Schließen brechen Requests ab; verspätet dekodierte Schichten werden entsorgt.
+
+Browserprüfungen ergänzen bedarfsweises Hautladen, gemeinsame Transformation,
+Skelettansicht, Schicht-/Deckkraftwechsel, Wiederherstellung nach Freistellung,
+Ladefehler/Wiederholung und Wechsel der Tierart während eines Hautrequests.
+Web und eingebettetes App-Bundle werden geprüft, einschließlich Handybreite.
+Screenshots prüfen zusätzlich Hautatlas, Skelett, Gesamtkörper und Mobilansicht.
+
+**Qualitätsgrenze:** Das ist ein besser dargestelltes Forschungsmodell, kein
+fotorealistischer oder klinisch zertifizierter Anatomieatlas. Die grobe
+Quellgeometrie und einzelne Überschneidungen zwischen Knochen und Muskeln bleiben
+sichtbar. Vollständige, präzise Faszien und realistische Faserverläufe benötigen
+entsprechende fachlich geprüfte Quelldaten; Materialeffekte können sie nicht
+ersetzen. Katze und Pferd behalten den oben dokumentierten bisherigen Stand.

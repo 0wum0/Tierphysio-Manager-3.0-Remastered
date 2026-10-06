@@ -19,8 +19,9 @@ import { OrbitControls } from './vendor/three/OrbitControls.js';
 import { GLTFLoader }    from './vendor/three/GLTFLoader.js';
 
 import { MeshoptDecoder } from './vendor/three/MeshoptDecoder.js';
-import { SEGMENTED_MODELS, validateMuscleModel } from './anatomy-models.js?v=20261006-2';
-import { PainSurfaces } from './anatomy-surfaces.js?v=20261006';
+import { SEGMENTED_MODELS, validateMuscleModel } from './anatomy-models.js?v=20261006-layers';
+import { PainSurfaces } from './anatomy-surfaces.js?v=20261006-layers';
+import { styleAnatomy } from './anatomy-materials.js?v=20261006-layers';
 import { MUSCLE_GROUPS } from './anatomy-landmarks.js?v=20261005';
 
 // Only compressed model bytes are retained; GPU resources belong to one viewer.
@@ -66,6 +67,8 @@ class Anatomy3DViewer {
         /* UI state */
         this.selectedKey = null;
         this.muscleMode = true;
+        this._layerState = {muscle:true, fascia:true, tendon:true, skeleton:true, skin:false};
+        this._layerLoads = new Map();
         this.hoveredMesh = null;
         this.debugMode   = true;
         this._disposed = false;
@@ -107,6 +110,19 @@ class Anatomy3DViewer {
             </select>
             <label id="a3d-muscle-mode-label" style="font-size:.72rem;color:#e2e8f0;"><input id="a3d-muscle-mode" type="checkbox" checked> Einzelmuskeln</label>
             <label id="a3d-isolate-label" style="font-size:.72rem;color:#e2e8f0;"><input id="a3d-isolate" type="checkbox"> Auswahl freistellen</label>
+            <details id="a3d-layers" hidden style="flex-basis:100%;font-size:.72rem;color:#e2e8f0;">
+              <summary style="cursor:pointer;padding:5px 0;">Gewebeschichten</summary>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;padding:6px 0;">
+                <label><input type="checkbox" data-layer="skin"> Haut</label>
+                <label><input type="checkbox" data-layer="fascia" checked> Faszien (vorhandene)</label>
+                <label><input type="checkbox" data-layer="muscle" checked> Muskeln</label>
+                <label><input type="checkbox" data-layer="tendon" checked> Sehnen / Bänder</label>
+                <label><input type="checkbox" data-layer="skeleton" checked> Skelett</label>
+              </div>
+              <label>Faszien-Deckkraft <input id="a3d-fascia-opacity" aria-label="Faszien-Deckkraft" type="range" min="0.15" max="1" step="0.05" value="1" style="vertical-align:middle;width:110px;"></label>
+              <div id="a3d-layer-status" role="status" style="color:#cbd5e1;padding-top:4px;"></div>
+              <div style="color:#94a3b8;font-size:.65rem;">Faszien nur teilweise in der Quelle enthalten. Hautansicht blendet tiefere Schichten aus.</div>
+            </details>
             <span id="a3d-surface-note" style="flex-basis:100%;font-size:.65rem;color:#94a3b8;"></span>
           </div>
 
@@ -240,6 +256,8 @@ class Anatomy3DViewer {
         const c = this.container;
 
         c.querySelector('#a3d-muscle-mode').addEventListener('change', e => this._setMuscleMode(e.target.checked));
+        c.querySelectorAll('[data-layer]').forEach(input => input.addEventListener('change', () => this._setLayer(input.dataset.layer, input.checked)));
+        c.querySelector('#a3d-fascia-opacity').addEventListener('input', () => this._updateIsolation());
         c.querySelector('#a3d-isolate').addEventListener('change', () => this._updateIsolation());
         c.querySelector('#a3d-retry-btn').addEventListener('click', () => this._loadModel(this.animalType));
 
@@ -317,13 +335,19 @@ class Anatomy3DViewer {
         this.controls.maxDistance = 8;
 
         /* Lighting */
-        const amb = new THREE.AmbientLight(0xffffff, 0.6);
+        const amb = new THREE.HemisphereLight(0xeaf1ff, 0x554438, 1.15);
         this.scene.add(amb);
-        const key = new THREE.DirectionalLight(0xffffff, 1.4);
+        const key = new THREE.DirectionalLight(0xfff0e2, 2.1);
         key.position.set(2, 3, 2);
         key.castShadow = false;
         this.scene.add(key);
-        const fill = new THREE.DirectionalLight(0x8888ff, 0.5);
+        this._keyLight = key;
+        key.shadow.mapSize.set(1024,1024);
+        Object.assign(key.shadow.camera, {left:-1.5,right:1.5,top:1.5,bottom:-1.5,near:.1,far:8});
+        key.shadow.normalBias = .006;
+        key.shadow.bias = -.0001;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        const fill = new THREE.DirectionalLight(0xc5d9f0, 0.8);
         fill.position.set(-2, 1, -1);
         this.scene.add(fill);
         const rim = new THREE.DirectionalLight(0xffeedd, 0.4);
@@ -407,6 +431,8 @@ class Anatomy3DViewer {
     }
 
     _clearModel() {
+        this._layerLoads.clear();
+        if (this._ground) { this.scene.remove(this._ground); this._disposeObject(this._ground); this._ground = null; }
         this.hoveredMesh = null;
         this._hideTooltip();
         if (this.modelGroup) {
@@ -422,6 +448,7 @@ class Anatomy3DViewer {
         this._modelMeshes = [];
         this._surfaces = null;
         this._modelBox = null;
+        this._viewBox = null;
         this._dirty = true;
     }
 
@@ -435,6 +462,7 @@ class Anatomy3DViewer {
         this.controls.dispose();
         this._clearModel();
         this._disposeObject(this.scene);
+        this._keyLight.shadow.dispose();
         this.renderer.dispose();
     }
 
@@ -500,6 +528,17 @@ class Anatomy3DViewer {
         model.traverse(o => { if (o.isMesh) this._modelMeshes.push(o); });
         this.scene.add(model);
         this.grid.position.y = finalBox.min.y - 0.015;
+        this.grid.visible = !this._exactMuscles();
+        this.renderer.shadowMap.enabled = this._exactMuscles();
+        this._keyLight.castShadow = this._exactMuscles();
+        if (this._exactMuscles()) {
+            styleAnatomy(model);
+            this._ground = new THREE.Mesh(new THREE.PlaneGeometry(6,6), new THREE.ShadowMaterial({opacity:.3}));
+            this._ground.rotation.x = -Math.PI/2;
+            this._ground.position.y = finalBox.min.y - .015;
+            this._ground.receiveShadow = true;
+            this.scene.add(this._ground);
+        }
         this._buildHotspots(species);
         this._surfaces = new PainSurfaces(this._modelMeshes, this._activeGroups(), this._exactMuscles(), this._leftSign());
         this.container.querySelector('#a3d-muscle-mode-label').hidden = !SEGMENTED_MODELS[species];
@@ -507,12 +546,20 @@ class Anatomy3DViewer {
         this.container.querySelector('#a3d-isolate-label').hidden = !this._exactMuscles();
         this.container.querySelector('#a3d-debug-btn').style.display = this._exactMuscles() ? 'none' : 'flex';
         this.container.querySelector('#a3d-surface-note').textContent = this._exactMuscles()
-            ? `${this._activeGroups().length} Muskelstrukturen · Fläche anklicken. Verdeckte Muskeln über die Auswahl freistellen. Unbefundet: Grau.`
+            ? `${this._activeGroups().length} Muskelstrukturen · Fläche anklicken. Verdeckte Muskeln über die Auswahl freistellen. Unbefundet: Naturfarbe.`
             : 'Regionale Flächenfärbung (Näherung): keine exakten Einzelmuskelgrenzen. Unbefundet: Naturfarbe.';
+        const layers = SEGMENTED_MODELS[species]?.layers;
+        this.container.querySelector('#a3d-layers').hidden = !this._exactMuscles() || !layers;
+        this.container.querySelector('#a3d-layer-status').textContent = '';
+        this._syncLayerInputs();
+        this._updateIsolation();
         this._renderList();
         this._applyPainToHotspots();
         this._resetCamera();
         this._hideLoading();
+        if (this._exactMuscles() && layers) {
+            for (const layer of Object.keys(layers)) if (this._layerState[layer]) this._loadLayer(layer);
+        }
     }
 
     _buildHotspots(species) {
@@ -943,8 +990,84 @@ class Anatomy3DViewer {
     _updateIsolation() {
         const id = this.selectedKey?.split('::')[0];
         const isolate = this._exactMuscles() && id && this.container.querySelector('#a3d-isolate').checked;
-        this._modelMeshes?.forEach(mesh => { mesh.visible = !isolate || mesh.userData.muscleId === id; });
+        const opacity = Number(this.container.querySelector('#a3d-fascia-opacity').value);
+        const skinVisible = this._layerState.skin && this._modelMeshes?.some(m => m.userData.anatomyLayer === 'skin');
+        this._modelMeshes?.forEach(mesh => {
+            const layer = mesh.userData.anatomyLayer;
+            let visible = layer === 'context'
+                ? this._layerState.muscle || this._layerState.skin
+                : this._layerState[layer] !== false;
+            if (skinVisible) visible = layer === 'skin';
+            if (isolate) visible = mesh.userData.muscleId === id;
+            mesh.visible = !this._exactMuscles() || visible;
+            if (layer === 'fascia') {
+                mesh.material.opacity = opacity;
+                const transparent = opacity < 1;
+                if (mesh.material.transparent !== transparent) mesh.material.needsUpdate = true;
+                mesh.material.transparent = transparent;
+                mesh.material.depthWrite = !transparent;
+                mesh.castShadow = !transparent;
+            }
+        });
         this._dirty = true;
+    }
+
+    _syncLayerInputs() {
+        this.container.querySelectorAll('[data-layer]').forEach(input => { input.checked = this._layerState[input.dataset.layer]; });
+    }
+
+    async _setLayer(layer, enabled) {
+        if (!(layer in this._layerState)) return;
+        // Leaving an isolated selection restores the chosen full-body layers.
+        this._closeForm();
+        this._layerState[layer] = enabled;
+        this._syncLayerInputs();
+        this._updateIsolation();
+        if (enabled) await this._loadLayer(layer);
+    }
+
+    async _loadLayer(layer) {
+        const file = this._exactMuscles() && SEGMENTED_MODELS[this.animalType]?.layers?.[layer];
+        if (!file || !this.modelGroup) return;
+        if (this._layerLoads.has(layer)) return this._layerLoads.get(layer);
+        const version = this._loadVersion, parent = this.modelGroup;
+        const path = './models/' + file;
+        const status = this.container.querySelector('#a3d-layer-status');
+        const label = layer === 'skin' ? 'Haut' : 'Skelett';
+        const task = (async () => {
+            let decoded;
+            try {
+                status.textContent = `${label} wird geladen…`;
+                let bytes = MODEL_BYTES.get(path);
+                if (!bytes) {
+                    const response = await fetch(path, {signal:this._fetchController.signal});
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    bytes = await response.arrayBuffer();
+                    MODEL_BYTES.set(path, bytes);
+                }
+                if (this._disposed || version !== this._loadVersion) return;
+                decoded = (await this.loader.parseAsync(bytes, path.slice(0,path.lastIndexOf('/')+1))).scene;
+                if (this._disposed || version !== this._loadVersion) { this._disposeObject(decoded); return; }
+                styleAnatomy(decoded);
+                parent.add(decoded);
+                decoded.traverse(mesh => { if (mesh.isMesh) this._modelMeshes.push(mesh); });
+                parent.updateMatrixWorld(true);
+                this._viewBox = new THREE.Box3().setFromObject(parent);
+                this._updateIsolation();
+                if (!this.selectedKey) this._resetCamera();
+                status.textContent = '';
+            } catch (error) {
+                if (decoded) this._disposeObject(decoded);
+                if (this._disposed || version !== this._loadVersion || error.name === 'AbortError') return;
+                MODEL_BYTES.delete(path);
+                this._layerLoads.delete(layer);
+                this._layerState[layer] = false;
+                this._syncLayerInputs();
+                status.textContent = `${label} konnte nicht geladen werden. Zum Wiederholen erneut einschalten.`;
+            }
+        })();
+        this._layerLoads.set(layer, task);
+        return task;
     }
 
     _defFromKey(key) {
@@ -976,7 +1099,7 @@ class Anatomy3DViewer {
     }
 
     _resetCamera() {
-        const sphere = this._modelBox?.box.getBoundingSphere(new THREE.Sphere());
+        const sphere = (this._viewBox || this._modelBox?.box)?.getBoundingSphere(new THREE.Sphere());
         const radius = sphere?.radius || 1.3;
         const vfov = THREE.MathUtils.degToRad(this.camera.fov);
         const hfov = 2 * Math.atan(Math.tan(vfov/2)*this.camera.aspect);

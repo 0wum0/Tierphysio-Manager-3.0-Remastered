@@ -3,7 +3,7 @@ import { DOG_MUSCLES } from './anatomy-dog-muscles.js?v=20261006';
 // Enable a species only after its own licensed model and calibrated catalog exist.
 // Cat and horse deliberately have no fabricated or cross-species geometry.
 export const SEGMENTED_MODELS = {
-    dog: {file:'Hund-Muskeln.glb?v=20261006', definitions:DOG_MUSCLES, leftSign:1},
+    dog: {file:'Hund-Muskeln.glb?v=20261006-layers', layers:{skeleton:'Hund-Skelett.glb?v=20261006-layers',skin:'Hund-Haut.glb?v=20261006-layers'}, definitions:DOG_MUSCLES, leftSign:1},
 };
 
 export function validateMuscleModel(scene, species, definitions) {

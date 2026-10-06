@@ -15,7 +15,6 @@ export class PainSurfaces {
                 if (!defs.has(id)) continue;
                 originals.add(mesh.material);
                 mesh.material = mesh.material.clone();
-                mesh.material.color.setHex(0x8a929f);
                 mesh.userData.neutralColor = mesh.material.color.clone();
                 if (!this.entries.has(id)) this.entries.set(id, []);
                 this.entries.get(id).push(mesh);
@@ -64,7 +63,7 @@ export class PainSurfaces {
                 if (level != null) {
                     material.color.set(colorForLevel(level));
                     material.emissive.set(colorForLevel(level));
-                    material.emissiveIntensity = 0.3;
+                    material.emissiveIntensity = 0.16;
                 }
             });
         });

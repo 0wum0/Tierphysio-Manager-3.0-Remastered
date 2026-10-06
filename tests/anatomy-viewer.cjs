@@ -83,6 +83,30 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
                     && v._surfaces.entries.size===225
                     && v._modelMeshes.filter(m=>m.userData.muscleId).length===250;
             }));
+            // Supplementary layers share the primary normalization and load only on demand.
+            await page.evaluate(()=>Anatomy3D._instance._loadLayer('skeleton'));
+            assert(await page.evaluate(()=>{
+                const v=Anatomy3D._instance;
+                return v._modelMeshes.some(m=>m.userData.anatomyLayer==='skeleton' && m.visible)
+                    && !v._modelMeshes.some(m=>m.userData.anatomyLayer==='skin')
+                    && [...v._surfaces.entries.values()].flat().every(m=>m.material.bumpMap && m.material.color.getHexString()!=='8a929f');
+            }));
+            await page.locator('#a3d-layers summary').click();
+            const transform = await page.evaluate(()=>Anatomy3D._instance.modelGroup.matrixWorld.toArray());
+            await page.locator('[data-layer="skin"]').check();
+            await page.waitForFunction(()=>Anatomy3D._instance._modelMeshes.some(m=>m.userData.anatomyLayer==='skin' && m.visible));
+            assert.deepEqual(await page.evaluate(()=>Anatomy3D._instance.modelGroup.matrixWorld.toArray()), transform);
+            assert(await page.evaluate(()=>Anatomy3D._instance._modelMeshes.filter(m=>m.visible).every(m=>m.userData.anatomyLayer==='skin')));
+            if(process.env.ANATOMY_SCREENSHOTS && !bundle) await page.screenshot({path:path.join(process.env.ANATOMY_SCREENSHOTS,'dog-skin.png')});
+            await page.locator('[data-layer="skin"]').uncheck();
+            for(const layer of ['muscle','fascia','tendon']) await page.locator(`[data-layer="${layer}"]`).uncheck();
+            assert(await page.evaluate(()=>Anatomy3D._instance._modelMeshes.filter(m=>m.visible).every(m=>m.userData.anatomyLayer==='skeleton')));
+            if(process.env.ANATOMY_SCREENSHOTS && !bundle) await page.screenshot({path:path.join(process.env.ANATOMY_SCREENSHOTS,'dog-skeleton.png')});
+            for(const layer of ['muscle','fascia','tendon']) await page.locator(`[data-layer="${layer}"]`).check();
+            await page.locator('#a3d-fascia-opacity').fill('0.35');
+            assert(await page.evaluate(()=>Anatomy3D._instance._modelMeshes.filter(m=>m.userData.anatomyLayer==='fascia').every(m=>m.material.transparent && m.material.opacity===.35)));
+            await page.locator('#a3d-fascia-opacity').fill('1');
+            await page.locator('#a3d-layers summary').click();
             const muscleId='dog_mesh_m_biceps_brachii_l';
             await page.selectOption('#a3d-region-select', muscleId);
             assert(await page.locator('#a3d-isolate').isChecked());
@@ -108,7 +132,7 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
             },muscleId));
             if(process.env.ANATOMY_SCREENSHOTS && !bundle) await page.screenshot({path:path.join(process.env.ANATOMY_SCREENSHOTS,'dog-muscle-isolated.png')});
             await page.locator('#a3d-cancel-btn').click();
-            assert(await page.evaluate(()=>Anatomy3D._instance._modelMeshes.every(m=>m.visible && m.material.emissive.getHex()===0)));
+            assert(await page.evaluate(()=>Anatomy3D._instance._modelMeshes.every(m=>m.visible === (m.userData.anatomyLayer!=='skin') && m.material.emissive.getHex()===0)));
             await page.selectOption('#a3d-region-select',muscleId);
             await page.locator('#a3d-pain-slider').fill('8');await page.locator('#a3d-save-btn').click();
             await page.waitForFunction(id=>Anatomy3D._instance.painData[id+'::left']?.painLevel===8,muscleId);
@@ -191,7 +215,7 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
             await page.evaluate(()=>{Anatomy3D.switchAnimal('cat');Anatomy3D.switchAnimal('horse');Anatomy3D.switchAnimal('dog')});await ready(page);
             assert(await page.evaluate(()=>Anatomy3D._instance.hotspots.every(h=>h.def.id.startsWith('dog_'))));
             // Registered cat/horse geometry follows the same picking/color/isolation path.
-            const registryPath=(bundle?'/bundle':'/assets/js')+'/anatomy-models.js?v=20261006-2';
+            const registryPath=(bundle?'/bundle':'/assets/js')+'/anatomy-models.js?v=20261006-layers';
             await page.evaluate(async registryPath=>{
                 const {SEGMENTED_MODELS}=await import(registryPath);
                 for(const species of ['cat','horse']) SEGMENTED_MODELS[species]={file:`fixture-${species}.glb`,leftSign:-1,
@@ -221,8 +245,35 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
             assert.deepEqual(errors,[]);
             await page.close();
         }
+        // Optional layer failures are recoverable; late parses cannot contaminate another species.
+        const layerPage = await browser.newPage();
+        let failSkin = true, releaseSkin;
+        await layerPage.route('**/Hund-Haut.glb*', async route => {
+            if (failSkin) return route.fulfill({status:503,body:'unavailable'});
+            await new Promise(resolve => { releaseSkin = resolve; });
+            try { await route.continue(); } catch { /* request may already have been aborted */ }
+        });
+        await layerPage.goto(origin+'/test');await ready(layerPage);
+        await layerPage.evaluate(()=>Anatomy3D._instance._setLayer('skin',true));
+        assert(await layerPage.evaluate(()=>!Anatomy3D._instance._layerState.skin && document.querySelector('#a3d-layer-status').textContent.includes('erneut')));
+        failSkin = false;
+        await layerPage.evaluate(()=>{Anatomy3D._instance._setLayer('skin',true);});
+        await new Promise(resolve=>{
+            const timer=setInterval(()=>{if(releaseSkin){clearInterval(timer);resolve();}},10);
+        });
+        await layerPage.evaluate(()=>Anatomy3D.switchAnimal('cat'));await ready(layerPage);
+        releaseSkin();
+        await layerPage.waitForTimeout(100);
+        assert(await layerPage.evaluate(()=>Anatomy3D._instance.animalType==='cat' && !Anatomy3D._instance._modelMeshes.some(m=>m.userData.anatomyLayer)));
+        await layerPage.close();
         const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:3,isMobile:true,hasTouch:true});
         const page=await context.newPage();await page.goto(origin+'/test');await ready(page);
+        await page.evaluate(()=>Anatomy3D._instance._loadLayer('skeleton'));
+        await page.locator('#a3d-layers summary').tap();
+        assert(await page.locator('[data-layer="skin"]').isVisible());
+        assert(await page.evaluate(()=>document.querySelector('#a3d-layers').getBoundingClientRect().right<=innerWidth));
+        await page.locator('#a3d-layers summary').tap();
+        if(process.env.ANATOMY_SCREENSHOTS) await page.screenshot({path:path.join(process.env.ANATOMY_SCREENSHOTS,'dog-body-mobile.png')});
         await page.selectOption('#a3d-region-select','dog_mesh_m_biceps_brachii_l');
         await page.locator('#a3d-pain-slider').fill('7');
         if(process.env.ANATOMY_SCREENSHOTS) await page.screenshot({path:path.join(process.env.ANATOMY_SCREENSHOTS,'dog-muscles-mobile.png')});
@@ -251,6 +302,6 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
         // Closing while a model is parsing must leave no live renderer/model behind.
         await page.evaluate(()=>{const v=Anatomy3D._instance;v._switchAnimal('dog');v.destroy()});
         assert(await page.evaluate(()=>Anatomy3D._instance._disposed && Anatomy3D._instance.modelGroup===null));
-        console.log(JSON.stringify({passed:true,models:results,checks:'225 exact muscle structures; surface raycast; NRS preview/cancel/zero/save/reload/delete; regional surface colors; mobile muscle form; zone checkbox off/on; all regions reachable; constant mobile point size; desktop both sides; mobile taps; CSP; web+Flutter bundle; save/reload/delete and errors; species races; resize; disposal'},null,2));
+        console.log(JSON.stringify({passed:true,models:results,checks:'225 exact muscle structures; lazy skin and skeleton; layer visibility and opacity; retry and layer/species races; surface raycast; NRS preview/cancel/zero/save/reload/delete; regional surface colors; mobile muscle form; zone checkbox off/on; all regions reachable; constant mobile point size; desktop both sides; mobile taps; CSP; web+Flutter bundle; save/reload/delete and errors; species races; resize; disposal'},null,2));
     } finally {await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1});
