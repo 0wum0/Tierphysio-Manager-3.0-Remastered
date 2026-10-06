@@ -10,6 +10,16 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 source = Path(sys.argv[1]) / 'musculoskeletal_dog/assets/skins'
 blob = bytearray(); views=[]; accessors=[]; meshes=[]; nodes=[]; groups={}
+# Only explicitly named connective-tissue surfaces get selectable IDs.
+# Ambiguous source surfaces (m_Ligament, vastus_lat_ander_fascia_lata) remain
+# visible but are not assigned an invented clinical identity.
+tissue_names = {
+    'm_dorsi_Fascia_thoracolumbar_': ('thoracolumbar', 'Fascia thoracolumbalis', 'Rückenfaszie', 'midline', 'fascia'),
+    'm_abdominis_Aponeurosis': ('abdominal_aponeurosis', 'Aponeurose der Bauchwand', 'Bauchaponeurose', 'midline', 'fascia'),
+    'm_biceps_femoris_tendon_L': ('biceps_femoris_tendon_l', 'Sehnenfläche des M. biceps femoris', 'Sehnenfläche', 'left', 'tendon'),
+    'm_biceps_femoris_tendon_R': ('biceps_femoris_tendon_r', 'Sehnenfläche des M. biceps femoris', 'Sehnenfläche', 'right', 'tendon'),
+}
+tissue_surfaces=[]
 exclude = ('Eye', 'Ligament', 'Nose', 'Skutulum', 'Aponeurosis', 'Fascia', 'tendon', 'fascia_lata')
 fixes = {'capri':'carpi', 'tranversus':'transversus', 'transverses':'transversus', 'sternohyroideus':'sternohyoideus', 'tricepsbrachii':'triceps_brachii', 'tensor_f.antebrachii':'tensor_fasciae_antebrachii', 'tensor_f.latae':'tensor_fasciae_latae', 'thoracis_m_pectoralis':'pectoralis', 'thoracis_serratus_ventr':'serratus_ventralis_thoracis', 'dorsi_scaleni_dors':'scalenus_dorsalis', 'latissimus_dors':'latissimus_dorsi', 'intercostals_ext':'intercostales_externi', 'intercostals_int':'intercostales_interni'}
 words = {'lat':'lateralis','med':'medialis','ext':'externus','int':'internus','ventr':'ventralis','sup':'superioris','long':'longum','lateral':'laterale','medial':'mediale','accessory':'accessorium'}
@@ -79,6 +89,10 @@ for p in sorted(source.glob('m_*.skn')):
     if is_muscle:
         extras['muscleId']=ident
         g=groups.setdefault(ident,{'name':canonical,'vertices':[]}); g['vertices'].extend(verts)
+    if name in tissue_names:
+        ident,anatomical,label,side,kind=tissue_names[name]
+        extras['muscleId']='dog_mesh_tissue_'+ident  # Existing storage/raycast field, not a muscle classification.
+        tissue_surfaces.append((extras['muscleId'],anatomical,label,side,kind,name,verts))
     surface(name,verts,faces,extras,0 if is_muscle else 1,fiber_uv(verts))
 # Include non-muscle surfaces in bounds, matching viewer Box3 normalization.
 lo=[min(a['min'][k] for a in accessors if 'min' in a) for k in range(3)]
@@ -114,6 +128,15 @@ def write_glb(filename, material_defs, texture=None):
 
 write_glb('Hund-Muskeln.glb',[{'pbrMetallicRoughness':{'baseColorFactor':[.48,.18,.14,1],'metallicFactor':0,'roughnessFactor':.7}},{'pbrMetallicRoughness':{'baseColorFactor':[.65,.62,.55,1],'metallicFactor':0,'roughnessFactor':.8}}])
 (root/'public/assets/js/anatomy-dog-muscles.js').write_text('// Source: MusculoskeletalDog, MIT; see assets/3D/licenses. IDs are independent of legacy regions.\nexport const DOG_MUSCLES = '+json.dumps(defs,ensure_ascii=False,indent=2)+';\n')
+
+tissues=[]
+for ident,anatomical,label,side,kind,name,verts in tissue_surfaces:
+    mean=[sum(v[k] for v in verts)/len(verts) for k in range(3)]
+    pos=min(verts,key=lambda v:sum((v[k]-mean[k])**2 for k in range(3)))
+    tissues.append({'id':ident,'anatomical':anatomical,'label':anatomical+' · '+{'left':'Links','right':'Rechts','midline':'Mittig'}[side],
+                    'side':side,'region':kind,'kind':kind,'sourceName':name,
+                    'pos':[round((pos[k]-center[k])*scale,6) for k in range(3)]})
+(root/'public/assets/js/anatomy-dog-tissues.js').write_text('// Existing, explicitly named source surfaces only. See docs/anatomy-3d.md.\nexport const DOG_TISSUES = '+json.dumps(tissues,ensure_ascii=False,indent=2)+';\n')
 
 # Optional skin retains the original UV atlas and texture.
 blob=bytearray(); views=[]; accessors=[]; meshes=[]; nodes=[]

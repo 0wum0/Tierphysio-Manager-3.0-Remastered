@@ -284,3 +284,85 @@ Quellgeometrie und einzelne Überschneidungen zwischen Knochen und Muskeln bleib
 sichtbar. Vollständige, präzise Faszien und realistische Faserverläufe benötigen
 entsprechende fachlich geprüfte Quelldaten; Materialeffekte können sie nicht
 ersetzen. Katze und Pferd behalten den oben dokumentierten bisherigen Stand.
+
+## Nutzbarkeit und zusätzliche Gewebebefunde (6. Oktober 2026)
+
+Die Oberfläche enthält eine Namenssuche, einen Filter für die anatomische Seite
+und einen Gewebefilter. Suchbegriffe werden unabhängig von Großschreibung,
+Akzenten und Unterstrichen abgeglichen. Filter verändern weder gespeicherte
+Befunde noch Sichtbarkeit/Identität der Geometrien. Beim Öffnen eines Befunds
+außerhalb des Filters wird der Filter zurückgesetzt. Keine-Treffer-Zustand und
+Zurücksetzen sind ausdrücklich bedienbar.
+
+Freigestellte Strukturen werden anhand der gemeinsamen Boundingbox ihrer
+wirklichen Teilflächen vergrößert. Die Kamera berücksichtigt den freien Bereich
+zwischen Werkzeugleiste und Befundformular; auch kleine und tief liegende Muskeln
+bleiben erreichbar. Die Projektion verschiebt den Bildmittelpunkt, ohne die
+Anatomie zu verschieben. Schließen stellt die normale Gesamtansicht und den
+normalen Zoomabstand wieder her. Suche und Schichtmenü klappen bei Auswahl zu,
+um insbesondere am Handy Platz für die Struktur zu lassen.
+
+`anatomy-dog-tissues.js` ergänzt vier ausdrücklich benannte Quellflächen:
+
+| Quellfläche | Anzeige / Befund-ID | Gewebe |
+|---|---|---|
+| m_dorsi_Fascia_thoracolumbar_ | Fascia thoracolumbalis / dog_mesh_tissue_thoracolumbar | Faszie |
+| m_abdominis_Aponeurosis | Aponeurose der Bauchwand / dog_mesh_tissue_abdominal_aponeurosis | Aponeurose |
+| m_biceps_femoris_tendon_L | Sehnenfläche des M. biceps femoris / dog_mesh_tissue_biceps_femoris_tendon_l | Sehne links |
+| m_biceps_femoris_tendon_R | Sehnenfläche des M. biceps femoris / dog_mesh_tissue_biceps_femoris_tendon_r | Sehne rechts |
+
+Damit gibt es **225 Muskelstrukturen plus vier weitere Gewebestrukturen**,
+keine 229 Muskeln. Befund-ID-Feld und Mesh-Metadaten `muscleId` bleiben aus
+Kompatibilitätsgründen erhalten; `kind` und `region` klassifizieren das Gewebe.
+Der gesamte zusätzliche Flächenumfang war bereits im Modell enthalten und wird
+jetzt auswählbar. Nicht eindeutig benannte Flächen (`m_Ligament` und
+`m_vastus_lat_ander_fascia_lata_*`) erhalten keine erfundene Befundzuordnung.
+Alle bisherigen Muskel-IDs und Schwerpunktkoordinaten bleiben unverändert.
+
+`anatomy-fur.js` erzeugt optional bis zu 12.000 kurze Haarsträhnen auf der
+vorhandenen Außenfläche. Verteilung nach Dreiecksfläche, Farbe aus der originalen
+Haut-/Felltextur, deterministischer Zufall. Die Geometrie folgt denselben
+Dekodierungs- und Normalisierungstransformationen. Sie ist eine **kosmetische
+Kurzhaar-Darstellung**, kein vermessener Fellverlauf, keine zusätzliche klinische
+Schicht und nicht für Raycast/Befunde auswählbar. Einschalten lädt gegebenenfalls
+die Haut; Schichtwechsel/Freistellung blendet das Fell passend aus. Kein
+zusätzlicher Netzwerkdienst oder Modell-Download. Ressourcen werden mit dem
+jeweiligen Modell entsorgt. Fehler beim Erzeugen des optionalen Fells lassen
+die geladene Haut benutzbar; erneutes Einschalten wiederholt die Erzeugung.
+
+Browserprüfungen: Suchkombinationen, keine Treffer/Reset, getrennte Seiten,
+Sehnenbefund speichern/löschen, Faszien-Schmerzvorschau, Projektion aller 229
+Strukturen in den freien Bildbereich, Fell erzeugen/ausblenden und bisherige
+Web-/App-, Regions-, API-, Race- und Mobilprüfungen. Die kosmetische Felloptik und
+vergrößerte Mobilansicht werden zusätzlich anhand von Screenshots kontrolliert.
+
+## Erweiterte Quellenprüfung: vollständiges Hundemodell
+
+Recherche am 6. Oktober 2026, zusätzlich zu den oben dokumentierten Quellen.
+Die Tabelle beschreibt die tatsächlich überprüften Angebote; sie ist kein
+Nachweis, dass es weltweit keinen weiteren Datensatz gibt.
+
+| Quelle | Geprüfter Umfang / Ergebnis für diese Integration |
+|---|---|
+| [MusculoskeletalDog](https://github.com/vittorione94/MusculoskeletalDog) | Bereits integriert; zugängliche SKN/STL-Dateien, MIT. Kein vollständiges Fasziennetz. |
+| [Z-Anatomy – veterinary models](https://github.com/Z-Anatomy/Models-of-veterinary-anatomy) | Das geprüfte Repository liefert Z-PIG und einen Viewer, keinen fertigen Hund. Nicht als Hund umgedeutet. |
+| [Stark et al. 2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC8166944/) | Forschungsmodell mit 134 aktuierten Muskeln; laut Publikation fehlen Kopf-, Bauch- und Zehenmuskeln. Kein vollständiger Ersatzatlas. |
+| [David Wigforss – Dog Anatomy 1](https://sketchfab.com/3d-models/dog-anatomy-1-3cc3b755813446a5adbd8c9faa37f30d) | Angebot mit NonCommercial-Lizenz; nicht in die kommerzielle SaaS übernommen. |
+| [Jess O’Neill – Canine Anatomy](https://jessoneill.artstation.com/store/oJaO/canine-anatomy-model) | Benannte Objekte und detaillierte Texturen, aber Anbieter schließt vollständiges Veterinärmodell ausdrücklich aus und nennt fehlende Gelenkstrukturen. Keine Datei erworben. |
+| [TurboSquid – Skin Dog Skeleton Muscles](https://www.turbosquid.com/3d-models/skin-dog-skeleton-muscles-3d-model-1462906) | Detailliertes Kaufangebot; vollständige Faszienabdeckung und Rechte zur offenen Dateiauslieferung nicht nachgewiesen. Keine Datei erworben. |
+| [Complete Canine 3D](https://www.completecanine3d.app/) | Fachanwendung mit vielen Systemen; die geprüfte Seite bietet App-Zugang, keine zur Weiterverteilung bereitgestellten Modellquelldateien. |
+| [Biosphera – 3D Dog Anatomy](https://biosphera3d.com/product/3d-dog-anatomy-software/) | Fachanwendung mit Schichten; kein für diese Integration bereitgestellter Quelldatensatz. |
+
+Originalhund ebenfalls überprüft: Die unkomprimierte Datei aus Commit
+`8b94133abe9151738384b3ab107788ec5f508a56` enthält ein Mesh/ein Material und
+982.036 Vertices / 1.904.708 Dreiecke. Nach geometrischem Zusammenführen der
+UV-Nähte bleibt eine einzige verbundene Oberfläche. Keine verborgenen separaten
+Muskelkörper oder inneren Faszienschichten wurden gefunden. Das Original bleibt
+als Regionsansicht erhalten; es wurde nicht überschrieben oder auf einen
+anderen Hund projiziert.
+
+**Weiter offen:** vollständige modellierte Faszien, vollständig nachgewiesene
+Abdeckung aller anatomischen Muskeln/Gelenkstrukturen und klinische Abnahme.
+Die neuen Bedienfunktionen, vier Gewebebefunde und kosmetischen Haare schließen
+diese Datenlücken nicht. Es wird weder ein vollständiger Atlas noch ein aus
+Internetbildern anatomisch korrekt rekonstruierter Hund behauptet.
