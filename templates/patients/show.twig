@@ -22,9 +22,11 @@
         align-items: flex-start !important;
         margin-top: 0.5rem;
         max-height: calc(100dvh - 1rem);
+        max-height: calc(var(--vh-real, 1vh) * 100 - 1rem);
     }
     #modal-edit-timeline-entry .modal-content {
         max-height: calc(100dvh - 1rem);
+        max-height: calc(var(--vh-real, 1vh) * 100 - 1rem);
     }
 }
 </style>
@@ -1570,7 +1572,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 {# Datei-Viewer (Bilder + PDFs) #}
 <div id="fileviewer-overlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.88);align-items:center;justify-content:center;padding:1rem;box-sizing:border-box;">
-    <div style="position:relative;width:100%;max-width:960px;height:min(88vh,100%);height:min(88dvh,100%);display:flex;flex-direction:column;background:var(--bs-body-bg,#1a1a2e);border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.7);">
+    <div style="position:relative;width:100%;max-width:960px;height:min(88vh,100%);height:min(88dvh,100%);height:min(calc(var(--vh-real, 1vh) * 88),100%);display:flex;flex-direction:column;background:var(--bs-body-bg,#1a1a2e);border-radius:12px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.7);">
         <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;gap:0.5rem;">
             <span id="fv-filename" style="font-size:0.875rem;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;"></span>
             <div style="display:flex;gap:0.5rem;align-items:center;flex-shrink:0;">
