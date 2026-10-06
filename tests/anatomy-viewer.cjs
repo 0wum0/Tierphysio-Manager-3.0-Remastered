@@ -76,12 +76,12 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
             const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error(e.message)});page.on('console',m=>{if(m.type()==='error')console.error(m.text())});page.on('requestfailed',r=>console.error(r.url(),r.failure()));
             await page.goto(origin+(bundle?'/bundle/test?bundle=1':'/test'));await ready(page);
             // New dog anatomy: exact surfaces, deep muscle isolation, independent sides and NRS 0.
-            assert.equal(await page.evaluate(()=>Anatomy3D._instance.hotspots.length),225);
+            assert.equal(await page.evaluate(()=>Anatomy3D._instance.hotspots.length),229);
             assert(await page.evaluate(()=>{
                 const v=Anatomy3D._instance;
                 return v.hotspots.every(h=>v._surfaces.entries.has(h.def.id))
-                    && v._surfaces.entries.size===225
-                    && v._modelMeshes.filter(m=>m.userData.muscleId).length===250;
+                    && v._surfaces.entries.size===229
+                    && v._modelMeshes.filter(m=>m.userData.anatomyLayer==='muscle').length===250;
             }));
             // Supplementary layers share the primary normalization and load only on demand.
             await page.evaluate(()=>Anatomy3D._instance._loadLayer('skeleton'));
@@ -98,7 +98,32 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
             assert.deepEqual(await page.evaluate(()=>Anatomy3D._instance.modelGroup.matrixWorld.toArray()), transform);
             assert(await page.evaluate(()=>Anatomy3D._instance._modelMeshes.filter(m=>m.visible).every(m=>m.userData.anatomyLayer==='skin')));
             if(process.env.ANATOMY_SCREENSHOTS && !bundle) await page.screenshot({path:path.join(process.env.ANATOMY_SCREENSHOTS,'dog-skin.png')});
+            // A failed optional coat must preserve the loaded skin and allow retry.
+            await page.evaluate(() => {
+                window.originalGetImageData = CanvasRenderingContext2D.prototype.getImageData;
+                CanvasRenderingContext2D.prototype.getImageData = () => { throw new Error('Texture read unavailable'); };
+            });
+            await page.locator('[data-layer="fur"]').click();
+            await page.waitForFunction(() => !Anatomy3D._instance._layerState.fur);
+            assert(await page.evaluate(() => {
+                const v = Anatomy3D._instance;
+                return v._layerState.skin && v._skinLayer?.parent === v.modelGroup
+                    && v._modelMeshes.some(m => m.userData.anatomyLayer === 'skin' && m.visible);
+            }));
+            assert.match(await page.locator('#a3d-layer-status').textContent(), /Haut bleibt nutzbar/);
+            await page.evaluate(() => {
+                CanvasRenderingContext2D.prototype.getImageData = window.originalGetImageData;
+                delete window.originalGetImageData;
+            });
+            await page.locator('[data-layer="fur"]').check();
+            assert(await page.evaluate(()=>{
+                const v=Anatomy3D._instance;
+                return v._fur?.visible && v._fur.geometry.attributes.position.count>1000 && v._fur.geometry.attributes.position.count<=48000
+                    && !v._modelMeshes.includes(v._fur);
+            }));
+            if(process.env.ANATOMY_SCREENSHOTS && !bundle) await page.screenshot({path:path.join(process.env.ANATOMY_SCREENSHOTS,'dog-coat.png')});
             await page.locator('[data-layer="skin"]').uncheck();
+            assert(await page.evaluate(()=>!Anatomy3D._instance._fur.visible));
             for(const layer of ['muscle','fascia','tendon']) await page.locator(`[data-layer="${layer}"]`).uncheck();
             assert(await page.evaluate(()=>Anatomy3D._instance._modelMeshes.filter(m=>m.visible).every(m=>m.userData.anatomyLayer==='skeleton')));
             if(process.env.ANATOMY_SCREENSHOTS && !bundle) await page.screenshot({path:path.join(process.env.ANATOMY_SCREENSHOTS,'dog-skeleton.png')});
@@ -107,6 +132,31 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
             assert(await page.evaluate(()=>Anatomy3D._instance._modelMeshes.filter(m=>m.userData.anatomyLayer==='fascia').every(m=>m.material.transparent && m.material.opacity===.35)));
             await page.locator('#a3d-fascia-opacity').fill('1');
             await page.locator('#a3d-layers summary').click();
+            await page.locator('#a3d-search-panel summary').click();
+            await page.locator('#a3d-structure-search').fill('BICEPS femoris');
+            await page.selectOption('#a3d-filter-side','right');
+            await page.selectOption('#a3d-filter-kind','tendon');
+            assert.equal(await page.locator('#a3d-region-select option').count(),2);
+            await page.selectOption('#a3d-region-select','dog_mesh_tissue_biceps_femoris_tendon_r');
+            await page.locator('#a3d-pain-slider').fill('6');
+            await page.locator('#a3d-save-btn').click();
+            await page.waitForFunction(()=>Anatomy3D._instance.painData['dog_mesh_tissue_biceps_femoris_tendon_r::right']?.painLevel===6);
+            assert.equal(postBody.region,'tendon');
+            await page.selectOption('#a3d-region-select','dog_mesh_tissue_biceps_femoris_tendon_r');
+            await page.locator('#a3d-remove-btn').click();
+            await page.waitForFunction(()=>!Anatomy3D._instance.painData['dog_mesh_tissue_biceps_femoris_tendon_r::right']);
+            await page.locator('#a3d-search-panel summary').click();
+            await page.locator('#a3d-structure-search').fill('does-not-exist');
+            assert(await page.locator('#a3d-region-select').isDisabled());
+            await page.locator('#a3d-filter-reset').click();
+            assert.equal(await page.locator('#a3d-region-select option').count(),230);
+            await page.selectOption('#a3d-filter-kind','fascia');
+            assert.equal(await page.locator('#a3d-region-select option').count(),3);
+            await page.selectOption('#a3d-region-select','dog_mesh_tissue_thoracolumbar');
+            await page.locator('#a3d-pain-slider').fill('4');
+            assert(await page.evaluate(()=>Anatomy3D._instance._surfaces.entries.get('dog_mesh_tissue_thoracolumbar').every(m=>m.visible&&m.material.color.getHexString()==='fb923c')));
+            await page.locator('#a3d-cancel-btn').click();
+            await page.evaluate(()=>Anatomy3D._instance._resetStructureFilters());
             const muscleId='dog_mesh_m_biceps_brachii_l';
             await page.selectOption('#a3d-region-select', muscleId);
             assert(await page.locator('#a3d-isolate').isChecked());
@@ -132,6 +182,7 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
             },muscleId));
             if(process.env.ANATOMY_SCREENSHOTS && !bundle) await page.screenshot({path:path.join(process.env.ANATOMY_SCREENSHOTS,'dog-muscle-isolated.png')});
             await page.locator('#a3d-cancel-btn').click();
+            assert(await page.evaluate(()=>!Anatomy3D._instance._fur?.visible));
             assert(await page.evaluate(()=>Anatomy3D._instance._modelMeshes.every(m=>m.visible === (m.userData.anatomyLayer!=='skin') && m.material.emissive.getHex()===0)));
             await page.selectOption('#a3d-region-select',muscleId);
             await page.locator('#a3d-pain-slider').fill('8');await page.locator('#a3d-save-btn').click();
@@ -146,6 +197,18 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
             assert(await page.evaluate(id=>Anatomy3D._instance._surfaces.entries.get(id).every(m=>m.material.color.getHexString()==='22c55e'),muscleId));
             await page.selectOption('#a3d-region-select',muscleId);await page.locator('#a3d-remove-btn').click();
             await page.waitForFunction(id=>!Anatomy3D._instance.painData[id+'::left'],muscleId);
+            // Every structure, including the small/deep ones, fits between toolbar and form.
+            assert(await page.evaluate(()=>{
+                const v=Anatomy3D._instance, c=v.container;
+                for (const h of v.hotspots) {
+                    v._focusHotspot(h.def);v._openForm(h.def);v.camera.updateMatrixWorld(true);
+                    const point=v.controls.target.clone().project(v.camera);
+                    const rect=v.renderer.domElement.getBoundingClientRect();
+                    const y=rect.top+(1-point.y)*rect.height/2;
+                    if (y<=c.querySelector('#a3d-toolbar').getBoundingClientRect().bottom || y>=c.querySelector('#a3d-form').getBoundingClientRect().top) return false;
+                }
+                v._closeForm();return !v.camera.view?.enabled;
+            }));
             // Legacy geometry and data remain independently reachable.
             await page.evaluate(()=>Anatomy3D._instance._setMuscleMode(false));await ready(page);
             for(const species of ['dog','cat','horse']) {
@@ -215,7 +278,7 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
             await page.evaluate(()=>{Anatomy3D.switchAnimal('cat');Anatomy3D.switchAnimal('horse');Anatomy3D.switchAnimal('dog')});await ready(page);
             assert(await page.evaluate(()=>Anatomy3D._instance.hotspots.every(h=>h.def.id.startsWith('dog_'))));
             // Registered cat/horse geometry follows the same picking/color/isolation path.
-            const registryPath=(bundle?'/bundle':'/assets/js')+'/anatomy-models.js?v=20261006-layers';
+            const registryPath=(bundle?'/bundle':'/assets/js')+'/anatomy-models.js?v=20261006-usable';
             await page.evaluate(async registryPath=>{
                 const {SEGMENTED_MODELS}=await import(registryPath);
                 for(const species of ['cat','horse']) SEGMENTED_MODELS[species]={file:`fixture-${species}.glb`,leftSign:-1,
@@ -255,6 +318,8 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
         });
         await layerPage.goto(origin+'/test');await ready(layerPage);
         await layerPage.evaluate(()=>Anatomy3D._instance._setLayer('skin',true));
+        assert(await layerPage.evaluate(()=>!Anatomy3D._instance._layerState.skin && document.querySelector('#a3d-layer-status').textContent.includes('erneut')));
+        await layerPage.evaluate(()=>Anatomy3D._instance._loadLayer('skeleton'));
         assert(await layerPage.evaluate(()=>!Anatomy3D._instance._layerState.skin && document.querySelector('#a3d-layer-status').textContent.includes('erneut')));
         failSkin = false;
         await layerPage.evaluate(()=>{Anatomy3D._instance._setLayer('skin',true);});
@@ -302,6 +367,6 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
         // Closing while a model is parsing must leave no live renderer/model behind.
         await page.evaluate(()=>{const v=Anatomy3D._instance;v._switchAnimal('dog');v.destroy()});
         assert(await page.evaluate(()=>Anatomy3D._instance._disposed && Anatomy3D._instance.modelGroup===null));
-        console.log(JSON.stringify({passed:true,models:results,checks:'225 exact muscle structures; lazy skin and skeleton; layer visibility and opacity; retry and layer/species races; surface raycast; NRS preview/cancel/zero/save/reload/delete; regional surface colors; mobile muscle form; zone checkbox off/on; all regions reachable; constant mobile point size; desktop both sides; mobile taps; CSP; web+Flutter bundle; save/reload/delete and errors; species races; resize; disposal'},null,2));
+        console.log(JSON.stringify({passed:true,models:results,checks:'225 exact muscle structures + 4 connective tissues; name/side/tissue search; cosmetic coat; focus of all 229 structures; lazy skin and skeleton; layer visibility and opacity; retry and layer/species races; surface raycast; NRS preview/cancel/zero/save/reload/delete; regional surface colors; mobile muscle form; zone checkbox off/on; all regions reachable; constant mobile point size; desktop both sides; mobile taps; CSP; web+Flutter bundle; save/reload/delete and errors; species races; resize; disposal'},null,2));
     } finally {await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1});
