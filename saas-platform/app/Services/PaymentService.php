@@ -377,6 +377,43 @@ class PaymentService
         );
     }
 
+    /**
+     * Löst einen Tenant anhand der Stripe customer_id auf. Schlägt das fehl
+     * (z.B. weil der Checkout-Redirect unterbrochen wurde und
+     * stripe_customer_id dadurch nie auf dem Tenant persistiert wurde),
+     * wird über die subscription_id in der subscriptions-Tabelle
+     * nachgeschlagen und customer_id nachträglich gesetzt. Ohne diesen
+     * Fallback wurden Zahlungs-Webhooks bisher still verworfen — Stripe
+     * bekam trotzdem ein 200 OK, die Zahlung tauchte aber nirgends auf.
+     */
+    private function resolveTenantForWebhook(?string $customerId, ?string $subId, string $context): ?array
+    {
+        if ($customerId) {
+            $tenant = $this->db->fetch("SELECT id FROM tenants WHERE stripe_customer_id = ?", [$customerId]);
+            if ($tenant) return $tenant;
+        }
+
+        if ($subId) {
+            $tenant = $this->db->fetch(
+                "SELECT t.id FROM tenants t
+                 JOIN subscriptions s ON s.tenant_id = t.id
+                 WHERE s.stripe_sub_id = ?
+                 ORDER BY s.created_at DESC LIMIT 1",
+                [$subId]
+            );
+            if ($tenant && $customerId) {
+                $this->db->execute(
+                    "UPDATE tenants SET stripe_customer_id = ? WHERE id = ? AND (stripe_customer_id IS NULL OR stripe_customer_id = '')",
+                    [$customerId, (int)$tenant['id']]
+                );
+            }
+            if ($tenant) return $tenant;
+        }
+
+        error_log("[PaymentService] {$context}: tenant nicht auflösbar (customer={$customerId}, sub={$subId})");
+        return null;
+    }
+
     private function onStripePaymentSucceeded(array $event): void
     {
         $stripeInvoice = $event['data']['object'];
@@ -384,9 +421,7 @@ class PaymentService
         $amount        = ($stripeInvoice['amount_paid'] ?? 0) / 100;
         $subId         = $stripeInvoice['subscription'] ?? null;
 
-        if (!$customerId) return;
-
-        $tenant = $this->db->fetch("SELECT id FROM tenants WHERE stripe_customer_id = ?", [$customerId]);
+        $tenant = $this->resolveTenantForWebhook($customerId, $subId, 'invoice.payment_succeeded');
         if (!$tenant) return;
 
         $this->db->execute(
@@ -426,9 +461,9 @@ class PaymentService
     {
         $invoice    = $event['data']['object'];
         $customerId = $invoice['customer'] ?? null;
-        if (!$customerId) return;
+        $subId      = $invoice['subscription'] ?? null;
 
-        $tenant = $this->db->fetch("SELECT id FROM tenants WHERE stripe_customer_id = ?", [$customerId]);
+        $tenant = $this->resolveTenantForWebhook($customerId, $subId, 'invoice.payment_failed');
         if (!$tenant) return;
 
         $this->db->execute(
@@ -443,9 +478,9 @@ class PaymentService
     {
         $sub        = $event['data']['object'];
         $customerId = $sub['customer'] ?? null;
-        if (!$customerId) return;
+        $subId      = $sub['id'] ?? null;
 
-        $tenant = $this->db->fetch("SELECT id FROM tenants WHERE stripe_customer_id = ?", [$customerId]);
+        $tenant = $this->resolveTenantForWebhook($customerId, $subId, 'customer.subscription.deleted');
         if (!$tenant) return;
 
         $this->db->execute("UPDATE tenants SET status = 'cancelled' WHERE id = ?", [$tenant['id']]);
