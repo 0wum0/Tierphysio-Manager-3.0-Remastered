@@ -19,8 +19,9 @@ import { OrbitControls } from '/assets/js/vendor/three/OrbitControls.js';
 import { GLTFLoader }    from '/assets/js/vendor/three/GLTFLoader.js';
 
 import { MeshoptDecoder } from '/assets/js/vendor/three/MeshoptDecoder.js';
-import { SEGMENTED_MODELS, validateMuscleModel } from './anatomy-models.js?v=20261006-usable';
+import { SEGMENTED_MODELS, validateMuscleModel } from './anatomy-models.js?v=20261006-atlas';
 import { PainSurfaces } from './anatomy-surfaces.js?v=20261006-layers';
+import { AnatomyAtlas, validateSkeletonAtlas } from './anatomy-atlas.js?v=20261006-atlas';
 import { createShortCoat } from './anatomy-fur.js?v=20261006-usable';
 import { styleAnatomy } from './anatomy-materials.js?v=20261006-layers';
 import { MUSCLE_GROUPS } from './anatomy-landmarks.js?v=20261005';
@@ -131,8 +132,16 @@ class Anatomy3DViewer {
               <div id="a3d-layer-status" role="status" style="color:#cbd5e1;padding-top:4px;"></div>
               <div style="color:#94a3b8;font-size:.65rem;">Faszien nur teilweise in der Quelle enthalten. Hautansicht blendet tiefere Schichten aus.</div>
             </details>
+            <button type="button" id="a3d-atlas-btn" hidden style="background:#1e3a5f;color:#dbeafe;border:1px solid #4778a8;border-radius:6px;padding:6px 12px;font-size:.75rem;">Anatomie-Atlas</button>
             <span id="a3d-surface-note" style="flex-basis:100%;font-size:.65rem;color:#94a3b8;"></span>
           </div>
+
+          <section id="a3d-atlas-selection" hidden style="position:absolute;bottom:12px;left:12px;right:12px;z-index:22;padding:12px;border:1px solid #475569;border-radius:10px;background:#101a2bf2;color:#e2e8f0;font-size:.8rem;">
+            <strong id="a3d-atlas-selection-title"></strong>
+            <p style="margin:6px 0;">Skelettansicht zur Orientierung · keine Knochenbefund-Erfassung</p>
+            <label><input type="checkbox" id="a3d-atlas-context"> Gesamtes Skelett anzeigen</label>
+            <button type="button" id="a3d-atlas-back" style="margin-left:8px;padding:8px;border-radius:6px;background:#1e293b;color:#e2e8f0;border:1px solid #475569;">Zurück zur Schmerzanalyse</button>
+          </section>
 
           <!-- Loading overlay -->
           <div id="a3d-loading" style="
@@ -257,11 +266,15 @@ class Anatomy3DViewer {
           </style>
         `;
 
+        this._atlas = new AnatomyAtlas(this.container, entry => this._selectAtlasEntry(entry));
         this._bindUI();
     }
 
     _bindUI() {
         const c = this.container;
+        c.querySelector('#a3d-atlas-btn').addEventListener('click', () => this._atlas.open(this._activeGroups()));
+        c.querySelector('#a3d-atlas-back').addEventListener('click', () => {this._clearAtlasSelection();this._resetCamera();});
+        c.querySelector('#a3d-atlas-context').addEventListener('change', () => this._updateIsolation());
 
         c.querySelector('#a3d-muscle-mode').addEventListener('change', e => this._setMuscleMode(e.target.checked));
         c.querySelectorAll('[data-layer]').forEach(input => input.addEventListener('change', () => this._setLayer(input.dataset.layer, input.checked)));
@@ -395,6 +408,7 @@ class Anatomy3DViewer {
         this._resizeObserver.observe(this.container);
         this._resizeObserver.observe(this.container.querySelector('#a3d-toolbar'));
         this._resizeObserver.observe(this.container.querySelector('#a3d-form'));
+        this._resizeObserver.observe(this.container.querySelector('#a3d-atlas-selection'));
 
         this._resize();
         this._animate();
@@ -410,7 +424,8 @@ class Anatomy3DViewer {
         this.camera.aspect = w / h;
         this.camera.updateProjectionMatrix();
         this._dirty = true;
-        if (this.selectedKey && this._exactMuscles() && this.container.querySelector('#a3d-isolate').checked) {
+        if (this._atlasSelection) this._fitStructure(this._atlasSelection);
+        else if (this.selectedKey && this._exactMuscles() && this.container.querySelector('#a3d-isolate').checked) {
             this._fitStructure(this._defFromKey(this.selectedKey));
         } else if (this.modelGroup && this._lastAspect !== this.camera.aspect) this._resetCamera();
         this._lastAspect = this.camera.aspect;
@@ -449,6 +464,8 @@ class Anatomy3DViewer {
     }
 
     _clearModel() {
+        this._atlas.close();
+        this._clearAtlasSelection();
         this._layerLoads.clear();
         this._layerMessages.clear();
         this._skinLayer = null;
@@ -571,6 +588,7 @@ class Anatomy3DViewer {
             : 'Regionale Flächenfärbung (Näherung): keine exakten Einzelmuskelgrenzen. Unbefundet: Naturfarbe.';
         const layers = SEGMENTED_MODELS[species]?.layers;
         this.container.querySelector('#a3d-layers').hidden = !this._exactMuscles() || !layers;
+        this.container.querySelector('#a3d-atlas-btn').hidden = !(this._exactMuscles() && species === 'dog' && layers?.skeletonAtlas);
         this.container.querySelector('#a3d-layer-status').textContent = '';
         this._syncLayerInputs();
         this._updateIsolation();
@@ -709,6 +727,7 @@ class Anatomy3DViewer {
 
     /* ── Pain form ────────────────────────────────────────── */
     _openForm(def, storedKey = null) {
+        this._clearAtlasSelection();
         const savedKeys = Object.keys(this.painData).filter(key => key.split('::')[0] === def.id);
         this.selectedKey = storedKey || (savedKeys.length === 1 ? savedKeys[0] : `${def.id}::${def.side}`);
         const existing   = this.painData[this.selectedKey] || {};
@@ -975,14 +994,15 @@ class Anatomy3DViewer {
         if (!def || !this._exactMuscles()) return;
         this.scene.updateMatrixWorld(true);
         const box = new THREE.Box3();
-        for (const mesh of this._surfaces?.entries.get(def.id) || []) box.union(new THREE.Box3().setFromObject(mesh));
+        const meshes = this._atlasSelection?.id === def.id ? this._modelMeshes.filter(m => m.userData.atlasId === def.id) : this._surfaces?.entries.get(def.id) || [];
+        for (const mesh of meshes) box.union(new THREE.Box3().setFromObject(mesh));
         if (box.isEmpty()) return;
         const sphere = box.getBoundingSphere(new THREE.Sphere());
         const rect = this.renderer.domElement.getBoundingClientRect();
         const toolbar = this.container.querySelector('#a3d-toolbar').getBoundingClientRect();
-        const form = this.container.querySelector('#a3d-form');
+        const form = this.container.querySelector(this._atlasSelection ? '#a3d-atlas-selection' : '#a3d-form');
         const top = Math.max(12, toolbar.bottom-rect.top+12);
-        const bottom = form.style.display === 'block' ? form.getBoundingClientRect().top-rect.top-12 : rect.height-20;
+        const bottom = (this._atlasSelection || form.style.display === 'block') ? form.getBoundingClientRect().top-rect.top-12 : rect.height-20;
         const available = Math.max(80, bottom-top);
         const vfov = 2*Math.atan(Math.tan(THREE.MathUtils.degToRad(this.camera.fov)/2)*available/rect.height);
         const hfov = 2*Math.atan(Math.tan(THREE.MathUtils.degToRad(this.camera.fov)/2)*this.camera.aspect*.9);
@@ -1057,18 +1077,26 @@ class Anatomy3DViewer {
     }
 
     _updateIsolation() {
+        const atlas = this._atlasSelection;
         const id = this.selectedKey?.split('::')[0];
         const isolate = this._exactMuscles() && id && this.container.querySelector('#a3d-isolate').checked;
         const opacity = Number(this.container.querySelector('#a3d-fascia-opacity').value);
         const skinVisible = this._layerState.skin && this._modelMeshes?.some(m => m.userData.anatomyLayer === 'skin');
-        if (this._fur) this._fur.visible = Boolean(skinVisible && this._layerState.fur && !isolate);
+        if (this._fur) this._fur.visible = Boolean(skinVisible && this._layerState.fur && !isolate && !atlas);
         this._modelMeshes?.forEach(mesh => {
             const layer = mesh.userData.anatomyLayer;
             let visible = layer === 'context'
                 ? this._layerState.muscle || this._layerState.skin
                 : this._layerState[layer] !== false;
+            // Keep the compact skeleton outside atlas inspection to limit draw calls.
+            if (mesh.userData.atlasId) visible = false;
             if (skinVisible) visible = layer === 'skin';
             if (isolate) visible = mesh.userData.muscleId === id;
+            if (atlas) visible = Boolean(mesh.userData.atlasId && (mesh.userData.atlasId === atlas.id || this.container.querySelector('#a3d-atlas-context').checked));
+            if (mesh.userData.atlasId) {
+                mesh.material.color.set(mesh.userData.atlasId === atlas?.id ? 0x60a5fa : 0xe2d7ba);
+                mesh.material.emissive.setHex(mesh.userData.atlasId === atlas?.id ? 0x163552 : 0);
+            }
             mesh.visible = !this._exactMuscles() || visible;
             if (layer === 'fascia') {
                 mesh.material.opacity = opacity;
@@ -1088,6 +1116,7 @@ class Anatomy3DViewer {
 
     async _setLayer(layer, enabled) {
         if (!(layer in this._layerState)) return;
+        this._clearAtlasSelection();
         // Leaving an isolated selection restores the chosen full-body layers.
         this._closeForm();
         this._layerState[layer] = enabled;
@@ -1097,6 +1126,45 @@ class Anatomy3DViewer {
         if (enabled) await this._loadLayer(layer === 'fur' ? 'skin' : layer);
         this._ensureFur();
         this._updateIsolation();
+    }
+
+    _clearAtlasSelection() {
+        this._atlasRequest = (this._atlasRequest || 0) + 1;
+        this._atlasSelection = null;
+        this.container.querySelector('#a3d-atlas-selection').hidden = true;
+        this._updateIsolation();
+    }
+
+    async _selectAtlasEntry(entry) {
+        if (entry.status === 'missing' || this.animalType !== 'dog' || !this._exactMuscles()) return;
+        this._clearAtlasSelection();
+        this._closeForm();
+        if (entry.layer) {
+            await this._setLayer(entry.layer, true);
+            this.container.querySelector('#a3d-layers').open = true;
+            return;
+        }
+        if (entry.kind !== 'skeleton') {
+            this.container.querySelector('#a3d-isolate').checked = true;
+            this._openForm(entry);
+            return;
+        }
+        const version = this._loadVersion, request = this._atlasRequest;
+        this.container.querySelector('#a3d-layers').open = true;
+        await this._loadLayer('skeletonAtlas');
+        if (this._disposed || version !== this._loadVersion || request !== this._atlasRequest) return;
+        if (!this._modelMeshes.some(m => m.userData.atlasId === entry.id)) {
+            this.container.querySelector('#a3d-layers').open = true;
+            return;
+        }
+        this._atlasSelection = entry;
+        this.container.querySelector('#a3d-search-panel').open = false;
+        this.container.querySelector('#a3d-layers').open = false;
+        this.container.querySelector('#a3d-atlas-selection-title').textContent = `${entry.anatomical} · ${SIDE_LABELS[entry.side] || ''}`;
+        this.container.querySelector('#a3d-atlas-selection').hidden = false;
+        this.container.querySelector('#a3d-atlas-context').checked = false;
+        this._updateIsolation();
+        this._fitStructure(entry);
     }
 
     _setLayerStatus(layer, message) {
@@ -1141,6 +1209,7 @@ class Anatomy3DViewer {
                 if (this._disposed || version !== this._loadVersion) return;
                 decoded = (await this.loader.parseAsync(bytes, path.slice(0,path.lastIndexOf('/')+1))).scene;
                 if (this._disposed || version !== this._loadVersion) { this._disposeObject(decoded); return; }
+                if (layer === 'skeletonAtlas') validateSkeletonAtlas(decoded);
                 styleAnatomy(decoded);
                 parent.add(decoded);
                 if (layer === 'skin') {
@@ -1150,7 +1219,8 @@ class Anatomy3DViewer {
                 parent.updateMatrixWorld(true);
                 this._viewBox = new THREE.Box3().setFromObject(parent);
                 this._updateIsolation();
-                if (!this.selectedKey) this._resetCamera();
+                if (this._atlasSelection) this._fitStructure(this._atlasSelection);
+                else if (!this.selectedKey) this._resetCamera();
                 this._setLayerStatus(layer, '');
                 this._ensureFur();
                 this._updateIsolation();

@@ -1,5 +1,94 @@
 # 3D-Schmerzanalyse: Modelle und Landmarken
 
+## Atlas-Erweiterung (6. Oktober 2026)
+
+Der Button **Anatomie-Atlas** im segmentierten Hundemodell öffnet einen
+durchsuchbaren Modellkatalog. Gewebe, Körperseite und Verfügbarkeit sind filterbar.
+225 Muskelstrukturen und vier benannte Gewebeflächen öffnen die bestehende
+Schmerzerfassung mit Freistellung. Haut und kosmetisches Fell öffnen die jeweilige
+Schicht. Skelettteile sind zur Orientierung separat anzeigbar, ohne neue
+Knochenbefunde in bestehende Muskel-IDs zu schreiben.
+
+### Skelett
+
+`Hund-Skelett-Atlas.glb` enthält die **160 getrennten Skelett-Quellflächen** von
+MusculoskeletalDog, Revision `2e87897e78cc99ecfcab930869a5b68c0fb1605a` (MIT).
+Das sind ausdrücklich **nicht 160 anatomisch einzeln segmentierte Knochen**:
+Brustkorb, Schädel und Becken sind bereits in der Quelle zusammengefasste Teile.
+Nicht eindeutig zuordenbare Zehen-/Fußwurzelteile behalten ihre Quellbezeichnung.
+Keine erfundenen Zehennummern oder fachlich ungeprüften Umbenennungen.
+
+Die Geometrie verwendet dieselben SKN-Bindepositionen und XML-Geometrieoffsets
+wie das bisherige Skelett, anschließend die Achsenumsetzung `(y,z,x)`.
+Die Elterntransformation des Muskelmodells bleibt maßgeblich. Das Detailmodell
+hat 1.273.040 Bytes und wird erst bei Auswahl eines Skelettteils geladen. Der
+Erstaufruf lädt weiterhin nur das kompakte bisherige Skelett. Während der Atlas-Einzelansicht
+ist das kompakte Skelett ausgeblendet. Bei der Rückkehr zur Schmerzanalyse wird
+wieder das kompakte Skelett verwendet; die Detailflächen bleiben ausgeblendet.
+So entstehen keine doppelten Flächen oder zusätzlichen Skelett-Drawcalls im
+normalen Befundmodus.
+Web und Flutter enthalten identische Atlasmodule und GLB-Bytes.
+
+Jede Fläche trägt `atlasId`, `sourceName` und `anatomyLayer: skeleton`.
+Der Loader prüft vollständige, eindeutige Übereinstimmung mit dem Quellkatalog.
+Die Atlas-ID ist vom bestehenden `muscleId`- und Schmerzspeicherschema getrennt.
+Auswahl, Modellwechsel und verzögerte Requests können keine veraltete
+Skelettauswahl auf eine andere Tierart übertragen.
+
+Reproduktion (Python 3 und glTF Transform 4.5.1):
+
+```sh
+python scripts/convert-canine-skeleton-atlas.py /path/to/MusculoskeletalDog /tmp/skeleton-raw.glb public/assets/js/anatomy-dog-bones.js
+gltf-transform optimize /tmp/skeleton-raw.glb public/assets/3D/Hund-Skelett-Atlas.glb --compress meshopt --simplify-ratio 0.25 --simplify-error 0.0005 --join false --instance false --flatten false --palette false
+```
+
+Anschließend GLB und Katalog in die entsprechenden Flutter-Verzeichnisse spiegeln.
+Die Vereinfachung behält die Identität aller Quellflächen; Grenzwerte sind
+numerische Optimierungsparameter, keine klinische Genauigkeitszusage.
+
+### Faszienbestand und offene Modellierung
+
+**Diese Erweiterung ist kein vollständiges Fasziennetz und kein vollständiger
+veterinäranatomischer Atlas.** Es wurden keine fehlenden Faszien als vergrößerte
+Muskeloberflächen oder geschrumpfte Haut simuliert. Die Literatur belegt die
+Anatomie, liefert aber keine zu diesem Hund kalibrierte vollständige Geometrie.
+
+| Struktur / System | 3D-Stand | Atlas-Verhalten |
+|---|---|---|
+| Fascia thoracolumbalis | Benannte Quellfläche | Auswahl und Schmerzbefund |
+| Bauchwandaponeurose | Benannte Quellfläche | Auswahl und Schmerzbefund |
+| Biceps-femoris-Sehnenflächen | Zwei benannte Quellflächen | Auswahl und Schmerzbefund |
+| Fascia lata | Zwei uneindeutige Quellflächen; kein vollständiges Modell | Referenz, keine neue Befund-ID |
+| Oberflächliche und tiefe Faszie; Epimysium | Keine separaten vollständigen Flächen | Referenz, „3D-Fläche fehlt“ |
+| Oberflächliche/tiefe Glutealfaszie; Fascia cruris; Fascia antebrachii | Keine zugeordneten Flächen | Referenz, „3D-Fläche fehlt“ |
+| Muskeln | 225 Quellstrukturen; keine Vollständigkeitszusage | Modellkatalog und Schmerzbefund |
+| Haut/Fell | Außenfläche / kosmetische Haare | Schichtauswahl; keine mikroskopischen Hautschichten |
+| Gelenkknorpel, Kapseln, vollständiger Bandapparat | Nicht separat vollständig vorhanden | Kein Vollständigkeitsversprechen |
+| Nerven, Gefäße, innere Organe | Kein vollständiges Geometriemodell | Nicht als verfügbare Atlassysteme ausgewiesen |
+
+Die acht Faszien-Referenzeinträge sind eine begrenzte, belegte regionale
+Arbeitsliste. Auch diese Liste wird nicht als vollständige Fasziennomenklatur
+ausgegeben. Fehlende Geometrie ist nicht anklickbar im Körper und nicht mit
+einem Schmerzbefund belegbar. Quellen sind in jeder Atlaskarte zugänglich;
+die Quellentexte, Fotos und Präparationsbilder wurden nicht ins Produkt kopiert.
+
+Quellen:
+
+- Ahmed et al. (2019), *A comparative multi-site and whole-body assessment of
+  fascia in the horse and dog: a detailed histological investigation*,
+  DOI 10.1111/joa.13064: https://pubmed.ncbi.nlm.nih.gov/31402460/
+- University of Minnesota, Carnivore Anatomy Lab 5:
+  https://vanat.ahc.umn.edu/carnLabs/Lab05/Lab05.html
+- University of Minnesota, Distal Thoracic Limb:
+  https://open.lib.umn.edu/dogcatanatomylabguide/chapter/part-4-distal-thoracic-limb/
+- University of Minnesota, Distal Pelvic Limb:
+  https://pressbooks.umn.edu/dogcatanatomylabguide/chapter/part-3-distal-pelvic-limb/
+
+Für die Fertigstellung des gesamten Fasziennetzes sind separat segmentierte,
+rechtmäßig nutzbare Geometrien in gemeinsamer Körperhaltung sowie eine
+veterinäranatomische Prüfung von Grenzen, Übergängen, Schichttiefe und Benennung
+erforderlich. Der vorliegende Commit schließt diese Lücke nicht.
+
 ## Ursache und Korrektur
 
 Die ursprünglichen Regions-GLBs sind jeweils **ein einziges texturiertes Mesh**, keine benannten oder

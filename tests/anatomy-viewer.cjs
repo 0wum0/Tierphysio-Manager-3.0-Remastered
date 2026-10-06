@@ -83,6 +83,35 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
                     && v._surfaces.entries.size===229
                     && v._modelMeshes.filter(m=>m.userData.anatomyLayer==='muscle').length===250;
             }));
+            // Atlas lists source geometry separately from documented but absent fascia.
+            assert(await page.evaluate(()=>!Anatomy3D._instance._modelMeshes.some(m=>m.userData.atlasId)));
+            await page.locator('#a3d-atlas-btn').click();
+            await page.selectOption('#a3d-atlas-kind','fascia');
+            await page.selectOption('#a3d-atlas-status','missing');
+            assert.equal(await page.locator('#a3d-atlas-results button').count(),8);
+            assert(await page.locator('#a3d-atlas-open').isDisabled());
+            await page.locator('#a3d-atlas-reset').click();
+            await page.locator('#a3d-atlas-search').fill('Femur');
+            await page.selectOption('#a3d-atlas-side','left');
+            assert.equal(await page.locator('#a3d-atlas-results button').count(),1);
+            await page.locator('#a3d-atlas-open').click();
+            await page.waitForFunction(()=>Anatomy3D._instance._atlasSelection?.id==='dog_bone_femoris_l');
+            assert(await page.evaluate(()=>{
+                const v=Anatomy3D._instance;
+                return v._modelMeshes.filter(m=>m.userData.atlasId).length===160
+                    && v._modelMeshes.filter(m=>m.visible).every(m=>m.userData.atlasId==='dog_bone_femoris_l')
+                    && v.controls.target.x>0 && !v.selectedKey;
+            }));
+            await page.locator('#a3d-atlas-context').check();
+            assert.equal(await page.evaluate(()=>Anatomy3D._instance._modelMeshes.filter(m=>m.visible).length),160);
+            await page.locator('#a3d-atlas-back').click();
+            assert(await page.evaluate(()=>!Anatomy3D._instance._atlasSelection && !document.querySelector('#a3d-toolbar').inert));
+            await page.locator('#a3d-atlas-btn').click();
+            await page.locator('#a3d-atlas-reset').click();
+            await page.locator('#a3d-atlas-search').fill('thoracolumbalis');
+            await page.locator('#a3d-atlas-open').click();
+            assert(await page.evaluate(()=>Anatomy3D._instance.selectedKey==='dog_mesh_tissue_thoracolumbar::midline'));
+            await page.locator('#a3d-cancel-btn').click();
             // Supplementary layers share the primary normalization and load only on demand.
             await page.evaluate(()=>Anatomy3D._instance._loadLayer('skeleton'));
             assert(await page.evaluate(()=>{
@@ -183,7 +212,7 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
             if(process.env.ANATOMY_SCREENSHOTS && !bundle) await page.screenshot({path:path.join(process.env.ANATOMY_SCREENSHOTS,'dog-muscle-isolated.png')});
             await page.locator('#a3d-cancel-btn').click();
             assert(await page.evaluate(()=>!Anatomy3D._instance._fur?.visible));
-            assert(await page.evaluate(()=>Anatomy3D._instance._modelMeshes.every(m=>m.visible === (m.userData.anatomyLayer!=='skin') && m.material.emissive.getHex()===0)));
+            assert(await page.evaluate(()=>Anatomy3D._instance._modelMeshes.every(m=>m.visible === (m.userData.anatomyLayer!=='skin' && !m.userData.atlasId) && m.material.emissive.getHex()===0)));
             await page.selectOption('#a3d-region-select',muscleId);
             await page.locator('#a3d-pain-slider').fill('8');await page.locator('#a3d-save-btn').click();
             await page.waitForFunction(id=>Anatomy3D._instance.painData[id+'::left']?.painLevel===8,muscleId);
@@ -278,7 +307,7 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
             await page.evaluate(()=>{Anatomy3D.switchAnimal('cat');Anatomy3D.switchAnimal('horse');Anatomy3D.switchAnimal('dog')});await ready(page);
             assert(await page.evaluate(()=>Anatomy3D._instance.hotspots.every(h=>h.def.id.startsWith('dog_'))));
             // Registered cat/horse geometry follows the same picking/color/isolation path.
-            const registryPath=(bundle?'/bundle':'/assets/js')+'/anatomy-models.js?v=20261006-usable';
+            const registryPath=(bundle?'/bundle':'/assets/js')+'/anatomy-models.js?v=20261006-atlas';
             await page.evaluate(async registryPath=>{
                 const {SEGMENTED_MODELS}=await import(registryPath);
                 for(const species of ['cat','horse']) SEGMENTED_MODELS[species]={file:`fixture-${species}.glb`,leftSign:-1,
@@ -334,6 +363,21 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
         const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:3,isMobile:true,hasTouch:true});
         const page=await context.newPage();await page.goto(origin+'/test');await ready(page);
         await page.evaluate(()=>Anatomy3D._instance._loadLayer('skeleton'));
+        await page.locator('#a3d-atlas-btn').tap();
+        assert(await page.evaluate(()=>{
+            const r=document.querySelector('#a3d-atlas').getBoundingClientRect();
+            return r.left>=0 && r.right<=innerWidth && r.top>=0 && r.bottom<=innerHeight
+                && document.querySelector('#a3d-atlas').scrollWidth<=r.width;
+        }));
+        await page.locator('#a3d-atlas-search').fill('Scapula');
+        await page.selectOption('#a3d-atlas-side','right');
+        await page.selectOption('#a3d-atlas-kind','skeleton');
+        if(process.env.ANATOMY_SCREENSHOTS) await page.screenshot({path:path.join(process.env.ANATOMY_SCREENSHOTS,'dog-atlas-mobile.png')});
+        await page.locator('#a3d-atlas-open').tap();
+        await page.waitForFunction(()=>Anatomy3D._instance._atlasSelection?.id==='dog_bone_scapula_r');
+        assert(await page.evaluate(()=>Anatomy3D._instance.controls.target.x<0));
+        if(process.env.ANATOMY_SCREENSHOTS) await page.screenshot({path:path.join(process.env.ANATOMY_SCREENSHOTS,'dog-atlas-bone-mobile.png')});
+        await page.locator('#a3d-atlas-back').tap();
         await page.locator('#a3d-layers summary').tap();
         assert(await page.locator('[data-layer="skin"]').isVisible());
         assert(await page.evaluate(()=>document.querySelector('#a3d-layers').getBoundingClientRect().right<=innerWidth));
@@ -367,6 +411,6 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
         // Closing while a model is parsing must leave no live renderer/model behind.
         await page.evaluate(()=>{const v=Anatomy3D._instance;v._switchAnimal('dog');v.destroy()});
         assert(await page.evaluate(()=>Anatomy3D._instance._disposed && Anatomy3D._instance.modelGroup===null));
-        console.log(JSON.stringify({passed:true,models:results,checks:'225 exact muscle structures + 4 connective tissues; name/side/tissue search; cosmetic coat; focus of all 229 structures; lazy skin and skeleton; layer visibility and opacity; retry and layer/species races; surface raycast; NRS preview/cancel/zero/save/reload/delete; regional surface colors; mobile muscle form; zone checkbox off/on; all regions reachable; constant mobile point size; desktop both sides; mobile taps; CSP; web+Flutter bundle; save/reload/delete and errors; species races; resize; disposal'},null,2));
+        console.log(JSON.stringify({passed:true,models:results,checks:'Atlas search and missing fascia status; lazy 160-part skeleton inspection and return; mobile atlas; 225 exact muscle structures + 4 connective tissues; name/side/tissue search; cosmetic coat; focus of all 229 structures; lazy skin and skeleton; layer visibility and opacity; retry and layer/species races; surface raycast; NRS preview/cancel/zero/save/reload/delete; regional surface colors; mobile muscle form; zone checkbox off/on; all regions reachable; constant mobile point size; desktop both sides; mobile taps; CSP; web+Flutter bundle; save/reload/delete and errors; species races; resize; disposal'},null,2));
     } finally {await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1});
