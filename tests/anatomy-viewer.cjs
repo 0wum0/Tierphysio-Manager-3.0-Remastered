@@ -8,8 +8,28 @@ const root = path.resolve(__dirname, '..');
 const results = [];
 const records = new Map();
 let postBody, failSave = false, failDelete = false;
+// Synthetic boxes exercise species routing only; these are not anatomical assets.
+function muscleFixture(species) {
+    const vertices = [-.25,-.25,-.25, .25,-.25,-.25, .25,.25,-.25, -.25,.25,-.25,
+        -.25,-.25,.25, .25,-.25,.25, .25,.25,.25, -.25,.25,.25];
+    const indices = [0,2,1,0,3,2,4,5,6,4,6,7,0,1,5,0,5,4,2,3,7,2,7,6,0,4,7,0,7,3,1,2,6,1,6,5];
+    const binary=Buffer.alloc(vertices.length*4+indices.length*2);
+    vertices.forEach((v,i)=>binary.writeFloatLE(v,i*4));
+    indices.forEach((v,i)=>binary.writeUInt16LE(v,vertices.length*4+i*2));
+    const json={asset:{version:'2.0'},scene:0,scenes:[{nodes:[0,1]}],
+        nodes:['left','right'].map((side,i)=>({mesh:0,translation:[i===0?-.6:.6,0,0],extras:{muscleId:`${species}_mesh_test_${side}`}})),
+        meshes:[{primitives:[{attributes:{POSITION:0},indices:1}]}],
+        buffers:[{byteLength:binary.length}],bufferViews:[{buffer:0,byteOffset:0,byteLength:vertices.length*4},{buffer:0,byteOffset:vertices.length*4,byteLength:indices.length*2}],
+        accessors:[{bufferView:0,componentType:5126,count:8,type:'VEC3',min:[-.25,-.25,-.25],max:[.25,.25,.25]},{bufferView:1,componentType:5123,count:indices.length,type:'SCALAR'}]};
+    let text=Buffer.from(JSON.stringify(json));text=Buffer.concat([text,Buffer.alloc((4-text.length%4)%4,32)]);
+    const header=Buffer.alloc(20);header.writeUInt32LE(0x46546c67,0);header.writeUInt32LE(2,4);header.writeUInt32LE(28+text.length+binary.length,8);header.writeUInt32LE(text.length,12);header.writeUInt32LE(0x4e4f534a,16);
+    const chunk=Buffer.alloc(8);chunk.writeUInt32LE(binary.length,0);chunk.writeUInt32LE(0x004e4942,4);
+    return Buffer.concat([header,text,chunk,binary]);
+}
 const server = http.createServer((req,res) => {
     const url = new URL(req.url,'http://localhost');
+    const fixtureSpecies=url.pathname.match(/fixture-(cat|horse)\.glb$/)?.[1];
+    if(fixtureSpecies){res.setHeader('Content-Type','model/gltf-binary');return res.end(muscleFixture(fixtureSpecies));}
     if (url.pathname.startsWith('/api/')) {
         let body='';req.on('data',b=>body+=b);req.on('end',()=>{
             res.setHeader('Content-Type','application/json');
@@ -170,6 +190,34 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
             // Out-of-order species loads cannot replace the currently selected model.
             await page.evaluate(()=>{Anatomy3D.switchAnimal('cat');Anatomy3D.switchAnimal('horse');Anatomy3D.switchAnimal('dog')});await ready(page);
             assert(await page.evaluate(()=>Anatomy3D._instance.hotspots.every(h=>h.def.id.startsWith('dog_'))));
+            // Registered cat/horse geometry follows the same picking/color/isolation path.
+            const registryPath=(bundle?'/bundle':'/assets/js')+'/anatomy-models.js?v=20261006-2';
+            await page.evaluate(async registryPath=>{
+                const {SEGMENTED_MODELS}=await import(registryPath);
+                for(const species of ['cat','horse']) SEGMENTED_MODELS[species]={file:`fixture-${species}.glb`,leftSign:-1,
+                    definitions:['left','right'].map((side,i)=>({id:`${species}_mesh_test_${side}`,label:`Testfläche ${side}`,anatomical:'Synthetische Testfläche',side,region:'test',pos:[i===0?-.705882:.705882,0,0]}))};
+            },registryPath);
+            await page.evaluate(()=>Anatomy3D._instance._setMuscleMode(true));await ready(page);
+            for(const species of ['cat','horse']) {
+                await page.evaluate(s=>Anatomy3D.switchAnimal(s),species);await ready(page);
+                assert(await page.evaluate(()=>{const v=Anatomy3D._instance;return v._exactMuscles() && v._leftSign()===-1 && v.hotspots.length===2}));
+                await page.selectOption('#a3d-region-select',`${species}_mesh_test_left`);
+                await page.locator('#a3d-pain-slider').fill('5');
+                assert(await page.evaluate(s=>{
+                    const v=Anatomy3D._instance;
+                    return v._surfaces.entries.get(s+'_mesh_test_left').every(m=>m.visible&&m.material.color.getHexString()==='f97316')
+                        && v._surfaces.entries.get(s+'_mesh_test_right').every(m=>!m.visible&&m.material.emissive.getHex()===0);
+                },species));
+                await page.locator('#a3d-cancel-btn').click();
+            }
+            // A catalog from the wrong species must fail closed before any hotspot is shown.
+            await page.evaluate(async registryPath=>{
+                const {SEGMENTED_MODELS}=await import(registryPath);
+                SEGMENTED_MODELS.cat.definitions[0].id='dog_mesh_wrong';
+                Anatomy3D.switchAnimal('cat');
+            },registryPath);
+            await page.waitForFunction(()=>!document.querySelector('#a3d-retry-btn').hidden);
+            assert(await page.evaluate(()=>Anatomy3D._instance.hotspots.length===0 && Anatomy3D._instance.modelGroup===null));
             assert.deepEqual(errors,[]);
             await page.close();
         }

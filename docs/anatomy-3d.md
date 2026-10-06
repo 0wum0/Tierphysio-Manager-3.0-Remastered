@@ -184,3 +184,40 @@ Erweiterte Browserprüfungen: Zuordnung aller 225 Strukturen zu 250 Meshes,
 direkter Oberflächen-Raycast, unabhängige Gegenseite, Freistellen, NRS 0,
 Farben nach Speichern/Neuladen/Löschen/Abbrechen, regionale Farbattribute,
 Mobilformular sowie bestehende Regions-/API-/Race-/CSP-Regressionstests.
+
+## Katze/Pferd: technische Vorbereitung und fehlende Assets
+
+`anatomy-models.js` registriert segmentierte Modelle getrennt nach Tierart.
+Modellpfad, Katalog und anatomische Linksrichtung sind je Tierart konfigurierbar.
+Flächenauswahl, Farbgebung, Freistellen, Befundliste und Modellwechsel sind damit
+nicht mehr auf Hund-IDs festgelegt. Vor dem Anzeigen wird geprüft, ob jede
+Katalog-ID zu mindestens einer tatsächlichen Mesh-Oberfläche gehört und ob
+Tierart-Präfix, Seitenangabe und Fokuskoordinaten gültig sind. Falsche oder
+unvollständige Zuordnungen zeigen einen Ladefehler statt falsch beschrifteter
+Muskeln. Das prüft die technische Konsistenz, nicht die anatomische Richtigkeit.
+
+Der Browser-Test registriert ausschließlich in seinem eigenen Seitenkontext je
+zwei **synthetische Boxen** für Katze und Pferd. Damit werden Tierart-Routing,
+getrennte Farben, Freistellen und die Ablehnung eines fremden Tierart-Katalogs
+geprüft. Diese Testkörper werden nicht ausgeliefert und sind keine Tiermodelle.
+
+Es sind weiterhin **keine segmentierten Katzen-/Pferde-Assets eingebaut**.
+Recherche und Zugriffstest am 6. Oktober 2026:
+
+- Katze: [Feline Ecorche Dec, westerly](https://sketchfab.com/3d-models/feline-ecorche-dec-4c08824eb4914ff4b6e71b4dc2ba080e).
+  Die öffentliche Sketchfab-v3-Metadaten-API nennt CC BY 4.0 und Downloadbarkeit.
+  Der offizielle Download-Endpunkt antwortet ohne Anmeldung mit HTTP 401.
+  Der Autor bezeichnet es als grobes Übungsmodell und nennt ausgelassene tiefe
+  Muskeln. Deshalb sind nach einem autorisierten Download sowohl Mesh-Aufteilung
+  als auch Nomenklatur und Eignung zu prüfen; vollständige Abdeckung ist nicht
+  zugesagt.
+- Pferd: [Horse Ecorche, Johnson Martin](https://superhivemarket.com/products/horse-ecorche).
+  Die Produktseite beschreibt getrennte, beschriftete Muskelgruppen und Knochen.
+  Kaufmodell; keine Datei heruntergeladen und keine Lizenz erworben. Vor einem
+  Einsatz müssen insbesondere die Rechte zur Auslieferung der 3D-Dateien im Web,
+  in Apps und in diesem öffentlichen Repository feststehen.
+
+Nächster sachlicher Schritt ist daher die Bereitstellung der Katzen-Quelldatei,
+danach die Prüfung/Zuordnung und Integration; entsprechend anschließend beim
+Pferd. Kein deformiertes Hundemodell und keine erfundenen zusätzlichen Punkte
+werden als Katzen-/Pferdeanatomie freigeschaltet.

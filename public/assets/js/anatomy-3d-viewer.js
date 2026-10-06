@@ -19,7 +19,7 @@ import { OrbitControls } from '/assets/js/vendor/three/OrbitControls.js';
 import { GLTFLoader }    from '/assets/js/vendor/three/GLTFLoader.js';
 
 import { MeshoptDecoder } from '/assets/js/vendor/three/MeshoptDecoder.js';
-import { DOG_MUSCLES } from './anatomy-dog-muscles.js?v=20261006';
+import { SEGMENTED_MODELS, validateMuscleModel } from './anatomy-models.js?v=20261006-2';
 import { PainSurfaces } from './anatomy-surfaces.js?v=20261006';
 import { MUSCLE_GROUPS } from './anatomy-landmarks.js?v=20261005';
 
@@ -100,7 +100,7 @@ class Anatomy3DViewer {
             <select id="a3d-region-select" aria-label="Alle Muskelregionen" disabled style="flex-basis:100%;width:100%;min-width:0;padding:6px;border:1px solid #475569;border-radius:6px;background:#1e293b;color:#e2e8f0;font-size:.72rem;">
               <option value="">Muskelregionen werden geladen…</option>
             </select>
-            <label id="a3d-muscle-mode-label" style="font-size:.72rem;color:#e2e8f0;"><input id="a3d-muscle-mode" type="checkbox" checked> Einzelmuskeln (Hund)</label>
+            <label id="a3d-muscle-mode-label" style="font-size:.72rem;color:#e2e8f0;"><input id="a3d-muscle-mode" type="checkbox" checked> Einzelmuskeln</label>
             <label id="a3d-isolate-label" style="font-size:.72rem;color:#e2e8f0;"><input id="a3d-isolate" type="checkbox"> Auswahl freistellen</label>
             <span id="a3d-surface-note" style="flex-basis:100%;font-size:.65rem;color:#94a3b8;"></span>
           </div>
@@ -436,7 +436,8 @@ class Anatomy3DViewer {
     /* Model requests can finish out of order when the animal or patient changes. */
     async _loadModel(species) {
         const paths = {dog:'/assets/3D/Hund.glb?v=20261005',cat:'/assets/3D/katze.glb?v=20261005',horse:'/assets/3D/Pferd.glb?v=20261005'};
-        if (species === 'dog' && this.muscleMode) paths.dog = '/assets/3D/Hund-Muskeln.glb?v=20261006';
+        const segmented = this.muscleMode ? SEGMENTED_MODELS[species] : null;
+        if (segmented) paths[species] = '/assets/3D/' + segmented.file;
         const path = paths[species];
         if (!path) return;
         const version = ++this._loadVersion;
@@ -463,6 +464,7 @@ class Anatomy3DViewer {
             const gltf = await this.loader.parseAsync(bytes, path.slice(0, path.lastIndexOf('/')+1));
             model = gltf.scene;
             if (this._disposed || version !== this._loadVersion) { this._disposeObject(model); return; }
+            if (segmented) validateMuscleModel(gltf.scene, species, segmented.definitions);
             this._onModelLoaded(gltf, species);
         } catch (err) {
             if (this._disposed || version !== this._loadVersion || err.name === 'AbortError') return;
@@ -494,13 +496,13 @@ class Anatomy3DViewer {
         this.scene.add(model);
         this.grid.position.y = finalBox.min.y - 0.015;
         this._buildHotspots(species);
-        this._surfaces = new PainSurfaces(this._modelMeshes, this._activeGroups(), this._exactMuscles(), species === 'dog' ? 1 : -1);
-        this.container.querySelector('#a3d-muscle-mode-label').hidden = species !== 'dog';
+        this._surfaces = new PainSurfaces(this._modelMeshes, this._activeGroups(), this._exactMuscles(), this._leftSign());
+        this.container.querySelector('#a3d-muscle-mode-label').hidden = !SEGMENTED_MODELS[species];
         this.container.querySelector('#a3d-muscle-mode').checked = this.muscleMode;
         this.container.querySelector('#a3d-isolate-label').hidden = !this._exactMuscles();
         this.container.querySelector('#a3d-debug-btn').style.display = this._exactMuscles() ? 'none' : 'flex';
         this.container.querySelector('#a3d-surface-note').textContent = this._exactMuscles()
-            ? `${DOG_MUSCLES.length} Muskelstrukturen · Fläche anklicken. Verdeckte Muskeln über die Auswahl freistellen. Unbefundet: Grau.`
+            ? `${this._activeGroups().length} Muskelstrukturen · Fläche anklicken. Verdeckte Muskeln über die Auswahl freistellen. Unbefundet: Grau.`
             : 'Regionale Flächenfärbung (Näherung): keine exakten Einzelmuskelgrenzen. Unbefundet: Naturfarbe.';
         this._renderList();
         this._applyPainToHotspots();
@@ -836,7 +838,7 @@ class Anatomy3DViewer {
         body.querySelectorAll('.a3d-list-item').forEach(el => {
             el.addEventListener('click', async () => {
                 const species = this.animalType;
-                if (this.animalType === 'dog') await this._setMuscleMode(el.dataset.key.startsWith('dog_mesh_'));
+                if (SEGMENTED_MODELS[species]) await this._setMuscleMode(el.dataset.key.startsWith(`${species}_mesh_`));
                 if (this._disposed || this.animalType !== species || !this.hotspots.some(h => h.def.id === el.dataset.key.split('::')[0])) return;
                 const def = this._defFromKey(el.dataset.key);
                 if (def) {
@@ -853,7 +855,7 @@ class Anatomy3DViewer {
         const entry = this.hotspots.find(h => h.def.id === def.id && h.def.side === def.side);
         const pos  = entry?.pos ? entry.pos.clone() : new THREE.Vector3(...def.pos);
         const dist = Math.max(1.5, 1.1 / Math.max(0.4, this.camera.aspect));
-        const left = this.animalType === 'dog' ? 1 : -1;
+        const left = this._leftSign();
         const dir = def.side === 'left' || def.side === 'right'
             ? new THREE.Vector3(def.side === 'left' ? left : -left, 0.06, 0)
             : pos.clone();
@@ -895,15 +897,17 @@ class Anatomy3DViewer {
             .sort((a,b) => b.painLevel-a.painLevel)[0];
     }
 
-    _exactMuscles() { return this.animalType === 'dog' && this.muscleMode; }
+    _exactMuscles() { return Boolean(this.muscleMode && SEGMENTED_MODELS[this.animalType]); }
 
-    _activeGroups() { return this._exactMuscles() ? DOG_MUSCLES : MUSCLE_GROUPS[this.animalType] || []; }
+    _leftSign() { return this._exactMuscles() ? SEGMENTED_MODELS[this.animalType].leftSign : this.animalType === 'dog' ? 1 : -1; }
+
+    _activeGroups() { return this._exactMuscles() ? SEGMENTED_MODELS[this.animalType].definitions : MUSCLE_GROUPS[this.animalType] || []; }
 
     async _setMuscleMode(enabled) {
         if (this.muscleMode === enabled) return;
         this._closeForm();
         this.muscleMode = enabled;
-        if (this.animalType === 'dog') await this._loadModel('dog');
+        if (SEGMENTED_MODELS[this.animalType]) await this._loadModel(this.animalType);
     }
 
     _paintSurfaces(previewKey = null, previewLevel = null) {
@@ -929,7 +933,7 @@ class Anatomy3DViewer {
     }
 
     _defFromKey(key) {
-        const groups = this.animalType === 'dog' ? [...MUSCLE_GROUPS.dog, ...DOG_MUSCLES] : MUSCLE_GROUPS[this.animalType] || [];
+        const groups = [...(MUSCLE_GROUPS[this.animalType] || []), ...(SEGMENTED_MODELS[this.animalType]?.definitions || [])];
         const [id] = key.split('::');
         return groups.find(d => d.id === id) || null;
     }
@@ -962,7 +966,7 @@ class Anatomy3DViewer {
         const vfov = THREE.MathUtils.degToRad(this.camera.fov);
         const hfov = 2 * Math.atan(Math.tan(vfov/2)*this.camera.aspect);
         const distance = radius / Math.sin(Math.min(vfov,hfov)/2) * 1.08;
-        const sign = this.animalType === 'dog' ? 1 : -1;
+        const sign = this._leftSign();
         this.camera.position.copy(new THREE.Vector3(sign*3,0.8,sign*1.6).normalize().multiplyScalar(distance));
         this.controls.maxDistance = Math.max(8,distance*2);
         this.controls.target.set(0,0,0);
