@@ -55,6 +55,55 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
             const page=await browser.newPage({viewport:{width:1200,height:850}});
             const errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error(e.message)});page.on('console',m=>{if(m.type()==='error')console.error(m.text())});page.on('requestfailed',r=>console.error(r.url(),r.failure()));
             await page.goto(origin+(bundle?'/bundle/test?bundle=1':'/test'));await ready(page);
+            // New dog anatomy: exact surfaces, deep muscle isolation, independent sides and NRS 0.
+            assert.equal(await page.evaluate(()=>Anatomy3D._instance.hotspots.length),225);
+            assert(await page.evaluate(()=>{
+                const v=Anatomy3D._instance;
+                return v.hotspots.every(h=>v._surfaces.entries.has(h.def.id))
+                    && v._surfaces.entries.size===225
+                    && v._modelMeshes.filter(m=>m.userData.muscleId).length===250;
+            }));
+            const muscleId='dog_mesh_m_biceps_brachii_l';
+            await page.selectOption('#a3d-region-select', muscleId);
+            assert(await page.locator('#a3d-isolate').isChecked());
+            assert.equal(await page.evaluate(()=>{
+                const v=Anatomy3D._instance;v.scene.updateMatrixWorld(true);v.camera.updateMatrixWorld(true);
+                // Cast at visible triangles of the isolated muscle, independent of landmark dots.
+                const mesh=v._modelMeshes.find(m=>m.visible);const pos=mesh.geometry.attributes.position;
+                const point=v.controls.target.clone();
+                for(let i=0;i<pos.count;i+=3){
+                    point.fromBufferAttribute(pos,i).applyMatrix4(mesh.matrixWorld).project(v.camera);
+                    v.pointer.set(point.x,point.y);const hit=v._pickHotspot();
+                    if(hit) return hit.userData.hotspot.id;
+                }
+                return null;
+            }),muscleId);
+            await page.locator('#a3d-pain-slider').fill('8');
+            assert(await page.evaluate(id=>{
+                const v=Anatomy3D._instance;
+                const selected=v._surfaces.entries.get(id);
+                const opposite=v._surfaces.entries.get(id.replace(/_l$/, '_r'));
+                return selected.length>0 && selected.every(m=>m.visible && m.material.color.getHexString()==='b91c1c' && m.material.emissiveIntensity>0)
+                    && opposite.every(m=>!m.visible && m.material.emissive.getHex()===0);
+            },muscleId));
+            if(process.env.ANATOMY_SCREENSHOTS && !bundle) await page.screenshot({path:path.join(process.env.ANATOMY_SCREENSHOTS,'dog-muscle-isolated.png')});
+            await page.locator('#a3d-cancel-btn').click();
+            assert(await page.evaluate(()=>Anatomy3D._instance._modelMeshes.every(m=>m.visible && m.material.emissive.getHex()===0)));
+            await page.selectOption('#a3d-region-select',muscleId);
+            await page.locator('#a3d-pain-slider').fill('8');await page.locator('#a3d-save-btn').click();
+            await page.waitForFunction(id=>Anatomy3D._instance.painData[id+'::left']?.painLevel===8,muscleId);
+            await page.evaluate(()=>Anatomy3D._instance._loadPainData());
+            await page.waitForFunction(id=>Anatomy3D._instance.painData[id+'::left']?.painLevel===8,muscleId);
+            assert(await page.evaluate(id=>Anatomy3D._instance._surfaces.entries.get(id).every(m=>m.material.color.getHexString()==='b91c1c'),muscleId));
+            if(process.env.ANATOMY_SCREENSHOTS && !bundle) await page.screenshot({path:path.join(process.env.ANATOMY_SCREENSHOTS,'dog-muscles-desktop.png')});
+            await page.selectOption('#a3d-region-select',muscleId);
+            await page.locator('#a3d-pain-slider').fill('0');await page.locator('#a3d-save-btn').click();
+            await page.waitForFunction(id=>Anatomy3D._instance.painData[id+'::left']?.painLevel===0,muscleId);
+            assert(await page.evaluate(id=>Anatomy3D._instance._surfaces.entries.get(id).every(m=>m.material.color.getHexString()==='22c55e'),muscleId));
+            await page.selectOption('#a3d-region-select',muscleId);await page.locator('#a3d-remove-btn').click();
+            await page.waitForFunction(id=>!Anatomy3D._instance.painData[id+'::left'],muscleId);
+            // Legacy geometry and data remain independently reachable.
+            await page.evaluate(()=>Anatomy3D._instance._setMuscleMode(false));await ready(page);
             for(const species of ['dog','cat','horse']) {
                 await page.evaluate(species=>Anatomy3D.switchAnimal(species),species);await ready(page);
                 const stats=await page.evaluate(()=>{const v=Anatomy3D._instance;let vertices=0;v.modelGroup.traverse(o=>{if(o.isMesh)vertices+=o.geometry.attributes.position.count});return{species:v.animalType,vertices,points:v.hotspots.length,size:v._modelBox.size.toArray()}});
@@ -66,6 +115,11 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
                 assert(await page.evaluate(()=>!Anatomy3D._instance.debugMode && Anatomy3D._instance.hotspots.every(h=>h.marker.material.opacity===0)));
                 await page.locator('#a3d-zones-visible').check();
                 assert(await page.evaluate(()=>Anatomy3D._instance.debugMode && Anatomy3D._instance.hotspots.every(h=>h.marker.material.opacity>=.9)));
+                await page.evaluate(()=>{
+                    const v=Anatomy3D._instance;v._previewPain(v.hotspots[0].def.id+'::left',7);
+                });
+                assert(await page.evaluate(()=>Anatomy3D._instance._surfaces.buffers.every(b=>b.weights.array.some(w=>w===1))));
+                await page.evaluate(()=>Anatomy3D._instance._applyPainToHotspots());
                 // Every configured region is reachable even on the occluded side.
                 const ids=await page.evaluate(()=>Anatomy3D._instance.hotspots.map(h=>h.def.id));
                 for(const id of ids) {
@@ -98,6 +152,13 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
             await page.locator('[data-pt="Druckschmerz"]').click();await page.locator('#a3d-save-btn').click();
             await page.waitForFunction(()=>Anatomy3D._instance.painData['dog_thoracic::left']);
             assert.equal(postBody.side,'left');assert(postBody.muscle_group_label.includes('M. longissimus thoracis'));
+            assert(await page.evaluate(()=>Anatomy3D._instance._surfaces.buffers.every(b=>{
+                let colored=false;
+                for(let i=0;i<b.sides.length;i++){
+                    if(b.weights.getX(i)>0){colored=true;if(b.sides[i]!==0)return false;}
+                }
+                return colored;
+            })));
             await page.evaluate(()=>Anatomy3D._instance._loadPainData());
             await page.waitForFunction(()=>Anatomy3D._instance.painData['dog_thoracic::left']);
             await page.evaluate(()=>{const v=Anatomy3D._instance;v._openForm(v.hotspots.find(h=>h.def.id==='dog_thoracic').def)});
@@ -114,6 +175,15 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
         }
         const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:3,isMobile:true,hasTouch:true});
         const page=await context.newPage();await page.goto(origin+'/test');await ready(page);
+        await page.selectOption('#a3d-region-select','dog_mesh_m_biceps_brachii_l');
+        await page.locator('#a3d-pain-slider').fill('7');
+        if(process.env.ANATOMY_SCREENSHOTS) await page.screenshot({path:path.join(process.env.ANATOMY_SCREENSHOTS,'dog-muscles-mobile.png')});
+        assert(await page.evaluate(()=>{
+            const f=document.querySelector('#a3d-form').getBoundingClientRect();
+            return f.left>=0 && f.right<=innerWidth && f.bottom<=innerHeight;
+        }));
+        await page.locator('#a3d-cancel-btn').click();
+        await page.evaluate(()=>Anatomy3D._instance._setMuscleMode(false));await ready(page);
         for(const species of ['dog','cat','horse']) {
             await page.evaluate(s=>Anatomy3D.switchAnimal(s),species);await ready(page);
             assert(await page.evaluate(()=>{const v=Anatomy3D._instance;return v.renderer.getPixelRatio()<=1.5 && v.hotspots.every(h=>{const p=h.pos.clone().project(v.camera);return Math.abs(p.x)<1&&Math.abs(p.y)<1})}));
@@ -133,6 +203,6 @@ const position=async(page,id)=>page.evaluate(id=>{const v=Anatomy3D._instance;v.
         // Closing while a model is parsing must leave no live renderer/model behind.
         await page.evaluate(()=>{const v=Anatomy3D._instance;v._switchAnimal('dog');v.destroy()});
         assert(await page.evaluate(()=>Anatomy3D._instance._disposed && Anatomy3D._instance.modelGroup===null));
-        console.log(JSON.stringify({passed:true,models:results,checks:'zone checkbox off/on; all regions reachable; constant mobile point size; desktop both sides; mobile taps; CSP; web+Flutter bundle; save/reload/delete and errors; species races; resize; disposal'},null,2));
+        console.log(JSON.stringify({passed:true,models:results,checks:'225 exact muscle structures; surface raycast; NRS preview/cancel/zero/save/reload/delete; regional surface colors; mobile muscle form; zone checkbox off/on; all regions reachable; constant mobile point size; desktop both sides; mobile taps; CSP; web+Flutter bundle; save/reload/delete and errors; species races; resize; disposal'},null,2));
     } finally {await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1});

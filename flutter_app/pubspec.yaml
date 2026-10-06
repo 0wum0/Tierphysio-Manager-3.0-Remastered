@@ -133,3 +133,4 @@ flutter:
     - assets/3d/
     - assets/3d/vendor/three/
     - assets/3d/models/
+    - assets/3d/models/licenses/

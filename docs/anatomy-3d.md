@@ -119,3 +119,68 @@ Die Oberfläche bleibt tiefengeprüft: rückseitige Punkte werden nicht durch de
 Körper hindurch als vermeintlich vordere Punkte angezeigt. Der Browser-Test
 schaltet den Haken aus/an, prüft die Touch-Punktgröße und öffnet jede hinterlegte
 Region in beiden Viewern.
+
+## Muskelflächen (6. Oktober 2026)
+
+Der Hund startet jetzt in der Ansicht **Einzelmuskeln**. `Hund-Muskeln.glb`
+enthält 262 getrennte Oberflächen; davon sind 250 Muskeloberflächen zu 225
+benannten, auswählbaren Strukturen zusammengefasst. Mehrere Teilflächen einer
+Quellstruktur teilen eine Befund-ID. Augen, Nase, Bänder, Sehnen und Faszien
+werden nicht als zusätzliche Muskeln gezählt. Das ist der Umfang dieses
+Quellmodells, keine Behauptung eines vollständigen veterinäranatomischen Atlas.
+Einige Strukturen sind im Quellmodell über die Mittellinie zusammengefasst;
+sie erhalten keine künstlich erfundene Links-/Rechts-Aufteilung.
+
+Quelle: https://github.com/vittorione94/MusculoskeletalDog
+Quellcommit: `2e87897e78cc99ecfcab930869a5b68c0fb1605a`.
+V. La Barbera et al., *Motion Tracking with Muscles: Predictive Control of a
+Parametric Musculoskeletal Canine Model* (2025). MIT-Lizenz liegt in beiden
+Modellpaketen unter `licenses/MusculoskeletalDog-MIT.txt`. Die SKN-Oberflächen
+werden in ihrer globalen Bind-Pose übernommen (Achsenwechsel Y/Z/X). Keine
+Simulation, keine automatische anatomische Segmentierung, kein Übertragen der
+Hundemuskeln auf andere Tierarten. Nomenklaturkorrekturen und Zusammenfassung
+von Teilflächen sind im Konverter nachvollziehbar; Quellnamen bleiben erhalten.
+
+Reproduktion (Python-Standardbibliothek und glTF Transform CLI 4.5.1):
+
+```sh
+python scripts/convert-canine-muscles.py /path/to/MusculoskeletalDog
+npx --yes @gltf-transform/cli@4.5.1 meshopt public/assets/3D/Hund-Muskeln.glb /tmp/Hund-Muskeln.glb
+cp /tmp/Hund-Muskeln.glb public/assets/3D/Hund-Muskeln.glb
+cp public/assets/3D/Hund-Muskeln.glb flutter_app/assets/3d/models/Hund-Muskeln.glb
+cp public/assets/js/anatomy-dog-muscles.js flutter_app/assets/3d/anatomy-dog-muscles.js
+```
+
+Keine `join`-/`flatten`-Optimierung verwenden: benannte Oberflächen und die
+`muscleId`-Metadaten müssen getrennt erhalten bleiben. Das komprimierte zusätzliche
+Hundemodell misst rund 1,28 MB und benötigt keine Texturdownloads. Materialien
+werden pro Muskeloberfläche geklont, damit ein Befund nicht alle Muskeln färbt.
+Schmerzfarben verwenden dieselbe Skala wie das Formular, mit konstanter leichter
+Eigenleuchtwirkung ohne zusätzlichen Bloom-Renderpass. Unbefundete Muskeln sind
+grau; ein expliziter NRS-0-Befund ist grün und bleibt löschbar.
+
+Direkte Auswahl erfolgt über den ersten sichtbaren Oberflächentreffer. Die
+Auswahlliste enthält auch verdeckte Muskeln und stellt die ausgewählte Struktur
+frei. Der Schalter „Auswahl freistellen“ zeigt den Körperkontext wieder an;
+Schließen des freigestellten Formulars stellt die Gesamtansicht wieder her.
+Zonenpunkte werden nur im bisherigen Regionsmodell verwendet.
+
+**Katze und Pferd haben weiterhin keine segmentierten Muskelmodelle.** Ihre
+44 bzw. 52 Regionen erhalten eine Flächenfärbung durch Zuordnung vorhandener
+Oberflächenvertices zum jeweils nächsten kalibrierten Punkt. Grenzen werden
+interpoliert. Das ist eine regionale Näherung, keine präzise Muskelkontur; der
+Viewer weist darauf sichtbar hin. Hier wurden keine weiteren Muskelpunkte oder
+tiefen Muskelschichten erfunden. Auch das bisherige Hundemodell ist als
+Regionsansicht über den Schalter erreichbar.
+
+Neue Hundebefunde nutzen IDs mit `dog_mesh_`. Alte IDs werden nicht umgedeutet.
+Ein Klick auf einen vorhandenen Befund schaltet bei Bedarf automatisch zum
+passenden Modell. Datenbank und API bleiben kompatibel. Vorschau färbt ohne
+Speichern, Abbrechen stellt gespeicherte Farben wieder her, Entfernen setzt
+zurück auf unbefundet. Beide Pakete enthalten denselben Katalog und dasselbe GLB;
+ein neuer Flutter-Build ist erforderlich.
+
+Erweiterte Browserprüfungen: Zuordnung aller 225 Strukturen zu 250 Meshes,
+direkter Oberflächen-Raycast, unabhängige Gegenseite, Freistellen, NRS 0,
+Farben nach Speichern/Neuladen/Löschen/Abbrechen, regionale Farbattribute,
+Mobilformular sowie bestehende Regions-/API-/Race-/CSP-Regressionstests.

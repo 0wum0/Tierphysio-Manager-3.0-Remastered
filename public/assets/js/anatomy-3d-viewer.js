@@ -19,6 +19,8 @@ import { OrbitControls } from '/assets/js/vendor/three/OrbitControls.js';
 import { GLTFLoader }    from '/assets/js/vendor/three/GLTFLoader.js';
 
 import { MeshoptDecoder } from '/assets/js/vendor/three/MeshoptDecoder.js';
+import { DOG_MUSCLES } from './anatomy-dog-muscles.js?v=20261006';
+import { PainSurfaces } from './anatomy-surfaces.js?v=20261006';
 import { MUSCLE_GROUPS } from './anatomy-landmarks.js?v=20261005';
 
 // Only compressed model bytes are retained; GPU resources belong to one viewer.
@@ -58,6 +60,7 @@ class Anatomy3DViewer {
 
         /* UI state */
         this.selectedKey = null;
+        this.muscleMode = true;
         this.hoveredMesh = null;
         this.debugMode   = true;
         this._disposed = false;
@@ -97,7 +100,9 @@ class Anatomy3DViewer {
             <select id="a3d-region-select" aria-label="Alle Muskelregionen" disabled style="flex-basis:100%;width:100%;min-width:0;padding:6px;border:1px solid #475569;border-radius:6px;background:#1e293b;color:#e2e8f0;font-size:.72rem;">
               <option value="">Muskelregionen werden geladen…</option>
             </select>
-            <span style="flex-basis:100%;font-size:.65rem;color:#94a3b8;">Andere Körperseite: Modell drehen oder Region auswählen.</span>
+            <label id="a3d-muscle-mode-label" style="font-size:.72rem;color:#e2e8f0;"><input id="a3d-muscle-mode" type="checkbox" checked> Einzelmuskeln (Hund)</label>
+            <label id="a3d-isolate-label" style="font-size:.72rem;color:#e2e8f0;"><input id="a3d-isolate" type="checkbox"> Auswahl freistellen</label>
+            <span id="a3d-surface-note" style="flex-basis:100%;font-size:.65rem;color:#94a3b8;"></span>
           </div>
 
           <!-- Loading overlay -->
@@ -229,6 +234,8 @@ class Anatomy3DViewer {
     _bindUI() {
         const c = this.container;
 
+        c.querySelector('#a3d-muscle-mode').addEventListener('change', e => this._setMuscleMode(e.target.checked));
+        c.querySelector('#a3d-isolate').addEventListener('change', () => this._updateIsolation());
         c.querySelector('#a3d-retry-btn').addEventListener('click', () => this._loadModel(this.animalType));
 
         /* Species buttons */
@@ -408,6 +415,7 @@ class Anatomy3DViewer {
         regions.disabled = true;
         regions.replaceChildren(new Option('Muskelregionen werden geladen…', ''));
         this._modelMeshes = [];
+        this._surfaces = null;
         this._modelBox = null;
         this._dirty = true;
     }
@@ -428,6 +436,7 @@ class Anatomy3DViewer {
     /* Model requests can finish out of order when the animal or patient changes. */
     async _loadModel(species) {
         const paths = {dog:'/assets/3D/Hund.glb?v=20261005',cat:'/assets/3D/katze.glb?v=20261005',horse:'/assets/3D/Pferd.glb?v=20261005'};
+        if (species === 'dog' && this.muscleMode) paths.dog = '/assets/3D/Hund-Muskeln.glb?v=20261006';
         const path = paths[species];
         if (!path) return;
         const version = ++this._loadVersion;
@@ -485,6 +494,15 @@ class Anatomy3DViewer {
         this.scene.add(model);
         this.grid.position.y = finalBox.min.y - 0.015;
         this._buildHotspots(species);
+        this._surfaces = new PainSurfaces(this._modelMeshes, this._activeGroups(), this._exactMuscles(), species === 'dog' ? 1 : -1);
+        this.container.querySelector('#a3d-muscle-mode-label').hidden = species !== 'dog';
+        this.container.querySelector('#a3d-muscle-mode').checked = this.muscleMode;
+        this.container.querySelector('#a3d-isolate-label').hidden = !this._exactMuscles();
+        this.container.querySelector('#a3d-debug-btn').style.display = this._exactMuscles() ? 'none' : 'flex';
+        this.container.querySelector('#a3d-surface-note').textContent = this._exactMuscles()
+            ? `${DOG_MUSCLES.length} Muskelstrukturen · Fläche anklicken. Verdeckte Muskeln über die Auswahl freistellen. Unbefundet: Grau.`
+            : 'Regionale Flächenfärbung (Näherung): keine exakten Einzelmuskelgrenzen. Unbefundet: Naturfarbe.';
+        this._renderList();
         this._applyPainToHotspots();
         this._resetCamera();
         this._hideLoading();
@@ -493,10 +511,10 @@ class Anatomy3DViewer {
     _buildHotspots(species) {
         // Calibrated coordinates are already on the surface. No runtime ray
         // projection can move a leg landmark onto the chest or throat.
-        const groups = MUSCLE_GROUPS[species] || [];
+        const groups = this._activeGroups();
         const select = this.container.querySelector('#a3d-region-select');
-        select.replaceChildren(new Option(`Alle ${groups.length} Regionen auswählen…`, ''));
-        groups.forEach(def => select.add(new Option(`${def.anatomical} – ${def.label}`, def.id)));
+        select.replaceChildren(new Option(`Alle ${groups.length} ${this._exactMuscles() ? 'Muskelstrukturen' : 'Regionen'} auswählen…`, ''));
+        groups.forEach(def => select.add(new Option(this._exactMuscles() ? def.label : `${def.anatomical} – ${def.label}`, def.id)));
         select.disabled = false;
         for (const def of groups) {
             const marker = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6),
@@ -513,6 +531,12 @@ class Anatomy3DViewer {
         if (!this.modelGroup) return null;
         this.scene.updateMatrixWorld(true);
         this.camera.updateMatrixWorld(true);
+        if (this._exactMuscles()) {
+            const ray = new THREE.Raycaster();
+            ray.setFromCamera(this.pointer, this.camera);
+            const hit = ray.intersectObjects(this._modelMeshes.filter(m => m.visible), false)[0];
+            return hit ? this.hotspots.find(h => h.def.id === hit.object.userData.muscleId)?.mesh || null : null;
+        }
         const canvas = this.renderer.domElement;
         const radius = this._pointerType === 'touch' ? 18 : 12;
         const candidates = this.hotspots.filter(h => h.marker.material.opacity > 0).map(h => {
@@ -615,25 +639,30 @@ class Anatomy3DViewer {
         const sideSelect = c.querySelector('#a3d-side-sel');
         const storedSide = this.selectedKey.split('::')[1];
         sideSelect.value = storedSide;
-        sideSelect.disabled = Boolean(existing.id) || def.side !== 'midline';
+        sideSelect.disabled = this._exactMuscles() || Boolean(existing.id) || def.side !== 'midline';
         c.querySelector('#a3d-notes').value = existing.notes || '';
 
-        c.querySelector('#a3d-remove-btn').style.display = existing.painLevel ? '' : 'none';
+        c.querySelector('#a3d-remove-btn').style.display = existing.id ? '' : 'none';
         c.querySelector('#a3d-form').style.display = 'block';
+        this._updateIsolation();
     }
 
     _closeForm() {
+        const wasIsolated = this._exactMuscles() && this.selectedKey && this.container.querySelector('#a3d-isolate').checked;
         this.container.querySelector('#a3d-form').style.display = 'none';
         /* Restore preview to actual pain state */
         if (this.selectedKey) {
             this._applyPainToHotspots();
         }
         this.selectedKey = null;
+        this._updateIsolation();
+        if (wasIsolated && this._modelBox) this._resetCamera();
         this.container.querySelector('#a3d-region-select').value = '';
     }
 
     _previewPain(key, level) {
         this._dirty = true;
+        this._paintSurfaces(key, level);
         const entry = this.hotspots.find(h => h.def.id === key.split('::')[0]);
         if (!entry) return;
         const mat = entry.marker.material;
@@ -762,9 +791,11 @@ class Anatomy3DViewer {
     /* ── Apply pain colors to hotspot markers ─────────────── */
     _applyPainToHotspots() {
         this._dirty = true;
+        this._paintSurfaces();
         this.hotspots.forEach(({ mesh, marker, def }) => {
             const entry = this._painForDef(def);
             mesh.visible = false; /* identity object is not rendered */
+            marker.visible = !this._exactMuscles();
 
             if (entry && entry.painLevel > 0) {
                 marker.material.color.set(painColor(entry.painLevel));
@@ -781,7 +812,7 @@ class Anatomy3DViewer {
     /* ── Pain points list ─────────────────────────────────── */
     _renderList() {
         const body    = this.container.querySelector('#a3d-list-body');
-        const entries = Object.entries(this.painData).filter(([,v]) => v.painLevel > 0);
+        const entries = Object.entries(this.painData);
 
         if (!entries.length) {
             body.innerHTML = '<div style="color:#64748b;font-size:.72rem;text-align:center;padding:10px;">Keine Schmerzpunkte</div>';
@@ -803,7 +834,10 @@ class Anatomy3DViewer {
         }).join('');
 
         body.querySelectorAll('.a3d-list-item').forEach(el => {
-            el.addEventListener('click', () => {
+            el.addEventListener('click', async () => {
+                const species = this.animalType;
+                if (this.animalType === 'dog') await this._setMuscleMode(el.dataset.key.startsWith('dog_mesh_'));
+                if (this._disposed || this.animalType !== species || !this.hotspots.some(h => h.def.id === el.dataset.key.split('::')[0])) return;
                 const def = this._defFromKey(el.dataset.key);
                 if (def) {
                     this._focusHotspot(def);
@@ -814,6 +848,7 @@ class Anatomy3DViewer {
     }
 
     _focusHotspot(def) {
+        if (this._exactMuscles()) this.container.querySelector('#a3d-isolate').checked = true;
         /* Focus the calibrated point, including when opened from the saved list. */
         const entry = this.hotspots.find(h => h.def.id === def.id && h.def.side === def.side);
         const pos  = entry?.pos ? entry.pos.clone() : new THREE.Vector3(...def.pos);
@@ -860,8 +895,41 @@ class Anatomy3DViewer {
             .sort((a,b) => b.painLevel-a.painLevel)[0];
     }
 
+    _exactMuscles() { return this.animalType === 'dog' && this.muscleMode; }
+
+    _activeGroups() { return this._exactMuscles() ? DOG_MUSCLES : MUSCLE_GROUPS[this.animalType] || []; }
+
+    async _setMuscleMode(enabled) {
+        if (this.muscleMode === enabled) return;
+        this._closeForm();
+        this.muscleMode = enabled;
+        if (this.animalType === 'dog') await this._loadModel('dog');
+    }
+
+    _paintSurfaces(previewKey = null, previewLevel = null) {
+        const previewId = previewKey?.split('::')[0];
+        const definitions = new Map(this._activeGroups().map(d => [d.id, d]));
+        const previewSide = this.container.querySelector('#a3d-side-sel').value;
+        this._surfaces?.paint((id, surfaceSide) => {
+            const divided = surfaceSide && definitions.get(id)?.side === 'midline';
+            const matches = side => !divided || side === 'midline' || side === 'bilateral' || side === surfaceSide;
+            if (id === previewId && matches(previewSide)) return previewLevel;
+            const values = Object.entries(this.painData)
+                .filter(([key]) => key.split('::')[0] === id && matches(key.split('::')[1]))
+                .map(([,entry]) => Number(entry.painLevel));
+            return values.length ? Math.max(...values) : null;
+        }, painColor);
+    }
+
+    _updateIsolation() {
+        const id = this.selectedKey?.split('::')[0];
+        const isolate = this._exactMuscles() && id && this.container.querySelector('#a3d-isolate').checked;
+        this._modelMeshes?.forEach(mesh => { mesh.visible = !isolate || mesh.userData.muscleId === id; });
+        this._dirty = true;
+    }
+
     _defFromKey(key) {
-        const groups = MUSCLE_GROUPS[this.animalType] || [];
+        const groups = this.animalType === 'dog' ? [...MUSCLE_GROUPS.dog, ...DOG_MUSCLES] : MUSCLE_GROUPS[this.animalType] || [];
         const [id] = key.split('::');
         return groups.find(d => d.id === id) || null;
     }
