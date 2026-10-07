@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'core/router.dart';
 import 'core/theme.dart';
 import 'services/auth_service.dart';
@@ -14,6 +16,11 @@ import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  LicenseRegistry.addLicense(() async* {
+    yield LicenseEntryWithLineBreaks([
+      'Inter',
+    ], await rootBundle.loadString('assets/fonts/OFL.txt'));
+  });
   await ApiService.init();
   await NotificationService.init();
   final themeService = ThemeService();
@@ -28,14 +35,25 @@ void main() async {
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
-  runApp(TheraPanoApp(themeService: themeService, offlineService: offlineService, portalAuth: portalAuth));
+  runApp(
+    TheraPanoApp(
+      themeService: themeService,
+      offlineService: offlineService,
+      portalAuth: portalAuth,
+    ),
+  );
 }
 
 class TheraPanoApp extends StatefulWidget {
   final ThemeService themeService;
   final OfflineService offlineService;
   final OwnerPortalAuthService portalAuth;
-  const TheraPanoApp({super.key, required this.themeService, required this.offlineService, required this.portalAuth});
+  const TheraPanoApp({
+    super.key,
+    required this.themeService,
+    required this.offlineService,
+    required this.portalAuth,
+  });
 
   @override
   State<TheraPanoApp> createState() => _TheraPanoAppState();
@@ -43,6 +61,13 @@ class TheraPanoApp extends StatefulWidget {
 
 class _TheraPanoAppState extends State<TheraPanoApp> {
   final _authService = AuthService();
+  late final _appRouter = AppRouter(_authService);
+  @override
+  void dispose() {
+    _appRouter.router.dispose();
+    _authService.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,33 +79,36 @@ class _TheraPanoAppState extends State<TheraPanoApp> {
         ChangeNotifierProvider.value(value: widget.portalAuth),
         Provider(create: (_) => ApiService()),
       ],
-      child: Builder(builder: (context) {
-        final router = AppRouter(context.read<AuthService>()).router;
-        final themeMode = context.watch<ThemeService>().mode;
-        return MaterialApp.router(
-          title: 'TheraPano',
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.light(),
-          darkTheme: AppTheme.dark(),
-          themeMode: themeMode,
-          routerConfig: router,
-          builder: (context, child) {
-            // Show splash on top until it signals completion.
-            // This avoids a black frame from widget tree swap.
-            return _SplashOverlay(
-              authService: _authService,
-              child: child ?? Container(color: Theme.of(context).scaffoldBackgroundColor),
-            );
-          },
-          localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: const [Locale('de', 'DE')],
-          locale: const Locale('de', 'DE'),
-        );
-      }),
+      child: Builder(
+        builder: (context) {
+          final themeMode = context.watch<ThemeService>().mode;
+          return MaterialApp.router(
+            title: 'TheraPano',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.light(),
+            darkTheme: AppTheme.dark(),
+            themeMode: themeMode,
+            routerConfig: _appRouter.router,
+            builder: (context, child) {
+              // Show splash on top until it signals completion.
+              // This avoids a black frame from widget tree swap.
+              return _SplashOverlay(
+                authService: _authService,
+                child:
+                    child ??
+                    Container(color: Theme.of(context).scaffoldBackgroundColor),
+              );
+            },
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [Locale('de', 'DE')],
+            locale: const Locale('de', 'DE'),
+          );
+        },
+      ),
     );
   }
 }
@@ -95,22 +123,23 @@ class _SplashOverlay extends StatefulWidget {
   State<_SplashOverlay> createState() => _SplashOverlayState();
 }
 
-
 class _SplashOverlayState extends State<_SplashOverlay> {
   bool _splashDone = false;
 
   @override
   Widget build(BuildContext context) {
-    return Stack(children: [
-      widget.child,
-      if (!_splashDone)
-        Material(
-          type: MaterialType.transparency,
-          child: SplashScreen(
-            authService: widget.authService,
-            onComplete: () => setState(() => _splashDone = true),
+    return Stack(
+      children: [
+        widget.child,
+        if (!_splashDone)
+          Material(
+            type: MaterialType.transparency,
+            child: SplashScreen(
+              authService: widget.authService,
+              onComplete: () => setState(() => _splashDone = true),
+            ),
           ),
-        ),
-    ]);
+      ],
+    );
   }
 }

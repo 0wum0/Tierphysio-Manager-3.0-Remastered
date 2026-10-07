@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_file/open_file.dart';
@@ -23,30 +24,35 @@ class UpdateInfo {
 /// Service to handle automatic update checks via GitHub Releases.
 class UpdateService {
   static const String _owner = '0wum0';
-  static const String _repo  = 'Tierphysio-Manager-3.0-Remastered';
+  static const String _repo = 'Tierphysio-Manager-3.0-Remastered';
 
   static final ValueNotifier<UpdateInfo?> updateNotifier = ValueNotifier(null);
-  static final ValueNotifier<double>      downloadProgress = ValueNotifier(0.0);
-  static final ValueNotifier<bool>        isDownloading = ValueNotifier(false);
+  static final ValueNotifier<double> downloadProgress = ValueNotifier(0.0);
+  static final ValueNotifier<bool> isDownloading = ValueNotifier(false);
 
   static Future<void> checkForUpdate() async {
     if (!Platform.isAndroid && !Platform.isWindows) return;
 
     try {
       final PackageInfo info = await PackageInfo.fromPlatform();
+      if (info.packageName.endsWith('.preview')) return;
       final String currentVersion = info.version;
 
-      final response = await http.get(
-        Uri.parse('https://api.github.com/repos/$_owner/$_repo/releases/latest'),
-        headers: {'Accept': 'application/vnd.github+json'},
-      ).timeout(const Duration(seconds: 15));
+      final response = await http
+          .get(
+            Uri.parse(
+              'https://api.github.com/repos/$_owner/$_repo/releases/latest',
+            ),
+            headers: {'Accept': 'application/vnd.github+json'},
+          )
+          .timeout(const Duration(seconds: 15));
 
       if (response.statusCode != 200) return;
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final String latestTag = data['tag_name'] as String? ?? '';
-      final String notes     = data['body']     as String? ?? '';
-      final List   assets    = data['assets']   as List?   ?? [];
+      final String notes = data['body'] as String? ?? '';
+      final List assets = data['assets'] as List? ?? [];
 
       final String latestVersion = latestTag.replaceAll(RegExp(r'^[vV]'), '');
       if (!_isNewer(latestVersion, currentVersion)) return;
@@ -59,10 +65,10 @@ class UpdateService {
       if (asset == null) return;
 
       updateNotifier.value = UpdateInfo(
-        version:     latestVersion,
+        version: latestVersion,
         downloadUrl: asset['browser_download_url'] as String,
-        notes:       notes,
-        fileName:    asset['name'] as String,
+        notes: notes,
+        fileName: asset['name'] as String,
       );
     } catch (e) {
       debugPrint('[UpdateService] check failed: $e');
@@ -73,7 +79,7 @@ class UpdateService {
     final info = updateNotifier.value;
     if (info == null || isDownloading.value) return;
 
-    isDownloading.value   = true;
+    isDownloading.value = true;
     downloadProgress.value = 0.0;
 
     try {
@@ -89,10 +95,10 @@ class UpdateService {
       final installFile = File('${dir.path}/${info.fileName}');
       if (await installFile.exists()) await installFile.delete();
 
-      final request  = http.Request('GET', Uri.parse(info.downloadUrl));
+      final request = http.Request('GET', Uri.parse(info.downloadUrl));
       final response = await request.send();
-      final total    = response.contentLength ?? 0;
-      int received   = 0;
+      final total = response.contentLength ?? 0;
+      int received = 0;
 
       final sink = installFile.openWrite();
       await response.stream.forEach((chunk) {

@@ -1,12 +1,15 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
+
 import '../services/auth_service.dart';
 import '../widgets/feedback_fab.dart';
+import '../widgets/module_sheet.dart';
 import '../services/api_service.dart';
 import '../services/notification_service.dart';
 import '../services/theme_service.dart';
@@ -54,7 +57,7 @@ class _ShellScreenState extends State<ShellScreen>
     _pollUnread();
     _loadOverdue();
     _pollNotifications();
-    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+    _clockTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       if (mounted) setState(() => _now = DateTime.now());
     });
     NotificationService.requestPermission();
@@ -106,11 +109,13 @@ class _ShellScreenState extends State<ShellScreen>
 
   Future<void> _checkConnectivity() async {
     try {
-      final result = await InternetAddress.lookup('google.com')
-          .timeout(const Duration(seconds: 4));
+      final result = await InternetAddress.lookup(
+        Uri.parse(ApiService.baseUrl).host,
+      ).timeout(const Duration(seconds: 4));
       if (mounted) {
-        setState(() =>
-            _isOffline = result.isEmpty || result.first.rawAddress.isEmpty);
+        setState(
+          () => _isOffline = result.isEmpty || result.first.rawAddress.isEmpty,
+        );
       }
     } catch (_) {
       if (mounted) setState(() => _isOffline = true);
@@ -200,14 +205,14 @@ class _ShellScreenState extends State<ShellScreen>
       Terminology(isTrainer: context.read<AuthService>().isTrainer);
 
   List<NavSection> _sections() => buildNavSections(
-        term: _term(),
-        isTrainer: context.read<AuthService>().isTrainer,
-        badges: NavBadges(
-          unreadMessages: _unreadMessages,
-          overdueInvoices: _overdueCount,
-          newIntakes: _newIntakes,
-        ),
-      );
+    term: _term(),
+    isTrainer: context.read<AuthService>().isTrainer,
+    badges: NavBadges(
+      unreadMessages: _unreadMessages,
+      overdueInvoices: _overdueCount,
+      newIntakes: _newIntakes,
+    ),
+  );
 
   static bool _isActive(String route, String loc) =>
       loc == route || loc.startsWith('$route/');
@@ -216,9 +221,11 @@ class _ShellScreenState extends State<ShellScreen>
     if (item.comingSoon) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(
-          content: Text('„${item.label}" kommt in Kürze (Hundeschul-Modul).'),
-        ));
+        ..showSnackBar(
+          SnackBar(
+            content: Text('„${item.label}" kommt in Kürze (Hundeschul-Modul).'),
+          ),
+        );
       return;
     }
     context.go(item.route);
@@ -248,10 +255,7 @@ class _ShellScreenState extends State<ShellScreen>
           child: SlideTransition(position: slide, child: child),
         );
       },
-      child: KeyedSubtree(
-        key: ValueKey<String>(location),
-        child: widget.child,
-      ),
+      child: KeyedSubtree(key: ValueKey<String>(location), child: widget.child),
     );
   }
 
@@ -262,7 +266,9 @@ class _ShellScreenState extends State<ShellScreen>
     // Auto-collapse the sidebar on medium widths for more content space.
     if (width < 1000 && _sidebarExpanded) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _sidebarExpanded && MediaQuery.of(context).size.width < 1000) {
+        if (mounted &&
+            _sidebarExpanded &&
+            MediaQuery.of(context).size.width < 1000) {
           setState(() => _sidebarExpanded = false);
           _sidebarCtrl.reverse();
         }
@@ -282,73 +288,93 @@ class _ShellScreenState extends State<ShellScreen>
     return Scaffold(
       floatingActionButton: const FeedbackFab(),
       floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
-      body: Row(children: [
-        AnimatedBuilder(
-          animation: _sidebarAnim,
-          builder: (context, _) {
-            final w = _kSidebarCollapsed +
-                (_kSidebarExpanded - _kSidebarCollapsed) * _sidebarAnim.value;
-            final showLabels = _sidebarAnim.value > 0.5;
-            return Container(
-              width: w,
-              color: cs.surface,
-              child: Column(
-                children: [
-                  _sidebarHeader(context, showLabels),
-                  Divider(height: 1, color: cs.outlineVariant),
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 8),
-                      children: [
-                        for (final section in sections) ...[
-                          _sectionHeader(context, section.title, showLabels),
-                          for (final item in section.items)
-                            _SidebarNavTile(
-                              item: item,
-                              isSelected: _isActive(item.route, location),
-                              showLabel: showLabels,
-                              onTap: () => _openItem(item),
-                            ),
-                          const SizedBox(height: 6),
+      body: Row(
+        children: [
+          AnimatedBuilder(
+            animation: _sidebarAnim,
+            builder: (context, _) {
+              final w =
+                  _kSidebarCollapsed +
+                  (_kSidebarExpanded - _kSidebarCollapsed) * _sidebarAnim.value;
+              final showLabels = _sidebarAnim.value > 0.95;
+              return Container(
+                width: w,
+                color: cs.surface,
+                child: Column(
+                  children: [
+                    _sidebarHeader(context, showLabels),
+                    Divider(height: 1, color: cs.outlineVariant),
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 8,
+                        ),
+                        children: [
+                          for (final section in sections) ...[
+                            _sectionHeader(context, section.title, showLabels),
+                            for (final item in section.items)
+                              _SidebarNavTile(
+                                item: item,
+                                isSelected: _isActive(item.route, location),
+                                showLabel: showLabels,
+                                onTap: () => _openItem(item),
+                              ),
+                            const SizedBox(height: 6),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                  Divider(height: 1, color: cs.outlineVariant),
-                  _SidebarNavTile(
-                    item: const NavItem(
-                      route: '__logout__',
-                      icon: Icons.logout_rounded,
-                      selectedIcon: Icons.logout_rounded,
-                      label: 'Abmelden',
-                      color: AppTheme.danger,
+                    Divider(height: 1, color: cs.outlineVariant),
+                    _SidebarNavTile(
+                      item: const NavItem(
+                        route: '__logout__',
+                        icon: Icons.logout_rounded,
+                        selectedIcon: Icons.logout_rounded,
+                        label: 'Abmelden',
+                        color: AppTheme.danger,
+                      ),
+                      isSelected: false,
+                      showLabel: showLabels,
+                      onTap: () => _confirmLogout(context),
                     ),
-                    isSelected: false,
-                    showLabel: showLabels,
-                    onTap: () => _confirmLogout(context),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ),
-            );
-          },
-        ),
-        VerticalDivider(width: 1, color: Theme.of(context).dividerColor),
-        Expanded(
-          child: Column(
-            children: [
-              _buildTopBar(context),
-              if (_isOffline) _offlineBanner(),
-              Expanded(child: _animatedContent(location)),
-            ],
+                    const SizedBox(height: 8),
+                  ],
+                ),
+              );
+            },
           ),
-        ),
-      ]),
+          VerticalDivider(width: 1, color: Theme.of(context).dividerColor),
+          Expanded(
+            child: Column(
+              children: [
+                _buildTopBar(context),
+                if (_isOffline) _offlineBanner(),
+                Expanded(child: _animatedContent(location)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _sidebarHeader(BuildContext context, bool showLabels) {
+    if (!showLabels) {
+      return SizedBox(
+        height: 64,
+        child: Center(
+          child: IconButton(
+            tooltip: 'Menü ausklappen',
+            onPressed: _toggleSidebar,
+            icon: Icon(
+              Icons.menu_open_rounded,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+        ),
+      );
+    }
     return SizedBox(
       height: 64,
       child: Row(
@@ -366,8 +392,10 @@ class _ShellScreenState extends State<ShellScreen>
                 'assets/icons/paw.svg',
                 width: 21,
                 height: 21,
-                colorFilter:
-                    const ColorFilter.mode(AppTheme.primary, BlendMode.srcIn),
+                colorFilter: const ColorFilter.mode(
+                  AppTheme.primary,
+                  BlendMode.srcIn,
+                ),
               ),
             ),
           ),
@@ -429,7 +457,9 @@ class _ShellScreenState extends State<ShellScreen>
           TextSpan(
             text: 'Thera',
             style: TextStyle(
-                color: cs.onSurface, decoration: TextDecoration.none),
+              color: cs.onSurface,
+              decoration: TextDecoration.none,
+            ),
           ),
           TextSpan(
             text: 'Pano',
@@ -454,15 +484,20 @@ class _ShellScreenState extends State<ShellScreen>
         bottom: false,
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          child: Row(children: [
-            Icon(Icons.wifi_off_rounded, color: Colors.white, size: 16),
-            SizedBox(width: 8),
-            Text('Keine Internetverbindung',
+          child: Row(
+            children: [
+              Icon(Icons.wifi_off_rounded, color: Colors.white, size: 16),
+              SizedBox(width: 8),
+              Text(
+                'Keine Internetverbindung',
                 style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600)),
-          ]),
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -478,39 +513,50 @@ class _ShellScreenState extends State<ShellScreen>
         border: Border(bottom: BorderSide(color: cs.outlineVariant)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Row(children: [
-        InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: () => context.push('/suche'),
-          child: Container(
-            height: 38,
-            width: 240,
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(10),
+      child: Row(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () => context.push('/suche'),
+            child: Container(
+              height: 38,
+              width: 240,
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.search_rounded,
+                    size: 18,
+                    color: cs.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _term().searchHint(),
+                    style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+                  ),
+                ],
+              ),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Row(children: [
-              Icon(Icons.search_rounded, size: 18, color: cs.onSurfaceVariant),
-              const SizedBox(width: 8),
-              Text(_term().searchHint(),
-                  style:
-                      TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
-            ]),
           ),
-        ),
-        const Spacer(),
-        Text(timeStr,
+          const Spacer(),
+          Text(
+            timeStr,
             style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w600,
               color: cs.onSurfaceVariant,
               fontFeatures: const [FontFeature.tabularFigures()],
-            )),
-        const SizedBox(width: 4),
-        _themeToggle(),
-        _bell(context),
-      ]),
+            ),
+          ),
+          const SizedBox(width: 4),
+          _themeToggle(),
+          _bell(context),
+        ],
+      ),
     );
   }
 
@@ -520,18 +566,19 @@ class _ShellScreenState extends State<ShellScreen>
     final location = GoRouterState.of(context).matchedLocation;
     final sections = _sections();
     final primary = primaryNavItems(sections);
-    final primaryIdx =
-        primary.indexWhere((i) => _isActive(i.route, location));
+    final primaryIdx = primary.indexWhere((i) => _isActive(i.route, location));
     final navIdx = primaryIdx >= 0 ? primaryIdx : primary.length;
 
     return Scaffold(
       appBar: _buildAppBar(context),
       floatingActionButton: const FeedbackFab(),
       floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
-      body: Column(children: [
-        if (_isOffline) _offlineBanner(),
-        Expanded(child: _animatedContent(location)),
-      ]),
+      body: Column(
+        children: [
+          if (_isOffline) _offlineBanner(),
+          Expanded(child: _animatedContent(location)),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: navIdx,
         onDestinationSelected: (idx) {
@@ -556,8 +603,10 @@ class _ShellScreenState extends State<ShellScreen>
           NavigationDestination(
             icon: Badge(
               isLabelVisible: _overdueCount > 0,
-              label:
-                  Text('$_overdueCount', style: const TextStyle(fontSize: 9)),
+              label: Text(
+                '$_overdueCount',
+                style: const TextStyle(fontSize: 9),
+              ),
               backgroundColor: AppTheme.danger,
               child: const Icon(Icons.grid_view_outlined),
             ),
@@ -573,35 +622,35 @@ class _ShellScreenState extends State<ShellScreen>
     final base = Icon(selected ? item.selectedIcon : item.icon);
     if (item.badge <= 0) return base;
     return Badge(
-      label: Text('${item.badge}',
-          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700)),
+      label: Text(
+        '${item.badge}',
+        style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w700),
+      ),
       backgroundColor: AppTheme.danger,
       child: base,
     );
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
-    final timeStr = DateFormat('HH:mm', 'de_DE').format(_now);
     return AppBar(
       automaticallyImplyLeading: false,
       titleSpacing: 16,
       title: Row(
         children: [
-          SvgPicture.asset('assets/icons/paw.svg',
-              width: 22,
-              height: 22,
-              colorFilter: const ColorFilter.mode(AppTheme.primary, BlendMode.srcIn)),
+          SvgPicture.asset(
+            'assets/icons/paw.svg',
+            width: 22,
+            height: 22,
+            colorFilter: const ColorFilter.mode(
+              AppTheme.primary,
+              BlendMode.srcIn,
+            ),
+          ),
           const SizedBox(width: 8),
-          _wordmark(context, 18),
-          Expanded(
-            child: Center(
-              child: Text(timeStr,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  )),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: _wordmark(context, 18),
             ),
           ),
         ],
@@ -644,17 +693,17 @@ class _ShellScreenState extends State<ShellScreen>
     final totalBadge = _newIntakes + _birthdayCount;
     return AnimatedBuilder(
       animation: _bellAnim,
-      builder: (context, child) => Transform.rotate(
-        angle: _bellAnim.value,
-        child: child,
-      ),
+      builder: (context, child) =>
+          Transform.rotate(angle: _bellAnim.value, child: child),
       child: Stack(
         alignment: Alignment.center,
         children: [
           IconButton(
-            icon: Icon(totalBadge > 0
-                ? Icons.notifications_rounded
-                : Icons.notifications_outlined),
+            icon: Icon(
+              totalBadge > 0
+                  ? Icons.notifications_rounded
+                  : Icons.notifications_outlined,
+            ),
             tooltip: 'Benachrichtigungen',
             onPressed: () => _showNotificationPanel(context),
           ),
@@ -663,23 +712,25 @@ class _ShellScreenState extends State<ShellScreen>
               top: 6,
               right: 6,
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppTheme.danger,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                      color: Theme.of(context).colorScheme.surface,
-                      width: 1.5),
+                    color: Theme.of(context).colorScheme.surface,
+                    width: 1.5,
+                  ),
                 ),
-                constraints:
-                    const BoxConstraints(minWidth: 16, minHeight: 16),
-                child: Text('$totalBadge',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800),
-                    textAlign: TextAlign.center),
+                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                child: Text(
+                  '$totalBadge',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
         ],
@@ -710,71 +761,26 @@ class _ShellScreenState extends State<ShellScreen>
   // ── Phone "Mehr" sheet — grouped, not a cramped grid ───────────────────────
 
   void _openMoreSheet(List<NavSection> sections) {
-    final cs = Theme.of(context).colorScheme;
-    // Only sections/items that aren't already reachable via the bottom bar.
-    final groups = [
-      for (final s in sections)
-        NavSection(s.title, [for (final i in s.items) if (!i.primary) i]),
-    ].where((s) => s.items.isNotEmpty).toList();
-
-    showModalBottomSheet(
+    final currentRoute = GoRouterState.of(context).matchedLocation;
+    showModalBottomSheet<void>(
       context: context,
-      backgroundColor: cs.surface,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      useSafeArea: true,
+      builder: (ctx) => FractionallySizedBox(
+        heightFactor: 0.92,
+        child: ModuleSheet(
+          sections: sections,
+          currentRoute: currentRoute,
+          onSelect: (item) {
+            Navigator.pop(ctx);
+            _openItem(item);
+          },
+          onLogout: () {
+            Navigator.pop(ctx);
+            _confirmLogout(context);
+          },
+        ),
       ),
-      builder: (ctx) {
-        return SafeArea(
-          top: false,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(ctx).size.height * 0.85,
-            ),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(12, 4, 12, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (final section in groups) ...[
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 12, 8, 8),
-                      child: Text(
-                        section.title.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.6,
-                          color: cs.onSurfaceVariant.withValues(alpha: 0.75),
-                        ),
-                      ),
-                    ),
-                    GridView.count(
-                      shrinkWrap: true,
-                      crossAxisCount: 4,
-                      mainAxisSpacing: 8,
-                      crossAxisSpacing: 8,
-                      childAspectRatio: 0.82,
-                      physics: const NeverScrollableScrollPhysics(),
-                      children: [
-                        for (final item in section.items)
-                          _MoreGridTile(
-                            item: item,
-                            onTap: () {
-                              Navigator.pop(ctx);
-                              _openItem(item);
-                            },
-                          ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -786,11 +792,13 @@ class _ShellScreenState extends State<ShellScreen>
         content: const Text('Möchten Sie sich wirklich abmelden?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Abbrechen')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Abbrechen'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Abmelden')),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Abmelden'),
+          ),
         ],
       ),
     );
@@ -852,9 +860,13 @@ class _SidebarNavTile extends StatelessWidget {
               children: [
                 Badge(
                   isLabelVisible: item.badge > 0,
-                  label: Text('${item.badge}',
-                      style: const TextStyle(
-                          fontSize: 9, fontWeight: FontWeight.w700)),
+                  label: Text(
+                    '${item.badge}',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   backgroundColor: AppTheme.danger,
                   child: Icon(
                     isSelected ? item.selectedIcon : item.icon,
@@ -869,8 +881,9 @@ class _SidebarNavTile extends StatelessWidget {
                       item.label,
                       style: TextStyle(
                         fontSize: 13.5,
-                        fontWeight:
-                            isSelected ? FontWeight.w700 : FontWeight.w500,
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
                         color: disabled
                             ? cs.onSurfaceVariant.withValues(alpha: 0.5)
                             : (isSelected ? accent : cs.onSurface),
@@ -878,8 +891,7 @@ class _SidebarNavTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  if (disabled)
-                    _soonChip(cs),
+                  if (disabled) _soonChip(cs),
                 ],
               ],
             ),
@@ -890,109 +902,23 @@ class _SidebarNavTile extends StatelessWidget {
   }
 
   Widget _soonChip(ColorScheme cs) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text('bald',
-            style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                color: cs.onSurfaceVariant)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    decoration: BoxDecoration(
+      color: cs.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Text(
+      'bald',
+      style: TextStyle(
+        fontSize: 9,
+        fontWeight: FontWeight.w700,
+        color: cs.onSurfaceVariant,
+      ),
+    ),
+  );
 }
 
 // ── Phone "Mehr" grid tile ───────────────────────────────────────────────────
-
-class _MoreGridTile extends StatelessWidget {
-  final NavItem item;
-  final VoidCallback onTap;
-  const _MoreGridTile({required this.item, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final disabled = item.comingSoon;
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Opacity(
-                opacity: disabled ? 0.5 : 1,
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [item.color, item.color.withValues(alpha: 0.72)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color:
-                            item.color.withValues(alpha: isDark ? 0.25 : 0.32),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Icon(item.selectedIcon, color: Colors.white, size: 26),
-                ),
-              ),
-              if (item.badge > 0)
-                Positioned(
-                  top: -5,
-                  right: -5,
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppTheme.danger,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                          color:
-                              isDark ? const Color(0xFF1A1D27) : Colors.white,
-                          width: 1.5),
-                    ),
-                    child: Text('${item.badge}',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800)),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 7),
-          Text(
-            item.label,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w600,
-              color: disabled
-                  ? cs.onSurfaceVariant.withValues(alpha: 0.6)
-                  : cs.onSurface,
-              height: 1.2,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Notification bottom sheet ──────────────────────────────────────────────────
 
 class _NotificationSheet extends StatefulWidget {
   final int newIntakes;
@@ -1021,11 +947,14 @@ class _NotificationSheetState extends State<_NotificationSheet>
   void initState() {
     super.initState();
     _entryCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 350));
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
     _fadeAnim = CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOut);
-    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero)
-        .animate(
-            CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOutCubic));
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.15),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _entryCtrl, curve: Curves.easeOutCubic));
     _entryCtrl.forward();
   }
 
@@ -1050,90 +979,109 @@ class _NotificationSheetState extends State<_NotificationSheet>
             ),
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Container(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
                     width: 40,
                     height: 4,
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(2))),
-                Row(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Benachrichtigungen',
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700)),
+                      Text(
+                        'Benachrichtigungen',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
                       if (hasAny)
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
                           decoration: BoxDecoration(
                             color: AppTheme.danger.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                              '${widget.newIntakes + widget.birthdayCount} neu',
-                              style: const TextStyle(
-                                  color: AppTheme.danger,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700)),
+                            '${widget.newIntakes + widget.birthdayCount} neu',
+                            style: const TextStyle(
+                              color: AppTheme.danger,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
-                    ]),
-                const SizedBox(height: 16),
-                if (!hasAny)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24),
-                    child: Column(children: [
-                      Icon(Icons.notifications_none_rounded,
-                          size: 48,
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant),
-                      const SizedBox(height: 8),
-                      Text('Keine neuen Benachrichtigungen',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  if (!hasAny)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.notifications_none_rounded,
+                            size: 48,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Keine neuen Benachrichtigungen',
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
                                   color: Theme.of(context)
                                       .colorScheme
-                                      .onSurfaceVariant)),
-                    ]),
-                  ),
-                ...widget.pendingIntakes.map((intake) {
-                  final ownerFirst =
-                      intake['owner_first_name'] as String? ?? '';
-                  final ownerLast = intake['owner_last_name'] as String? ?? '';
-                  final ownerName = '$ownerFirst $ownerLast'.trim();
-                  final petName = intake['patient_name'] as String? ?? '';
-                  final species = intake['patient_species'] as String? ?? '';
-                  final subtitle = [
-                    if (petName.isNotEmpty) petName,
-                    if (species.isNotEmpty) species,
-                  ].join(' · ');
-                  return _NotifTile(
-                    icon: Icons.assignment_ind_rounded,
-                    color: AppTheme.primary,
-                    title: ownerName.isNotEmpty ? ownerName : 'Neue Anmeldung',
-                    subtitle: subtitle.isNotEmpty
-                        ? subtitle
-                        : 'Zur Bestätigung antippen',
-                    onTap: () => widget.onTap('/anmeldungen/${intake['id']}'),
-                  );
-                }),
-                if (widget.birthdayCount > 0)
-                  _NotifTile(
-                    icon: Icons.cake_rounded,
-                    color: AppTheme.secondary,
-                    title:
-                        '${widget.birthdayCount} Geburtstag${widget.birthdayCount == 1 ? '' : 'e'} heute!',
-                    subtitle:
-                        'Tier${widget.birthdayCount == 1 ? '' : 'e'} haben heute Geburtstag',
-                    onTap: () => widget.onTap('/patienten'),
-                  ),
-              ]),
+                                      .onSurfaceVariant,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ...widget.pendingIntakes.map((intake) {
+                    final ownerFirst =
+                        intake['owner_first_name'] as String? ?? '';
+                    final ownerLast =
+                        intake['owner_last_name'] as String? ?? '';
+                    final ownerName = '$ownerFirst $ownerLast'.trim();
+                    final petName = intake['patient_name'] as String? ?? '';
+                    final species = intake['patient_species'] as String? ?? '';
+                    final subtitle = [
+                      if (petName.isNotEmpty) petName,
+                      if (species.isNotEmpty) species,
+                    ].join(' · ');
+                    return _NotifTile(
+                      icon: Icons.assignment_ind_rounded,
+                      color: AppTheme.primary,
+                      title: ownerName.isNotEmpty
+                          ? ownerName
+                          : 'Neue Anmeldung',
+                      subtitle: subtitle.isNotEmpty
+                          ? subtitle
+                          : 'Zur Bestätigung antippen',
+                      onTap: () => widget.onTap('/anmeldungen/${intake['id']}'),
+                    );
+                  }),
+                  if (widget.birthdayCount > 0)
+                    _NotifTile(
+                      icon: Icons.cake_rounded,
+                      color: AppTheme.secondary,
+                      title:
+                          '${widget.birthdayCount} Geburtstag${widget.birthdayCount == 1 ? '' : 'e'} heute!',
+                      subtitle:
+                          'Tier${widget.birthdayCount == 1 ? '' : 'e'} haben heute Geburtstag',
+                      onTap: () => widget.onTap('/patienten'),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -1147,12 +1095,13 @@ class _NotifTile extends StatelessWidget {
   final Color color;
   final String title, subtitle;
   final VoidCallback onTap;
-  const _NotifTile(
-      {required this.icon,
-      required this.color,
-      required this.title,
-      required this.subtitle,
-      required this.onTap});
+  const _NotifTile({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1166,30 +1115,40 @@ class _NotifTile extends StatelessWidget {
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Row(children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
+            child: Row(
+              children: [
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
                     color: color.withValues(alpha: 0.15),
-                    shape: BoxShape.circle),
-                child: Icon(icon, color: color, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: color, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
                   child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                    Text(title,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
                         style: TextStyle(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 14,
-                            color: color)),
-                    Text(subtitle,
-                        style: Theme.of(context).textTheme.bodySmall),
-                  ])),
-              Icon(Icons.chevron_right_rounded, color: color, size: 18),
-            ]),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: color,
+                        ),
+                      ),
+                      Text(
+                        subtitle,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, color: color, size: 18),
+              ],
+            ),
           ),
         ),
       ),

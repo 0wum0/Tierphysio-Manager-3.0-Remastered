@@ -10,6 +10,8 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+def previewBuild = providers.gradleProperty('previewBuild').orNull == 'true' || System.getenv('THERAPANO_PREVIEW') == 'true'
+
 android {
     namespace "de.tierphysio.manager"
     compileSdk flutter.compileSdkVersion
@@ -26,7 +28,8 @@ android {
     }
 
     defaultConfig {
-        applicationId "de.tierphysio.manager"
+        applicationId previewBuild ? "de.tierphysio.manager.preview" : "de.tierphysio.manager"
+        manifestPlaceholders = [appLabel: previewBuild ? "TheraPano Vorschau" : "TheraPano"]
         minSdkVersion flutter.minSdkVersion
         targetSdk flutter.targetSdkVersion
         versionCode flutter.versionCode
@@ -44,7 +47,7 @@ android {
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            signingConfig previewBuild ? signingConfigs.debug : signingConfigs.release
             minifyEnabled false
             shrinkResources false
         }
