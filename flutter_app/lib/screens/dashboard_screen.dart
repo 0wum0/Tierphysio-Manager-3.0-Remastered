@@ -85,21 +85,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: _loading
           ? _buildShimmer()
           : _error != null
-          ? _ErrorView(error: _error!, onRetry: _load)
-          : Column(
-              children: [
-                _UpdateBanner(),
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _load,
-                    child: LayoutBuilder(
-                      builder: (_, constraints) =>
-                          _buildContent(constraints.maxWidth),
+              ? _ErrorView(error: _error!, onRetry: _load)
+              : Column(
+                  children: [
+                    _UpdateBanner(),
+                    Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: _load,
+                        child: LayoutBuilder(
+                          builder: (_, constraints) =>
+                              _buildContent(constraints.maxWidth),
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
-            ),
     );
   }
 
@@ -339,32 +339,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 12, 6),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.calendar_month_rounded,
-                  size: 18,
-                  color: AppTheme.tertiary,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Terminvorschau',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.tertiary,
-                      fontSize: 14,
-                    ),
+            child: SizedBox(
+              width: double.infinity,
+              child: Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 8,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.calendar_month_rounded,
+                          size: 18, color: AppTheme.tertiary),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text('Terminvorschau',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.tertiary,
+                              fontSize: 14,
+                            )),
+                      ),
+                    ],
                   ),
-                ),
-                TextButton(
-                  onPressed: () => context.go('/kalender'),
-                  child: const Text('Kalender'),
-                ),
-              ],
+                  TextButton(
+                    onPressed: () => context.go('/kalender'),
+                    child: const Text('Kalender'),
+                  ),
+                ],
+              ),
             ),
           ),
           const Divider(height: 1),
@@ -413,7 +418,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Icon(
                     Icons.event_available_rounded,
                     size: 18,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurfaceVariant
                         .withValues(alpha: 0.5),
                   ),
                   const SizedBox(width: 8),
@@ -453,7 +460,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       vertical: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurfaceVariant
                           .withValues(alpha: 0.10),
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -507,26 +516,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildQuickActions() => Wrap(
-    spacing: 10,
-    runSpacing: 10,
-    children: [
-      FilledButton.icon(
-        onPressed: () => context.push('/patienten/neu'),
-        icon: const Icon(Icons.add_rounded, size: 20),
-        label: Text(_t.isTrainer ? 'Hund anlegen' : 'Patient anlegen'),
-      ),
-      OutlinedButton.icon(
-        onPressed: () => context.push('/rechnungen/neu'),
-        icon: const Icon(Icons.receipt_long_outlined, size: 20),
-        label: const Text('Neue Rechnung'),
-      ),
-      TextButton.icon(
-        onPressed: () => context.go('/kalender'),
-        icon: const Icon(Icons.calendar_month_outlined, size: 20),
-        label: const Text('Zum Kalender'),
-      ),
-    ],
-  );
+        spacing: 10,
+        runSpacing: 10,
+        children: [
+          FilledButton.icon(
+            onPressed: () => context.push('/patienten/neu'),
+            icon: const Icon(Icons.add_rounded, size: 20),
+            label: Text(_t.isTrainer ? 'Hund anlegen' : 'Patient anlegen'),
+          ),
+          OutlinedButton.icon(
+            onPressed: () => context.push('/rechnungen/neu'),
+            icon: const Icon(Icons.receipt_long_outlined, size: 20),
+            label: const Text('Neue Rechnung'),
+          ),
+          TextButton.icon(
+            onPressed: () => context.go('/kalender'),
+            icon: const Icon(Icons.calendar_month_outlined, size: 20),
+            label: const Text('Zum Kalender'),
+          ),
+        ],
+      );
 
   Widget _waitlistPreview() {
     return Container(
@@ -607,8 +616,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final greeting = now.hour < 12
         ? 'Guten Morgen'
         : now.hour < 18
-        ? 'Guten Tag'
-        : 'Guten Abend';
+            ? 'Guten Tag'
+            : 'Guten Abend';
     final name = (d['user_name'] as String? ?? '').trim();
     final appointments = (d['today_apts'] as num?)?.toInt() ?? 0;
     return Container(
@@ -647,7 +656,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 20),
           Text(
             name.isEmpty ? greeting : '$greeting,\n$name',
-            style: Theme.of(context).textTheme.headlineSmall
+            style: Theme.of(context)
+                .textTheme
+                .headlineSmall
                 ?.copyWith(color: Colors.white, height: 1.25),
           ),
           const SizedBox(height: 12),
@@ -700,9 +711,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final largeText = MediaQuery.textScalerOf(context).scale(14) > 20;
-        final columns = isTablet
-            ? 4
-            : (largeText && constraints.maxWidth < 380 ? 1 : 2);
+        final columns =
+            isTablet ? 4 : (largeText && constraints.maxWidth < 380 ? 1 : 2);
         return Wrap(
           spacing: 12,
           runSpacing: 12,
@@ -726,14 +736,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Widget trend(double value, String suffix) {
       final up = value > 0;
       final down = value < 0;
-      final color = up
-          ? AppTheme.success
-          : (down ? AppTheme.danger : Colors.grey);
+      final color =
+          up ? AppTheme.success : (down ? AppTheme.danger : Colors.grey);
       final txt = up
           ? '▲ ${value.toStringAsFixed(1)}%'
           : down
-          ? '▼ ${value.abs().toStringAsFixed(1)}%'
-          : '—';
+              ? '▼ ${value.abs().toStringAsFixed(1)}%'
+              : '—';
       return Text(
         '$txt $suffix',
         style: TextStyle(
@@ -910,10 +919,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final maxY = months.isEmpty
         ? 1000.0
         : (months
-                      .map((m) => _toDouble(m['revenue']))
-                      .reduce((a, b) => a > b ? a : b) *
-                  1.2)
-              .clamp(100.0, double.infinity);
+                    .map((m) => _toDouble(m['revenue']))
+                    .reduce((a, b) => a > b ? a : b) *
+                1.2)
+            .clamp(100.0, double.infinity);
 
     return _ChartCard(
       title: 'Umsatz (6 Monate)',
@@ -1184,20 +1193,20 @@ class _AppointmentCard extends StatelessWidget {
   }
 
   String _statusLabel(String? s) => switch (s) {
-    'confirmed' => 'Bestätigt',
-    'completed' => 'Fertig',
-    'cancelled' => 'Abgesagt',
-    'noshow' => 'Nicht da',
-    _ => 'Geplant',
-  };
+        'confirmed' => 'Bestätigt',
+        'completed' => 'Fertig',
+        'cancelled' => 'Abgesagt',
+        'noshow' => 'Nicht da',
+        _ => 'Geplant',
+      };
 
   Color _statusColor(String? s) => switch (s) {
-    'confirmed' => AppTheme.success,
-    'completed' => AppTheme.tertiary,
-    'cancelled' => AppTheme.danger,
-    'noshow' => AppTheme.warning,
-    _ => AppTheme.primary,
-  };
+        'confirmed' => AppTheme.success,
+        'completed' => AppTheme.tertiary,
+        'cancelled' => AppTheme.danger,
+        'noshow' => AppTheme.warning,
+        _ => AppTheme.primary,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -1692,7 +1701,9 @@ class _ErrorView extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               'Fehler',
-              style: Theme.of(context).textTheme.titleMedium
+              style: Theme.of(context)
+                  .textTheme
+                  .titleMedium
                   ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
@@ -1845,7 +1856,9 @@ class _UpdateSheetState extends State<_UpdateSheet> {
                     children: [
                       Text(
                         'Update verfügbar',
-                        style: Theme.of(context).textTheme.titleMedium
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
                             ?.copyWith(fontWeight: FontWeight.w700),
                       ),
                       Text(

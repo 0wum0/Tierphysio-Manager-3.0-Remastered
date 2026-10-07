@@ -19,44 +19,44 @@ class DashboardApi extends ApiService {
   final Future<Map<String, dynamic>>? pending;
   DashboardApi({this.pending});
   @override
-  Future<Map<String, dynamic>> dashboard() async =>
-      pending ??
-      {
-        'user_name': 'Mara Schneider',
-        'patients_total': 128,
-        'owners_total': 86,
-        'appointments_today': 3,
-        'appointments_upcoming': 12,
-        'revenue_week': '1250.50',
-        'revenue_month': 5480,
-        'revenue_year': 48250,
-        'revenue_total': 156780.50,
-        'revenue_month_change': 12.5,
-        'revenue_year_change': -3.2,
-        'open_invoices': 4,
-        'open_invoices_amount': 640,
-        'overdue_invoices': 2,
-        'overdue_invoices_amount': 120,
-        'today_appointments': [
-          {
-            'id': 1,
-            'patient_id': 1,
-            'patient_name': 'Luna',
-            'title': 'Physiotherapie',
-            'owner_name': 'Lisa Weber',
-            'start_at': '2026-10-07 10:00:00',
-            'end_at': '2026-10-07 11:00:00',
-            'status': 'confirmed',
-          },
-        ],
-        'monthly_revenue': [
-          for (var month = 5; month <= 10; month++)
+  Future<Map<String, dynamic>> dashboard() async => pending != null
+      ? await pending!
+      : <String, dynamic>{
+          'user_name': 'Mara Schneider',
+          'patients_total': 128,
+          'owners_total': 86,
+          'today_apts': 1,
+          'upcoming_apts': 12,
+          'revenue_week': '1250.50',
+          'revenue_month': 5480,
+          'revenue_year': 48250,
+          'revenue_total': 156780.50,
+          'revenue_month_change': 12.5,
+          'revenue_year_change': -3.2,
+          'open_invoices': 4,
+          'open_invoices_amount': 640,
+          'overdue_invoices': 2,
+          'overdue_invoices_amount': 120,
+          'today_appointments': [
             {
-              'month': '2026-${month.toString().padLeft(2, '0')}',
-              'revenue': 2500,
+              'id': 1,
+              'patient_id': 1,
+              'patient_name': 'Luna',
+              'title': 'Physiotherapie',
+              'owner_name': 'Lisa Weber',
+              'start_at': '2026-10-07 10:00:00',
+              'end_at': '2026-10-07 11:00:00',
+              'status': 'confirmed',
             },
-        ],
-      };
+          ],
+          'monthly_revenue': [
+            for (var month = 5; month <= 10; month++)
+              {
+                'month': '2026-${month.toString().padLeft(2, '0')}',
+                'revenue': 2500,
+              },
+          ],
+        };
   @override
   Future<Map<String, dynamic>> analytics() async => {};
   @override

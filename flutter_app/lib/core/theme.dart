@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -97,9 +98,8 @@ class AppTheme {
         scrolledUnderElevation: 0.5,
         backgroundColor: cs.surface,
         foregroundColor: cs.onSurface,
-        systemOverlayStyle: isDark
-            ? SystemUiOverlayStyle.light
-            : SystemUiOverlayStyle.dark,
+        systemOverlayStyle:
+            isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
         titleTextStyle: TextStyle(
           fontFamily: 'Inter',
           fontSize: 20,
@@ -166,7 +166,8 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          textStyle: textTheme.labelLarge
+              ?.copyWith(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -212,6 +213,7 @@ class AppTheme {
         labelTextStyle: WidgetStateProperty.resolveWith((s) {
           final selected = s.contains(WidgetState.selected);
           return TextStyle(
+            fontFamily: 'Inter',
             fontSize: 10,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
             color: selected ? primary : cs.onSurfaceVariant,
@@ -226,9 +228,8 @@ class AppTheme {
         }),
       ),
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: isDark
-            ? const Color(0xFF12141E)
-            : const Color(0xFFEFF2FF),
+        backgroundColor:
+            isDark ? const Color(0xFF12141E) : const Color(0xFFEFF2FF),
         indicatorColor: primary.withValues(alpha: 0.13),
         indicatorShape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -236,11 +237,13 @@ class AppTheme {
         selectedIconTheme: const IconThemeData(color: primary),
         unselectedIconTheme: IconThemeData(color: cs.onSurfaceVariant),
         selectedLabelTextStyle: const TextStyle(
+          fontFamily: 'Inter',
           color: primary,
           fontWeight: FontWeight.w700,
           fontSize: 12,
         ),
         unselectedLabelTextStyle: TextStyle(
+          fontFamily: 'Inter',
           color: cs.onSurfaceVariant,
           fontSize: 12,
         ),
@@ -254,9 +257,8 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        backgroundColor: isDark
-            ? const Color(0xFF22263A)
-            : const Color(0xFF1E2234),
+        backgroundColor:
+            isDark ? const Color(0xFF22263A) : const Color(0xFF1E2234),
         contentTextStyle: TextStyle(
           fontFamily: 'Inter',
           color: Colors.white,

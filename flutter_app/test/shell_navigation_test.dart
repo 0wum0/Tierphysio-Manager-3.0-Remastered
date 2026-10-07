@@ -22,7 +22,7 @@ void main() {
         initialLocation: '/dashboard',
         routes: [
           ShellRoute(
-            builder: (_, _, child) =>
+            builder: (_, __, child) =>
                 ShellScreen(backgroundTasks: false, child: child),
             routes: [
               for (final route in [
@@ -33,7 +33,7 @@ void main() {
               ])
                 GoRoute(
                   path: route,
-                  builder: (_, _) => Scaffold(body: Text(route)),
+                  builder: (_, __) => Scaffold(body: Text(route)),
                 ),
             ],
           ),
