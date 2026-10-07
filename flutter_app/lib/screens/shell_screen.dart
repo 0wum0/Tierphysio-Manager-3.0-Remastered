@@ -22,7 +22,12 @@ const double _kSidebarExpanded = 248.0;
 
 class ShellScreen extends StatefulWidget {
   final Widget child;
-  const ShellScreen({super.key, required this.child});
+  final bool backgroundTasks;
+  const ShellScreen({
+    super.key,
+    required this.child,
+    this.backgroundTasks = true,
+  });
 
   @override
   State<ShellScreen> createState() => _ShellScreenState();
@@ -36,8 +41,8 @@ class _ShellScreenState extends State<ShellScreen>
   int _newIntakes = 0;
   int _birthdayCount = 0;
   List<Map<String, dynamic>> _pendingIntakes = [];
-  late Timer _clockTimer;
-  late Timer _connectivityTimer;
+  Timer? _clockTimer;
+  Timer? _connectivityTimer;
   DateTime _now = DateTime.now();
   bool _isOffline = false;
 
@@ -54,24 +59,26 @@ class _ShellScreenState extends State<ShellScreen>
   @override
   void initState() {
     super.initState();
-    _pollUnread();
-    _loadOverdue();
-    _pollNotifications();
-    _clockTimer = Timer.periodic(const Duration(minutes: 1), (_) {
-      if (mounted) setState(() => _now = DateTime.now());
-    });
-    NotificationService.requestPermission();
-    NotificationService.onTap = (route) {
-      if (mounted) context.go(route);
-    };
-    _checkConnectivity();
-    _connectivityTimer = Timer.periodic(const Duration(seconds: 10), (_) {
-      if (mounted) _checkConnectivity();
-    });
-    // Auto 2-Wege-Sync beim App-Start (still im Hintergrund)
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) _autoGoogleSync();
-    });
+    if (widget.backgroundTasks) {
+      _pollUnread();
+      _loadOverdue();
+      _pollNotifications();
+      _clockTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+        if (mounted) setState(() => _now = DateTime.now());
+      });
+      NotificationService.requestPermission();
+      NotificationService.onTap = (route) {
+        if (mounted) context.go(route);
+      };
+      _checkConnectivity();
+      _connectivityTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+        if (mounted) _checkConnectivity();
+      });
+      // Auto 2-Wege-Sync beim App-Start (still im Hintergrund)
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted) _autoGoogleSync();
+      });
+    }
 
     _sidebarCtrl = AnimationController(
       vsync: this,
@@ -98,8 +105,8 @@ class _ShellScreenState extends State<ShellScreen>
 
   @override
   void dispose() {
-    _clockTimer.cancel();
-    _connectivityTimer.cancel();
+    _clockTimer?.cancel();
+    _connectivityTimer?.cancel();
     _sidebarCtrl.dispose();
     _bellCtrl.dispose();
     super.dispose();
@@ -240,24 +247,9 @@ class _ShellScreenState extends State<ShellScreen>
     }
   }
 
-  Widget _animatedContent(String location) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 260),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      transitionBuilder: (child, animation) {
-        final slide = Tween<Offset>(
-          begin: const Offset(0.02, 0),
-          end: Offset.zero,
-        ).animate(animation);
-        return FadeTransition(
-          opacity: animation,
-          child: SlideTransition(position: slide, child: child),
-        );
-      },
-      child: KeyedSubtree(key: ValueKey<String>(location), child: widget.child),
-    );
-  }
+  // GoRouter owns the Navigator and its page transitions. Keeping two copies
+  // in an AnimatedSwitcher would duplicate its GlobalKey during navigation.
+  Widget _animatedContent(String location) => widget.child;
 
   @override
   Widget build(BuildContext context) {
@@ -534,9 +526,16 @@ class _ShellScreenState extends State<ShellScreen>
                     color: cs.onSurfaceVariant,
                   ),
                   const SizedBox(width: 8),
-                  Text(
-                    _term().searchHint(),
-                    style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant),
+                  Expanded(
+                    child: Text(
+                      _term().searchHint(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
                   ),
                 ],
               ),
