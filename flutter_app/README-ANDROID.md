@@ -18,7 +18,8 @@ nicht um eine separate Demo mit erfundenen Patientendaten.
 
 ## Reproduzierbarer Build
 
-Voraussetzungen: Flutter **3.47.6**, Java **17**, Android-SDK.
+Voraussetzungen: Flutter **3.47.6**, ein vollständiges **Java-17-JDK** mit `javac`
+(eine reine Java-Laufzeit reicht nicht aus) und das Android-SDK.
 Der Wrapper nutzt Gradle **8.14.3**, AGP **8.11.1** und Kotlin **2.2.20**. Die benötigten
 Android-/NDK-Versionen werden von Flutter und Gradle festgelegt.
 
