@@ -457,7 +457,8 @@ $router->get('/profil', [ProfileController::class, 'show'], ['auth']);
 $router->post('/profil', [ProfileController::class, 'update'], ['auth']);
 $router->post('/profil/password', [ProfileController::class, 'updatePassword'], ['auth']);
 
-$router->post('/api/onboarding/complete', function () use ($app) {
+$router->post('/api/onboarding/complete', function () {
+    $app       = \App\Core\Application::getInstance();
     $session   = $app->getContainer()->get(\App\Core\Session::class);
     $db        = $app->getContainer()->get(\App\Core\Database::class);
     $userId    = (int)($session->get('user_id') ?? 0);
