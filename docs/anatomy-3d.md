@@ -1,8 +1,97 @@
 # 3D-Schmerzanalyse: Modelle und Landmarken
 
+## Atlas-Erweiterung (6. Oktober 2026)
+
+Der Button **Anatomie-Atlas** im segmentierten Hundemodell öffnet einen
+durchsuchbaren Modellkatalog. Gewebe, Körperseite und Verfügbarkeit sind filterbar.
+225 Muskelstrukturen und vier benannte Gewebeflächen öffnen die bestehende
+Schmerzerfassung mit Freistellung. Haut und kosmetisches Fell öffnen die jeweilige
+Schicht. Skelettteile sind zur Orientierung separat anzeigbar, ohne neue
+Knochenbefunde in bestehende Muskel-IDs zu schreiben.
+
+### Skelett
+
+`Hund-Skelett-Atlas.glb` enthält die **160 getrennten Skelett-Quellflächen** von
+MusculoskeletalDog, Revision `2e87897e78cc99ecfcab930869a5b68c0fb1605a` (MIT).
+Das sind ausdrücklich **nicht 160 anatomisch einzeln segmentierte Knochen**:
+Brustkorb, Schädel und Becken sind bereits in der Quelle zusammengefasste Teile.
+Nicht eindeutig zuordenbare Zehen-/Fußwurzelteile behalten ihre Quellbezeichnung.
+Keine erfundenen Zehennummern oder fachlich ungeprüften Umbenennungen.
+
+Die Geometrie verwendet dieselben SKN-Bindepositionen und XML-Geometrieoffsets
+wie das bisherige Skelett, anschließend die Achsenumsetzung `(y,z,x)`.
+Die Elterntransformation des Muskelmodells bleibt maßgeblich. Das Detailmodell
+hat 1.273.040 Bytes und wird erst bei Auswahl eines Skelettteils geladen. Der
+Erstaufruf lädt weiterhin nur das kompakte bisherige Skelett. Während der Atlas-Einzelansicht
+ist das kompakte Skelett ausgeblendet. Bei der Rückkehr zur Schmerzanalyse wird
+wieder das kompakte Skelett verwendet; die Detailflächen bleiben ausgeblendet.
+So entstehen keine doppelten Flächen oder zusätzlichen Skelett-Drawcalls im
+normalen Befundmodus.
+Web und Flutter enthalten identische Atlasmodule und GLB-Bytes.
+
+Jede Fläche trägt `atlasId`, `sourceName` und `anatomyLayer: skeleton`.
+Der Loader prüft vollständige, eindeutige Übereinstimmung mit dem Quellkatalog.
+Die Atlas-ID ist vom bestehenden `muscleId`- und Schmerzspeicherschema getrennt.
+Auswahl, Modellwechsel und verzögerte Requests können keine veraltete
+Skelettauswahl auf eine andere Tierart übertragen.
+
+Reproduktion (Python 3 und glTF Transform 4.5.1):
+
+```sh
+python scripts/convert-canine-skeleton-atlas.py /path/to/MusculoskeletalDog /tmp/skeleton-raw.glb public/assets/js/anatomy-dog-bones.js
+gltf-transform optimize /tmp/skeleton-raw.glb public/assets/3D/Hund-Skelett-Atlas.glb --compress meshopt --simplify-ratio 0.25 --simplify-error 0.0005 --join false --instance false --flatten false --palette false
+```
+
+Anschließend GLB und Katalog in die entsprechenden Flutter-Verzeichnisse spiegeln.
+Die Vereinfachung behält die Identität aller Quellflächen; Grenzwerte sind
+numerische Optimierungsparameter, keine klinische Genauigkeitszusage.
+
+### Faszienbestand und offene Modellierung
+
+**Diese Erweiterung ist kein vollständiges Fasziennetz und kein vollständiger
+veterinäranatomischer Atlas.** Es wurden keine fehlenden Faszien als vergrößerte
+Muskeloberflächen oder geschrumpfte Haut simuliert. Die Literatur belegt die
+Anatomie, liefert aber keine zu diesem Hund kalibrierte vollständige Geometrie.
+
+| Struktur / System | 3D-Stand | Atlas-Verhalten |
+|---|---|---|
+| Fascia thoracolumbalis | Benannte Quellfläche | Auswahl und Schmerzbefund |
+| Bauchwandaponeurose | Benannte Quellfläche | Auswahl und Schmerzbefund |
+| Biceps-femoris-Sehnenflächen | Zwei benannte Quellflächen | Auswahl und Schmerzbefund |
+| Fascia lata | Zwei uneindeutige Quellflächen; kein vollständiges Modell | Referenz, keine neue Befund-ID |
+| Oberflächliche und tiefe Faszie; Epimysium | Keine separaten vollständigen Flächen | Referenz, „3D-Fläche fehlt“ |
+| Oberflächliche/tiefe Glutealfaszie; Fascia cruris; Fascia antebrachii | Keine zugeordneten Flächen | Referenz, „3D-Fläche fehlt“ |
+| Muskeln | 225 Quellstrukturen; keine Vollständigkeitszusage | Modellkatalog und Schmerzbefund |
+| Haut/Fell | Außenfläche / kosmetische Haare | Schichtauswahl; keine mikroskopischen Hautschichten |
+| Gelenkknorpel, Kapseln, vollständiger Bandapparat | Nicht separat vollständig vorhanden | Kein Vollständigkeitsversprechen |
+| Nerven, Gefäße, innere Organe | Kein vollständiges Geometriemodell | Nicht als verfügbare Atlassysteme ausgewiesen |
+
+Die acht Faszien-Referenzeinträge sind eine begrenzte, belegte regionale
+Arbeitsliste. Auch diese Liste wird nicht als vollständige Fasziennomenklatur
+ausgegeben. Fehlende Geometrie ist nicht anklickbar im Körper und nicht mit
+einem Schmerzbefund belegbar. Quellen sind in jeder Atlaskarte zugänglich;
+die Quellentexte, Fotos und Präparationsbilder wurden nicht ins Produkt kopiert.
+
+Quellen:
+
+- Ahmed et al. (2019), *A comparative multi-site and whole-body assessment of
+  fascia in the horse and dog: a detailed histological investigation*,
+  DOI 10.1111/joa.13064: https://pubmed.ncbi.nlm.nih.gov/31402460/
+- University of Minnesota, Carnivore Anatomy Lab 5:
+  https://vanat.ahc.umn.edu/carnLabs/Lab05/Lab05.html
+- University of Minnesota, Distal Thoracic Limb:
+  https://open.lib.umn.edu/dogcatanatomylabguide/chapter/part-4-distal-thoracic-limb/
+- University of Minnesota, Distal Pelvic Limb:
+  https://pressbooks.umn.edu/dogcatanatomylabguide/chapter/part-3-distal-pelvic-limb/
+
+Für die Fertigstellung des gesamten Fasziennetzes sind separat segmentierte,
+rechtmäßig nutzbare Geometrien in gemeinsamer Körperhaltung sowie eine
+veterinäranatomische Prüfung von Grenzen, Übergängen, Schichttiefe und Benennung
+erforderlich. Der vorliegende Commit schließt diese Lücke nicht.
+
 ## Ursache und Korrektur
 
-Die GLBs sind jeweils **ein einziges texturiertes Mesh**, keine benannten oder
+Die ursprünglichen Regions-GLBs sind jeweils **ein einziges texturiertes Mesh**, keine benannten oder
 segmentierten Einzelmuskeln. Der Hund schaut nach +Z; Katze und Pferd nach -Z.
 Die vorherigen Hundekoordinaten verwendeten die falsche Längsrichtung. Dazu
 projizierte der Viewer Punkte radial vom Körpermittelpunkt auf irgendeinen
@@ -65,10 +154,10 @@ Wichtig: Quantisierte GLBs tragen Dekodierungstransformationen an ihren Nodes.
 Der Viewer normalisiert deshalb eine **übergeordnete Gruppe**, statt die
 GLB-Transformationen zu überschreiben. Beibehalten, auch bei künftigen Assets.
 
-Der Viewer hält nur die drei kleinen komprimierten Dateien im Byte-Cache.
+Der Viewer hält geladene komprimierte Modelldateien im Byte-Cache.
 Beim Wechsel werden GPU-Geometrien, Texturen und ImageBitmaps freigegeben.
 Veraltete Requests können keine neue Tierart/Patientenansicht überschreiben.
-Pixelratio ist auf 1,5 begrenzt; Schattenpässe entfallen. Nur Änderungen lösen
+Pixelratio ist auf 1,5 begrenzt; bei den Regionsmodellen entfallen Schattenpässe. Nur Änderungen lösen
 Rendering und Hover-Auswertung aus. ResizeObserver deckt Modal/Vollbild ab.
 
 ## Reproduktion und Tests
@@ -119,3 +208,250 @@ Die Oberfläche bleibt tiefengeprüft: rückseitige Punkte werden nicht durch de
 Körper hindurch als vermeintlich vordere Punkte angezeigt. Der Browser-Test
 schaltet den Haken aus/an, prüft die Touch-Punktgröße und öffnet jede hinterlegte
 Region in beiden Viewern.
+
+## Muskelflächen (6. Oktober 2026)
+
+Der Hund startet jetzt in der Ansicht **Einzelmuskeln**. `Hund-Muskeln.glb`
+enthält 262 getrennte Oberflächen; davon sind 250 Muskeloberflächen zu 225
+benannten, auswählbaren Strukturen zusammengefasst. Mehrere Teilflächen einer
+Quellstruktur teilen eine Befund-ID. Augen, Nase, Bänder, Sehnen und Faszien
+werden nicht als zusätzliche Muskeln gezählt. Das ist der Umfang dieses
+Quellmodells, keine Behauptung eines vollständigen veterinäranatomischen Atlas.
+Einige Strukturen sind im Quellmodell über die Mittellinie zusammengefasst;
+sie erhalten keine künstlich erfundene Links-/Rechts-Aufteilung.
+
+Quelle: https://github.com/vittorione94/MusculoskeletalDog
+Quellcommit: `2e87897e78cc99ecfcab930869a5b68c0fb1605a`.
+V. La Barbera et al., *Motion Tracking with Muscles: Predictive Control of a
+Parametric Musculoskeletal Canine Model* (2025). MIT-Lizenz liegt in beiden
+Modellpaketen unter `licenses/MusculoskeletalDog-MIT.txt`. Die SKN-Oberflächen
+werden in ihrer globalen Bind-Pose übernommen (Achsenwechsel Y/Z/X). Keine
+Simulation, keine automatische anatomische Segmentierung, kein Übertragen der
+Hundemuskeln auf andere Tierarten. Nomenklaturkorrekturen und Zusammenfassung
+von Teilflächen sind im Konverter nachvollziehbar; Quellnamen bleiben erhalten.
+
+Reproduktion (Python-Standardbibliothek und glTF Transform CLI 4.5.1):
+
+```sh
+python scripts/convert-canine-muscles.py /path/to/MusculoskeletalDog
+npx --yes @gltf-transform/cli@4.5.1 meshopt public/assets/3D/Hund-Muskeln.glb /tmp/Hund-Muskeln.glb
+npx --yes @gltf-transform/cli@4.5.1 simplify public/assets/3D/Hund-Skelett.glb /tmp/skeleton.glb --ratio 0.4 --error 0.001
+npx --yes @gltf-transform/cli@4.5.1 meshopt /tmp/skeleton.glb /tmp/Hund-Skelett.glb
+npx --yes @gltf-transform/cli@4.5.1 meshopt public/assets/3D/Hund-Haut.glb /tmp/Hund-Haut.glb
+cp /tmp/Hund-Muskeln.glb /tmp/Hund-Skelett.glb /tmp/Hund-Haut.glb public/assets/3D/
+cp public/assets/3D/Hund-Muskeln.glb public/assets/3D/Hund-Skelett.glb public/assets/3D/Hund-Haut.glb flutter_app/assets/3d/models/
+cp public/assets/js/anatomy-dog-muscles.js flutter_app/assets/3d/anatomy-dog-muscles.js
+```
+
+Keine `join`-/`flatten`-Optimierung verwenden: benannte Oberflächen und die
+`muscleId`-Metadaten müssen getrennt erhalten bleiben. Das komprimierte zusätzliche
+Muskelmodell misst mit den ergänzten Faser-UVs rund 2,04 MB. Die kleine
+Fasertextur wird lokal erzeugt und benötigt keinen Download. Materialien
+werden pro Muskeloberfläche geklont, damit ein Befund nicht alle Muskeln färbt.
+Schmerzfarben verwenden dieselbe Skala wie das Formular, mit konstanter leichter
+Eigenleuchtwirkung ohne zusätzlichen Bloom-Renderpass. Unbefundete Muskeln sind
+in natürlichem Rot dargestellt; ein expliziter NRS-0-Befund ist grün und bleibt löschbar.
+
+Direkte Auswahl erfolgt über den ersten sichtbaren Oberflächentreffer. Die
+Auswahlliste enthält auch verdeckte Muskeln und stellt die ausgewählte Struktur
+frei. Der Schalter „Auswahl freistellen“ zeigt den Körperkontext wieder an;
+Schließen des freigestellten Formulars stellt die Gesamtansicht wieder her.
+Zonenpunkte werden nur im bisherigen Regionsmodell verwendet.
+
+**Katze und Pferd haben weiterhin keine segmentierten Muskelmodelle.** Ihre
+44 bzw. 52 Regionen erhalten eine Flächenfärbung durch Zuordnung vorhandener
+Oberflächenvertices zum jeweils nächsten kalibrierten Punkt. Grenzen werden
+interpoliert. Das ist eine regionale Näherung, keine präzise Muskelkontur; der
+Viewer weist darauf sichtbar hin. Hier wurden keine weiteren Muskelpunkte oder
+tiefen Muskelschichten erfunden. Auch das bisherige Hundemodell ist als
+Regionsansicht über den Schalter erreichbar.
+
+Neue Hundebefunde nutzen IDs mit `dog_mesh_`. Alte IDs werden nicht umgedeutet.
+Ein Klick auf einen vorhandenen Befund schaltet bei Bedarf automatisch zum
+passenden Modell. Datenbank und API bleiben kompatibel. Vorschau färbt ohne
+Speichern, Abbrechen stellt gespeicherte Farben wieder her, Entfernen setzt
+zurück auf unbefundet. Beide Pakete enthalten denselben Katalog und dasselbe GLB;
+ein neuer Flutter-Build ist erforderlich.
+
+Erweiterte Browserprüfungen: Zuordnung aller 225 Strukturen zu 250 Meshes,
+direkter Oberflächen-Raycast, unabhängige Gegenseite, Freistellen, NRS 0,
+Farben nach Speichern/Neuladen/Löschen/Abbrechen, regionale Farbattribute,
+Mobilformular sowie bestehende Regions-/API-/Race-/CSP-Regressionstests.
+
+## Katze/Pferd: technische Vorbereitung und fehlende Assets
+
+`anatomy-models.js` registriert segmentierte Modelle getrennt nach Tierart.
+Modellpfad, Katalog und anatomische Linksrichtung sind je Tierart konfigurierbar.
+Flächenauswahl, Farbgebung, Freistellen, Befundliste und Modellwechsel sind damit
+nicht mehr auf Hund-IDs festgelegt. Vor dem Anzeigen wird geprüft, ob jede
+Katalog-ID zu mindestens einer tatsächlichen Mesh-Oberfläche gehört und ob
+Tierart-Präfix, Seitenangabe und Fokuskoordinaten gültig sind. Falsche oder
+unvollständige Zuordnungen zeigen einen Ladefehler statt falsch beschrifteter
+Muskeln. Das prüft die technische Konsistenz, nicht die anatomische Richtigkeit.
+
+Der Browser-Test registriert ausschließlich in seinem eigenen Seitenkontext je
+zwei **synthetische Boxen** für Katze und Pferd. Damit werden Tierart-Routing,
+getrennte Farben, Freistellen und die Ablehnung eines fremden Tierart-Katalogs
+geprüft. Diese Testkörper werden nicht ausgeliefert und sind keine Tiermodelle.
+
+Es sind weiterhin **keine segmentierten Katzen-/Pferde-Assets eingebaut**.
+Recherche und Zugriffstest am 6. Oktober 2026:
+
+- Katze: [Feline Ecorche Dec, westerly](https://sketchfab.com/3d-models/feline-ecorche-dec-4c08824eb4914ff4b6e71b4dc2ba080e).
+  Die öffentliche Sketchfab-v3-Metadaten-API nennt CC BY 4.0 und Downloadbarkeit.
+  Der offizielle Download-Endpunkt antwortet ohne Anmeldung mit HTTP 401.
+  Der Autor bezeichnet es als grobes Übungsmodell und nennt ausgelassene tiefe
+  Muskeln. Deshalb sind nach einem autorisierten Download sowohl Mesh-Aufteilung
+  als auch Nomenklatur und Eignung zu prüfen; vollständige Abdeckung ist nicht
+  zugesagt.
+- Pferd: [Horse Ecorche, Johnson Martin](https://superhivemarket.com/products/horse-ecorche).
+  Die Produktseite beschreibt getrennte, beschriftete Muskelgruppen und Knochen.
+  Kaufmodell; keine Datei heruntergeladen und keine Lizenz erworben. Vor einem
+  Einsatz müssen insbesondere die Rechte zur Auslieferung der 3D-Dateien im Web,
+  in Apps und in diesem öffentlichen Repository feststehen.
+
+Nächster sachlicher Schritt ist daher die Bereitstellung der Katzen-Quelldatei,
+danach die Prüfung/Zuordnung und Integration; entsprechend anschließend beim
+Pferd. Kein deformiertes Hundemodell und keine erfundenen zusätzlichen Punkte
+werden als Katzen-/Pferdeanatomie freigeschaltet.
+
+
+## Hund: Gewebeschichten und Materialien
+
+Das Forschungsmodell enthält nun zusätzlich das zugehörige Skelett und die
+äußere Haut. Alle Schichten stammen aus demselben oben gepinnten MIT-Quellstand.
+Die 160 verwendeten Skelett-Geometrien (ohne doppelte Augen) werden für einen
+Renderaufruf zusammengeführt. Das ist keine Zählung anatomischer Knochen.
+STL-Punkte werden über die lokale Geom-Position und die Body-Bind-Pose aus
+`dog_skin.skn` ausgerichtet. Die XML-Ausgangspose der Simulation ist leicht
+abweichend und wird deshalb nicht als Bind-Pose verwendet. Der Konverter prüft
+die erwarteten Einheitsrotationen und unveränderte Mesh-Skalierung ausdrücklich.
+
+| Datei | Übertragung | Ladezeitpunkt |
+|---|---:|---|
+| Hund-Muskeln.glb | 2,04 MB | Öffnen der Einzelmuskelansicht |
+| Hund-Skelett.glb | 0,51 MB | Anschließend, standardmäßig sichtbar |
+| Hund-Haut.glb | 1,02 MB | Erst beim Einschalten der Haut |
+
+Zusätzliche Schichten werden unter denselben normalisierten Modellknoten
+gehängt. Keine eigene Skalierung/Zentrierung, keine Änderung der 225 Befund-IDs
+oder Fokuskoordinaten. Der Kameraausschnitt berücksichtigt zusätzliche
+Ausdehnungen. Haut verwendet die Original-UVs und den eingebetteten 1024-px-Atlas.
+Die Hautansicht blendet tiefere Geometrien aus, um Überschneidungen zu vermeiden;
+nach dem Ausschalten werden die gewählten Schichten wieder sichtbar. Die
+Freistellung eines Muskels hat Vorrang und wird beim Schließen zurückgenommen.
+
+Unter **Gewebeschichten** lassen sich Haut, vorhandene Faszien, Muskeln,
+Sehnen/Bänder und Skelett schalten. Die Faszien-Deckkraft ist einstellbar.
+Gemeint sind ausschließlich die vorhandenen thorakolumbalen, aponeurotischen
+und faszienassoziierten Quellflächen; kein vollständiges Fasziennetz wurde
+hinzuerfunden. Auch der Schalter beschreibt diese Einschränkung.
+
+`anatomy-materials.js` ergänzt rotbraune Muskeln, helles Bindegewebe und Knochen,
+feine Farb-/Rauheits-/Reliefstruktur sowie dunkle Augen/Nase. Die kleinen
+prozeduralen Texturen sind deterministisch. Ihre Ausrichtung folgt einer
+Hauptachsenprojektion je Mesh: **optische Textur, keine anatomisch vermessenen
+Faserverläufe**. Schmerzfarben ersetzen den Grundfarbton, erhalten aber Relief,
+Textur und Beleuchtung. Die Eigenleuchtwirkung ist reduziert. Neutral bedeutet
+Naturfarbe, während ein gespeicherter NRS 0 weiterhin grün ist.
+
+Hemisphärenlicht, warmes Hauptlicht und ein einzelner 1024-px-Schattenpass geben
+räumliche Orientierung. Rendering bleibt bedarfsgesteuert; kein Bloom und kein
+zusätzlicher Netzwerkdienst. Ein Ladefehler einer Zusatzschicht lässt die
+Muskelansicht benutzbar und erlaubt erneutes Einschalten. Modellwechsel und
+Schließen brechen Requests ab; verspätet dekodierte Schichten werden entsorgt.
+
+Browserprüfungen ergänzen bedarfsweises Hautladen, gemeinsame Transformation,
+Skelettansicht, Schicht-/Deckkraftwechsel, Wiederherstellung nach Freistellung,
+Ladefehler/Wiederholung und Wechsel der Tierart während eines Hautrequests.
+Web und eingebettetes App-Bundle werden geprüft, einschließlich Handybreite.
+Screenshots prüfen zusätzlich Hautatlas, Skelett, Gesamtkörper und Mobilansicht.
+
+**Qualitätsgrenze:** Das ist ein besser dargestelltes Forschungsmodell, kein
+fotorealistischer oder klinisch zertifizierter Anatomieatlas. Die grobe
+Quellgeometrie und einzelne Überschneidungen zwischen Knochen und Muskeln bleiben
+sichtbar. Vollständige, präzise Faszien und realistische Faserverläufe benötigen
+entsprechende fachlich geprüfte Quelldaten; Materialeffekte können sie nicht
+ersetzen. Katze und Pferd behalten den oben dokumentierten bisherigen Stand.
+
+## Nutzbarkeit und zusätzliche Gewebebefunde (6. Oktober 2026)
+
+Die Oberfläche enthält eine Namenssuche, einen Filter für die anatomische Seite
+und einen Gewebefilter. Suchbegriffe werden unabhängig von Großschreibung,
+Akzenten und Unterstrichen abgeglichen. Filter verändern weder gespeicherte
+Befunde noch Sichtbarkeit/Identität der Geometrien. Beim Öffnen eines Befunds
+außerhalb des Filters wird der Filter zurückgesetzt. Keine-Treffer-Zustand und
+Zurücksetzen sind ausdrücklich bedienbar.
+
+Freigestellte Strukturen werden anhand der gemeinsamen Boundingbox ihrer
+wirklichen Teilflächen vergrößert. Die Kamera berücksichtigt den freien Bereich
+zwischen Werkzeugleiste und Befundformular; auch kleine und tief liegende Muskeln
+bleiben erreichbar. Die Projektion verschiebt den Bildmittelpunkt, ohne die
+Anatomie zu verschieben. Schließen stellt die normale Gesamtansicht und den
+normalen Zoomabstand wieder her. Suche und Schichtmenü klappen bei Auswahl zu,
+um insbesondere am Handy Platz für die Struktur zu lassen.
+
+`anatomy-dog-tissues.js` ergänzt vier ausdrücklich benannte Quellflächen:
+
+| Quellfläche | Anzeige / Befund-ID | Gewebe |
+|---|---|---|
+| m_dorsi_Fascia_thoracolumbar_ | Fascia thoracolumbalis / dog_mesh_tissue_thoracolumbar | Faszie |
+| m_abdominis_Aponeurosis | Aponeurose der Bauchwand / dog_mesh_tissue_abdominal_aponeurosis | Aponeurose |
+| m_biceps_femoris_tendon_L | Sehnenfläche des M. biceps femoris / dog_mesh_tissue_biceps_femoris_tendon_l | Sehne links |
+| m_biceps_femoris_tendon_R | Sehnenfläche des M. biceps femoris / dog_mesh_tissue_biceps_femoris_tendon_r | Sehne rechts |
+
+Damit gibt es **225 Muskelstrukturen plus vier weitere Gewebestrukturen**,
+keine 229 Muskeln. Befund-ID-Feld und Mesh-Metadaten `muscleId` bleiben aus
+Kompatibilitätsgründen erhalten; `kind` und `region` klassifizieren das Gewebe.
+Der gesamte zusätzliche Flächenumfang war bereits im Modell enthalten und wird
+jetzt auswählbar. Nicht eindeutig benannte Flächen (`m_Ligament` und
+`m_vastus_lat_ander_fascia_lata_*`) erhalten keine erfundene Befundzuordnung.
+Alle bisherigen Muskel-IDs und Schwerpunktkoordinaten bleiben unverändert.
+
+`anatomy-fur.js` erzeugt optional bis zu 12.000 kurze Haarsträhnen auf der
+vorhandenen Außenfläche. Verteilung nach Dreiecksfläche, Farbe aus der originalen
+Haut-/Felltextur, deterministischer Zufall. Die Geometrie folgt denselben
+Dekodierungs- und Normalisierungstransformationen. Sie ist eine **kosmetische
+Kurzhaar-Darstellung**, kein vermessener Fellverlauf, keine zusätzliche klinische
+Schicht und nicht für Raycast/Befunde auswählbar. Einschalten lädt gegebenenfalls
+die Haut; Schichtwechsel/Freistellung blendet das Fell passend aus. Kein
+zusätzlicher Netzwerkdienst oder Modell-Download. Ressourcen werden mit dem
+jeweiligen Modell entsorgt. Fehler beim Erzeugen des optionalen Fells lassen
+die geladene Haut benutzbar; erneutes Einschalten wiederholt die Erzeugung.
+
+Browserprüfungen: Suchkombinationen, keine Treffer/Reset, getrennte Seiten,
+Sehnenbefund speichern/löschen, Faszien-Schmerzvorschau, Projektion aller 229
+Strukturen in den freien Bildbereich, Fell erzeugen/ausblenden und bisherige
+Web-/App-, Regions-, API-, Race- und Mobilprüfungen. Die kosmetische Felloptik und
+vergrößerte Mobilansicht werden zusätzlich anhand von Screenshots kontrolliert.
+
+## Erweiterte Quellenprüfung: vollständiges Hundemodell
+
+Recherche am 6. Oktober 2026, zusätzlich zu den oben dokumentierten Quellen.
+Die Tabelle beschreibt die tatsächlich überprüften Angebote; sie ist kein
+Nachweis, dass es weltweit keinen weiteren Datensatz gibt.
+
+| Quelle | Geprüfter Umfang / Ergebnis für diese Integration |
+|---|---|
+| [MusculoskeletalDog](https://github.com/vittorione94/MusculoskeletalDog) | Bereits integriert; zugängliche SKN/STL-Dateien, MIT. Kein vollständiges Fasziennetz. |
+| [Z-Anatomy – veterinary models](https://github.com/Z-Anatomy/Models-of-veterinary-anatomy) | Das geprüfte Repository liefert Z-PIG und einen Viewer, keinen fertigen Hund. Nicht als Hund umgedeutet. |
+| [Stark et al. 2021](https://pmc.ncbi.nlm.nih.gov/articles/PMC8166944/) | Forschungsmodell mit 134 aktuierten Muskeln; laut Publikation fehlen Kopf-, Bauch- und Zehenmuskeln. Kein vollständiger Ersatzatlas. |
+| [David Wigforss – Dog Anatomy 1](https://sketchfab.com/3d-models/dog-anatomy-1-3cc3b755813446a5adbd8c9faa37f30d) | Angebot mit NonCommercial-Lizenz; nicht in die kommerzielle SaaS übernommen. |
+| [Jess O’Neill – Canine Anatomy](https://jessoneill.artstation.com/store/oJaO/canine-anatomy-model) | Benannte Objekte und detaillierte Texturen, aber Anbieter schließt vollständiges Veterinärmodell ausdrücklich aus und nennt fehlende Gelenkstrukturen. Keine Datei erworben. |
+| [TurboSquid – Skin Dog Skeleton Muscles](https://www.turbosquid.com/3d-models/skin-dog-skeleton-muscles-3d-model-1462906) | Detailliertes Kaufangebot; vollständige Faszienabdeckung und Rechte zur offenen Dateiauslieferung nicht nachgewiesen. Keine Datei erworben. |
+| [Complete Canine 3D](https://www.completecanine3d.app/) | Fachanwendung mit vielen Systemen; die geprüfte Seite bietet App-Zugang, keine zur Weiterverteilung bereitgestellten Modellquelldateien. |
+| [Biosphera – 3D Dog Anatomy](https://biosphera3d.com/product/3d-dog-anatomy-software/) | Fachanwendung mit Schichten; kein für diese Integration bereitgestellter Quelldatensatz. |
+
+Originalhund ebenfalls überprüft: Die unkomprimierte Datei aus Commit
+`8b94133abe9151738384b3ab107788ec5f508a56` enthält ein Mesh/ein Material und
+982.036 Vertices / 1.904.708 Dreiecke. Nach geometrischem Zusammenführen der
+UV-Nähte bleibt eine einzige verbundene Oberfläche. Keine verborgenen separaten
+Muskelkörper oder inneren Faszienschichten wurden gefunden. Das Original bleibt
+als Regionsansicht erhalten; es wurde nicht überschrieben oder auf einen
+anderen Hund projiziert.
+
+**Weiter offen:** vollständige modellierte Faszien, vollständig nachgewiesene
+Abdeckung aller anatomischen Muskeln/Gelenkstrukturen und klinische Abnahme.
+Die neuen Bedienfunktionen, vier Gewebebefunde und kosmetischen Haare schließen
+diese Datenlücken nicht. Es wird weder ein vollständiger Atlas noch ein aus
+Internetbildern anatomisch korrekt rekonstruierter Hund behauptet.
